@@ -919,19 +919,16 @@ export default function MediaCreationEngine({
             /* MODE SELECT BENTO MENU (First view when clicking +) */
             <div className="space-y-4">
               <p className="text-xs text-zinc-400 font-sans">
-                Elevate your digital canvas. Add multi-imagery carousels, instant recorded clips, soundwaves, interactive maps or stories:
+                Create a new post to share with everyone:
               </p>
               
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
                 {[
                   { id: 'photo', title: '📸 Photo', desc: 'Share images and visual moments', color: 'bg-pink-600/10 border-pink-500/10 text-pink-400 hover:bg-pink-600/15' },
                   { id: 'video', title: '🎥 Video', desc: 'Post high quality loops and clips', color: 'bg-cyan-600/10 border-cyan-500/10 text-cyan-400 hover:bg-cyan-600/15' },
-                  { id: 'voice', title: '🎙 Voice', desc: 'Record voice notes and soundwaves', color: 'bg-violet-600/10 border-violet-500/10 text-violet-400 hover:bg-violet-600/15' },
                   { id: 'text', title: '✍ Text', desc: 'Share deep thoughts and text posts', color: 'bg-zinc-800/40 hover:bg-zinc-800 text-zinc-200' },
+                  { id: 'voice', title: '🎙 Voice', desc: 'Record voice notes and soundwaves', color: 'bg-violet-600/10 border-violet-500/10 text-violet-400 hover:bg-violet-600/15' },
                   { id: 'poll', title: '📊 Poll', desc: 'Ask questions and gather choices', color: 'bg-emerald-600/10 border-emerald-500/10 text-emerald-400 hover:bg-emerald-600/15' },
-                  { id: 'reel', title: '🎉 Event', desc: 'Schedule and host community events', color: 'bg-fuchsia-600/10 border-fuchsia-500/10 text-fuchsia-400 hover:bg-fuchsia-600/15' },
-                  { id: 'pulse', title: '🤝 Collaboration', desc: 'Coordinate joint tasks and projects', color: 'bg-blue-600/10 border-blue-500/10 text-cyan-400 hover:bg-blue-600/15' },
-                  { id: 'community', title: '🏘 Community Post', desc: 'Post directly to a community group', color: 'bg-amber-600/10 border-amber-500/10 text-amber-400 hover:bg-amber-600/15' },
                 ].map(opt => (
                   <button
                     key={opt.id}

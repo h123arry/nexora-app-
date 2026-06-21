@@ -20,8 +20,8 @@ import NexoraPremiumLogo from './NexoraPremiumLogo';
 
 interface SidebarProps {
   currentUser: User;
-  activeTab: 'feed' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin';
-  setActiveTab: (tab: 'feed' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin') => void;
+  activeTab: 'feed' | 'explore' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin';
+  setActiveTab: (tab: 'feed' | 'explore' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin') => void;
   unreadMessagesCount: number;
   unreadNotificationsCount: number;
   theme: ThemeMood;
@@ -96,85 +96,57 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* 🟣 Dynamic Context Header (Option A) */}
-      <div className="mb-4 p-3.5 rounded-2xl bg-violet-600/5 border border-violet-500/10">
-        <span className="text-[8px] font-mono uppercase tracking-widest text-violet-400/70 font-bold block mb-1.5">
-          Current Pulse
-        </span>
-        {activeTab === 'feed' && (
-          <div>
-            <h4 className="text-xs font-sans font-black tracking-wider text-current uppercase flex items-center gap-1.5">
-              <Home className="w-4 h-4 text-sky-400" />
-              Home Feed
-            </h4>
-            <p className="text-[10px] text-current/60 font-sans mt-0.5">Discover what's happening</p>
-          </div>
-        )}
-        {activeTab === 'pulse' && (
-          <div>
-            <h4 className="text-xs font-sans font-black tracking-wider text-current uppercase flex items-center gap-1.5">
-              <Globe className="w-4 h-4 text-cyan-400" />
-              World Pulse
-            </h4>
-            <p className="text-[10px] text-current/60 font-sans mt-0.5">Live global activity</p>
-          </div>
-        )}
-        {activeTab === 'matrix' && (
-          <div>
-            <h4 className="text-xs font-sans font-black tracking-wider text-current uppercase flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
-              VOH AI Assistant
-            </h4>
-            <p className="text-[10px] text-current/60 font-sans mt-0.5">Ask VOH AI system core</p>
-          </div>
-        )}
-        {activeTab === 'activity' && (
-          <div>
-            <h4 className="text-xs font-sans font-black tracking-wider text-current uppercase flex items-center gap-1.5">
-              <Bell className="w-4 h-4 text-amber-400" />
-              Activity Feed
-            </h4>
-            <p className="text-[10px] text-current/60 font-sans mt-0.5">Global notifications & syncs</p>
-          </div>
-        )}
-        {activeTab === 'profile' && (
-          <div>
-            <h4 className="text-xs font-sans font-black tracking-wider text-current uppercase flex items-center gap-1.5">
-              <UserIcon className="w-4 h-4 text-fuchsia-400" />
-              My Profile
-            </h4>
-            <p className="text-[10px] text-current/60 font-sans mt-0.5">Your identity in NEXORA</p>
-          </div>
-        )}
-      </div>
-
-      {/* 🧠 Smart Search & AI Bar (Option B) */}
+      {/* 🟣 Simplified Social Media Navigation Menu */}
       <div className="flex flex-col gap-2.5 mb-5 p-1">
-        <label className="text-[8px] font-mono uppercase tracking-widest text-current/40 font-bold block mb-0.5">
-          Quick Actions
-        </label>
-        
-        {/* Search NEXORA */}
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-current/40" />
-          <input
-            type="text"
-            placeholder="Search NEXORA..."
-            value={searchQuery}
-            onChange={(e) => {
-               setSearchQuery(e.target.value);
-               if (activeTab !== 'feed') {
-                 setActiveTab('feed');
-               }
-            }}
-            className="w-full pl-9 pr-3 py-2 rounded-xl bg-current/5 border border-current/5 focus:outline-hidden focus:border-violet-500/30 focus:bg-current/8 transition-all font-sans text-[11px] text-current placeholder:text-current/30"
-          />
-        </div>
+        {[
+          { id: 'feed', label: 'Home', desc: 'Sleek social feed', icon: Home, count: 0 },
+          { id: 'explore', label: 'Search', desc: 'Find trends & tags', icon: Search, count: 0 },
+          { id: 'create_btn', label: 'Create Post', desc: 'Share photos, video, voice, poll', icon: PlusCircle, isCreate: true, count: 0 },
+          { id: 'activity', label: 'Activity', desc: 'Likes, comments, shares', icon: Bell, count: unreadNotificationsCount },
+          { id: 'profile', label: 'Profile', desc: 'Your personal views', icon: UserIcon, count: 0 }
+        ].map((item) => {
+          const isActive = activeTab === item.id;
+          const Icon = item.icon;
+          return (
+            <button
+              key={item.id}
+              onClick={() => {
+                if (item.isCreate) {
+                  onOpenCreatePost();
+                } else {
+                  setActiveTab(item.id as any);
+                }
+              }}
+              className={`flex items-center gap-3.5 w-full p-2.5 rounded-xl border transition-all text-left relative group cursor-pointer ${
+                isActive
+                  ? 'bg-linear-to-r from-violet-600/25 to-pink-500/10 border-violet-500/40 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5 font-bold'
+                  : 'bg-black/35 border-current/5 hover:border-violet-500/20 text-current/70 hover:bg-violet-950/10'
+              }`}
+            >
+              <div className={`p-1.5 rounded-lg ${isActive ? 'bg-violet-600/10 text-violet-400' : 'bg-current/5 text-current/60 group-hover:scale-105 transition-all'}`}>
+                <Icon className="w-4.5 h-4.5" />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <span className="block text-[11px] font-sans tracking-wide font-black uppercase">
+                  {item.label}
+                </span>
+                <span className="block text-[9px] text-current/40 font-mono truncate">
+                  {item.desc}
+                </span>
+              </div>
+              {item.count > 0 && (
+                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-pink-500 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full">
+                  {item.count}
+                </span>
+              )}
+            </button>
+          );
+        })}
 
-        {/* Ask VOH AI... */}
+        {/* Optional VOH AI system bot deck */}
         <button
           onClick={() => setActiveTab('matrix')}
-          className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl border transition-all text-left group cursor-pointer ${
+          className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl border transition-all text-left group cursor-pointer mt-1 ${
             activeTab === 'matrix'
               ? 'bg-linear-to-r from-violet-600/25 to-pink-500/10 border-violet-500/40 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5'
               : 'bg-black/35 border-current/5 hover:border-violet-500/20 text-violet-400 hover:bg-violet-950/10'
@@ -185,10 +157,10 @@ export default function Sidebar({
           </div>
           <div className="flex-1 overflow-hidden">
             <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-cyan-300 group-hover:text-cyan-200">
-              Ask VOH AI...
+              VOH AI Assistant
             </span>
             <span className="block text-[9px] text-current/40 font-mono truncate">
-              VOH AI Assistant Core
+              Ask any helpful topic
             </span>
           </div>
         </button>

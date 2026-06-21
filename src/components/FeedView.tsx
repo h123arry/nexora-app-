@@ -6,7 +6,7 @@ import {
   Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp,
   MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2
 } from 'lucide-react';
-import { User, Post, Comment } from '../types';
+import { User, Post, Comment, ThemeMood } from '../types';
 import { generateTestUsers } from '../data/generatedUsers';
 import ReportModal from './ReportModal';
 
@@ -121,67 +121,67 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
   // 2. Templates for rich variety in content
   const contentTemplates = [
     {
-      content: "Just finalized the design tokens for our modular space-inspired component library. It explores organic curves fused with high contrast glassmorphism. What do you think of this visual layout? 🪐✨",
-      tags: ["DesignTokens", "UIUX", "FrontEnd"],
-      image: "https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=800&auto=format&fit=crop&q=80"
+      content: "Lekki beach sunset is absolutely unmatched today. Perfect evening to unwind with some great friends! 🌅📸",
+      tags: ["Creators", "Photography", "Art"],
+      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80"
     },
     {
-      content: "What a thrilling match today! Tactical defensive builds in the second half were absolute class. Teeming with local talent! 🏟️⚽",
-      tags: ["FootballNigeria", "SuperEagles", "Sports"],
+      content: "What a thrilling match today! The tactical build-up in the second half was absolute class. Nigerian football is steaming with local talent! 🏟️⚽",
+      tags: ["Football", "Sports", "Lagos"],
       communityName: "Football Nigeria",
       image: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80"
     },
     {
-      content: "🌍 World Pulse Alert: Over 450 Nigerian builders have just shared updates about their tech meetups & community workshops today! Community engagement is peaking! ⚡🔋",
-      tags: ["WorldPulse", "GridScale", "Synergy"],
+      content: "🌍 Big community meetup in Port Harcourt today! Over 150 local creators and storytellers are gathering to share ideas on creative writing. Engagement is peaking! ⚡📝",
+      tags: ["News", "Creators", "Writing"],
       location: "Port Harcourt, Nigeria"
     },
     {
-      content: "Seeking a Senior AI Alignment Researcher. Lead the design of empathetic system helpers and multi-agent translation loops. Flexible location.",
-      tags: ["AIAlignment", "MachineLearning", "Fellowship"],
-      opportunityType: "Job" as const,
-      opportunityReward: "$140,000 - $180,000 + Stock Options",
-      opportunitySkills: ["Deep Learning", "Python", "LlamaIndex"]
+      content: "We are currently looking for a passionate local graphic designer to help co-design beautiful merchandise for our street arts project. Send details!",
+      tags: ["Business", "Creators", "Startups"],
+      opportunityType: "Collaboration" as const,
+      opportunityReward: "Design royalty splits & project bonuses",
+      opportunitySkills: ["Adobe Illustrator", "Figma", "Visual Brand design"]
     },
     {
-      content: "🎙 Voice Update - Symmetrical architecture and typography rules are our code of honor. Direct spatial audio broadcast on our current design tokens.",
-      tags: ["VoiceBroadcast", "AudioNodes", "Sprint"],
+      content: "🎙 Checking out the new Afrobeat playlists. Wizkids current track has been on repeat all morning! Drop your current favorite tunes in the replies! 🎶📻",
+      tags: ["Music", "Afrobeat", "Entertainment"],
       isVoice: true,
       voiceDuration: "0:45",
-      voiceTranscript: "Hey team, this is Harrison. Just confirming the new layout rules. Visual spacing is balanced, and text readability is pristine. Keep building in public!"
+      voiceTranscript: "Hey guys, this is Alex. Just playing some classic Wizkid vibing. Let me know what track you have on loop this week!"
     },
     {
-      content: "🎥 Immersive Video Update - Capturing Tokyo under vaporwave electronic mist. The depth-sensing camera map matches our dynamic viewport benchmarks perfectly. 🏙️🌧️",
-      tags: ["Cyberpunk", "TokyoVisuals", "Vaporwave"],
+      content: "🎥 Beautiful morning drive through the streets of Lagos. There's real beauty in the hustle and bustle! 🏙️🎉",
+      tags: ["Entertainment", "Vlogs", "Lagos"],
       videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-neon-city-street-at-night-41551-large.mp4"
     },
     {
-      content: "Completed the baseline latency audit of our edge notification relay. We are routing geo-spatially with a mean ping processing time of only 1.8ms under 50k requests.🦀⚡",
-      tags: ["RustLang", "EdgeComputing", "Performance"],
+      content: "Just tried out that legendary local pepper soup spot in Abuja. The taste is incredible and 100/10 spicy! Any other spot recommendations around? 🍲🥣🍽️",
+      tags: ["News", "LocalFood", "Entertainment"],
       image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80"
     },
     {
-      content: "📊 Memory constraints of high-volume localized systems. Which compiler language offers the best memory guarantees for real-time edge processing?",
-      tags: ["Coding", "SystemDesign", "TechPoll"],
+      content: "📊 Which gaming console or system are you planning to upgrade or spend most of your weekends on? Looking for recommendations!",
+      tags: ["Gaming", "Technology", "Education"],
       interactivePoll: {
-        question: "Which low-latency system engine topology serves decentralized community spaces best?",
+        question: "Which of these is the absolute king of weekend gaming?",
         options: [
-          { id: 'opt-1', text: "Rust Raw Socket SIMD Serialization", votes: 412 },
-          { id: 'opt-2', text: "Go High-Concurrency Channels", votes: 212 },
-          { id: 'opt-3', text: "Zig Arena-allocated Buffers", votes: 121 }
+          { id: 'opt-1', text: "PlayStation 5 (🔥)", votes: 412 },
+          { id: 'opt-2', text: "PC Master Race (🎮)", votes: 212 },
+          { id: 'opt-3', text: "Nintendo Switch (⭐)", votes: 121 }
         ]
       }
     },
     {
-      content: "Looking for an expert WebGL developer to build highly immersive 3D grid states for our upcoming space elements ecosystem. Full-stack capability is a huge bonus! 🚀🎨",
-      tags: ["ThreeJS", "WebGL", "Opportunity"],
-      opportunityType: "Collaboration" as const,
-      opportunityReward: "Co-Founder Equity & Project Bonuses",
-      opportunitySkills: ["WebGL", "Three.js", "React"]
+      content: "Starting a weekend program to tutor students on responsive web development and basic product design. Excited to teach! 🚀💻",
+      tags: ["Technology", "Education", "Mentorship"],
+      opportunityType: "Mentorship" as const,
+      opportunityReward: "Free community classes",
+      opportunitySkills: ["HTML/CSS", "UI principles", "React"]
     },
     {
-      content: "🌍 World Pulse Event: Digital Nomad Collective meetup live in Lagos! Over 150 members are discussing local tech talents and remote opportunities. 🌐☕",
-      tags: ["WorldPulse", "LagosGrid", "Nomads"],
+      content: "🌍 Foodies hangout live in Lekki! Cooking up some massive jollof rice and grilled catfish with the food enthusiast circle today. 🌐🥣",
+      tags: ["News", "LocalFood", "Lagos"],
       location: "Lagos, Nigeria"
     }
   ];
@@ -207,8 +207,8 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
         name: commenter.name,
         avatar: commenter.avatar,
         content: c % 2 === 0 
-          ? "This is absolutely the right architecture direction. Symmetrical buffers solve scale bottlenecks! 🚀" 
-          : "Interesting statistics. I think optimizing the vectors can slice that latency by another 15%. Will post my audit soon.",
+          ? "This is absolute vibes, totally agree! 🚀" 
+          : "Love this so much, keep doing what you are doing. Will share this with my circle!",
         timestamp: `${c + 1}h ago`,
         likes: (c * 19) % 50,
         replies: [
@@ -218,7 +218,7 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
             username: user.username,
             name: user.name,
             avatar: user.avatar,
-            content: "Agreed! Keep me posted when your compiler audit goes live.",
+            content: "Thanks a lot! Really appreciate your support.",
             timestamp: "30m ago"
           }
         ]
@@ -294,6 +294,7 @@ interface FeedViewProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onViewProfile?: (userId: string) => void;
+  theme?: ThemeMood;
 }
 
 export default function FeedView({
@@ -308,7 +309,8 @@ export default function FeedView({
   setSelectedTag,
   searchQuery,
   setSearchQuery,
-  onViewProfile
+  onViewProfile,
+  theme = 'stealth-dark'
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
@@ -827,6 +829,34 @@ export default function FeedView({
       return false;
     }
 
+    // First-time user experience shows clean empty or interest-based feed in For You
+    const isNewUser = currentUser.id !== 'user-0' && (!followingIds || followingIds.length === 0);
+    if (isNewUser && feedTab === 'for_you') {
+      const userInterests = Object.keys(currentUser.interestDNA || {});
+      if (userInterests.length > 0) {
+        const isPostMatchedToUserInterests = (postItem: typeof post, interests: string[]) => {
+          return postItem.tags.some(t => {
+            const tl = t.toLowerCase();
+            return interests.some(ui => {
+              const uil = ui.toLowerCase();
+              if (tl.includes(uil) || uil.includes(tl)) return true;
+              if (uil === 'football' && tl === 'sports') return true;
+              if (uil === 'creators' && (tl === 'art' || tl === 'photography')) return true;
+              if (uil === 'news' && tl === 'localfood') return true;
+              if (uil === 'music' && tl === 'afrobeat') return true;
+              if (uil === 'technology' && tl === 'coding') return true;
+              return false;
+            });
+          });
+        };
+        if (!isPostMatchedToUserInterests(post, userInterests)) {
+          return false;
+        }
+      } else {
+        return false;
+      }
+    }
+
     // Tab indexing logic
     if (feedTab === 'following') {
       const isPostFromFollowed = followingIds.includes(post.userId) || post.userId === currentUser.id;
@@ -926,25 +956,36 @@ export default function FeedView({
 
   // Suggested item creators
   const suggestedCommunities = [
-    { name: "🏟 Football Nigeria", members: "12,420 members", desc: "For technical build-ups and Nigerian sports. Flagship space." },
-    { name: "🏟 Cyberpunk Photography", members: "4,110 members", desc: "Volumetric electronic vapor haze snaps across our grids." },
-    { name: "🏟 Rust Compiler Labs", members: "1,840 members", desc: "SIMD buffers, compiler speed tuning, zero-cost architecture structures." }
+    { name: "🏟 Football Nigeria", members: "12,420 members", desc: "Nigerian football discussions, daily matches and player analysis." },
+    { name: "🏟 Lagos Foodies", members: "4,110 members", desc: "Discovering the best local restaurants and recipes in Lagos." },
+    { name: "🎓 Afrobeat Jams", members: "1,840 members", desc: "Conversations on the finest Afrobeat songs and artists." }
   ];
 
   const suggestedUsers = [
     { id: 'creator-4', name: "Nexora AI", username: "nexora_ai", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "Official NEXORA AI Companion. Sharing football updates, food vibes, and daily stories." },
-    { id: 'voh_ai', name: "VOH AI", username: "voh_ai", avatar: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "The Intelligent AI assistant by VOICE OF HARRISON. Syncing daily matches and design tokens." }
+    { id: 'voh_ai', name: "VOH AI", username: "voh_ai", avatar: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "The Intelligent AI assistant by VOICE OF HARRISON. Discussing football, music tracks, and daily trends." }
   ];
 
+  // Theme-aware backdrop container style for the fixed/overlay top navigation
+  const getHeaderOverlayClass = () => {
+    switch (theme) {
+      case 'neon-cyber': return 'bg-[#050409]/80 border-b border-violet-500/15 text-purple-100';
+      case 'emerald-glass': return 'bg-[#010403]/80 border-b border-emerald-950/40 text-emerald-100';
+      case 'platinum-light': return 'bg-white/80 border-b border-slate-200 text-slate-900';
+      case 'stealth-dark':
+      default: return 'bg-zinc-950/80 border-b border-zinc-800/40 text-zinc-100';
+    }
+  };
+
   return (
-    <div className="space-y-5 flex flex-col h-full max-h-[800px] relative">
+    <div className="flex flex-col h-full w-full relative overflow-hidden bg-transparent">
       
-      {/* 1. TOP MINIMALIST HEADER */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-violet-500/15 pb-4 shrink-0 px-1">
+      {/* 1. TOP OVERLAYED GLASSY HEADER */}
+      <div className={`absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 px-4 pt-3.5 backdrop-blur-xl select-none ${getHeaderOverlayClass()}`}>
         {/* Left: Brand logo */}
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-full bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <Cpu className="w-4.5 h-4.5 text-white animate-pulse" />
+            <Star className="w-4.5 h-4.5 text-white animate-pulse" />
           </div>
           <div>
             <span className="font-sans font-black text-lg tracking-wider bg-linear-to-r from-violet-200 via-pink-300 to-cyan-200 bg-clip-text text-transparent">
@@ -1030,116 +1071,10 @@ export default function FeedView({
 
 
 
-      {/* Search Deck */}
-      <div className="shrink-0 p-4 bg-slate-950/25 border border-white/5 rounded-2xl space-y-3.5 text-left">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <span className="text-[10px] uppercase font-mono text-[#A78BFA] font-extrabold tracking-widest block">
-              Search
-            </span>
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[
-                { id: 'all', label: 'All 🌌' },
-                { id: 'users', label: 'Users 👥' },
-                { id: 'posts', label: 'Posts 📝' },
-                { id: 'videos', label: 'Videos 🎥' },
-                { id: 'voice', label: 'Voice Posts 🎙️' },
-                { id: 'communities', label: 'Communities 🏟️' },
-                { id: 'hashtags', label: 'Hashtags 🏷️' },
-                { id: 'pulse', label: 'Pulse 🌍' }
-              ].map(f => (
-                <button
-                  key={f.id}
-                  onClick={() => setSearchFilterType(f.id as any)}
-                  className={`px-3 py-1.5 rounded-lg text-[10.5px] font-bold font-sans transition-all cursor-pointer ${searchFilterType === f.id ? 'bg-violet-600 border border-violet-500/30 text-white font-extrabold shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-[#0b0821]/50 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-1 shrink-0">
-            <span className="text-[10px] uppercase font-mono text-pink-400 font-extrabold tracking-widest block">
-              Sort By
-            </span>
-            <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-xl border border-white/5 text-[10.5px] font-sans">
-              {[
-                { id: 'latest', label: '⚡ Latest' },
-                { id: 'popular', label: '🔥 Popular' },
-                { id: 'nearby', label: '📍 Nearby' }
-              ].map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => setSortBy(s.id as any)}
-                  className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${sortBy === s.id ? 'bg-pink-600 text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
-                >
-                  {s.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Pinterest style Saved collection folder rows */}
-        <div className="text-left border-t border-white/5 pt-2.5 w-full">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-[10.5px] font-mono font-bold text-zinc-400 uppercase flex items-center gap-1 shrink-0">
-                <Folder className="w-3.5 h-3.5 text-pink-400" />
-                SAVED COLLECTIONS:
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {Object.keys(savedCollections).map(folder => {
-                  const count = savedCollections[folder]?.length || 0;
-                  const isFolderActive = activeCollectionFolder === folder;
-                  return (
-                    <button
-                      key={folder}
-                      onClick={() => {
-                        if (isFolderActive) {
-                          setActiveCollectionFolder(null);
-                        } else {
-                          setActiveCollectionFolder(folder);
-                        }
-                      }}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold font-sans transition-all flex items-center gap-1.5 cursor-pointer border ${isFolderActive ? 'bg-pink-900/30 text-pink-300 border-pink-500/40 font-extrabold' : 'bg-black/20 text-zinc-400 hover:text-zinc-300 border-white/5'}`}
-                    >
-                      <span>{folder}</span>
-                      <span className="bg-black/40 text-[9px] px-1 rounded-md font-mono">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-            {activeCollectionFolder && (
-              <button
-                onClick={() => setActiveCollectionFolder(null)}
-                className="text-[10.5px] font-mono text-rose-400 hover:text-rose-500 font-extrabold flex items-center gap-1 cursor-pointer shrink-0 uppercase tracking-wide"
-              >
-                [Exit Folder ✖]
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Selected Tag Active Indicator */}
-      {selectedTag && (
-        <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl">
-          <span className="text-xs font-mono text-violet-300">Filtering tags containing: <strong className="text-white">#{selectedTag}</strong></span>
-          <button onClick={() => setSelectedTag(null)} className="text-violet-400 hover:text-white">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-
-
-
       {/* 5. MAIN FEED CONTENT STREAM (With pull-to-refresh & infinite scroll) */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto pr-1.5 space-y-4 custom-scrollbar"
+        className="flex-1 overflow-y-auto space-y-5 pt-[190px] md:pt-[76px] pb-32 px-4 md:px-6 custom-scrollbar"
       >
         {/* Refresh pull-down simulator button */}
         <div className="flex justify-center shrink-0">
@@ -1152,6 +1087,110 @@ export default function FeedView({
             <span>{isRefreshing ? 'Refreshing feed...' : 'Pull Feed down to refresh'}</span>
           </button>
         </div>
+
+        {/* Search Deck (Moved inside scroll to maximize scrolling feed area) */}
+        <div className="shrink-0 p-4 bg-slate-950/25 border border-white/5 rounded-2xl space-y-3.5 text-left">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-mono text-[#A78BFA] font-extrabold tracking-widest block">
+                Search
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { id: 'all', label: 'All 🌌' },
+                  { id: 'users', label: 'Users 👥' },
+                  { id: 'posts', label: 'Posts 📝' },
+                  { id: 'videos', label: 'Videos 🎥' },
+                  { id: 'voice', label: 'Voice Posts 🎙️' },
+                  { id: 'communities', label: 'Communities 🏟️' },
+                  { id: 'hashtags', label: 'Hashtags 🏷️' },
+                  { id: 'pulse', label: 'Pulse 🌍' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setSearchFilterType(f.id as any)}
+                    className={`px-3 py-1.5 rounded-lg text-[10.5px] font-bold font-sans transition-all cursor-pointer ${searchFilterType === f.id ? 'bg-violet-600 border border-violet-500/30 text-white font-extrabold shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-[#0b0821]/50 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1 shrink-0">
+              <span className="text-[10px] uppercase font-mono text-pink-400 font-extrabold tracking-widest block">
+                Sort By
+              </span>
+              <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-xl border border-white/5 text-[10.5px] font-sans">
+                {[
+                  { id: 'latest', label: '⚡ Latest' },
+                  { id: 'popular', label: '🔥 Popular' },
+                  { id: 'nearby', label: '📍 Nearby' }
+                ].map(s => (
+                  <button
+                    key={s.id}
+                    onClick={() => setSortBy(s.id as any)}
+                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${sortBy === s.id ? 'bg-pink-600 text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Pinterest style Saved collection folder rows */}
+          <div className="text-left border-t border-white/5 pt-2.5 w-full">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10.5px] font-mono font-bold text-zinc-400 uppercase flex items-center gap-1 shrink-0">
+                  <Folder className="w-3.5 h-3.5 text-pink-400" />
+                  SAVED COLLECTIONS:
+                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {Object.keys(savedCollections).map(folder => {
+                    const count = savedCollections[folder]?.length || 0;
+                    const isFolderActive = activeCollectionFolder === folder;
+                    return (
+                      <button
+                        key={folder}
+                        onClick={() => {
+                          if (isFolderActive) {
+                            setActiveCollectionFolder(null);
+                          } else {
+                            setActiveCollectionFolder(folder);
+                          }
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold font-sans transition-all flex items-center gap-1.5 cursor-pointer border ${isFolderActive ? 'bg-pink-900/30 text-pink-300 border-pink-500/40 font-extrabold' : 'bg-black/20 text-zinc-400 hover:text-zinc-300 border-white/5'}`}
+                      >
+                       <span>{folder}</span>
+                        <span className="bg-black/40 text-[9px] px-1 rounded-md font-mono">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {activeCollectionFolder && (
+                <button
+                  onClick={() => setActiveCollectionFolder(null)}
+                  className="text-[10.5px] font-mono text-rose-400 hover:text-rose-500 font-extrabold flex items-center gap-1 cursor-pointer shrink-0 uppercase tracking-wide"
+                >
+                  [Exit Folder ✖]
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Selected Tag Active Indicator (Moved inside scroll) */}
+        {selectedTag && (
+          <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl">
+            <span className="text-xs font-mono text-violet-300">Filtering tags containing: <strong className="text-white">#{selectedTag}</strong></span>
+            <button onClick={() => setSelectedTag(null)} className="text-violet-400 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* Empty feed state */}
         {filteredPosts.length === 0 && (

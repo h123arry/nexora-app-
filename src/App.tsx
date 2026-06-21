@@ -13,7 +13,8 @@ import {
   Home,
   Globe,
   Plus,
-  User as UserIcon
+  User as UserIcon,
+  Search
 } from 'lucide-react';
 
 import {
@@ -67,6 +68,7 @@ import MatrixView from './components/MatrixView';
 import AuthView from './components/AuthView';
 import AdminDashboardView from './components/AdminDashboardView';
 import MediaCreationEngine from './components/MediaCreationEngine';
+import ExploreView from './components/ExploreView';
 
 export default function App() {
   // 1. Core State Orchestrator
@@ -935,6 +937,18 @@ export default function App() {
                       searchQuery={searchQuery}
                       setSearchQuery={setSearchQuery}
                       onViewProfile={handleViewProfile}
+                    />
+                  )}
+
+                  {activeTab === 'explore' && (
+                    <ExploreView
+                      creators={MOCK_CREATORS}
+                      posts={posts}
+                      setSelectedTag={setSelectedTag}
+                      setActiveTab={(t) => setActiveTab(t as any)}
+                      onLikePost={handleLikePost}
+                      onToggleFollow={handleToggleFollow}
+                      followingIds={followingIds}
                     />
                   )}
 
@@ -2070,14 +2084,14 @@ export default function App() {
         </button>
         <button 
           onClick={() => {
-            setActiveTab('pulse');
+            setActiveTab('explore');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-cyan-950/20 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] ${activeTab === 'pulse' ? 'text-cyan-400 scale-105 font-bold bg-cyan-950/15 border-cyan-500/10' : 'hover:text-current'}`}
-          id="mobile-nav-pulse"
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-cyan-950/20 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] ${activeTab === 'explore' ? 'text-cyan-400 scale-105 font-bold bg-cyan-950/15 border-cyan-500/10' : 'hover:text-current'}`}
+          id="mobile-nav-search"
         >
-          <Globe className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Pulse</span>
+          <Search className="w-5 h-5" />
+          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Search</span>
         </button>
         
         {/* Unified Plus/Create Button in Center with expanded high performance glow */}
