@@ -932,8 +932,8 @@ export default function FeedView({
   ];
 
   const suggestedUsers = [
-    { id: 'gen-sug-1', name: "Chioma Adebayo", username: "chioma_codes_88", avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "Full-stack developer building on high performance sockets." },
-    { id: 'gen-sug-2', name: "Elena Rostova", username: "elena_vision", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80", location: "Tokyo, Japan", bio: "Photography capturer of neon-hazed vaporwave environments." }
+    { id: 'creator-4', name: "Nexora AI", username: "nexora_ai", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "Official NEXORA AI Companion. Sharing football updates, food vibes, and daily stories." },
+    { id: 'voh_ai', name: "VOH AI", username: "voh_ai", avatar: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "The Intelligent AI assistant by VOICE OF HARRISON. Syncing daily matches and design tokens." }
   ];
 
   return (

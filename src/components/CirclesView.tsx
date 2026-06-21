@@ -25,7 +25,7 @@ import {
   Award
 } from 'lucide-react';
 import { Circle, User } from '../types';
-import { INITIAL_CIRCLES, MOCK_CREATORS } from '../data/mockData';
+import { INITIAL_CIRCLES, MOCK_CREATORS, INITIAL_USER } from '../data/mockData';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -331,7 +331,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       {/* Circles/Communities Grid */}
       <div id="circles-grid-wrapper" className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredCircles.map((circle) => {
-          const creator = MOCK_CREATORS.find(mc => mc.id === circle.creatorId);
+          const creator = [INITIAL_USER, ...MOCK_CREATORS].find(mc => mc.id === circle.creatorId) || INITIAL_USER;
 
           return (
             <div 
@@ -510,7 +510,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                         Setting up the local tournament brackets for this weekend. Who is checking in?
                       </p>
                       <div className="text-[10px] text-violet-300/40 font-mono mt-1 pt-2 border-t border-white/5">
-                        Posted by marcus_v_codes • Yesterday
+                        Posted by nexora_ai • Yesterday
                       </div>
                     </div>
                   </div>
@@ -522,9 +522,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {[
                         { name: 'VOICE OF HARRISON', username: 'voh', role: 'Founder Admin', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' },
-                        { name: 'Chioma Adebayo', username: 'chioma_codes', role: 'Moderator', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150' },
-                        { name: 'Marcus Vance', username: 'marcus_v_codes', role: 'Contributor', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150' },
-                        { name: 'David Sterling', username: 'david_sterling', role: 'Member', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' }
+                        { name: 'Nexora AI', username: 'nexora_ai', role: 'System Co-Pilot', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80' },
+                        { name: 'VOH AI', username: 'voh_ai', role: 'AI Assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' }
                       ].map((mbr, i) => (
                         <div key={i} className="p-3 bg-white/[0.01] border border-white/5 rounded-2xl flex items-center justify-between">
                           <div className="flex items-center gap-2">
@@ -787,8 +786,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     <div className="space-y-2">
                       {[
                         { name: 'voh', score: '98,000 pts', pos: '1' },
-                        { name: 'marcus_v_codes', score: '420 pts', pos: '2' },
-                        { name: 'chioma_codes', score: '310 pts', pos: '3' }
+                        { name: 'nexora_ai', score: '85,000 pts', pos: '2' },
+                        { name: 'voh_ai', score: '78,000 pts', pos: '3' }
                       ].map((ld, i) => (
                         <div key={i} className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2.5">

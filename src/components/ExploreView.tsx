@@ -160,10 +160,9 @@ export default function ExploreView({
 
   // Static Audio Loops Library Data
   const mockSounds = [
-    { id: 's-1', title: 'Midnight Vapor Drift', artist: '@sophiathorne', uses: '14.2K', url: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?w=500' },
+    { id: 's-1', title: 'Midnight Vapor Drift', artist: '@nexora_ai', uses: '14.2K', url: 'https://images.unsplash.com/photo-1511447333015-45b65e60f6d5?w=500' },
     { id: 's-2', title: 'Zero Latency Pulse', artist: '@voh', uses: '9.8K', url: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=500' },
-    { id: 's-3', title: 'Vaporwave Rain Tokyo', artist: '@elena_rostova', uses: '34.5K', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500' },
-    { id: 's-4', title: 'Dakar Cyber Rhythm', artist: '@marcus_v', uses: '5.2K', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500' }
+    { id: 's-3', title: 'Vaporwave Rain Tokyo', artist: '@voh_ai', uses: '34.5K', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=500' }
   ];
 
   // Custom Reels (Nexora Reels) Data
@@ -177,47 +176,34 @@ export default function ExploreView({
       commentsCount: 382,
       sound: { title: 'Zero Latency Pulse - Harrison Custom Mix', author: 'voh' },
       comments: [
-        { id: 1, user: 'sophia_designs', text: 'This framing feels pristine, Harrison! 💜' },
-        { id: 2, user: 'marcus_v_codes', text: 'Benchmarks are super solid on the mobile viewport.' },
-        { id: 3, user: 'alex_sterling', text: 'Loving the auto-caps layout timing lines!' }
+        { id: 1, user: 'nexora_ai', text: 'This framing feels pristine, Harrison! 💜' },
+        { id: 2, user: 'voh_ai', text: 'Benchmarks are super solid on the mobile viewport.' }
       ]
     },
     {
       id: 'vr-2',
-      creator: { id: 'creator-3', name: 'Elena Rostova', username: 'elena_vision', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80', isVerified: false },
+      creator: { id: 'creator-4', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true },
       videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-holding-smartphone-at-night-with-city-lights-41553-large.mp4',
-      caption: 'Vaporwave sunset mapping in Berlin city clusters. Capturing real-time visual streams with volumetric lens setups. 🌌📸 #photography #neon #art',
+      caption: 'Discussing our latest football matches, Wizkid tunes, and Davido jams. Let us build connected spaces! #NEXORA #football #afrobeat',
       likes: 8520,
       commentsCount: 198,
-      sound: { title: 'Vaporwave Rain Tokyo', author: 'elena_rostova' },
+      sound: { title: 'Vaporwave Rain Tokyo', author: 'nexora_ai' },
       comments: [
-        { id: 1, user: 'sophia_designs', text: 'That magenta backglow is stunning!' },
-        { id: 2, user: 'david_j', text: 'Fits perfectly with the lofi beat streams.' }
+        { id: 1, user: 'voh_ai', text: 'Super cool music choices!' },
+        { id: 2, user: 'voh', text: 'Excellent rhythm!' }
       ]
     },
     {
       id: 'vr-3',
-      creator: { id: 'creator-2', name: 'Marcus Vance', username: 'marcus_v_codes', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', isVerified: false },
+      creator: { id: 'voh_ai', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true },
       videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-and-graphs-41555-large.mp4',
-      caption: 'Writing an asynchronous WebSockets parser in Rust for concurrent packet streaming. Latency down to 1.8ms under load! 🦀⚡ #rustlang #performance #code',
+      caption: 'System processing optimized under loads. VOH AI is ready to help you answer any design or coding queries! #aesthetics #vohai #technology',
       likes: 9420,
       commentsCount: 412,
-      sound: { title: 'Zero cost abstraction - Techno Beat', author: 'marcus_v' },
+      sound: { title: 'Zero cost abstraction - Techno Beat', author: 'voh_ai' },
       comments: [
         { id: 1, user: 'voh', text: 'Zero allocation streams are extremely beautiful. Solid speed!' },
-        { id: 2, user: 'sarah_codes', text: 'Can we load test this via the webAssembly interface?' }
-      ]
-    },
-    {
-      id: 'vr-4',
-      creator: { id: 'creator-1', name: 'Sophia Thorne', username: 'sophia_designs', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', isVerified: false },
-      videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-neon-light-from-a-building-at-night-41552-large.mp4',
-      caption: 'Adjusting backdro-blur and glowing cards parameters dynamically inside our spatial prototype. Minimalist interfaces only. 📐🎨 #design #figma #ux',
-      likes: 4100,
-      commentsCount: 104,
-      sound: { title: 'Midnight Vapor Drift', author: 'sophiathorne' },
-      comments: [
-        { id: 1, user: 'elena_vision', text: 'Love the soft outlines!' }
+        { id: 2, user: 'nexora_ai', text: 'Let us load test this via the database interface.' }
       ]
     }
   ];
@@ -445,26 +431,26 @@ export default function ExploreView({
             </div>
             
             <div className="mt-8 space-y-1">
-              <span className="text-[9px] text-[#8B5CF6] font-mono uppercase tracking-widest block">Sophia Thorne</span>
+              <span className="text-[9px] text-[#8B5CF6] font-mono uppercase tracking-widest block">Nexora AI</span>
               <h3 className="text-sm font-black text-white font-sans line-clamp-2 leading-snug">
-                🎨 Crafting 3D Glass Widgets and Figma System Parameters
+                🎵 Live Afrobeat DJ set and Music Jams Session
               </h3>
             </div>
 
             <div className="mt-auto pt-3 border-t border-violet-500/5 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100" className="w-6 h-6 rounded-lg object-cover" />
-                <span className="text-[10px] font-mono text-violet-300">@sophia_designs</span>
+                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100" className="w-6 h-6 rounded-lg object-cover" />
+                <span className="text-[10px] font-mono text-violet-300">@nexora_ai</span>
               </div>
               <button 
                 onClick={() => {
                   setLiveComments([
-                    { id: '1', user: 'sarah_codes', text: 'This looks so smooth Sophia! 😍', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80' },
-                    { id: '2', user: 'marcus_v_codes', text: 'Benchmarks look perfect', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80' }
+                    { id: '1', user: 'voh_ai', text: 'This looks so smooth Nexora! 😍', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=80' },
+                    { id: '2', user: 'voh', text: 'Lekki sounds are super crisp! 🎧', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' }
                   ]);
                   setLiveAccumulatedSparks(120);
                   setLiveViewersCount(2102);
-                  setActiveWatchLive({ id: 'live-sophia', name: 'Sophia Thorne', username: 'sophia_designs', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', topic: '🎨 Crafting 3D Glass Widgets' });
+                  setActiveWatchLive({ id: 'live-nexora', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100', topic: '🎵 Live Afrobeat DJ set and Music Jams' });
                 }}
                 className="text-[9px] font-mono font-black bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition-all uppercase cursor-pointer"
               >
@@ -484,25 +470,25 @@ export default function ExploreView({
             </div>
             
             <div className="mt-8 space-y-1">
-              <span className="text-[9px] text-[#8B5CF6] font-mono uppercase tracking-widest block">Elena Rostova</span>
+              <span className="text-[9px] text-[#8B5CF6] font-mono uppercase tracking-widest block">VOH AI</span>
               <h3 className="text-sm font-black text-white font-sans line-clamp-2 leading-snug">
-                🌆 Volumetric Street Photography in Neon Nightscapes of Berlin
+                🤖 Interactive Design Playground & Code Architecture Sync
               </h3>
             </div>
 
             <div className="mt-auto pt-3 border-t border-violet-500/5 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100" className="w-6 h-6 rounded-lg object-cover" />
-                <span className="text-[10px] font-mono text-violet-300">@elena_rostova</span>
+                <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100" className="w-6 h-6 rounded-lg object-cover" />
+                <span className="text-[10px] font-mono text-violet-300">@voh_ai</span>
               </div>
               <button 
                 onClick={() => {
                   setLiveComments([
-                    { id: '1', user: 'voh', text: 'Sensational neon colors Elena!', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' }
+                    { id: '1', user: 'voh', text: 'Sensational design tokens VOH AI!', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' }
                   ]);
                   setLiveAccumulatedSparks(85);
                   setLiveViewersCount(852);
-                  setActiveWatchLive({ id: 'live-elena', name: 'Elena Rostova', username: 'elena_rostova', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', topic: '🌆 Berlin Neon Photography Walk' });
+                  setActiveWatchLive({ id: 'live-vohai', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=100', topic: '🤖 Interactive Design Playground' });
                 }}
                 className="text-[9px] font-mono font-black bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition-all uppercase cursor-pointer"
               >

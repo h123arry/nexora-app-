@@ -1700,11 +1700,7 @@ try {
                   <span>💻</span> Technical Developer
                 </span>
               )}
-              {currentUser.username === 'creator-1' && (
-                <span className="text-[10px] uppercase font-mono px-2.5 py-1 rounded-xl bg-pink-500/10 text-pink-300 border border-pink-500/20 flex items-center gap-1.5" title="Verified interface designer">
-                  <span>🎨</span> Lead Designer
-                </span>
-              )}
+
             </div>
 
             {/* Compact Bio Paragraph & Location info */}
@@ -2451,10 +2447,10 @@ try {
                 <div className="p-4 rounded-3xl bg-[#0c0a25]/65 border border-violet-500/10">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=80" className="w-6.5 h-6.5 rounded-lg object-cover" />
+                      <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80" className="w-6.5 h-6.5 rounded-lg object-cover" />
                       <div>
-                        <span className="text-[11px] font-sans font-black text-white block leading-none">Sophia Thorne</span>
-                        <span className="text-[9px] font-mono text-violet-400">@sophia_designs</span>
+                        <span className="text-[11px] font-sans font-black text-white block leading-none">Nexora AI</span>
+                        <span className="text-[9px] font-mono text-violet-400">@nexora_ai</span>
                       </div>
                     </div>
                     <span className="text-[9px] font-mono text-violet-400">1 day ago</span>
@@ -2468,16 +2464,16 @@ try {
                 <div className="p-4 rounded-3xl bg-[#0c0a25]/65 border border-violet-500/10">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=80" className="w-6.5 h-6.5 rounded-lg object-cover" />
+                      <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80" className="w-6.5 h-6.5 rounded-lg object-cover" />
                       <div>
-                        <span className="text-[11px] font-sans font-black text-white block leading-none">Marcus Vance</span>
-                        <span className="text-[9px] font-mono text-violet-400">@marcus_v_codes</span>
+                        <span className="text-[11px] font-sans font-black text-white block leading-none">VOH AI</span>
+                        <span className="text-[9px] font-mono text-violet-400">@voh_ai</span>
                       </div>
                     </div>
                     <span className="text-[9px] font-mono text-violet-400">4 days ago</span>
                   </div>
                   <p className="text-xs text-violet-100 font-sans leading-relaxed">
-                    Superb package validation pass with <span className="text-[#8B5CF6] font-bold">@{currentUser.username}</span>! Compiling synchronous websocket filters with Rust achieved under 1.8ms! Absolute beast.
+                    Superb package validation pass with <span className="text-[#8B5CF6] font-bold">@{currentUser.username}</span>! Compiling synchronous data filters achieved under ultra-fast speeds! Absolute beast.
                   </p>
                 </div>
               </div>

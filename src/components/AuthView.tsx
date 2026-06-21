@@ -277,25 +277,8 @@ const loadAccounts = (): RegisteredAccount[] => {
   const defaults: RegisteredAccount[] = [
     { email: 'ogoulu131@gmail.com', passwordHash: 'password123', user: INITIAL_USER },
     { email: 'voh@nexora.com', passwordHash: 'password123', user: INITIAL_USER },
-    { email: 'sophia@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[0] },
-    { email: 'marcus@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[1] },
-    { email: 'elena@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[2] },
-    { email: 'ai@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[3] },
-    {
-      email: 'test1@nexora.com',
-      passwordHash: 'password123',
-      user: ADDITIONAL_TEST_ACCOUNTS[0]
-    },
-    {
-      email: 'test2@nexora.com',
-      passwordHash: 'password123',
-      user: ADDITIONAL_TEST_ACCOUNTS[1]
-    },
-    {
-      email: 'user3@gmail.com',
-      passwordHash: 'password123',
-      user: ADDITIONAL_TEST_ACCOUNTS[2]
-    }
+    { email: 'ai@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[0] },
+    { email: 'voh_ai@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[1] }
   ];
   localStorage.setItem('nexora_registered_accounts', JSON.stringify(defaults));
   return defaults;
@@ -519,23 +502,11 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     // Recommend Accounts
     const getRecommendations = () => {
       const recs: typeof MOCK_CREATORS = [];
-      // Always recommend founder VOH
       const vohUser = INITIAL_USER;
       recs.push(vohUser);
 
       MOCK_CREATORS.forEach(cr => {
-        let match = false;
-        if (selectedInterests.includes('Technology') && (cr.username === 'sophia_designs' || cr.username === 'marcus_v_codes')) match = true;
-        if (selectedInterests.includes('Football') && cr.username === 'marcus_v_codes') match = true;
-        if (selectedInterests.includes('Gaming') && cr.username === 'marcus_v_codes') match = true;
-        if (selectedInterests.includes('Creators') && (cr.username === 'sophia_designs' || cr.username === 'elena_vision')) match = true;
-        if (selectedInterests.includes('Music') && (cr.username === 'sophia_designs' || cr.username === 'elena_vision')) match = true;
-        if (selectedInterests.includes('News') && cr.username === 'elena_vision') match = true;
-        if (selectedInterests.includes('Entertainment') && cr.username === 'elena_vision') match = true;
-        if (selectedInterests.includes('Education') && cr.username === 'elena_vision') match = true;
-        if (selectedInterests.includes('Business') && cr.username === 'marcus_v_codes') match = true;
-
-        if (match && !recs.some(r => r.id === cr.id)) {
+        if (!recs.some(r => r.id === cr.id)) {
           recs.push(cr);
         }
       });

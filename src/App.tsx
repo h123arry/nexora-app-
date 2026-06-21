@@ -31,7 +31,8 @@ import {
   Pause,
   Trash2,
   RefreshCw,
-  Eye
+  Eye,
+  WifiOff
 } from 'lucide-react';
 
 import { 
@@ -117,7 +118,7 @@ export default function App() {
 
   const [followingIds, setFollowingIds] = useState<string[]>(() => {
     const saved = localStorage.getItem('nexora_following_ids');
-    return saved ? JSON.parse(saved) : ['creator-1', 'creator-2', 'creator-4'];
+    return saved ? JSON.parse(saved) : ['creator-4', 'voh_ai'];
   });
 
   const [activeTab, setActiveTab] = useState<'feed' | 'pulse' | 'matrix' | 'activity' | 'profile'>('feed');
@@ -134,6 +135,8 @@ export default function App() {
   // Dialog overlays
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
   const [systemSpeed, setSystemSpeed] = useState('1.8ms');
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isSyncPending, setIsSyncPending] = useState(false);
 
   // PWA Installation state variables
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -209,6 +212,38 @@ export default function App() {
       setSystemSpeed(`${ping}ms`);
     }, 4000);
     return () => clearInterval(interval);
+  }, []);
+
+  // 3.5. Web Offline & Pending Sync State handlers
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📶 Dynamic sync restored! Back online.' }));
+      
+      setIsSyncPending(prev => {
+        if (prev) {
+          setTimeout(() => {
+            setIsSyncPending(false);
+            window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully synchronized!' }));
+          }, 2000);
+          return true;
+        }
+        return false;
+      });
+    };
+
+    const handleOffline = () => {
+      setIsOffline(true);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ You are currently offline. New posts will be queued.' }));
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
 
@@ -391,6 +426,12 @@ export default function App() {
     setPosts(prev => [newPost, ...prev]);
     // Log post in database to grant reputation and increment contribution records
     createPostDb(currentUser.id);
+    
+    if (isOffline) {
+      setIsSyncPending(true);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📝 Offline Mode: Post saved locally and queued for synchronization!' }));
+    }
+    
     return postId;
   };
 
@@ -986,6 +1027,28 @@ export default function App() {
             onClose={handleCloseCreateModal}
             onAddPost={handleAddPost}
             theme={theme}
+            isOffline={isOffline}
+            onToggleOffline={() => {
+              setIsOffline(prev => {
+                const next = !prev;
+                if (next) {
+                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔌 Simulating OFFLINE mode. Actions will be queued.' }));
+                } else {
+                  window.dispatchEvent(new CustomEvent('toast', { detail: '📶 Simulating ONLINE mode. Syncing pending posts...' }));
+                  setIsSyncPending(prevPending => {
+                    if (prevPending) {
+                      setTimeout(() => {
+                        setIsSyncPending(false);
+                        window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully synchronized!' }));
+                      }, 2005);
+                      return true;
+                    }
+                    return false;
+                  });
+                }
+                return next;
+              });
+            }}
           />
         )}
       </AnimatePresence>
@@ -2093,6 +2156,27 @@ export default function App() {
             }}
           />
           <Plus className="w-5.5 h-5.5 text-white relative z-10" />
+
+          {/* Status Indicator Badge */}
+          {(isOffline || isSyncPending) && (
+            <span 
+              className={`absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border border-[#06040f] z-20 shadow-md ${
+                isSyncPending ? 'bg-purple-500' : (isOffline ? 'bg-amber-500' : 'bg-purple-500')
+              }`}
+              title={isOffline ? (isSyncPending ? "Offline - Pending Synchronization" : "Offline Mode Active") : "Synchronizing Offline Logs..."}
+            >
+              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                isSyncPending ? 'bg-purple-400 animate-pulse' : (isOffline ? 'bg-amber-400 animate-pulse' : 'bg-[#c084fc] animate-ping')
+              }`} />
+              {isSyncPending ? (
+                <RefreshCw className="w-2.5 h-2.5 text-white shrink-0 relative z-10 animate-sync-pulse" />
+              ) : isOffline ? (
+                <WifiOff className="w-2.5 h-2.5 text-zinc-950 shrink-0 relative z-10" />
+              ) : (
+                <RefreshCw className="w-2.5 h-2.5 text-white shrink-0 relative z-10 animate-spin" />
+              )}
+            </span>
+          )}
         </motion.button>
  
         <button 

@@ -54,7 +54,7 @@ export default function AdminDashboardView({
     if (registryStr) {
       try {
         const accounts = JSON.parse(registryStr);
-        registeredUsers = accounts.map((a: any) => a.user);
+        registeredUsers = accounts.filter((a: any) => a && a.user).map((a: any) => a.user);
       } catch (e) {
         console.error(e);
       }
@@ -75,31 +75,8 @@ export default function AdminDashboardView({
         console.error(e);
       }
     } else {
-      // Seed default mock reports for illustration
-      const seedReports: Report[] = [
-        {
-          id: 'rep-1',
-          reporterUsername: 'marcus_v_codes',
-          targetType: 'post',
-          targetId: posts[0]?.id || 'p-1',
-          targetContent: posts[0]?.content || 'Vaporwave sunset mapping in Berlin city clusters...',
-          reason: 'Other',
-          comment: 'Seems a bit off-topic for this node.',
-          timestamp: '2 hours ago',
-          status: 'pending'
-        },
-        {
-          id: 'rep-2',
-          reporterUsername: 'elena_vision',
-          targetType: 'user',
-          targetId: 'creator-1',
-          targetContent: 'User profile: @sophia_designs',
-          reason: 'Spam',
-          comment: 'Posting redundant digital templates multiple times.',
-          timestamp: '1 day ago',
-          status: 'pending'
-        }
-      ];
+      // Seed default empty reports list to ensure authentic database-driven reports
+      const seedReports: Report[] = [];
       localStorage.setItem('nexora_reports', JSON.stringify(seedReports));
       setReports(seedReports);
     }
@@ -161,7 +138,7 @@ export default function AdminDashboardView({
       try {
         const accounts = JSON.parse(registryStr);
         const updatedAccounts = accounts.map((a: any) => {
-          if (a.user.id === updatedUser.id) {
+          if (a && a.user && a.user.id === updatedUser.id) {
             return { ...a, user: updatedUser };
           }
           return a;
@@ -634,10 +611,9 @@ export default function AdminDashboardView({
                 </div>
                 <div className="space-y-2.5">
                   {[
-                    { name: 'VOICE OF HARRISON', handle: '@voh', rank: 'Founder', rep: '1.45M PR', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' },
-                    { name: 'Sophia Thorne', handle: '@sophia_designs', rank: 'Verfied Lead', rep: '142,500 PR', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120' },
-                    { name: 'Marcus Vance', handle: '@marcus_v_codes', rank: 'Rust Core Developer', rep: '98,400 PR', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=110' },
-                    { name: 'Elena Rostova', handle: '@elena_vision', rank: 'Curator', rep: '45,210 PR', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120' }
+                    { name: 'VOICE OF HARRISON', handle: '@voh', rank: 'Founder', rep: '5.45M PR', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' },
+                    { name: 'Nexora AI', handle: '@nexora_ai', rank: 'Central Cognitive Co-Pilot', rep: '4.50M PR', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80' },
+                    { name: 'VOH AI', handle: '@voh_ai', rank: 'Intelligent AI Node', rep: '4.20M PR', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' }
                   ].map((creator, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2.5 bg-black/20 rounded-xl border border-white/3">
                       <div className="flex items-center gap-2.5">

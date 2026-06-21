@@ -32,6 +32,8 @@ interface MediaCreationEngineProps {
   ) => string;
   theme: 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';
   isStoryModeInitially?: boolean;
+  isOffline?: boolean;
+  onToggleOffline?: () => void;
 }
 
 interface SelectedImage {
@@ -73,7 +75,9 @@ export default function MediaCreationEngine({
   onClose,
   onAddPost,
   theme,
-  isStoryModeInitially = false
+  isStoryModeInitially = false,
+  isOffline = false,
+  onToggleOffline
 }: MediaCreationEngineProps) {
   // Navigation categories
   const [activeTab, setActiveTab] = useState<'feed' | 'story' | 'drafts'>(isStoryModeInitially ? 'story' : 'feed');
@@ -786,7 +790,26 @@ export default function MediaCreationEngine({
             </div>
             <div>
               <h2 className="text-xs font-sans font-black tracking-widest uppercase text-violet-400">Content Studio v2.4</h2>
-              <p className="text-[9.5px] font-mono text-zinc-500 uppercase mt-0.5">Symmetric Mobile Media Hub</p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[9.5px] font-mono text-zinc-500 uppercase">Symmetric Mobile Media Hub</span>
+                {onToggleOffline && (
+                  <>
+                    <span className="text-[8px] text-zinc-600 font-mono">•</span>
+                    <button
+                      type="button"
+                      onClick={onToggleOffline}
+                      className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
+                        isOffline 
+                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25 hover:bg-amber-500/20' 
+                          : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700/50 hover:text-zinc-300'
+                      }`}
+                      title="Toggle simulated offline state for audit"
+                    >
+                      {isOffline ? '🔌 Simulated Offline' : '🟢 Simulation: Online'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <button 

@@ -32,16 +32,22 @@ export default function RightSidebar({
 
   const sampleUsers = useMemo(() => {
     const list: User[] = [];
+    if (!allGeneratedNodes || allGeneratedNodes.length === 0) return list;
     for (let j = 0; j < 3; j++) {
       const idx = (seedIndex + j * 97) % allGeneratedNodes.length;
-      list.push(allGeneratedNodes[idx]);
+      const u = allGeneratedNodes[idx];
+      if (u) {
+        list.push(u);
+      }
     }
     return list;
   }, [seedIndex, allGeneratedNodes]);
 
   const shuffleSamples = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setSeedIndex(prev => (prev + 3) % allGeneratedNodes.length);
+    if (allGeneratedNodes.length > 0) {
+      setSeedIndex(prev => (prev + 3) % allGeneratedNodes.length);
+    }
   };
 
   return (
@@ -85,7 +91,7 @@ export default function RightSidebar({
               </div>
 
               <div className="space-y-1.5">
-                {sampleUsers.map(u => (
+                {sampleUsers.map(u => u && (
                   <div 
                     key={u.id}
                     onClick={() => onViewProfile?.(u.id)}
@@ -164,12 +170,13 @@ export default function RightSidebar({
 
         <div className="p-3 bg-current/3 border border-current/5 rounded-2xl space-y-3">
           {creators.map((creator) => {
+            if (!creator) return null;
             const isFollowing = followingIds.includes(creator.id);
             return (
               <div key={creator.id} className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 overflow-hidden">
                   <img 
-                    src={creator.avatar} 
+                    src={creator.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'} 
                     alt={creator.name} 
                     referrerPolicy="no-referrer"
                     onClick={() => onViewProfile?.(creator.id)}

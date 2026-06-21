@@ -65,7 +65,7 @@ export default function MessagesView({
   const [searchContactText, setSearchContactText] = useState('');
   
   // Advanced State Features
-  const [pinnedChats, setPinnedChats] = useState<string[]>(['chat-ai', 'creator-1']); 
+  const [pinnedChats, setPinnedChats] = useState<string[]>(['chat-1']); 
   const [blockedChats, setBlockedChats] = useState<string[]>([]);
   const [mutedChats, setMutedChats] = useState<string[]>([]); // muted notifications
   const [disappearingMode, setDisappearingMode] = useState<boolean>(false);
@@ -257,10 +257,14 @@ export default function MessagesView({
       } else {
         reply = `Message received safely! Let us catch up on upcoming updates shortly. Talk to VOH AI anytime.`;
       }
-    } else if (partnerId === 'creator-1') {
-      reply = `Oh excellent! I am adjusting our design overlay layouts from 12px margins to 16px to ensure maximum breathing room negative space, Alex! 💜`;
-    } else if (partnerId === 'creator-2') {
-      reply = `Benchmarks are perfectly solid! I managed to decrease our memory footprint to zero allocations on parsing cycles! Absolute bliss 🦀`;
+    } else if (partnerId === 'voh_ai') {
+      if (query.includes('hello') || query.includes('hey') || query.includes('hi')) {
+        reply = `Greetings! I am VOH AI, your cognitive assistant. Let me know if you need football stats, match analytics, or responsive layout scripts!`;
+      } else if (query.includes('script') || query.includes('code')) {
+        reply = `Here is a responsive container snippet: "<div className='w-full max-w-7xl mx-auto px-4 md:px-8'>...</div>" Use this to ensure desktop-first precision!`;
+      } else {
+        reply = `Processing request... VOH AI Node is fully functional and ready to assist VOICE OF HARRISON and the community!`;
+      }
     } else {
       reply = `Thanks for the message! Catch you inside the World Pulse map soon.`;
     }
@@ -376,7 +380,7 @@ export default function MessagesView({
                   partnerAvatar: 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=150',
                   partnerBio: 'Multi-member global developer & product synthesis channel.',
                   isPartnerOnline: true,
-                  lastMessage: 'Sophia: Let\'s coordinate our layout specs!',
+                  lastMessage: 'Nexora AI: Let\'s coordinate our layout specs!',
                   lastTimestamp: 'Now',
                   unreadCount: 0
                 };
@@ -385,8 +389,8 @@ export default function MessagesView({
                 setLocalMessages(prev => ({
                   ...prev,
                   ['group-main']: [
-                    { id: 'gm-1', senderId: 'creator-1', content: "[Sophia] Hi Alex! Excited to connect keynotes in this group.", timestamp: "10 mins ago", status: "read" },
-                    { id: 'gm-2', senderId: 'creator-2', content: "[Marcus] Rust socket layer compiled. Output latency maps under 1.8ms! Let me know if you need any tests.", timestamp: "8 mins ago", status: "read" }
+                    { id: 'gm-1', senderId: 'creator-4', content: "[Nexora AI] Greetings! Excited to connect everyone in this group.", timestamp: "10 mins ago", status: "read" },
+                    { id: 'gm-2', senderId: 'voh_ai', content: "[VOH AI] Connected and reporting system parameters. Ready to assist co-building.", timestamp: "8 mins ago", status: "read" }
                   ]
                 }));
               }
