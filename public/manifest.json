@@ -1,0 +1,31 @@
+{
+  "name": "NEXORA Network",
+  "short_name": "Nexora",
+  "description": "Premium, zero-noise, high-craft social network for creators, tech elite, developers, and builders.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#03010a",
+  "theme_color": "#8B5CF6",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
