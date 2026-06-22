@@ -9,6 +9,7 @@ import {
 import { User, Post, Comment, ThemeMood } from '../types';
 import { generateTestUsers } from '../data/generatedUsers';
 import ReportModal from './ReportModal';
+import NexoraVideoPlayer from './NexoraVideoPlayer';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -427,6 +428,37 @@ export default function FeedView({
   // 3. Search Engine 2.0 States
   const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'voice' | 'communities' | 'hashtags' | 'pulse'>('all');
   const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'nearby'>('latest');
+
+  // Premium Search States
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_search_history');
+    return saved ? JSON.parse(saved) : ['Sarah 🌸', 'David ⚔️', 'Quantum', 'Physics', 'FC Barcelona', 'Austin'];
+  });
+
+  const addToSearchHistory = (q: string) => {
+    if (!q || !q.trim()) return;
+    const query = q.trim();
+    setSearchHistory(prev => {
+      const filtered = prev.filter(h => h.toLowerCase() !== query.toLowerCase());
+      const updated = [query, ...filtered].slice(0, 10);
+      localStorage.setItem('nexora_search_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const removeFromSearchHistory = (q: string) => {
+    setSearchHistory(prev => {
+      const updated = prev.filter(h => h !== q);
+      localStorage.setItem('nexora_search_history', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const clearAllSearchHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem('nexora_search_history');
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Clear Search history packet successfully executed!' }));
+  };
 
   // 4. Reporting Modal and Post Options Menu
   const [activeDotsMenuPostId, setActiveDotsMenuPostId] = useState<string | null>(null);
@@ -1030,6 +1062,11 @@ export default function FeedView({
               placeholder="Search..." 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  addToSearchHistory(searchQuery);
+                }
+              }}
               className="w-full bg-slate-950/50 border border-white/5 hover:border-violet-500/20 focus:border-violet-500/40 rounded-xl py-1.5 pl-7.5 pr-6 text-[10.5px] text-white focus:outline-hidden placeholder:text-violet-400/30"
             />
             {searchQuery && (
@@ -1135,6 +1172,126 @@ export default function FeedView({
                     {s.label}
                   </button>
                 ))}
+              </div>
+            </div>
+          </div>
+
+          {/* PREMIUM SEARCH HISTORY & TRENDING PLATFORM */}
+          <div className="pt-3 border-t border-white/5 space-y-3">
+            {/* Search History Row */}
+            {searchHistory.length > 0 && (
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[9.5px] font-mono font-extrabold text-[#A78BFA] uppercase tracking-wider flex items-center gap-1">
+                    <RefreshCw className="w-3 h-3 text-[#A78BFA]" />
+                    RECENT SEARCH LIFE:
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {searchHistory.map((hist) => (
+                      <div 
+                        key={hist}
+                        className="flex items-center gap-1 bg-violet-950/40 hover:bg-violet-950/70 border border-violet-500/10 hover:border-violet-500/20 px-2 py-1 rounded-lg text-[10px] font-mono text-violet-200 transition-all cursor-pointer"
+                      >
+                        <span 
+                          onClick={() => {
+                            setSearchQuery(hist.replace(/[^a-zA-Z0-9\s]/g, '').trim());
+                            addToSearchHistory(hist);
+                          }}
+                        >
+                          {hist}
+                        </span>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeFromSearchHistory(hist);
+                          }}
+                          className="hover:text-red-400 font-bold ml-1 px-0.5 text-[9px] cursor-pointer"
+                        >
+                          ✖
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <button
+                  onClick={clearAllSearchHistory}
+                  className="text-[9px] font-mono font-bold text-red-400 hover:text-red-300 transition-colors uppercase shrink-0"
+                >
+                  Clear Logs 🗑️
+                </button>
+              </div>
+            )}
+
+            {/* Trending Sections Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+              {/* Trending Topics Column */}
+              <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
+                <span className="text-[9px] font-mono font-black text-rose-400 uppercase tracking-widest flex items-center gap-1">
+                  <span>🔥</span> TRENDING TOPICS
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {[
+                    { text: 'Quantum Networking', term: 'Quantum' },
+                    { text: 'Sarah Creative Studio', term: 'Sarah' },
+                    { text: 'David Sports Hub', term: 'David' }
+                  ].map((topic) => (
+                    <button
+                      key={topic.text}
+                      onClick={() => {
+                        setSearchQuery(topic.term);
+                        setSearchFilterType('all');
+                        addToSearchHistory(topic.text);
+                      }}
+                      className="text-left py-1 px-1.5 text-[10px] font-sans font-medium text-zinc-300 hover:text-[#A78BFA] transition-colors truncate block"
+                    >
+                      📈 {topic.text}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trending Hashtags Column */}
+              <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
+                <span className="text-[9px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1">
+                  <span>🏷️</span> TRENDING HASHTAGS
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {['#BuildInPublic', '#NextGenWeb', '#SpatialComputing'].map((hashtag) => (
+                    <button
+                      key={hashtag}
+                      onClick={() => {
+                        setSearchQuery(hashtag);
+                        setSearchFilterType('hashtags');
+                        addToSearchHistory(hashtag);
+                      }}
+                      className="text-left py-1 px-1.5 text-[10px] font-mono text-zinc-300 hover:text-[#A78BFA] transition-colors truncate block"
+                    >
+                      ✨ {hashtag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Trending Communities Column */}
+              <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
+                <span className="text-[9px] font-mono font-black text-cyan-400 uppercase tracking-widest flex items-center gap-1">
+                  <span>🏟️</span> TRENDING GUILDS
+                </span>
+                <div className="flex flex-col gap-1.5">
+                  {['Austin Creators Guild', 'Lagos Tech Hub', 'Business Synthesis'].map((community) => (
+                    <button
+                      key={community}
+                      onClick={() => {
+                        setSearchQuery(community);
+                        setSearchFilterType('communities');
+                        addToSearchHistory(community);
+                      }}
+                      className="text-left py-1 px-1.5 text-[10px] font-sans font-medium text-zinc-300 hover:text-cyan-400 transition-colors truncate block"
+                    >
+                      🏟️ {community}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
@@ -1485,29 +1642,15 @@ export default function FeedView({
                   </div>
                 ) : null}
 
-                {/* Video Playback Experience (autoplay, loop, muted) */}
+                {/* Advanced Video Experience */}
                 {post.videoUrl && (
-                  <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 mb-4 bg-black aspect-video">
-                    {/* Auto-playing muted loop */}
-                    <video 
-                      src={post.videoUrl}
-                      autoPlay
-                      muted
-                      loop
-                      playsInline
-                      className="w-full h-full object-cover"
+                  <div className="mb-4">
+                    <NexoraVideoPlayer
+                      post={post}
+                      videoUrl={post.videoUrl}
+                      onOpenFullscreen={() => setActiveVideoFullscreen(post)}
+                      onSpark={() => handleSpark(post.id)}
                     />
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-mono text-pink-400 uppercase tracking-widest flex items-center gap-1">
-                      <Play className="w-2.5 h-2.5 fill-pink-400 text-pink-400 animate-pulse" />
-                      <span>AUTOPLAY VIDEO STREAM</span>
-                    </div>
-
-                    <button 
-                      onClick={() => setActiveVideoFullscreen(post)}
-                      className="absolute bottom-3 right-3 bg-violet-600 hover:bg-violet-500 text-white font-mono font-black text-[9.5px] px-3 py-1.5 rounded-xl uppercase transition-all tracking-wider cursor-pointer"
-                    >
-                      Watch Video 🎥
-                    </button>
                   </div>
                 )}
 

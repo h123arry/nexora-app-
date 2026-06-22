@@ -57,6 +57,7 @@ import {
 
 import { getRichUser, followUserDb, unfollowUserDb, createPostDb, isFollowingDb } from './data/database';
 import { TRANSLATIONS } from './utils/translations';
+import { resolveMediaUrl } from './utils/indexedDbStorage';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -84,8 +85,44 @@ export default function App() {
 
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('nexora_posts');
-    return saved ? JSON.parse(saved) : INITIAL_POSTS;
+    const loadedPosts = saved ? JSON.parse(saved) : INITIAL_POSTS;
+    console.log('[Audit] Retrieved raw posts from persistent store. Total:', loadedPosts.length);
+    return loadedPosts;
   });
+
+  const [resolvedPosts, setResolvedPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    let active = true;
+    const resolveAll = async () => {
+      console.log('[Audit] Running lazy media url resolver for feed and profile views...');
+      const updated = await Promise.all(posts.map(async (post) => {
+        let modified = false;
+        let vUrl = post.videoUrl;
+        let aUrl = post.voiceAudioUrl;
+
+        if (vUrl && vUrl.startsWith('db-media://')) {
+          vUrl = await resolveMediaUrl(vUrl);
+          modified = true;
+        }
+        if (aUrl && aUrl.startsWith('db-media://')) {
+          aUrl = await resolveMediaUrl(aUrl);
+          modified = true;
+        }
+
+        if (modified) {
+          return { ...post, videoUrl: vUrl, voiceAudioUrl: aUrl };
+        }
+        return post;
+      }));
+      if (active) {
+        setResolvedPosts(updated);
+        console.log('[Audit] Media url resolver completed successfully!');
+      }
+    };
+    resolveAll();
+    return () => { active = false; };
+  }, [posts]);
 
   const [chats, setChats] = useState<Chat[]>(() => {
     const saved = localStorage.getItem('nexora_chats');
@@ -880,13 +917,13 @@ export default function App() {
 
   return (
     <div id="nexora-master-wrapper" className={`${getThemeWrapperClass(theme)} transition-colors duration-500`}>
-      <div className="max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 pb-24 lg:pb-6">
+      <div className={activeTab === 'feed' ? "w-full h-screen md:h-[100dvh] relative overflow-hidden" : "max-w-7xl mx-auto px-4 md:px-6 lg:px-8 py-6 pb-24 lg:pb-6"}>
         
         {/* Main application Grid */}
-        <div id="nexora-main-grid" className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
+        <div id="nexora-main-grid" className={activeTab === 'feed' ? "grid grid-cols-1 lg:grid-cols-4 h-full w-full relative overflow-hidden" : "grid grid-cols-1 lg:grid-cols-4 gap-6 items-start"}>
           
           {/* Col 1: Left Navigation sidebar */}
-          <div className="hidden lg:block lg:col-span-1 lg:sticky lg:top-6">
+          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-1 h-full border-r border-white/5 bg-black/20 p-4 overflow-y-auto" : "hidden lg:block lg:col-span-1 lg:sticky lg:top-6"}>
             <Sidebar 
               currentUser={getRichUser(currentUser)}
               activeTab={activeTab}
@@ -913,37 +950,38 @@ export default function App() {
           </div>
 
           {/* Col 2 & 3: Main Immersive View Area */}
-          <div className="lg:col-span-2">
-            <div className={`${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.08, ease: "easeOut" }}
-                >
-                  {activeTab === 'feed' && (
-                    <FeedView
-                      currentUser={getRichUser(currentUser)}
-                      posts={posts}
-                      followingIds={followingIds}
-                      onLikePost={handleLikePost}
-                      onBookmarkPost={handleBookmarkPost}
-                      onAddComment={handleAddComment}
-                      onAddPost={handleAddPost}
-                      selectedTag={selectedTag}
-                      setSelectedTag={setSelectedTag}
-                      searchQuery={searchQuery}
-                      setSearchQuery={setSearchQuery}
-                      onViewProfile={handleViewProfile}
-                    />
-                  )}
+          <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-2 h-full w-full relative" : "lg:col-span-2"}>
+            {activeTab === 'feed' ? (
+              <FeedView
+                currentUser={getRichUser(currentUser)}
+                posts={resolvedPosts}
+                followingIds={followingIds}
+                onLikePost={handleLikePost}
+                onBookmarkPost={handleBookmarkPost}
+                onAddComment={handleAddComment}
+                onAddPost={handleAddPost}
+                selectedTag={selectedTag}
+                setSelectedTag={setSelectedTag}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onViewProfile={handleViewProfile}
+                theme={theme}
+              />
+            ) : (
+              <div className={`${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={activeTab}
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ duration: 0.08, ease: "easeOut" }}
+                  >
 
                   {activeTab === 'explore' && (
                     <ExploreView
                       creators={MOCK_CREATORS}
-                      posts={posts}
+                      posts={resolvedPosts}
                       setSelectedTag={setSelectedTag}
                       setActiveTab={(t) => setActiveTab(t as any)}
                       onLikePost={handleLikePost}
@@ -959,7 +997,7 @@ export default function App() {
                   {activeTab === 'matrix' && (
                     <MatrixView
                       currentUser={getRichUser(currentUser)}
-                      posts={posts}
+                      posts={resolvedPosts}
                       onAddPost={handleAddPost}
                       chats={chats}
                       messages={messages}
@@ -972,9 +1010,10 @@ export default function App() {
                   {activeTab === 'profile' && (
                     <ProfileView
                       currentUser={getRichUser(viewedUser || currentUser)}
-                      posts={posts}
+                      posts={resolvedPosts}
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
+                      onAddComment={handleAddComment}
                       isOwnProfile={!viewedUser}
                       onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
                       onToggleFollow={handleToggleFollow}
@@ -999,7 +1038,7 @@ export default function App() {
                   {activeTab === 'admin' && (
                     <AdminDashboardView
                       currentUser={getRichUser(currentUser)}
-                      posts={posts}
+                      posts={resolvedPosts}
                       onRemovePost={handleRemovePost}
                       lang={TRANSLATIONS[currentUser.preferredLanguage as any] || TRANSLATIONS.en}
                     />
@@ -1007,10 +1046,11 @@ export default function App() {
                 </motion.div>
               </AnimatePresence>
             </div>
+            )}
           </div>
 
           {/* Col 4: Right Discovery sidebar */}
-          <div className="hidden lg:block lg:col-span-1 lg:sticky lg:top-6">
+          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-1 h-full border-l border-white/5 bg-black/20 p-4 overflow-y-auto" : "hidden lg:block lg:col-span-1 lg:sticky lg:top-6"}>
             <RightSidebar
               creators={MOCK_CREATORS}
               followingIds={followingIds}

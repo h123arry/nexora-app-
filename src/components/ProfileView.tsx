@@ -36,7 +36,10 @@ import {
   Trash2,
   HelpCircle,
   Info,
-  Activity
+  Activity,
+  Video,
+  Film,
+  Mic
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
@@ -45,11 +48,143 @@ import RelativeTimestamp from './RelativeTimestamp';
 import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS } from '../data/mockData';
 import CreatorDashboardView from './CreatorDashboardView';
 
+interface MediaGridProps {
+  gridPosts: Post[];
+  pinnedPostIds: string[];
+  onSelectPost: (post: Post) => void;
+}
+
+const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) => {
+  if (gridPosts.length === 0) {
+    return (
+      <div className="text-center py-16 border border-dashed border-violet-500/10 rounded-3xl bg-[#09071c]/40 font-mono text-xs text-violet-400/80 w-full">
+        <div className="text-3xl mb-2">📸</div>
+        <p className="font-bold">No gallery items here yet</p>
+        <p className="text-[10px] text-zinc-500 mt-1">Ready for custom clips, snapshots or audio broadcasts!</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-3 w-full">
+      {gridPosts.map(post => {
+        const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
+        const isVideo = !!post.videoUrl;
+        const isPinned = pinnedPostIds.includes(post.id);
+        
+        return (
+          <motion.div
+            layout
+            key={post.id}
+            onClick={() => onSelectPost(post)}
+            className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between transition-all hover:scale-[1.01]"
+          >
+            {/* Thumbnail Container */}
+            <div className="absolute inset-0 w-full h-full z-0">
+              {post.image ? (
+                <img 
+                  src={post.image} 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                  alt={post.content}
+                  referrerPolicy="no-referrer"
+                />
+              ) : isVideo ? (
+                <div className="w-full h-full bg-black relative">
+                  <video 
+                    src={post.videoUrl} 
+                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
+                    preload="metadata" 
+                    muted 
+                    playsInline
+                  />
+                  <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-10">
+                    <Film className="w-3.5 h-3.5 text-pink-400" />
+                  </div>
+                </div>
+              ) : isVoice ? (
+                <div className="w-full h-full bg-gradient-to-tr from-pink-950/75 via-[#1d1242] to-[#040212] flex flex-col justify-between p-3">
+                  <div className="flex justify-between items-center">
+                    <Mic className="w-4 h-4 text-pink-400 group-hover:scale-110 transition-transform" />
+                    <span className="text-[8px] font-mono text-purple-300 font-extrabold uppercase bg-purple-500/10 px-1.5 py-0.5 rounded border border-purple-500/15">Voice</span>
+                  </div>
+                  
+                  {/* Visual Waves */}
+                  <div className="space-y-1 my-auto">
+                    <div className="flex gap-0.5 items-end justify-center h-8 opacity-60 group-hover:opacity-85 transition-opacity">
+                      <span className="w-0.5 bg-pink-400 h-4 animate-bounce" />
+                      <span className="w-0.5 bg-purple-500 h-6 animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <span className="w-0.5 bg-pink-400 h-2 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                      <span className="w-0.5 bg-purple-500 h-7 animate-bounce" style={{ animationDelay: '0.15s' }} />
+                      <span className="w-0.5 bg-pink-400 h-5 animate-bounce" style={{ animationDelay: '0.05s' }} />
+                    </div>
+                  </div>
+                  
+                  <p className="text-[10px] text-left text-zinc-300 italic truncate font-sans max-w-full">
+                    "{post.voiceTranscript || post.content}"
+                  </p>
+                </div>
+              ) : (
+                // Gradient visual cards for Text posts
+                (() => {
+                  const grads = [
+                    'from-violet-950 via-[#100730] to-zinc-950',
+                    'from-blue-950 via-[#0a0a38] to-[#1a0833]',
+                    'from-emerald-950 via-teal-950 to-zinc-950',
+                    'from-fuchsia-950 via-slate-950 to-rose-950/70',
+                  ];
+                  const num = post.id.charCodeAt(post.id.length - 1) || 0;
+                  const grad = grads[num % grads.length];
+                  return (
+                    <div className={`w-full h-full bg-gradient-to-br ${grad} p-4 flex flex-col justify-between`}>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[8px] font-mono text-violet-400/80 font-bold uppercase tracking-wider">Thought</span>
+                        <span className="text-xs text-violet-400/60 font-serif">“</span>
+                      </div>
+                      <p className="text-[10px] md:text-xs font-sans font-medium line-clamp-3 italic text-zinc-300 leading-normal text-center my-auto">
+                        {post.content}
+                      </p>
+                      <div className="text-right">
+                        <span className="text-[8px] font-mono text-violet-400/50">Nexora Node</span>
+                      </div>
+                    </div>
+                  );
+                })()
+              )}
+            </div>
+
+            {/* Badges */}
+            <div className="absolute top-2 left-2 z-10 flex gap-1 items-center">
+              {isPinned && (
+                <span className="p-1.5 bg-[#8B5CF6]/90 backdrop-blur-md rounded-full text-white shadow-sm" title="Pinned Post">
+                  <Pin className="w-3 h-3 rotate-45 text-white" />
+                </span>
+              )}
+            </div>
+
+            {/* Hover Stats Blur Overlay */}
+            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 backdrop-blur-xs transition-all flex items-center justify-center gap-4 z-2">
+              <div className="flex items-center gap-1.5 text-white font-sans font-black text-xs md:text-sm">
+                <Zap className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                <span>{post.likes || 0}</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-white font-sans font-black text-xs md:text-sm">
+                <MessageSquare className="w-4 h-4 text-violet-300" />
+                <span>{post.comments?.length || 0}</span>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
+  );
+};
+
 interface ProfileViewProps {
   currentUser: User;
   posts: Post[];
   onUpdateProfile: (updatedData: Partial<User>) => void;
   onLikePost: (postId: string) => void;
+  onAddComment?: (postId: string, text: string) => void;
   isOwnProfile?: boolean;
   onCloseProfile?: () => void;
   onToggleFollow?: (creatorId: string) => void;
@@ -66,6 +201,7 @@ export default function ProfileView({
   posts,
   onUpdateProfile,
   onLikePost,
+  onAddComment,
   isOwnProfile = true,
   onCloseProfile,
   onToggleFollow,
@@ -78,10 +214,13 @@ export default function ProfileView({
 }: ProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [profileTab, setProfileTab] = useState<'posts' | 'reels' | 'media' | 'voice' | 'saved' | 'communities' | 'tagged' | 'analytics'>('posts');
+  const [profileTab, setProfileTab] = useState<'posts' | 'videos' | 'reels' | 'media' | 'voice' | 'saved' | 'communities' | 'tagged' | 'analytics'>('posts');
   const [isCreatorDashboardOpen, setIsCreatorDashboardOpen] = useState(false);
   const [activeDashboardTab, setActiveDashboardTab] = useState<'overview' | 'content' | 'earnings' | 'insights'>('overview');
-  
+  const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
+  const [detailCommentText, setDetailCommentText] = useState<string>('');
+
+
   // Follower actions state
   const [isFollowing, setIsFollowing] = useState(isFollowingField);
   const [isConnected, setIsConnected] = useState(false);
@@ -131,6 +270,68 @@ export default function ProfileView({
     const saved = localStorage.getItem(`nexora_pinned_posts_${currentUser.id}`);
     return saved ? JSON.parse(saved) : [];
   });
+
+  // Nexora Presence and Privacy Upgrades
+  const [showActiveStatus, setShowActiveStatus] = useState<boolean>(() => {
+    const saved = localStorage.getItem('nexora_privacy_active_status');
+    return saved !== 'false';
+  });
+  const [shareInVisitorLists, setShareInVisitorLists] = useState<boolean>(() => {
+    const saved = localStorage.getItem('nexora_privacy_share_visitor');
+    return saved !== 'false';
+  });
+  const [profileViewFilter, setProfileViewFilter] = useState<'today' | 'week' | 'month'>('week');
+  
+  // Moment / Story Active Overlays inside ProfileView
+  const [selectedMoment, setSelectedMoment] = useState<any | null>(null);
+  const [storyIndex, setStoryIndex] = useState(0);
+
+  // Pending verification requests for the VOH review admin desk
+  const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
+
+  const getActiveUserStory = () => {
+    const saved = localStorage.getItem('nexora_moments_list');
+    let moments = [];
+    if (saved) {
+      try { moments = JSON.parse(saved); } catch (e) {}
+    }
+    // Fall back to seed moments if list is empty
+    if (!moments || moments.length === 0) {
+      moments = [
+        { id: 'm-0', name: 'VOICE OF HARRISION', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', active: true, quotes: ["Building the future of social networks with clean designs.", "Great seeing our community grow so rapidly!", "Continuous listening and iterating with you guys."] },
+        { id: 'm-1', name: 'Alex Sterling', username: 'alex_sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["What a beautiful evening in Port Harcourt today! 🌅", "Just finished writing a clean tutorial for absolute beginners.", "Always keep learning and showing up daily."] },
+        { id: 'm-2', name: 'Sarah Vance', username: 'sarah_codes', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Designing clean UI components with lots of breathing room.", "Taking a coffee break before diving back into CSS! ☕️", "Simple things are often the most elegant ones."] }
+      ];
+    }
+    const userStory = moments.find((m: any) => m.username && m.username.toLowerCase() === currentUser.username.toLowerCase());
+    
+    // Check if the story has expired (older than 24 hours). Fallback stories remain active.
+    if (userStory) {
+      if (userStory.timestamp) {
+        const ageMs = Date.now() - new Date(userStory.timestamp).getTime();
+        const isActive = ageMs < 24 * 60 * 60 * 1000;
+        return isActive ? userStory : null;
+      }
+      return userStory;
+    }
+    return null;
+  };
+
+  const activeUserStory = getActiveUserStory();
+
+  React.useEffect(() => {
+    if (currentUser.username === 'voh') {
+      const reqs = JSON.parse(localStorage.getItem('nexora_verification_requests') || '[]');
+      setVerificationRequests(reqs);
+    }
+  }, [currentUser.username]);
+
+  const handleDismissVerificationRequest = (userId: string) => {
+    const updated = verificationRequests.filter((r: any) => r.userId !== userId);
+    localStorage.setItem('nexora_verification_requests', JSON.stringify(updated));
+    setVerificationRequests(updated);
+    alert("Verification request reviewed and archived. Consistent with policies, only VOICE OF HARRISON is authorized to display the exclusive purple verification tick.");
+  };
 
   // Toggle pin mechanics (limits to max 3)
   const togglePinPost = (postId: string) => {
@@ -567,13 +768,24 @@ try {
     );
   });
 
-  // Active posts computation
-  const myPosts = posts.filter(post => post.userId === currentUser.id || post.username === currentUser.username);
+  // Active posts computation: Case-insensitive match on both ID and username
+  const myPosts = posts.filter(post => {
+    if (!post) return false;
+    const postUserId = String(post.userId || '').toLowerCase();
+    const currentUserId = String(currentUser.id || '').toLowerCase();
+    const postUsername = String(post.username || '').toLowerCase();
+    const currentUsername = String(currentUser.username || '').toLowerCase();
+    
+    return postUserId === currentUserId || 
+           (currentUsername && postUsername === currentUsername);
+  });
   
   // Tab computed contents
-  const mediaPosts = myPosts.filter(post => post.image);
+  const mediaPosts = myPosts.filter(post => post.image || (post.images && post.images.length > 0));
   const savedPosts = posts.filter(post => post.isBookmarkedByUser);
-  const voicePosts = myPosts.filter(post => post.isVoice || post.content.includes('🎙') || post.voiceDuration || post.media?.includes('voice'));
+  const videoPosts = myPosts.filter(post => post.videoUrl);
+  const reelsPosts = myPosts.filter(post => post.videoUrl || post.tags?.includes('reels') || post.tags?.includes('reel') || post.content.toLowerCase().includes('#reel'));
+  const voicePosts = myPosts.filter(post => post.isVoice || post.content.includes('🎙') || post.voiceDuration || post.voiceAudioUrl || post.voiceTranscript);
 
   // Custom mock data for Voice transmission recordings
   const voiceTransmissions = [
@@ -893,9 +1105,34 @@ try {
                     <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/20 border border-white/5">
                       <div>
                         <span className="font-bold text-white block text-[11px]">Online Activity Status</span>
-                        <span className="text-[9px] text-current/50 block">Show a green indicator when active</span>
+                        <span className="text-[9px] text-current/50 block">Show presence indicators when you are active</span>
                       </div>
-                      <input type="checkbox" defaultChecked className="w-4 h-4 rounded-sm border-current accent-violet-500 cursor-pointer" />
+                      <input 
+                        type="checkbox" 
+                        checked={showActiveStatus} 
+                        onChange={(e) => {
+                          setShowActiveStatus(e.target.checked);
+                          localStorage.setItem('nexora_privacy_active_status', String(e.target.checked));
+                          window.dispatchEvent(new CustomEvent('toast', { detail: `Presence status ${e.target.checked ? 'activated' : 'deactivated'}` }));
+                        }}
+                        className="w-4 h-4 rounded-sm border-current accent-violet-500 cursor-pointer" 
+                      />
+                    </div>
+                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/20 border border-white/5">
+                      <div>
+                        <span className="font-bold text-white block text-[11px]">Profile Visitor Listings</span>
+                        <span className="text-[9px] text-current/50 block">Let creator accounts see when you visit their spaces</span>
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        checked={shareInVisitorLists} 
+                        onChange={(e) => {
+                          setShareInVisitorLists(e.target.checked);
+                          localStorage.setItem('nexora_privacy_share_visitor', String(e.target.checked));
+                          window.dispatchEvent(new CustomEvent('toast', { detail: `Browsing mode: ${e.target.checked ? 'Discoverable (Show me in list)' : 'Anonymous (Keep private)'}` }));
+                        }} 
+                        className="w-4 h-4 rounded-sm border-current accent-violet-500 cursor-pointer" 
+                      />
                     </div>
                   </div>
                 </div>
@@ -1045,43 +1282,26 @@ try {
                       Admin review channel
                     </span>
                     <div className="space-y-2 mt-2">
-                      {(() => {
-                        const [requests, setRequests] = React.useState<any[]>([]);
-                        React.useEffect(() => {
-                          const reqs = JSON.parse(localStorage.getItem('nexora_verification_requests') || '[]');
-                          setRequests(reqs);
-                        }, []);
-
-                        const handleDismiss = (userId: string) => {
-                          const updated = requests.filter((r: any) => r.userId !== userId);
-                          localStorage.setItem('nexora_verification_requests', JSON.stringify(updated));
-                          setRequests(updated);
-                          alert("Verification request reviewed and archived. Consistent with policies, only VOICE OF HARRISON is authorized to display the exclusive purple verification tick.");
-                        };
-
-                        if (requests.length === 0) {
-                          return (
-                            <p className="text-[10.5px] text-current/50 italic font-sans py-2">
-                              No pending verification requests in the queue.
-                            </p>
-                          );
-                        }
-
-                        return requests.map((req: any, i: number) => (
+                      {verificationRequests.length === 0 ? (
+                        <p className="text-[10.5px] text-current/50 italic font-sans py-2">
+                          No pending verification requests in the queue.
+                        </p>
+                      ) : (
+                        verificationRequests.map((req: any, i: number) => (
                           <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-violet-950/25 border border-violet-500/15">
                             <div className="min-w-0 pr-2">
                               <p className="text-[11px] font-black text-white truncate">@{req.username}</p>
                               <p className="text-[9px] text-violet-300/60 truncate">{req.name}</p>
                             </div>
                             <button
-                              onClick={() => handleDismiss(req.userId)}
+                              onClick={() => handleDismissVerificationRequest(req.userId)}
                               className="px-2.5 py-1 bg-violet-600/30 hover:bg-violet-600/60 text-white rounded-md text-[9px] font-mono uppercase transition-colors cursor-pointer"
                             >
                               Review & Archive
                             </button>
                           </div>
-                        ));
-                      })()}
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
@@ -1263,12 +1483,32 @@ try {
               
               {/* Profile Avatar Position */}
               <div className="absolute left-6 bottom-[-24px] z-10 flex items-end gap-4">
-                <img 
-                  src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
-                  alt={currentUser.name} 
-                  referrerPolicy="no-referrer"
-                  className="w-24 h-24 rounded-2xl object-cover ring-4 ring-violet-500 shadow-xl bg-slate-900" 
-                />
+                <div 
+                  className={`relative ${activeUserStory ? 'cursor-pointer hover:scale-105 transition-all' : ''}`}
+                  onClick={() => {
+                    if (activeUserStory) {
+                      console.log('[Audit] Creator story ring clicked. Presenting immersive slideshow overlay...', activeUserStory);
+                      setSelectedMoment(activeUserStory);
+                      setStoryIndex(0);
+                    }
+                  }}
+                >
+                  <img 
+                    src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
+                    alt={currentUser.name} 
+                    referrerPolicy="no-referrer"
+                    className={`w-24 h-24 rounded-2xl object-cover shadow-xl bg-slate-900 ${
+                      activeUserStory 
+                        ? 'ring-4 ring-purple-600 ring-offset-2 animate-pulse border border-purple-500/20' 
+                        : 'ring-4 ring-violet-500'
+                    }`}
+                  />
+                  {activeUserStory && (
+                    <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-purple-600 border border-purple-400 text-[8px] font-mono font-black text-white rounded-md uppercase tracking-wider animate-bounce select-none">
+                      STORY
+                    </span>
+                  )}
+                </div>
                 <div className="pb-3 hidden sm:block">
                   <div className="flex items-center gap-1.5">
                     <span className="text-white text-md font-bold font-sans">
@@ -1594,12 +1834,32 @@ try {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-1">
               {/* Left Side: Avatar & Name details */}
               <div className="flex items-center gap-4">
-                <img 
-                  src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
-                  alt={currentUser.name} 
-                  referrerPolicy="no-referrer"
-                  className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover ring-4 ring-violet-500 shadow-xl bg-slate-900 border border-violet-500/15" 
-                />
+                <div 
+                  className={`relative ${activeUserStory ? 'cursor-pointer hover:scale-105 transition-all' : ''}`}
+                  onClick={() => {
+                    if (activeUserStory) {
+                      console.log('[Audit] Creator story ring clicked. Presenting immersive slideshow overlay...', activeUserStory);
+                      setSelectedMoment(activeUserStory);
+                      setStoryIndex(0);
+                    }
+                  }}
+                >
+                  <img 
+                    src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
+                    alt={currentUser.name} 
+                    referrerPolicy="no-referrer"
+                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-xl bg-slate-900 border ${
+                      activeUserStory 
+                        ? 'ring-4 ring-purple-600 ring-offset-2 animate-pulse border-purple-500/20' 
+                        : 'ring-4 ring-violet-500 border-violet-500/15'
+                    }`}
+                  />
+                  {activeUserStory && (
+                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.2 bg-purple-600 border border-purple-400 text-[8px] font-mono font-black text-white rounded-md uppercase tracking-wider select-none">
+                      STORY
+                    </span>
+                  )}
+                </div>
                 <div>
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <h2 className="text-xl sm:text-2xl font-black font-sans text-white leading-tight">
@@ -1609,10 +1869,33 @@ try {
                   </div>
                   <p className="text-xs sm:text-sm text-violet-400 font-mono">@{currentUser.username}</p>
                   
-                  {/* Small Brand / Creator Sub-tag */}
-                  <p className="text-[10px] sm:text-xs font-mono text-purple-200/85 mt-1">
-                    {currentUser.username === 'voh' ? '⚡ Nexora Founder' : '👤 Nexora Member'}
-                  </p>
+                  {/* Small Brand / Creator Sub-tag along with Live Presence Active Status */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-[10px] sm:text-xs font-mono text-purple-200/85 mt-1">
+                      {currentUser.username === 'voh' ? '⚡ Nexora Founder' : '👤 Nexora Member'}
+                    </p>
+                    {(() => {
+                      // If it's own profile and disabled, return nothing/hidden
+                      if (isOwnProfile && !showActiveStatus) {
+                        return null;
+                      }
+                      
+                      const usernameLower = currentUser.username.toLowerCase();
+                      let statusInfo = { text: 'Active now', icon: '🟢', dotClass: 'text-emerald-400' };
+                      if (usernameLower === 'sarah_codes') {
+                        statusInfo = { text: 'Active 5m ago', icon: '🕒', dotClass: 'text-amber-400 font-extrabold' };
+                      } else if (usernameLower === 'david_j') {
+                        statusInfo = { text: 'Active 2h ago', icon: '🕒', dotClass: 'text-zinc-500 font-extrabold' };
+                      }
+                      
+                      return (
+                        <span className="text-[10px] sm:text-xs font-mono text-zinc-400 mt-1 flex items-center gap-1">
+                          • <span className={statusInfo.dotClass}>{statusInfo.icon}</span>
+                          <span className="text-zinc-300">{statusInfo.text}</span>
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
 
@@ -1767,14 +2050,168 @@ try {
                 </div>
               </div>
 
-              {/* Owner visitor analytics */}
+              {/* Profile Creator Upgrades: Profile Views & Visitor Insights (Owner-Only) */}
               {isOwnProfile && (
-                <div className="flex items-center gap-1.5 text-[10.5px] text-violet-300/80 font-mono bg-violet-950/25 px-3.5 py-1.5 rounded-xl border border-violet-500/10 w-fit mt-1">
-                  <Eye className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
-                  <span><strong className="text-white">127</strong> real humans visited your profile this week.</span>
-                  <span className="text-[9px] text-[#A78BFA]/60">(visible only to you)</span>
+                <div className="p-4 rounded-2xl bg-[#0d0926]/40 border border-violet-500/15 space-y-4 max-w-2xl mt-3 text-left">
+                  <div className="flex items-center justify-between border-b border-violet-500/10 pb-2">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-violet-200 font-extrabold flex items-center gap-1.5">
+                      <Eye className="w-4 h-4 text-violet-400" />
+                      <span>Creator Live Insights (Owner Only)</span>
+                    </span>
+                    <span className="text-[8px] font-mono text-violet-400 bg-violet-950/50 border border-violet-500/20 px-2 py-0.5 rounded uppercase">
+                      🔒 Private to you
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Left: View Count and Filters */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] uppercase font-mono text-zinc-400 tracking-wider">Profile Views</span>
+                        <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-white/5">
+                          {(['today', 'week', 'month'] as const).map((filter) => (
+                            <button
+                              key={filter}
+                              onClick={() => setProfileViewFilter(filter)}
+                              className={`px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider rounded-md transition-all cursor-pointer ${
+                                profileViewFilter === filter
+                                  ? 'bg-purple-600 text-white font-bold'
+                                  : 'text-zinc-500 hover:text-zinc-300'
+                              }`}
+                            >
+                              {filter}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-black/20 rounded-xl border border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className="text-xl">👁️</span>
+                          <div>
+                            <span className="text-sm font-sans font-black text-white block">
+                              {profileViewFilter === 'today' ? '38' : profileViewFilter === 'week' ? '247' : '894'}{' '}
+                              views
+                            </span>
+                            <span className="text-[9px] text-zinc-500 font-mono block">
+                              {profileViewFilter === 'today'
+                                ? 'Real human activities today'
+                                : profileViewFilter === 'week'
+                                ? 'Profile views this week'
+                                : 'Cumulative monthly coverage'}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-emerald-400 text-[10px] font-mono font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                          +15%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Visitor Insights with toggle information */}
+                    <div className="space-y-2.5">
+                      <span className="text-[10px] uppercase font-mono text-zinc-400 tracking-wider block">Recent Visitors</span>
+
+                      <div className="space-y-1.5">
+                        {[
+                          { name: 'Alex', username: 'alex_sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', time: '12m ago' },
+                          { name: 'Sarah', username: 'sarah_codes', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', time: '2h ago' },
+                          { name: 'David', username: 'david_j', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', time: '1d ago' }
+                        ].map((visitor, i) => (
+                          <div key={i} className="flex items-center justify-between p-1.5 bg-black/10 rounded-lg border border-white/5 text-[10.5px]">
+                            <div className="flex items-center gap-2">
+                              <img src={visitor.avatar} className="w-5 h-5 rounded-md object-cover" />
+                              <span className="font-sans font-bold text-zinc-100">{visitor.name}</span>
+                              <span className="text-[9px] text-zinc-500 font-mono">@{visitor.username}</span>
+                            </div>
+                            <span className="text-[9px] text-violet-400 font-mono">{visitor.time}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
+
+              {/* Creator Highlights */}
+              {(() => {
+                // Programmatic Creator Highlights or beautiful fallbacks
+                const sortedByLikes = [...myPosts].sort((a, b) => (b.likes || 0) - (a.likes || 0));
+                const sortedByComments = [...myPosts].sort((a, b) => (b.comments?.length || 0) - (a.comments?.length || 0));
+                
+                const topP = sortedByLikes[0] || null;
+                const trendP = sortedByComments.length > 1 && sortedByComments[0]?.id === topP?.id 
+                  ? sortedByComments[1] 
+                  : (sortedByComments[0] || null);
+                
+                const fallbackTopText = "The journey into decentralised social networking with Nexora. Real connections, absolute design fidelity.";
+                const fallbackTrendText = "Voice node recordings are live! Tap to listen to my newest webm broadcast. 🎙️⚡";
+
+                return (
+                  <div className="space-y-2.5 max-w-2xl mt-4 text-left">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-violet-300 font-extrabold flex items-center gap-1.5">
+                      <span>🏆</span> Creator Highlights
+                    </span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Top Post Highlights Card */}
+                      <div 
+                        onClick={() => {
+                          if (topP) {
+                            setSelectedGridPost(topP);
+                          } else {
+                            window.dispatchEvent(new CustomEvent('toast', { detail: "🏆 Featured top post: standard system welcome anchor!" }));
+                          }
+                        }}
+                        className="p-3 bg-[#0d0926]/40 border border-violet-500/15 hover:border-violet-400/30 rounded-xl cursor-pointer transition-all hover:-translate-y-0.5 group relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 p-1 px-2 bg-purple-600 text-white font-mono text-[8px] font-black rounded-bl-lg uppercase tracking-wider select-none">
+                          TOP POST
+                        </div>
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-mono text-purple-400 block tracking-wider font-bold">🏆 HIGH ENGAGEMENT NODE</span>
+                          <p className="text-[11px] text-zinc-100 font-sans leading-relaxed line-clamp-2">
+                            {topP ? topP.content : fallbackTopText}
+                          </p>
+                          <div className="flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 mt-2">
+                            <span>❤️ {topP ? topP.likes : 142} likes</span>
+                            <span>•</span>
+                            <span>💬 {topP ? topP.comments?.length : 24} responses</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Trending Post Highlights Card */}
+                      <div 
+                        onClick={() => {
+                          if (trendP) {
+                            setSelectedGridPost(trendP);
+                          } else if (topP) {
+                            setSelectedGridPost(topP);
+                          } else {
+                            window.dispatchEvent(new CustomEvent('toast', { detail: "🔥 Trending node: real-time voice synthesis broadcast!" }));
+                          }
+                        }}
+                        className="p-3 bg-[#0d0926]/40 border border-pink-500/15 hover:border-pink-400/30 rounded-xl cursor-pointer transition-all hover:-translate-y-0.5 group relative overflow-hidden"
+                      >
+                        <div className="absolute top-0 right-0 p-1 px-2 bg-pink-500 text-white font-mono text-[8px] font-black rounded-bl-lg uppercase tracking-wider select-none">
+                          TRENDING
+                        </div>
+                        <div className="space-y-1 text-left">
+                          <span className="text-[9px] font-mono text-pink-400 block tracking-wider font-bold">🔥 SPECTRUM VELOCITY BOOST</span>
+                          <p className="text-[11px] text-zinc-100 font-sans leading-relaxed line-clamp-2">
+                            {trendP ? trendP.content : fallbackTrendText}
+                          </p>
+                          <div className="flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 mt-2">
+                            <span>💬 {trendP ? trendP.comments?.length : 38} comments</span>
+                            <span>•</span>
+                            <span>🔥 Vitality index: Ultra</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Nexora Aesthetic Stats Grid */}
@@ -1952,107 +2389,122 @@ try {
         )}
       </AnimatePresence>
 
+      {/* 📌 Pinned posts section (Max 3) rendered horizontally */}
+      {(() => {
+        const pinnedPosts = myPosts.filter(p => pinnedPostIds.includes(p.id)).slice(0, 3);
+        if (pinnedPosts.length === 0) return null;
+        return (
+          <div className="mt-4 mb-2 bg-[#0c0a25]/60 hover:bg-[#0c0a25]/80 p-4 rounded-3xl border border-violet-500/20 text-left transition-all">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-[10px] font-mono tracking-widest text-[#8B5CF6] font-bold uppercase flex items-center gap-1.5">
+                <Pin className="w-3.5 h-3.5 fill-violet-400 rotate-45 text-violet-400" />
+                <span>Pinned Content ({pinnedPosts.length}/3)</span>
+              </span>
+              <span className="text-[9px] font-mono text-zinc-500">Spotlight</span>
+            </div>
+            
+            <div className="flex gap-3 overflow-x-auto pb-1.5 scrollbar-none snap-x">
+              {pinnedPosts.map(post => {
+                const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
+                const isVideo = !!post.videoUrl;
+                
+                return (
+                  <div 
+                    key={post.id}
+                    onClick={() => setSelectedGridPost(post)}
+                    className="w-40 sm:w-48 shrink-0 rounded-2xl overflow-hidden relative border border-violet-500/25 snap-start shadow-md hover:border-violet-500/60 hover:scale-[1.02] transition-all cursor-pointer aspect-video bg-zinc-950 flex flex-col justify-between"
+                  >
+                    {/* Media Thumbnail */}
+                    {post.image ? (
+                      <img src={post.image} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : isVideo ? (
+                      <div className="absolute inset-0 w-full h-full bg-black">
+                        <video src={post.videoUrl} className="w-full h-full object-cover opacity-80" preload="metadata" muted />
+                        <div className="absolute top-2 right-2 p-1 bg-black/60 rounded-full z-10">
+                          <Film className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                    ) : isVoice ? (
+                      <div className="absolute inset-0 bg-gradient-to-tr from-violet-950 via-purple-900 to-[#120835] flex flex-col justify-between p-2">
+                        <div className="flex justify-between items-center w-full">
+                          <Mic className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                          <span className="text-[8px] font-mono text-pink-400/85">VOICE TRANS</span>
+                        </div>
+                        <div className="space-y-0.5">
+                          <div className="flex gap-0.5 items-end justify-center h-4 my-1 opacity-70">
+                            <span className="w-0.5 bg-pink-400 h-2 animate-bounce" style={{ animationDelay: '0.1s' }} />
+                            <span className="w-0.5 bg-violet-400 h-3 animate-bounce" style={{ animationDelay: '0.3s' }} />
+                            <span className="w-0.5 bg-pink-400 h-4 animate-bounce" style={{ animationDelay: '0s' }} />
+                            <span className="w-0.5 bg-violet-400 h-2 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                          </div>
+                          <p className="text-[9px] text-center text-white/90 font-sans line-clamp-1 italic">
+                            {post.voiceTranscript || post.content}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-[#1c0d4a] to-[#040212] flex items-center justify-center p-3 text-center">
+                        <p className="text-[9.5px] font-sans font-medium italic text-white/90 line-clamp-3 leading-relaxed">
+                          "{post.content}"
+                        </p>
+                      </div>
+                    )}
+                    
+                    {/* Top Pinned Badge */}
+                    <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#8B5CF6]/90 backdrop-blur-xs text-[8px] font-mono font-bold text-white uppercase rounded flex items-center gap-1 z-10 shadow-sm">
+                      <Pin className="w-2 h-2 rotate-45" />
+                      PINNED
+                    </div>
+                    
+                    {/* Dark gradient fade for text if image exists */}
+                    {(post.image || isVideo) && (
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-1 bg-opacity-40" />
+                    )}
+                    
+                    {/* Info bar at the bottom */}
+                    <div className="p-2 z-2 relative flex items-center justify-between w-full mt-auto bg-black/30 backdrop-blur-xs">
+                      <span className="text-[9px] font-sans font-bold text-white truncate max-w-[70%]">
+                        {post.name || post.username}
+                      </span>
+                      <div className="flex items-center gap-1.5 text-[9px] font-mono text-violet-300">
+                        <span className="flex items-center gap-0.5">⚡ {post.likes || 0}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Profile Tabs List with exactly 8 categories - horizontally smooth scrolling */}
       <div id="voh-profile-tabs-selector" className="border-b border-violet-500/10 pt-4 overflow-x-auto scrollbar-none">
         <div className="flex gap-2 text-center text-[10px] sm:text-xs font-mono font-bold px-2 pb-1.5 min-w-max">
-          <button
-            onClick={() => setProfileTab('posts')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'posts' ? 'text-violet-400 font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span>Posts</span>
-            {profileTab === 'posts' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-violet-500" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setProfileTab('reels')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'reels' ? 'text-pink-500 font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <span>🎥 Videos</span>
-            {profileTab === 'reels' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-pink-500" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setProfileTab('media')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'media' ? 'text-violet-400 font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <span>🖼️ Photos</span>
-            {profileTab === 'media' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-violet-500" />
-            )}
-          </button>
-          
-          <button
-            onClick={() => setProfileTab('voice')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'voice' ? 'text-violet-400 font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <span>🎙️ Voice</span>
-            {profileTab === 'voice' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-violet-500" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setProfileTab('saved')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'saved' ? 'text-[#8B5CF6] font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span>Saved</span>
-            {profileTab === 'saved' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-[#8B5CF6]" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setProfileTab('communities')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'communities' ? 'text-cyan-400 font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <span>🏟️ Spaces</span>
-            {profileTab === 'communities' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-cyan-700" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setProfileTab('tagged')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'tagged' ? 'text-orange-400 font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <span>🏷️ Tagged</span>
-            {profileTab === 'tagged' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-orange-500" />
-            )}
-          </button>
-
-          <button
-            onClick={() => setProfileTab('analytics')}
-            className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider ${
-              profileTab === 'analytics' ? 'text-yellow-400 font-extrabold' : 'text-violet-300/60 hover:text-white'
-            }`}
-          >
-            <Activity className="w-3.5 h-3.5 text-yellow-400" />
-            <span>📊 Insights</span>
-            {profileTab === 'analytics' && (
-              <motion.div layoutId="vohProfileTabLine" className="absolute bottom-0 inset-x-0 h-0.5 bg-yellow-500" />
-            )}
-          </button>
+          {[
+            { id: 'posts', label: 'Posts', icon: <FileText className="w-3.5 h-3.5" />, color: 'text-violet-400', underline: 'bg-violet-500' },
+            { id: 'videos', label: 'Videos', icon: <Video className="w-3.5 h-3.5" />, color: 'text-pink-500', underline: 'bg-pink-500' },
+            { id: 'reels', label: 'Reels', icon: <Film className="w-3.5 h-3.5" />, color: 'text-amber-500', underline: 'bg-amber-500' },
+            { id: 'voice', label: 'Voice', icon: <Mic className="w-3.5 h-3.5" />, color: 'text-cyan-400', underline: 'bg-cyan-400' },
+            { id: 'saved', label: 'Saved', icon: <Lock className="w-3.5 h-3.5" />, color: 'text-violet-400', underline: 'bg-violet-500' },
+            { id: 'communities', label: 'Spaces', icon: <span>🏟️</span>, color: 'text-cyan-400', underline: 'bg-cyan-700' },
+            { id: 'tagged', label: 'Tagged', icon: <span>🏷️</span>, color: 'text-orange-400', underline: 'bg-orange-500' },
+            { id: 'analytics', label: 'Insights', icon: <Activity className="w-3.5 h-3.5 text-yellow-400" />, color: 'text-yellow-400', underline: 'bg-yellow-500' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setProfileTab(tab.id as any)}
+              className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider transition-colors ${
+                profileTab === tab.id ? `${tab.color} font-extrabold` : 'text-violet-300/60 hover:text-white'
+              }`}
+            >
+              {tab.icon}
+              <span>{tab.label}</span>
+              {profileTab === tab.id && (
+                <motion.div layoutId="vohProfileTabLine" className={`absolute bottom-0 inset-x-0 h-0.5 bg-violet-500`} />
+              )}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -2060,7 +2512,19 @@ try {
       <div id="voh-tab-content-render" className="space-y-4 pt-2">
         
         {/* Contributions tab */}
-        {profileTab === 'posts' && (() => {
+        {profileTab === 'posts' && (
+          <MediaGrid gridPosts={myPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
+        )}
+
+        {profileTab === 'videos' && (
+          <MediaGrid gridPosts={videoPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
+        )}
+
+        {profileTab === 'reels' && (
+          <MediaGrid gridPosts={reelsPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
+        )}
+
+        {profileTab === 'disabled_posts_old' && (() => {
           const sortedMyPosts = [...myPosts].sort((a, b) => {
             const isAPinned = pinnedPostIds.includes(a.id);
             const isBPinned = pinnedPostIds.includes(b.id);
@@ -2161,6 +2625,9 @@ try {
 
         {/* Media Tab */}
         {profileTab === 'media' && (
+          <MediaGrid gridPosts={mediaPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
+        )}
+        {profileTab === 'disabled_media_old' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {mediaPosts.length === 0 ? (
               <div className="p-8 text-center rounded-2xl border border-dashed border-violet-500/20 bg-[#070513]/50 col-span-2">
@@ -2202,6 +2669,15 @@ try {
         {/* Voice Tab */}
         {profileTab === 'voice' && (
           <div className="space-y-4">
+            {voicePosts.length > 0 && (
+              <div className="space-y-2.5">
+                <span className="text-[9.5px] font-mono uppercase tracking-widest text-[#8B5CF6] font-extrabold block text-left">
+                  🎙️ Voice gallery snaps
+                </span>
+                <MediaGrid gridPosts={voicePosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
+              </div>
+            )}
+
             <div className="p-4 rounded-2xl bg-[#090718] border border-violet-500/20">
               <div className="flex items-center gap-2 mb-2 text-violet-300">
                 <Volume2 className="w-4 h-4 text-violet-400 animate-bounce" />
@@ -2274,6 +2750,11 @@ try {
 
         {/* Saved posts content tab - upgraded with Collection folders */}
         {profileTab === 'saved' && (
+          <div className="space-y-4">
+            <MediaGrid gridPosts={savedPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
+          </div>
+        )}
+        {profileTab === 'disabled_saved_old' && (
           <div className="space-y-6 text-left">
             {!isOwnProfile ? (
               <div className="p-12 text-center rounded-3xl border border-violet-500/15 bg-black/40 backdrop-blur-md max-w-sm mx-auto space-y-3 shadow-xl my-4">
@@ -2799,6 +3280,339 @@ try {
             </motion.div>
           </div>
         )}
+      </AnimatePresence>
+
+      {/* Story Slideshow Overlay Deck */}
+      <AnimatePresence>
+        {selectedMoment && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#010006]/95 backdrop-blur-xl p-4">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg bg-[#060413] border border-violet-500/20 rounded-3xl p-6 relative flex flex-col justify-between min-h-[460px] shadow-[0_0_60px_rgba(139,92,246,0.3)]"
+            >
+              {/* Top Bar: Progress trackers and meta */}
+              <div className="space-y-4">
+                {/* Tick index bars */}
+                <div className="flex gap-1.5 w-full">
+                  {selectedMoment.quotes.map((_: any, idx: number) => (
+                    <div key={idx} className="flex-1 h-1 bg-zinc-800 rounded-full relative overflow-hidden">
+                      {idx < storyIndex && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-pink-500" />
+                      )}
+                      {idx === storyIndex && (
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: '100%' }}
+                          transition={{ duration: 5, ease: 'linear' }}
+                          onAnimationComplete={() => {
+                            if (storyIndex < selectedMoment.quotes.length - 1) {
+                              setStoryIndex(idx => idx + 1);
+                            } else {
+                              setSelectedMoment(null);
+                              setStoryIndex(0);
+                            }
+                          }}
+                          className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-violet-500 to-pink-500"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Meta bar */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img src={selectedMoment.avatar} className="w-9 h-9 rounded-xl object-cover ring-2 ring-violet-500/30" />
+                    <div className="text-left">
+                      <h4 className="text-xs font-sans font-black text-white">{selectedMoment.name}</h4>
+                      <span className="text-[9px] font-mono text-purple-400">@{selectedMoment.username} • Story Moment</span>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      setSelectedMoment(null);
+                      setStoryIndex(0);
+                    }}
+                    className="p-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-violet-400 hover:text-white transition-all text-[10px] font-mono cursor-pointer"
+                  >
+                    CLOSE [ESC]
+                  </button>
+                </div>
+              </div>
+
+              {/* Quote Content text centered beautifully with elegant display typography */}
+              <div className="my-8 py-8 px-4 text-center select-text">
+                <p className="text-lg sm:text-xl font-sans font-black text-white leading-normal tracking-tight bg-gradient-to-r from-white via-violet-100 to-pink-100 bg-clip-text text-transparent">
+                  "{selectedMoment.quotes[storyIndex]}"
+                </p>
+              </div>
+
+              {/* Actions footer */}
+              <div className="flex items-center justify-between border-t border-violet-500/10 pt-4">
+                <button
+                  onClick={() => {
+                    if (storyIndex > 0) {
+                      setStoryIndex(storyIndex - 1);
+                    }
+                  }}
+                  disabled={storyIndex === 0}
+                  className="px-3.5 py-1.5 text-[10px] font-mono font-bold bg-zinc-900 border border-zinc-800 disabled:opacity-20 text-zinc-400 hover:text-white rounded-lg transition-all"
+                >
+                  ← PREV
+                </button>
+                <span className="text-[9.5px] font-mono text-zinc-500">
+                  Slide {storyIndex + 1} of {selectedMoment.quotes.length}
+                </span>
+                <button
+                  onClick={() => {
+                    if (storyIndex < selectedMoment.quotes.length - 1) {
+                      setStoryIndex(storyIndex + 1);
+                    } else {
+                      setSelectedMoment(null);
+                      setStoryIndex(0);
+                    }
+                  }}
+                  className="px-4 py-1.5 text-[10px] font-mono font-bold bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all"
+                >
+                  {storyIndex === selectedMoment.quotes.length - 1 ? 'FINISH' : 'NEXT →'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Immersive Post Detail Modal (Instagram/TikTok style layout) */}
+      <AnimatePresence>
+        {selectedGridPost && (() => {
+          const activePost = posts.find((p: any) => p.id === selectedGridPost.id) || selectedGridPost;
+          const isVoice = activePost.isVoice || activePost.content.includes('🎙') || activePost.voiceDuration;
+          const isVideo = !!activePost.videoUrl;
+          const isPinned = pinnedPostIds.includes(activePost.id);
+          const isPostLiked = activePost.isLikedByUser;
+
+          return (
+            <div className="fixed inset-0 bg-[#04020a]/95 backdrop-blur-lg z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in font-sans">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 30 }}
+                className="relative w-full max-w-4xl bg-[#09071c] border border-violet-500/25 rounded-3xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[75vh] shadow-[0_0_60px_rgba(139,92,246,0.35)]"
+              >
+                {/* Visual Media Side (Left/Top) */}
+                <div className="w-full md:w-3/5 bg-black/90 flex items-center justify-center relative border-b md:border-b-0 md:border-r border-violet-500/10 h-1/2 md:h-full">
+                  {activePost.image ? (
+                    <img 
+                      src={activePost.image} 
+                      className="w-full h-full object-contain" 
+                      alt={activePost.content}
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : isVideo ? (
+                    <video 
+                      src={activePost.videoUrl} 
+                      className="w-full h-full object-contain" 
+                      controls 
+                      autoPlay 
+                      loop 
+                      preload="auto"
+                    />
+                  ) : isVoice ? (
+                    <div className="w-full h-full bg-gradient-to-br from-[#120a2e] to-[#04010b] flex flex-col items-center justify-center p-6 space-y-6">
+                      <div className="w-16 h-16 rounded-full bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
+                        <Mic className="w-8 h-8" />
+                      </div>
+                      
+                      {/* Live Waveform motion */}
+                      <div className="flex gap-1.5 items-end justify-center h-16 max-w-xs">
+                        <span className="w-1 bg-[#8B5CF6] h-12 rounded-full animate-bounce" style={{ animationDuration: '0.9s' }} />
+                        <span className="w-1 bg-pink-500 h-16 rounded-full animate-bounce" style={{ animationDelay: '0.1s', animationDuration: '1.2s' }} />
+                        <span className="w-1 bg-cyan-400 h-8 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '0.8s' }} />
+                        <span className="w-1 bg-[#8B5CF6] h-14 rounded-full animate-bounce" style={{ animationDelay: '0.15s', animationDuration: '1.1s' }} />
+                        <span className="w-1 bg-pink-500 h-10 rounded-full animate-bounce" style={{ animationDelay: '0.05s', animationDuration: '0.95s' }} />
+                      </div>
+
+                      <div className="text-center">
+                        <span className="text-[10px] font-mono text-pink-400 uppercase font-black px-2 py-0.5 bg-pink-500/10 rounded border border-pink-500/15">Acoustic Audio</span>
+                        <span className="text-xs text-zinc-400 font-mono block mt-2">Duration: {activePost.voiceDuration || '0:15'}</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-violet-950 via-[#100730] to-zinc-950 p-8 flex flex-col justify-between">
+                      <span className="text-4xl text-violet-400/20 font-serif">“</span>
+                      <p className="text-sm md:text-base font-sans font-medium italic text-zinc-200 leading-relaxed text-center max-w-md mx-auto">
+                        {activePost.content}
+                      </p>
+                      <span className="text-4xl text-violet-400/20 font-serif text-right font-extrabold">”</span>
+                    </div>
+                  )}
+
+                  {/* Back glow overlay */}
+                  <div className="absolute inset-0 bg-transparent pointer-events-none border border-violet-500/5" />
+                </div>
+
+                {/* Details & Comments Side (Right/Bottom) */}
+                <div className="w-full md:w-2/5 flex flex-col justify-between h-1/2 md:h-full bg-[#06040f]">
+                  {/* Modal Header */}
+                  <div className="p-4 border-b border-violet-500/10 flex items-center justify-between bg-[#080614]">
+                    <div className="flex items-center gap-2.5 text-left">
+                      <img 
+                        src={currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"} 
+                        className="w-9 h-9 rounded-full object-cover border border-violet-500/20" 
+                        alt={currentUser.name} 
+                      />
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <span className="text-xs font-bold text-white font-sans block leading-none">{currentUser.name}</span>
+                          {(currentUser.username === 'voh' || currentUser.username === 'nexora_ai') && (
+                            <PurpleVerifiedBadge className="w-3.5 h-3.5" />
+                          )}
+                        </div>
+                        <span className="text-[10px] font-mono text-violet-400 font-bold">@{currentUser.username}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-1.5">
+                      {isOwnProfile && (
+                        <button
+                          onClick={() => togglePinPost(activePost.id)}
+                          className={`p-2 rounded-xl transition-all cursor-pointer ${
+                            isPinned 
+                              ? 'bg-[#8B5CF6]/20 text-violet-300 ring-1 ring-violet-500/30' 
+                              : 'hover:bg-violet-500/10 text-violet-400'
+                          }`}
+                          title={isPinned ? "Unpin post" : "Pin post (Max 3)"}
+                        >
+                          <Pin className={`w-3.5 h-3.5 ${isPinned ? 'rotate-45 fill-current text-[#8B5CF6]' : ''}`} />
+                        </button>
+                      )}
+                      
+                      <button
+                        onClick={() => setSelectedGridPost(null)}
+                        className="p-2 hover:bg-violet-500/10 text-zinc-400 hover:text-white rounded-xl transition-colors cursor-pointer"
+                        title="Close details"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Center Content / Comments Container */}
+                  <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-left">
+                    {/* Caption block */}
+                    <div className="pb-3 border-b border-violet-500/5">
+                      <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                        {activePost.content}
+                      </p>
+                      {isVoice && activePost.voiceTranscript && (
+                        <div className="mt-2.5 p-2.5 rounded-xl bg-violet-600/5 border border-violet-500/15">
+                          <span className="text-[8px] font-mono text-purple-400 uppercase font-black block">Voice transcript</span>
+                          <span className="text-[11px] text-zinc-300 italic font-sans mt-0.5 block leading-normal">
+                            "{activePost.voiceTranscript}"
+                          </span>
+                        </div>
+                      )}
+                      <span className="text-[9px] font-mono text-violet-400 mt-2 block opacity-60">
+                        Synthesized on Nexora Node
+                      </span>
+                    </div>
+
+                    {/* Comments list */}
+                    <div className="space-y-3">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400 font-black block">
+                        Discussion Forum ({activePost.comments?.length || 0})
+                      </span>
+
+                      {(!activePost.comments || activePost.comments.length === 0) ? (
+                        <div className="text-center py-10">
+                          <p className="text-[11px] text-zinc-500 font-mono">No feedback logs transmitted yet.</p>
+                          <p className="text-[9px] text-zinc-600 mt-1">Be the first to leave a response spark!</p>
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {activePost.comments.map((comment: any, cidx: number) => (
+                            <div key={comment.id || cidx} className="p-2.5 rounded-2xl bg-zinc-950/40 border border-violet-500/5 text-left">
+                              <div className="flex justify-between items-center mb-1">
+                                <span className="text-[10.5px] font-bold text-white block">
+                                  {comment.name || comment.username}
+                                </span>
+                                <span className="text-[8.5px] font-mono text-zinc-500">
+                                  {comment.timestamp || 'Just now'}
+                                </span>
+                              </div>
+                              <p className="text-[11.5px] text-zinc-300 font-sans leading-relaxed">
+                                {comment.content || comment.comment || comment.text}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Input / Engagement Block (Sticky Bottom) */}
+                  <div className="p-4 bg-[#080614] border-t border-violet-500/10 space-y-3">
+                    {/* Like and Stats Actions row */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <button
+                          onClick={() => onLikePost(activePost.id)}
+                          className={`flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-transform active:scale-95 duration-100 ${
+                            isPostLiked ? 'text-red-400' : 'text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          <Heart className={`w-4.5 h-4.5 ${isPostLiked ? 'fill-current text-rose-500' : ''}`} />
+                          <span>{activePost.likes || 0} Sparks</span>
+                        </button>
+
+                        <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
+                          <MessageSquare className="w-4.5 h-4.5 text-violet-400" />
+                          <span>{activePost.comments?.length || 0} Comments</span>
+                        </div>
+                      </div>
+
+                      <span className="text-[9px] font-mono text-violet-400/40">
+                        node: #{activePost.id.substring(0, 8)}
+                      </span>
+                    </div>
+
+                    {/* New Comment input form */}
+                    <div className="flex gap-2">
+                      <input 
+                        type="text" 
+                        value={detailCommentText}
+                        onChange={(e) => setDetailCommentText(e.target.value)}
+                        placeholder="Type response log..."
+                        className="flex-1 bg-zinc-950/80 border border-violet-500/15 focus:border-[#8B5CF6]/60 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden font-sans transition-all"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && detailCommentText.trim()) {
+                            onAddComment(activePost.id, detailCommentText.trim());
+                            setDetailCommentText('');
+                          }
+                        }}
+                      />
+                      <button
+                        disabled={!detailCommentText.trim()}
+                        onClick={() => {
+                          if (selectedGridPost) {
+                            onAddComment(activePost.id, detailCommentText.trim());
+                            setDetailCommentText('');
+                          }
+                        }}
+                        className="bg-violet-600 hover:bg-[#8B5CF6] disabled:opacity-40 disabled:hover:bg-violet-600 text-white font-sans font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1 cursor-pointer shrink-0"
+                      >
+                        <span>Transmit</span>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
     </div>

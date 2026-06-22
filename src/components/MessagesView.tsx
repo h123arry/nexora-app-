@@ -73,6 +73,31 @@ export default function MessagesView({
   const [showOptionsPopover, setShowOptionsPopover] = useState<boolean>(false);
   const [activeHoveringMessage, setActiveHoveringMessage] = useState<string | null>(null);
 
+  // Creator protection and custom search states
+  const [chatAccessGates, setChatAccessGates] = useState<Record<string, 'open' | 'followers' | 'subscribers'>>(() => {
+    const saved = localStorage.getItem('nexora_chat_access_gates');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [autoReplyModes, setAutoReplyModes] = useState<Record<string, 'none' | 'busy' | 'ai'>>(() => {
+    const saved = localStorage.getItem('nexora_auto_reply_modes');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+
+  const updateAccessGate = (chatId: string, value: 'open' | 'followers' | 'subscribers') => {
+    const next = { ...chatAccessGates, [chatId]: value };
+    setChatAccessGates(next);
+    localStorage.setItem('nexora_chat_access_gates', JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent('toast', { detail: `🛡️ Chat access gated to: ${value.toUpperCase()}` }));
+  };
+
+  const updateAutoReplyMode = (chatId: string, value: 'none' | 'busy' | 'ai') => {
+    const next = { ...autoReplyModes, [chatId]: value };
+    setAutoReplyModes(next);
+    localStorage.setItem('nexora_auto_reply_modes', JSON.stringify(next));
+    window.dispatchEvent(new CustomEvent('toast', { detail: `🤖 Auto-reply mode set to: ${value.toUpperCase()}` }));
+  };
+
   // Attachment Picker dialog states
   const [showAttachmentDropdown, setShowAttachmentDropdown] = useState(false);
   const [simulatedRecordingVoice, setSimulatedRecordingVoice] = useState(false);
@@ -186,6 +211,20 @@ export default function MessagesView({
     simulateBotResponse(activeChatId, "shared file request");
   };
 
+  // VOICE PLAYBACK TOGGLER
+  const toggleVoicePlayback = (msgId: string) => {
+    setLocalMessages(prev => {
+      const currentStream = prev[activeChatId] || [];
+      const updatedStream = currentStream.map(msg => {
+        if (msg.id === msgId) {
+          return { ...msg, isVoicePlaying: !msg.isVoicePlaying };
+        }
+        return msg;
+      });
+      return { ...prev, [activeChatId]: updatedStream };
+    });
+  };
+
   // EMOJI REACTION CAPSULE TOGGLER
   const toggleMessageEmojiReaction = (msgId: string, emoji: string) => {
     setLocalMessages(prev => {
@@ -210,6 +249,48 @@ export default function MessagesView({
     if (!targetChat) return;
 
     if (blockedChats.includes(chatId)) return;
+
+    // Check Creator Protection Auto-Reply Mode
+    const autoReplyMode = autoReplyModes[chatId] || 'none';
+    if (autoReplyMode === 'busy') {
+      setIsBotTyping(true);
+      setTimeout(() => {
+        setIsBotTyping(false);
+        const botMsgId = 'auto-' + Date.now();
+        const newBotMsg: Message & MessageEnrichment = {
+          id: botMsgId,
+          chatId,
+          senderId: targetChat.partnerId,
+          content: "🤖 AUTOMATED AUTO-REPLY: Creator is currently busy in production! Your text is safely queued. ⏳",
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'read'
+        };
+        setLocalMessages(prev => ({
+          ...prev,
+          [chatId]: [...(prev[chatId] || []), newBotMsg]
+        }));
+      }, 700);
+      return;
+    } else if (autoReplyMode === 'ai') {
+      setIsBotTyping(true);
+      setTimeout(() => {
+        setIsBotTyping(false);
+        const botMsgId = 'auto-' + Date.now();
+        const newBotMsg: Message & MessageEnrichment = {
+          id: botMsgId,
+          chatId,
+          senderId: targetChat.partnerId,
+          content: `✨ NEXORA AI COMPANION AUTO-REPLY:\n"This is an intelligent autonomous session. The creator is AFK, but I am here to help. You asked: '${userText}'. We are fine-tuning our next-generation web modules to load under 1.8ms! Feel free to leave a brief proposal."`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          status: 'read'
+        };
+        setLocalMessages(prev => ({
+          ...prev,
+          [chatId]: [...(prev[chatId] || []), newBotMsg]
+        }));
+      }, 750);
+      return;
+    }
 
     const partnerId = targetChat.partnerId;
     let reply = '';
@@ -591,27 +672,110 @@ export default function MessagesView({
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 5 }}
-                      className="absolute right-0 top-9 w-44 bg-[#09071c] border border-violet-500/20 rounded-xl p-1.5 shadow-2xl z-20"
+                      className="absolute right-0 top-10 w-64 bg-[#09071c] border border-violet-500/30 rounded-2xl p-3.5 shadow-[0_10px_40px_rgba(0,0,0,0.8)] z-35 space-y-4"
                     >
-                      <button
-                        onClick={() => toggleBlockStatus(activeChatId)}
-                        className="w-full text-left p-2 hover:bg-red-950/20 rounded-lg text-[10px] font-mono uppercase font-black text-red-400 flex items-center justify-between cursor-pointer"
-                      >
-                        <span>{blockedChats.includes(activeChatId) ? '🔓 Unblock Connection' : '🔒 Block Node'}</span>
-                        <EyeOff className="w-3 h-3" />
-                      </button>
+                      {/* Connection Block/Mute */}
+                      <div className="space-y-1.5">
+                        <span className="text-[8.5px] font-mono text-zinc-500 uppercase tracking-wider block">Connection Controls</span>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          <button
+                            onClick={() => toggleBlockStatus(activeChatId)}
+                            className="p-2 bg-red-950/15 hover:bg-red-950/30 border border-red-500/20 rounded-xl text-[9px] font-mono uppercase font-extrabold text-red-400 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <EyeOff className="w-3.5 h-3.5" />
+                            <span>{blockedChats.includes(activeChatId) ? '🔓 Unblock' : '🔒 Block'}</span>
+                          </button>
 
-                      <button
-                        onClick={() => toggleMuteStatus(activeChatId)}
-                        className="w-full text-left p-2 hover:bg-violet-950/25 rounded-lg text-[10px] font-mono uppercase font-black text-violet-300 flex items-center justify-between cursor-pointer"
-                      >
-                        <span>{mutedChats.includes(activeChatId) ? '🔊 Unmute Node' : '🔇 Mute Alerts'}</span>
-                        <Radio className="w-3 h-3" />
-                      </button>
+                          <button
+                            onClick={() => toggleMuteStatus(activeChatId)}
+                            className="p-2 bg-violet-950/20 hover:bg-violet-950/40 border border-violet-500/20 rounded-xl text-[9px] font-mono uppercase font-extrabold text-violet-300 flex flex-col items-center justify-center gap-1 cursor-pointer"
+                          >
+                            <Radio className="w-3.5 h-3.5" />
+                            <span>{mutedChats.includes(activeChatId) ? '🔊 Unmute' : '🔇 Mute'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Creator Protection: Chat Access Gates */}
+                      <div className="space-y-1 text-left">
+                        <span className="text-[8.5px] font-mono text-[#A78BFA] uppercase tracking-wider block">
+                          🛡️ CHAT ACCESS GATE
+                        </span>
+                        <div className="flex flex-col gap-1 bg-black/40 p-1.5 rounded-xl border border-white/5">
+                          {[
+                            { value: 'open', label: 'Open Channel 🌐' },
+                            { value: 'followers', label: 'Followers Only 👥' },
+                            { value: 'subscribers', label: 'Subscribers Only 🌟' }
+                          ].map(opt => {
+                            const isSel = (chatAccessGates[activeChatId] || 'open') === opt.value;
+                            return (
+                              <button
+                                key={opt.value}
+                                onClick={() => updateAccessGate(activeChatId, opt.value as any)}
+                                className={`w-full text-left p-1.5 rounded-lg text-[9px] font-mono transition-all uppercase cursor-pointer ${isSel ? 'bg-violet-600 text-white font-bold' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                              >
+                                {isSel ? '✓ ' : ''}{opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Creator Protection: Auto Replies */}
+                      <div className="space-y-1 text-left">
+                        <span className="text-[8.5px] font-mono text-pink-400 uppercase tracking-wider block">
+                          🤖 AUTOMATED RESPONSE
+                        </span>
+                        <div className="flex flex-col gap-1 bg-black/40 p-1.5 rounded-xl border border-white/5">
+                          {[
+                            { value: 'none', label: 'Disabled ✖' },
+                            { value: 'busy', label: 'Busy Mode ⏳' },
+                            { value: 'ai', label: 'AI Companion Assistant 🧠' }
+                          ].map(replyOpt => {
+                            const isSel = (autoReplyModes[activeChatId] || 'none') === replyOpt.value;
+                            return (
+                              <button
+                                key={replyOpt.value}
+                                onClick={() => updateAutoReplyMode(activeChatId, replyOpt.value as any)}
+                                className={`w-full text-left p-1.5 rounded-lg text-[9px] font-mono transition-all uppercase cursor-pointer ${isSel ? 'bg-pink-600 text-white font-bold' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+                              >
+                                {isSel ? '✓ ' : ''}{replyOpt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
+            </div>
+
+            {/* IN-CHAT TEXT LOG SEARCH FILTER */}
+            <div className="bg-[#04020a] border-b border-violet-500/5 px-4 py-2 flex items-center justify-between gap-3 text-left">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-2.5 w-3 h-3 text-violet-400/50" />
+                <input
+                  type="text"
+                  placeholder="Filter chat messages history live..."
+                  value={chatSearchQuery}
+                  onChange={(e) => setChatSearchQuery(e.target.value)}
+                  className="w-full bg-black/40 border border-white/5 hover:border-violet-500/20 focus:border-violet-500/40 rounded-xl py-1.5 pl-8 pr-7 text-[10px] text-white focus:outline-hidden placeholder:text-violet-400/20 font-sans"
+                />
+                {chatSearchQuery && (
+                  <button
+                    onClick={() => setChatSearchQuery('')}
+                    className="absolute right-3 top-2.5 text-violet-400/60 hover:text-white"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+              {chatSearchQuery && (
+                <span className="text-[9px] font-mono text-[#A78BFA] bg-[#A78BFA]/10 px-2 py-1 rounded-md shrink-0 uppercase font-black">
+                  MATCH INDEX LIVE
+                </span>
+              )}
             </div>
 
             {/* REQUEST APPROVAL CAPTURE BANNER */}
@@ -643,9 +807,11 @@ export default function MessagesView({
 
             {/* MESSAGES PORTION SCROLL VIEW */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar text-left scroll-smooth">
-              {activeChatMessages.map((msg) => {
-                const isMe = msg.senderId === currentUser.id;
-                const isHovered = activeHoveringMessage === msg.id;
+              {activeChatMessages
+                .filter(msg => !chatSearchQuery || msg.content.toLowerCase().includes(chatSearchQuery.toLowerCase()))
+                .map((msg) => {
+                  const isMe = msg.senderId === currentUser.id;
+                  const isHovered = activeHoveringMessage === msg.id;
                 
                 return (
                   <div 
@@ -673,18 +839,34 @@ export default function MessagesView({
                         {/* Render voice indicator */}
                         {msg.voiceDuration ? (
                           <div className="flex items-center gap-3 py-1">
-                            <button className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/35 text-white flex items-center justify-center cursor-pointer">
-                              ▶️
+                            <button 
+                              onClick={() => toggleVoicePlayback(msg.id)}
+                              className="h-7 w-7 rounded-full bg-white/20 hover:bg-white/35 text-white flex items-center justify-center cursor-pointer transition-all active:scale-95"
+                            >
+                              {msg.isVoicePlaying ? '⏸️' : '▶️'}
                             </button>
-                            <div className="flex gap-0.5 items-end h-5 w-32 shrink-0">
-                              <span className="w-1 bg-white/40 h-2 rounded animate-pulse" />
-                              <span className="w-1 bg-white/60 h-4 rounded animate-pulse" style={{ animationDelay: '150ms' }} />
-                              <span className="w-1 bg-white/80 h-3 rounded animate-pulse" style={{ animationDelay: '300ms' }} />
-                              <span className="w-1 bg-white/50 h-5 rounded animate-pulse" style={{ animationDelay: '450ms' }} />
-                              <span className="w-1 bg-white/75 h-2 rounded animate-pulse" style={{ animationDelay: '100ms' }} />
-                              <span className="w-1 bg-white/90 h-4 rounded animate-pulse" style={{ animationDelay: '250ms' }} />
+                            <div className="flex gap-1 items-end h-5 w-32 shrink-0">
+                              {[
+                                { h: 'h-2', d: '0ms' },
+                                { h: 'h-4', d: '150ms' },
+                                { h: 'h-3', d: '300ms' },
+                                { h: 'h-5', d: '450ms' },
+                                { h: 'h-2.5', d: '100ms' },
+                                { h: 'h-4.5', d: '250ms' },
+                                { h: 'h-3', d: '350ms' },
+                                { h: 'h-5', d: '200ms' },
+                                { h: 'h-2', d: '400ms' }
+                              ].map((bar, idx) => (
+                                <span 
+                                  key={idx} 
+                                  className={`w-1 bg-white/95 rounded-full transition-all duration-300 ${bar.h} ${msg.isVoicePlaying ? 'animate-[pulse_1s_infinite]' : 'opacity-60'}`}
+                                  style={{ 
+                                    animationDelay: msg.isVoicePlaying ? bar.d : '0ms'
+                                  }} 
+                                />
+                              ))}
                             </div>
-                            <span className="text-[10px] font-mono opacity-80">{msg.voiceDuration}</span>
+                            <span className="text-[10px] font-mono opacity-80 shrink-0">{msg.voiceDuration}</span>
                           </div>
                         ) : msg.videoUrl ? (
                           <div className="rounded-xl overflow-hidden aspect-square w-32 border border-white/10 bg-black relative mb-1.5 select-none">
@@ -722,28 +904,19 @@ export default function MessagesView({
 
                       {/* HOVER EMOJI REACTION MINI BAR & REPLY TRIGGER BOX */}
                       {isHovered && !blockedChats.includes(activeChatId) && (
-                        <div className={`absolute bottom-[-18px] ${isMe ? 'left-[-40px]' : 'right-[-40px]'} flex items-center gap-1.5 bg-[#09071b] border border-violet-500/25 py-1 px-2.5 rounded-full z-10 shadow-2xl animate-fade-in text-[10px]`}>
-                          <button 
-                            onClick={() => toggleMessageEmojiReaction(msg.id, '❤️')} 
-                            className="hover:scale-125 transition-transform cursor-pointer"
-                          >
-                            ❤️
-                          </button>
-                          <button 
-                            onClick={() => toggleMessageEmojiReaction(msg.id, '🔥')} 
-                            className="hover:scale-125 transition-transform cursor-pointer"
-                          >
-                            🔥
-                          </button>
-                          <button 
-                            onClick={() => toggleMessageEmojiReaction(msg.id, '😂')} 
-                            className="hover:scale-125 transition-transform cursor-pointer"
-                          >
-                            😂
-                          </button>
+                        <div className={`absolute bottom-[-18px] ${isMe ? 'left-[-40px]' : 'right-[-40px]'} flex items-center gap-1.5 bg-[#09071b] border border-violet-500/25 py-1 px-2.5 rounded-full z-15 shadow-2xl animate-fade-in text-[10px]`}>
+                          {['❤️', '🔥', '👏', '😂', '💡', '❓'].map((emo) => (
+                            <button 
+                              key={emo}
+                              onClick={() => toggleMessageEmojiReaction(msg.id, emo)} 
+                              className="hover:scale-135 transition-transform cursor-pointer select-none"
+                            >
+                              {emo}
+                            </button>
+                          ))}
                           <button 
                             onClick={() => setActiveReplyQuote(msg.content)} 
-                            className="text-violet-400 hover:text-white p-0.5 shrink-0 ml-1 cursor-pointer"
+                            className="text-violet-400 hover:text-white p-0.5 shrink-0 ml-1 cursor-pointer transition-colors"
                             title="Reply / Quote message"
                           >
                             <CornerUpLeft className="w-3 h-3" />
@@ -833,6 +1006,31 @@ export default function MessagesView({
               <div className="bg-amber-600/10 p-2 border-t border-amber-500/10 text-[9.5px] font-mono tracking-wider text-amber-300 text-center select-none uppercase font-extrabold flex items-center justify-center gap-1 animate-pulse">
                 <Clock className="w-3 h-3 text-amber-400" />
                 <span>Disappearing Vanish clock active: Sent messages auto-erase after 10 seconds.</span>
+              </div>
+            )}
+
+            {/* QUICK REPLY SCHEDULING PILLS */}
+            {!blockedChats.includes(activeChatId) && (
+              <div className="px-4 py-2 border-t border-violet-500/5 bg-[#070514]/90 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-left scroll-smooth">
+                <span className="text-[8.5px] font-mono text-zinc-500 uppercase tracking-widest shrink-0 mr-1 flex items-center gap-1">
+                  ⚡ Quick:
+                </span>
+                {[
+                  "Drafting template proposal...",
+                  "Replying shortly! 🚀",
+                  "Currently testing build at 1.8ms ⚡",
+                  "Let's sync soon! 📅",
+                  "Sounds excellent, send details. 📝"
+                ].map((tpl) => (
+                  <button
+                    key={tpl}
+                    type="button"
+                    onClick={() => setTypedMessage(tpl)}
+                    className="px-2.5 py-1 bg-violet-950/30 hover:bg-violet-950 text-violet-300 hover:text-white border border-violet-500/10 rounded-lg text-[9.5px] font-mono tracking-normal shrink-0 transition-all cursor-pointer select-none"
+                  >
+                    {tpl}
+                  </button>
+                ))}
               </div>
             )}
 

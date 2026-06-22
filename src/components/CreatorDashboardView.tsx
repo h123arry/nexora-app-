@@ -538,7 +538,8 @@ export default function CreatorDashboardView({
                 You do not have enough published content yet to extract intelligent insights. Post your updates and engage with your communities to unlock performance recommendations.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                 
                 {/* Insights Suggestions List */}
                 <div className="p-5 rounded-2xl bg-[#090616] border border-violet-500/15 space-y-4">
@@ -586,8 +587,105 @@ export default function CreatorDashboardView({
                     ))}
                   </div>
                 </div>
-
               </div>
+
+              {/* Engagement Heatmap Segment */}
+              <div className="p-5 rounded-2xl bg-[#090616] border border-violet-500/15 space-y-5 text-left">
+                <div className="flex items-center justify-between border-b border-violet-500/10 pb-2.5">
+                  <h3 className="text-[10px] font-mono uppercase text-[#A78BFA] font-extrabold tracking-widest flex items-center gap-1.5">
+                    <span className="text-violet-400">📅</span>
+                    <span>Live Engagement Heatmap Tracker</span>
+                  </h3>
+                  <span className="text-[8px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded uppercase">
+                    Optimal Window Active
+                  </span>
+                </div>
+
+                {/* Top Metrics Details Bar */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="p-2.5 bg-black/30 rounded-xl border border-white/5">
+                    <span className="text-[8.5px] font-mono text-zinc-500 uppercase block leading-none">Best Posting Days</span>
+                    <span className="text-xs font-sans font-black text-white mt-1.5 block">Wednesday & Friday</span>
+                  </div>
+                  <div className="p-2.5 bg-black/30 rounded-xl border border-white/5">
+                    <span className="text-[8.5px] font-mono text-zinc-500 uppercase block leading-none">Best Posting Hours</span>
+                    <span className="text-xs font-sans font-black text-white mt-1.5 block">2:00 PM - 6:00 PM</span>
+                  </div>
+                  <div className="p-2.5 bg-black/30 rounded-xl border border-white/5">
+                    <span className="text-[8.5px] font-mono text-zinc-500 uppercase block leading-none">Peak Audience Time</span>
+                    <span className="text-xs font-sans font-black text-white mt-1.5 block">4:00 PM - 8:00 PM</span>
+                  </div>
+                  <div className="p-2.5 bg-black/30 rounded-xl border border-white/5">
+                    <span className="text-[8.5px] font-mono text-zinc-500 uppercase block leading-none">Top Content Format</span>
+                    <span className="text-xs font-sans font-black text-purple-300 mt-1.5 block">Video Loops 🎥</span>
+                  </div>
+                </div>
+
+                {/* Grid Visualizer */}
+                <div className="space-y-2">
+                  <div className="flex justify-between text-[9px] font-mono text-zinc-500 px-1 pt-1">
+                    <span>Morning (08:00)</span>
+                    <span>Noon (12:00)</span>
+                    <span>Afternoon (16:00)</span>
+                    <span>Evening (20:00)</span>
+                    <span>Midnight (00:00)</span>
+                  </div>
+
+                  <div className="space-y-1 bg-black/30 p-3 rounded-xl border border-white/5">
+                    {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day, dIdx) => {
+                      // Wednesday (3) and Friday (5) have higher heat values
+                      const isHotDay = dIdx === 3 || dIdx === 5;
+                      return (
+                        <div key={day} className="flex items-center gap-2">
+                          <span className="w-8 text-[9px] font-mono text-zinc-400 text-left truncate">{day.substring(0, 3)}</span>
+                          <div className="flex-1 flex gap-1">
+                            {Array.from({ length: 12 }).map((_, hIdx) => {
+                              // Standard afternoons (hIdx between 4 and 8, i.e., 4pm - 8pm) are hotter
+                              const isPeakHour = hIdx >= 4 && hIdx <= 8;
+                              let opacityLevel = 10;
+                              if (isHotDay && isPeakHour) {
+                                opacityLevel = 90;
+                              } else if (isHotDay || isPeakHour) {
+                                opacityLevel = 50;
+                              } else if (hIdx % 3 === 0) {
+                                opacityLevel = 30;
+                              }
+                              
+                              const styleClass = opacityLevel === 90 
+                                ? 'bg-purple-500 shadow-[0_0_8px_rgba(168,85,247,0.4)]' 
+                                : opacityLevel === 50 
+                                ? 'bg-[#8B5CF6]/60' 
+                                : opacityLevel === 30 
+                                ? 'bg-[#8B5CF6]/20' 
+                                : 'bg-zinc-800/20';
+
+                              return (
+                                <div 
+                                  key={hIdx} 
+                                  className={`flex-1 h-3.5 sm:h-4.5 rounded-sm transition-all hover:scale-115 hover:ring-1 hover:ring-purple-300 cursor-crosshair ${styleClass}`}
+                                  title={`${day} block ${hIdx * 2}:00 — Engagement boost: ${opacityLevel}%`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex items-center gap-3 justify-end text-[9px] font-mono text-zinc-500 pt-1 select-none">
+                    <span>Muted (0%)</span>
+                    <div className="flex items-center gap-0.5">
+                      <div className="w-2 h-2 bg-zinc-800 rounded-xs" />
+                      <div className="w-2 h-2 bg-purple-900/20 rounded-xs" />
+                      <div className="w-2 h-2 bg-purple-700/60 rounded-xs" />
+                      <div className="w-2 h-2 bg-purple-500 rounded-xs" />
+                    </div>
+                    <span>Extreme Engagement Spike (100%)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
             )}
           </div>
         )}

@@ -23,7 +23,13 @@ import {
   BookmarkCheck,
   Eye, 
   ArrowRight,
-  Sparkle
+  Sparkle,
+  History,
+  Tv,
+  Trash2,
+  Play,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -59,6 +65,30 @@ export default function NotificationsView({
   const [activeCategory, setActiveCategory] = useState<'all' | 'followers' | 'comments' | 'mentions' | 'sparks' | 'messages' | 'communities' | 'system'>('all');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showDailySummary, setShowDailySummary] = useState(true);
+
+  // Watch History System
+  const [watchHistory, setWatchHistory] = useState<any[]>([]);
+  const [activeHistoryVideo, setActiveHistoryVideo] = useState<any | null>(null);
+
+  useEffect(() => {
+    const loadHistory = () => {
+      const saved = localStorage.getItem('nexora_watch_history');
+      if (saved) {
+        setWatchHistory(JSON.parse(saved));
+      } else {
+        setWatchHistory([]);
+      }
+    };
+    loadHistory();
+    window.addEventListener('update-watch-history', loadHistory);
+    return () => window.removeEventListener('update-watch-history', loadHistory);
+  }, []);
+
+  const handleClearWatchHistory = () => {
+    localStorage.removeItem('nexora_watch_history');
+    setWatchHistory([]);
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Watch history successfully cleared!' }));
+  };
 
   // Quick activity action response states
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
@@ -470,6 +500,106 @@ export default function NotificationsView({
         </div>
       )}
 
+      {/* WATCH HISTORY & CONTINUE WATCHING DESIGN PLATFORM */}
+      <div className="p-5 rounded-3xl bg-[#09071c]/60 border border-violet-500/10 text-left space-y-4 shadow-xl">
+        <div className="flex items-center justify-between border-b border-violet-500/5 pb-2">
+          <div className="flex items-center gap-2">
+            <History className="w-4 h-4 text-pink-400" />
+            <span className="text-xs font-mono font-black text-violet-200 uppercase tracking-wider">
+              📺 WATCH HISTORY & CONTINUE WATCHING
+            </span>
+          </div>
+
+          {watchHistory.length > 0 && (
+            <button
+              onClick={handleClearWatchHistory}
+              className="text-[10px] font-mono font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors uppercase"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear History</span>
+            </button>
+          )}
+        </div>
+
+        {watchHistory.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {watchHistory.map((item: any) => {
+              const progressPercentage = item.duration ? Math.min(100, Math.floor((item.progress / item.duration) * 100)) : 0;
+              return (
+                <div 
+                  key={item.postId}
+                  className="bg-black/40 border border-white/5 rounded-2xl p-3 flex flex-col justify-between hover:border-violet-500/20 transition-all group relative overflow-hidden"
+                >
+                  <div className="space-y-2.5">
+                    {/* Simulated thumbnail */}
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10 group-hover:scale-[1.01] transition-transform">
+                      <video 
+                        src={item.videoUrl} 
+                        muted 
+                        playsInline 
+                        className="w-full h-full object-cover opacity-70"
+                      />
+                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                        <button
+                          onClick={() => setActiveHistoryVideo(item)}
+                          className="w-9 h-9 rounded-xl bg-purple-600/90 text-white flex items-center justify-center hover:bg-purple-500 hover:scale-105 active:scale-95 transition-all shadow-[0_0_12px_rgba(139,92,246,0.3)] cursor-pointer"
+                        >
+                          <Play className="w-4 h-4 fill-current ml-0.5" />
+                        </button>
+                      </div>
+
+                      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[9px] font-mono text-zinc-300 bg-black/75 px-2 py-1 rounded-md backdrop-blur-md">
+                        <span>@{item.username}</span>
+                        <span>{progressPercentage}% watched</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <img src={item.avatar} alt="" className="w-4 h-4 rounded-full object-cover border border-white/10" />
+                        <span className="text-[10px] font-mono text-violet-300 font-bold">{item.name}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-100 font-sans line-clamp-2 leading-relaxed">
+                        {item.content || "Awesome video moment on Nexora!"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mt-4 decoration-current">
+                    {/* Visual Progress tracking bar */}
+                    <div className="space-y-1">
+                      <div className="h-1 w-full bg-zinc-800 rounded-lg overflow-hidden">
+                        <div 
+                          className="h-full bg-linear-to-r from-purple-500 to-pink-500 rounded-lg transition-all" 
+                          style={{ width: `${progressPercentage}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[8px] font-mono text-zinc-500">
+                        <span>Resumed position: {Math.floor(item.progress)}s</span>
+                        <span>Length: {Math.floor(item.duration)}s</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setActiveHistoryVideo(item)}
+                      className="w-full py-1.5 bg-violet-600/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/10 rounded-xl text-[10px] font-mono tracking-wider font-extrabold uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Tv className="w-3 h-3" />
+                      <span>Continue Watching ⏯️</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-6 text-center text-violet-400/30 font-mono text-[10px] flex flex-col items-center justify-center gap-2">
+            <Tv className="w-8 h-8 opacity-25 animate-pulse" />
+            <span>Watch standard videos on the Home Feed to populate your watch resume stream here!</span>
+          </div>
+        )}
+      </div>
+
       {/* SEARCH ACTIVITY BAR */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400/50" />
@@ -794,6 +924,96 @@ export default function NotificationsView({
           </AnimatePresence>
         )}
       </div>
+
+      {/* CONTINUOUS WATCH HISTORY IMMERSIVE PLAYER MODAL */}
+      <AnimatePresence>
+        {activeHistoryVideo && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4 backdrop-blur-2xl"
+          >
+            <div className="w-full max-w-2xl bg-slate-950 border border-violet-500/20 rounded-3xl overflow-hidden relative shadow-[0_0_50px_rgba(139,92,246,0.3)]">
+              
+              {/* Header bar controls */}
+              <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-20 pointer-events-none">
+                <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full flex items-center gap-1.5 border border-white/5">
+                  <Tv className="w-3.5 h-3.5 text-pink-400" />
+                  <span className="text-[10px] font-mono text-white font-extrabold uppercase">CONTINUE NARRATIVE CHANNEL</span>
+                </div>
+                
+                <button
+                  onClick={() => setActiveHistoryVideo(null)}
+                  className="pointer-events-auto p-2 bg-black/60 hover:bg-black/90 backdrop-blur-md rounded-full text-zinc-400 hover:text-white border border-white/5 transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Central Video Frame */}
+              <div className="aspect-video w-full bg-black relative flex items-center justify-center">
+                <video
+                  autoPlay
+                  controls
+                  src={activeHistoryVideo.videoUrl}
+                  // Start playing precisely from saved progress timestamp
+                  onLoadedMetadata={(e) => {
+                    const video = e.currentTarget;
+                    if (video) {
+                      video.currentTime = activeHistoryVideo.progress || 0;
+                    }
+                  }}
+                  onTimeUpdate={(e) => {
+                    const video = e.currentTarget;
+                    if (video && activeHistoryVideo) {
+                      // Keep updating saved position so resume session keeps track!
+                      localStorage.setItem(`nexora_vid_pos_${activeHistoryVideo.videoUrl}`, String(video.currentTime));
+                      
+                      // Also update watch history item
+                      const saved = localStorage.getItem('nexora_watch_history');
+                      if (saved) {
+                        try {
+                          const list = JSON.parse(saved);
+                          const matched = list.map((item: any) => {
+                            if (item.postId === activeHistoryVideo.postId) {
+                              return { ...item, progress: video.currentTime };
+                            }
+                            return item;
+                          });
+                          localStorage.setItem('nexora_watch_history', JSON.stringify(matched));
+                        } catch (err) {
+                          console.error(err);
+                        }
+                      }
+                    }
+                  }}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              {/* Bottom bio info bar */}
+              <div className="p-4 bg-slate-900 border-t border-white/5 flex items-center gap-3">
+                <img 
+                  src={activeHistoryVideo.avatar} 
+                  alt="" 
+                  className="w-10 h-10 rounded-xl object-cover border border-white/10 shrink-0" 
+                />
+                <div className="text-left min-w-0">
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs font-bold text-white font-sans">{activeHistoryVideo.name}</span>
+                    <span className="text-[9.5px] font-mono text-violet-400">@{activeHistoryVideo.username}</span>
+                  </div>
+                  <p className="text-[11px] text-zinc-400 font-sans truncate leading-normal mt-0.5">
+                    {activeHistoryVideo.content}
+                  </p>
+                </div>
+              </div>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

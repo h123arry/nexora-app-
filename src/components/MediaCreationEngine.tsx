@@ -7,6 +7,7 @@ import {
   ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo
 } from 'lucide-react';
 import { User, Post } from '../types';
+import { saveMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 
 interface MediaCreationEngineProps {
   currentUser: User;
@@ -117,6 +118,7 @@ export default function MediaCreationEngine({
 
   // Video variables
   const [videoFileUrl, setVideoFileUrl] = useState<string | null>(null);
+  const [videoRawBlob, setVideoRawBlob] = useState<Blob | null>(null);
   const [videoMuted, setVideoMuted] = useState(false);
   const [videoTrimStart, setVideoTrimStart] = useState(0);
   const [videoTrimEnd, setVideoTrimEnd] = useState(15);
@@ -133,6 +135,7 @@ export default function MediaCreationEngine({
 
   // Voice recording
   const [voiceFileUrl, setVoiceFileUrl] = useState<string | null>(null);
+  const [voiceRawBlob, setVoiceRawBlob] = useState<Blob | null>(null);
   const [voiceDurationSecs, setVoiceDurationSecs] = useState(0);
   const [voiceIsRecording, setVoiceIsRecording] = useState(false);
   const [voiceIsPaused, setVoiceIsPaused] = useState(false);
@@ -361,8 +364,10 @@ export default function MediaCreationEngine({
     if (!files || files.length === 0) return;
 
     handleRequestPermission('gallery', () => {
-      const objectUrl = URL.createObjectURL(files[0]);
+      const file = files[0];
+      const objectUrl = URL.createObjectURL(file);
       setVideoFileUrl(objectUrl);
+      setVideoRawBlob(file);
       setVideoTrimStart(0);
       setVideoTrimEnd(15);
       setVideoDuration(15);
@@ -398,6 +403,7 @@ export default function MediaCreationEngine({
                   const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
                   const url = URL.createObjectURL(videoBlob);
                   setRecordedVideoUrl(url);
+                  setVideoRawBlob(videoBlob);
                 };
                 recorder.start();
               } catch (e) {
@@ -465,6 +471,7 @@ export default function MediaCreationEngine({
               const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
               const audioUrl = URL.createObjectURL(audioBlob);
               setVoiceFileUrl(audioUrl);
+              setVoiceRawBlob(audioBlob);
             };
 
             recorder.start();
@@ -628,8 +635,51 @@ export default function MediaCreationEngine({
     try {
       const imgArray = selectedImages.map(img => img.url);
       const isVoice = activeMode === 'voice';
-      const mainImg = imgArray[0] || undefined;
-      const vidUrl = videoFileUrl || recordedVideoUrl || undefined;
+      let mainImg = imgArray[0] || undefined;
+      let vidUrl = videoFileUrl || recordedVideoUrl || undefined;
+      let finalVoiceUrl = voiceFileUrl || undefined;
+
+      // Persist video and extract thumbnail
+      if (videoRawBlob) {
+        console.log('[Audit] Video raw blob detected, starting permanent store pipeline.');
+        const mediaId = `video-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        
+        // Ensure thumbnail is generated and set to database
+        try {
+          console.log('[Audit] Launching video thumbnail rendering pipeline...');
+          const thumb = await generateVideoThumbnail(videoRawBlob);
+          if (thumb) {
+            mainImg = thumb;
+            console.log('[Audit] Thumbnail generated successfully and set as post cover image!');
+          }
+        } catch (thumbErr) {
+          console.error('[Audit] Failed to render video thumbnail:', thumbErr);
+        }
+
+        // Save actual video blob
+        try {
+          console.log('[Audit] Committing video binary stream to long-term database storage...');
+          const permanentUri = await saveMediaBlob(mediaId, videoRawBlob);
+          vidUrl = permanentUri;
+          console.log(`[Audit] Brand new permanent storage URL created: ${permanentUri}`);
+        } catch (storeErr) {
+          console.error('[Audit] Permanent storage write failed, fallback to local URL:', storeErr);
+        }
+      }
+
+      // Persist voice audio recording
+      if (voiceRawBlob) {
+        console.log('[Audit] Voice raw blob detected, starting audio store pipeline.');
+        const audioId = `voice-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        try {
+          console.log('[Audit] Committing audio binary stream to long-term database storage...');
+          const permanentAudioUri = await saveMediaBlob(audioId, voiceRawBlob);
+          finalVoiceUrl = permanentAudioUri;
+          console.log(`[Audit] Voice audio committed successfully. Key: ${permanentAudioUri}`);
+        } catch (audioStoreErr) {
+          console.error('[Audit] Persistent voice store failed:', audioStoreErr);
+        }
+      }
       
       const filtersArray = selectedImages.map(img => img.filterStyle || 'none');
       const mainFilter = filtersArray[0] || undefined;
@@ -647,14 +697,22 @@ export default function MediaCreationEngine({
         };
       }
 
-      onAddPost(
+      console.log('[Audit] Initializing database write with:', {
+        caption,
+        mainImg: mainImg ? `${mainImg.substring(0, 50)}...` : 'none',
+        vidUrl,
+        finalVoiceUrl,
+        isVoice
+      });
+
+      const newPostId = onAddPost(
         caption,
         mainImg,
         topics,
         imgArray.length > 1 ? imgArray : undefined,
         vidUrl,
         voiceTranscript || undefined,
-        voiceFileUrl || undefined,
+        finalVoiceUrl,
         audience,
         isVoice,
         isVoice ? voiceDurationSecs : undefined,
@@ -667,6 +725,8 @@ export default function MediaCreationEngine({
         targetBroadcastChannel
       );
 
+      console.log(`[Audit] Database write success! New post ID created: ${newPostId}`);
+
       setPostingStatus('completed');
       window.dispatchEvent(new CustomEvent('toast', { detail: '🚀 Shared directly to network with 0ms delay!' }));
       setTimeout(() => {
@@ -674,6 +734,7 @@ export default function MediaCreationEngine({
       }, 800);
 
     } catch (err) {
+      console.error('[Audit] Fatal error in publish queue:', err);
       setPostingStatus('failed');
       setErrorMessage('Upload failed. Please try again.');
     }
