@@ -1023,6 +1023,8 @@ export default function App() {
                       theme={theme}
                       setTheme={setTheme}
                       onLogout={() => setIsLoggedIn(false)}
+                      onTriggerPWAInstall={handleTriggerPWAInstall}
+                      showPWAInstallPrompt={showPWAInstallPrompt}
                     />
                   )}
 
@@ -2092,19 +2094,6 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* 📥 PWA FLOATING QUICK INSTALL CORE ALIGNMENT TRIGGER */}
-      {currentUser.username === 'voh' && pwaInstallStatus !== 'installed' && (
-        <button
-          onClick={() => setShowPWAInstallPrompt(true)}
-          className="fixed bottom-20 md:bottom-24 right-5 z-40 p-2 px-3.5 rounded-full md:rounded-2xl bg-linear-to-r from-violet-600 via-pink-600 to-pink-500 hover:brightness-110 active:scale-95 text-white font-sans text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 shadow-[0_0_20px_rgba(139,92,246,0.45)] hover:-translate-y-0.5 transition-all cursor-pointer"
-          title="Install Nexora Standalone Client"
-        >
-          <Sparkles className="w-3.5 h-3.5 animate-pulse text-yellow-300" />
-          <span className="hidden sm:inline">Install PWA logo app</span>
-          <span className="inline sm:hidden">Install App</span>
-        </button>
-      )}
 
       {/* Sleek unified bottom navigation bar (primary app navigation for all sizes) */}
       <div 

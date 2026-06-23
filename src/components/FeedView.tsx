@@ -10,6 +10,7 @@ import { User, Post, Comment, ThemeMood } from '../types';
 import { generateTestUsers } from '../data/generatedUsers';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
+import PurpleVerifiedBadge from './VohVerifiedBadge';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -282,6 +283,14 @@ const MOCK_MOMENTS = [
   { id: 'm-3', name: 'David Jenkins', username: 'david_j', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', active: false, quotes: ["Early morning street photography session.", "Capturing real local human stories with my lens. 📸"] }
 ];
 
+const SEARCHABLE_SYSTEM_USERS = [
+  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 1245000, bio: 'Nexora Founder & System Architect. Building glassmorphic social systems with absolute visual rhythm.' },
+  { id: 'sarah_codes', name: 'Sarah Vance', username: 'sarah_codes', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 8520, bio: 'Full stack wizard. Building components with high responsiveness and generous negative space.' },
+  { id: 'alex_sterling', name: 'Alex Sterling', username: 'alex_sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 4250, bio: 'Distributed ledger developer & digital artist. Port Harcourt community node lead.' },
+  { id: 'david_j', name: 'David Jenkins', username: 'david_j', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', isVerified: false, followers: 980, bio: 'Experimental audio-focused documentarian and soundscape engineer. Capturing human frequencies.' },
+  { id: 'nexora_ai', name: 'Nexora Platform AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 235000, bio: 'Autonomous cognitive model managing on-chain telemetry, active status buffers, and user interest DNAs.' }
+];
+
 interface FeedViewProps {
   currentUser: User;
   posts: Post[];
@@ -315,10 +324,18 @@ export default function FeedView({
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
-  const [feedTab, setFeedTab] = useState<'for_you' | 'following' | 'contributions' | 'pulse' | 'local' | 'broadcast'>('for_you');
+  const [feedTab, setFeedTab] = useState<'for_you' | 'following' | 'communities' | 'pulse' | 'local'>(() => {
+    const saved = localStorage.getItem('nexora_feed_tab');
+    if (saved === 'contributions' || saved === 'broadcast') return 'for_you';
+    return (saved as any) || 'for_you';
+  });
   const [qualityFilter, setQualityFilter] = useState(false);
   const [visibleCount, setVisibleCount] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_feed_tab', feedTab);
+  }, [feedTab]);
   
   // Custom interactive features
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
@@ -406,6 +423,10 @@ export default function FeedView({
     const saved = localStorage.getItem('nexora_blocked_users');
     return saved ? JSON.parse(saved) : [];
   });
+  const [mutedUserIds, setMutedUserIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_muted_users');
+    return saved ? JSON.parse(saved) : [];
+  });
   const [notInterestedTags, setNotInterestedTags] = useState<string[]>(() => {
     const saved = localStorage.getItem('nexora_not_interested_tags');
     return saved ? JSON.parse(saved) : [];
@@ -415,10 +436,11 @@ export default function FeedView({
   const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => {
     const saved = localStorage.getItem('nexora_saved_collections');
     return saved ? JSON.parse(saved) : {
+      'Favorites ❤️': [],
       'Football ⚽': [],
       'Business 💼': [],
       'Inspiration ⚡': [],
-      'Friends 🤝': []
+      'Custom Collections 📂': []
     };
   });
   const [activeCollectionFolder, setActiveCollectionFolder] = useState<string | null>(null);
@@ -479,6 +501,10 @@ export default function FeedView({
   useEffect(() => {
     localStorage.setItem('nexora_blocked_users', JSON.stringify(blockedUserIds));
   }, [blockedUserIds]);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_muted_users', JSON.stringify(mutedUserIds));
+  }, [mutedUserIds]);
 
   useEffect(() => {
     localStorage.setItem('nexora_not_interested_tags', JSON.stringify(notInterestedTags));
@@ -572,6 +598,10 @@ export default function FeedView({
     const handleScroll = () => {
       if (!scrollContainerRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      
+      // Store scroll position for feed recovery
+      localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+
       if (scrollHeight - scrollTop - clientHeight < 120) {
         // threshold reached! Automatically load more
         setVisibleCount(prev => Math.min(prev + 6, localPosts.length));
@@ -588,6 +618,19 @@ export default function FeedView({
       }
     };
   }, [localPosts, visibleCount]);
+
+  // Restore scroll position on load
+  useEffect(() => {
+    const savedPos = localStorage.getItem('nexora_feed_scroll_pos');
+    if (savedPos && scrollContainerRef.current) {
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = Number(savedPos);
+        }
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, []);
 
   // Pull-down refresh simulator
   const triggerRefresh = () => {
@@ -826,6 +869,7 @@ export default function FeedView({
     // 1. Core moderation overrides
     if (hiddenPostIds.includes(post.id)) return false;
     if (blockedUserIds.includes(post.userId)) return false;
+    if (mutedUserIds.includes(post.userId)) return false;
     if (post.tags.some(t => notInterestedTags.includes(t))) return false;
 
     // 2. Prevent scheduled posts in the future from being visible to others
@@ -893,9 +937,9 @@ export default function FeedView({
     if (feedTab === 'following') {
       const isPostFromFollowed = followingIds.includes(post.userId) || post.userId === currentUser.id;
       if (!isPostFromFollowed) return false;
-    } else if (feedTab === 'contributions') {
-      const isCreatorContribution = post.userId === currentUser.id || post.username === 'voh' || post.username === 'nexora_ai' || post.username === 'voh_ai' || post.likes > 15 || post.reputationReward;
-      if (!isCreatorContribution) return false;
+    } else if (feedTab === 'communities') {
+      const isCommunityPost = !!(post.communityName || post.audience === 'community' || (post as any).circleName);
+      if (!isCommunityPost) return false;
     } else if (feedTab === 'pulse') {
       if (post.category !== 'pulse') return false;
     } else if (feedTab === 'local') {
@@ -964,24 +1008,47 @@ export default function FeedView({
     }
 
     // Apply For You Engagement boost only if not strictly sorted or in specialized feeds
-    if (feedTab === 'for_you' && sortBy === 'latest') {
-      return list.sort((a, b) => {
-        let scoreA = a.likes + a.shares * 3 + a.comments.length * 2;
-        let scoreB = b.likes + b.shares * 3 + b.comments.length * 2;
+    const sorted = (() => {
+      if (feedTab === 'for_you' && sortBy === 'latest') {
+        const sortedList = [...list].sort((a, b) => {
+          let scoreA = a.likes + a.shares * 3 + a.comments.length * 2;
+          let scoreB = b.likes + b.shares * 3 + b.comments.length * 2;
 
-        // Boost VOH posts or items matching verified interests
-        if (a.userId === 'user-0') scoreA += 500;
-        if (b.userId === 'user-0') scoreB += 500;
+          // Boost VOH posts or items matching verified interests
+          if (a.userId === 'user-0') scoreA += 500;
+          if (b.userId === 'user-0') scoreB += 500;
 
-        // Location relevance boost (e.g. Nigeria, Port Harcourt)
-        if (a.location?.toLowerCase().includes("nigeria")) scoreA += 100;
-        if (b.location?.toLowerCase().includes("nigeria")) scoreB += 100;
+          // Location relevance boost (e.g. Nigeria, Port Harcourt)
+          if (a.location?.toLowerCase().includes("nigeria")) scoreA += 100;
+          if (b.location?.toLowerCase().includes("nigeria")) scoreB += 100;
 
-        return scoreB - scoreA;
-      });
+          return scoreB - scoreA;
+        });
+        return sortedList;
+      }
+      return list;
+    })();
+
+    // Fulfill FEED CONTENT MIX RULE: If videos exist, show them prominently. Weave and interleave them:
+    const videoPosts = sorted.filter(p => !!p.videoUrl);
+    const nonVideoPosts = sorted.filter(p => !p.videoUrl);
+
+    if (videoPosts.length > 0 && !searchQuery.trim()) {
+      const interleaved: RefactoredPost[] = [];
+      let vidIdx = 0;
+      let nonVidIdx = 0;
+      while (vidIdx < videoPosts.length || nonVidIdx < nonVideoPosts.length) {
+        if (vidIdx < videoPosts.length) {
+          interleaved.push(videoPosts[vidIdx++]);
+        }
+        if (nonVidIdx < nonVideoPosts.length) {
+          interleaved.push(nonVideoPosts[nonVidIdx++]);
+        }
+      }
+      return interleaved;
     }
 
-    return list;
+    return sorted;
   };
 
   const currentDisplayList = getRankedPosts().slice(0, visibleCount);
@@ -1027,9 +1094,9 @@ export default function FeedView({
           </div>
         </div>
 
-        {/* Center: For You / Following / Contributions / Pulse / Local / Broadcast */}
+        {/* Center: For You / Following / Communities / Pulse / Local */}
         <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-xl border border-white/5 mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full">
-          {(['for_you', 'following', 'contributions', 'pulse', 'local', 'broadcast'] as const).map(tab => (
+          {(['for_you', 'following', 'communities', 'pulse', 'local'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => {
@@ -1044,41 +1111,15 @@ export default function FeedView({
             >
               {tab === 'for_you' && 'For You'}
               {tab === 'following' && 'Following'}
-              {tab === 'contributions' && 'Contributions'}
+              {tab === 'communities' && 'Communities'}
               {tab === 'pulse' && 'Pulse'}
               {tab === 'local' && 'Local'}
-              {tab === 'broadcast' && '📢 Broadcasts'}
             </button>
           ))}
         </div>
 
-        {/* Right: Search and Messages */}
+        {/* Right: Messages and AI Oracle */}
         <div className="flex items-center gap-2.5">
-          {/* Compact Search box */}
-          <div className="relative w-36 sm:w-44">
-            <Search className="absolute left-2.5 top-2.5 w-3 h-3 text-violet-400/50" />
-            <input 
-              type="text" 
-              placeholder="Search..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  addToSearchHistory(searchQuery);
-                }
-              }}
-              className="w-full bg-slate-950/50 border border-white/5 hover:border-violet-500/20 focus:border-violet-500/40 rounded-xl py-1.5 pl-7.5 pr-6 text-[10.5px] text-white focus:outline-hidden placeholder:text-violet-400/30"
-            />
-            {searchQuery && (
-              <button 
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-2 text-violet-400/50 hover:text-white"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-
           {/* VOH AI button */}
           <button 
             onClick={() => {
@@ -1125,220 +1166,6 @@ export default function FeedView({
           </button>
         </div>
 
-        {/* Search Deck (Moved inside scroll to maximize scrolling feed area) */}
-        <div className="shrink-0 p-4 bg-slate-950/25 border border-white/5 rounded-2xl space-y-3.5 text-left">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono text-[#A78BFA] font-extrabold tracking-widest block">
-                Search
-              </span>
-              <div className="flex flex-wrap items-center gap-1.5">
-                {[
-                  { id: 'all', label: 'All 🌌' },
-                  { id: 'users', label: 'Users 👥' },
-                  { id: 'posts', label: 'Posts 📝' },
-                  { id: 'videos', label: 'Videos 🎥' },
-                  { id: 'voice', label: 'Voice Posts 🎙️' },
-                  { id: 'communities', label: 'Communities 🏟️' },
-                  { id: 'hashtags', label: 'Hashtags 🏷️' },
-                  { id: 'pulse', label: 'Pulse 🌍' }
-                ].map(f => (
-                  <button
-                    key={f.id}
-                    onClick={() => setSearchFilterType(f.id as any)}
-                    className={`px-3 py-1.5 rounded-lg text-[10.5px] font-bold font-sans transition-all cursor-pointer ${searchFilterType === f.id ? 'bg-violet-600 border border-violet-500/30 text-white font-extrabold shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-[#0b0821]/50 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'}`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="space-y-1 shrink-0">
-              <span className="text-[10px] uppercase font-mono text-pink-400 font-extrabold tracking-widest block">
-                Sort By
-              </span>
-              <div className="flex items-center gap-1 bg-black/40 p-1.5 rounded-xl border border-white/5 text-[10.5px] font-sans">
-                {[
-                  { id: 'latest', label: '⚡ Latest' },
-                  { id: 'popular', label: '🔥 Popular' },
-                  { id: 'nearby', label: '📍 Nearby' }
-                ].map(s => (
-                  <button
-                    key={s.id}
-                    onClick={() => setSortBy(s.id as any)}
-                    className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${sortBy === s.id ? 'bg-pink-600 text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* PREMIUM SEARCH HISTORY & TRENDING PLATFORM */}
-          <div className="pt-3 border-t border-white/5 space-y-3">
-            {/* Search History Row */}
-            {searchHistory.length > 0 && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[9.5px] font-mono font-extrabold text-[#A78BFA] uppercase tracking-wider flex items-center gap-1">
-                    <RefreshCw className="w-3 h-3 text-[#A78BFA]" />
-                    RECENT SEARCH LIFE:
-                  </span>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {searchHistory.map((hist) => (
-                      <div 
-                        key={hist}
-                        className="flex items-center gap-1 bg-violet-950/40 hover:bg-violet-950/70 border border-violet-500/10 hover:border-violet-500/20 px-2 py-1 rounded-lg text-[10px] font-mono text-violet-200 transition-all cursor-pointer"
-                      >
-                        <span 
-                          onClick={() => {
-                            setSearchQuery(hist.replace(/[^a-zA-Z0-9\s]/g, '').trim());
-                            addToSearchHistory(hist);
-                          }}
-                        >
-                          {hist}
-                        </span>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeFromSearchHistory(hist);
-                          }}
-                          className="hover:text-red-400 font-bold ml-1 px-0.5 text-[9px] cursor-pointer"
-                        >
-                          ✖
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <button
-                  onClick={clearAllSearchHistory}
-                  className="text-[9px] font-mono font-bold text-red-400 hover:text-red-300 transition-colors uppercase shrink-0"
-                >
-                  Clear Logs 🗑️
-                </button>
-              </div>
-            )}
-
-            {/* Trending Sections Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-              {/* Trending Topics Column */}
-              <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
-                <span className="text-[9px] font-mono font-black text-rose-400 uppercase tracking-widest flex items-center gap-1">
-                  <span>🔥</span> TRENDING TOPICS
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {[
-                    { text: 'Quantum Networking', term: 'Quantum' },
-                    { text: 'Sarah Creative Studio', term: 'Sarah' },
-                    { text: 'David Sports Hub', term: 'David' }
-                  ].map((topic) => (
-                    <button
-                      key={topic.text}
-                      onClick={() => {
-                        setSearchQuery(topic.term);
-                        setSearchFilterType('all');
-                        addToSearchHistory(topic.text);
-                      }}
-                      className="text-left py-1 px-1.5 text-[10px] font-sans font-medium text-zinc-300 hover:text-[#A78BFA] transition-colors truncate block"
-                    >
-                      📈 {topic.text}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Trending Hashtags Column */}
-              <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
-                <span className="text-[9px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1">
-                  <span>🏷️</span> TRENDING HASHTAGS
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {['#BuildInPublic', '#NextGenWeb', '#SpatialComputing'].map((hashtag) => (
-                    <button
-                      key={hashtag}
-                      onClick={() => {
-                        setSearchQuery(hashtag);
-                        setSearchFilterType('hashtags');
-                        addToSearchHistory(hashtag);
-                      }}
-                      className="text-left py-1 px-1.5 text-[10px] font-mono text-zinc-300 hover:text-[#A78BFA] transition-colors truncate block"
-                    >
-                      ✨ {hashtag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Trending Communities Column */}
-              <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
-                <span className="text-[9px] font-mono font-black text-cyan-400 uppercase tracking-widest flex items-center gap-1">
-                  <span>🏟️</span> TRENDING GUILDS
-                </span>
-                <div className="flex flex-col gap-1.5">
-                  {['Austin Creators Guild', 'Lagos Tech Hub', 'Business Synthesis'].map((community) => (
-                    <button
-                      key={community}
-                      onClick={() => {
-                        setSearchQuery(community);
-                        setSearchFilterType('communities');
-                        addToSearchHistory(community);
-                      }}
-                      className="text-left py-1 px-1.5 text-[10px] font-sans font-medium text-zinc-300 hover:text-cyan-400 transition-colors truncate block"
-                    >
-                      🏟️ {community}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Pinterest style Saved collection folder rows */}
-          <div className="text-left border-t border-white/5 pt-2.5 w-full">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10.5px] font-mono font-bold text-zinc-400 uppercase flex items-center gap-1 shrink-0">
-                  <Folder className="w-3.5 h-3.5 text-pink-400" />
-                  SAVED COLLECTIONS:
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {Object.keys(savedCollections).map(folder => {
-                    const count = savedCollections[folder]?.length || 0;
-                    const isFolderActive = activeCollectionFolder === folder;
-                    return (
-                      <button
-                        key={folder}
-                        onClick={() => {
-                          if (isFolderActive) {
-                            setActiveCollectionFolder(null);
-                          } else {
-                            setActiveCollectionFolder(folder);
-                          }
-                        }}
-                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold font-sans transition-all flex items-center gap-1.5 cursor-pointer border ${isFolderActive ? 'bg-pink-900/30 text-pink-300 border-pink-500/40 font-extrabold' : 'bg-black/20 text-zinc-400 hover:text-zinc-300 border-white/5'}`}
-                      >
-                       <span>{folder}</span>
-                        <span className="bg-black/40 text-[9px] px-1 rounded-md font-mono">{count}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              {activeCollectionFolder && (
-                <button
-                  onClick={() => setActiveCollectionFolder(null)}
-                  className="text-[10.5px] font-mono text-rose-400 hover:text-rose-500 font-extrabold flex items-center gap-1 cursor-pointer shrink-0 uppercase tracking-wide"
-                >
-                  [Exit Folder ✖]
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Selected Tag Active Indicator (Moved inside scroll) */}
         {selectedTag && (
           <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl">
@@ -1353,23 +1180,354 @@ export default function FeedView({
         {filteredPosts.length === 0 && (
           <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-12 space-y-4">
             <Globe className="w-10 h-10 text-violet-500/30 mx-auto animate-pulse" />
-            <h4 className="text-sm font-sans font-bold text-violet-100">No Posts Found</h4>
+            <h4 className="text-sm font-sans font-bold text-violet-100">No posts yet.</h4>
             <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-              Welcome to NEXORA. Follow people, join communities, and explore World Pulse to start discovering content.
+              Create your first post and share it with the world! Choose from text, voice notes, video streams, or photos to begin your social journey.
             </p>
-            <button 
-              onClick={() => { setSearchQuery(''); setSelectedTag(null); setFeedTab('for_you'); }}
-              className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-mono font-bold cursor-pointer"
-            >
-              Reset Feed Filters
-            </button>
+            <div className="flex justify-center gap-2.5">
+              <button 
+                onClick={() => { setSearchQuery(''); setSelectedTag(null); setFeedTab('for_you'); }}
+                className="px-4 py-2 bg-[#0c0823] hover:bg-violet-950 text-violet-300 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer"
+              >
+                Reset Feed Filters
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Profile Searchability Section */}
+        {(() => {
+          const isSearchingUsers = searchFilterType === 'users';
+          const query = searchQuery.trim().toLowerCase();
+          const matchingUsers = query
+            ? SEARCHABLE_SYSTEM_USERS.filter(u => 
+                u.name.toLowerCase().includes(query) || 
+                u.username.toLowerCase().includes(query) ||
+                u.bio.toLowerCase().includes(query)
+              )
+            : (isSearchingUsers ? SEARCHABLE_SYSTEM_USERS : []);
+
+          if (isSearchingUsers && matchingUsers.length === 0) {
+            return (
+              <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-12 space-y-4">
+                <span className="text-3xl select-none">👥</span>
+                <h4 className="text-sm font-sans font-bold text-violet-100">No members matched your search query.</h4>
+                <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
+                  You're just getting started. Follow people and grow your network. Try searching for "voh", "sarah" or "alex" to follow top creators.
+                </p>
+              </div>
+            );
+          }
+
+          if (matchingUsers.length > 0 && (isSearchingUsers || query)) {
+            return (
+              <div className="space-y-3.5 pt-2 pb-3.5 text-left">
+                <span className="text-[10px] uppercase font-mono tracking-widest text-[#8B5CF6] font-extrabold flex items-center gap-1.5 px-1">
+                  👥 Verified Nexora Nodes ({matchingUsers.length})
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {matchingUsers.map(u => (
+                    <div 
+                      key={u.id}
+                      className="p-4 rounded-3xl bg-[#0e0a2b]/95 border border-violet-500/20 hover:border-violet-500/40 shadow-xl flex flex-col justify-between transition-all hover:-translate-y-0.5"
+                    >
+                      <div className="flex gap-3">
+                        <img 
+                          src={u.avatar} 
+                          alt={u.name}
+                          className="w-12 h-12 rounded-full object-cover border border-violet-500/15 cursor-pointer shrink-0"
+                          onClick={() => onViewProfile?.(u.id)}
+                          referrerPolicy="no-referrer"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span 
+                              onClick={() => onViewProfile?.(u.id)}
+                              className="text-sm font-sans font-black text-white hover:text-[#8B5CF6] transition-colors cursor-pointer leading-tight"
+                            >
+                              {u.name}
+                            </span>
+                            {u.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" />}
+                          </div>
+                          <span className="text-[10px] text-violet-400 font-mono font-medium block">@{u.username}</span>
+                          <p className="text-[11px] text-zinc-300 leading-snug mt-1.5 font-sans line-clamp-2 select-text">{u.bio}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-3 gap-2">
+                        <span className="text-[10px] font-mono text-zinc-400 select-none">
+                          👥 <strong>{u.followers.toLocaleString()}</strong> followers
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onViewProfile?.(u.id)}
+                          className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-[9.5px] font-mono font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all"
+                        >
+                          Profile
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
+
+        {/* SKELETON FEED CARDS ON REFRESH */}
+        {isRefreshing && (
+          <div className="space-y-4 text-left">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="p-5 rounded-3xl bg-[#0b091e]/60 border border-violet-500/10 space-y-4 animate-pulse">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 rounded-full bg-violet-950/40 shrink-0" />
+                  <div className="space-y-2 flex-1 pt-1">
+                    <div className="h-3 w-1/3 bg-violet-900/30 rounded-lg" />
+                    <div className="h-2.5 w-1/4 bg-violet-900/25 rounded-md" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-full bg-violet-900/25 rounded-md" />
+                  <div className="h-3 w-5/6 bg-violet-900/25 rounded-md" />
+                  <div className="h-3 w-2/3 bg-violet-900/20 rounded-md" />
+                </div>
+                <div className="flex justify-between items-center pt-3 border-t border-white/5">
+                  <div className="h-3.5 w-10 bg-violet-900/35 rounded-md" />
+                  <div className="h-3.5 w-12 bg-violet-900/35 rounded-md" />
+                  <div className="h-3.5 w-8 bg-violet-900/35 rounded-md" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
         {/* POST LIST */}
-        {currentDisplayList.map((post, index) => {
+        {!isRefreshing && searchFilterType !== 'users' && currentDisplayList.map((post, index) => {
           const isPlaying = playingVoiceId === post.id;
           const isCommentsOpen = activeCommentsPostId === post.id;
+
+          if (post.videoUrl) {
+            return (
+              <React.Fragment key={post.id}>
+                {/* 🟣 IMMERSIVE VIDEO CARD */}
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="rounded-3xl bg-black/95 border border-violet-500/15 overflow-hidden text-left shadow-2xl relative"
+                >
+                  {/* Outer edge-to-edge Video Container */}
+                  <div className="relative aspect-video sm:aspect-[16/10] bg-zinc-950 w-full overflow-hidden flex items-center justify-center group/video">
+                    {/* Native video element auto playing, looping, muted */}
+                    <video
+                      src={post.videoUrl}
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={() => setActiveVideoFullscreen(post)}
+                    />
+                    
+                    {/* Overlay header information */}
+                    <div className="absolute top-3 left-3 bg-black/55 backdrop-blur-md py-1 px-2.5 rounded-xl border border-white/10 flex items-center gap-2">
+                      <img src={post.avatar} className="w-5 h-5 rounded-full object-cover" />
+                      <span className="text-[10px] font-mono text-white/90">@{post.username}</span>
+                    </div>
+
+                    <div className="absolute bottom-3 right-3 bg-black/65 backdrop-blur-md p-2 rounded-xl text-[9px] font-mono text-purple-300 border border-violet-500/10 pointer-events-none uppercase tracking-wider">
+                      🎬 Tap Fullscreen
+                    </div>
+                  </div>
+
+                  {/* Below the video media block */}
+                  <div className="p-4 space-y-3">
+                    {/* Caption: text becomes secondary (small copy font-sans) */}
+                    {post.content && (
+                      <p className="text-[12.5px] text-zinc-300 font-sans leading-relaxed">
+                        {post.content}
+                      </p>
+                    )}
+
+                    {/* Hashtags list if any */}
+                    {post.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        {post.tags.map(tag => (
+                          <button
+                            key={tag}
+                            onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
+                            className="text-[9.5px] font-mono text-violet-400 hover:text-white"
+                          >
+                            #{tag}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Actions row: ⚡ (Sparks) 💬 (Comments) 🔁 (Repost) ↗️ (Share) */}
+                    <div className="flex items-center justify-between border-t border-white/5 pt-3 text-zinc-400 text-xs">
+                      {/* Sparks (Like) */}
+                      <button
+                        onClick={() => handleSpark(post.id)}
+                        className={`flex items-center gap-1.5 hover:text-pink-400 transition-colors cursor-pointer ${post.isLikedByUser ? 'text-pink-400 font-bold' : ''}`}
+                      >
+                        <Zap className={`w-4 h-4 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400' : ''}`} />
+                        <span className="font-mono text-[11px]">{post.likes} Sparks</span>
+                      </button>
+
+                      {/* Comments count */}
+                      <button
+                        onClick={() => setActiveCommentsPostId(isCommentsOpen ? null : post.id)}
+                        className={`flex items-center gap-1.5 hover:text-violet-300 transition-colors cursor-pointer ${isCommentsOpen ? 'text-[#8B5CF6] font-bold' : ''}`}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        <span className="font-mono text-[11px]">{post.comments.length} Comments</span>
+                      </button>
+
+                      {/* Repost (Shares) */}
+                      <button
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('toast', { detail: '🔁 Post reposted to your network profile stream!' }));
+                        }}
+                        className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span className="font-mono text-[11px]">{post.shares} Reposts</span>
+                      </button>
+
+                      {/* Share link */}
+                      <button
+                        onClick={() => {
+                          const text = `${window.location.origin}/post/${post.id}`;
+                          navigator.clipboard.writeText(text);
+                          window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
+                        }}
+                        className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer"
+                        title="Copy Link to Share"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span className="font-mono text-[11px]">Share</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Inline Comments Section from FeedView inside Video Card */}
+                  <AnimatePresence>
+                    {isCommentsOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="overflow-hidden mt-4 pt-4 border-t border-white/5 space-y-4 p-4 bg-slate-950/45 rounded-b-3xl"
+                      >
+                        {/* Comments stream scroll */}
+                        <div className="space-y-3.5 max-h-[200px] overflow-y-auto pr-1">
+                          {post.comments.length === 0 && (
+                            <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
+                              No comments yet. Start the conversation!
+                            </p>
+                          )}
+                          {post.comments.map(c => (
+                            <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
+                              <div className="flex items-start justify-between gap-2 text-xs">
+                                <div className="flex gap-2">
+                                  <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
+                                  <div>
+                                    <span className="font-sans font-bold text-violet-200">{c.name}</span>
+                                    <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • {c.timestamp}</span>
+                                  </div>
+                                </div>
+                                <button 
+                                  onClick={() => handleSparkComment(post.id, c.id)}
+                                  className={`flex items-center gap-1 font-mono text-[10px] hover:text-pink-400 ${c.isLikedByUser ? 'text-pink-400' : 'text-violet-400/50'}`}
+                                >
+                                  <Zap className="w-3 h-3 fill-current" />
+                                  <span>{c.likes}</span>
+                                </button>
+                              </div>
+                              
+                              <p className="text-xs text-slate-200 pl-9 font-sans">{c.content}</p>
+
+                              {/* Standard Threaded/Nested Replies */}
+                              {c.replies && c.replies.length > 0 && (
+                                <div className="pl-9 space-y-2.5 pt-1.5 border-l border-violet-500/10 ml-3.5">
+                                  {c.replies.map(rep => (
+                                    <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
+                                        <div>
+                                          <span className="font-sans font-black text-violet-200 text-[11px]">{rep.name}</span>
+                                          <span className="text-[9px] font-mono text-violet-400/50 block">@{rep.username} • {rep.timestamp}</span>
+                                        </div>
+                                      </div>
+                                      <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Reply compose activator */}
+                              <div className="pl-9">
+                                {activeReplyFieldId === c.id ? (
+                                  <div className="flex gap-2 mt-2">
+                                    <input 
+                                      type="text"
+                                      placeholder="Write nested thread reply..."
+                                      value={replyInputs[c.id] || ''}
+                                      onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
+                                      onKeyDown={(e) => { if(e.key === 'Enter') handleAddReplySubmit(post.id, c.id); }}
+                                      className="flex-1 bg-slate-900 border border-violet-500/15 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
+                                    />
+                                    <button 
+                                      onClick={() => handleAddReplySubmit(post.id, c.id)}
+                                      className="bg-violet-600 hover:bg-violet-500 p-1.5 rounded-xl text-white cursor-pointer"
+                                    >
+                                      <Send className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button 
+                                      onClick={() => setActiveReplyFieldId(null)}
+                                      className="text-violet-400 text-xs hover:text-white"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button 
+                                    onClick={() => setActiveReplyFieldId(c.id)}
+                                    className="text-[10px] font-mono text-violet-400 hover:text-white flex items-center gap-1 mt-1 cursor-pointer"
+                                  >
+                                    Reply to Thread 💬
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Main comment form */}
+                        <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                          <input 
+                            type="text" 
+                            placeholder="Write your comment..."
+                            value={commentInputs[post.id] || ''}
+                            onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
+                            onKeyDown={(e) => { if(e.key==='Enter') handleAddCommentSubmit(post.id); }}
+                            className="flex-1 bg-slate-950/60 border border-white/5 focus:border-violet-500/20 text-xs text-white placeholder:text-violet-400/40 py-2.5 px-4 rounded-xl focus:outline-hidden"
+                          />
+                          <button 
+                            onClick={() => handleAddCommentSubmit(post.id)}
+                            className="p-2.5 bg-violet-600 hover:bg-violet-550 rounded-xl text-white transition-colors cursor-pointer"
+                          >
+                            <Send className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              </React.Fragment>
+            );
+          }
 
           return (
             <React.Fragment key={post.id}>
@@ -1520,14 +1678,52 @@ export default function FeedView({
 
                               <button
                                 onClick={() => {
+                                  setMutedUserIds(prev => [...prev, post.userId]);
+                                  setActiveDotsMenuPostId(null);
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: `🔊 Muted @${post.username}. Their posts are hidden.` }));
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-amber-500/10 text-amber-400 flex items-center gap-2 text-xs transition-colors cursor-pointer border-t border-white/5"
+                              >
+                                <VolumeX className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                                Mute User
+                              </button>
+
+                              <button
+                                onClick={() => {
                                   setBlockedUserIds(prev => [...prev, post.userId]);
                                   setActiveDotsMenuPostId(null);
                                   window.dispatchEvent(new CustomEvent('toast', { detail: `🚫 Blocked @${post.username}. Stream isolated.` }));
                                 }}
-                                className="w-full text-left px-3 py-2 hover:bg-red-950/20 text-rose-500 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-t border-white/5"
+                                className="w-full text-left px-3 py-2 hover:bg-red-950/20 text-rose-500 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
                               >
                                 <X className="w-3.5 h-3.5 shrink-0 text-red-500" />
                                 Block User
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  const text = `${window.location.origin}/post/${post.id}`;
+                                  navigator.clipboard.writeText(text);
+                                  setActiveDotsMenuPostId(null);
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-white/5 text-emerald-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
+                              >
+                                <Share2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                                Copy Link
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  const text = `${window.location.origin}/post/${post.id}`;
+                                  navigator.clipboard.writeText(text);
+                                  setActiveDotsMenuPostId(null);
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: '📤 Share sheet dispatched. Propagating nodes...' }));
+                                }}
+                                className="w-full text-left px-3 py-2 hover:bg-white/5 text-sky-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
+                              >
+                                <Share2 className="w-3.5 h-3.5 shrink-0 text-sky-400" />
+                                Share
                               </button>
 
                               <button
@@ -2823,7 +3019,7 @@ export default function FeedView({
                         const name = newCollectionName.trim();
                         if (!name) return;
                         if (savedCollections[name]) {
-                          alert("Collection folder already exists!");
+                          window.dispatchEvent(new CustomEvent('toast', { detail: `❌ Collection folder "${name}" already exists!` }));
                           return;
                         }
                         setSavedCollections(prev => ({

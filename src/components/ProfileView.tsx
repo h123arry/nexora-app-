@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   MapPin, 
   Link as LinkIcon, 
@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Award,
   Zap,
+  Sparkles,
   Play,
   Pause,
   Volume2,
@@ -39,6 +40,8 @@ import {
   Activity,
   Video,
   Film,
+  Camera,
+  Image,
   Mic
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -194,6 +197,8 @@ interface ProfileViewProps {
   theme?: string;
   setTheme?: (t: any) => void;
   onLogout?: () => void;
+  onTriggerPWAInstall?: () => void;
+  showPWAInstallPrompt?: boolean;
 }
 
 export default function ProfileView({
@@ -210,7 +215,9 @@ export default function ProfileView({
   onViewProfile,
   theme,
   setTheme,
-  onLogout
+  onLogout,
+  onTriggerPWAInstall,
+  showPWAInstallPrompt
 }: ProfileViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -219,6 +226,84 @@ export default function ProfileView({
   const [activeDashboardTab, setActiveDashboardTab] = useState<'overview' | 'content' | 'earnings' | 'insights'>('overview');
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
   const [detailCommentText, setDetailCommentText] = useState<string>('');
+
+  // Account settings center states
+  const [activeSettingsSection, setActiveSettingsSection] = useState<'account' | 'privacy' | 'messaging' | 'safety' | 'notifications' | 'theme'>('account');
+  const [editUsername, setEditUsername] = useState(currentUser.username);
+  const [editEmail, setEditEmail] = useState(currentUser.email || `${currentUser.username}@nexora.ai`);
+  const [editPhone, setEditPhone] = useState(currentUser.phone || '+234 80 123 4567');
+  const [editPassword, setEditPassword] = useState('••••••••••••');
+  
+  // Privacy states
+  const [isPrivateAccount, setIsPrivateAccount] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_privacy_private_account') === 'true';
+  });
+  const [showProfileViews, setShowProfileViews] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_privacy_profile_views') !== 'false';
+  });
+  const [showVisitorInsights, setShowVisitorInsights] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_privacy_visitor_insights') !== 'false';
+  });
+  const [allowMentions, setAllowMentions] = useState<'everyone' | 'followers' | 'nobody'>(() => {
+    return (localStorage.getItem('nexora_privacy_allow_mentions') as any) || 'everyone';
+  });
+  const [allowTags, setAllowTags] = useState<'everyone' | 'followers' | 'nobody'>(() => {
+    return (localStorage.getItem('nexora_privacy_allow_tags') as any) || 'everyone';
+  });
+  const [allowDownloads, setAllowDownloads] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_privacy_allow_downloads') !== 'false';
+  });
+
+  // Messaging states
+  const [whoCanMessageMe, setWhoCanMessageMe] = useState<'everyone' | 'followers' | 'following' | 'nobody'>(() => {
+    return (localStorage.getItem('nexora_privacy_messaging_scope') as any) || 'everyone';
+  });
+
+  // Safety states
+  const [blockedAccountsList, setBlockedAccountsList] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_privacy_blocked_usernames');
+    return saved ? JSON.parse(saved) : ['spammer_bot_99', 'toxic_agent_4'];
+  });
+  const [newBlockedUsername, setNewBlockedUsername] = useState('');
+  
+  const [mutedAccountsList, setMutedAccountsList] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_privacy_muted_usernames');
+    return saved ? JSON.parse(saved) : ['loud_noise_creator', 'ads_broadcast_hq'];
+  });
+  const [newMutedUsername, setNewMutedUsername] = useState('');
+
+  const [hiddenWordsList, setHiddenWordsList] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_privacy_hidden_words');
+    return saved ? JSON.parse(saved) : ['spam', 'buy crypto', 'free tokens', 'winner'];
+  });
+  const [newHiddenWord, setNewHiddenWord] = useState('');
+
+  const [restrictedAccountsList, setRestrictedAccountsList] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_privacy_restricted_usernames');
+    return saved ? JSON.parse(saved) : ['creepy_profile_22'];
+  });
+  const [newRestrictedUsername, setNewRestrictedUsername] = useState('');
+
+  // Notifications states
+  const [notifyLikes, setNotifyLikes] = useState<boolean>(() => localStorage.getItem('nexora_notify_likes') !== 'false');
+  const [notifyComments, setNotifyComments] = useState<boolean>(() => localStorage.getItem('nexora_notify_comments') !== 'false');
+  const [notifyFollowers, setNotifyFollowers] = useState<boolean>(() => localStorage.getItem('nexora_notify_followers') !== 'false');
+  const [notifyMessages, setNotifyMessages] = useState<boolean>(() => localStorage.getItem('nexora_notify_messages') !== 'false');
+  const [notifyMentions, setNotifyMentions] = useState<boolean>(() => localStorage.getItem('nexora_notify_mentions') !== 'false');
+  const [notifyCommunityUpdates, setNotifyCommunityUpdates] = useState<boolean>(() => localStorage.getItem('nexora_notify_community') !== 'false');
+  const [notifyLive, setNotifyLive] = useState<boolean>(() => localStorage.getItem('nexora_notify_live') !== 'false');
+
+  // Interactive Live Streaming States
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  const [liveViewerCount, setLiveViewerCount] = useState(0);
+  const [liveGifts, setLiveGifts] = useState(0);
+  const [liveChatMessages, setLiveChatMessages] = useState<any[]>([]);
+  const [liveNewMessage, setLiveNewMessage] = useState('');
+  const [liveDuration, setLiveDuration] = useState(0);
+  const [showEndStats, setShowEndStats] = useState(false);
+  const [livePeakViewers, setLivePeakViewers] = useState(0);
+  const [liveModerators, setLiveModerators] = useState<string[]>(['alex_sterling', 'sarah_codes']);
+  const [modToAssign, setModToAssign] = useState('');
 
 
   // Follower actions state
@@ -240,6 +325,97 @@ export default function ProfileView({
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+
+  // Live stream background simulation effect
+  useEffect(() => {
+    let timer: any;
+    let chatInterval: any;
+    let viewerInterval: any;
+
+    if (isLiveStreaming) {
+      setLiveDuration(0);
+      setLiveViewerCount(Math.floor(Math.random() * 20) + 20);
+      setLiveGifts(0);
+      setLiveNewMessage('');
+      setShowEndStats(false);
+      setLivePeakViewers(35);
+      
+      const seedChat = [
+        { sender: 'alex_sterling', message: 'Lets go live! 🔴 Welcome everyone!', isSystem: true },
+        { sender: 'sarah_codes', message: 'Yay! Excited for the stream today 🥳', isSystem: false },
+        { sender: 'voh_ai', message: 'Live stream connection established on port 3000.', isSystem: false }
+      ];
+      setLiveChatMessages(seedChat);
+
+      // Duration counter
+      timer = setInterval(() => {
+        setLiveDuration(prev => prev + 1);
+      }, 1000);
+
+      // Viewer count fluctuation
+      viewerInterval = setInterval(() => {
+        setLiveViewerCount(prev => {
+          const delta = Math.floor(Math.random() * 15) - 7;
+          const next = Math.max(5, prev + delta);
+          setLivePeakViewers(peak => Math.max(peak, next));
+          return next;
+        });
+      }, 3000);
+
+      // Chat additions
+      const viewerComments = [
+        "Wizkid fans are active today! 🎶",
+        "Davido is definitely dropping a classic album!",
+        "Are you streaming Messi's game tonight?? ⚽",
+        "Nexora's high fidelity feels so smooth!",
+        "Send some gifts people! 🎁💎",
+        "Love the aesthetic here. Clean violet tones!",
+        "Burna Boy concert was totally fire! 🔥",
+        "Ronaldo still the absolute GOAT header king 👑",
+        "Hello from Port Harcourt!",
+        "Lagos hub is locked in!",
+        "Can we get moderators assigned? 🛡️",
+        "Awesome stream! Subscribing immediately."
+      ];
+
+      const senders = ['dave_swift', 'football_hq', 'p_harcourt_queen', 'naija_vibe', 'afrobeats_guy', 'cyber_knight_9', 'messi_10_le', 'cr7_siuu'];
+
+      chatInterval = setInterval(() => {
+        const randomSender = senders[Math.floor(Math.random() * senders.length)];
+        const randomComment = viewerComments[Math.floor(Math.random() * viewerComments.length)];
+        const isGiftSim = Math.random() < 0.25;
+
+        if (isGiftSim) {
+          const giftTypes = [
+            { text: 'Sent you a Popcorn 🍿 (+5 NEX)', value: 5, icon: '🍿' },
+            { text: 'Sent you a Neon Spark ✨ (+10 NEX)', value: 10, icon: '✨' },
+            { text: 'Sent you a Crystal Gem 💎 (+50 NEX)', value: 50, icon: '💎' },
+            { text: 'Sent you a Creator Crown 👑 (+100 NEX)', value: 100, icon: '👑' }
+          ];
+          const choice = giftTypes[Math.floor(Math.random() * giftTypes.length)];
+          setLiveGifts(prev => prev + choice.value);
+          setLiveChatMessages(chat => [...chat, {
+            sender: randomSender,
+            message: choice.text,
+            isGift: true,
+            icon: choice.icon
+          }]);
+        } else {
+          setLiveChatMessages(chat => [...chat, {
+            sender: randomSender,
+            message: randomComment,
+            isSystem: false
+          }]);
+        }
+      }, 3000);
+    }
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(chatInterval);
+      clearInterval(viewerInterval);
+    };
+  }, [isLiveStreaming]);
 
   // Custom status system states
   const [statusText, setStatusText] = useState<string>(() => {
@@ -946,33 +1122,42 @@ try {
               {/* Category Selector Side Menu */}
               <div className="flex flex-col gap-2">
                 <span className="text-[9px] font-mono uppercase tracking-widest text-violet-400/50 block mb-2 px-2">
-                  Options and Preferences
+                  Settings Directory
                 </span>
                 <div className="p-2.5 rounded-3xl bg-black/40 border border-violet-500/5 space-y-1">
-                  <div className="p-3 bg-violet-600/10 border border-violet-500/20 rounded-xl text-xs text-white font-sans font-bold flex items-center gap-2.5">
-                    <Settings className="w-4 h-4 text-violet-400" />
-                    <span>Account Settings</span>
-                  </div>
-                  <div className="p-3 hover:bg-white/5 rounded-xl text-xs text-current/70 font-sans flex items-center gap-2.5">
-                    <Shield className="w-4 h-4 text-cyan-400" />
-                    <span>Privacy & Direct Messages</span>
-                  </div>
-                  <div className="p-3 hover:bg-white/5 rounded-xl text-xs text-current/70 font-sans flex items-center gap-2.5">
-                    <Bell className="w-4 h-4 text-pink-400 animate-swing" />
-                    <span>Notifications</span>
-                  </div>
-                  <div className="p-3 hover:bg-white/5 rounded-xl text-xs text-current/70 font-sans flex items-center gap-2.5">
-                    <Sliders className="w-4 h-4 text-purple-400" />
-                    <span>Themes & Colors</span>
-                  </div>
+                  {[
+                    { id: 'account', label: 'My Account', icon: Settings, color: 'text-violet-400' },
+                    { id: 'privacy', label: 'Privacy Center', icon: Shield, color: 'text-cyan-400' },
+                    { id: 'messaging', label: 'Messaging Rules', icon: MessageCircle, color: 'text-emerald-400' },
+                    { id: 'safety', label: 'Safety & Safeguards', icon: Lock, color: 'text-amber-400' },
+                    { id: 'notifications', label: 'Notifications', icon: Bell, color: 'text-pink-400' },
+                    { id: 'theme', label: 'Themes & Appearance', icon: Sliders, color: 'text-purple-400' }
+                  ].map(sec => (
+                    <button
+                      key={sec.id}
+                      onClick={() => setActiveSettingsSection(sec.id as any)}
+                      type="button"
+                      className={`w-full p-3 rounded-xl text-xs font-sans font-bold flex items-center justify-between transition-all cursor-pointer ${
+                        activeSettingsSection === sec.id 
+                          ? 'bg-violet-600/10 text-white border border-violet-500/20' 
+                          : 'bg-transparent text-current/70 hover:bg-white/5 border border-transparent'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <sec.icon className={`w-4 h-4 ${sec.color}`} />
+                        <span>{sec.label}</span>
+                      </div>
+                      <span className="text-[10px] text-zinc-600">→</span>
+                    </button>
+                  ))}
                 </div>
 
-                <div className="p-4 rounded-2xl bg-violet-950/10 border border-violet-500/15">
-                  <span className="text-[10px] font-mono text-violet-300 font-bold uppercase block mb-1">
-                    🟢 Account Status
+                <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5">
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase block mb-1">
+                    🟢 Platform Node Active
                   </span>
-                  <p className="text-[10px] text-current/60 font-sans">
-                    Your profile is secure, active, and verified on the Nexora platform.
+                  <p className="text-[10px] text-zinc-400 font-sans leading-normal">
+                    This settings console is fully offline-secured. Modifying attributes synchronizes with your local browser storage instantly.
                   </p>
                 </div>
               </div>
@@ -980,79 +1165,111 @@ try {
               {/* Main Settings Subsections */}
               <div className="md:col-span-2 space-y-6">
                 
-                {/* 1. Account Settings */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Settings className="w-4 h-4 text-violet-400" /> Account Management
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <label className="text-[9px] font-mono uppercase text-current/50 block mb-1">Display Name</label>
-                      <input
-                        type="text"
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-violet-950/40 border border-violet-500/15 focus:outline-hidden focus:border-violet-500 text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[9px] font-mono uppercase text-current/50 block mb-1">HQ Location</label>
-                      <input
-                        type="text"
-                        value={editLocation}
-                        onChange={(e) => setEditLocation(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-violet-950/40 border border-violet-500/15 focus:outline-hidden focus:border-violet-500 text-white"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <label className="text-[9px] font-mono uppercase text-current/50 block mb-1">Website Link</label>
-                      <input
-                        type="text"
-                        value={editWebsite}
-                        onChange={(e) => setEditWebsite(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-violet-950/40 border border-violet-500/15 focus:outline-hidden focus:border-violet-500 text-white"
-                        placeholder="e.g. nexora.ai/voh"
-                      />
-                    </div>
-                    <div className="sm:col-span-2 flex items-center justify-between pt-2 border-t border-violet-500/5 mt-1">
+                {/* 1. Account Management Tab */}
+                {activeSettingsSection === 'account' && (
+                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-violet-400" /> Account Management
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
                       <div>
-                        <span className="text-[11px] font-sans font-bold text-white block">🟣 Signature Verification Badge</span>
-                        <span className="text-[9px] text-current/50 font-sans block">Request official violet badge check</span>
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Display Name</label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
+                        />
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const reqs = JSON.parse(localStorage.getItem('nexora_verification_requests') || '[]');
-                          if (!reqs.some((r: any) => r.userId === currentUser.id)) {
-                            reqs.push({
-                              userId: currentUser.id,
-                              username: currentUser.username,
-                              name: currentUser.name,
-                              timestamp: new Date().toISOString()
-                            });
-                            localStorage.setItem('nexora_verification_requests', JSON.stringify(reqs));
-                          }
-                          alert("Verification request sent! Only VOICE OF HARRISON receives your application and has absolute authority to grant verification status.");
-                        }}
-                        className="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase transition-colors cursor-pointer"
-                      >
-                        Request Badge
-                      </button>
+                      
+                      <div>
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">HQ Location</label>
+                        <input
+                          type="text"
+                          value={editLocation}
+                          onChange={(e) => setEditLocation(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Bio Description</label>
+                        <textarea
+                          value={editBio}
+                          onChange={(e) => setEditBio(e.target.value)}
+                          rows={2}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Website Link</label>
+                        <input
+                          type="text"
+                          value={editWebsite}
+                          onChange={(e) => setEditWebsite(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
+                          placeholder="e.g. nexora.ai/voh"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Account @username</label>
+                        <input
+                          type="text"
+                          value={editUsername}
+                          onChange={(e) => setEditUsername(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white font-mono focus:outline-hidden focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Email Address</label>
+                        <input
+                          type="email"
+                          value={editEmail}
+                          onChange={(e) => setEditEmail(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Secured Phone Contact</label>
+                        <input
+                          type="text"
+                          value={editPhone}
+                          onChange={(e) => setEditPhone(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white font-mono focus:outline-hidden focus:border-violet-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Platform Password</label>
+                        <input
+                          type="password"
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white font-mono focus:outline-hidden focus:border-violet-500"
+                          placeholder="••••••••••••"
+                        />
+                      </div>
                     </div>
 
-                    {/* Creator Mode and Earnings/Wallet Settings */}
-                    <div className="sm:col-span-2 pt-4 border-t border-violet-500/10 mt-2 space-y-4">
+                    <div className="pt-4 border-t border-violet-500/10 space-y-4">
+                      {/* Creator mode toggler */}
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className="text-[11px] font-sans font-bold text-white block">🟣 Creator Mode</span>
-                          <span className="text-[9px] text-[#A78BFA] font-sans block">Unlock creator analytics, creator mode tools and statistics</span>
+                          <span className="text-[11px] font-sans font-bold text-white block">🟣 Creator Dashboard Access</span>
+                          <span className="text-[9px] text-[#A78BFA] font-sans block">Activates financial wallets, tip jars, content heatmaps & advanced insights</span>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
+                        <label className="relative inline-flex items-center cursor-pointer select-none">
                           <input 
                             type="checkbox" 
                             checked={!!currentUser.creatorModeEnabled}
                             onChange={(e) => {
                               onUpdateProfile({ creatorModeEnabled: e.target.checked });
+                              window.dispatchEvent(new CustomEvent('toast', { detail: `Creator Dashboard ${e.target.checked ? 'Enabled 🚀' : 'Disabled'}` }));
                             }}
                             className="sr-only peer" 
                           />
@@ -1060,114 +1277,582 @@ try {
                         </label>
                       </div>
 
-                      <div className="flex items-center justify-between pt-3 border-t border-violet-500/5">
+                      {/* Verification request block */}
+                      <div className="flex items-center justify-between pt-3 border-t border-white/5">
                         <div>
-                          <span className="text-[11px] font-sans font-bold text-white block">🟣 Earnings & Wallet</span>
-                          <span className="text-[9px] text-[#A78BFA] font-sans block">Monitor and review your accumulative NEX platform tokens</span>
+                          <span className="text-[11px] font-sans font-bold text-white block">🟣 Official Blue Verification Badge</span>
+                          <span className="text-[9px] text-zinc-400 block">Apply for professional node identity status checks</span>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            if (!currentUser.creatorModeEnabled) {
-                              alert("Please enable Creator Mode to unlock Earnings & Wallet!");
-                              return;
+                            const reqs = JSON.parse(localStorage.getItem('nexora_verification_requests') || '[]');
+                            if (!reqs.some((r: any) => r.userId === currentUser.id)) {
+                              reqs.push({
+                                userId: currentUser.id,
+                                username: editUsername,
+                                name: editName,
+                                timestamp: new Date().toISOString()
+                              });
+                              localStorage.setItem('nexora_verification_requests', JSON.stringify(reqs));
                             }
-                            setIsSettingsOpen(false);
-                            setActiveDashboardTab('earnings');
-                            setIsCreatorDashboardOpen(true);
+                            alert("Verification requested! Application lodged for administrator check.");
+                            window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Badge request filed!' }));
                           }}
-                          className={`${
-                            currentUser.creatorModeEnabled 
-                              ? 'bg-purple-600 hover:bg-purple-500 text-white cursor-pointer' 
-                              : 'bg-zinc-900 text-zinc-600 cursor-not-allowed'
-                          } px-3.5 py-1.5 text-[10px] font-mono font-bold rounded-lg uppercase transition-all`}
+                          className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase transition-colors cursor-pointer"
                         >
-                          Open Wallet
+                          Request Badge
                         </button>
                       </div>
                     </div>
                   </div>
-                </div>
+                )}
 
-                {/* 2. Privacy Safeguards */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-cyan-400" /> Privacy & Direct Messages
-                  </h4>
-                  <div className="space-y-2.5 text-xs text-current/80 font-sans">
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/20 border border-white/5">
-                      <div>
-                        <span className="font-bold text-white block text-[11px]">Private Account Feed</span>
-                        <span className="text-[9px] text-current/50 block">Only approved followers can view your detailed posts</span>
-                      </div>
-                      <input type="checkbox" className="w-4 h-4 rounded-sm border-current accent-violet-500 cursor-pointer" />
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/20 border border-white/5">
-                      <div>
-                        <span className="font-bold text-white block text-[11px]">Online Activity Status</span>
-                        <span className="text-[9px] text-current/50 block">Show presence indicators when you are active</span>
-                      </div>
-                      <input 
-                        type="checkbox" 
-                        checked={showActiveStatus} 
-                        onChange={(e) => {
-                          setShowActiveStatus(e.target.checked);
-                          localStorage.setItem('nexora_privacy_active_status', String(e.target.checked));
-                          window.dispatchEvent(new CustomEvent('toast', { detail: `Presence status ${e.target.checked ? 'activated' : 'deactivated'}` }));
-                        }}
-                        className="w-4 h-4 rounded-sm border-current accent-violet-500 cursor-pointer" 
-                      />
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 rounded-xl bg-black/20 border border-white/5">
-                      <div>
-                        <span className="font-bold text-white block text-[11px]">Profile Visitor Listings</span>
-                        <span className="text-[9px] text-current/50 block">Let creator accounts see when you visit their spaces</span>
-                      </div>
-                      <input 
-                        type="checkbox" 
-                        checked={shareInVisitorLists} 
-                        onChange={(e) => {
-                          setShareInVisitorLists(e.target.checked);
-                          localStorage.setItem('nexora_privacy_share_visitor', String(e.target.checked));
-                          window.dispatchEvent(new CustomEvent('toast', { detail: `Browsing mode: ${e.target.checked ? 'Discoverable (Show me in list)' : 'Anonymous (Keep private)'}` }));
-                        }} 
-                        className="w-4 h-4 rounded-sm border-current accent-violet-500 cursor-pointer" 
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Notification Settings */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Bell className="w-4 h-4 text-pink-400" /> In-App Notification Preferences
-                  </h4>
-                  <div className="space-y-2.5 text-xs text-current/80 font-sans">
-                    <div className="flex items-center justify-between p-1.5">
-                      <span className="text-[11px] font-black">Direct Message Alerts</span>
-                      <input type="checkbox" defaultChecked className="w-4 h-4 accent-violet-500 cursor-pointer" />
-                    </div>
-                    <div className="flex items-center justify-between p-1.5">
-                      <span className="text-[11px] font-black">New Followers & Updates</span>
-                      <input type="checkbox" defaultChecked className="w-4 h-4 accent-violet-500 cursor-pointer" />
-                    </div>
-                    <div className="flex items-center justify-between p-1.5">
-                      <span className="text-[11px] font-black">VOH AI Suggestions Digest</span>
-                      <input type="checkbox" className="w-4 h-4 accent-violet-500 cursor-pointer" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Appearance Settings */}
-                {setTheme && theme && (
-                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <Sliders className="w-4 h-4 text-purple-400" /> Theme Personalizations
+                {/* 2. Privacy Center Tab */}
+                {activeSettingsSection === 'privacy' && (
+                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-cyan-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-cyan-400" /> Privacy & Visibility
                     </h4>
-                    <p className="text-[10px] text-current/60 font-sans">
-                      Select a visual theme mode to customize your Nexora experience:
-                    </p>
-                    <div className="grid grid-cols-2 gap-2.5">
+
+                    <div className="space-y-3 font-sans text-xs">
+                      {/* Private/Public Toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Private Account Mode</span>
+                          <span className="text-[9px] text-zinc-400 block">Only approved followers can view your clips and voice logs</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={isPrivateAccount}
+                          onChange={(e) => {
+                            setIsPrivateAccount(e.target.checked);
+                            localStorage.setItem('nexora_privacy_private_account', String(e.target.checked));
+                            window.dispatchEvent(new CustomEvent('toast', { detail: `Account set to ${e.target.checked ? 'PRIVATE 🔒' : 'PUBLIC 🌐'}` }));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Active Status toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Pulse Activity Status</span>
+                          <span className="text-[9px] text-zinc-400 block">Show a green activity pulse when you are browsing the app</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={showActiveStatus}
+                          onChange={(e) => {
+                            setShowActiveStatus(e.target.checked);
+                            localStorage.setItem('nexora_privacy_active_status', String(e.target.checked));
+                            window.dispatchEvent(new CustomEvent('toast', { detail: `Activity pulse indicator: ${e.target.checked ? 'ON' : 'OFF'}` }));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Profile view history toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Profile Views Logging</span>
+                          <span className="text-[9px] text-zinc-400 block">Keep track of which accounts visit your space</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={showProfileViews}
+                          onChange={(e) => {
+                            setShowProfileViews(e.target.checked);
+                            localStorage.setItem('nexora_privacy_profile_views', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Visitor insights toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Visitor Insights Panel</span>
+                          <span className="text-[9px] text-zinc-400 block">Allow other nodes to see aggregated statistical insights of your visitations</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={showVisitorInsights}
+                          onChange={(e) => {
+                            setShowVisitorInsights(e.target.checked);
+                            localStorage.setItem('nexora_privacy_visitor_insights', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
+                        />
+                      </div>
+
+                      {/* Allow Mentions Radios */}
+                      <div className="p-3.5 rounded-xl bg-black/20 border border-white/5 space-y-2">
+                        <span className="font-bold text-white block text-[11px]">Admissible Mentions Scope</span>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(['everyone', 'followers', 'nobody'] as const).map(option => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                setAllowMentions(option);
+                                localStorage.setItem('nexora_privacy_allow_mentions', option);
+                              }}
+                              className={`p-2 rounded-xl text-[10px] font-mono border font-black uppercase transition-all cursor-pointer ${
+                                allowMentions === option ? 'border-cyan-400 text-cyan-400 bg-cyan-950/25' : 'border-white/5 text-zinc-400 hover:bg-black/20'
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Allow Tags Radios */}
+                      <div className="p-3.5 rounded-xl bg-black/20 border border-white/5 space-y-2">
+                        <span className="font-bold text-white block text-[11px]">Admissible Tags Scope</span>
+                        <div className="grid grid-cols-3 gap-2">
+                          {(['everyone', 'followers', 'nobody'] as const).map(option => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                setAllowTags(option);
+                                localStorage.setItem('nexora_privacy_allow_tags', option);
+                              }}
+                              className={`p-2 rounded-xl text-[10px] font-mono border font-black uppercase transition-all cursor-pointer ${
+                                allowTags === option ? 'border-cyan-400 text-cyan-400 bg-cyan-950/25' : 'border-white/5 text-zinc-400 hover:bg-black/20'
+                              }`}
+                            >
+                              {option}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Download toggle */}
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Allow Downloads of My Videos</span>
+                          <span className="text-[9px] text-zinc-400 block font-sans">Let visitors back up and download your static clips or voice posts</span>
+                        </div>
+                        <input 
+                          type="checkbox" 
+                          checked={allowDownloads}
+                          onChange={(e) => {
+                            setAllowDownloads(e.target.checked);
+                            localStorage.setItem('nexora_privacy_allow_downloads', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Messaging Rules Tab */}
+                {activeSettingsSection === 'messaging' && (
+                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-emerald-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4 text-emerald-400" /> Secure Direct Messages
+                    </h4>
+
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3 font-sans">
+                      <div>
+                        <span className="font-bold text-white block text-xs">Who can start private chats with me?</span>
+                        <span className="text-[10px] text-zinc-400 block mt-0.5 leading-normal">
+                          Only selected relationships are permitted to open real-time client socket feeds.
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        {(['everyone', 'followers', 'following', 'nobody'] as const).map(scope => (
+                          <button
+                            key={scope}
+                            type="button"
+                            onClick={() => {
+                              setWhoCanMessageMe(scope);
+                              localStorage.setItem('nexora_privacy_messaging_scope', scope);
+                            }}
+                            className={`p-3 rounded-xl border text-[10px] font-mono font-black uppercase transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+                              whoCanMessageMe === scope
+                                ? 'border-emerald-500 text-emerald-400 bg-emerald-950/20'
+                                : 'border-white/5 text-zinc-400 hover:bg-black/20'
+                            }`}
+                          >
+                            <span className="block text-sm">{scope === 'everyone' ? '🌐' : scope === 'followers' ? '👥' : scope === 'following' ? '🤝' : '🔒'}</span>
+                            <span>{scope}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="p-4 rounded-xl bg-emerald-950/10 border border-emerald-500/10 text-[10px] text-emerald-400 leading-normal">
+                      <strong>Reputation Badge Bypass:</strong> Accredited moderator authorities (👑, 🛸, 🟣) bypass DM blocks to deliver urgent service support notes.
+                    </div>
+                  </div>
+                )}
+
+                {/* 4. Safety & Safeguards Tab */}
+                {activeSettingsSection === 'safety' && (
+                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-amber-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-amber-400" /> Safety & Content Filters
+                    </h4>
+
+                    {/* Blocked Accounts Block */}
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+                      <div className="flex justify-between items-center font-sans">
+                        <span className="font-bold text-white block text-[11px]">Blocked Accounts Directory</span>
+                        <span className="font-mono text-[9px] text-zinc-500">{blockedAccountsList.length} blocked</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Type username to block..."
+                          value={newBlockedUsername}
+                          onChange={(e) => setNewBlockedUsername(e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newBlockedUsername.trim()) return;
+                            const clean = newBlockedUsername.replace('@', '').trim().toLowerCase();
+                            if (!blockedAccountsList.includes(clean)) {
+                              const updated = [...blockedAccountsList, clean];
+                              setBlockedAccountsList(updated);
+                              localStorage.setItem('nexora_privacy_blocked_usernames', JSON.stringify(updated));
+                            }
+                            setNewBlockedUsername('');
+                          }}
+                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
+                        >
+                          Block
+                        </button>
+                      </div>
+
+                      {blockedAccountsList.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {blockedAccountsList.map(uname => (
+                            <div key={uname} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
+                              <span>@{uname}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = blockedAccountsList.filter(u => u !== uname);
+                                  setBlockedAccountsList(updated);
+                                  localStorage.setItem('nexora_privacy_blocked_usernames', JSON.stringify(updated));
+                                }}
+                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Muted Accounts Block */}
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+                      <div className="flex justify-between items-center font-sans">
+                        <span className="font-bold text-white block text-[11px]">Muted Accounts</span>
+                        <span className="font-mono text-[9px] text-zinc-500">{mutedAccountsList.length} muted</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Type username to mute..."
+                          value={newMutedUsername}
+                          onChange={(e) => setNewMutedUsername(e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newMutedUsername.trim()) return;
+                            const clean = newMutedUsername.replace('@', '').trim().toLowerCase();
+                            if (!mutedAccountsList.includes(clean)) {
+                              const updated = [...mutedAccountsList, clean];
+                              setMutedAccountsList(updated);
+                              localStorage.setItem('nexora_privacy_muted_usernames', JSON.stringify(updated));
+                            }
+                            setNewMutedUsername('');
+                          }}
+                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
+                        >
+                          Mute
+                        </button>
+                      </div>
+
+                      {mutedAccountsList.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {mutedAccountsList.map(uname => (
+                            <div key={uname} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
+                              <span>@{uname}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = mutedAccountsList.filter(u => u !== uname);
+                                  setMutedAccountsList(updated);
+                                  localStorage.setItem('nexora_privacy_muted_usernames', JSON.stringify(updated));
+                                }}
+                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Word suppression engine block */}
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+                      <div>
+                        <span className="font-bold text-white block text-[11px]">Hidden Word suppression filter</span>
+                        <span className="text-[9px] text-zinc-400 block">Comments or chat messages including these exact terms are immediately filtered.</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Add hidden keyword trigger word (e.g. lottery)..."
+                          value={newHiddenWord}
+                          onChange={(e) => setNewHiddenWord(e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newHiddenWord.trim()) return;
+                            const clean = newHiddenWord.trim().toLowerCase();
+                            if (!hiddenWordsList.includes(clean)) {
+                              const updated = [...hiddenWordsList, clean];
+                              setHiddenWordsList(updated);
+                              localStorage.setItem('nexora_privacy_hidden_words', JSON.stringify(updated));
+                            }
+                            setNewHiddenWord('');
+                          }}
+                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
+                        >
+                          Add Word
+                        </button>
+                      </div>
+
+                      {hiddenWordsList.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {hiddenWordsList.map(word => (
+                            <div key={word} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
+                              <span>"{word}"</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = hiddenWordsList.filter(w => w !== word);
+                                  setHiddenWordsList(updated);
+                                  localStorage.setItem('nexora_privacy_hidden_words', JSON.stringify(updated));
+                                }}
+                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Restricted Accounts Block */}
+                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
+                      <div>
+                        <span className="font-bold text-white block text-[11px]">Restricted Accounts</span>
+                        <span className="text-[9px] text-zinc-400 block">Comments from restricted accounts are only visible to themselves.</span>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="Type username to restrict..."
+                          value={newRestrictedUsername}
+                          onChange={(e) => setNewRestrictedUsername(e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!newRestrictedUsername.trim()) return;
+                            const clean = newRestrictedUsername.replace('@', '').trim().toLowerCase();
+                            if (!restrictedAccountsList.includes(clean)) {
+                              const updated = [...restrictedAccountsList, clean];
+                              setRestrictedAccountsList(updated);
+                              localStorage.setItem('nexora_privacy_restricted_usernames', JSON.stringify(updated));
+                            }
+                            setNewRestrictedUsername('');
+                          }}
+                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
+                        >
+                          Restrict
+                        </button>
+                      </div>
+
+                      {restrictedAccountsList.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {restrictedAccountsList.map(uname => (
+                            <div key={uname} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
+                              <span>@{uname}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = restrictedAccountsList.filter(u => u !== uname);
+                                  setRestrictedAccountsList(updated);
+                                  localStorage.setItem('nexora_privacy_restricted_usernames', JSON.stringify(updated));
+                                }}
+                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. Notifications Panel */}
+                {activeSettingsSection === 'notifications' && (
+                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn font-sans">
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-pink-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
+                      <Bell className="w-4 h-4 text-pink-400 animate-swing" /> Push Notification Rules
+                    </h4>
+
+                    <div className="space-y-3 text-xs">
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Likes & Sparks Alerts</span>
+                          <span className="text-[9px] text-[#C084FC] block">Alert when a visitor sparks your text or static clips</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notifyLikes}
+                          onChange={(e) => {
+                            setNotifyLikes(e.target.checked);
+                            localStorage.setItem('nexora_notify_likes', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Media Comments Alerts</span>
+                          <span className="text-[9px] text-[#C084FC] block">Alert when followers leave voice or textual discussions</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notifyComments}
+                          onChange={(e) => {
+                            setNotifyComments(e.target.checked);
+                            localStorage.setItem('nexora_notify_comments', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Follower Connections alerts</span>
+                          <span className="text-[9px] text-[#C084FC] block">Receive highlights when others request contact synchronization</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notifyFollowers}
+                          onChange={(e) => {
+                            setNotifyFollowers(e.target.checked);
+                            localStorage.setItem('nexora_notify_followers', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Socket Direct Messaging alerts</span>
+                          <span className="text-[9px] text-[#C084FC] block">Alert on incoming secure private inquiries</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notifyMessages}
+                          onChange={(e) => {
+                            setNotifyMessages(e.target.checked);
+                            localStorage.setItem('nexora_notify_messages', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Mentions & Bio Tags alerts</span>
+                          <span className="text-[9px] text-[#C084FC] block">Alert when tagged in descriptions or community posts</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notifyMentions}
+                          onChange={(e) => {
+                            setNotifyMentions(e.target.checked);
+                            localStorage.setItem('nexora_notify_mentions', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Community Updates newsletters</span>
+                          <span className="text-[9px] text-[#C084FC] block">Weekly community board newsletters and broadcasts</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notifyCommunityUpdates}
+                          onChange={(e) => {
+                            setNotifyCommunityUpdates(e.target.checked);
+                            localStorage.setItem('nexora_notify_community', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
+                        <div>
+                          <span className="font-bold text-white block text-[11px]">Live Broadcast alarms</span>
+                          <span className="text-[9px] text-[#C084FC] block">Instant alerts when nodes your profile follows click "Go Live"</span>
+                        </div>
+                        <input
+                          type="checkbox"
+                          checked={notifyLive}
+                          onChange={(e) => {
+                            setNotifyLive(e.target.checked);
+                            localStorage.setItem('nexora_notify_live', String(e.target.checked));
+                          }}
+                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. Themes & Colors Tab */}
+                {activeSettingsSection === 'theme' && setTheme && theme && (
+                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
+                    <h4 className="text-xs font-mono uppercase tracking-wider text-purple-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
+                      <Sliders className="w-4 h-4 text-purple-400" /> Platform Skins
+                    </h4>
+                    
+                    <div className="grid grid-cols-2 gap-3">
                       {[
                         { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-violet-600', text: 'Neon Violet' },
                         { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-700', text: 'Classic Off-Black' },
@@ -1176,6 +1861,7 @@ try {
                       ].map((t) => (
                         <button
                           key={t.id}
+                          type="button"
                           onClick={() => setTheme(t.id as any)}
                           className={`p-3 rounded-xl border text-left transition-all hover:scale-102 flex flex-col justify-between h-20 cursor-pointer ${
                             theme === t.id
@@ -1183,84 +1869,16 @@ try {
                               : 'bg-black/40 border-white/5 hover:bg-white/5'
                           }`}
                         >
-                          <div className="flex justify-between items-center w-full">
-                            <span className="text-[10px] font-bold text-white font-sans">{t.label}</span>
+                          <div className="flex justify-between items-center w-full font-sans">
+                            <span className="text-[10px] font-bold text-white">{t.label}</span>
                             <div className={`w-3 h-3 rounded-full ${t.color}`} />
                           </div>
-                          <span className="text-[8px] font-mono text-[#8B5CF6]">{t.text}</span>
+                          <span className="text-[8px] font-mono text-[#8B5CF6] font-bold uppercase">{t.text}</span>
                         </button>
                       ))}
                     </div>
                   </div>
                 )}
-
-                {/* 5. Security & Account Safeguards */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-yellow-500" /> Platform Security
-                  </h4>
-                  <div className="text-xs space-y-2 font-sans">
-                    <div className="flex justify-between p-2 rounded-lg bg-black/20">
-                      <div>
-                        <span className="font-bold text-white block text-[11px]">2-Factor Authentication</span>
-                        <span className="text-[9px] text-current/50">Enable 2FA login verification code checks</span>
-                      </div>
-                      <input type="checkbox" className="w-4 h-4 accent-violet-500 cursor-pointer" />
-                    </div>
-                    <div className="mt-2 text-[9px] text-current/30 font-mono">
-                      LAST LOGIN: Lagos, Nigeria • Active desktop session
-                    </div>
-                  </div>
-                </div>
-
-                {/* 6. Content & Storage Management */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Sliders className="w-4 h-4 text-purple-400" /> Content & Storage Management
-                  </h4>
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => alert("Browser cache storage successfully cleared!")}
-                      className="px-3.5 py-1.5 bg-current/5 hover:bg-current/10 text-current text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                    >
-                      Clear Saved Cache
-                    </button>
-                    <button 
-                      onClick={() => alert("Loading past activity summaries...")}
-                      className="px-3.5 py-1.5 bg-current/5 hover:bg-current/10 text-current text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                    >
-                      Audit Activity Logs
-                    </button>
-                  </div>
-                </div>
-
-                {/* 7. VOH AI Integration Preferences */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-violet-400" /> VOH AI Companion Customizations
-                  </h4>
-                  <div className="space-y-1.5 text-xs">
-                    <span className="text-[10px] font-bold text-violet-300 block">AI Assistant Personality: Casual, Friendly & Helpful</span>
-                    <div className="w-full bg-violet-950/40 h-1.5 rounded-full">
-                      <div className="w-[85%] h-full bg-violet-500 rounded-full" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 8. Trends Preferences */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-cyan-400" /> Regional Trending Customizations
-                  </h4>
-                  <div className="space-y-2 text-xs">
-                    <span className="font-bold text-[11px] text-white">Location for Trend Customizations</span>
-                    <input 
-                      type="text" 
-                      defaultValue="Lagos, Nigeria"
-                      className="w-full px-3 py-1.5 text-[11px] bg-violet-950/20 border border-violet-500/10 rounded-lg text-white"
-                    />
-                  </div>
-                </div>
 
                 {/* 9. Communities roles */}
                 <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
@@ -1469,84 +2087,7 @@ try {
             animate={{ opacity: 1 }}
             className="space-y-6"
           >
-            {/* Immersive Cover Photo and Avatar Banner */}
-            <div id="voh-profile-imagery-header" className="relative rounded-3xl overflow-hidden border border-violet-500/20 bg-slate-950 shadow-2xl">
-              <div className="h-44 w-full overflow-hidden relative">
-                <div className="absolute inset-0 bg-gradient-to-t from-[#020108] via-[#020108]/30 to-transparent z-1" />
-                <img 
-                  src={currentUser.coverImage || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&auto=format&fit=crop&q=80"} 
-                  alt="NEXORA Living Space" 
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover opacity-75" 
-                />
-              </div>
-              
-              {/* Profile Avatar Position */}
-              <div className="absolute left-6 bottom-[-24px] z-10 flex items-end gap-4">
-                <div 
-                  className={`relative ${activeUserStory ? 'cursor-pointer hover:scale-105 transition-all' : ''}`}
-                  onClick={() => {
-                    if (activeUserStory) {
-                      console.log('[Audit] Creator story ring clicked. Presenting immersive slideshow overlay...', activeUserStory);
-                      setSelectedMoment(activeUserStory);
-                      setStoryIndex(0);
-                    }
-                  }}
-                >
-                  <img 
-                    src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
-                    alt={currentUser.name} 
-                    referrerPolicy="no-referrer"
-                    className={`w-24 h-24 rounded-2xl object-cover shadow-xl bg-slate-900 ${
-                      activeUserStory 
-                        ? 'ring-4 ring-purple-600 ring-offset-2 animate-pulse border border-purple-500/20' 
-                        : 'ring-4 ring-violet-500'
-                    }`}
-                  />
-                  {activeUserStory && (
-                    <span className="absolute -bottom-1 -right-1 px-1 py-0.2 bg-purple-600 border border-purple-400 text-[8px] font-mono font-black text-white rounded-md uppercase tracking-wider animate-bounce select-none">
-                      STORY
-                    </span>
-                  )}
-                </div>
-                <div className="pb-3 hidden sm:block">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-white text-md font-bold font-sans">
-                      {currentUser.name}
-                    </span>
-                    {(currentUser.username === 'voh' || currentUser.isVerified) && <PurpleVerifiedBadge className="w-5 h-5" />}
-                  </div>
-                  <p className="text-[11px] text-violet-400 font-mono font-medium">@{currentUser.username}</p>
-                </div>
-              </div>
-
-              {/* Edit Action Overlay & Top-Right Settings trigger */}
-              <div className="absolute right-4 bottom-4 z-10 flex items-center gap-2">
-                {isOwnProfile && (
-                  <>
-                    <button
-                      onClick={() => {
-                        if (isEditing) {
-                          stopCamera();
-                        }
-                        setIsEditing(!isEditing);
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-mono font-black bg-[#0d0a21]/90 hover:bg-violet-950/90 hover:text-violet-300 text-white rounded-lg border border-violet-500/20 backdrop-blur-md transition-all shadow-lg cursor-pointer"
-                    >
-                      {isEditing ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Edit3 className="w-3.5 h-3.5 text-violet-400" />}
-                      <span>{isEditing ? 'Cancel Edit' : 'Edit Profile'}</span>
-                    </button>
-                    <button
-                      onClick={() => setIsSettingsOpen(true)}
-                      className="p-1.5 rounded-lg border border-violet-500/20 bg-[#0d0a21]/90 text-violet-400 hover:text-white cursor-pointer"
-                      title="Open Settings Console (⚙️)"
-                    >
-                      <Settings className="w-4 h-4 animate-spin-slow" />
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
+            {/* Minimalist Profile Layout - Cover banner completely removed */}
 
       {/* Editing Form Section */}
       <AnimatePresence mode="wait">
@@ -1795,6 +2336,26 @@ try {
               </div>
             )}
 
+            {/* Standalone PWA Client Installation Banner */}
+            {onTriggerPWAInstall && showPWAInstallPrompt && (
+              <div className="pt-4 border-t border-violet-500/10 space-y-3 text-left">
+                <h5 className="text-xs font-bold font-sans text-[#A78BFA] uppercase tracking-wider flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
+                  Standalone Secure client
+                </h5>
+                <p className="text-[10px] text-zinc-400 font-sans leading-relaxed">
+                  Fast-load Nexora with edge-to-edge viewing, zero latency, and launch directly from your device home screen.
+                </p>
+                <button
+                  type="button"
+                  onClick={onTriggerPWAInstall}
+                  className="px-4 py-2 bg-linear-to-r from-violet-600 via-pink-600 to-pink-500 hover:brightness-110 text-white text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-[0_0_12px_rgba(139,92,246,0.25)] flex items-center gap-1.5"
+                >
+                  📥 Install Standalone Client App
+                </button>
+              </div>
+            )}
+
             {/* Account Settings Section with Logout button */}
             {onLogout && (
               <div className="pt-4 border-t border-violet-500/10 space-y-3 text-left">
@@ -1828,140 +2389,148 @@ try {
             key="voh-display-info"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="pt-2 space-y-4 text-left"
+            className="pt-2 text-left space-y-5"
           >
-            {/* Unified Compact Profile Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pl-1">
-              {/* Left Side: Avatar & Name details */}
-              <div className="flex items-center gap-4">
-                <div 
-                  className={`relative ${activeUserStory ? 'cursor-pointer hover:scale-105 transition-all' : ''}`}
-                  onClick={() => {
-                    if (activeUserStory) {
-                      console.log('[Audit] Creator story ring clicked. Presenting immersive slideshow overlay...', activeUserStory);
-                      setSelectedMoment(activeUserStory);
-                      setStoryIndex(0);
-                    }
-                  }}
-                >
-                  <img 
-                    src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
-                    alt={currentUser.name} 
-                    referrerPolicy="no-referrer"
-                    className={`w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover shadow-xl bg-slate-900 border ${
-                      activeUserStory 
-                        ? 'ring-4 ring-purple-600 ring-offset-2 animate-pulse border-purple-500/20' 
-                        : 'ring-4 ring-violet-500 border-violet-500/15'
-                    }`}
-                  />
-                  {activeUserStory && (
-                    <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1.5 py-0.2 bg-purple-600 border border-purple-400 text-[8px] font-mono font-black text-white rounded-md uppercase tracking-wider select-none">
-                      STORY
+            {/* 1. Profile Picture with presence indicator */}
+            <div className="flex items-center gap-5 relative pl-1">
+              <div 
+                className={`relative shrink-0 ${activeUserStory ? 'cursor-pointer hover:scale-105 transition-all' : ''}`}
+                onClick={() => {
+                  if (activeUserStory) {
+                    setSelectedMoment(activeUserStory);
+                    setStoryIndex(0);
+                  }
+                }}
+              >
+                <img 
+                  src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
+                  alt={currentUser.name} 
+                  referrerPolicy="no-referrer"
+                  className={`w-24 h-24 rounded-full object-cover shadow-xl bg-slate-900 border-2 ${
+                    activeUserStory 
+                      ? 'ring-4 ring-purple-600 ring-offset-2 animate-pulse border-purple-500/20' 
+                      : 'border-violet-550/60'
+                  }`}
+                />
+                
+                {/* Tiny purple dot: replace boldness of "Active Now" with an online presence dot */}
+                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-violet-500 border-2 border-[#090514] rounded-full shadow-md shadow-violet-500/30" title="Online Node active" />
+
+                {activeUserStory && (
+                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1 py-0.2 bg-purple-600 border border-purple-400 text-[8px] font-mono font-black text-white rounded-md uppercase tracking-wider select-none">
+                    STORY
+                  </span>
+                )}
+              </div>
+
+              {/* Badges / Creator status */}
+              <div className="space-y-1.5 text-left">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-lg bg-violet-950/40 text-violet-300 border border-violet-500/10 flex items-center gap-1">
+                    <span>{statusEmoji || '👤'}</span>
+                    <span className="font-extrabold tracking-wider">{statusText || 'Synchronized'}</span>
+                  </span>
+                  
+                  {/* Trusted Expert Badges */}
+                  {(currentUser.username === 'voh' || currentUser.username === 'voh_ai') && (
+                    <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-305 border border-amber-500/20 flex items-center gap-0.5" title="Earned through football contributions">
+                      <span>⚽</span> Expert
+                    </span>
+                  )}
+                  {(currentUser.username === 'nexora_ai' || currentUser.username === 'voh_ai') && (
+                    <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-303 border border-blue-500/20 flex items-center gap-0.5" title="Verified system programmer">
+                      <span>💻</span> Developer
                     </span>
                   )}
                 </div>
-                <div>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <h2 className="text-xl sm:text-2xl font-black font-sans text-white leading-tight">
-                      {currentUser.name}
-                    </h2>
-                    {(currentUser.username === 'voh' || currentUser.isVerified) && <PurpleVerifiedBadge className="w-5 h-5 shrink-0" />}
-                  </div>
-                  <p className="text-xs sm:text-sm text-violet-400 font-mono">@{currentUser.username}</p>
-                  
-                  {/* Small Brand / Creator Sub-tag along with Live Presence Active Status */}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-[10px] sm:text-xs font-mono text-purple-200/85 mt-1">
-                      {currentUser.username === 'voh' ? '⚡ Nexora Founder' : '👤 Nexora Member'}
-                    </p>
-                    {(() => {
-                      // If it's own profile and disabled, return nothing/hidden
-                      if (isOwnProfile && !showActiveStatus) {
-                        return null;
-                      }
-                      
-                      const usernameLower = currentUser.username.toLowerCase();
-                      let statusInfo = { text: 'Active now', icon: '🟢', dotClass: 'text-emerald-400' };
-                      if (usernameLower === 'sarah_codes') {
-                        statusInfo = { text: 'Active 5m ago', icon: '🕒', dotClass: 'text-amber-400 font-extrabold' };
-                      } else if (usernameLower === 'david_j') {
-                        statusInfo = { text: 'Active 2h ago', icon: '🕒', dotClass: 'text-zinc-500 font-extrabold' };
-                      }
-                      
-                      return (
-                        <span className="text-[10px] sm:text-xs font-mono text-zinc-400 mt-1 flex items-center gap-1">
-                          • <span className={statusInfo.dotClass}>{statusInfo.icon}</span>
-                          <span className="text-zinc-300">{statusInfo.text}</span>
-                        </span>
-                      );
-                    })()}
-                  </div>
-                </div>
+                <p className="text-[10px] font-mono text-zinc-500">
+                  {currentUser.username === 'voh' ? '⚡ System Founder Core' : '👤 Synced Member'}
+                </p>
               </div>
+            </div>
 
-              {/* Right Side / Top: Clean action buttons */}
-              <div className="flex flex-wrap items-center gap-2">
-                {isOwnProfile ? (
+            {/* 2 & 3. Display Name + Purple Badge & Username */}
+            <div className="space-y-1 text-left pl-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <h2 className="text-xl sm:text-2xl font-black font-sans text-white tracking-tight uppercase leading-none">
+                  {currentUser.name}
+                </h2>
+                {(currentUser.username === 'voh' || currentUser.isVerified) && <PurpleVerifiedBadge className="w-5 h-5 shrink-0" />}
+              </div>
+              <p className="text-sm text-violet-400 font-mono">@{currentUser.username}</p>
+            </div>
+
+            {/* 4. Edit Profile Button / Follow Button (owner only / visitor) */}
+            <div className="flex flex-wrap items-center gap-2 pl-1">
+              {isOwnProfile ? (
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-mono bg-[#0d0a21]/90 hover:bg-violet-950/90 hover:text-violet-300 text-white rounded-xl border border-violet-500/20 backdrop-blur-md transition-all shadow-lg cursor-pointer"
+                    className="flex items-center gap-1.5 px-4.5 py-2 text-xs font-mono font-bold bg-violet-600/15 hover:bg-violet-600/25 text-violet-200 hover:text-white rounded-xl border border-violet-500/30 backdrop-blur-md transition-all shadow-lg cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5 text-violet-400" />
                     <span>Edit Profile</span>
                   </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => {
-                        if (onToggleFollow) {
-                          onToggleFollow(currentUser.id);
-                        }
-                        setIsFollowing(!isFollowing);
-                      }}
-                      className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-black transition-all cursor-pointer ${
-                        isFollowing 
-                          ? 'bg-violet-950/65 text-violet-300 border border-violet-500/30 hover:bg-violet-900/40' 
-                          : 'bg-violet-600 text-white hover:bg-violet-550 active:scale-95'
-                      }`}
-                    >
-                      {isFollowing ? <UserCheck className="w-4 h-4 text-violet-400" /> : <UserPlus className="w-4 h-4" />}
-                      <span>{isFollowing ? 'FOLLOWED' : 'FOLLOW'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        if (onStartChat) {
-                          onStartChat(currentUser.id);
-                        } else {
-                          alert(`Opening chat with @${currentUser.username}...`);
-                        }
-                      }}
-                      className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-black border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-200 transition-all active:scale-95 cursor-pointer"
-                    >
-                      <MessageCircle className="w-4 h-4 text-violet-400" />
-                      <span>MESSAGE</span>
-                    </button>
-                  </>
-                )}
-
-                <div className="relative">
+                  <button
+                    onClick={() => setIsSettingsOpen(true)}
+                    className="p-2 rounded-xl border border-violet-500/20 bg-[#0d0a21]/90 text-violet-400 hover:text-white cursor-pointer transition-all"
+                    title="Open Settings Console (⚙️)"
+                  >
+                    <Settings className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <>
                   <button
                     onClick={() => {
-                      navigator.clipboard.writeText(`https://nexora.ai/${currentUser.username}`);
-                      setShowShareAlert(true);
-                      setTimeout(() => setShowShareAlert(false), 2000);
+                      if (onToggleFollow) {
+                        onToggleFollow(currentUser.id);
+                      }
+                      setIsFollowing(!isFollowing);
+                    }}
+                    className={`flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-xs font-mono font-black transition-all cursor-pointer ${
+                      isFollowing 
+                        ? 'bg-violet-950/65 text-violet-300 border border-violet-500/30 hover:bg-violet-900/40' 
+                        : 'bg-violet-600 text-white hover:bg-violet-550 active:scale-95'
+                    }`}
+                  >
+                    {isFollowing ? <UserCheck className="w-4 h-4 text-violet-400" /> : <UserPlus className="w-4 h-4" />}
+                    <span>{isFollowing ? 'FOLLOWED' : 'FOLLOW'}</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (onStartChat) {
+                        onStartChat(currentUser.id);
+                      } else {
+                        alert(`Opening chat with @${currentUser.username}...`);
+                      }
                     }}
                     className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-black border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-200 transition-all active:scale-95 cursor-pointer"
                   >
-                    <Share2 className="w-4 h-4 text-violet-400" />
-                    <span>SHARE</span>
+                    <MessageCircle className="w-4 h-4 text-violet-400" />
+                    <span>MESSAGE</span>
                   </button>
-                  {showShareAlert && (
-                    <span className="absolute bottom-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-violet-600 text-white font-mono text-[9px] rounded-lg tracking-wider whitespace-nowrap animate-bounce shadow-lg z-50">
-                      COPIED!
-                    </span>
-                  )}
-                </div>
+                </>
+              )}
+
+              <div className="relative">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://nexora.ai/${currentUser.username}`);
+                    setShowShareAlert(true);
+                    setTimeout(() => setShowShareAlert(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-black border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-200 transition-all active:scale-95 cursor-pointer"
+                >
+                  <Share2 className="w-4 h-4 text-violet-400" />
+                  <span>SHARE</span>
+                </button>
+                {showShareAlert && (
+                  <span className="absolute bottom-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-violet-600 text-white font-mono text-[9px] rounded-lg tracking-wider whitespace-nowrap animate-bounce shadow-lg z-50">
+                    COPIED!
+                  </span>
+                )}
               </div>
             </div>
 
@@ -2214,44 +2783,6 @@ try {
               })()}
             </div>
 
-            {/* Nexora Aesthetic Stats Grid */}
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 py-3.5 border-y border-violet-500/10 text-xs pl-1">
-              <div>
-                <span className="font-bold text-white font-sans mr-1">{myPosts.length}</span>
-                <span className="text-violet-400 font-sans">posts</span>
-              </div>
-              <button 
-                onClick={() => {
-                  setConnectionsModalTab('followers');
-                  setConnectionSearchQuery('');
-                  setIsConnectionsModalOpen(true);
-                }}
-                className="hover:text-violet-300 cursor-pointer text-left"
-              >
-                <span className="font-bold text-white font-sans mr-1">{formatNumber(currentUser.followers)}</span>
-                <span className="text-violet-400 font-sans">followers</span>
-              </button>
-              <button 
-                onClick={() => {
-                  setConnectionsModalTab('following');
-                  setConnectionSearchQuery('');
-                  setIsConnectionsModalOpen(true);
-                }}
-                className="hover:text-violet-300 cursor-pointer text-left"
-              >
-                <span className="font-bold text-white font-sans mr-1">{currentUser.following}</span>
-                <span className="text-violet-400 font-sans">following</span>
-              </button>
-              <div className="flex items-center gap-0.5">
-                <span className="font-bold text-yellow-400 font-sans mr-1">⚡ {formatNumber(currentUser.sparks || 0)}</span>
-                <span className="text-violet-400 font-sans">sparks</span>
-              </div>
-              <div className="flex items-center gap-0.5">
-                <span className="font-bold text-violet-300 font-sans mr-1">⭐ {formatNumber(currentUser.reputationPoints)}</span>
-                <span className="text-violet-400 font-sans">reputation</span>
-              </div>
-            </div>
-
             {/* REAL ACHIEVEMENT BADGES SHELF */}
             <div className="p-4 rounded-2xl bg-linear-to-b from-[#100c2a]/80 to-[#070514]/90 border border-violet-500/15 text-left mt-2 shadow-inner">
               <span className="text-[9.5px] font-mono uppercase tracking-widest text-violet-400 font-bold flex items-center gap-1.5 mb-2.5">
@@ -2478,18 +3009,15 @@ try {
         );
       })()}
 
-      {/* Profile Tabs List with exactly 8 categories - horizontally smooth scrolling */}
+      {/* Profile Tabs List with exactly 5 categories - horizontally smooth scrolling */}
       <div id="voh-profile-tabs-selector" className="border-b border-violet-500/10 pt-4 overflow-x-auto scrollbar-none">
         <div className="flex gap-2 text-center text-[10px] sm:text-xs font-mono font-bold px-2 pb-1.5 min-w-max">
           {[
-            { id: 'posts', label: 'Posts', icon: <FileText className="w-3.5 h-3.5" />, color: 'text-violet-400', underline: 'bg-violet-500' },
-            { id: 'videos', label: 'Videos', icon: <Video className="w-3.5 h-3.5" />, color: 'text-pink-500', underline: 'bg-pink-500' },
-            { id: 'reels', label: 'Reels', icon: <Film className="w-3.5 h-3.5" />, color: 'text-amber-500', underline: 'bg-amber-500' },
-            { id: 'voice', label: 'Voice', icon: <Mic className="w-3.5 h-3.5" />, color: 'text-cyan-400', underline: 'bg-cyan-400' },
-            { id: 'saved', label: 'Saved', icon: <Lock className="w-3.5 h-3.5" />, color: 'text-violet-400', underline: 'bg-violet-500' },
-            { id: 'communities', label: 'Spaces', icon: <span>🏟️</span>, color: 'text-cyan-400', underline: 'bg-cyan-700' },
-            { id: 'tagged', label: 'Tagged', icon: <span>🏷️</span>, color: 'text-orange-400', underline: 'bg-orange-500' },
-            { id: 'analytics', label: 'Insights', icon: <Activity className="w-3.5 h-3.5 text-yellow-400" />, color: 'text-yellow-400', underline: 'bg-yellow-500' },
+            { id: 'posts', label: 'Posts', icon: <FileText className="w-3.5 h-3.5" />, color: 'text-violet-400' },
+            { id: 'videos', label: 'Videos', icon: <Video className="w-3.5 h-3.5" />, color: 'text-pink-500' },
+            { id: 'media', label: 'Photos', icon: <Camera className="w-3.5 h-3.5" />, color: 'text-amber-500' },
+            { id: 'voice', label: 'Voice', icon: <Mic className="w-3.5 h-3.5" />, color: 'text-cyan-400' },
+            { id: 'saved', label: 'Saved', icon: <Lock className="w-3.5 h-3.5" />, color: 'text-violet-400' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -3263,10 +3791,24 @@ try {
                     </div>
                   ))
                 ) : (
-                  <div className="text-center py-10 border border-dashed border-violet-500/10 rounded-2xl bg-white/[0.01]">
-                    <span className="text-2xl select-none">🔍</span>
-                    <p className="text-xs font-mono font-bold text-violet-300 mt-2">No connections match your search query.</p>
-                    <p className="text-[10px] text-violet-300/40 mt-1">Refine parameters and try again.</p>
+                  <div className="text-center py-10 px-4 border border-dashed border-violet-500/10 rounded-2xl bg-white/[0.01]">
+                    <span className="text-2xl select-none">👥</span>
+                    {connectionSearchQuery ? (
+                      <>
+                        <p className="text-xs font-mono font-bold text-violet-300 mt-2">No connections match your search query.</p>
+                        <p className="text-[10px] text-violet-300/40 mt-1">Refine parameters or check your spelling.</p>
+                      </>
+                    ) : connectionsModalTab === 'followers' ? (
+                      <>
+                        <p className="text-xs font-sans font-bold text-violet-300 mt-2">You're just getting started.</p>
+                        <p className="text-[10px] text-violet-300/60 mt-1 leading-relaxed max-w-xs mx-auto">Follow other creators, share high-value insights, and build your social authority to grow your network.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-xs font-sans font-bold text-violet-300 mt-2">No connections yet.</p>
+                        <p className="text-[10px] text-violet-300/60 mt-1 leading-relaxed max-w-xs mx-auto">Start connecting by following active creators or explorers in the community.</p>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

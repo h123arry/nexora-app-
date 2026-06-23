@@ -15,9 +15,10 @@ interface ReportModalProps {
 export type ReportReason = 
   | 'Spam' 
   | 'Harassment' 
+  | 'Hate' 
   | 'Violence' 
-  | 'Hate Speech' 
-  | 'Sexual Content' 
+  | 'Impersonation' 
+  | 'Copyright' 
   | 'Misinformation' 
   | 'Other';
 
@@ -39,9 +40,10 @@ export default function ReportModal({
   const reasons: ReportReason[] = [
     'Spam',
     'Harassment',
+    'Hate',
     'Violence',
-    'Hate Speech',
-    'Sexual Content',
+    'Impersonation',
+    'Copyright',
     'Misinformation',
     'Other'
   ];

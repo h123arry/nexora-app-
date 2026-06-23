@@ -1,5 +1,5 @@
 {
-  "name": "Nexora",
+  "name": "Nexora Pulse",
   "description": "A premium, ultra-modern social media dashboard with immersive feed navigation, interactive posts, direct messaging, creators showcase, and robust client-side storage.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

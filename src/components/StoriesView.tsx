@@ -118,6 +118,23 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
   // Overlays
   const [selectedMoment, setSelectedMoment] = useState<any | null>(null);
   const [storyIndex, setStoryIndex] = useState(0);
+  
+  // Custom Story details reply & analytics
+  const [storyReplyText, setStoryReplyText] = useState('');
+  const [showStoryAnalytics, setShowStoryAnalytics] = useState(false);
+  const [storyStats, setStoryStats] = useState<Record<string, { views: number, reactions: string[], replies: string[] }>>(() => {
+    const saved = localStorage.getItem('nexora_story_stats_v2');
+    if (saved) return JSON.parse(saved);
+    return {
+      'm-voh-1': { views: 124500, reactions: ['⚡', '❤️', '👏', '🔥'], replies: ['Amazing vibe Harrison!', 'Messi is the absolute 🐐!'] },
+      'm-nexora-1': { views: 88400, reactions: ['⚡', '👏', '🔥'], replies: ['Visual clarity is supreme!'] },
+      'm-vohai-1': { views: 76100, reactions: ['❤️', '😂'], replies: ['Unbelievable header yesterday!'] }
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('nexora_story_stats_v2', JSON.stringify(storyStats));
+  }, [storyStats]);
 
   // Moment Creation Modal States
   const [isCreateMomentOpen, setIsCreateMomentOpen] = useState(false);
@@ -170,6 +187,12 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
     setMomentsList(updated);
     localStorage.setItem('nexora_moments_list', JSON.stringify(updated));
 
+    // Initialize story entry stats
+    setStoryStats(prev => ({
+      ...prev,
+      [newMoment.id]: { views: 1, reactions: [], replies: [] }
+    }));
+
     // Reset fields
     setMomentCaption('');
     setMomentMediaType('photo');
@@ -203,6 +226,45 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
     const updated = storyHighlightsList.filter(h => h.id !== hlId);
     setStoryHighlightsList(updated);
     localStorage.setItem('nexora_story_highlights', JSON.stringify(updated));
+  };
+
+  const handleSendStoryReply = () => {
+    if (!storyReplyText.trim() || !selectedMoment) return;
+    const repText = storyReplyText.trim();
+    setStoryStats(prev => {
+      const current = prev[selectedMoment.id] || { views: 100, reactions: [], replies: [] };
+      return {
+        ...prev,
+        [selectedMoment.id]: {
+          ...current,
+          replies: [...current.replies, repText]
+        }
+      };
+    });
+    setStoryReplyText('');
+    window.dispatchEvent(new CustomEvent('toast', { detail: `💌 Secure story reply submitted directly to @${selectedMoment.username}!` }));
+  };
+
+  const handleReactToStory = (emoji: string) => {
+    if (!selectedMoment) return;
+    setStoryStats(prev => {
+      const current = prev[selectedMoment.id] || { views: 100, reactions: [], replies: [] };
+      return {
+        ...prev,
+        [selectedMoment.id]: {
+          ...current,
+          reactions: [...current.reactions, emoji]
+        }
+      };
+    });
+    window.dispatchEvent(new CustomEvent('toast', { detail: `✨ Story reacted with ${emoji}!` }));
+  };
+
+  const handleShareStory = () => {
+    if (!selectedMoment) return;
+    const text = `Check out @${selectedMoment.username}'s story on Nexora: "${selectedMoment.quotes[storyIndex]}"`;
+    navigator.clipboard.writeText(text);
+    window.dispatchEvent(new CustomEvent('toast', { detail: `📤 Story forwarded directly to your social buffer!` }));
   };
 
   return (
@@ -265,6 +327,16 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                     setMomentsList(updated);
                     localStorage.setItem('nexora_moments_list', JSON.stringify(updated));
                   }
+                  
+                  // Increment views count in story stats
+                  setStoryStats(prev => {
+                    const current = prev[mom.id] || { views: 100, reactions: [], replies: [] };
+                    return {
+                      ...prev,
+                      [mom.id]: { ...current, views: current.views + 1 }
+                    };
+                  });
+
                   setSelectedMoment(mom);
                   setStoryIndex(0);
                 }}
@@ -534,13 +606,13 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
             </div>
 
             {/* Core Story Card Content */}
-            <div className="flex-1 flex items-center justify-center p-4 z-10">
+            <div className="flex-grow flex flex-col items-center justify-center p-4 z-10 overflow-y-auto w-full">
               <motion.div 
                 key={storyIndex}
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0 }}
-                className="w-full max-w-md aspect-3/4 p-6 rounded-3xl bg-[#09071c]/90 border border-violet-500/20 shadow-2xl flex flex-col justify-between relative overflow-hidden"
+                className="w-full max-w-md p-6 rounded-3xl bg-[#09071c]/95 border border-violet-500/20 shadow-2xl flex flex-col justify-between relative overflow-hidden space-y-4"
               >
                 {selectedMoment.mediaUrl && (
                   <div className="absolute inset-0 z-0">
@@ -549,7 +621,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                   </div>
                 )}
 
-                <div className="flex items-center gap-1 z-10 w-full">
+                <div className="flex items-center gap-1 z-10 w-full mb-2">
                   {selectedMoment.quotes.map((_: any, idx: number) => (
                     <div key={idx} className="flex-1 h-1 rounded-full overflow-hidden bg-white/10">
                       <div className={`h-full ${idx <= storyIndex ? 'bg-violet-500' : ''}`} />
@@ -557,7 +629,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                   ))}
                 </div>
 
-                <div className="my-auto z-10 text-center space-y-6">
+                <div className="my-auto z-10 text-center py-4 space-y-6">
                   {selectedMoment.mediaType === 'voice' && (
                     <div className="flex flex-col items-center justify-center space-y-3">
                       <div className="w-16 h-16 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-white text-lg cursor-pointer hover:bg-violet-600/30 transition-all">
@@ -567,20 +639,118 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                     </div>
                   )}
 
-                  <p className="text-lg md:text-xl font-bold font-sans text-white select-text leading-relaxed tracking-tight">
+                  <p className="text-base md:text-md font-bold font-sans text-white select-text leading-relaxed tracking-tight">
                     {selectedMoment.quotes[storyIndex] || "Empty insight block"}
                   </p>
                 </div>
 
+                {/* Reply, React & Share Section (Interactions) */}
+                <div className="z-10 space-y-3 border-t border-white/5 pt-4">
+                  {/* Reactions Bar */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      {['⚡', '❤️', '👏', '😂', '🔥'].map(emoji => (
+                        <button
+                          key={emoji}
+                          type="button"
+                          onClick={() => handleReactToStory(emoji)}
+                          className="hover:scale-125 hover:rotate-6 duration-200 text-base p-1.5 bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer font-sans"
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={handleShareStory}
+                      className="p-1.5 px-3 bg-pink-500/10 hover:bg-pink-500/20 border border-pink-500/20 rounded-xl text-[10px] text-pink-300 font-mono font-bold flex items-center gap-1.5 cursor-pointer font-sans"
+                    >
+                      Share 📤
+                    </button>
+                  </div>
+
+                  {/* Reply Input Box */}
+                  <div className="flex items-center gap-2 bg-black/40 p-2 rounded-xl border border-white/5">
+                    <input 
+                      type="text"
+                      placeholder={`Reply to @${selectedMoment.username}...`}
+                      value={storyReplyText}
+                      onChange={(e) => setStoryReplyText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSendStoryReply();
+                      }}
+                      className="flex-1 bg-transparent border-none text-xs text-zinc-100 placeholder-zinc-500 focus:outline-hidden px-2 font-sans"
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleSendStoryReply}
+                      className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white font-mono text-[9px] font-black rounded-lg uppercase cursor-pointer transition-all"
+                    >
+                      Reply
+                    </button>
+                  </div>
+                </div>
+
+                {/* Creator Analytics Panel: Toggleable */}
+                {(selectedMoment.username === currentUser.username || selectedMoment.username === 'voh') && (
+                  <div className="z-10 bg-violet-600/10 border border-violet-500/10 rounded-2xl p-3 text-left">
+                    <div 
+                      className="flex items-center justify-between cursor-pointer select-none" 
+                      onClick={() => setShowStoryAnalytics(!showStoryAnalytics)}
+                    >
+                      <span className="text-[10px] font-mono text-purple-400 font-extrabold uppercase flex items-center gap-1">
+                        📊 Creator Insights
+                      </span>
+                      <span className="text-[9px] text-[#A78BFA] font-mono font-black">{showStoryAnalytics ? 'HIDE ▲' : 'VIEW STATS ▼'}</span>
+                    </div>
+                    {showStoryAnalytics && (
+                      <div className="grid grid-cols-3 gap-2 mt-2 pt-2 border-t border-white/5 text-center">
+                        <div className="p-1.5 bg-black/30 rounded-xl border border-white/5">
+                          <span className="text-[8px] font-mono block text-zinc-500 uppercase">Views</span>
+                          <span className="text-xs font-mono font-black text-white">
+                            {((storyStats[selectedMoment.id]?.views || 0) + (selectedMoment.id === 'm-voh-1' ? 124500 : 0)).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="p-1.5 bg-black/30 rounded-xl border border-white/5">
+                          <span className="text-[8px] font-mono block text-zinc-500 uppercase">Reactions</span>
+                          <span className="text-xs font-mono font-black text-amber-400">
+                            {((storyStats[selectedMoment.id]?.reactions || []).length + (selectedMoment.id === 'm-voh-1' ? 425 : 0))}
+                          </span>
+                        </div>
+                        <div className="p-1.5 bg-black/30 rounded-xl border border-white/5">
+                          <span className="text-[8px] font-mono block text-zinc-500 uppercase">Replies</span>
+                          <span className="text-xs font-mono font-black text-cyan-400">
+                            {((storyStats[selectedMoment.id]?.replies || []).length + (selectedMoment.id === 'm-voh-1' ? 18 : 0))}
+                          </span>
+                        </div>
+                        
+                        {/* Display replies content */}
+                        {((storyStats[selectedMoment.id]?.replies || []).length > 0) && (
+                          <div className="col-span-3 text-left p-2 rounded-xl bg-black/40 mt-1 max-h-24 overflow-y-auto border border-white/5 space-y-1 scrollbar-none">
+                            <span className="text-[8px] font-mono text-zinc-500 uppercase font-black block">Replies Feed:</span>
+                            {(storyStats[selectedMoment.id]?.replies || []).map((reply, rIdx) => (
+                              <p key={rIdx} className="text-[9.5px] text-zinc-300 font-sans leading-normal">
+                                💬 <span className="italic">"{reply}"</span>
+                              </p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="z-10 flex items-center justify-between border-t border-white/5 pt-4">
                   <button 
+                    type="button"
                     disabled={storyIndex === 0}
                     onClick={() => setStoryIndex(storyIndex - 1)}
-                    className="px-4 py-2 border border-white/10 rounded-xl text-xs font-mono text-zinc-400 hover:text-white disabled:opacity-20 transition-all"
+                    className="px-4 py-2 border border-white/10 rounded-xl text-xs font-mono text-zinc-400 hover:text-white disabled:opacity-20 transition-all cursor-pointer"
                   >
                     ← BACK
                   </button>
                   <button 
+                    type="button"
                     onClick={() => {
                       if (storyIndex < selectedMoment.quotes.length - 1) {
                         setStoryIndex(storyIndex + 1);
@@ -588,7 +758,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                         setSelectedMoment(null);
                       }
                     }}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-mono font-bold transition-all"
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-mono font-bold transition-all cursor-pointer"
                   >
                     {storyIndex === selectedMoment.quotes.length - 1 ? 'EXIT STORY' : 'NEXT →'}
                   </button>

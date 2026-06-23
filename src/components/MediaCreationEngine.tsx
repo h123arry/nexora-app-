@@ -209,6 +209,68 @@ export default function MediaCreationEngine({
     localStorage.setItem('nexora_post_drafts_v1', JSON.stringify(draftsList));
   }, [draftsList]);
 
+  // Load auto-save on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('nexora_creation_autosave_v1');
+      if (saved) {
+        const item = JSON.parse(saved);
+        if (item.caption || item.activeMode || (item.images && item.images.length > 0) || item.videoUrl || item.voiceUrl) {
+          setCaption(item.caption || '');
+          setTopics(item.topics || '');
+          setAudience(item.audience || 'public');
+          setActiveMode(item.activeMode || null);
+          if (item.images && item.images.length > 0) {
+            setSelectedImages(item.images.map((img: string) => ({
+              url: img,
+              rotation: 0,
+              zoom: 1,
+              cropOffset: { x: 0, y: 0 }
+            })));
+          }
+          if (item.videoUrl) setVideoFileUrl(item.videoUrl);
+          if (item.recordedVideoUrl) setRecordedVideoUrl(item.recordedVideoUrl);
+          if (item.voiceUrl) setVoiceFileUrl(item.voiceUrl);
+          if (item.voiceTranscript) setVoiceTranscript(item.voiceTranscript);
+          
+          window.dispatchEvent(new CustomEvent('toast', { 
+            detail: '🔄 Workspace restored! Caption, video or voice recovered.' 
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Autosave load error:", e);
+    }
+  }, []);
+
+  // Update auto-save
+  useEffect(() => {
+    if (!caption && !activeMode && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl) {
+      localStorage.removeItem('nexora_creation_autosave_v1');
+      return;
+    }
+    const timer = setTimeout(() => {
+      try {
+        const draftToSave = {
+          caption,
+          topics,
+          audience,
+          activeMode,
+          images: selectedImages.map(img => img.url),
+          videoUrl: videoFileUrl,
+          recordedVideoUrl,
+          voiceUrl: voiceFileUrl,
+          voiceTranscript
+        };
+        localStorage.setItem('nexora_creation_autosave_v1', JSON.stringify(draftToSave));
+      } catch (e) {
+        console.error("Autosave write error:", e);
+      }
+    }, 1000); // Debounce writing to localStorage to be elegant
+
+    return () => clearTimeout(timer);
+  }, [caption, topics, audience, activeMode, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript]);
+
   // Location Autocomplete
   useEffect(() => {
     if (location.trim().length > 1) {
@@ -593,6 +655,7 @@ export default function MediaCreationEngine({
   };
 
   const resetInputs = () => {
+    localStorage.removeItem('nexora_creation_autosave_v1');
     setCaption('');
     setTopics('');
     setAudience('public');

@@ -13,6 +13,7 @@ export interface User {
   coverImage: string;
   joinedDate: string;
   email?: string;
+  phone?: string;
   role?: 'founder' | 'admin' | 'user';
   isBanned?: boolean;
   isSuspended?: boolean;

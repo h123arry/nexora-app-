@@ -30,7 +30,11 @@ import {
   Play, 
   Pause,
   Video,
-  Grid
+  Grid,
+  Folder,
+  RefreshCw,
+  Globe,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
@@ -76,6 +80,35 @@ function ReelsKeyboardController({
   return null;
 }
 
+// Prefix-aligned fuzzy/substring similarity indexer for ranked user metrics
+function computeSimilarityScore(source: string, search: string): number {
+  const src = source.toLowerCase().trim();
+  const query = search.toLowerCase().trim();
+  if (!query) return 1;
+  if (src === query) return 100; // Exact match
+  if (src.includes(query)) {
+    if (src.startsWith(query)) return 80; // Prefix match
+    return 50; // Substring match
+  }
+  
+  // Fuzzy character subset matching
+  let matches = 0;
+  let lastIndex = 0;
+  for (let i = 0; i < query.length; i++) {
+    const char = query[i];
+    const index = src.indexOf(char, lastIndex);
+    if (index !== -1) {
+      matches++;
+      lastIndex = index + 1;
+    }
+  }
+  const ratio = matches / query.length;
+  if (ratio > 0.6) {
+    return Math.floor(ratio * 30); // Partial fuzzy subset match
+  }
+  return 0; // No match
+}
+
 export default function ExploreView({
   creators,
   posts,
@@ -88,6 +121,57 @@ export default function ExploreView({
   // Navigation & Categorization Status
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [localSearch, setLocalSearch] = useState('');
+  
+  // Core Search Platform States
+  const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'voice' | 'communities' | 'hashtags' | 'pulse'>('all');
+  const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'nearby'>('latest');
+  const [activeCollectionFolder, setActiveCollectionFolder] = useState<string | null>(null);
+
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
+    try {
+      const stored = localStorage.getItem('nexora_search_history');
+      return stored ? JSON.parse(stored) : ['voh', 'afrobeat', 'tech', 'lagos'];
+    } catch {
+      return ['voh', 'afrobeat', 'tech', 'lagos'];
+    }
+  });
+
+  const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => {
+    try {
+      const stored = localStorage.getItem('nexora_saved_collections_voh');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return {
+      'Favorites': ['post-0', 'post-3'],
+      'Football': [],
+      'Business': ['post-1'],
+      'Inspiration': [],
+      'Custom Collections': []
+    };
+  });
+
+  const addToSearchHistory = (q: string) => {
+    if (!q.trim()) return;
+    setSearchHistory(prev => {
+      const filtered = prev.filter(item => item.toLowerCase() !== q.toLowerCase());
+      const next = [q, ...filtered].slice(0, 8);
+      try { localStorage.setItem('nexora_search_history', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const removeFromSearchHistory = (q: string) => {
+    setSearchHistory(prev => {
+      const next = prev.filter(item => item !== q);
+      try { localStorage.setItem('nexora_search_history', JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const clearAllSearchHistory = () => {
+    setSearchHistory([]);
+    try { localStorage.removeItem('nexora_search_history'); } catch {}
+  };
   
   // Simulated Live Streaming States
   const [activeWatchLive, setActiveWatchLive] = useState<any | null>(null);
@@ -240,6 +324,79 @@ export default function ExploreView({
     return true;
   });
 
+  // Dynamic user matching & ranked similarity scoring
+  const matchedCreators = (() => {
+    const query = localSearch.trim().toLowerCase();
+    if (searchFilterType !== 'all' && searchFilterType !== 'users' && !query) {
+      return [];
+    }
+    if (!query) {
+      return creators;
+    }
+    const scored = creators.map(user => {
+      const nameScore = computeSimilarityScore(user.name, query);
+      const usernameScore = computeSimilarityScore(user.username, query);
+      const bioScore = user.bio ? computeSimilarityScore(user.bio, query) : 0;
+      return { user, score: Math.max(nameScore, usernameScore, bioScore) };
+    });
+    return scored
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.user);
+  })();
+
+  // Dynamic post matching, category indexing, and sort sequencing
+  const sortedMatchedPosts = (() => {
+    const query = localSearch.trim().toLowerCase();
+    let result = [...posts];
+
+    // Filter by saved collections folder if active
+    if (activeCollectionFolder) {
+      const savedIds = savedCollections[activeCollectionFolder] || [];
+      result = result.filter(post => savedIds.includes(post.id));
+    }
+
+    // Filter by keywords within content, metadata, or communities
+    if (query) {
+      result = result.filter(post => {
+        const contentMatch = post.content.toLowerCase().includes(query);
+        const nameMatch = post.name.toLowerCase().includes(query);
+        const usernameMatch = post.username.toLowerCase().includes(query);
+        const tagsMatch = post.tags && post.tags.some(t => t.toLowerCase().includes(query));
+        const communityMatch = (post as any).communityName && (post as any).communityName.toLowerCase().includes(query);
+        return contentMatch || nameMatch || usernameMatch || tagsMatch || communityMatch;
+      });
+    }
+
+    // Filter by selected search scope tab type
+    if (searchFilterType === 'posts') {
+      result = result.filter(post => !post.videoUrl && !post.isVoice);
+    } else if (searchFilterType === 'videos') {
+      result = result.filter(post => !!post.videoUrl);
+    } else if (searchFilterType === 'voice') {
+      result = result.filter(post => !!post.isVoice);
+    } else if (searchFilterType === 'communities') {
+      result = result.filter(post => !!(post as any).communityName || post.tags.includes('communities') || post.tags.includes('guild'));
+    } else if (searchFilterType === 'hashtags') {
+      result = result.filter(post => query ? post.tags.some(t => t.toLowerCase().includes(query)) : post.tags.length > 0);
+    } else if (searchFilterType === 'pulse') {
+      result = result.filter(post => post.likes > 200 || post.tags.includes('pulse'));
+    }
+
+    // Sort matching posts based on sort sequencing
+    if (sortBy === 'popular') {
+      result.sort((a, b) => b.likes - a.likes);
+    } else if (sortBy === 'nearby') {
+      result.sort((a, b) => {
+        const aLocal = a.tags.includes('local') || a.tags.includes('lagos') ? 1 : 0;
+        const bLocal = b.tags.includes('local') || b.tags.includes('lagos') ? 1 : 0;
+        return bLocal - aLocal;
+      });
+    }
+
+    return result;
+  })();
+
   // Livestream comments loop trigger
   useEffect(() => {
     if (!activeWatchLive && !isGoingLiveOwn) return;
@@ -382,6 +539,353 @@ export default function ExploreView({
           )}
         </div>
       </div>
+
+      {/* 🟣 SEARCH HUB ENGINE PLATFORM (Consolidated from Home Feed for full immersion) */}
+      <div className="p-4 bg-[#0a071d]/90 border border-violet-500/10 rounded-2xl space-y-4 text-left">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5">
+          {/* Search Category Tabs */}
+          <div className="space-y-1">
+            <span className="text-[10px] uppercase font-mono text-[#A78BFA] font-extrabold tracking-widest block">
+              Search Scope
+            </span>
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: 'all', label: 'All Content 🌌' },
+                { id: 'users', label: 'Users 👥' },
+                { id: 'posts', label: 'Posts 📝' },
+                { id: 'videos', label: 'Videos 🎥' },
+                { id: 'voice', label: 'Voice Posts 🎙️' },
+                { id: 'communities', label: 'Communities 🏟️' },
+                { id: 'hashtags', label: 'Hashtags 🏷️' },
+                { id: 'pulse', label: 'Pulse 🌍' }
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => {
+                    setSearchFilterType(f.id as any);
+                    if (f.id === 'users') {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '👤 Filtering results by User Accounts only' }));
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[10.5px] font-bold font-sans transition-all cursor-pointer ${searchFilterType === f.id ? 'bg-violet-600 border border-violet-500/30 text-white font-extrabold shadow-[0_0_12px_rgba(139,92,246,0.25)]' : 'bg-slate-900 text-zinc-400 hover:text-zinc-200 border border-white/5'}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sort By Controls */}
+          <div className="space-y-1 shrink-0">
+            <span className="text-[10px] uppercase font-mono text-pink-400 font-extrabold tracking-widest block">
+              Sort Sequence
+            </span>
+            <div className="flex items-center gap-1 bg-black/40 p-1 rounded-xl border border-white/5 text-[10.5px] font-sans">
+              {[
+                { id: 'latest', label: '⚡ Latest' },
+                { id: 'popular', label: '🔥 Popular' },
+                { id: 'nearby', label: '📍 Nearby' }
+              ].map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setSortBy(s.id as any)}
+                  className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all cursor-pointer ${sortBy === s.id ? 'bg-pink-600 text-white font-bold' : 'text-zinc-400 hover:text-white'}`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Saved Collections Folder Deck */}
+        <div className="text-left border-t border-white/5 pt-3 w-full">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-[10.5px] font-mono font-bold text-zinc-400 uppercase flex items-center gap-1 shrink-0">
+                <Folder className="w-3.5 h-3.5 text-pink-400" />
+                SAVED COLLECTIONS:
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5 font-sans">
+                {Object.keys(savedCollections).map(folder => {
+                  const count = savedCollections[folder]?.length || 0;
+                  const isFolderActive = activeCollectionFolder === folder;
+                  return (
+                    <button
+                      key={folder}
+                      onClick={() => {
+                        setActiveCollectionFolder(isFolderActive ? null : folder);
+                        if (!isFolderActive) {
+                          window.dispatchEvent(new CustomEvent('toast', { detail: `📂 Displaying items bookmarked inside [${folder}]` }));
+                        }
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-bold font-sans transition-all flex items-center gap-1.5 cursor-pointer border ${isFolderActive ? 'bg-pink-950/40 text-pink-300 border-pink-500/40 font-extrabold' : 'bg-[#0a051c]/60 text-zinc-400 hover:text-zinc-350 border-white/5'}`}
+                    >
+                      <span>{folder}</span>
+                      <span className="bg-black/40 text-[9px] px-1 rounded-md font-mono text-zinc-350">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            {activeCollectionFolder && (
+              <button
+                onClick={() => setActiveCollectionFolder(null)}
+                className="text-[10.5px] font-mono text-rose-400 hover:text-rose-500 font-extrabold flex items-center gap-1 cursor-pointer shrink-0 uppercase tracking-wide"
+              >
+                [Exit Folder ✖]
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Premium Recent Searches Block */}
+        {searchHistory.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-white/5 pt-3">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="text-[9.5px] font-mono font-extrabold text-[#A78BFA] uppercase tracking-wider flex items-center gap-1">
+                <RefreshCw className="w-3" />
+                Recent Search Logs:
+              </span>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {searchHistory.map((hist) => (
+                  <div 
+                    key={hist}
+                    className="flex items-center gap-1 bg-violet-950/40 hover:bg-violet-950/70 border border-violet-500/10 hover:border-violet-500/20 px-2 py-1 rounded-lg text-[10px] font-mono text-violet-200 transition-all cursor-pointer"
+                  >
+                    <span 
+                      onClick={() => {
+                        setLocalSearch(hist);
+                        addToSearchHistory(hist);
+                      }}
+                    >
+                      {hist}
+                    </span>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFromSearchHistory(hist);
+                      }}
+                      className="hover:text-red-400 font-bold ml-1 px-0.5 text-[9px] cursor-pointer"
+                    >
+                      ✖
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button
+              onClick={clearAllSearchHistory}
+              className="text-[9px] font-mono font-bold text-red-400 hover:text-red-300 transition-colors uppercase shrink-0"
+            >
+              Clear Logs 🗑️
+            </button>
+          </div>
+        )}
+
+        {/* Trending Bento Grids */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-white/5 pt-3">
+          {/* Trending Topics Column */}
+          <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
+            <span className="text-[9px] font-mono font-black text-rose-400 uppercase tracking-widest flex items-center gap-1">
+              <span>🔥</span> TRENDING TOPICS
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {[
+                { text: 'Quantum Networking', term: 'Quantum' },
+                { text: 'Sarah Creative Studio', term: 'Sarah' },
+                { text: 'David Sports Hub', term: 'David' }
+              ].map((topic) => (
+                <button
+                  key={topic.text}
+                  onClick={() => {
+                    setLocalSearch(topic.term);
+                    setSearchFilterType('all');
+                    addToSearchHistory(topic.text);
+                  }}
+                  className="text-left py-1 px-1.5 text-[10px] font-sans font-medium text-zinc-300 hover:text-[#A78BFA] transition-colors truncate block"
+                >
+                  📈 {topic.text}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Trending Hashtags Column */}
+          <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
+            <span className="text-[9px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1">
+              <span>🏷️</span> TRENDING HASHTAGS
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {['#BuildInPublic', '#NextGenWeb', '#SpatialComputing'].map((hashtag) => (
+                <button
+                  key={hashtag}
+                  onClick={() => {
+                    setLocalSearch(hashtag);
+                    setSearchFilterType('hashtags');
+                    addToSearchHistory(hashtag);
+                  }}
+                  className="text-left py-1 px-1.5 text-[10px] font-mono text-zinc-300 hover:text-[#A78BFA] transition-colors truncate block"
+                >
+                  ✨ {hashtag}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Trending Communities Column */}
+          <div className="bg-black/25 border border-white/5 rounded-xl p-2.5 space-y-2 text-left">
+            <span className="text-[9px] font-mono font-black text-cyan-400 uppercase tracking-widest flex items-center gap-1">
+              <span>🏟️</span> TRENDING GUILDS
+            </span>
+            <div className="flex flex-col gap-1.5">
+              {['Austin Creators Guild', 'Lagos Tech Hub', 'Business Synthesis'].map((community) => (
+                <button
+                  key={community}
+                  onClick={() => {
+                    setLocalSearch(community);
+                    setSearchFilterType('communities');
+                    addToSearchHistory(community);
+                  }}
+                  className="text-left py-1 px-1.5 text-[10px] font-sans font-medium text-zinc-300 hover:text-cyan-400 transition-colors truncate block"
+                >
+                  🏟️ {community}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 🔴 SEARCH RESULTS OVERLAY/DOCK VIEW (Conditional) */}
+      {(localSearch.trim().length > 0 || searchFilterType !== 'all' || activeCollectionFolder !== null) && (
+        <div className="p-5 md:p-6 rounded-2xl bg-slate-950/70 border border-violet-500/20 space-y-5 text-left relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#8B5CF6] animate-ping" />
+              <h2 className="text-sm font-sans font-black tracking-wider uppercase text-violet-200">
+                Found {matchedCreators.length} Users & {sortedMatchedPosts.length} Matching Posts
+              </h2>
+            </div>
+            <button 
+              onClick={() => {
+                setLocalSearch('');
+                setSearchFilterType('all');
+                setActiveCollectionFolder(null);
+              }}
+              className="text-[10.5px] font-mono font-bold text-pink-400 hover:text-pink-300 uppercase cursor-pointer"
+            >
+              Clear Search Filters ✖
+            </button>
+          </div>
+
+          {/* Users List Result Segment - Voice of Harrison verification styling */}
+          {matchedCreators.length > 0 && (
+            <div className="space-y-3">
+              <span className="text-[10px] font-mono font-black text-pink-500/80 uppercase tracking-widest block">
+                CREATORS & INFLUENCERS
+              </span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {matchedCreators.map((user) => (
+                  <div key={user.id} className="p-4 rounded-3xl bg-[#08051a] hover:bg-[#0b0826] border border-violet-500/15 transition-all flex items-center justify-between gap-4 text-left relative overflow-hidden group">
+                    <div className="flex gap-3.5 items-center">
+                      <div className="relative shrink-0">
+                        <img src={user.avatar} className="w-13 h-13 rounded-xl object-cover ring-2 ring-violet-500/40" />
+                        {user.isVerified && (
+                          <span className="absolute -bottom-1 -right-1">
+                            <PurpleVerifiedBadge />
+                          </span>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className="text-xs font-black text-white font-sans">{user.name}</h4>
+                          <span className="text-[9.5px] font-mono text-[#8B5CF6]">@{user.username}</span>
+                        </div>
+                        {/* Followers level */}
+                        <span className="text-[9px] font-mono text-zinc-400 mt-0.5 block font-bold">
+                          ⚡ {user.followers || '14.8K'} Follower Nodes
+                        </span>
+                        {/* Bio preview */}
+                        <p className="text-[11px] text-zinc-300 font-sans mt-0.5 line-clamp-1 max-w-sm">
+                          {user.bio}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => onToggleFollow && onToggleFollow(user.id)}
+                      className={`text-[9.5px] font-mono font-black py-1.5 px-3 rounded-lg active:scale-95 transition-all uppercase shrink-0 cursor-pointer ${
+                        followingIds.includes(user.id) 
+                          ? 'border border-[#8B5CF6]/30 text-purple-400 hover:text-white' 
+                          : 'bg-linear-to-r from-violet-600 to-pink-600 text-white'
+                      }`}
+                    >
+                      {followingIds.includes(user.id) ? 'Following' : 'Follow Node'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Posts Result Segment - Interleaved style list */}
+          {sortedMatchedPosts.length > 0 ? (
+            <div className="space-y-3 pt-3 border-t border-white/5">
+              <span className="text-[10px] font-mono font-black text-[#A78BFA] uppercase tracking-widest block">
+                POST STREAM MATCHES ({sortedMatchedPosts.length})
+              </span>
+              <div className="space-y-4">
+                {sortedMatchedPosts.map((post) => (
+                  <div key={post.id} className="p-4 rounded-2xl bg-[#09071c]/90 border border-violet-500/10 text-left space-y-3">
+                    <div className="flex items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <img src={post.avatar} className="w-8 h-8 rounded-lg object-cover" />
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-black text-white">{post.name}</span>
+                            <span className="text-[9px] font-mono text-violet-400">@{post.username}</span>
+                          </div>
+                          <span className="text-[8px] font-mono text-zinc-500 block">{post.timestamp}</span>
+                        </div>
+                      </div>
+
+                      {post.videoUrl && (
+                        <span className="bg-purple-600/10 text-purple-400 border border-purple-500/20 text-[8px] font-mono py-0.5 px-2 rounded uppercase tracking-wider font-extrabold">
+                          🎥 Video Block
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                      {post.content}
+                    </p>
+
+                    {post.videoUrl && (
+                      <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden bg-black/40 border border-white/5">
+                        <video src={post.videoUrl} muted autoPlay loop className="w-full h-full object-cover" />
+                        <div className="absolute top-2 left-2 bg-black/60 text-[8px] font-mono text-white/80 py-0.5 px-1.5 rounded">AUTO PLAY PREVIEW</div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-3 text-[10px] font-mono text-zinc-400">
+                      <span>⚡ {post.likes} Sparks</span>
+                      <span>💬 {post.comments.length} Discussion notes</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            (localSearch.trim().length > 0 || searchFilterType !== 'all' || activeCollectionFolder !== null) && matchedCreators.length === 0 && (
+              <div className="p-6 text-center text-zinc-500 font-mono text-xs">
+                No matching results found for selected criteria. Try typing different keywords like "voh", "quantum", or "sports".
+              </div>
+            )
+          )}
+        </div>
+      )}
 
       {/* 🧭 2. DYNAMIC NICHE CATEGORIES HORIZONTAL DOCK */}
       <div id="explore-categories-bar" className="flex gap-2 bg-slate-950/20 p-1 rounded-2xl border border-white/5 overflow-x-auto scrollbar-none py-1.5 px-2">
