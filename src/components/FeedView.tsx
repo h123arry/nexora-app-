@@ -7,7 +7,6 @@ import {
   MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2
 } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
-import { generateTestUsers } from '../data/generatedUsers';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -109,167 +108,14 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
 
 // Seed function to generate 150+ realistic posts from 1000 users deterministically
 function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
-  const testUsers = generateTestUsers(); // Generates 1,000 active test users
   const blended: RefactoredPost[] = [];
 
-  // 1. First append parent posts (if any)
+  // First append parent posts (if any)
   parentPosts.forEach(p => {
     blended.push({
       ...p,
-      comments: p.comments.map(c => ({ ...c, replies: [] }))
+      comments: (p.comments || []).map(c => ({ ...c, replies: (c as any).replies || [] }))
     });
-  });
-
-  // 2. Templates for rich variety in content
-  const contentTemplates = [
-    {
-      content: "Lekki beach sunset is absolutely unmatched today. Perfect evening to unwind with some great friends! 🌅📸",
-      tags: ["Creators", "Photography", "Art"],
-      image: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=800&auto=format&fit=crop&q=80"
-    },
-    {
-      content: "What a thrilling match today! The tactical build-up in the second half was absolute class. Nigerian football is steaming with local talent! 🏟️⚽",
-      tags: ["Football", "Sports", "Lagos"],
-      communityName: "Football Nigeria",
-      image: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80"
-    },
-    {
-      content: "🌍 Big community meetup in Port Harcourt today! Over 150 local creators and storytellers are gathering to share ideas on creative writing. Engagement is peaking! ⚡📝",
-      tags: ["News", "Creators", "Writing"],
-      location: "Port Harcourt, Nigeria"
-    },
-    {
-      content: "We are currently looking for a passionate local graphic designer to help co-design beautiful merchandise for our street arts project. Send details!",
-      tags: ["Business", "Creators", "Startups"],
-      opportunityType: "Collaboration" as const,
-      opportunityReward: "Design royalty splits & project bonuses",
-      opportunitySkills: ["Adobe Illustrator", "Figma", "Visual Brand design"]
-    },
-    {
-      content: "🎙 Checking out the new Afrobeat playlists. Wizkids current track has been on repeat all morning! Drop your current favorite tunes in the replies! 🎶📻",
-      tags: ["Music", "Afrobeat", "Entertainment"],
-      isVoice: true,
-      voiceDuration: "0:45",
-      voiceTranscript: "Hey guys, this is Alex. Just playing some classic Wizkid vibing. Let me know what track you have on loop this week!"
-    },
-    {
-      content: "🎥 Beautiful morning drive through the streets of Lagos. There's real beauty in the hustle and bustle! 🏙️🎉",
-      tags: ["Entertainment", "Vlogs", "Lagos"],
-      videoUrl: "https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-neon-city-street-at-night-41551-large.mp4"
-    },
-    {
-      content: "Just tried out that legendary local pepper soup spot in Abuja. The taste is incredible and 100/10 spicy! Any other spot recommendations around? 🍲🥣🍽️",
-      tags: ["News", "LocalFood", "Entertainment"],
-      image: "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?w=800&auto=format&fit=crop&q=80"
-    },
-    {
-      content: "📊 Which gaming console or system are you planning to upgrade or spend most of your weekends on? Looking for recommendations!",
-      tags: ["Gaming", "Technology", "Education"],
-      interactivePoll: {
-        question: "Which of these is the absolute king of weekend gaming?",
-        options: [
-          { id: 'opt-1', text: "PlayStation 5 (🔥)", votes: 412 },
-          { id: 'opt-2', text: "PC Master Race (🎮)", votes: 212 },
-          { id: 'opt-3', text: "Nintendo Switch (⭐)", votes: 121 }
-        ]
-      }
-    },
-    {
-      content: "Starting a weekend program to tutor students on responsive web development and basic product design. Excited to teach! 🚀💻",
-      tags: ["Technology", "Education", "Mentorship"],
-      opportunityType: "Mentorship" as const,
-      opportunityReward: "Free community classes",
-      opportunitySkills: ["HTML/CSS", "UI principles", "React"]
-    },
-    {
-      content: "🌍 Foodies hangout live in Lekki! Cooking up some massive jollof rice and grilled catfish with the food enthusiast circle today. 🌐🥣",
-      tags: ["News", "LocalFood", "Lagos"],
-      location: "Lagos, Nigeria"
-    }
-  ];
-
-  // Deterministically spread 150 posts across 1000 generated users
-  for (let i = 1; i <= 150; i++) {
-    const userIndex = (i * 23) % testUsers.length;
-    const user = testUsers[userIndex];
-    const templateIndex = (i * 11) % contentTemplates.length;
-    const temp = contentTemplates[templateIndex];
-
-    // Generate nested comments
-    const comments: InteractiveComment[] = [];
-    const numComments = (i * 3) % 4;
-    for (let c = 0; c < numComments; c++) {
-      const commenterIdx = (userIndex + c * 31 + 5) % testUsers.length;
-      const commenter = testUsers[commenterIdx];
-      comments.push({
-        id: `comment-${i}-${c}`,
-        postId: `gen-post-${i}`,
-        userId: commenter.id,
-        username: commenter.username,
-        name: commenter.name,
-        avatar: commenter.avatar,
-        content: c % 2 === 0 
-          ? "This is absolute vibes, totally agree! 🚀" 
-          : "Love this so much, keep doing what you are doing. Will share this with my circle!",
-        timestamp: `${c + 1}h ago`,
-        likes: (c * 19) % 50,
-        replies: [
-          {
-            id: `reply-${i}-${c}-1`,
-            userId: user.id,
-            username: user.username,
-            name: user.name,
-            avatar: user.avatar,
-            content: "Thanks a lot! Really appreciate your support.",
-            timestamp: "30m ago"
-          }
-        ]
-      });
-    }
-
-    blended.push({
-      id: `gen-post-${i}`,
-      userId: user.id,
-      username: user.username,
-      name: user.name,
-      avatar: user.avatar,
-      isVerified: user.id === 'user-0', // Stripped verification from generated users - only founder 'user-0' retains it
-      content: temp.content,
-      image: temp.image,
-      tags: temp.tags,
-      likes: 12 + (i * 7) % 890,
-      commentsCount: comments.length,
-      shares: 2 + (i * 3) % 324,
-      timestamp: i < 5 ? `${i * 12}m ago` : `${Math.floor(i / 10) + 1}d ago`,
-      comments,
-      isVoice: temp.isVoice,
-      voiceDuration: temp.voiceDuration,
-      voiceTranscript: temp.voiceTranscript,
-      videoUrl: temp.videoUrl,
-      location: temp.location,
-      communityName: temp.communityName,
-      opportunityType: temp.opportunityType,
-      opportunityReward: temp.opportunityReward,
-      opportunitySkills: temp.opportunitySkills
-    });
-  }
-
-  // 3. Add 2 dummy spam bot accounts to prove Quality Control Filter
-  blended.push({
-    id: 'spam-bot-1',
-    userId: 'bot-99',
-    username: 'crypto_profit_bot',
-    name: '💰 EARN CRYPTO NOW 💰',
-    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-    isVerified: false,
-    content: "⚠️ ALERT: CLAIM 400% SPARK REWARDS IMMEDIATELY. NO VERIFICATION REQUIRED. REGISTER TODAY SCAM SCAM CLICK HERE NOW!!!",
-    tags: ["Crypto", "Earn", "FreeSparks"],
-    likes: 4120,
-    commentsCount: 0,
-    shares: 9840,
-    timestamp: "1m ago",
-    comments: [],
-    isSpamBot: true
   });
 
   return blended;
@@ -278,17 +124,14 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
 // Active moments structure
 const MOCK_MOMENTS = [
   { id: 'm-0', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', active: true, quotes: ["Building the future of social networks with clean designs.", "Great seeing our community grow so rapidly!", "Continuous listening and iterating with you guys."] },
-  { id: 'm-1', name: 'Alex Sterling', username: 'alex_sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["What a beautiful evening in Port Harcourt today! 🌅", "Just finished writing a clean tutorial for absolute beginners.", "Always keep learning and showing up daily."] },
-  { id: 'm-2', name: 'Sarah Vance', username: 'sarah_codes', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Designing clean UI components with lots of breathing room.", "Taking a coffee break before diving back into CSS! ☕️", "Simple things are often the most elegant ones."] },
-  { id: 'm-3', name: 'David Jenkins', username: 'david_j', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', active: false, quotes: ["Early morning street photography session.", "Capturing real local human stories with my lens. 📸"] }
+  { id: 'm-1', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Official NEXORA AI Companion 🌟 Keeping you posted with football updates!", "Super excited to chat with everyone today.", "Always online to suggest Davido and Wizkid jams!"] },
+  { id: 'm-2', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["The Intelligent AI assistant by VOICE OF HARRISON.", "Connected and ready to assist you anytime.", "Analyzing daily premier league matches."] }
 ];
 
 const SEARCHABLE_SYSTEM_USERS = [
-  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 1245000, bio: 'Nexora Founder & System Architect. Building glassmorphic social systems with absolute visual rhythm.' },
-  { id: 'sarah_codes', name: 'Sarah Vance', username: 'sarah_codes', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 8520, bio: 'Full stack wizard. Building components with high responsiveness and generous negative space.' },
-  { id: 'alex_sterling', name: 'Alex Sterling', username: 'alex_sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 4250, bio: 'Distributed ledger developer & digital artist. Port Harcourt community node lead.' },
-  { id: 'david_j', name: 'David Jenkins', username: 'david_j', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', isVerified: false, followers: 980, bio: 'Experimental audio-focused documentarian and soundscape engineer. Capturing human frequencies.' },
-  { id: 'nexora_ai', name: 'Nexora Platform AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 235000, bio: 'Autonomous cognitive model managing on-chain telemetry, active status buffers, and user interest DNAs.' }
+  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 7300000, bio: 'Nexora Founder & System Architect. Building social systems with absolute visual rhythm.' },
+  { id: 'nexora_ai', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 3000000, bio: 'Official NEXORA AI Companion 🌟 Keeping you posted with football updates, Wizkid/Davido jams, local food tips, and everyday stories.' },
+  { id: 'voh_ai', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 2900000, bio: 'The Intelligent AI assistant by VOICE OF HARRISON. Syncing daily matches (Messi vs Ronaldo!), movie trends, and helper scripts.' }
 ];
 
 interface FeedViewProps {
@@ -324,9 +167,9 @@ export default function FeedView({
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
-  const [feedTab, setFeedTab] = useState<'for_you' | 'following' | 'communities' | 'pulse' | 'local'>(() => {
+  const [feedTab, setFeedTab] = useState<'for_you' | 'following' | 'communities' | 'polls' | 'local'>(() => {
     const saved = localStorage.getItem('nexora_feed_tab');
-    if (saved === 'contributions' || saved === 'broadcast') return 'for_you';
+    if (saved === 'contributions' || saved === 'broadcast' || saved === 'pulse') return 'for_you';
     return (saved as any) || 'for_you';
   });
   const [qualityFilter, setQualityFilter] = useState(false);
@@ -940,8 +783,9 @@ export default function FeedView({
     } else if (feedTab === 'communities') {
       const isCommunityPost = !!(post.communityName || post.audience === 'community' || (post as any).circleName);
       if (!isCommunityPost) return false;
-    } else if (feedTab === 'pulse') {
-      if (post.category !== 'pulse') return false;
+    } else if (feedTab === 'polls') {
+      const isPoll = !!(post.interactivePoll || post.content.toLowerCase().includes('poll') || post.tags.some(t => t.toLowerCase().includes('poll')));
+      if (!isPoll) return false;
     } else if (feedTab === 'local') {
       const userCity = currentUser.location.toLowerCase();
       const inSearchRegion = post.location?.toLowerCase().includes("nigeria") || post.location?.toLowerCase().includes("harcourt") || post.location?.toLowerCase().includes("lagos");
@@ -1096,7 +940,7 @@ export default function FeedView({
 
         {/* Center: For You / Following / Communities / Pulse / Local */}
         <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-xl border border-white/5 mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full">
-          {(['for_you', 'following', 'communities', 'pulse', 'local'] as const).map(tab => (
+          {(['for_you', 'following', 'communities', 'polls', 'local'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => {
@@ -1112,7 +956,7 @@ export default function FeedView({
               {tab === 'for_you' && 'For You'}
               {tab === 'following' && 'Following'}
               {tab === 'communities' && 'Communities'}
-              {tab === 'pulse' && 'Pulse'}
+              {tab === 'polls' && 'Polls'}
               {tab === 'local' && 'Local'}
             </button>
           ))}
@@ -1152,7 +996,7 @@ export default function FeedView({
       {/* 5. MAIN FEED CONTENT STREAM (With pull-to-refresh & infinite scroll) */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto space-y-5 pt-[190px] md:pt-[76px] pb-32 px-4 md:px-6 custom-scrollbar"
+        className="flex-1 overflow-y-auto space-y-5 pt-[190px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar"
       >
         {/* Refresh pull-down simulator button */}
         <div className="flex justify-center shrink-0">
@@ -1168,7 +1012,7 @@ export default function FeedView({
 
         {/* Selected Tag Active Indicator (Moved inside scroll) */}
         {selectedTag && (
-          <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl">
+          <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl mx-4 md:mx-0">
             <span className="text-xs font-mono text-violet-300">Filtering tags containing: <strong className="text-white">#{selectedTag}</strong></span>
             <button onClick={() => setSelectedTag(null)} className="text-violet-400 hover:text-white">
               <X className="w-4 h-4" />
@@ -1178,7 +1022,7 @@ export default function FeedView({
 
         {/* Empty feed state */}
         {filteredPosts.length === 0 && (
-          <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-12 space-y-4">
+          <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-12 space-y-4 mx-4 md:mx-0">
             <Globe className="w-10 h-10 text-violet-500/30 mx-auto animate-pulse" />
             <h4 className="text-sm font-sans font-bold text-violet-100">No posts yet.</h4>
             <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
@@ -1314,7 +1158,7 @@ export default function FeedView({
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="rounded-3xl bg-black/95 border border-violet-500/15 overflow-hidden text-left shadow-2xl relative"
+                  className="rounded-none md:rounded-3xl bg-black/95 border-y border-x-0 md:border border-violet-500/15 overflow-hidden text-left shadow-2xl relative w-full"
                 >
                   {/* Outer edge-to-edge Video Container */}
                   <div className="relative aspect-video sm:aspect-[16/10] bg-zinc-950 w-full overflow-hidden flex items-center justify-center group/video">
@@ -1535,13 +1379,13 @@ export default function FeedView({
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className={`p-4 md:p-5 rounded-3xl bg-[#0b091e]/80 border ${
+                className={`p-4 md:p-5 rounded-none md:rounded-3xl bg-[#0b091e]/80 border-y border-x-0 md:border ${
                   post.isBroadcastPost 
                     ? 'border-amber-500/25 bg-[#171008]/90 shadow-lg shadow-amber-500/5' 
                     : post.userId === 'user-0' 
                       ? 'border-violet-500/30 bg-[#0d0926]/90' 
                       : 'border-violet-500/10'
-                } relative overflow-hidden group text-left`}
+                } relative overflow-hidden group text-left w-full`}
               >
                 {/* Future scheduled posts warning banner (Only visible to the creator) */}
                 {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (

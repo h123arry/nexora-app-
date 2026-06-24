@@ -265,12 +265,32 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
   }, [activeTab, pulseSearch]);
 
   // VOH AI response triggers (fully interactive)
-  const handleAskVoh = (query: string) => {
+  const handleAskVoh = async (query: string) => {
     if (!query.trim()) return;
     setVohSearch(query);
     setIsVohThinking(true);
 
-    setTimeout(() => {
+    try {
+      // Fetch from the real VOH AI endpoint
+      const response = await fetch('/api/voh-ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: query,
+          history: [],
+          context: {
+            posts: JSON.parse(localStorage.getItem('nexora_posts') || '[]').slice(0, 5),
+            circles: JSON.parse(localStorage.getItem('nexora_db_joined_circles') || '[]'),
+            notifications: JSON.parse(localStorage.getItem('nexora_notifications') || '[]')
+          }
+        })
+      });
+
+      const data = await response.json();
+      setVohReplies(prev => [{ query, reply: data.text }, ...prev]);
+      triggerToast("VOH AI retrieved live pulse matrix!");
+    } catch (err) {
+      console.error("VOH AI Pulse request failed, using mock:", err);
       let replyText = '';
       const q = query.toLowerCase();
 
@@ -289,9 +309,10 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       }
 
       setVohReplies(prev => [{ query, reply: replyText }, ...prev]);
-      setIsVohThinking(false);
       triggerToast("VOH AI retrieved live pulse matrix!");
-    }, 1000);
+    } finally {
+      setIsVohThinking(false);
+    }
   };
 
   // World Pulse Alert toggler

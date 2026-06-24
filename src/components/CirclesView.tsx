@@ -25,7 +25,7 @@ import {
   Award
 } from 'lucide-react';
 import { Circle, User } from '../types';
-import { INITIAL_CIRCLES, MOCK_CREATORS, INITIAL_USER } from '../data/mockData';
+import { INITIAL_CIRCLES, MOCK_CREATORS, INITIAL_USER } from '../data/database';
 
 interface CirclesViewProps {
   currentUser: User;

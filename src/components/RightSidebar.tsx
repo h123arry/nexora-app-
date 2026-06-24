@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Flame, TrendingUp, Users, Radio } from 'lucide-react';
+import { Flame, TrendingUp, Users } from 'lucide-react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { generateTestUsers } from '../data/generatedUsers';
 
 interface RightSidebarProps {
   creators: User[];
@@ -27,29 +26,6 @@ export default function RightSidebar({
   onViewProfile,
   currentUserUsername
 }: RightSidebarProps) {
-  const allGeneratedNodes = useMemo(() => generateTestUsers(), []);
-  const [seedIndex, setSeedIndex] = useState(0);
-
-  const sampleUsers = useMemo(() => {
-    const list: User[] = [];
-    if (!allGeneratedNodes || allGeneratedNodes.length === 0) return list;
-    for (let j = 0; j < 3; j++) {
-      const idx = (seedIndex + j * 97) % allGeneratedNodes.length;
-      const u = allGeneratedNodes[idx];
-      if (u) {
-        list.push(u);
-      }
-    }
-    return list;
-  }, [seedIndex, allGeneratedNodes]);
-
-  const shuffleSamples = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (allGeneratedNodes.length > 0) {
-      setSeedIndex(prev => (prev + 3) % allGeneratedNodes.length);
-    }
-  };
-
   return (
     <div id="nexora-right-panel" className="flex flex-col h-full py-6 pl-4 border-l border-current/10 space-y-8 select-none">
       
@@ -59,59 +35,6 @@ export default function RightSidebar({
           ⚡ Shape what’s happening by exploring high-affinity creators and trending conversations.
         </p>
       </div>
-
-      {/* 1,000 Verified Test Accounts Directory Widget */}
-      {currentUserUsername === 'voh' && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 px-1">
-            <Radio className="w-4 h-4 text-violet-400 animate-pulse" />
-            <h2 className="text-xs font-mono font-black tracking-widest uppercase text-current/75">
-              User Directory (1,000 Live)
-            </h2>
-          </div>
-
-          <div className="p-4 bg-violet-500/5 border border-[#8B5CF6]/15 rounded-2xl space-y-3 text-left">
-            <p className="text-[10.5px] font-sans text-purple-200/95 leading-relaxed">
-              We have set up <strong>1,000 active test profiles</strong> that follow your founder page. You can check their pages, see their follower counts grow when you follow them, and test how everything works!
-            </p>
-
-            <p className="text-[9.5px] font-mono text-[#8B5CF6]/90 leading-relaxed pt-2.5 border-t border-[#8B5CF6]/10">
-              🔎 <strong>Search Tip:</strong> Type names like <em>Sarah</em>, <em>Chioma</em>, <em>David</em>, <em>Yuki</em>, <em>Elena</em> or <em>Kofi</em> in the search box above to find them!
-            </p>
-
-            <div className="space-y-2 pt-2.5 border-t border-[#8B5CF6]/10">
-              <div className="flex justify-between items-center">
-                <span className="text-[9px] font-mono text-violet-400 uppercase font-black">Active Member Directory</span>
-                <button 
-                  onClick={shuffleSamples}
-                  className="text-[9px] font-mono text-violet-300 hover:text-white hover:underline transition-all uppercase cursor-pointer"
-                >
-                  🔄 Mix Profiles
-                </button>
-              </div>
-
-              <div className="space-y-1.5">
-                {sampleUsers.map(u => u && (
-                  <div 
-                    key={u.id}
-                    onClick={() => onViewProfile?.(u.id)}
-                    className="p-1 px-2 py-1.5 rounded-xl bg-white/[0.02] border border-white/5 hover:border-[#8B5CF6]/30 hover:bg-[#8B5CF6]/5 transition-all text-xs flex items-center justify-between cursor-pointer group"
-                  >
-                    <div className="flex items-center gap-2 overflow-hidden max-w-[80%]">
-                      <img src={u.avatar} alt={u.name} className="w-5 h-5 rounded-md object-cover" referrerPolicy="no-referrer" />
-                      <div className="min-w-0">
-                        <p className="text-[10px] font-bold text-current truncate leading-none">{u.name}</p>
-                        <p className="text-[8px] font-mono text-[#8B5CF6] truncate leading-none mt-1">@{u.username}</p>
-                      </div>
-                    </div>
-                    <span className="text-[8px] font-mono text-cyan-400 group-hover:underline">VIEW &rarr;</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Trending Topics Module */}
       <div id="trending-topics-widget" className="space-y-3">

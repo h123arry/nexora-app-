@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 import { User } from '../types';
-import { INITIAL_USER, MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, INITIAL_CIRCLES } from '../data/mockData';
+import { INITIAL_USER, MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, INITIAL_CIRCLES } from '../data/database';
 import { followUserDb, unfollowUserDb, joinCircleDb, leaveCircleDb, isFollowingDb, isCircleJoinedDb, getRichUser } from '../data/database';
 import NexoraPremiumLogo from './NexoraPremiumLogo';
 
@@ -407,6 +407,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           website: `nexora.ai/${cleanUsername}`,
           followers: 0,
           following: 0,
+          sparks: 0,
           isVerified: false,
           coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
           joinedDate: 'Joined June 2026',
@@ -469,6 +470,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
             website: `nexora.ai/${generatedUsername}`,
             followers: 0,
             following: 0,
+            sparks: 0,
             isVerified: false,
             coverImage: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=1000&auto=format&fit=crop&q=80',
             joinedDate: 'Joined June 2026',

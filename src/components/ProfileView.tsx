@@ -48,7 +48,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import RelativeTimestamp from './RelativeTimestamp';
-import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS } from '../data/mockData';
+import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS } from '../data/database';
 import CreatorDashboardView from './CreatorDashboardView';
 
 interface MediaGridProps {
@@ -352,62 +352,12 @@ export default function ProfileView({
         setLiveDuration(prev => prev + 1);
       }, 1000);
 
-      // Viewer count fluctuation
-      viewerInterval = setInterval(() => {
-        setLiveViewerCount(prev => {
-          const delta = Math.floor(Math.random() * 15) - 7;
-          const next = Math.max(5, prev + delta);
-          setLivePeakViewers(peak => Math.max(peak, next));
-          return next;
-        });
-      }, 3000);
+      // Viewer count fluctuation: Real activity only (1 viewer - the user themselves)
+      setLiveViewerCount(1);
+      setLivePeakViewers(1);
 
-      // Chat additions
-      const viewerComments = [
-        "Wizkid fans are active today! 🎶",
-        "Davido is definitely dropping a classic album!",
-        "Are you streaming Messi's game tonight?? ⚽",
-        "Nexora's high fidelity feels so smooth!",
-        "Send some gifts people! 🎁💎",
-        "Love the aesthetic here. Clean violet tones!",
-        "Burna Boy concert was totally fire! 🔥",
-        "Ronaldo still the absolute GOAT header king 👑",
-        "Hello from Port Harcourt!",
-        "Lagos hub is locked in!",
-        "Can we get moderators assigned? 🛡️",
-        "Awesome stream! Subscribing immediately."
-      ];
-
-      const senders = ['dave_swift', 'football_hq', 'p_harcourt_queen', 'naija_vibe', 'afrobeats_guy', 'cyber_knight_9', 'messi_10_le', 'cr7_siuu'];
-
-      chatInterval = setInterval(() => {
-        const randomSender = senders[Math.floor(Math.random() * senders.length)];
-        const randomComment = viewerComments[Math.floor(Math.random() * viewerComments.length)];
-        const isGiftSim = Math.random() < 0.25;
-
-        if (isGiftSim) {
-          const giftTypes = [
-            { text: 'Sent you a Popcorn 🍿 (+5 NEX)', value: 5, icon: '🍿' },
-            { text: 'Sent you a Neon Spark ✨ (+10 NEX)', value: 10, icon: '✨' },
-            { text: 'Sent you a Crystal Gem 💎 (+50 NEX)', value: 50, icon: '💎' },
-            { text: 'Sent you a Creator Crown 👑 (+100 NEX)', value: 100, icon: '👑' }
-          ];
-          const choice = giftTypes[Math.floor(Math.random() * giftTypes.length)];
-          setLiveGifts(prev => prev + choice.value);
-          setLiveChatMessages(chat => [...chat, {
-            sender: randomSender,
-            message: choice.text,
-            isGift: true,
-            icon: choice.icon
-          }]);
-        } else {
-          setLiveChatMessages(chat => [...chat, {
-            sender: randomSender,
-            message: randomComment,
-            isSystem: false
-          }]);
-        }
-      }, 3000);
+      // No fake chat comments or gifts: keep stream interactive for host only
+      setLiveGifts(0);
     }
 
     return () => {
@@ -907,10 +857,6 @@ try {
         }
       });
 
-      // Show some creators by default if empty or for founder backcompat
-      if (followingUsers.length === 0) {
-        return list.filter(u => u.id !== currentUser.id && (u.id.startsWith('creator-') || u.id.startsWith('test-'))).slice(0, 10);
-      }
       return followingUsers;
     } else {
       const followerIds = follows
@@ -925,10 +871,6 @@ try {
         }
       });
 
-      // Show seed people if empty or for founder's massive follower list backcompat
-      if (followerUsers.length === 0) {
-        return list.filter(u => u.id !== currentUser.id);
-      }
       return followerUsers;
     }
   };
@@ -3015,6 +2957,7 @@ try {
           {[
             { id: 'posts', label: 'Posts', icon: <FileText className="w-3.5 h-3.5" />, color: 'text-violet-400' },
             { id: 'videos', label: 'Videos', icon: <Video className="w-3.5 h-3.5" />, color: 'text-pink-500' },
+            { id: 'reels', label: 'Reels', icon: <Film className="w-3.5 h-3.5" />, color: 'text-rose-500' },
             { id: 'media', label: 'Photos', icon: <Camera className="w-3.5 h-3.5" />, color: 'text-amber-500' },
             { id: 'voice', label: 'Voice', icon: <Mic className="w-3.5 h-3.5" />, color: 'text-cyan-400' },
             { id: 'saved', label: 'Saved', icon: <Lock className="w-3.5 h-3.5" />, color: 'text-violet-400' },

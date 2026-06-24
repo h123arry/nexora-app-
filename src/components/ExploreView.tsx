@@ -423,19 +423,8 @@ export default function ExploreView({
     ];
 
     const interval = setInterval(() => {
-      // Periodic Comments insertion
-      const randomUserIdx = Math.floor(Math.random() * mockLiveUsers.length);
-      const randomUser = mockLiveUsers[randomUserIdx];
-      const randomText = mockLiveTexts[Math.floor(Math.random() * mockLiveTexts.length)];
-      
-      setLiveComments(prev => [
-        ...prev.slice(-15), // keep last 15
-        { id: Math.random().toString(), user: randomUser.user, text: randomText, avatar: randomUser.avatar }
-      ]);
-
-      // Viewers fluctuating
-      setLiveViewersCount(prev => prev + (Math.floor(Math.random() * 11) - 5));
-    }, 2200);
+      // Real-activity only: No fake periodic activity or mock comment generation
+    }, 100000);
 
     return () => clearInterval(interval);
   }, [activeWatchLive, isGoingLiveOwn]);

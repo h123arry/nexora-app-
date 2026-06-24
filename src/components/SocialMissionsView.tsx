@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { SocialMission, User } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
-import { INITIAL_MISSIONS } from '../data/mockData';
+import { INITIAL_MISSIONS } from '../data/database';
 
 interface SocialMissionsViewProps {
   currentUser: User;

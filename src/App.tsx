@@ -46,6 +46,11 @@ import {
 } from './types';
 
 import { 
+  getRichUser, 
+  followUserDb, 
+  unfollowUserDb, 
+  createPostDb, 
+  isFollowingDb,
   INITIAL_USER, 
   MOCK_CREATORS, 
   INITIAL_POSTS, 
@@ -53,9 +58,7 @@ import {
   INITIAL_MESSAGES, 
   INITIAL_NOTIFICATIONS,
   ADDITIONAL_TEST_ACCOUNTS
-} from './data/mockData';
-
-import { getRichUser, followUserDb, unfollowUserDb, createPostDb, isFollowingDb } from './data/database';
+} from './data/database';
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
 
@@ -1781,19 +1784,47 @@ export default function App() {
                           <span className="text-[10px] font-mono text-violet-300 font-extrabold uppercase">🚀 Intelligent VOH AI Enhancer</span>
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={async () => {
                               setLoadingAi(true);
-                              setTimeout(() => {
+                              try {
                                 if (activePostType === 'poll') {
-                                  setPollQuestion('Which low-latency system engine topology serves decentralized community spaces best?');
-                                  setPollOptions(['Rust Raw Socket SIMD Serialization', 'Go High-Concurrency Channels', 'Zig Arena-allocated Buffers']);
-                                  setModalTags('Technology, Rust, SystemsDesign');
+                                  const textToImprove = pollQuestion.trim() || "What technology is best?";
+                                  const res = await fetch('/api/voh-ai/chat', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      message: `Create an extremely engaging tech/community poll based on this topic: "${textToImprove}". Provide the poll question and exactly 3 options. Respond in simple JSON format like: {"question": "...", "options": ["...", "...", "..."], "tags": "..."}`,
+                                    })
+                                  });
+                                  const data = await res.json();
+                                  try {
+                                    const parsed = JSON.parse(data.text);
+                                    if (parsed.question && Array.isArray(parsed.options)) {
+                                      setPollQuestion(parsed.question);
+                                      setPollOptions(parsed.options);
+                                      setModalTags(parsed.tags || 'Technology, SystemsDesign');
+                                    }
+                                  } catch (pe) {
+                                    setPollQuestion('Which system engine topology serves decentralized community spaces best?');
+                                    setPollOptions(['Rust Raw Socket SIMD Serialization', 'Go High-Concurrency Channels', 'Zig Arena-allocated Buffers']);
+                                    setModalTags('Technology, Rust, SystemsDesign');
+                                  }
                                 } else {
-                                  setModalContent('Bypassing standard traditional noisy networks via optimized compiler memory serialization yields under-millisecond latency. Fully constructed in modular space-glass aesthetics.');
+                                  const textToImprove = modalContent.trim() || 'Co-building a new design framework today';
+                                  const res = await fetch('/api/voh-ai/improve-post', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ content: textToImprove })
+                                  });
+                                  const data = await res.json();
+                                  setModalContent(data.text);
                                   setModalTags('SpaceGlass, SystemsDesign, Innovation');
                                 }
+                              } catch (err) {
+                                console.error('Improve post AI error:', err);
+                              } finally {
                                 setLoadingAi(false);
-                              }, 1200);
+                              }
                             }}
                             className="bg-[#8B5CF6] text-white px-3 py-1.5 rounded-xl text-[10px] font-sans font-bold hover:brightness-110 cursor-pointer flex items-center gap-1 shadow-sm uppercase tracking-wide"
                           >
