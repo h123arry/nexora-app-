@@ -127,6 +127,7 @@ export interface Post {
   timestamp: string;
   isLikedByUser?: boolean;
   isBookmarkedByUser?: boolean;
+  location?: string;
   comments: Comment[];
   isVoice?: boolean;
   voiceDuration?: number;

@@ -42,13 +42,15 @@ interface NotificationsViewProps {
   currentUser: User;
   onMarkAllAsRead: () => void;
   onClearNotifications: () => void;
+  onViewProfile?: (userId: string) => void;
 }
 
 export default function NotificationsView({
   notifications,
   currentUser,
   onMarkAllAsRead,
-  onClearNotifications
+  onClearNotifications,
+  onViewProfile
 }: NotificationsViewProps) {
   
   // Local list initialized from props, allowing rapid interactive updates
@@ -61,6 +63,37 @@ export default function NotificationsView({
       return true;
     });
   });
+
+  const handleNotificationClick = (notif: Notification) => {
+    if (notif.type === 'follow') {
+      if (onViewProfile) {
+        onViewProfile(notif.userId);
+      }
+    } else if (notif.type === 'message') {
+      const chatId = notif.targetId || `chat-${notif.userId}`;
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'matrix', subTab: 'messages' } }));
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('selectChat', { detail: { chatId } }));
+      }, 250);
+    } else if (notif.type === 'comment' || notif.type === 'spark' || notif.type === 'like') {
+      const postId = notif.targetId;
+      if (postId) {
+        window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'feed' } }));
+        setTimeout(() => {
+          const element = document.getElementById(`post-${postId}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            element.classList.add('ring-4', 'ring-violet-500', 'ring-offset-4', 'scale-[1.01]', 'transition-all');
+            setTimeout(() => {
+              element.classList.remove('ring-4', 'ring-violet-500', 'ring-offset-4', 'scale-[1.01]');
+            }, 3000);
+          } else {
+            window.dispatchEvent(new CustomEvent('toast', { detail: 'ℹ️ Scrolling to post context failed (Post not found or queued)' }));
+          }
+        }, 500);
+      }
+    }
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<'all' | 'followers' | 'comments' | 'mentions' | 'sparks' | 'messages' | 'communities' | 'system'>('all');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -458,17 +491,17 @@ export default function NotificationsView({
 
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 font-sans">
             <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
-              <span className="text-[10px] text-violet-300/50 block font-mono">Followers</span>
+              <span className="text-[10px] text-violet-300/50 block font-mono">Follow Alerts</span>
               <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>+12</span>
-                <span className="text-emerald-400 text-[10px] font-normal">Followers</span>
+                <span>{localNotifications.filter(n => n.type === 'follow').length}</span>
+                <span className="text-emerald-400 text-[10px] font-normal">Active</span>
               </span>
             </div>
             
             <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
               <span className="text-[10px] text-violet-300/50 block font-mono">Spark Factor</span>
               <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>+48</span>
+                <span>{localNotifications.filter(n => n.type === 'spark' || n.type === 'like').length}</span>
                 <span className="text-amber-400 text-[10px] font-normal">Sparks</span>
               </span>
             </div>
@@ -476,7 +509,7 @@ export default function NotificationsView({
             <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
               <span className="text-[10px] text-violet-300/50 block font-mono">Discussions</span>
               <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>+3</span>
+                <span>{localNotifications.filter(n => n.type === 'comment').length}</span>
                 <span className="text-pink-400 text-[10px] font-normal">Comments</span>
               </span>
             </div>
@@ -484,16 +517,16 @@ export default function NotificationsView({
             <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
               <span className="text-[10px] text-violet-300/50 block font-mono">Invitations</span>
               <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>+1</span>
-                <span className="text-cyan-400 text-[10px] font-normal">Community</span>
+                <span>{localNotifications.filter(n => n.type === 'community').length}</span>
+                <span className="text-cyan-400 text-[10px] font-normal">Invites</span>
               </span>
             </div>
 
             <div className="p-2.5 rounded-2xl bg-linear-to-tr from-violet-500/10 to-pink-500/5 border border-violet-500/20 text-left col-span-2 sm:col-span-1">
-              <span className="text-[10px] text-pink-300/50 block font-mono">PR Growth</span>
+              <span className="text-[10px] text-pink-300/50 block font-mono">Reputation</span>
               <span className="text-sm font-extrabold text-[#F59E0B] mt-0.5 block flex items-center gap-1">
-                <span>+15</span>
-                <span className="text-[#F59E0B] text-[9px] font-black tracking-tighter">POINTS</span>
+                <span>{currentUser.reputationPoints || 0}</span>
+                <span className="text-[#F59E0B] text-[9px] font-black tracking-tighter">PTS</span>
               </span>
             </div>
           </div>
@@ -702,7 +735,14 @@ export default function NotificationsView({
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95 }}
-                  className={`p-4 rounded-3xl border text-left flex flex-col gap-3 transition-all relative overflow-hidden ${
+                  onClick={(e) => {
+                    const target = e.target as HTMLElement;
+                    if (target.closest('button') || target.closest('input')) {
+                      return;
+                    }
+                    handleNotificationClick(notif);
+                  }}
+                  className={`p-4 rounded-3xl border text-left flex flex-col gap-3 transition-all relative overflow-hidden hover:border-violet-500/35 cursor-pointer ${
                     notif.isRead 
                       ? 'bg-black/30 border-violet-500/5 opacity-75' 
                       : 'bg-[#09071e]/90 border-violet-500/15 shadow-xs shadow-violet-500/2'

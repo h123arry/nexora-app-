@@ -27,11 +27,20 @@ export default function PurpleVerifiedBadge({
     }
   };
 
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    window.dispatchEvent(new CustomEvent('show-voh-verification-modal', { 
+      detail: { type, tooltip: getBadgeTooltip() } 
+    }));
+  };
+
   return (
     <span 
-      className={`${className} inline-flex items-center justify-center select-none shrink-0 group relative`} 
-      title={getBadgeTooltip()}
+      className={`${className} inline-flex items-center justify-center select-none shrink-0 group relative cursor-pointer hover:scale-110 active:scale-95 transition-transform`} 
+      title={`${getBadgeTooltip()} (Click to verify details)`}
       id="voh-verified-badge-element"
+      onClick={handleClick}
     >
       <svg 
         viewBox="0 0 24 24" 

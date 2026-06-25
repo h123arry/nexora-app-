@@ -240,14 +240,14 @@ export default function NexoraVideoPlayer({
     lastTapRef.current = now;
   };
 
-  // Long press speed up triggers while holding
+  // Long press hold-to-pause triggers while holding
   const handleStartHold = () => {
     longPressTimerRef.current = setTimeout(() => {
       if (!videoRef.current) return;
       setIsLongPressing(true);
-      videoRef.current.playbackRate = 2.0;
-      setPlaybackRate(2.0);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Hyper-Speed Active: 2.0x playback enabled!' }));
+      videoRef.current.pause();
+      setIsPlaying(false);
+      setShowControls(false);
     }, 450);
   };
 
@@ -257,10 +257,11 @@ export default function NexoraVideoPlayer({
     }
     if (isLongPressing) {
       if (videoRef.current) {
-        videoRef.current.playbackRate = 1.0;
+        videoRef.current.play().catch(() => {});
+        setIsPlaying(true);
       }
-      setPlaybackRate(1.0);
       setIsLongPressing(false);
+      setShowControls(true);
     }
   };
 
@@ -383,19 +384,20 @@ export default function NexoraVideoPlayer({
         </div>
       )}
 
-      {/* 2X Speed Overlay Indicator */}
+      {/* Hold to Pause Overlay Indicator */}
       {isLongPressing && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-purple-600/90 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono text-white font-extrabold flex items-center gap-1.5 z-20 shadow-lg pointer-events-none tracking-widest animate-pulse">
-          <Zap className="w-3.5 h-3.5 fill-current animate-bounce" />
-          <span>2.0X SPEED ACTIVE</span>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono text-zinc-300 font-extrabold flex items-center gap-1.5 z-20 shadow-lg pointer-events-none tracking-widest uppercase">
+          <span>PAUSED (VIEW MODE)</span>
         </div>
       )}
 
       {/* Autoplay visual watermark */}
-      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-mono text-purple-300 uppercase tracking-widest flex items-center gap-1 pointer-events-none z-10">
-        <Radio className="w-2.5 h-2.5 text-pink-400 animate-pulse" />
-        <span>NEXORA LIVE PLAYER ({selectedQuality})</span>
-      </div>
+      {!isLongPressing && (
+        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-mono text-purple-300 uppercase tracking-widest flex items-center gap-1 pointer-events-none z-10">
+          <Radio className="w-2.5 h-2.5 text-pink-400 animate-pulse" />
+          <span>NEXORA LIVE PLAYER ({selectedQuality})</span>
+        </div>
+      )}
 
       {/* DOUBLE TAP ANIMATED SPARK OR HEART */}
       <AnimatePresence>
@@ -420,29 +422,31 @@ export default function NexoraVideoPlayer({
       </AnimatePresence>
 
       {/* Top right parameters action bar */}
-      <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
-        {/* Save/Collection Bookmark */}
-        <button
-          onClick={() => setShowSaveModal(true)}
-          className={`p-1.5 rounded-xl backdrop-blur-md border transition-all cursor-pointer ${
-            savedCollectionForThis 
-              ? 'bg-purple-600 border-purple-500 text-white shadow-md' 
-              : 'bg-black/60 border-white/10 text-zinc-400 hover:text-white hover:bg-black/85'
-          }`}
-          title="Save Video to Collection"
-        >
-          <Bookmark className="w-3.5 h-3.5 fill-current" />
-        </button>
+      {!isLongPressing && (
+        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
+          {/* Save/Collection Bookmark */}
+          <button
+            onClick={() => setShowSaveModal(true)}
+            className={`p-1.5 rounded-xl backdrop-blur-md border transition-all cursor-pointer ${
+              savedCollectionForThis 
+                ? 'bg-purple-600 border-purple-500 text-white shadow-md' 
+                : 'bg-black/60 border-white/10 text-zinc-400 hover:text-white hover:bg-black/85'
+            }`}
+            title="Save Video to Collection"
+          >
+            <Bookmark className="w-3.5 h-3.5 fill-current" />
+          </button>
 
-        {/* Creator parameters options button */}
-        <button
-          onClick={() => setShowCreatorToggles(!showCreatorToggles)}
-          className="p-1.5 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-xl text-zinc-400 hover:text-white border border-white/10 transition-all cursor-pointer"
-          title="Creator Telemetry Toggles"
-        >
-          <Settings className="w-3.5 h-3.5" />
-        </button>
-      </div>
+          {/* Creator parameters options button */}
+          <button
+            onClick={() => setShowCreatorToggles(!showCreatorToggles)}
+            className="p-1.5 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-xl text-zinc-400 hover:text-white border border-white/10 transition-all cursor-pointer"
+            title="Creator Telemetry Toggles"
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Creator parameters Popover panel */}
       <AnimatePresence>

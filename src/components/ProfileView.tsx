@@ -48,7 +48,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import RelativeTimestamp from './RelativeTimestamp';
-import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS } from '../data/database';
+import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, getFollowersCount, getFollowingCount, getReputationPoints, getSparksReceived, getContributionsCount } from '../data/database';
 import CreatorDashboardView from './CreatorDashboardView';
 
 interface MediaGridProps {
@@ -897,6 +897,19 @@ try {
     return postUserId === currentUserId || 
            (currentUsername && postUsername === currentUsername);
   });
+
+  const isFounder = currentUser.username === 'voh' || currentUser.id === 'user-0';
+  const isVohAi = currentUser.username === 'voh_ai' || currentUser.id === 'voh_ai';
+  const isNexoraAi = currentUser.username === 'nexora_ai' || currentUser.id === 'creator-4';
+
+  const stats = {
+    followers: isFounder ? 15300000 : isVohAi ? 8700000 : isNexoraAi ? 6400000 : getFollowersCount(currentUser.id),
+    following: isFounder ? 2 : isVohAi ? 2 : isNexoraAi ? 2 : getFollowingCount(currentUser.id),
+    posts: myPosts.length,
+    sparks: isFounder ? 40000000 : isVohAi ? 18000000 : isNexoraAi ? 12000000 : getSparksReceived(currentUser.id),
+    reputation: isFounder ? 9900000 : isVohAi ? 5200000 : isNexoraAi ? 4100000 : getReputationPoints(currentUser.id),
+    contributions: isFounder ? 20000000 : isVohAi ? 7000000 : isNexoraAi ? 5000000 : getContributionsCount(currentUser.id)
+  };
   
   // Tab computed contents
   const mediaPosts = myPosts.filter(post => post.image || (post.images && post.images.length > 0));
@@ -2402,6 +2415,46 @@ try {
               <p className="text-sm text-violet-400 font-mono">@{currentUser.username}</p>
             </div>
 
+            {/* 3b. Stats Row */}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 border-y border-white/5 pl-1 my-2">
+              <div 
+                onClick={() => {
+                  setConnectionsModalTab('followers');
+                  setIsConnectionsModalOpen(true);
+                }}
+                className="flex items-baseline gap-1 cursor-pointer hover:opacity-80 transition-all"
+              >
+                <span className="text-sm font-sans font-black text-white">{formatNumber(stats.followers)}</span>
+                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">followers</span>
+              </div>
+              <div 
+                onClick={() => {
+                  setConnectionsModalTab('following');
+                  setIsConnectionsModalOpen(true);
+                }}
+                className="flex items-baseline gap-1 cursor-pointer hover:opacity-80 transition-all"
+              >
+                <span className="text-sm font-sans font-black text-white">{formatNumber(stats.following)}</span>
+                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">following</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-sans font-black text-white">{formatNumber(stats.posts)}</span>
+                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">posts</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-sans font-black text-amber-400">✨ {formatNumber(stats.sparks)}</span>
+                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">sparks</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-sans font-black text-emerald-400">⭐ {formatNumber(stats.reputation)}</span>
+                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">rep</span>
+              </div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-sm font-sans font-black text-cyan-400">📊 {formatNumber(stats.contributions)}</span>
+                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">contrib</span>
+              </div>
+            </div>
+
             {/* 4. Edit Profile Button / Follow Button (owner only / visitor) */}
             <div className="flex flex-wrap items-center gap-2 pl-1">
               {isOwnProfile ? (
@@ -2804,12 +2857,12 @@ try {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
                       <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-2xl">
                         <p className="text-[9px] font-mono text-violet-400 uppercase tracking-wider font-extrabold text-left">Reputation Points</p>
-                        <p className="text-lg font-mono font-black text-white mt-1 text-left">{formatNumber(currentUser.reputationPoints)}</p>
+                        <p className="text-lg font-mono font-black text-white mt-1 text-left">{formatNumber(stats.reputation)}</p>
                       </div>
 
                       <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-2xl">
                         <p className="text-[9px] font-mono text-violet-400 uppercase tracking-wider font-extrabold text-left font-semibold">Contributions</p>
-                        <p className="text-lg font-mono font-black text-cyan-400 mt-1 text-left">{formatNumber(currentUser.reputationBreakdown?.contributions || 0)}</p>
+                        <p className="text-lg font-mono font-black text-cyan-400 mt-1 text-left">{formatNumber(stats.contributions)}</p>
                       </div>
 
                       <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-2xl">
@@ -2832,7 +2885,7 @@ try {
                       <p className="text-xs text-violet-100/90 leading-relaxed font-sans italic">
                         {currentUser.username === 'voh' 
                           ? '"VOICE OF HARRISON is the founder of NEXORA and creator of VOH AI. A technology entrepreneur and community builder focused on creating innovative platforms that help people connect, collaborate, learn, and grow."'
-                          : `"${currentUser.name} is an active member of the NEXORA community. They have established a dynamic reputation rating of ${currentUser.reputationPoints} points with strong community contributions."`}
+                          : `"${currentUser.name} is an active member of the NEXORA community. They have established a dynamic reputation rating of ${formatNumber(stats.reputation)} points with strong community contributions."`}
                       </p>
                     </div>
 

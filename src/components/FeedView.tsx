@@ -10,6 +10,7 @@ import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import StoriesView from './StoriesView';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -55,7 +56,7 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/5 mb-4 aspect-square max-h-[360px] bg-black group select-none">
+    <div className="relative overflow-hidden rounded-2xl border border-white/5 mb-4 aspect-square max-h-[500px] bg-black group select-none">
       <div 
         className="flex h-full transition-transform duration-300 ease-out"
         style={{ transform: `translateX(-${index * (100 / images.length)}%)`, width: `${images.length * 100}%` }}
@@ -374,17 +375,67 @@ export default function FeedView({
     setLocalPosts(seeded);
   }, [posts]);
 
-  // Voice Player simulation
+  const audioCtxRef = useRef<any>(null);
+  const [voiceMomentSeconds, setVoiceMomentSeconds] = useState(0);
+
+  const playVoiceSynthesizer = (seconds: number) => {
+    try {
+      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioCtx();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === 'suspended') {
+        ctx.resume();
+      }
+      
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      // Warm retro triangle wave shape
+      osc.type = 'triangle';
+      
+      // Beautiful pentatonic chord scale arpeggio notes (A3, C4, D4, E4, G4, A4)
+      const frequencies = [220, 261.63, 293.66, 329.63, 392.00, 440.00];
+      const baseFreq = frequencies[seconds % frequencies.length];
+      
+      osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
+      // Soft verbal frequency modulation (speech-like vibrato)
+      osc.frequency.linearRampToValueAtTime(baseFreq + 12, ctx.currentTime + 0.25);
+      osc.frequency.linearRampToValueAtTime(baseFreq - 8, ctx.currentTime + 0.55);
+      osc.frequency.linearRampToValueAtTime(baseFreq, ctx.currentTime + 0.9);
+      
+      // Smooth pleasant volume envelope (soft attack and slow decay)
+      gain.gain.setValueAtTime(0, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.15); 
+      gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.5);
+      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.95);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      
+      osc.start();
+      osc.stop(ctx.currentTime + 1.0);
+    } catch (err) {
+      console.warn("Audio context not allowed or blocked by policy", err);
+    }
+  };
+
+  // Voice Player simulation with Web Audio synthesis
   useEffect(() => {
     let timer: any = null;
     if (playingVoiceId) {
+      playVoiceSynthesizer(0);
       timer = setInterval(() => {
         setVoiceSeconds(s => {
-          if (s >= 45) {
+          const nextSec = s + 1;
+          if (nextSec >= 45) {
             setPlayingVoiceId(null);
             return 0;
           }
-          return s + 1;
+          playVoiceSynthesizer(nextSec);
+          return nextSec;
         });
       }, 1000);
     } else {
@@ -392,6 +443,29 @@ export default function FeedView({
     }
     return () => clearInterval(timer);
   }, [playingVoiceId]);
+
+  // Voice Story/Moment Player simulation with Web Audio synthesis
+  useEffect(() => {
+    let timer: any = null;
+    if (playingVoiceMoment) {
+      playVoiceSynthesizer(0);
+      setVoiceMomentSeconds(0);
+      timer = setInterval(() => {
+        setVoiceMomentSeconds(s => {
+          const nextSec = s + 1;
+          if (nextSec >= (selectedMoment?.voiceDuration || 15)) {
+            setPlayingVoiceMoment(false);
+            return 0;
+          }
+          playVoiceSynthesizer(nextSec);
+          return nextSec;
+        });
+      }, 1000);
+    } else {
+      setVoiceMomentSeconds(0);
+    }
+    return () => clearInterval(timer);
+  }, [playingVoiceMoment, selectedMoment]);
 
   // Voice Recording Simulator effect
   useEffect(() => {
@@ -742,40 +816,6 @@ export default function FeedView({
       return false;
     }
 
-    // Media filtration check: only show posts with videos or pictures on the home feed
-    const hasMedia = !!post.image || (!!post.images && post.images.length > 0) || !!post.videoUrl || !!post.isVoice;
-    if (!hasMedia && !searchQuery.trim() && !activeCollectionFolder) {
-      return false;
-    }
-
-    // First-time user experience shows clean empty or interest-based feed in For You
-    const isNewUser = currentUser.id !== 'user-0' && (!followingIds || followingIds.length === 0);
-    if (isNewUser && feedTab === 'for_you') {
-      const userInterests = Object.keys(currentUser.interestDNA || {});
-      if (userInterests.length > 0) {
-        const isPostMatchedToUserInterests = (postItem: typeof post, interests: string[]) => {
-          return postItem.tags.some(t => {
-            const tl = t.toLowerCase();
-            return interests.some(ui => {
-              const uil = ui.toLowerCase();
-              if (tl.includes(uil) || uil.includes(tl)) return true;
-              if (uil === 'football' && tl === 'sports') return true;
-              if (uil === 'creators' && (tl === 'art' || tl === 'photography')) return true;
-              if (uil === 'news' && tl === 'localfood') return true;
-              if (uil === 'music' && tl === 'afrobeat') return true;
-              if (uil === 'technology' && tl === 'coding') return true;
-              return false;
-            });
-          });
-        };
-        if (!isPostMatchedToUserInterests(post, userInterests)) {
-          return false;
-        }
-      } else {
-        return false;
-      }
-    }
-
     // Tab indexing logic
     if (feedTab === 'following') {
       const isPostFromFollowed = followingIds.includes(post.userId) || post.userId === currentUser.id;
@@ -831,6 +871,19 @@ export default function FeedView({
   });
 
   // Score analyzer for "For You" Feed ranking
+  const getMediaTypeScore = (postItem: any) => {
+    const isReel = postItem.videoUrl && (postItem.tags?.includes('reels') || postItem.tags?.includes('reel') || postItem.content.toLowerCase().includes('#reel') || postItem.content.toLowerCase().includes('#reels'));
+    const isVideo = postItem.videoUrl && !isReel;
+    const isPhoto = !!postItem.image || (!!postItem.images && postItem.images.length > 0);
+    const isVoice = !!postItem.isVoice;
+
+    if (isVideo) return 50000;
+    if (isReel) return 40000;
+    if (isPhoto) return 30000;
+    if (isVoice) return 20000;
+    return 10000;
+  };
+
   const getRankedPosts = () => {
     let list = [...filteredPosts];
 
@@ -855,8 +908,14 @@ export default function FeedView({
     const sorted = (() => {
       if (feedTab === 'for_you' && sortBy === 'latest') {
         const sortedList = [...list].sort((a, b) => {
-          let scoreA = a.likes + a.shares * 3 + a.comments.length * 2;
-          let scoreB = b.likes + b.shares * 3 + b.comments.length * 2;
+          let scoreA = getMediaTypeScore(a);
+          let scoreB = getMediaTypeScore(b);
+
+          if (a.timestamp === 'Just now') scoreA += 5000;
+          if (b.timestamp === 'Just now') scoreB += 5000;
+
+          scoreA += a.likes + a.shares * 3 + a.comments.length * 2;
+          scoreB += b.likes + b.shares * 3 + b.comments.length * 2;
 
           // Boost VOH posts or items matching verified interests
           if (a.userId === 'user-0') scoreA += 500;
@@ -872,25 +931,6 @@ export default function FeedView({
       }
       return list;
     })();
-
-    // Fulfill FEED CONTENT MIX RULE: If videos exist, show them prominently. Weave and interleave them:
-    const videoPosts = sorted.filter(p => !!p.videoUrl);
-    const nonVideoPosts = sorted.filter(p => !p.videoUrl);
-
-    if (videoPosts.length > 0 && !searchQuery.trim()) {
-      const interleaved: RefactoredPost[] = [];
-      let vidIdx = 0;
-      let nonVidIdx = 0;
-      while (vidIdx < videoPosts.length || nonVidIdx < nonVideoPosts.length) {
-        if (vidIdx < videoPosts.length) {
-          interleaved.push(videoPosts[vidIdx++]);
-        }
-        if (nonVidIdx < nonVideoPosts.length) {
-          interleaved.push(nonVideoPosts[nonVidIdx++]);
-        }
-      }
-      return interleaved;
-    }
 
     return sorted;
   };
@@ -996,8 +1036,13 @@ export default function FeedView({
       {/* 5. MAIN FEED CONTENT STREAM (With pull-to-refresh & infinite scroll) */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto space-y-5 pt-[190px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar"
+        className="flex-1 overflow-y-auto space-y-5 pt-[130px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar"
       >
+        {/* Stories/Moments strip */}
+        <div className="px-4 md:px-0">
+          <StoriesView currentUser={currentUser} />
+        </div>
+
         {/* Refresh pull-down simulator button */}
         <div className="flex justify-center shrink-0">
           <button 
@@ -1155,6 +1200,7 @@ export default function FeedView({
               <React.Fragment key={post.id}>
                 {/* 🟣 IMMERSIVE VIDEO CARD */}
                 <motion.div
+                  id={`post-${post.id}`}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
@@ -1376,6 +1422,7 @@ export default function FeedView({
           return (
             <React.Fragment key={post.id}>
               <motion.div
+                id={`post-${post.id}`}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -1671,7 +1718,7 @@ export default function FeedView({
                 {post.images && post.images.length > 1 ? (
                   <PostCarousel images={post.images} filters={post.imageFilters} />
                 ) : post.image && !post.opportunityType ? (
-                  <div className="overflow-hidden rounded-2xl border border-white/5 mb-4 max-h-[300px]">
+                  <div className="overflow-hidden rounded-2xl border border-white/5 mb-4 max-h-[500px]">
                     <img 
                       src={post.image} 
                       alt="Attachment" 

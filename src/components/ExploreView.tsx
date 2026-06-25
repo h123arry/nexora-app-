@@ -37,7 +37,8 @@ import {
   Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Post } from '../types';
+import { User, Post, Circle } from '../types';
+import { INITIAL_CIRCLES } from '../data/database';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 
 interface ExploreViewProps {
@@ -123,7 +124,7 @@ export default function ExploreView({
   const [localSearch, setLocalSearch] = useState('');
   
   // Core Search Platform States
-  const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'voice' | 'communities' | 'hashtags' | 'pulse'>('all');
+  const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'voice' | 'communities' | 'hashtags' | 'polls' | 'pulse'>('all');
   const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'nearby'>('latest');
   const [activeCollectionFolder, setActiveCollectionFolder] = useState<string | null>(null);
 
@@ -324,6 +325,41 @@ export default function ExploreView({
     return true;
   });
 
+  // Dynamic typing suggestions helper
+  const suggestions = (() => {
+    const term = localSearch.trim().toLowerCase();
+    if (term.length === 0) return [];
+    
+    const matches: { type: 'user' | 'tag' | 'circle' | 'post'; text: string; raw: any }[] = [];
+    
+    // User matches
+    creators.forEach(u => {
+      if (u.name.toLowerCase().includes(term) || u.username.toLowerCase().includes(term)) {
+        matches.push({ type: 'user', text: `@${u.username} (${u.name})`, raw: u });
+      }
+    });
+    
+    // Tag matches
+    const tagsSeen = new Set<string>();
+    posts.forEach(p => {
+      p.tags.forEach(t => {
+        if (t.toLowerCase().includes(term) && !tagsSeen.has(t)) {
+          tagsSeen.add(t);
+          matches.push({ type: 'tag', text: `#${t}`, raw: t });
+        }
+      });
+    });
+    
+    // Circle matches
+    INITIAL_CIRCLES.forEach(c => {
+      if (c.name.toLowerCase().includes(term)) {
+        matches.push({ type: 'circle', text: `🌐 Circle: ${c.name}`, raw: c });
+      }
+    });
+
+    return matches.slice(0, 5);
+  })();
+
   // Dynamic user matching & ranked similarity scoring
   const matchedCreators = (() => {
     const query = localSearch.trim().toLowerCase();
@@ -345,6 +381,22 @@ export default function ExploreView({
       .map(item => item.user);
   })();
 
+  // Dynamic community / circle matching
+  const matchedCircles = (() => {
+    const query = localSearch.trim().toLowerCase();
+    if (searchFilterType !== 'all' && searchFilterType !== 'communities' && !query) {
+      return [];
+    }
+    if (!query) {
+      return INITIAL_CIRCLES;
+    }
+    return INITIAL_CIRCLES.filter(c => 
+      c.name.toLowerCase().includes(query) || 
+      c.description.toLowerCase().includes(query) ||
+      (c.tags && c.tags.some(t => t.toLowerCase().includes(query)))
+    );
+  })();
+
   // Dynamic post matching, category indexing, and sort sequencing
   const sortedMatchedPosts = (() => {
     const query = localSearch.trim().toLowerCase();
@@ -364,7 +416,8 @@ export default function ExploreView({
         const usernameMatch = post.username.toLowerCase().includes(query);
         const tagsMatch = post.tags && post.tags.some(t => t.toLowerCase().includes(query));
         const communityMatch = (post as any).communityName && (post as any).communityName.toLowerCase().includes(query);
-        return contentMatch || nameMatch || usernameMatch || tagsMatch || communityMatch;
+        const locationMatch = post.location && post.location.toLowerCase().includes(query);
+        return contentMatch || nameMatch || usernameMatch || tagsMatch || communityMatch || locationMatch;
       });
     }
 
@@ -379,8 +432,10 @@ export default function ExploreView({
       result = result.filter(post => !!(post as any).communityName || post.tags.includes('communities') || post.tags.includes('guild'));
     } else if (searchFilterType === 'hashtags') {
       result = result.filter(post => query ? post.tags.some(t => t.toLowerCase().includes(query)) : post.tags.length > 0);
+    } else if (searchFilterType === 'polls') {
+      result = result.filter(post => !!(post as any).interactivePoll || post.content.toLowerCase().includes('poll') || post.tags.some(t => t.toLowerCase().includes('poll')));
     } else if (searchFilterType === 'pulse') {
-      result = result.filter(post => post.likes > 200 || post.tags.includes('pulse'));
+      result = result.filter(post => post.likes > 200 || post.tags.includes('pulse') || !!post.location);
     }
 
     // Sort matching posts based on sort sequencing
@@ -388,8 +443,8 @@ export default function ExploreView({
       result.sort((a, b) => b.likes - a.likes);
     } else if (sortBy === 'nearby') {
       result.sort((a, b) => {
-        const aLocal = a.tags.includes('local') || a.tags.includes('lagos') ? 1 : 0;
-        const bLocal = b.tags.includes('local') || b.tags.includes('lagos') ? 1 : 0;
+        const aLocal = a.tags.includes('local') || a.tags.includes('lagos') || !!a.location ? 1 : 0;
+        const bLocal = b.tags.includes('local') || b.tags.includes('lagos') || !!b.location ? 1 : 0;
         return bLocal - aLocal;
       });
     }
@@ -509,23 +564,63 @@ export default function ExploreView({
         </div>
 
         {/* 🔍 Dynamic Search Form */}
-        <div className="relative mt-4.5 max-w-xl">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
-          <input
-            type="text"
-            placeholder="Search creators, hashtags, sports channels, tech posts, video tags..."
-            value={localSearch}
-            onChange={(e) => setLocalSearch(e.target.value)}
-            className="w-full pl-10 pr-16 py-3 bg-[#070512]/90 border border-violet-500/15 focus:border-[#8B5CF6] focus:outline-hidden focus:ring-1 focus:ring-violet-500/20 rounded-xl text-xs text-white placeholder-violet-400/30 transition-all font-sans"
-          />
-          {localSearch && (
-            <button
-              onClick={() => setLocalSearch('')}
-              className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[10px] font-mono font-black text-pink-400 hover:text-white"
-            >
-              CLEAR
-            </button>
-          )}
+        <div className="relative mt-4.5 max-w-xl flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
+            <input
+              type="text"
+              placeholder="Search creators, hashtags, sports channels, tech posts, video tags..."
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  addToSearchHistory(localSearch);
+                  window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Executing search for "${localSearch}"...` }));
+                }
+              }}
+              className="w-full pl-10 pr-4 py-3 bg-[#070512]/90 border border-violet-500/15 focus:border-[#8B5CF6] focus:outline-hidden focus:ring-1 focus:ring-violet-500/20 rounded-xl text-xs text-white placeholder-violet-400/30 transition-all font-sans"
+            />
+            
+            {/* Dynamic Typing Suggestions */}
+            {suggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 bg-[#09061c] border border-violet-500/30 rounded-xl shadow-2xl z-50 overflow-hidden text-left divide-y divide-white/5">
+                {suggestions.map((sug, i) => (
+                  <div 
+                    key={`sug-${i}`}
+                    onClick={() => {
+                      if (sug.type === 'user') {
+                        setLocalSearch(sug.raw.username);
+                        addToSearchHistory(sug.raw.username);
+                        onViewProfile(sug.raw);
+                      } else if (sug.type === 'tag') {
+                        setLocalSearch(sug.raw);
+                        setSearchFilterType('hashtags');
+                        addToSearchHistory(sug.raw);
+                      } else {
+                        setLocalSearch(sug.raw.name || sug.text);
+                        addToSearchHistory(sug.raw.name || sug.text);
+                      }
+                    }}
+                    className="p-2.5 px-4 text-xs font-mono text-violet-200 hover:bg-violet-600/10 cursor-pointer flex items-center justify-between transition-colors"
+                  >
+                    <span>{sug.text}</span>
+                    <span className="text-[9px] text-violet-400/50 uppercase tracking-widest">{sug.type}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              if (localSearch.trim()) {
+                addToSearchHistory(localSearch);
+                window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Executing search for "${localSearch}"...` }));
+              }
+            }}
+            className="px-5 py-3 rounded-xl bg-linear-to-r from-violet-600 to-pink-600 text-white font-sans text-xs font-black shadow-lg shadow-violet-500/10 hover:brightness-110 active:scale-95 transition-all cursor-pointer shrink-0"
+          >
+            SEARCH
+          </button>
         </div>
       </div>
 
@@ -546,6 +641,7 @@ export default function ExploreView({
                 { id: 'voice', label: 'Voice Posts 🎙️' },
                 { id: 'communities', label: 'Communities 🏟️' },
                 { id: 'hashtags', label: 'Hashtags 🏷️' },
+                { id: 'polls', label: 'Polls 📊' },
                 { id: 'pulse', label: 'Pulse 🌍' }
               ].map(f => (
                 <button
@@ -753,7 +849,7 @@ export default function ExploreView({
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#8B5CF6] animate-ping" />
               <h2 className="text-sm font-sans font-black tracking-wider uppercase text-violet-200">
-                Found {matchedCreators.length} Users & {sortedMatchedPosts.length} Matching Posts
+                Found {matchedCreators.length} Users, {matchedCircles.length} Communities & {sortedMatchedPosts.length} Posts
               </h2>
             </div>
             <button 
@@ -819,6 +915,58 @@ export default function ExploreView({
             </div>
           )}
 
+          {/* Circles Result Segment */}
+          {matchedCircles.length > 0 && (
+            <div className="space-y-3 pt-3 border-t border-white/5">
+              <span className="text-[10px] font-mono font-black text-emerald-400 uppercase tracking-widest block">
+                🏟️ MATCHED COMMUNITIES & CIRCLES ({matchedCircles.length})
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {matchedCircles.map(circle => (
+                  <div 
+                    key={circle.id}
+                    className="p-4 rounded-3xl bg-[#090620] hover:bg-[#0c092c] border border-emerald-500/10 hover:border-emerald-500/20 transition-all flex flex-col justify-between gap-3 text-left"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs font-black text-white font-sans">{circle.name}</h4>
+                        <span className="bg-emerald-500/10 text-emerald-400 text-[8px] font-mono py-0.5 px-2 rounded-full border border-emerald-500/20 uppercase font-bold">
+                          🏟️ {circle.membersCount} members
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-zinc-300 font-sans leading-snug line-clamp-2">
+                        {circle.description}
+                      </p>
+                      {circle.tags && circle.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {circle.tags.map(t => (
+                            <span key={t} className="text-[9px] font-mono text-zinc-400 bg-white/5 px-1.5 py-0.5 rounded">
+                              #{t}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center border-t border-white/5 pt-2 mt-1">
+                      <span className="text-[9px] font-mono text-zinc-500">
+                        Rules: {circle.rules?.length || 0} enforced
+                      </span>
+                      <button 
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'communities' } }));
+                          window.dispatchEvent(new CustomEvent('toast', { detail: `Welcome to ${circle.name}! 🏟️` }));
+                        }}
+                        className="text-[9.5px] font-mono font-black bg-emerald-600 hover:bg-emerald-500 text-white py-1 px-3 rounded-lg active:scale-95 transition-all uppercase cursor-pointer"
+                      >
+                        Enter Guild
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Posts Result Segment - Interleaved style list */}
           {sortedMatchedPosts.length > 0 ? (
             <div className="space-y-3 pt-3 border-t border-white/5">
@@ -867,9 +1015,60 @@ export default function ExploreView({
               </div>
             </div>
           ) : (
-            (localSearch.trim().length > 0 || searchFilterType !== 'all' || activeCollectionFolder !== null) && matchedCreators.length === 0 && (
-              <div className="p-6 text-center text-zinc-500 font-mono text-xs">
-                No matching results found for selected criteria. Try typing different keywords like "voh", "quantum", or "sports".
+            (localSearch.trim().length > 0 || searchFilterType !== 'all' || activeCollectionFolder !== null) && 
+            matchedCreators.length === 0 && matchedCircles.length === 0 && (
+              <div className="space-y-6 pt-2">
+                <div className="p-4 bg-violet-950/10 border border-violet-500/10 rounded-2xl text-center">
+                  <p className="text-xs font-mono text-zinc-400">🔍 No exact matches found for <span className="text-violet-400">"{localSearch}"</span>. Showing similar platform-wide discoveries:</p>
+                </div>
+                
+                {/* Similar Creators */}
+                <div className="space-y-3">
+                  <span className="text-[10px] font-mono font-black text-pink-500/80 uppercase tracking-widest block">SUGGESTED CREATORS</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {creators.slice(0, 3).map((user) => (
+                      <div key={`sim-cr-${user.id}`} className="p-4 rounded-3xl bg-[#08051a] hover:bg-[#0b0826] border border-violet-500/15 transition-all flex items-center justify-between gap-4 text-left">
+                        <div className="flex gap-3.5 items-center">
+                          <div className="relative shrink-0">
+                            <img src={user.avatar} className="w-11 h-11 rounded-xl object-cover ring-2 ring-violet-500/40" />
+                            {user.isVerified && <span className="absolute -bottom-1 -right-1"><PurpleVerifiedBadge /></span>}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-white font-sans">{user.name}</h4>
+                            <p className="text-[10px] text-violet-400 font-mono">@{user.username}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => onViewProfile(user)}
+                          className="px-3.5 py-1.5 rounded-lg text-[9.5px] font-mono font-black border border-violet-500/30 text-violet-300 bg-violet-500/10 hover:bg-violet-600 hover:text-white transition-all cursor-pointer"
+                        >
+                          VIEW
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Similar Communities */}
+                <div className="space-y-3">
+                  <span className="text-[10px] font-mono font-black text-emerald-500/80 uppercase tracking-widest block">ACTIVE CHANNELS</span>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {INITIAL_CIRCLES.slice(0, 2).map((circle) => (
+                      <div key={`sim-ci-${circle.id}`} className="p-4 rounded-3xl bg-[#08051a] border border-violet-500/15 flex flex-col justify-between gap-3 text-left">
+                        <div>
+                          <h4 className="text-xs font-black text-white font-sans flex items-center gap-1.5">
+                            <span>🌐</span> {circle.name}
+                          </h4>
+                          <p className="text-[10.5px] text-zinc-400 font-sans mt-1 line-clamp-2">{circle.description}</p>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9.5px] font-mono text-zinc-500">{circle.membersCount} active nodes</span>
+                          <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded bg-violet-950/40 text-violet-300 border border-violet-500/10">{circle.tags[0]}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             )
           )}

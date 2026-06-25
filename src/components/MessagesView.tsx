@@ -84,6 +84,17 @@ export default function MessagesView({
   });
   const [chatSearchQuery, setChatSearchQuery] = useState('');
 
+  useEffect(() => {
+    const handleSelectChat = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.chatId) {
+        setActiveChatId(customEvent.detail.chatId);
+      }
+    };
+    window.addEventListener('selectChat', handleSelectChat);
+    return () => window.removeEventListener('selectChat', handleSelectChat);
+  }, []);
+
   const updateAccessGate = (chatId: string, value: 'open' | 'followers' | 'subscribers') => {
     const next = { ...chatAccessGates, [chatId]: value };
     setChatAccessGates(next);

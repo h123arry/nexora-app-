@@ -191,6 +191,17 @@ export default function App() {
   const [modalTags, setModalTags] = useState('');
   const [createdPostLink, setCreatedPostLink] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
+  const [verificationModalDetail, setVerificationModalDetail] = useState<{ type: string; tooltip: string } | null>(null);
+
+  useEffect(() => {
+    const handleShowModal = (e: any) => {
+      if (e.detail) {
+        setVerificationModalDetail(e.detail);
+      }
+    };
+    window.addEventListener('show-voh-verification-modal', handleShowModal);
+    return () => window.removeEventListener('show-voh-verification-modal', handleShowModal);
+  }, []);
 
   // Advanced Category Post options states
   const [activePostType, setActivePostType] = useState<'text' | 'photo' | 'video' | 'voice' | 'poll' | 'article' | 'mission' | 'community' | 'pulse' | null>(null);
@@ -468,6 +479,75 @@ export default function App() {
     setPosts(prev => [newPost, ...prev]);
     // Log post in database to grant reputation and increment contribution records
     createPostDb(currentUser.id);
+
+    // Simulate real, action-driven triggers from official seeded platform accounts
+    setTimeout(() => {
+      setPosts(prevPosts =>
+        prevPosts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              likes: p.likes + 1
+            };
+          }
+          return p;
+        })
+      );
+      
+      const likeNotif: Notification = {
+        id: `notif-${Date.now()}-like`,
+        type: 'like',
+        userId: 'voh_ai',
+        username: 'voh_ai',
+        avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
+        targetId: postId,
+        content: `liked your post: "${content.slice(0, 30)}..."`,
+        timestamp: 'Just now',
+        isRead: false
+      };
+      setNotifications(prev => [likeNotif, ...prev]);
+    }, 4000);
+
+    setTimeout(() => {
+      const commentId = `comment-${Date.now()}-reply`;
+      const botComment = {
+        id: commentId,
+        postId: postId,
+        userId: 'nexora_ai',
+        username: 'nexora_ai',
+        name: 'NEXORA AI',
+        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+        content: `Outstanding share! The metadata integration on this is fantastic. Let us boost this node in the feed index! 🚀`,
+        timestamp: 'Just now',
+        likes: 0
+      };
+
+      setPosts(prevPosts =>
+        prevPosts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              commentsCount: p.commentsCount + 1,
+              comments: [...p.comments, botComment]
+            };
+          }
+          return p;
+        })
+      );
+
+      const commentNotif: Notification = {
+        id: `notif-${Date.now()}-comment`,
+        type: 'comment',
+        userId: 'nexora_ai',
+        username: 'nexora_ai',
+        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+        targetId: postId,
+        content: `commented on your post: "Outstanding share! The metadata integration on this..."`,
+        timestamp: 'Just now',
+        isRead: false
+      };
+      setNotifications(prev => [commentNotif, ...prev]);
+    }, 8000);
     
     if (isOffline) {
       setIsSyncPending(true);
@@ -591,6 +671,20 @@ export default function App() {
       ...prev,
       [chatId]: [...(prev[chatId] || []), newMsg]
     }));
+
+    const senderUser = MOCK_CREATORS.find(c => c.id === senderId) || { name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' };
+    const newNotif: Notification = {
+      id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+      type: 'message',
+      userId: senderId,
+      username: senderUser.username,
+      avatar: senderUser.avatar,
+      targetId: chatId,
+      content: `sent you a direct message: "${content.slice(0, 30)}..."`,
+      timestamp: 'Just now',
+      isRead: false
+    };
+    setNotifications(prev => [newNotif, ...prev]);
 
     // Update global chats array stats
     setChats(prevChats =>
@@ -1037,6 +1131,7 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       onMarkAllAsRead={handleMarkAllNotificationsAsRead}
                       onClearNotifications={handleClearNotifications}
+                      onViewProfile={handleViewProfile}
                     />
                   )}
 
@@ -2279,6 +2374,77 @@ export default function App() {
           <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Profile</span>
         </button>
       </div>
+
+      {/* 🟣 VOH AI VERIFICATION EXPLANATION MODAL */}
+      <AnimatePresence>
+        {verificationModalDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1000] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="w-full max-w-md bg-[#0a071c] border border-violet-500/20 p-6 rounded-3xl space-y-4 shadow-2xl relative text-left"
+            >
+              <div className="flex items-center justify-between border-b border-violet-500/10 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-violet-600/20 flex items-center justify-center border border-violet-500/30">
+                    <Sparkles className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider">
+                      VOH AI VERIFICATION INDEX
+                    </h3>
+                    <span className="text-[9px] font-mono text-purple-400 uppercase tracking-widest block mt-0.5">
+                      {verificationModalDetail.tooltip}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setVerificationModalDetail(null)}
+                  className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full text-zinc-400 hover:text-white transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 text-xs leading-relaxed font-sans text-zinc-300">
+                <p>
+                  This account has been thoroughly audited and authenticated by the **Voice of Harrison (VOH AI)** core reputation indexer.
+                </p>
+                
+                <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-xl space-y-1.5">
+                  <span className="text-[9.5px] font-mono text-pink-400 uppercase font-black tracking-widest block">
+                    Verification Criteria
+                  </span>
+                  <ul className="space-y-1 text-[11px] list-disc list-inside">
+                    <li>Biometric voiceprint verification & cryptographic signature match</li>
+                    <li>Sustained contribution and community reputation threshold (Points &gt; 1,000)</li>
+                    <li>Zero-tolerance policy adherence matching Harrison's AI directives</li>
+                  </ul>
+                </div>
+
+                <p className="text-[11.5px] text-zinc-400 italic">
+                  Verification on NEXORA guarantees absolute content origin integrity. Deepfakes, synthesized voice fraud, and duplicate identities are automatically flagged and blocked.
+                </p>
+              </div>
+
+              <div className="border-t border-white/5 pt-3 flex justify-end">
+                <button
+                  onClick={() => setVerificationModalDetail(null)}
+                  className="px-4 py-2 rounded-xl bg-linear-to-r from-violet-600 to-pink-600 hover:brightness-110 text-white font-sans text-xs font-black transition-all cursor-pointer shadow-md"
+                >
+                  ACKNOWLEDGE AUDIT
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );
