@@ -48,7 +48,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import RelativeTimestamp from './RelativeTimestamp';
-import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, getFollowersCount, getFollowingCount, getReputationPoints, getSparksReceived, getContributionsCount } from '../data/database';
+import NexoraVideoPlayer from './NexoraVideoPlayer';
+import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, getFollowersCount, getFollowingCount, getReputationPoints, getSparksReceived, getContributionsCount, getSeededFollowers } from '../data/database';
 import CreatorDashboardView from './CreatorDashboardView';
 
 interface MediaGridProps {
@@ -92,16 +93,19 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
                   referrerPolicy="no-referrer"
                 />
               ) : isVideo ? (
-                <div className="w-full h-full bg-black relative">
+                <div className="w-full h-full bg-slate-950 relative overflow-hidden">
+                  {/* Premium skeleton loader and neon pulse backdrop */}
+                  <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/40 via-[#0a0521]/90 to-[#2c0b3d]/30" />
+                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-pink-500/5 to-transparent animate-pulse" />
                   <video 
-                    src={post.videoUrl} 
-                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" 
+                    src={post.videoUrl ? `${post.videoUrl}#t=0.5` : ''} 
+                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
                     preload="metadata" 
                     muted 
                     playsInline
                   />
-                  <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-10">
-                    <Film className="w-3.5 h-3.5 text-pink-400" />
+                  <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">
+                    <Film className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
                   </div>
                 </div>
               ) : isVoice ? (
@@ -870,6 +874,21 @@ try {
           followerUsers.push(u);
         }
       });
+
+      // Append pre-seeded high-quality followers for VOH, VOH AI, and NEXORA AI
+      const isFounder = currentUser.id === 'user-0' || currentUser.username.toLowerCase() === 'voh';
+      const isNexoraAi = currentUser.username === 'nexora_ai';
+      const isVohAi = currentUser.username === 'voh_ai';
+
+      if (isFounder || isNexoraAi || isVohAi) {
+        const seeded = getSeededFollowers(currentUser.id);
+        const existingIds = new Set(followerUsers.map(u => u.id));
+        seeded.forEach(u => {
+          if (!existingIds.has(u.id)) {
+            followerUsers.push(u);
+          }
+        });
+      }
 
       return followerUsers;
     }
@@ -2944,10 +2963,11 @@ try {
                     {post.image ? (
                       <img src={post.image} className="absolute inset-0 w-full h-full object-cover" />
                     ) : isVideo ? (
-                      <div className="absolute inset-0 w-full h-full bg-black">
-                        <video src={post.videoUrl} className="w-full h-full object-cover opacity-80" preload="metadata" muted />
+                      <div className="absolute inset-0 w-full h-full bg-zinc-950 overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/25 via-zinc-950/90 to-transparent animate-pulse" />
+                        <video src={post.videoUrl ? `${post.videoUrl}#t=0.5` : ''} className="w-full h-full object-cover opacity-80" preload="metadata" muted playsInline />
                         <div className="absolute top-2 right-2 p-1 bg-black/60 rounded-full z-10">
-                          <Film className="w-3 h-3 text-white" />
+                          <Film className="w-3 h-3 text-pink-400" />
                         </div>
                       </div>
                     ) : isVoice ? (
@@ -3668,7 +3688,7 @@ try {
                   <h3 className="text-base font-black text-white tracking-tight flex items-center gap-1.5 font-sans mt-0.5 animate-fade-in">
                     {connectionsModalTab === 'followers' ? '👥 Followers List' : '⚡ Connected Friends'}
                     <span className="text-xs text-[#8B5CF6]/85 font-mono font-normal">
-                      ({connectionsModalTab === 'followers' ? formatNumber(currentUser.followers) : formatNumber(currentUser.following)} Users)
+                      ({connectionsModalTab === 'followers' ? formatNumber(stats.followers) : formatNumber(stats.following)} Users)
                     </span>
                   </h3>
                 </div>
@@ -3689,7 +3709,7 @@ try {
                   }}
                   className={`py-2 text-[10px] font-mono tracking-wider font-extrabold rounded-lg uppercase transition-all cursor-pointer ${connectionsModalTab === 'followers' ? 'bg-[#8B5CF6] text-white shadow-md' : 'text-violet-300/50 hover:text-violet-200'}`}
                 >
-                  Followers ({formatNumber(currentUser.followers)})
+                  Followers ({formatNumber(stats.followers)})
                 </button>
                 <button
                   onClick={() => {
@@ -3698,7 +3718,7 @@ try {
                   }}
                   className={`py-2 text-[10px] font-mono tracking-wider font-extrabold rounded-lg uppercase transition-all cursor-pointer ${connectionsModalTab === 'following' ? 'bg-[#8B5CF6] text-white shadow-md' : 'text-violet-300/50 hover:text-violet-200'}`}
                 >
-                  Following ({formatNumber(currentUser.following)})
+                  Following ({formatNumber(stats.following)})
                 </button>
               </div>
 
@@ -3949,14 +3969,16 @@ try {
                       referrerPolicy="no-referrer"
                     />
                   ) : isVideo ? (
-                    <video 
-                      src={activePost.videoUrl} 
-                      className="w-full h-full object-contain" 
-                      controls 
-                      autoPlay 
-                      loop 
-                      preload="auto"
-                    />
+                    <div className="w-full h-full bg-black flex items-center justify-center p-1 md:p-3">
+                      <NexoraVideoPlayer
+                        post={activePost}
+                        videoUrl={activePost.videoUrl}
+                        onOpenFullscreen={() => {
+                          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Immersive video mode active!' }));
+                        }}
+                        onSpark={() => onLikePost(activePost.id)}
+                      />
+                    </div>
                   ) : isVoice ? (
                     <div className="w-full h-full bg-gradient-to-br from-[#120a2e] to-[#04010b] flex flex-col items-center justify-center p-6 space-y-6">
                       <div className="w-16 h-16 rounded-full bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">

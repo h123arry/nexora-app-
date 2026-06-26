@@ -49,6 +49,7 @@ interface ExploreViewProps {
   onLikePost: (postId: string) => void;
   onToggleFollow?: (creatorId: string) => void;
   followingIds: string[];
+  onViewProfile?: (userIdOrUsername: string) => void;
 }
 
 function ReelsKeyboardController({ 
@@ -117,7 +118,8 @@ export default function ExploreView({
   setActiveTab,
   onLikePost,
   onToggleFollow,
-  followingIds
+  followingIds,
+  onViewProfile
 }: ExploreViewProps) {
   // Navigation & Categorization Status
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -292,6 +294,29 @@ export default function ExploreView({
       ]
     }
   ];
+
+  const activeReelsList = React.useMemo(() => {
+    const dynamicReels = posts
+      .filter(p => p.videoUrl)
+      .map(p => ({
+        id: p.id,
+        creator: { id: p.userId, name: p.name, username: p.username, avatar: p.avatar, isVerified: p.isVerified },
+        videoUrl: p.videoUrl,
+        caption: p.content,
+        likes: p.likes,
+        commentsCount: p.commentsCount || p.comments?.length || 0,
+        sound: { title: 'Original Sound', author: p.username },
+        comments: (p.comments || []).map((c, i) => ({ id: i, user: c.username, text: c.content }))
+      }));
+
+    const combined = [...mockReels];
+    dynamicReels.forEach(dr => {
+      if (!combined.some(r => r.videoUrl === dr.videoUrl || r.id === dr.id)) {
+        combined.unshift(dr);
+      }
+    });
+    return combined;
+  }, [posts]);
 
   // Dynamic search filtration logic
   const filteredPosts = posts.filter(post => {
@@ -552,7 +577,7 @@ export default function ExploreView({
             
             <button
               onClick={() => {
-                setActiveReelsPlayback(mockReels[0]);
+                setActiveReelsPlayback(activeReelsList[0]);
                 setReelsIndex(0);
               }}
               className="px-4 py-2.5 rounded-xl bg-slate-900 border border-violet-500/20 text-violet-300 font-sans text-xs font-black hover:border-violet-500/40 hover:-translate-y-0.5 transition-all flex items-center gap-1.5 cursor-pointer"
@@ -591,7 +616,7 @@ export default function ExploreView({
                       if (sug.type === 'user') {
                         setLocalSearch(sug.raw.username);
                         addToSearchHistory(sug.raw.username);
-                        onViewProfile(sug.raw);
+                        onViewProfile?.(sug.raw.id);
                       } else if (sug.type === 'tag') {
                         setLocalSearch(sug.raw);
                         setSearchFilterType('hashtags');
@@ -1000,9 +1025,10 @@ export default function ExploreView({
                     </p>
 
                     {post.videoUrl && (
-                      <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden bg-black/40 border border-white/5">
-                        <video src={post.videoUrl} muted autoPlay loop className="w-full h-full object-cover" />
-                        <div className="absolute top-2 left-2 bg-black/60 text-[8px] font-mono text-white/80 py-0.5 px-1.5 rounded">AUTO PLAY PREVIEW</div>
+                      <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden bg-zinc-950 border border-white/5">
+                        <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/20 via-zinc-950/95 to-transparent animate-pulse" />
+                        <video src={`${post.videoUrl}#t=0.5`} muted autoPlay loop className="w-full h-full object-cover relative z-10" />
+                        <div className="absolute top-2 left-2 bg-black/60 text-[8px] font-mono text-white/80 py-0.5 px-1.5 rounded z-20">AUTO PLAY PREVIEW</div>
                       </div>
                     )}
 
@@ -1039,7 +1065,7 @@ export default function ExploreView({
                           </div>
                         </div>
                         <button 
-                          onClick={() => onViewProfile(user)}
+                          onClick={() => onViewProfile?.(user.id)}
                           className="px-3.5 py-1.5 rounded-lg text-[9.5px] font-mono font-black border border-violet-500/30 text-violet-300 bg-violet-500/10 hover:bg-violet-600 hover:text-white transition-all cursor-pointer"
                         >
                           VIEW
@@ -1421,14 +1447,14 @@ export default function ExploreView({
             {/* Keyboard Arrow Navigation Handler */}
             <ReelsKeyboardController 
               reelsIndex={reelsIndex}
-              mockReels={mockReels}
+              mockReels={activeReelsList}
               setReelsIndex={setReelsIndex}
               setActiveReelsPlayback={setActiveReelsPlayback}
             />
 
             {/* PRELOADER BUFFER FOR NEXT VIDEO LOOP */}
             <video 
-              src={mockReels[(reelsIndex + 1) % mockReels.length]?.videoUrl} 
+              src={activeReelsList[(reelsIndex + 1) % activeReelsList.length]?.videoUrl} 
               preload="auto" 
               className="hidden" 
               muted 
@@ -1628,9 +1654,9 @@ export default function ExploreView({
                 <div className="flex flex-col gap-2 mt-2">
                   <button
                     onClick={() => {
-                      const prevIdx = (reelsIndex - 1 + mockReels.length) % mockReels.length;
+                      const prevIdx = (reelsIndex - 1 + activeReelsList.length) % activeReelsList.length;
                       setReelsIndex(prevIdx);
-                      setActiveReelsPlayback(mockReels[prevIdx]);
+                      setActiveReelsPlayback(activeReelsList[prevIdx]);
                     }}
                     className="bg-black/60 hover:bg-black/80 text-violet-400 border border-white/10 h-8 w-8 rounded-full flex items-center justify-center cursor-pointer active:scale-95 hover:scale-105"
                     title="Swipe Previous Video loop"
@@ -1640,9 +1666,9 @@ export default function ExploreView({
 
                   <button
                     onClick={() => {
-                      const nextIdx = (reelsIndex + 1) % mockReels.length;
+                      const nextIdx = (reelsIndex + 1) % activeReelsList.length;
                       setReelsIndex(nextIdx);
-                      setActiveReelsPlayback(mockReels[nextIdx]);
+                      setActiveReelsPlayback(activeReelsList[nextIdx]);
                     }}
                     className="bg-violet-600 text-white h-9 w-9 hover:bg-violet-500 rounded-full font-mono text-xs font-black shadow-lg flex items-center justify-center cursor-pointer border border-violet-400/20 active:scale-95 hover:scale-105 animate-bounce"
                     title="Swipe Next Video loop"
@@ -2078,7 +2104,7 @@ export default function ExploreView({
                 <button
                   onClick={() => {
                     setActiveSoundDetail(null);
-                    setActiveReelsPlayback(mockReels[0]);
+                    setActiveReelsPlayback(activeReelsList[0]);
                   }}
                   className="py-2 bg-violet-600 hover:bg-violet-700 text-white font-mono text-[10px] font-bold rounded-lg uppercase cursor-pointer text-center"
                 >
@@ -2090,17 +2116,18 @@ export default function ExploreView({
               <div className="mt-5 space-y-2.5">
                 <span className="text-[8.5px] font-mono uppercase text-violet-400/65 font-bold block">Videos using this soundtrack</span>
                 <div className="grid grid-cols-3 gap-2">
-                  {mockReels.slice(0, 3).map((item) => (
+                  {activeReelsList.slice(0, 3).map((item) => (
                     <div 
                       key={item.id} 
                       onClick={() => {
                         setActiveReelsPlayback(item);
                         setActiveSoundDetail(null);
                       }}
-                      className="relative rounded-xl overflow-hidden aspect-video cursor-pointer border border-white/5 bg-black"
+                      className="relative rounded-xl overflow-hidden aspect-video cursor-pointer border border-white/5 bg-zinc-950"
                     >
-                      <video src={item.videoUrl} className="w-full h-full object-cover opacity-60" muted playsInline />
-                      <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/10 via-zinc-950/80 to-transparent animate-pulse" />
+                      <video src={`${item.videoUrl}#t=0.5`} className="w-full h-full object-cover opacity-60 relative z-10" muted playsInline />
+                      <div className="absolute inset-0 flex items-center justify-center z-20">
                         <Play className="w-4 h-4 text-white hover:scale-110 transition-transform" />
                       </div>
                     </div>

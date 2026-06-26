@@ -1062,6 +1062,7 @@ export default function App() {
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 onViewProfile={handleViewProfile}
+                onToggleFollow={handleToggleFollow}
                 theme={theme}
               />
             ) : (

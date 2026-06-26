@@ -48,7 +48,10 @@ export default function NexoraVideoPlayer({
 
   // Connection & Speed playback status states
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(() => {
+    return localStorage.getItem('nexora_video_muted') !== 'false';
+  });
+  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -83,6 +86,21 @@ export default function NexoraVideoPlayer({
   // Watch duration log trigger state
   const viewLoggedRef = useRef(false);
 
+  const handleVolumeToggle = (forcedMute?: boolean) => {
+    const newMuted = forcedMute !== undefined ? forcedMute : !isMuted;
+    setIsMuted(newMuted);
+    if (videoRef.current) {
+      videoRef.current.muted = newMuted;
+    }
+    localStorage.setItem('nexora_video_muted', newMuted ? 'true' : 'false');
+    window.dispatchEvent(
+      new CustomEvent('nexora-volume-change', { detail: { muted: newMuted, senderId: post.id } })
+    );
+    if (!newMuted) {
+      setAutoplayBlocked(false);
+    }
+  };
+
   // 1. Intersection Observer for Auto-play and Auto-pause
   useEffect(() => {
     if (!videoRef.current) return;
@@ -94,15 +112,41 @@ export default function NexoraVideoPlayer({
             window.dispatchEvent(
               new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
             );
-            videoRef.current?.play().catch(() => {});
-            setIsPlaying(true);
+
+            // Sync current mute preference
+            const isPrefMuted = localStorage.getItem('nexora_video_muted') !== 'false';
+            setIsMuted(isPrefMuted);
+            if (videoRef.current) {
+              videoRef.current.muted = isPrefMuted;
+            }
+
+            const playPromise = videoRef.current?.play();
+            if (playPromise !== undefined) {
+              playPromise.then(() => {
+                setIsPlaying(true);
+                setAutoplayBlocked(false);
+              }).catch((error) => {
+                console.log("Autoplay with audio blocked. Retrying muted:", error);
+                // Try playing muted
+                if (videoRef.current) {
+                  videoRef.current.muted = true;
+                  setIsMuted(true);
+                  videoRef.current.play()
+                    .then(() => {
+                      setIsPlaying(true);
+                      setAutoplayBlocked(true); // Autoplay blocked with audio, show "Tap for sound"
+                    })
+                    .catch(e => console.error("Muted play also failed", e));
+                }
+              });
+            }
           } else {
             videoRef.current?.pause();
             setIsPlaying(false);
           }
         });
       },
-      { threshold: 0.5 }
+      { threshold: 0.6 } // Higher threshold so only the fully visible video plays
     );
 
     observer.observe(videoRef.current);
@@ -122,6 +166,24 @@ export default function NexoraVideoPlayer({
     window.addEventListener('nexora-video-play', handleGlobalPlay);
     return () => {
       window.removeEventListener('nexora-video-play', handleGlobalPlay);
+    };
+  }, [post.id]);
+
+  // Global Volume-sync listener
+  useEffect(() => {
+    const handleVolumeChange = (e: any) => {
+      if (e.detail && e.detail.senderId !== post.id && videoRef.current) {
+        const newMuted = e.detail.muted;
+        setIsMuted(newMuted);
+        videoRef.current.muted = newMuted;
+        if (!newMuted) {
+          setAutoplayBlocked(false);
+        }
+      }
+    };
+    window.addEventListener('nexora-volume-change', handleVolumeChange);
+    return () => {
+      window.removeEventListener('nexora-volume-change', handleVolumeChange);
     };
   }, [post.id]);
 
@@ -207,6 +269,12 @@ export default function NexoraVideoPlayer({
       window.dispatchEvent(
         new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
       );
+      
+      // If muted because of autoplay, let's unmute on user's direct play request!
+      if (autoplayBlocked && isMuted) {
+        handleVolumeToggle(false);
+      }
+      
       videoRef.current.play().catch(() => {});
       setIsPlaying(true);
     }
@@ -230,12 +298,22 @@ export default function NexoraVideoPlayer({
       setShowDoubleTapHeart(true);
       onSpark();
 
+      // If autoplay was blocked and we are muted, double tap to like can also unmute beautifully!
+      if (autoplayBlocked && isMuted) {
+        handleVolumeToggle(false);
+      }
+
       // Clear double-tap heart visual after 1000ms
       setTimeout(() => setShowDoubleTapHeart(false), 800);
       lastTapRef.current = 0;
     } else {
-      // SINGLE TAP: Toggle standard controls overlay
-      setShowControls(!showControls);
+      // If autoplay was blocked and we single tap, unmute immediately rather than toggling controls!
+      if (autoplayBlocked && isMuted) {
+        handleVolumeToggle(false);
+      } else {
+        // SINGLE TAP: Toggle standard controls overlay
+        setShowControls(!showControls);
+      }
     }
     lastTapRef.current = now;
   };
@@ -353,6 +431,33 @@ export default function NexoraVideoPlayer({
     }, 1500);
   };
 
+  const handleOpenFullscreenWithSync = () => {
+    if (videoRef.current) {
+      (window as any).nexoraFullscreenSync = {
+        postId: post.id,
+        currentTime: videoRef.current.currentTime,
+        isPlaying: isPlaying,
+        isMuted: isMuted,
+        videoElement: videoRef.current,
+        onClose: (finalTime: number, finalIsPlaying: boolean, finalIsMuted: boolean) => {
+          if (videoRef.current) {
+            videoRef.current.currentTime = finalTime;
+            setIsMuted(finalIsMuted);
+            videoRef.current.muted = finalIsMuted;
+            if (finalIsPlaying) {
+              videoRef.current.play().catch(() => {});
+              setIsPlaying(true);
+            } else {
+              videoRef.current.pause();
+              setIsPlaying(false);
+            }
+          }
+        }
+      };
+    }
+    onOpenFullscreen();
+  };
+
   return (
     <div 
       ref={containerRef}
@@ -361,7 +466,7 @@ export default function NexoraVideoPlayer({
       onMouseLeave={handleReleaseHold}
       onTouchStart={handleStartHold}
       onTouchEnd={handleReleaseHold}
-      className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black aspect-video select-none group w-full"
+      className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black aspect-video select-none group w-full animate-fade-in"
     >
       {/* Absolute Video Frame */}
       <video
@@ -375,6 +480,26 @@ export default function NexoraVideoPlayer({
         onClick={handleTapOrGesture}
         className="w-full h-full object-cover cursor-pointer"
       />
+
+      {/* Tap for sound overlay */}
+      {autoplayBlocked && isMuted && (
+        <div 
+          onClick={(e) => {
+            e.stopPropagation();
+            handleVolumeToggle(false);
+          }}
+          className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 cursor-pointer"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-purple-600/95 hover:bg-purple-500/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-purple-400/30 text-white text-xs font-mono font-black uppercase tracking-widest flex items-center gap-2 shadow-lg"
+          >
+            <VolumeX className="w-4 h-4 animate-bounce" />
+            <span>Tap for sound</span>
+          </motion.div>
+        </div>
+      )}
 
       {/* Switching Quality overlay indicator */}
       {isSwitchingQuality && (
@@ -606,7 +731,7 @@ export default function NexoraVideoPlayer({
 
                 {/* Mute button toggler */}
                 <button
-                  onClick={() => setIsMuted(!isMuted)}
+                  onClick={() => handleVolumeToggle()}
                   className="p-1 text-zinc-300 hover:text-white cursor-pointer active:scale-90 transition-transform"
                 >
                   {isMuted ? <VolumeX className="w-4 h-4 text-pink-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
@@ -662,7 +787,7 @@ export default function NexoraVideoPlayer({
 
                 {/* Fullscreen Overlay trigger */}
                 <button
-                  onClick={onOpenFullscreen}
+                  onClick={handleOpenFullscreenWithSync}
                   className="p-1 text-zinc-400 hover:text-violet-400 cursor-pointer"
                   title="Expand Full Immersive Player Mode"
                 >

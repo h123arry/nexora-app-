@@ -58,15 +58,15 @@ export const MOCK_CREATORS: User[] = [
     bio: 'Official NEXORA AI Companion 🌟 Keeping you posted with football updates, Wizkid/Davido jams, local food tips, and everyday stories. Following only VOH AI & VOICE OF HARRISON.',
     location: 'Lagos, Nigeria',
     website: 'nexora.ai/agent',
-    followers: 6200000,
-    following: 1,
+    followers: 6400000,
+    following: 2,
     sparks: 12000000,
     isVerified: true,
     coverImage: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1000&auto=format&fit=crop&q=80',
     joinedDate: 'Joined June 2026',
-    reputationPoints: 3200000,
+    reputationPoints: 4100000,
     reputationBreakdown: {
-      contributions: 6000000,
+      contributions: 5000000,
       helpfulness: 1250000,
       missionsCompleted: 800,
       skillsVerified: 500000
@@ -87,14 +87,14 @@ export const MOCK_CREATORS: User[] = [
     location: 'Lagos, Nigeria',
     website: 'nexora.ai/voh_ai',
     followers: 8700000,
-    following: 1,
+    following: 2,
     sparks: 18000000,
     isVerified: true,
     coverImage: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=1000&auto=format&fit=crop&q=80',
     joinedDate: 'Joined June 2026',
-    reputationPoints: 4500000,
+    reputationPoints: 5200000,
     reputationBreakdown: {
-      contributions: 9000000,
+      contributions: 7000000,
       helpfulness: 1120000,
       missionsCompleted: 750,
       skillsVerified: 510000
@@ -600,18 +600,18 @@ export function getRichUser(user: User): User {
   const completedMissionsCount = getCompletedMissionsCount(user.id);
 
   if (isFounder) {
-    // Founder Exception: manually assigned metrics (7.3 Million Followers) + local changes
+    // Founder Exception: manually assigned metrics (15.3 Million Followers) + local changes
     return {
       ...user,
       name: 'VOICE OF HARRISON',
       username: 'voh',
       isVerified: true,
-      followers: 7300000 + followersCount,
+      followers: 15300000 + followersCount,
       following: 2 + followingCount,
-      reputationPoints: 5450000 + reputationVal,
-      sparks: 2500000 + getSparksReceived(user.id),
+      reputationPoints: 9900000 + reputationVal,
+      sparks: 40000000 + getSparksReceived(user.id),
       reputationBreakdown: {
-        contributions: 450000 + contributionsCount,
+        contributions: 20000000 + contributionsCount,
         helpfulness: 121000 + breakdown.helpfulness,
         missionsCompleted: 350 + completedMissionsCount,
         skillsVerified: 83650 + breakdown.skillsVerified,
@@ -620,18 +620,18 @@ export function getRichUser(user: User): User {
   }
 
   if (isNexoraAi) {
-    // Nexora AI details requested (3.0M Followers, following only voh_ai & VOH)
+    // Nexora AI details requested (6.4M Followers, following only voh_ai & VOH)
     return {
       ...user,
       name: 'Nexora AI',
       username: 'nexora_ai',
       isVerified: true,
-      followers: 3000000 + followersCount,
-      following: 2, // only voh_ai and VOH
-      reputationPoints: 4500000 + reputationVal,
-      sparks: 1200000 + getSparksReceived(user.id),
+      followers: 6400000 + followersCount,
+      following: 2 + followingCount,
+      reputationPoints: 4100000 + reputationVal,
+      sparks: 12000000 + getSparksReceived(user.id),
       reputationBreakdown: {
-        contributions: 950000 + contributionsCount,
+        contributions: 5000000 + contributionsCount,
         helpfulness: 1250000 + breakdown.helpfulness,
         missionsCompleted: 800 + completedMissionsCount,
         skillsVerified: 500000 + breakdown.skillsVerified,
@@ -640,18 +640,18 @@ export function getRichUser(user: User): User {
   }
 
   if (isVohAi) {
-    // VOH AI details requested (2.9M Followers, following only VOICE OF HARRISON)
+    // VOH AI details requested (8.7M Followers, following only VOICE OF HARRISON)
     return {
       ...user,
       name: 'VOH AI',
       username: 'voh_ai',
       isVerified: true,
-      followers: 2900000 + followersCount,
-      following: 1, // only VOICE OF HARRISON (voh)
-      reputationPoints: 4200000 + reputationVal,
-      sparks: 1100000 + getSparksReceived(user.id),
+      followers: 8700000 + followersCount,
+      following: 2 + followingCount,
+      reputationPoints: 5200000 + reputationVal,
+      sparks: 18000000 + getSparksReceived(user.id),
       reputationBreakdown: {
-        contributions: 820000 + contributionsCount,
+        contributions: 7000000 + contributionsCount,
         helpfulness: 1120000 + breakdown.helpfulness,
         missionsCompleted: 750 + completedMissionsCount,
         skillsVerified: 510000 + breakdown.skillsVerified,
@@ -674,4 +674,95 @@ export function getRichUser(user: User): User {
       skillsVerified: breakdown.skillsVerified,
     },
   };
+}
+
+export function getSeededFollowers(targetUserId: string): User[] {
+  const isFounder = targetUserId === 'user-0' || targetUserId === 'voh';
+  const isNexoraAi = targetUserId === 'creator-4' || targetUserId === 'nexora_ai';
+  const isVohAi = targetUserId === 'voh_ai';
+
+  if (!isFounder && !isNexoraAi && !isVohAi) return [];
+
+  const firstNames = ['Tunde', 'Chioma', 'Bola', 'Samuel', 'Clara', 'Emeka', 'Sarah', 'Joy', 'David', 'Aisha', 'Tobi', 'Kelechi', 'Kunle', 'Yomi', 'Lola', 'Femi', 'Ngozi', 'Segun', 'Nkechi', 'Chidi', 'Elena', 'Mark', 'Sophie', 'Alex', 'Liam', 'Maya', 'Nils', 'Chloe', 'Ryan', 'Zoe'];
+  const lastNames = ['Olayinka', 'Nwachukwu', 'Adesina', 'Vance', 'Jenkins', 'Okoye', 'Miller', 'Peters', 'King', 'Bello', 'Cole', 'Obi', 'Alao', 'Davies', 'Shittu', 'Balogun', 'Eze', 'Johnson', 'Okonkwo', 'Adeyemi', 'Smith', 'Jones', 'Taylor', 'Brown', 'Wilson', 'Davis', 'Miller', 'Garcia', 'Rodriguez', 'Martinez'];
+  
+  const avatars = [
+    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1554151228-14d9def656e4?w=150&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
+  ];
+
+  const locations = ['Lagos, Nigeria', 'Abuja, Nigeria', 'London, UK', 'New York, USA', 'Port Harcourt, Nigeria', 'San Francisco, USA', 'Berlin, Germany', 'Nairobi, Kenya', 'Accra, Ghana', 'Toronto, Canada'];
+
+  const bios = [
+    'Software engineer & tech enthusiast. Love building communities 💻✨',
+    'Football enthusiast (Messi is the GOAT!) and Afrobeat music fan ⚽🎵',
+    'UI/UX Designer. Obsessed with clean code and minimalist interfaces 🎨',
+    'Content creator and digital marketer. Loving the Nexora vibes! 🚀',
+    'AI researcher. Exploring decentralized social media and web3 tech 🤖',
+    'Logistics startup founder. Football analyst in my free time 📈⚽',
+    'Student and budding developer. Davido is my favorite artist! 🎶',
+    'Cloud architect. Proud follower of VOICE OF HARRISON ☁️🙌',
+    'Cybersecurity enthusiast, gamer, and movie lover 🎮🎬',
+    'Digital nomad. Travel blogger, capturing life across Africa 🌍📸'
+  ];
+
+  const interests = ['Football', 'Afrobeat', 'Community', 'Technology', 'Local Life', 'Food', 'Design', 'AI'];
+
+  const list: User[] = [];
+
+  // Generate 50 realistic, high-quality users
+  for (let i = 0; i < 50; i++) {
+    const fName = firstNames[i % firstNames.length];
+    const lName = lastNames[(i + 7) % lastNames.length];
+    const name = `${fName} ${lName}`;
+    const username = `${fName.toLowerCase()}_${lName.toLowerCase()}${i % 3 === 0 ? '' : i}`;
+    const avatar = avatars[i % avatars.length];
+    const loc = locations[i % locations.length];
+    const bio = bios[i % bios.length] + (isFounder ? ' Proud follower of VOICE OF HARRISON.' : isVohAi ? ' Supporter of VOH AI.' : ' Nexora platform node follower.');
+    const rep = 1500 + (i * 240);
+
+    const dna: { [key: string]: number } = {};
+    interests.forEach((interest, idx) => {
+      dna[interest] = 60 + ((idx + i) % 40);
+    });
+
+    list.push({
+      id: `seeded-follower-${targetUserId}-${i}`,
+      username,
+      name,
+      avatar,
+      bio,
+      location: loc,
+      website: `nexora.ai/${username}`,
+      followers: 120 + (i * 85),
+      following: 80 + (i * 22),
+      isVerified: i % 7 === 0,
+      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      joinedDate: 'Joined June 2026',
+      reputationPoints: rep,
+      reputationBreakdown: {
+        contributions: Math.floor(rep * 0.4),
+        helpfulness: Math.floor(rep * 0.3),
+        missionsCompleted: i % 10,
+        skillsVerified: Math.floor(rep * 0.2)
+      },
+      interestDNA: dna,
+      skills: [interests[i % interests.length], 'Innovation', 'Collaboration']
+    });
+  }
+
+  return list;
 }

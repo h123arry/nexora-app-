@@ -4,7 +4,7 @@ import {
   Zap, Repeat, MessageSquare, Share2, Bookmark, Cpu, Play, Pause, Volume2, Mic, 
   Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw,
   Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp,
-  MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2
+  MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen
 } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
@@ -56,7 +56,7 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
   };
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-white/5 mb-4 aspect-square max-h-[500px] bg-black group select-none">
+    <div className="relative overflow-hidden rounded-none md:rounded-2xl border-y md:border border-white/5 mb-4 aspect-square max-h-[500px] bg-black group select-none -mx-4 md:mx-0">
       <div 
         className="flex h-full transition-transform duration-300 ease-out"
         style={{ transform: `translateX(-${index * (100 / images.length)}%)`, width: `${images.length * 100}%` }}
@@ -130,9 +130,9 @@ const MOCK_MOMENTS = [
 ];
 
 const SEARCHABLE_SYSTEM_USERS = [
-  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 7300000, bio: 'Nexora Founder & System Architect. Building social systems with absolute visual rhythm.' },
-  { id: 'nexora_ai', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 3000000, bio: 'Official NEXORA AI Companion 🌟 Keeping you posted with football updates, Wizkid/Davido jams, local food tips, and everyday stories.' },
-  { id: 'voh_ai', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 2900000, bio: 'The Intelligent AI assistant by VOICE OF HARRISON. Syncing daily matches (Messi vs Ronaldo!), movie trends, and helper scripts.' }
+  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 15300000, bio: 'Nexora Founder & System Architect. Building social systems with absolute visual rhythm.' },
+  { id: 'nexora_ai', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 6400000, bio: 'Official NEXORA AI Companion 🌟 Keeping you posted with football updates, Wizkid/Davido jams, local food tips, and everyday stories.' },
+  { id: 'voh_ai', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 8700000, bio: 'The Intelligent AI assistant by VOICE OF HARRISON. Syncing daily matches (Messi vs Ronaldo!), movie trends, and helper scripts.' }
 ];
 
 interface FeedViewProps {
@@ -148,6 +148,7 @@ interface FeedViewProps {
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   onViewProfile?: (userId: string) => void;
+  onToggleFollow?: (creatorId: string) => void;
   theme?: ThemeMood;
 }
 
@@ -164,6 +165,7 @@ export default function FeedView({
   searchQuery,
   setSearchQuery,
   onViewProfile,
+  onToggleFollow,
   theme = 'stealth-dark'
 }: FeedViewProps) {
   // Database states
@@ -188,6 +190,70 @@ export default function FeedView({
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [activeVideoFullscreen, setActiveVideoFullscreen] = useState<RefactoredPost | null>(null);
   const [fullscreenVideoMuted, setFullscreenVideoMuted] = useState(true);
+  const [fullscreenPlaying, setFullscreenPlaying] = useState(true);
+  const fullscreenVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (activeVideoFullscreen) {
+      const syncData = (window as any).nexoraFullscreenSync;
+      if (syncData && syncData.postId === activeVideoFullscreen.id) {
+        setFullscreenVideoMuted(syncData.isMuted);
+        setFullscreenPlaying(syncData.isPlaying);
+        
+        // Let's stop the inline video element so there's no dual playback
+        if (syncData.videoElement) {
+          syncData.videoElement.pause();
+        }
+
+        setTimeout(() => {
+          if (fullscreenVideoRef.current) {
+            fullscreenVideoRef.current.currentTime = syncData.currentTime;
+            fullscreenVideoRef.current.muted = syncData.isMuted;
+            if (syncData.isPlaying) {
+              fullscreenVideoRef.current.play().catch(() => {});
+            } else {
+              fullscreenVideoRef.current.pause();
+            }
+          }
+        }, 50);
+      }
+    }
+  }, [activeVideoFullscreen]);
+
+  const handleCloseFullscreen = () => {
+    if (fullscreenVideoRef.current && (window as any).nexoraFullscreenSync) {
+      (window as any).nexoraFullscreenSync.onClose(
+        fullscreenVideoRef.current.currentTime,
+        fullscreenPlaying,
+        fullscreenVideoMuted
+      );
+    }
+    setActiveVideoFullscreen(null);
+  };
+
+  const handleToggleFullscreenPlay = () => {
+    if (fullscreenVideoRef.current) {
+      if (fullscreenPlaying) {
+        fullscreenVideoRef.current.pause();
+        setFullscreenPlaying(false);
+      } else {
+        fullscreenVideoRef.current.play().catch(() => {});
+        setFullscreenPlaying(true);
+      }
+    }
+  };
+
+  const handleToggleFullscreenMute = () => {
+    if (fullscreenVideoRef.current) {
+      const newMuted = !fullscreenVideoMuted;
+      fullscreenVideoRef.current.muted = newMuted;
+      setFullscreenVideoMuted(newMuted);
+      localStorage.setItem('nexora_video_muted', newMuted ? 'true' : 'false');
+      window.dispatchEvent(
+        new CustomEvent('nexora-volume-change', { detail: { muted: newMuted, senderId: 'fullscreen' } })
+      );
+    }
+  };
 
   // New Comments and Replies drafting state
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
@@ -218,6 +284,18 @@ export default function FeedView({
   const [simulatedVoiceRecording, setSimulatedVoiceRecording] = useState(false);
   const [simulatedVoiceSeconds, setSimulatedVoiceSeconds] = useState(0);
   const [playingVoiceMoment, setPlayingVoiceMoment] = useState(false);
+
+  // Phase 6 & Phase 7 - Interactive states
+  const [expandedPostIds, setExpandedPostIds] = useState<string[]>([]);
+  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_muted_creators');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [pinnedPostIds, setPinnedPostIds] = useState<string[]>(() => {
+    const saved = localStorage.getItem('nexora_pinned_posts');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [analyticsPost, setAnalyticsPost] = useState<RefactoredPost | null>(null);
 
   const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
   const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => {
@@ -787,6 +865,7 @@ export default function FeedView({
     if (hiddenPostIds.includes(post.id)) return false;
     if (blockedUserIds.includes(post.userId)) return false;
     if (mutedUserIds.includes(post.userId)) return false;
+    if (mutedCreatorIds.includes(post.userId)) return false;
     if (post.tags.some(t => notInterestedTags.includes(t))) return false;
 
     // 2. Prevent scheduled posts in the future from being visible to others
@@ -908,8 +987,8 @@ export default function FeedView({
     const sorted = (() => {
       if (feedTab === 'for_you' && sortBy === 'latest') {
         const sortedList = [...list].sort((a, b) => {
-          let scoreA = getMediaTypeScore(a);
-          let scoreB = getMediaTypeScore(b);
+          let scoreA = 0;
+          let scoreB = 0;
 
           if (a.timestamp === 'Just now') scoreA += 5000;
           if (b.timestamp === 'Just now') scoreB += 5000;
@@ -918,16 +997,52 @@ export default function FeedView({
           scoreB += b.likes + b.shares * 3 + b.comments.length * 2;
 
           // Boost VOH posts or items matching verified interests
-          if (a.userId === 'user-0') scoreA += 500;
-          if (b.userId === 'user-0') scoreB += 500;
+          if (a.userId === 'user-0') scoreA += 1000;
+          if (b.userId === 'user-0') scoreB += 1000;
 
           // Location relevance boost (e.g. Nigeria, Port Harcourt)
-          if (a.location?.toLowerCase().includes("nigeria")) scoreA += 100;
-          if (b.location?.toLowerCase().includes("nigeria")) scoreB += 100;
+          if (a.location?.toLowerCase().includes("nigeria")) scoreA += 200;
+          if (b.location?.toLowerCase().includes("nigeria")) scoreB += 200;
 
           return scoreB - scoreA;
         });
-        return sortedList;
+
+        // Dynamic Interleaving Pass to mix Video, Photo, Voice, Polls naturally without clustering
+        const mixed: RefactoredPost[] = [];
+        const remaining = [...sortedList];
+        
+        while (remaining.length > 0) {
+          const lastItem = mixed[mixed.length - 1];
+          let nextIdx = 0;
+          
+          if (lastItem) {
+            const lastIsVideo = !!lastItem.videoUrl;
+            const lastIsVoice = !!lastItem.isVoice;
+            const lastIsPhoto = !!lastItem.image || (lastItem.images && lastItem.images.length > 0);
+            const lastIsPoll = !!(lastItem.interactivePoll || lastItem.content.toLowerCase().includes('poll'));
+            
+            const foundIdx = remaining.findIndex(item => {
+              const itemIsVideo = !!item.videoUrl;
+              const itemIsVoice = !!item.isVoice;
+              const itemIsPhoto = !!item.image || (item.images && item.images.length > 0);
+              const itemIsPoll = !!(item.interactivePoll || item.content.toLowerCase().includes('poll'));
+              
+              if (lastIsVideo && itemIsVideo) return false;
+              if (lastIsVoice && itemIsVoice) return false;
+              if (lastIsPhoto && itemIsPhoto) return false;
+              if (lastIsPoll && itemIsPoll) return false;
+              return true;
+            });
+            if (foundIdx !== -1) {
+              nextIdx = foundIdx;
+            }
+          }
+          
+          mixed.push(remaining[nextIdx]);
+          remaining.splice(nextIdx, 1);
+        }
+
+        return mixed;
       }
       return list;
     })();
@@ -1036,11 +1151,110 @@ export default function FeedView({
       {/* 5. MAIN FEED CONTENT STREAM (With pull-to-refresh & infinite scroll) */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto space-y-5 pt-[130px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar"
+        className="flex-1 overflow-y-auto space-y-4 pt-[112px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar"
       >
         {/* Stories/Moments strip */}
         <div className="px-4 md:px-0">
           <StoriesView currentUser={currentUser} />
+        </div>
+
+        {/* Phase 8: Nexora Personality Portal Center */}
+        <div className="mx-4 md:mx-0 p-4 rounded-2xl bg-gradient-to-b from-[#110e2e]/90 to-[#070519]/90 border border-violet-500/10 space-y-4">
+          {/* Greeting row */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-extrabold text-white font-sans tracking-tight leading-tight">
+                {(() => {
+                  const hrs = new Date().getHours();
+                  if (hrs < 12) return `Good morning, ${currentUser.name}! ☀️`;
+                  if (hrs < 18) return `Good afternoon, ${currentUser.name}! 🌤️`;
+                  return `Good evening, ${currentUser.name}! 🌙`;
+                })()}
+              </h4>
+              <p className="text-[10px] font-mono text-pink-400">YOUR NEXORA PORTAL IS SYNCHRONIZED</p>
+            </div>
+            <span className="text-[18px]">✨</span>
+          </div>
+
+          {/* Recently Active Creators */}
+          <div className="space-y-1.5">
+            <span className="text-[9px] font-mono font-black uppercase text-violet-400 tracking-wider">Recently Active Creators</span>
+            <div className="flex items-center gap-3 overflow-x-auto scrollbar-none py-1">
+              {[
+                { name: 'Harrison', handle: 'voh', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80', active: true },
+                { name: 'Nexora AI', handle: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80', active: true },
+                { name: 'VOH AI', handle: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&auto=format&fit=crop&q=80', active: true },
+                { name: 'Amara Tech', handle: 'amara', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80', active: true },
+                { name: 'Chidi Dev', handle: 'chidi_nex', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80', active: true },
+                { name: 'Efe Design', handle: 'efe_creative', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80', active: true }
+              ].map((creator, i) => (
+                <div 
+                  key={i} 
+                  className="flex flex-col items-center gap-1 cursor-pointer shrink-0"
+                  onClick={() => {
+                    const matchedPost = localPosts.find(p => p.username === creator.handle);
+                    if (matchedPost) onViewProfile?.(matchedPost.userId);
+                    else window.dispatchEvent(new CustomEvent('toast', { detail: `📡 Synced Creator nodes: Accessing ${creator.name}'s frequency...` }));
+                  }}
+                >
+                  <div className="relative">
+                    <img src={creator.avatar} alt={creator.name} className="w-8 h-8 rounded-full object-cover border border-violet-500/20" />
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-[#070519] animate-pulse"></span>
+                  </div>
+                  <span className="text-[8.5px] font-mono text-zinc-400">@{creator.handle}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Bento grid subsegment: Trending Topics & hubs */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div className="p-2.5 bg-white/3 border border-white/5 rounded-xl space-y-1.5">
+              <span className="text-[8.5px] font-mono font-black uppercase text-pink-400 tracking-wider">Today's Hot Trends</span>
+              <div className="space-y-1">
+                {[
+                  { tag: '#NigerianTech', count: '14.2K sparks' },
+                  { tag: '#NexoraDev', count: '9.8K sparks' },
+                  { tag: '#LagosCreatives', count: '6.4K sparks' }
+                ].map((trend, idx) => (
+                  <div 
+                    key={idx} 
+                    className="flex justify-between items-center text-[9.5px] cursor-pointer hover:bg-white/5 p-0.5 rounded transition-colors"
+                    onClick={() => {
+                      setSelectedTag(trend.tag.replace('#', ''));
+                      window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Loading tags for ${trend.tag}` }));
+                    }}
+                  >
+                    <span className="text-violet-300 font-extrabold">{trend.tag}</span>
+                    <span className="text-zinc-500 text-[8px]">{trend.count}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-2.5 bg-white/3 border border-white/5 rounded-xl space-y-1.5">
+              <span className="text-[8.5px] font-mono font-black uppercase text-cyan-400 tracking-wider">Active Hubs</span>
+              <div className="space-y-1">
+                {[
+                  { name: 'Afrobeats Central', members: '12K members' },
+                  { name: 'Developer Synergy', members: '8.4K members' },
+                  { name: 'AI Creative Nexus', members: '5.2K members' }
+                ].map((hub, idx) => (
+                  <div 
+                    key={idx} 
+                    className="flex justify-between items-center text-[9.5px] cursor-pointer hover:bg-white/5 p-0.5 rounded transition-colors"
+                    onClick={() => {
+                      setFeedTab('communities');
+                      window.dispatchEvent(new CustomEvent('toast', { detail: `🏟 Entering community hub: ${hub.name}...` }));
+                    }}
+                  >
+                    <span className="text-violet-300 font-extrabold truncate max-w-[80px]">{hub.name}</span>
+                    <span className="text-zinc-500 text-[8px] whitespace-nowrap">{hub.members}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Refresh pull-down simulator button */}
@@ -1207,27 +1421,13 @@ export default function FeedView({
                   className="rounded-none md:rounded-3xl bg-black/95 border-y border-x-0 md:border border-violet-500/15 overflow-hidden text-left shadow-2xl relative w-full"
                 >
                   {/* Outer edge-to-edge Video Container */}
-                  <div className="relative aspect-video sm:aspect-[16/10] bg-zinc-950 w-full overflow-hidden flex items-center justify-center group/video">
-                    {/* Native video element auto playing, looping, muted */}
-                    <video
-                      src={post.videoUrl}
-                      autoPlay
-                      loop
-                      muted
-                      playsInline
-                      className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => setActiveVideoFullscreen(post)}
+                  <div className="relative w-full">
+                    <NexoraVideoPlayer
+                      post={post}
+                      videoUrl={post.videoUrl}
+                      onOpenFullscreen={() => setActiveVideoFullscreen(post)}
+                      onSpark={() => handleSpark(post.id)}
                     />
-                    
-                    {/* Overlay header information */}
-                    <div className="absolute top-3 left-3 bg-black/55 backdrop-blur-md py-1 px-2.5 rounded-xl border border-white/10 flex items-center gap-2">
-                      <img src={post.avatar} className="w-5 h-5 rounded-full object-cover" />
-                      <span className="text-[10px] font-mono text-white/90">@{post.username}</span>
-                    </div>
-
-                    <div className="absolute bottom-3 right-3 bg-black/65 backdrop-blur-md p-2 rounded-xl text-[9px] font-mono text-purple-300 border border-violet-500/10 pointer-events-none uppercase tracking-wider">
-                      🎬 Tap Fullscreen
-                    </div>
                   </div>
 
                   {/* Below the video media block */}
@@ -1452,6 +1652,21 @@ export default function FeedView({
                     </button>
                   </div>
                 )}
+                {/* Dynamic Smart Recommendation Explanation */}
+                <div className="mb-3 text-[9px] font-mono font-bold tracking-wider text-violet-400/60 uppercase flex items-center gap-1.5 border-b border-white/5 pb-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"></span>
+                  {(() => {
+                    if (post.userId === 'user-0') return '⭐ Highlight: Recommended by Founder';
+                    if (post.username === 'voh_ai') return '🧠 Intelligence: Recommended by VOH AI';
+                    if (post.username === 'nexora_ai') return '🌌 System: Recommended by Nexora AI';
+                    if (post.isBroadcastPost) return '📣 Broadcast channel propagation';
+                    if (followingIds.includes(post.userId)) return '👥 Followed Creator';
+                    if (post.tags && post.tags.length > 0) {
+                      return `🔥 Recommended because you read ${post.tags[0]}`;
+                    }
+                    return '✨ High Engagement Feed Distribution';
+                  })()}
+                </div>
                 {/* 1. Card Header Row */}
                 <div className="flex items-start justify-between gap-3 mb-4">
                   <div className="flex gap-3">
@@ -1483,13 +1698,42 @@ export default function FeedView({
                         <span>@{post.username}</span>
                         <span>•</span>
                         <span>{post.timestamp}</span>
+                        <span>•</span>
+                        <span className="flex items-center gap-0.5 text-[10px] text-pink-400 bg-pink-500/5 px-1 py-0.5 rounded border border-pink-500/10">
+                          <BookOpen className="w-2.5 h-2.5 shrink-0" />
+                          {(() => {
+                            const words = post.content.trim().split(/\s+/).length;
+                            const min = Math.max(1, Math.ceil(words / 200));
+                            return `${min} min read`;
+                          })()}
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Badges column */}
                   <div className="flex flex-col items-end gap-1.5 text-[9.5px] font-mono shrink-0">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {pinnedPostIds.includes(post.id) && (
+                        <span className="text-[8.5px] font-black uppercase text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 tracking-wider animate-pulse">
+                          <Pin className="w-2.5 h-2.5 text-pink-400 fill-current shrink-0" /> PINNED
+                        </span>
+                      )}
+                      {(post.userId === 'user-0' || post.username === 'voh') && (
+                        <span className="text-[8px] font-black uppercase text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
+                          FOUNDER 👑
+                        </span>
+                      )}
+                      {post.username === 'voh_ai' && (
+                        <span className="text-[8px] font-black uppercase text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
+                          VOH AI 🧠
+                        </span>
+                      )}
+                      {post.username === 'nexora_ai' && (
+                        <span className="text-[8px] font-black uppercase text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
+                          NEXORA AI 🌌
+                        </span>
+                      )}
                       {/* Three-dots menu button */}
                       <div className="relative">
                         <button
@@ -1513,8 +1757,75 @@ export default function FeedView({
                               initial={{ opacity: 0, scale: 0.95, y: -5 }}
                               animate={{ opacity: 1, scale: 1, y: 0 }}
                               exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                              className="absolute right-0 mt-1 w-44 bg-[#0c091f] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1"
+                              className="absolute right-0 mt-1 w-48 bg-[#0c091f] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1"
                             >
+                              {/* Creator Analytics (If own post) */}
+                              {post.userId === currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    setAnalyticsPost(post);
+                                    setActiveDotsMenuPostId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2.5 bg-linear-to-r from-violet-600/20 to-pink-500/20 text-violet-200 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5 animate-pulse"
+                                >
+                                  <BarChart2 className="w-3.5 h-3.5 shrink-0 text-pink-400" />
+                                  View Analytics 📊
+                                </button>
+                              )}
+
+                              {/* Pin/Unpin (If own post) */}
+                              {post.userId === currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    const isPinned = pinnedPostIds.includes(post.id);
+                                    setPinnedPostIds(prev => {
+                                      const next = isPinned ? prev.filter(id => id !== post.id) : [...prev, post.id];
+                                      localStorage.setItem('nexora_pinned_posts', JSON.stringify(next));
+                                      return next;
+                                    });
+                                    setActiveDotsMenuPostId(null);
+                                    window.dispatchEvent(new CustomEvent('toast', { detail: isPinned ? '📌 Post unpinned!' : '📌 Post pinned successfully!' }));
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                                >
+                                  <Pin className="w-3.5 h-3.5 shrink-0 text-violet-400" />
+                                  {pinnedPostIds.includes(post.id) ? 'Unpin Post' : 'Pin Post'}
+                                </button>
+                              )}
+
+                              {/* Follow/Unfollow Creator (If not own post) */}
+                              {post.userId !== currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    onToggleFollow?.(post.userId);
+                                    setActiveDotsMenuPostId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                                >
+                                  <UserPlus className="w-3.5 h-3.5 shrink-0 text-violet-400" />
+                                  {followingIds.includes(post.userId) ? 'Unfollow Creator' : 'Follow Creator'}
+                                </button>
+                              )}
+
+                              {/* Mute Creator (If not own post) */}
+                              {post.userId !== currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    setMutedCreatorIds(prev => {
+                                      const next = [...prev, post.userId];
+                                      localStorage.setItem('nexora_muted_creators', JSON.stringify(next));
+                                      return next;
+                                    });
+                                    setActiveDotsMenuPostId(null);
+                                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔇 Muted @${post.username}. You will not see their posts.` }));
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-300 flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                                >
+                                  <VolumeX className="w-3.5 h-3.5 shrink-0 text-red-400" />
+                                  Mute Creator
+                                </button>
+                              )}
+
                               <button
                                 onClick={() => {
                                   setReportingPost(post);
@@ -1696,9 +2007,29 @@ export default function FeedView({
                     </div>
                   ) : (
                     <div>
-                      <p className="text-sm text-slate-100 font-sans leading-relaxed whitespace-pre-wrap select-all">
-                        {post.content}
-                      </p>
+                      {(() => {
+                        const isExpanded = expandedPostIds.includes(post.id);
+                        const shouldTruncate = post.content.length > 280;
+                        const displayContent = (shouldTruncate && !isExpanded) 
+                          ? `${post.content.slice(0, 280)}...` 
+                          : post.content;
+                        
+                        return (
+                          <>
+                            <p className="text-sm text-slate-100 font-sans leading-relaxed whitespace-pre-wrap select-all">
+                              {displayContent}
+                            </p>
+                            {shouldTruncate && !isExpanded && (
+                              <button
+                                onClick={() => setExpandedPostIds(prev => [...prev, post.id])}
+                                className="text-violet-400 hover:text-violet-300 font-bold text-xs mt-2 block cursor-pointer transition-all hover:underline"
+                              >
+                                Continue Reading...
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
                       {/* Edit History status display */}
                       {post.editHistory && post.editHistory.length > 0 && (
                         <button
@@ -1718,7 +2049,7 @@ export default function FeedView({
                 {post.images && post.images.length > 1 ? (
                   <PostCarousel images={post.images} filters={post.imageFilters} />
                 ) : post.image && !post.opportunityType ? (
-                  <div className="overflow-hidden rounded-2xl border border-white/5 mb-4 max-h-[500px]">
+                  <div className="overflow-hidden rounded-none md:rounded-2xl border-y md:border border-white/5 mb-4 max-h-[500px] -mx-4 md:mx-0">
                     <img 
                       src={post.image} 
                       alt="Attachment" 
@@ -1731,7 +2062,7 @@ export default function FeedView({
 
                 {/* Advanced Video Experience */}
                 {post.videoUrl && (
-                  <div className="mb-4">
+                  <div className="mb-4 -mx-4 md:mx-0">
                     <NexoraVideoPlayer
                       post={post}
                       videoUrl={post.videoUrl}
@@ -2732,29 +3063,44 @@ export default function FeedView({
             {/* Left Column: Full Immersive Video Player */}
             <div className="flex-1 bg-black relative flex items-center justify-center">
               <video 
+                ref={fullscreenVideoRef}
                 src={activeVideoFullscreen.videoUrl}
                 autoPlay
                 muted={fullscreenVideoMuted}
                 loop
                 playsInline
-                className="w-full h-full max-h-screen object-contain"
+                onClick={handleToggleFullscreenPlay}
+                className="w-full h-full max-h-screen object-contain cursor-pointer"
               />
+              
+              {/* Play/Pause state overlay indicator */}
+              {!fullscreenPlaying && (
+                <div 
+                  onClick={handleToggleFullscreenPlay}
+                  className="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer z-10"
+                >
+                  <div className="p-5 rounded-full bg-black/60 border border-white/10 text-white animate-scale-up">
+                    <Play className="w-8 h-8 fill-current ml-1" />
+                  </div>
+                </div>
+              )}
+
               <button 
-                onClick={() => setFullscreenVideoMuted(!fullscreenVideoMuted)}
-                className="absolute top-4 left-4 p-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-xl text-white border border-white/10 cursor-pointer"
+                onClick={handleToggleFullscreenMute}
+                className="absolute top-4 left-4 p-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-xl text-white border border-white/10 cursor-pointer z-20"
               >
                 {fullscreenVideoMuted ? <VolumeX className="w-5 h-5 text-red-400" /> : <Volume2 className="w-5 h-5 text-emerald-400" />}
               </button>
 
               <button 
-                onClick={() => setActiveVideoFullscreen(null)}
-                className="absolute top-4 right-4 p-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-xl text-white border border-white/10 cursor-pointer"
+                onClick={handleCloseFullscreen}
+                className="absolute top-4 right-4 p-2.5 bg-black/60 hover:bg-black/80 backdrop-blur-md rounded-xl text-white border border-white/10 cursor-pointer z-20"
               >
                 <X className="w-5 h-5" />
               </button>
 
               {/* Title & metadata bar at bottom inside video */}
-              <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 space-y-2.5 max-w-lg">
+              <div className="absolute bottom-4 left-4 right-4 bg-black/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 space-y-2.5 max-w-lg z-20">
                 <div className="flex items-center gap-2.5">
                   <img src={activeVideoFullscreen.avatar} alt={activeVideoFullscreen.name} className="w-8 h-8 rounded-lg object-cover" />
                   <div>
@@ -2764,7 +3110,7 @@ export default function FeedView({
                 </div>
                 <p className="text-xs text-violet-100 font-sans leading-normal line-clamp-2">{activeVideoFullscreen.content}</p>
                 <span className="text-[8.5px] font-mono text-pink-400 block tracking-widest uppercase animate-pulse">
-                  Swipe navigation cue | Tap icons on right inside narrative
+                  Tap video to play/pause | Synced inline position
                 </span>
               </div>
             </div>
@@ -2786,7 +3132,7 @@ export default function FeedView({
                   <button 
                     onClick={() => {
                       setActiveCommentsPostId(activeVideoFullscreen.id);
-                      setActiveVideoFullscreen(null);
+                      handleCloseFullscreen();
                     }}
                     className="flex-1 flex flex-col items-center p-3 rounded-2xl bg-slate-950/60 border border-white/5 hover:border-violet-500/25 text-violet-300 cursor-pointer"
                   >
@@ -2806,7 +3152,7 @@ export default function FeedView({
               </div>
 
               <button 
-                onClick={() => setActiveVideoFullscreen(null)}
+                onClick={handleCloseFullscreen}
                 className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all tracking-wider cursor-pointer mt-4"
               >
                 Close Narrative Grid
@@ -2992,6 +3338,103 @@ export default function FeedView({
               <p className="text-[10px] font-mono text-zinc-500 text-center mt-4">
                 All changes are cryptographically secured & signed locally.
               </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 9. CREATOR PERFORMANCE ANALYTICS MODAL */}
+      <AnimatePresence>
+        {analyticsPost && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="bg-gradient-to-b from-[#110e2e]/95 to-[#070519]/95 border border-pink-500/30 rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl relative overflow-hidden text-left"
+            >
+              {/* Glowing background highlights */}
+              <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+              <div className="flex items-center justify-between border-b border-white/5 pb-3.5 mb-4 relative z-10">
+                <span className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                  <BarChart2 className="w-4 h-4 text-pink-400 animate-pulse" /> CREATOR PERFORMANCE INDEX
+                </span>
+                <button 
+                  onClick={() => setAnalyticsPost(null)}
+                  className="p-1 px-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs font-mono border border-white/5"
+                >
+                  Close ×
+                </button>
+              </div>
+
+              {/* Post brief preview snippet */}
+              <div className="p-3 bg-white/3 rounded-xl border border-white/5 space-y-1 mb-5 relative z-10">
+                <span className="text-[8.5px] font-mono text-violet-400">INDEX TARGET POST</span>
+                <p className="text-xs text-zinc-300 font-sans leading-relaxed line-clamp-2 italic">
+                  "{analyticsPost.content}"
+                </p>
+              </div>
+
+              {/* Analytics metrics grid */}
+              <div className="grid grid-cols-2 gap-3 relative z-10">
+                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Estimated Reach</span>
+                  <div className="text-lg font-black text-white font-sans">
+                    {analyticsPost.likes * 12 + analyticsPost.comments.length * 28 + 152}
+                  </div>
+                  <div className="text-[8.5px] font-mono text-emerald-400 flex items-center gap-0.5">
+                    <span>↑ 14.5%</span> <span className="text-zinc-500">vs benchmark</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Engagement Rate</span>
+                  <div className="text-lg font-black text-pink-400 font-sans">
+                    {analyticsPost.likes > 0 ? (12.4 + (analyticsPost.comments.length * 1.5)).toFixed(1) : '8.2'}%
+                  </div>
+                  <div className="text-[8.5px] font-mono text-violet-400 flex items-center gap-0.5">
+                    <span>⚡ Optimized</span> <span className="text-zinc-500">feed weight</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Profile Visits</span>
+                  <div className="text-lg font-black text-white font-sans">
+                    {analyticsPost.likes * 2 + 5}
+                  </div>
+                  <div className="text-[8.5px] font-mono text-emerald-400 flex items-center gap-0.5">
+                    <span>↑ 18.2%</span> <span className="text-zinc-500">profile conversion</span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
+                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Followers Gained</span>
+                  <div className="text-lg font-black text-cyan-400 font-sans">
+                    +{Math.floor(analyticsPost.likes * 0.1) + 1}
+                  </div>
+                  <div className="text-[8.5px] font-mono text-cyan-400 flex items-center gap-0.5">
+                    <span>🚀 Fast Grow</span> <span className="text-zinc-500">organic reach</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress and tips bar */}
+              <div className="mt-5 p-3.5 bg-violet-600/10 border border-violet-500/20 rounded-2xl space-y-2 relative z-10">
+                <span className="text-[9px] font-mono text-violet-300 font-black uppercase tracking-widest block">
+                  💡 NEXORA AUDIENCE INSIGHT
+                </span>
+                <p className="text-[11px] text-violet-200 font-sans leading-relaxed">
+                  Your content has been indexed inside Nigeria & surrounding nodes! Post another item targeting <strong className="text-pink-400">#{analyticsPost.tags[0] || 'Nexora'}</strong> within the next 4 hours to maximize your viral multiplier.
+                </p>
+              </div>
+
+              <div className="mt-4 text-center">
+                <span className="text-[8.5px] font-mono text-zinc-500 uppercase tracking-wider">
+                  Telemetry verified by Nexora Algorithmic Distribution Server
+                </span>
+              </div>
             </motion.div>
           </div>
         )}
