@@ -325,6 +325,91 @@ export default function ProfileView({
   const [editCover, setEditCover] = useState(currentUser.coverImage);
   const [editAvatar, setEditAvatar] = useState(currentUser.avatar);
 
+  // Sync edit states when currentUser prop changes (e.g. after successful save)
+  useEffect(() => {
+    setEditName(currentUser.name);
+    setEditBio(currentUser.bio);
+    setEditLocation(currentUser.location);
+    setEditWebsite(currentUser.website);
+    setEditCover(currentUser.coverImage);
+    setEditAvatar(currentUser.avatar);
+    setEditUsername(currentUser.username);
+  }, [currentUser]);
+
+  // Lock tracking states
+  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+  const [lockWarningText, setLockWarningText] = useState<string | null>(null);
+  const [pendingUpdateData, setPendingUpdateData] = useState<Partial<User> | null>(null);
+
+  // Core profile lock and validation engine
+  const validateAndSaveProfile = (updatedFields: Partial<User>, isSettingsFlow: boolean) => {
+    // 1. Check Display Name Lock (7 Days)
+    const displayChanged = updatedFields.name !== undefined && updatedFields.name !== currentUser.name;
+    if (displayChanged) {
+      const lastChange = currentUser.lastDisplayNameChangeTime;
+      if (lastChange) {
+        const timeDiff = Date.now() - new Date(lastChange).getTime();
+        const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+        if (daysDiff < 7) {
+          const nextAvailable = new Date(new Date(lastChange).getTime() + 7 * 24 * 60 * 60 * 1000);
+          alert(`⚠️ Display Name change locked! It can only be updated once every 7 days.\nNext available change date: ${nextAvailable.toLocaleDateString()}`);
+          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Display Name change locked for 7 days!' }));
+          return false;
+        }
+      }
+    }
+
+    // 2. Check Username Lock (30 Days)
+    const usernameChanged = updatedFields.username !== undefined && updatedFields.username !== currentUser.username;
+    if (usernameChanged) {
+      // Validate empty, spaces or special chars
+      const cleanUsername = updatedFields.username.trim().toLowerCase();
+      if (!cleanUsername) {
+        alert('⚠️ Username cannot be empty.');
+        return false;
+      }
+      
+      const lastChange = currentUser.lastUsernameChangeTime;
+      if (lastChange) {
+        const timeDiff = Date.now() - new Date(lastChange).getTime();
+        const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
+        if (daysDiff < 30) {
+          const nextAvailable = new Date(new Date(lastChange).getTime() + 30 * 24 * 60 * 60 * 1000);
+          alert(`⚠️ Username change locked! It can only be changed once every 30 days.\nNext available change date: ${nextAvailable.toLocaleDateString()}`);
+          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Username change locked for 30 days!' }));
+          return false;
+        }
+      }
+    }
+
+    // Prepare final payload
+    const finalFieldsToUpdate: Partial<User> = { ...updatedFields };
+    if (displayChanged) {
+      finalFieldsToUpdate.lastDisplayNameChangeTime = new Date().toISOString();
+    }
+
+    // 3. If username changed, show a modal warning first
+    if (usernameChanged) {
+      setLockWarningText(`⚠️ Warning: You are about to change your account username to @${updatedFields.username}.\n\nOnce updated, you can NOT change your username again for the next 30 days.\n\nAre you sure you want to proceed?`);
+      setPendingUpdateData({
+        ...finalFieldsToUpdate,
+        lastUsernameChangeTime: new Date().toISOString()
+      });
+      setConfirmModalOpen(true);
+      return true; // Handle via confirmation modal overlay
+    }
+
+    // If no username change, commit immediately!
+    onUpdateProfile(finalFieldsToUpdate);
+    if (isSettingsFlow) {
+      setIsSettingsOpen(false);
+    } else {
+      setIsEditing(false);
+    }
+    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Profile updated successfully!' }));
+    return true;
+  };
+
   const [isWebcamActive, setIsWebcamActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const videoRef = React.useRef<HTMLVideoElement | null>(null);
@@ -991,16 +1076,14 @@ try {
     setPinnedSong(editSong);
     setPinnedArtist(editArtist);
 
-    onUpdateProfile({
+    validateAndSaveProfile({
       name: editName,
       bio: editBio,
       location: editLocation,
       website: editWebsite,
       coverImage: editCover,
       avatar: editAvatar
-    });
-    setIsEditing(false);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Profile information successfully synchronized!' }));
+    }, false);
   };
 
   const handleEndorseSkill = (skill: string) => {
@@ -2033,15 +2116,15 @@ try {
                   )}
                   <button
                     onClick={() => {
-                      onUpdateProfile({
+                      validateAndSaveProfile({
                         name: editName,
+                        username: editUsername,
                         bio: editBio,
                         location: editLocation,
                         website: editWebsite,
                         coverImage: editCover,
                         avatar: editAvatar
-                      });
-                      setIsSettingsOpen(false);
+                      }, true);
                     }}
                     className="px-5 py-2.5 text-[10px] font-mono font-bold rounded-xl bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white uppercase tracking-wider cursor-pointer"
                   >
@@ -4173,6 +4256,73 @@ try {
             </div>
           );
         })()}
+      </AnimatePresence>
+
+      {/* Premium Identity Change Lock Confirmation Dialog */}
+      <AnimatePresence>
+        {confirmModalOpen && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#0b0821] border border-violet-500/40 p-6 md:p-8 rounded-3xl max-w-md w-full space-y-6 shadow-[0_0_50px_rgba(139,92,246,0.25)] relative overflow-hidden"
+            >
+              {/* Decorative premium header border */}
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-600 via-fuchsia-500 to-pink-500" />
+              
+              <div className="space-y-2 text-center sm:text-left">
+                <span className="text-[10px] font-mono tracking-widest text-fuchsia-400 font-extrabold uppercase bg-fuchsia-500/10 px-3 py-1 rounded-full inline-block">
+                  🛡️ Identity Node Protection
+                </span>
+                <h3 className="text-lg font-sans font-black text-white tracking-tight">
+                  Confirm Account Username Change
+                </h3>
+              </div>
+
+              <div className="p-4 bg-violet-950/20 border border-violet-500/15 rounded-2xl text-left">
+                <p className="text-xs font-sans text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                  {lockWarningText}
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingUpdateData) {
+                      onUpdateProfile(pendingUpdateData);
+                      setIsSettingsOpen(false);
+                      setIsEditing(false);
+                      setConfirmModalOpen(false);
+                      setPendingUpdateData(null);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Username locked & synced successfully!' }));
+                    }
+                  }}
+                  className="flex-1 px-5 py-3 bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white text-xs font-mono font-bold rounded-xl transition-all uppercase tracking-wider text-center cursor-pointer shadow-md shadow-violet-500/10 active:scale-98"
+                >
+                  Confirm & Commit Lock
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmModalOpen(false);
+                    setPendingUpdateData(null);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Username change aborted' }));
+                  }}
+                  className="px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-mono font-bold rounded-xl border border-zinc-800 transition-all uppercase tracking-wider text-center cursor-pointer active:scale-98"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
     </div>

@@ -11,6 +11,7 @@ import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import StoriesView from './StoriesView';
+import { getRecommendationScore, recordRecommendationEvent } from '../utils/recommendations';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -178,6 +179,17 @@ export default function FeedView({
   const [qualityFilter, setQualityFilter] = useState(false);
   const [visibleCount, setVisibleCount] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [recommendationsVersion, setRecommendationsVersion] = useState(0);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setRecommendationsVersion(v => v + 1);
+    };
+    window.addEventListener('nexora-recommendations-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('nexora-recommendations-updated', handleUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('nexora_feed_tab', feedTab);
@@ -188,6 +200,9 @@ export default function FeedView({
   const [voiceSeconds, setVoiceSeconds] = useState(0);
   const [votedPolls, setVotedPolls] = useState<Record<string, string>>({});
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
+  const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [isScrollingFast, setIsScrollingFast] = useState(false);
+  const [userSettled, setUserSettled] = useState(false);
   const [activeVideoFullscreen, setActiveVideoFullscreen] = useState<RefactoredPost | null>(null);
   const [fullscreenVideoMuted, setFullscreenVideoMuted] = useState(true);
   const [fullscreenPlaying, setFullscreenPlaying] = useState(true);
@@ -445,6 +460,16 @@ export default function FeedView({
     return () => window.removeEventListener('reports-updated', handleReportsUpdate);
   }, []);
 
+  // Track search terms in the recommendation engine
+  useEffect(() => {
+    if (searchQuery && searchQuery.trim().length > 2) {
+      const delayDebounce = setTimeout(() => {
+        recordRecommendationEvent('search', { keyword: searchQuery });
+      }, 1000); // 1s debounce to avoid over-triggering
+      return () => clearTimeout(delayDebounce);
+    }
+  }, [searchQuery]);
+
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // 1. Hydrate the feed and synchronize with Parent posts
@@ -590,12 +615,17 @@ export default function FeedView({
 
   // Infinite Scroll intersection callback simulator
   useEffect(() => {
+    let debounceTimer: any = null;
+
     const handleScroll = () => {
       if (!scrollContainerRef.current) return;
       const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
       
-      // Store scroll position for feed recovery
-      localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+      // Debounce localStorage writes to prevent main thread blocking and UI stutter
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+      }, 200);
 
       if (scrollHeight - scrollTop - clientHeight < 120) {
         // threshold reached! Automatically load more
@@ -611,6 +641,7 @@ export default function FeedView({
       if (container) {
         container.removeEventListener('scroll', handleScroll);
       }
+      if (debounceTimer) clearTimeout(debounceTimer);
     };
   }, [localPosts, visibleCount]);
 
@@ -649,6 +680,10 @@ export default function FeedView({
   // Sparks trigger handler
   const handleSpark = (postId: string) => {
     onLikePost(postId);
+    const post = localPosts.find(p => p.id === postId);
+    if (post) {
+      recordRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+    }
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
         const isLiked = !p.isLikedByUser;
@@ -738,6 +773,10 @@ export default function FeedView({
   // Bookmark / Save handler
   const handleSave = (postId: string) => {
     onBookmarkPost(postId);
+    const post = localPosts.find(p => p.id === postId);
+    if (post) {
+      recordRecommendationEvent('save', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+    }
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return { ...p, isBookmarkedByUser: !p.isBookmarkedByUser };
@@ -753,6 +792,11 @@ export default function FeedView({
     
     // Parent Sync
     onAddComment(postId, content);
+
+    const post = localPosts.find(p => p.id === postId);
+    if (post) {
+      recordRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+    }
 
     const newComment: InteractiveComment = {
       id: `comment-new-${Date.now()}`,
@@ -985,8 +1029,9 @@ export default function FeedView({
 
     // Apply For You Engagement boost only if not strictly sorted or in specialized feeds
     const sorted = (() => {
+      let sortedList = [...list];
       if (feedTab === 'for_you' && sortBy === 'latest') {
-        const sortedList = [...list].sort((a, b) => {
+        sortedList.sort((a, b) => {
           let scoreA = 0;
           let scoreB = 0;
 
@@ -1004,9 +1049,15 @@ export default function FeedView({
           if (a.location?.toLowerCase().includes("nigeria")) scoreA += 200;
           if (b.location?.toLowerCase().includes("nigeria")) scoreB += 200;
 
+          // Adaptive recommendation engine scoring
+          scoreA += getRecommendationScore(a);
+          scoreB += getRecommendationScore(b);
+
           return scoreB - scoreA;
         });
+      }
 
+      if (feedTab === 'for_you' || feedTab === 'following') {
         // Dynamic Interleaving Pass to mix Video, Photo, Voice, Polls naturally without clustering
         const mixed: RefactoredPost[] = [];
         const remaining = [...sortedList];
@@ -1044,13 +1095,103 @@ export default function FeedView({
 
         return mixed;
       }
-      return list;
+      return sortedList;
     })();
 
     return sorted;
   };
 
   const currentDisplayList = getRankedPosts().slice(0, visibleCount);
+
+  // Active Post Viewport Detection using vertical-center proximity
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const containerRect = container.getBoundingClientRect();
+      const containerCenter = containerRect.top + containerRect.height / 2;
+
+      const items = container.querySelectorAll('[data-post-id]');
+      let closestPostId: string | null = null;
+      let minDistance = Infinity;
+
+      items.forEach((item) => {
+        const rect = item.getBoundingClientRect();
+        const itemCenter = rect.top + rect.height / 2;
+        const distance = Math.abs(itemCenter - containerCenter);
+
+        if (distance < minDistance) {
+          minDistance = distance;
+          closestPostId = item.getAttribute('data-post-id');
+        }
+      });
+
+      if (closestPostId && closestPostId !== activePostId) {
+        setActivePostId(closestPostId);
+      }
+    };
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleScroll);
+
+    // Initial evaluation
+    handleScroll();
+    const timer = setTimeout(handleScroll, 150);
+
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleScroll);
+      clearTimeout(timer);
+    };
+  }, [currentDisplayList, activePostId]);
+
+  // Settle detector (stops predictive loading to save bandwidth if paused on a post)
+  useEffect(() => {
+    setUserSettled(false);
+    const settleTimer = setTimeout(() => {
+      setUserSettled(true);
+    }, 4000); // User stays on a post for 4 seconds, consider settled (saves bandwidth)
+    return () => clearTimeout(settleTimer);
+  }, [activePostId]);
+
+  // Scroll speed/velocity detector (predictively triggers prefetching of next-next post if scrolling quickly)
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let lastScrollTop = container.scrollTop;
+    let lastTime = Date.now();
+    let scrollFastTimer: any = null;
+
+    const handleScrollSpeed = () => {
+      const now = Date.now();
+      const currentScrollTop = container.scrollTop;
+      const dt = now - lastTime;
+      const dy = Math.abs(currentScrollTop - lastScrollTop);
+
+      if (dt > 0) {
+        const velocity = dy / dt; // pixels per millisecond
+        if (velocity > 1.2) {
+          setIsScrollingFast(true);
+          
+          if (scrollFastTimer) clearTimeout(scrollFastTimer);
+          scrollFastTimer = setTimeout(() => {
+            setIsScrollingFast(false);
+          }, 400); // Stay in fast scroll mode for 400ms after last fast scroll event
+        }
+      }
+
+      lastScrollTop = currentScrollTop;
+      lastTime = now;
+    };
+
+    container.addEventListener('scroll', handleScrollSpeed, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScrollSpeed);
+      if (scrollFastTimer) clearTimeout(scrollFastTimer);
+    };
+  }, []);
 
   // Suggested item creators
   const suggestedCommunities = [
@@ -1151,124 +1292,8 @@ export default function FeedView({
       {/* 5. MAIN FEED CONTENT STREAM (With pull-to-refresh & infinite scroll) */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto space-y-4 pt-[112px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar"
+        className="flex-1 overflow-y-auto space-y-4 pt-[112px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar scroll-smooth overscroll-contain"
       >
-        {/* Stories/Moments strip */}
-        <div className="px-4 md:px-0">
-          <StoriesView currentUser={currentUser} />
-        </div>
-
-        {/* Phase 8: Nexora Personality Portal Center */}
-        <div className="mx-4 md:mx-0 p-4 rounded-2xl bg-gradient-to-b from-[#110e2e]/90 to-[#070519]/90 border border-violet-500/10 space-y-4">
-          {/* Greeting row */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-extrabold text-white font-sans tracking-tight leading-tight">
-                {(() => {
-                  const hrs = new Date().getHours();
-                  if (hrs < 12) return `Good morning, ${currentUser.name}! ☀️`;
-                  if (hrs < 18) return `Good afternoon, ${currentUser.name}! 🌤️`;
-                  return `Good evening, ${currentUser.name}! 🌙`;
-                })()}
-              </h4>
-              <p className="text-[10px] font-mono text-pink-400">YOUR NEXORA PORTAL IS SYNCHRONIZED</p>
-            </div>
-            <span className="text-[18px]">✨</span>
-          </div>
-
-          {/* Recently Active Creators */}
-          <div className="space-y-1.5">
-            <span className="text-[9px] font-mono font-black uppercase text-violet-400 tracking-wider">Recently Active Creators</span>
-            <div className="flex items-center gap-3 overflow-x-auto scrollbar-none py-1">
-              {[
-                { name: 'Harrison', handle: 'voh', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80', active: true },
-                { name: 'Nexora AI', handle: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80', active: true },
-                { name: 'VOH AI', handle: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100&auto=format&fit=crop&q=80', active: true },
-                { name: 'Amara Tech', handle: 'amara', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=80', active: true },
-                { name: 'Chidi Dev', handle: 'chidi_nex', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80', active: true },
-                { name: 'Efe Design', handle: 'efe_creative', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80', active: true }
-              ].map((creator, i) => (
-                <div 
-                  key={i} 
-                  className="flex flex-col items-center gap-1 cursor-pointer shrink-0"
-                  onClick={() => {
-                    const matchedPost = localPosts.find(p => p.username === creator.handle);
-                    if (matchedPost) onViewProfile?.(matchedPost.userId);
-                    else window.dispatchEvent(new CustomEvent('toast', { detail: `📡 Synced Creator nodes: Accessing ${creator.name}'s frequency...` }));
-                  }}
-                >
-                  <div className="relative">
-                    <img src={creator.avatar} alt={creator.name} className="w-8 h-8 rounded-full object-cover border border-violet-500/20" />
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border border-[#070519] animate-pulse"></span>
-                  </div>
-                  <span className="text-[8.5px] font-mono text-zinc-400">@{creator.handle}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bento grid subsegment: Trending Topics & hubs */}
-          <div className="grid grid-cols-2 gap-2.5 pt-1">
-            <div className="p-2.5 bg-white/3 border border-white/5 rounded-xl space-y-1.5">
-              <span className="text-[8.5px] font-mono font-black uppercase text-pink-400 tracking-wider">Today's Hot Trends</span>
-              <div className="space-y-1">
-                {[
-                  { tag: '#NigerianTech', count: '14.2K sparks' },
-                  { tag: '#NexoraDev', count: '9.8K sparks' },
-                  { tag: '#LagosCreatives', count: '6.4K sparks' }
-                ].map((trend, idx) => (
-                  <div 
-                    key={idx} 
-                    className="flex justify-between items-center text-[9.5px] cursor-pointer hover:bg-white/5 p-0.5 rounded transition-colors"
-                    onClick={() => {
-                      setSelectedTag(trend.tag.replace('#', ''));
-                      window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Loading tags for ${trend.tag}` }));
-                    }}
-                  >
-                    <span className="text-violet-300 font-extrabold">{trend.tag}</span>
-                    <span className="text-zinc-500 text-[8px]">{trend.count}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="p-2.5 bg-white/3 border border-white/5 rounded-xl space-y-1.5">
-              <span className="text-[8.5px] font-mono font-black uppercase text-cyan-400 tracking-wider">Active Hubs</span>
-              <div className="space-y-1">
-                {[
-                  { name: 'Afrobeats Central', members: '12K members' },
-                  { name: 'Developer Synergy', members: '8.4K members' },
-                  { name: 'AI Creative Nexus', members: '5.2K members' }
-                ].map((hub, idx) => (
-                  <div 
-                    key={idx} 
-                    className="flex justify-between items-center text-[9.5px] cursor-pointer hover:bg-white/5 p-0.5 rounded transition-colors"
-                    onClick={() => {
-                      setFeedTab('communities');
-                      window.dispatchEvent(new CustomEvent('toast', { detail: `🏟 Entering community hub: ${hub.name}...` }));
-                    }}
-                  >
-                    <span className="text-violet-300 font-extrabold truncate max-w-[80px]">{hub.name}</span>
-                    <span className="text-zinc-500 text-[8px] whitespace-nowrap">{hub.members}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Refresh pull-down simulator button */}
-        <div className="flex justify-center shrink-0">
-          <button 
-            disabled={isRefreshing}
-            onClick={triggerRefresh}
-            className="flex items-center gap-1.5 py-1.5 px-4 rounded-full bg-slate-950/60 border border-violet-500/15 hover:border-violet-500/30 text-[10.5px] font-mono text-violet-300 transition-all cursor-pointer active:scale-95"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 text-pink-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-            <span>{isRefreshing ? 'Refreshing feed...' : 'Pull Feed down to refresh'}</span>
-          </button>
-        </div>
-
         {/* Selected Tag Active Indicator (Moved inside scroll) */}
         {selectedTag && (
           <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl mx-4 md:mx-0">
@@ -1408,6 +1433,44 @@ export default function FeedView({
         {!isRefreshing && searchFilterType !== 'users' && currentDisplayList.map((post, index) => {
           const isPlaying = playingVoiceId === post.id;
           const isCommentsOpen = activeCommentsPostId === post.id;
+          const activePostIndex = currentDisplayList.findIndex(p => p.id === activePostId);
+
+          // ─── INTENSE MEDIA MANAGEMENT AND PREDICTIVE BUFFERING ───
+          const hasVideo = !!post.videoUrl;
+          const videoPosts = currentDisplayList.filter(p => !!p.videoUrl);
+          const activeVideoIndex = videoPosts.findIndex(p => p.id === activePostId);
+          const postVideoIndex = videoPosts.findIndex(p => p.id === post.id);
+
+          // Release video player memory if not previous, current, or next video
+          const isReleased = hasVideo && (() => {
+            if (activeVideoIndex === -1) {
+              const activeIndexInAll = currentDisplayList.findIndex(p => p.id === activePostId);
+              return Math.abs(index - activeIndexInAll) > 2;
+            }
+            return Math.abs(postVideoIndex - activeVideoIndex) > 1;
+          })();
+
+          // Connection adaptive buffering
+          const isConnectionSlow = (() => {
+            if (typeof navigator === 'undefined') return false;
+            const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+            if (!conn) return false;
+            return conn.saveData || ['slow-2g', '2g', '3g'].includes(conn.effectiveType);
+          })();
+
+          const isNextPost = activePostIndex !== -1 && currentDisplayList[activePostIndex + 1]?.id === post.id;
+          const isSecondNextPost = activePostIndex !== -1 && currentDisplayList[activePostIndex + 2]?.id === post.id;
+
+          let preloadMode: 'auto' | 'metadata' | 'none' = 'metadata';
+          if (activePostId === post.id) {
+            preloadMode = 'auto';
+          } else if (isNextPost) {
+            preloadMode = (isConnectionSlow || userSettled) ? 'metadata' : 'auto';
+          } else if (isSecondNextPost && isScrollingFast && !isConnectionSlow) {
+            preloadMode = 'auto'; // Predictive Prefetch
+          } else {
+            preloadMode = 'none'; // Unneeded videos have zero preload to conserve data
+          }
 
           if (post.videoUrl) {
             return (
@@ -1415,26 +1478,61 @@ export default function FeedView({
                 {/* 🟣 IMMERSIVE VIDEO CARD */}
                 <motion.div
                   id={`post-${post.id}`}
+                  data-post-id={post.id}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className="rounded-none md:rounded-3xl bg-black/95 border-y border-x-0 md:border border-violet-500/15 overflow-hidden text-left shadow-2xl relative w-full"
+                  className={`rounded-none md:rounded-3xl bg-black/95 border-y border-x-0 md:border border-violet-500/15 overflow-hidden text-left shadow-2xl relative w-full flex flex-col justify-between transition-all ${
+                    isCommentsOpen ? 'h-auto' : 'md:h-auto h-[calc(100vh-170px)]'
+                  }`}
                 >
+                  {/* Premium Creator Header for Immersive Video */}
+                  <div className="p-3 pb-0 shrink-0 flex items-center justify-between z-10">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={post.avatar} 
+                        alt={post.name} 
+                        className="w-9 h-9 rounded-xl object-cover border border-violet-500/20 cursor-pointer" 
+                        onClick={() => onViewProfile?.(post.userId)}
+                        referrerPolicy="no-referrer"
+                      />
+                      <div>
+                        <div className="flex items-center gap-1">
+                          <span 
+                            onClick={() => onViewProfile?.(post.userId)}
+                            className="font-sans font-extrabold text-xs text-white hover:text-violet-400 transition-colors cursor-pointer"
+                          >
+                            {post.name}
+                          </span>
+                          {(post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai') && (
+                            <CheckCircle className="w-3 h-3 text-violet-400 fill-current" />
+                          )}
+                        </div>
+                        <span className="text-[9px] font-mono text-violet-400/80 block">@{post.username} • {post.timestamp}</span>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Outer edge-to-edge Video Container */}
-                  <div className="relative w-full">
-                    <NexoraVideoPlayer
-                      post={post}
-                      videoUrl={post.videoUrl}
-                      onOpenFullscreen={() => setActiveVideoFullscreen(post)}
-                      onSpark={() => handleSpark(post.id)}
-                    />
+                  <div className="flex-1 min-h-0 relative w-full h-full flex items-center justify-center bg-black/30 my-1">
+                    <div className="w-full h-full max-h-full">
+                      <NexoraVideoPlayer
+                        post={post}
+                        videoUrl={post.videoUrl}
+                        onOpenFullscreen={() => setActiveVideoFullscreen(post)}
+                        onSpark={() => handleSpark(post.id)}
+                        isActive={activePostId === post.id}
+                        preloadMode={preloadMode}
+                        isReleased={isReleased}
+                      />
+                    </div>
                   </div>
 
                   {/* Below the video media block */}
-                  <div className="p-4 space-y-3">
+                  <div className="p-3.5 pt-1.5 shrink-0 space-y-2">
                     {/* Caption: text becomes secondary (small copy font-sans) */}
                     {post.content && (
-                      <p className="text-[12.5px] text-zinc-300 font-sans leading-relaxed">
+                      <p className="text-[12px] text-zinc-300 font-sans leading-relaxed line-clamp-2">
                         {post.content}
                       </p>
                     )}
@@ -1442,7 +1540,7 @@ export default function FeedView({
                     {/* Hashtags list if any */}
                     {post.tags.length > 0 && (
                       <div className="flex flex-wrap gap-1">
-                        {post.tags.map(tag => (
+                        {post.tags.slice(0, 3).map(tag => (
                           <button
                             key={tag}
                             onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
@@ -1455,14 +1553,14 @@ export default function FeedView({
                     )}
 
                     {/* Actions row: ⚡ (Sparks) 💬 (Comments) 🔁 (Repost) ↗️ (Share) */}
-                    <div className="flex items-center justify-between border-t border-white/5 pt-3 text-zinc-400 text-xs">
+                    <div className="flex items-center justify-between border-t border-white/5 pt-2 text-zinc-400 text-xs">
                       {/* Sparks (Like) */}
                       <button
                         onClick={() => handleSpark(post.id)}
                         className={`flex items-center gap-1.5 hover:text-pink-400 transition-colors cursor-pointer ${post.isLikedByUser ? 'text-pink-400 font-bold' : ''}`}
                       >
-                        <Zap className={`w-4 h-4 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400' : ''}`} />
-                        <span className="font-mono text-[11px]">{post.likes} Sparks</span>
+                        <Zap className={`w-3.5 h-3.5 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400' : ''}`} />
+                        <span className="font-mono text-[10px]">{post.likes} Sparks</span>
                       </button>
 
                       {/* Comments count */}
@@ -1470,8 +1568,8 @@ export default function FeedView({
                         onClick={() => setActiveCommentsPostId(isCommentsOpen ? null : post.id)}
                         className={`flex items-center gap-1.5 hover:text-violet-300 transition-colors cursor-pointer ${isCommentsOpen ? 'text-[#8B5CF6] font-bold' : ''}`}
                       >
-                        <MessageSquare className="w-4 h-4" />
-                        <span className="font-mono text-[11px]">{post.comments.length} Comments</span>
+                        <MessageSquare className="w-3.5 h-3.5" />
+                        <span className="font-mono text-[10px]">{post.comments.length} Reply</span>
                       </button>
 
                       {/* Repost (Shares) */}
@@ -1481,8 +1579,8 @@ export default function FeedView({
                         }}
                         className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors cursor-pointer"
                       >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                        <span className="font-mono text-[11px]">{post.shares} Reposts</span>
+                        <RefreshCw className="w-3 h-3" />
+                        <span className="font-mono text-[10px]">{post.shares} Reposts</span>
                       </button>
 
                       {/* Share link */}
@@ -1495,8 +1593,8 @@ export default function FeedView({
                         className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer"
                         title="Copy Link to Share"
                       >
-                        <Share2 className="w-3.5 h-3.5" />
-                        <span className="font-mono text-[11px]">Share</span>
+                        <Share2 className="w-3 h-3" />
+                        <span className="font-mono text-[10px]">Share</span>
                       </button>
                     </div>
                   </div>
@@ -1623,6 +1721,7 @@ export default function FeedView({
             <React.Fragment key={post.id}>
               <motion.div
                 id={`post-${post.id}`}
+                data-post-id={post.id}
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
@@ -2068,6 +2167,9 @@ export default function FeedView({
                       videoUrl={post.videoUrl}
                       onOpenFullscreen={() => setActiveVideoFullscreen(post)}
                       onSpark={() => handleSpark(post.id)}
+                      isActive={activePostId === post.id}
+                      preloadMode={preloadMode}
+                      isReleased={isReleased}
                     />
                   </div>
                 )}

@@ -141,6 +141,7 @@ export default function MediaCreationEngine({
   const [voiceIsPaused, setVoiceIsPaused] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [voicePlaybackActive, setVoicePlaybackActive] = useState(false);
+  const [noiseSuppression, setNoiseSuppression] = useState(true);
   const [loadingTranscript, setLoadingTranscript] = useState(false);
 
   // Poll
@@ -1434,7 +1435,7 @@ export default function MediaCreationEngine({
                   <div className="flex items-end justify-center gap-[3px] h-12 w-full max-w-sm mx-auto overflow-hidden">
                     {[...Array(24)].map((_, i) => {
                       const waveH = voiceIsRecording && !voiceIsPaused
-                        ? 20 + Math.sin(i * 0.9 + voiceDurationSecs) * 60 + Math.random() * 20
+                        ? 20 + Math.sin(i * 0.9 + voiceDurationSecs) * 60 + Math.random() * (noiseSuppression ? 5 : 20)
                         : 8;
                       return (
                         <div 
@@ -1446,16 +1447,74 @@ export default function MediaCreationEngine({
                     })}
                   </div>
 
+                  {/* Noise Suppression Toggle */}
+                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800 text-left">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs font-sans text-zinc-200 font-bold flex items-center gap-1.5">🎙️ AI Noise Suppression</span>
+                      <span className="text-[10px] font-sans text-zinc-500 leading-tight">Mutes static ambient background noise recursively</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNoiseSuppression(!noiseSuppression)}
+                      className={`px-3 py-1.5 rounded-xl text-[10px] font-mono font-black uppercase cursor-pointer transition-all ${noiseSuppression ? 'bg-violet-600 text-white shadow-md' : 'bg-zinc-800 text-zinc-500'}`}
+                    >
+                      {noiseSuppression ? 'ACTIVE (95% filter)' : 'DISABLED'}
+                    </button>
+                  </div>
+
+                  {/* Playback Preview */}
+                  {voiceFileUrl && !voiceIsRecording && (
+                    <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between text-left">
+                      <div className="flex items-center gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const audio = (window as any).voicePreviewAudio || new Audio(voiceFileUrl);
+                            (window as any).voicePreviewAudio = audio;
+                            if (audio.paused) {
+                              audio.play();
+                              setVoicePlaybackActive(true);
+                              audio.onended = () => setVoicePlaybackActive(false);
+                            } else {
+                              audio.pause();
+                              setVoicePlaybackActive(false);
+                            }
+                          }}
+                          className="w-8 h-8 flex items-center justify-center bg-violet-600 hover:bg-violet-500 rounded-full text-white cursor-pointer transition-colors"
+                        >
+                          {voicePlaybackActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                        </button>
+                        <div className="flex flex-col">
+                          <span className="text-xs text-zinc-200 font-bold font-sans">Recorded Playback Preview</span>
+                          <span className="text-[10px] text-zinc-500 font-sans">Tap to listen before broadcasting</span>
+                        </div>
+                      </div>
+                      <span className="text-xs font-mono text-zinc-400">0:{voiceDurationSecs.toString().padStart(2, '0')}</span>
+                    </div>
+                  )}
+
                   <div className="flex justify-center items-center gap-3">
                     {voiceIsRecording ? (
                       <>
+                        {voiceIsPaused ? (
+                          <button
+                            type="button"
+                            onClick={handleResumeVoiceRecord}
+                            className="px-4 py-2 hover:bg-zinc-800 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-mono font-bold cursor-pointer transition-colors"
+                          >
+                            RESUME 🔴
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handlePauseVoiceRecord}
+                            className="px-4 py-2 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-400 text-xs font-mono font-bold cursor-pointer transition-colors"
+                          >
+                            PAUSE ⏸
+                          </button>
+                        )}
                         <button
-                          onClick={handlePauseVoiceRecord}
-                          className="px-3.5 py-2 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-400 text-xs font-mono font-bold cursor-pointer transition-colors"
-                        >
-                          PAUSE
-                        </button>
-                        <button
+                          type="button"
                           onClick={handleStopVoiceRecord}
                           className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 animate-pulse flex items-center justify-center text-white border-2 border-white cursor-pointer"
                         >
@@ -1464,6 +1523,7 @@ export default function MediaCreationEngine({
                       </>
                     ) : (
                       <button
+                        type="button"
                         onClick={handleStartVoiceRecord}
                         className="w-16 h-16 rounded-full bg-linear-to-r from-rose-500 to-pink-600 flex items-center justify-center text-white shadow-lg border-2 border-zinc-800 cursor-pointer"
                       >

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { recordRecommendationEvent } from '../utils/recommendations';
 import { 
   Play, 
   Pause, 
@@ -28,6 +29,7 @@ interface Post {
   likes: number;
   comments: any[];
   tags: string[];
+  userId?: string;
 }
 
 interface NexoraVideoPlayerProps {
@@ -35,13 +37,19 @@ interface NexoraVideoPlayerProps {
   videoUrl: string;
   onOpenFullscreen: () => void;
   onSpark: () => void;
+  isActive?: boolean;
+  preloadMode?: 'auto' | 'metadata' | 'none';
+  isReleased?: boolean;
 }
 
 export default function NexoraVideoPlayer({
   post,
   videoUrl,
   onOpenFullscreen,
-  onSpark
+  onSpark,
+  isActive,
+  preloadMode,
+  isReleased
 }: NexoraVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -52,6 +60,7 @@ export default function NexoraVideoPlayer({
     return localStorage.getItem('nexora_video_muted') !== 'false';
   });
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
+  const [showTapForSound, setShowTapForSound] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
@@ -85,6 +94,9 @@ export default function NexoraVideoPlayer({
 
   // Watch duration log trigger state
   const viewLoggedRef = useRef(false);
+  const watchCompletedRef = useRef(false);
+  const playStartedTimeRef = useRef<number>(0);
+  const [showPlayStateIndicator, setShowPlayStateIndicator] = useState<'play' | 'pause' | null>(null);
 
   const handleVolumeToggle = (forcedMute?: boolean) => {
     const newMuted = forcedMute !== undefined ? forcedMute : !isMuted;
@@ -97,23 +109,84 @@ export default function NexoraVideoPlayer({
       new CustomEvent('nexora-volume-change', { detail: { muted: newMuted, senderId: post.id } })
     );
     if (!newMuted) {
+      localStorage.setItem('nexora_unmuted_once', 'true');
       setAutoplayBlocked(false);
     }
   };
 
-  // 1. Intersection Observer for Auto-play and Auto-pause
+  // Manage first-time user "Tap for Sound" overlay fading
+  useEffect(() => {
+    if (isPlaying && isMuted) {
+      const hasUnmutedOnce = localStorage.getItem('nexora_unmuted_once') === 'true';
+      if (!hasUnmutedOnce) {
+        setShowTapForSound(true);
+        const timer = setTimeout(() => {
+          setShowTapForSound(false);
+        }, 4000); // Fades away after 4 seconds
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setShowTapForSound(false);
+    }
+  }, [isPlaying, isMuted]);
+
+  // 1. Unified Play/Pause controller linked to viewport active state or fallback intersection
   useEffect(() => {
     if (!videoRef.current) return;
+
+    if (isActive !== undefined) {
+      if (isActive) {
+        // Trigger customized global event to pause other players before entering local loop
+        window.dispatchEvent(
+          new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
+        );
+
+        // Sync current mute preference
+        const isPrefMuted = localStorage.getItem('nexora_video_muted') !== 'false';
+        setIsMuted(isPrefMuted);
+        videoRef.current.muted = isPrefMuted;
+
+        const playPromise = videoRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            setIsPlaying(true);
+            playStartedTimeRef.current = Date.now();
+          }).catch((error) => {
+            console.log("Autoplay failed. Retrying muted:", error);
+            if (videoRef.current) {
+              videoRef.current.muted = true;
+              setIsMuted(true);
+              videoRef.current.play()
+                .then(() => {
+                  setIsPlaying(true);
+                  playStartedTimeRef.current = Date.now();
+                })
+                .catch(e => console.error("Muted play failed", e));
+            }
+          });
+        }
+      } else {
+        if (!videoRef.current.paused) {
+          const playDuration = (Date.now() - playStartedTimeRef.current) / 1000;
+          if (playDuration > 0.2 && playDuration < 3.0) {
+            recordRecommendationEvent('skip_quick', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+          }
+        }
+        videoRef.current.pause();
+        setIsPlaying(false);
+      }
+      return;
+    }
+
+    // FALLBACK: If isActive is not specified, use a standard viewport observer
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
-            // Trigger customized global event to pause other players before entering local loop
             window.dispatchEvent(
               new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
             );
 
-            // Sync current mute preference
             const isPrefMuted = localStorage.getItem('nexora_video_muted') !== 'false';
             setIsMuted(isPrefMuted);
             if (videoRef.current) {
@@ -124,36 +197,40 @@ export default function NexoraVideoPlayer({
             if (playPromise !== undefined) {
               playPromise.then(() => {
                 setIsPlaying(true);
-                setAutoplayBlocked(false);
+                playStartedTimeRef.current = Date.now();
               }).catch((error) => {
-                console.log("Autoplay with audio blocked. Retrying muted:", error);
-                // Try playing muted
                 if (videoRef.current) {
                   videoRef.current.muted = true;
                   setIsMuted(true);
                   videoRef.current.play()
                     .then(() => {
                       setIsPlaying(true);
-                      setAutoplayBlocked(true); // Autoplay blocked with audio, show "Tap for sound"
+                      playStartedTimeRef.current = Date.now();
                     })
-                    .catch(e => console.error("Muted play also failed", e));
+                    .catch(e => console.error(e));
                 }
               });
             }
           } else {
+            if (videoRef.current && !videoRef.current.paused) {
+              const playDuration = (Date.now() - playStartedTimeRef.current) / 1000;
+              if (playDuration > 0.2 && playDuration < 3.0) {
+                recordRecommendationEvent('skip_quick', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+              }
+            }
             videoRef.current?.pause();
             setIsPlaying(false);
           }
         });
       },
-      { threshold: 0.6 } // Higher threshold so only the fully visible video plays
+      { threshold: 0.6 }
     );
 
     observer.observe(videoRef.current);
     return () => {
       observer.disconnect();
     };
-  }, [videoUrl, post.id]);
+  }, [videoUrl, post.id, isActive]);
 
   // 2. Global event listener to support "Only one video plays at a time"
   useEffect(() => {
@@ -210,6 +287,19 @@ export default function NexoraVideoPlayer({
     setCurrentTime(time);
     localStorage.setItem(`nexora_vid_pos_${videoUrl}`, String(time));
 
+    // Reset watchCompletedRef if wrapped/replayed
+    if (time < 0.5 && watchCompletedRef.current) {
+      watchCompletedRef.current = false;
+    }
+
+    // Detect complete watch
+    if (duration > 0 && time > duration - 0.5) {
+      if (!watchCompletedRef.current) {
+        watchCompletedRef.current = true;
+        recordRecommendationEvent('watch_complete', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+      }
+    }
+
     // Watch History: Log view when watched for more than 3 seconds (Meaningful watch duration)
     if (time > 3.0 && !viewLoggedRef.current) {
       viewLoggedRef.current = true;
@@ -265,6 +355,7 @@ export default function NexoraVideoPlayer({
     if (isPlaying) {
       videoRef.current.pause();
       setIsPlaying(false);
+      setShowPlayStateIndicator('pause');
     } else {
       window.dispatchEvent(
         new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
@@ -277,7 +368,11 @@ export default function NexoraVideoPlayer({
       
       videoRef.current.play().catch(() => {});
       setIsPlaying(true);
+      setShowPlayStateIndicator('play');
     }
+    setTimeout(() => {
+      setShowPlayStateIndicator(null);
+    }, 600);
   };
 
   // Handle single tap, double tap, and long press gestures
@@ -297,6 +392,7 @@ export default function NexoraVideoPlayer({
       setHeartPosition({ x, y });
       setShowDoubleTapHeart(true);
       onSpark();
+      recordRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
 
       // If autoplay was blocked and we are muted, double tap to like can also unmute beautifully!
       if (autoplayBlocked && isMuted) {
@@ -307,12 +403,12 @@ export default function NexoraVideoPlayer({
       setTimeout(() => setShowDoubleTapHeart(false), 800);
       lastTapRef.current = 0;
     } else {
-      // If autoplay was blocked and we single tap, unmute immediately rather than toggling controls!
+      // If autoplay was blocked and we single tap, unmute immediately rather than toggling playback
       if (autoplayBlocked && isMuted) {
         handleVolumeToggle(false);
       } else {
-        // SINGLE TAP: Toggle standard controls overlay
-        setShowControls(!showControls);
+        // SINGLE TAP: Toggle playback/pause
+        togglePlayback();
       }
     }
     lastTapRef.current = now;
@@ -376,6 +472,7 @@ export default function NexoraVideoPlayer({
   const handleSaveToCollection = (collection: string) => {
     localStorage.setItem(`nexora_saved_mapping_${post.id}`, collection);
     setSavedCollectionForThis(collection);
+    recordRecommendationEvent('save', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
 
     // Record list of posts inside this collection
     try {
@@ -458,6 +555,27 @@ export default function NexoraVideoPlayer({
     onOpenFullscreen();
   };
 
+  if (isReleased) {
+    return (
+      <div 
+        className="relative overflow-hidden rounded-none md:rounded-3xl border-y md:border border-violet-500/10 bg-zinc-950/95 select-none w-full h-full min-h-[240px] md:aspect-video flex flex-col items-center justify-center animate-fade-in"
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0b091e]/50 via-black to-[#070518]/50" />
+        <div className="absolute inset-0 bg-violet-500/5 animate-pulse" />
+        
+        <div className="relative z-10 flex flex-col items-center gap-3 text-center px-6">
+          <div className="p-3.5 bg-violet-950/40 border border-violet-500/15 rounded-full text-violet-400/90 shadow-lg shadow-violet-500/5">
+            <Radio className="w-5 h-5 text-violet-400 animate-pulse" />
+          </div>
+          <div className="space-y-1">
+            <span className="text-[10px] font-mono font-bold text-violet-400 uppercase tracking-widest block">NEXORA Stream (Optimized)</span>
+            <span className="text-[9px] font-sans text-zinc-500 block">Memory-released • Swipe to play</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div 
       ref={containerRef}
@@ -466,7 +584,7 @@ export default function NexoraVideoPlayer({
       onMouseLeave={handleReleaseHold}
       onTouchStart={handleStartHold}
       onTouchEnd={handleReleaseHold}
-      className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-black aspect-video select-none group w-full animate-fade-in"
+      className="relative overflow-hidden rounded-none md:rounded-3xl border-y md:border border-violet-500/10 bg-black select-none group w-full h-full md:aspect-video flex items-center justify-center animate-fade-in"
     >
       {/* Absolute Video Frame */}
       <video
@@ -474,6 +592,7 @@ export default function NexoraVideoPlayer({
         src={videoUrl}
         loop
         playsInline
+        preload={preloadMode || "metadata"}
         muted={isMuted}
         onLoadedMetadata={handleLoadedMetadata}
         onTimeUpdate={handleTimeUpdate}
@@ -482,24 +601,30 @@ export default function NexoraVideoPlayer({
       />
 
       {/* Tap for sound overlay */}
-      {autoplayBlocked && isMuted && (
-        <div 
-          onClick={(e) => {
-            e.stopPropagation();
-            handleVolumeToggle(false);
-          }}
-          className="absolute inset-0 bg-black/40 flex items-center justify-center z-10 cursor-pointer"
-        >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-purple-600/95 hover:bg-purple-500/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-purple-400/30 text-white text-xs font-mono font-black uppercase tracking-widest flex items-center gap-2 shadow-lg"
+      <AnimatePresence>
+        {showTapForSound && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleVolumeToggle(false);
+            }}
+            className="absolute inset-0 bg-black/30 flex items-center justify-center z-10 cursor-pointer"
           >
-            <VolumeX className="w-4 h-4 animate-bounce" />
-            <span>Tap for sound</span>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-purple-600/95 hover:bg-purple-500/95 backdrop-blur-md px-4 py-2.5 rounded-full border border-purple-400/30 text-white text-xs font-mono font-black uppercase tracking-widest flex items-center gap-2 shadow-lg"
+            >
+              <VolumeX className="w-4 h-4 animate-bounce" />
+              <span>Tap for sound</span>
+            </motion.div>
           </motion.div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
       {/* Switching Quality overlay indicator */}
       {isSwitchingQuality && (
@@ -513,14 +638,6 @@ export default function NexoraVideoPlayer({
       {isLongPressing && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono text-zinc-300 font-extrabold flex items-center gap-1.5 z-20 shadow-lg pointer-events-none tracking-widest uppercase">
           <span>PAUSED (VIEW MODE)</span>
-        </div>
-      )}
-
-      {/* Autoplay visual watermark */}
-      {!isLongPressing && (
-        <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-md px-2 py-1 rounded-lg text-[9px] font-mono text-purple-300 uppercase tracking-widest flex items-center gap-1 pointer-events-none z-10">
-          <Radio className="w-2.5 h-2.5 text-pink-400 animate-pulse" />
-          <span>NEXORA LIVE PLAYER ({selectedQuality})</span>
         </div>
       )}
 
@@ -546,258 +663,60 @@ export default function NexoraVideoPlayer({
         )}
       </AnimatePresence>
 
-      {/* Top right parameters action bar */}
-      {!isLongPressing && (
-        <div className="absolute top-3 right-3 flex items-center gap-1.5 z-20">
-          {/* Save/Collection Bookmark */}
-          <button
-            onClick={() => setShowSaveModal(true)}
-            className={`p-1.5 rounded-xl backdrop-blur-md border transition-all cursor-pointer ${
-              savedCollectionForThis 
-                ? 'bg-purple-600 border-purple-500 text-white shadow-md' 
-                : 'bg-black/60 border-white/10 text-zinc-400 hover:text-white hover:bg-black/85'
-            }`}
-            title="Save Video to Collection"
-          >
-            <Bookmark className="w-3.5 h-3.5 fill-current" />
-          </button>
-
-          {/* Creator parameters options button */}
-          <button
-            onClick={() => setShowCreatorToggles(!showCreatorToggles)}
-            className="p-1.5 bg-black/60 hover:bg-black/85 backdrop-blur-md rounded-xl text-zinc-400 hover:text-white border border-white/10 transition-all cursor-pointer"
-            title="Creator Telemetry Toggles"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
-
-      {/* Creator parameters Popover panel */}
+      {/* Centered Play/Pause state tap indicator */}
       <AnimatePresence>
-        {showCreatorToggles && (
+        {showPlayStateIndicator && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: -10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -10 }}
-            className="absolute top-12 right-3 w-48 bg-[#09071a]/95 backdrop-blur-xl border border-violet-500/20 p-3.5 rounded-xl text-left space-y-3 z-30 shadow-[0_10px_25px_rgba(0,0,0,0.5)]"
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1.2, opacity: 1 }}
+            exit={{ scale: 1.4, opacity: 0 }}
+            transition={{ duration: 0.4 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
           >
-            <span className="text-[8px] font-mono uppercase text-violet-300 font-black tracking-widest block border-b border-white/5 pb-1.5">
-              Creator Media Controls
-            </span>
-            <div className="space-y-2 text-[10.5px]">
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-zinc-300 font-sans">Allow Comments</span>
-                <input 
-                  type="checkbox" 
-                  checked={commentsOn} 
-                  onChange={(e) => {
-                    setCommentsOn(e.target.checked);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: `Comments toggled ${e.target.checked ? 'ON' : 'OFF'} for this video!` }));
-                  }}
-                  className="rounded border-zinc-800 accent-purple-600 cursor-pointer text-purple-600 bg-black"
-                />
-              </label>
-
-              <label className="flex items-center justify-between cursor-pointer">
-                <span className="text-zinc-300 font-sans">Allow Downloads</span>
-                <input 
-                  type="checkbox" 
-                  checked={downloadsOn} 
-                  onChange={(e) => {
-                    setDownloadsOn(e.target.checked);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: `Downloads toggled ${e.target.checked ? 'ON' : 'OFF'} for this video!` }));
-                  }}
-                  className="rounded border-zinc-800 accent-purple-600 cursor-pointer text-purple-600 bg-black"
-                />
-              </label>
-            </div>
-            <div className="border-t border-white/5 pt-2 flex items-center justify-between">
-              <span className="text-[8.5px] font-mono text-zinc-500 uppercase">Interactive specs</span>
-              <button
-                onClick={() => setShowCreatorToggles(false)}
-                className="text-[9px] font-mono text-purple-400 hover:text-white"
-              >
-                APPLY
-              </button>
+            <div className="p-4 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white shadow-xl">
+              {showPlayStateIndicator === 'play' ? (
+                <Play className="w-6 h-6 fill-current text-white ml-0.5" />
+              ) : (
+                <Pause className="w-6 h-6 fill-current text-white" />
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Save to Collection Modal overlay frame */}
-      <AnimatePresence>
-        {showSaveModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/85 backdrop-blur-md z-30 flex items-center justify-center p-3"
-          >
-            <div className="w-full max-w-xs bg-[#0b0821] border border-violet-500/20 p-4 rounded-xl space-y-3 shadow-2xl text-left">
-              <div className="flex items-center justify-between border-b border-white/5 pb-1.5">
-                <span className="text-[10px] font-mono uppercase text-violet-300 font-black tracking-wider flex items-center gap-1.5">
-                  <FolderHeart className="w-3.5 h-3.5 text-pink-400" />
-                  <span>Save to Collection</span>
-                </span>
-                <button
-                  onClick={() => setShowSaveModal(false)}
-                  className="text-zinc-500 hover:text-white font-mono text-[10px]"
-                >
-                  CLOSE
-                </button>
-              </div>
+      {/* Floating Bottom custom simplified controls block */}
+      <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
+        {/* Mute/Unmute Toggler */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleVolumeToggle();
+          }}
+          className="p-2 bg-black/60 hover:bg-black/85 border border-white/10 backdrop-blur-md rounded-full text-white transition-all cursor-pointer active:scale-90 shadow-md"
+        >
+          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-pink-400" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
+        </button>
 
-              {/* Collections listings scroll zone */}
-              <div className="space-y-1 max-h-32 overflow-y-auto custom-scrollbar">
-                {collections.map((col) => (
-                  <button
-                    key={col}
-                    onClick={() => handleSaveToCollection(col)}
-                    className="w-full p-2 hover:bg-violet-950/30 rounded-lg text-left text-[11px] font-sans flex items-center justify-between group transition-all text-zinc-100"
-                  >
-                    <span>{col}</span>
-                    <span className="text-[8px] font-mono opacity-0 group-hover:opacity-100 text-purple-400 uppercase tracking-widest font-black">
-                      SELECT →
-                    </span>
-                  </button>
-                ))}
-              </div>
+        {/* Maximize / Fullscreen Button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenFullscreenWithSync();
+          }}
+          className="p-2 bg-black/60 hover:bg-black/85 border border-white/10 backdrop-blur-md rounded-full text-white transition-all cursor-pointer active:scale-90 shadow-md"
+          title="Expand Full Immersive Player Mode"
+        >
+          <Maximize2 className="w-3.5 h-3.5 text-violet-300" />
+        </button>
+      </div>
 
-              {/* Create Custom input container */}
-              <div className="border-t border-white/5 pt-2.5 space-y-2">
-                <span className="text-[8.5px] font-mono text-zinc-500 uppercase block">Create Custom Collection</span>
-                <div className="flex gap-1.5">
-                  <input
-                    type="text"
-                    placeholder="E.g., Tech Loops..."
-                    value={newCollectionName}
-                    onChange={(e) => setNewCollectionName(e.target.value)}
-                    className="flex-1 bg-black border border-white/5 rounded-lg py-1 px-2 text-[10.5px] focus:outline-hidden focus:border-purple-500 text-white"
-                  />
-                  <button
-                    onClick={handleCreateNewCollection}
-                    className="p-1 px-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg flex items-center justify-center cursor-pointer"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Floating Bottom custom video controls block */}
-      <AnimatePresence>
-        {showControls && (
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 15 }}
-            className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/85 to-transparent p-3 pt-8 space-y-2 z-10"
-          >
-            {/* Play progress bar track slider */}
-            <div className="flex items-center gap-2">
-              <span className="text-[8.5px] font-mono text-zinc-400">
-                {Math.floor(currentTime / 60)}:
-                {Math.floor(currentTime % 60).toString().padStart(2, '0')}
-              </span>
-              <input
-                type="range"
-                min="0"
-                max={duration || 100}
-                value={currentTime}
-                onChange={handleScrubChange}
-                className="flex-1 h-1 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-purple-500 hover:accent-pink-500 transition-colors"
-                title="Drag or scrub video timeline indicator"
-              />
-              <span className="text-[8.5px] font-mono text-zinc-400">
-                {Math.floor(duration / 60)}:
-                {Math.floor(duration % 60).toString().padStart(2, '0')}
-              </span>
-            </div>
-
-            {/* Controls panel button deck */}
-            <div className="flex items-center justify-between text-white">
-              <div className="flex items-center gap-2.5">
-                {/* Play Action button toggle */}
-                <button
-                  onClick={togglePlayback}
-                  className="p-1 text-zinc-300 hover:text-white cursor-pointer active:scale-90 transition-transform"
-                >
-                  {isPlaying ? <Pause className="w-4 h-4 fill-current text-white" /> : <Play className="w-4 h-4 fill-current text-white ml-0.5" />}
-                </button>
-
-                {/* Mute button toggler */}
-                <button
-                  onClick={() => handleVolumeToggle()}
-                  className="p-1 text-zinc-300 hover:text-white cursor-pointer active:scale-90 transition-transform"
-                >
-                  {isMuted ? <VolumeX className="w-4 h-4 text-pink-400" /> : <Volume2 className="w-4 h-4 text-emerald-400" />}
-                </button>
-
-                {/* Simulated Restore time progress button */}
-                <button
-                  onClick={() => {
-                    if (videoRef.current) {
-                      videoRef.current.currentTime = 0;
-                      setCurrentTime(0);
-                    }
-                  }}
-                  className="p-1 text-zinc-400 hover:text-white transition-all cursor-pointer"
-                  title="Re-play from beginning"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Simulated Resolution trigger */}
-                <div className="relative group/qual">
-                  <button className="text-[9px] font-mono uppercase bg-zinc-900 border border-white/5 py-0.5 px-2 rounded-md hover:text-cyan-400">
-                    {selectedQuality} Resolution
-                  </button>
-                  <div className="hidden group-hover/qual:flex flex-col absolute bottom-full left-0 bg-black border border-white/10 p-1 rounded-lg w-20 space-y-0.5">
-                    {(['1080p', '720p', '480p', 'Auto'] as const).map((q) => (
-                      <button
-                        key={q}
-                        onClick={() => handleQualitySelect(q)}
-                        className={`text-[8.5px] font-mono text-left px-1.5 py-0.5 rounded ${
-                          selectedQuality === q ? 'bg-purple-600 text-white' : 'text-zinc-400 hover:bg-zinc-900 hover:text-white'
-                        }`}
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right panel downloads and immersive fullscreen */}
-              <div className="flex items-center gap-2">
-                {/* Download option */}
-                {downloadsOn && (
-                  <button
-                    onClick={handleSimulateDownload}
-                    className="p-1 text-zinc-400 hover:text-emerald-400 active:scale-95 transition-all cursor-pointer"
-                    title="Download Mp4 packet offline"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                )}
-
-                {/* Fullscreen Overlay trigger */}
-                <button
-                  onClick={handleOpenFullscreenWithSync}
-                  className="p-1 text-zinc-400 hover:text-violet-400 cursor-pointer"
-                  title="Expand Full Immersive Player Mode"
-                >
-                  <Maximize2 className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Thin elegant progress bar indicator at the very bottom edge of the player */}
+      <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white/10 z-10 pointer-events-none">
+        <div 
+          className="h-full bg-linear-to-r from-violet-600 via-pink-500 to-cyan-400 transition-all duration-100"
+          style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
+        />
+      </div>
     </div>
   );
 }

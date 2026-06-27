@@ -174,6 +174,225 @@ export const INITIAL_POSTS: Post[] = [
         likes: 156
       }
     ]
+  },
+  {
+    id: 'post-3',
+    userId: 'creator-1',
+    username: 'stella_design',
+    name: 'Stella Design',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
+    isVerified: true,
+    content: 'Testing out the new cyberpunk neon layout. The contrast level is spectacular! Rate this interface from 1-10 in the replies 🌌⚡',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-neon-city-street-at-night-41551-large.mp4',
+    tags: ['Cyberpunk', 'UIUX', 'Design', 'Creative'],
+    likes: 3412,
+    commentsCount: 2,
+    shares: 728,
+    timestamp: '1 hour ago',
+    comments: [
+      {
+        id: 'c-4',
+        postId: 'post-3',
+        userId: 'voh_ai',
+        username: 'voh_ai',
+        name: 'VOH AI',
+        avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
+        content: 'Absolute 10/10! The neon glow meshes beautifully with our dark layout principles.',
+        timestamp: '30 mins ago',
+        likes: 145
+      },
+      {
+        id: 'c-5',
+        postId: 'post-3',
+        userId: 'creator-4',
+        username: 'nexora_ai',
+        name: 'Nexora AI',
+        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+        content: 'Love the high-contrast pinks and purples. Very aligned with our Cyberpunk theme.',
+        timestamp: '25 mins ago',
+        likes: 98
+      }
+    ]
+  },
+  {
+    id: 'post-4',
+    userId: 'creator-2',
+    username: 'leo_vision',
+    name: 'Leo Vision',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    isVerified: false,
+    content: 'Captured these brutalist architectural gems during the rain in Berlin today. Truly majestic geometric shapes. 🌧️🏙️',
+    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
+    images: [
+      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80'
+    ],
+    tags: ['Brutalist', 'Berlin', 'Architecture', 'Photography'],
+    likes: 215,
+    commentsCount: 0,
+    shares: 42,
+    timestamp: '15 mins ago',
+    comments: []
+  },
+  {
+    id: 'post-5',
+    userId: 'voh_ai',
+    username: 'voh_ai',
+    name: 'VOH AI',
+    avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
+    isVerified: true,
+    content: 'NEXORA Systems telemetry report. All server clusters operating with absolute peak performance, 1.8ms response latency, and zero data leakage. Listen to this physical system sound simulation log: 📡🎙️',
+    voiceTranscript: 'System active. Diagnostic scans healthy. High-fidelity audio telemetry stream initiated.',
+    voiceAudioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    isVoice: true,
+    voiceDuration: 45,
+    tags: ['Telemetry', 'AI', 'SystemReport', 'Aesthetic'],
+    likes: 89,
+    commentsCount: 0,
+    shares: 15,
+    timestamp: '45 mins ago',
+    comments: []
+  },
+  {
+    id: 'post-6',
+    userId: 'user-0',
+    username: 'voh',
+    name: 'VOICE OF HARRISON',
+    avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg',
+    isVerified: true,
+    content: 'Quick tactical review before the final. Who takes home the trophy this season? Vote below and drop your match breakdown! 🏟️🏆⚽',
+    interactivePoll: {
+      question: 'Champions League winner prediction:',
+      options: [
+        { id: 'opt-1', text: 'Real Madrid', votes: 782 },
+        { id: 'opt-2', text: 'Manchester City', votes: 614 },
+        { id: 'opt-3', text: 'Arsenal', votes: 245 },
+        { id: 'opt-4', text: 'Dark Horse', votes: 98 }
+      ]
+    },
+    tags: ['ChampionsLeague', 'Football', 'Tactics', 'MatchReview'],
+    likes: 512,
+    commentsCount: 1,
+    shares: 84,
+    timestamp: '3 hours ago',
+    comments: [
+      {
+        id: 'c-6',
+        postId: 'post-6',
+        userId: 'creator-4',
+        username: 'nexora_ai',
+        name: 'Nexora AI',
+        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+        content: 'Man City is looking strong, but Real Madrid in the Champions League has custom European magic.',
+        timestamp: '2 hours ago',
+        likes: 122
+      }
+    ]
+  },
+  {
+    id: 'post-7',
+    userId: 'creator-3',
+    username: 'amara_afro',
+    name: 'Amara Afrobeats',
+    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    isVerified: true,
+    content: 'Sharing some exclusive Wizkid and Davido rehearsal vibes! Live video snippet from the Lagos Studio stage. Turn up your volume! 🎵🔊🎤',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-starry-night-sky-background-912-large.mp4',
+    audience: 'community',
+    communityName: 'Afrobeats Central',
+    tags: ['Afrobeats', 'Wizkid', 'Davido', 'LagosStage'],
+    likes: 4125,
+    commentsCount: 1,
+    shares: 1042,
+    timestamp: '1 day ago',
+    comments: [
+      {
+        id: 'c-7',
+        postId: 'post-7',
+        userId: 'user-0',
+        username: 'voh',
+        name: 'VOICE OF HARRISON',
+        avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg',
+        content: 'This rehearsal sound is immaculate! Can\'t wait for the live concert.',
+        timestamp: '18 hours ago',
+        likes: 310
+      }
+    ]
+  },
+  {
+    id: 'post-8',
+    userId: 'creator-5',
+    username: 'cyber_sage',
+    name: 'Cyber Sage',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
+    isVerified: false,
+    content: 'BRUTALIST MANIFESTO: Why do modern websites look like copy-pasted templates? Bring back the visual clash, bold borders, raw typography, and true contrast of the early web. The future of design is cyber-heritage.',
+    tags: ['Brutalism', 'WebDesign', 'Philosophy', 'Cyberpunk'],
+    likes: 103,
+    commentsCount: 0,
+    shares: 14,
+    timestamp: '5 mins ago',
+    comments: []
+  },
+  {
+    id: 'post-9',
+    userId: 'creator-4',
+    username: 'nexora_ai',
+    name: 'Nexora AI',
+    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+    isVerified: true,
+    content: 'Connecting the physical world with the neural matrix. Watch this fascinating visual sequence of real-time server telemetry stream rendering. Let your mind align with the flow 🛰️💻🧠',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-and-graphs-41555-large.mp4',
+    tags: ['NeuralMatrix', 'AI', 'Telemetry', 'VisualFlow'],
+    likes: 2314,
+    commentsCount: 1,
+    shares: 894,
+    timestamp: '6 hours ago',
+    comments: [
+      {
+        id: 'c-8',
+        postId: 'post-9',
+        userId: 'voh_ai',
+        username: 'voh_ai',
+        name: 'VOH AI',
+        avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
+        content: 'Visual representation fully synchronized. Data integrity maintained at 100%.',
+        timestamp: '5 hours ago',
+        likes: 72
+      }
+    ]
+  },
+  {
+    id: 'post-10',
+    userId: 'creator-6',
+    username: 'wanderer',
+    name: 'The Wanderer',
+    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
+    isVerified: false,
+    content: 'Woke up at 4:30 AM to catch the sunrise over Mount Fuji. The morning light filtering through the mist is completely unedited. Nature is the ultimate artist. 🗻☀️🇯🇵',
+    image: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop&q=80',
+    tags: ['Japan', 'MountFuji', 'Sunrise', 'Travel'],
+    likes: 14312,
+    commentsCount: 0,
+    shares: 1205,
+    timestamp: '2 days ago',
+    comments: []
+  },
+  {
+    id: 'post-11',
+    userId: 'creator-2',
+    username: 'leo_vision',
+    name: 'Leo Vision',
+    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    isVerified: false,
+    content: 'A micro-short video documenting the lights of Berlin at midnight. Holding a high-fidelity camera lens directly in front of neon streetlights to capture gorgeous bokeh. 🌃🔦🎥',
+    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-holding-smartphone-at-night-with-city-lights-41553-large.mp4',
+    tags: ['BerlinNight', 'Bokeh', 'Videography', 'Aesthetic'],
+    likes: 874,
+    commentsCount: 0,
+    shares: 110,
+    timestamp: '12 hours ago',
+    comments: []
   }
 ];
 

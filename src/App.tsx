@@ -61,6 +61,7 @@ import {
 } from './data/database';
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
+import { recordRecommendationEvent } from './utils/recommendations';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -266,6 +267,77 @@ export default function App() {
     }, 4000);
     return () => clearInterval(interval);
   }, []);
+
+  // 3.8 Simulated Real-Time Platform Social Activity Sync (VOH and other users interacting live)
+  useEffect(() => {
+    const activityInterval = setInterval(() => {
+      // 1. Randomly increment sparks (likes) on existing posts to simulate active network traffic
+      setPosts(prev => {
+        if (!prev || prev.length === 0) return prev;
+        const indexToUpdate = Math.floor(Math.random() * prev.length);
+        const updated = [...prev];
+        const p = updated[indexToUpdate];
+        if (p && p.username !== currentUser.username) {
+          updated[indexToUpdate] = {
+            ...p,
+            likes: p.likes + Math.floor(Math.random() * 2) + 1
+          };
+        }
+        return updated;
+      });
+
+      // 2. Randomly trigger a smart contextual notification
+      const notificationTemplates = [
+        {
+          text: "120 new people viewed your profile today. Check Creator Studio!",
+          title: "Trending Momentum",
+          type: "system"
+        },
+        {
+          text: "Voice of Harrison mentioned you: 'Exploring afrobeats rhythms with V2!'",
+          title: "Mention Alert",
+          type: "mention"
+        },
+        {
+          text: "Your recent post is trending in Port Harcourt local feed! ⚡",
+          title: "Local Pulse",
+          type: "system"
+        },
+        {
+          text: "Harrison left a comment on your video post.",
+          title: "New Comment",
+          type: "comment"
+        }
+      ];
+
+      if (Math.random() > 0.6) {
+        const template = notificationTemplates[Math.floor(Math.random() * notificationTemplates.length)];
+        const newNotif = {
+          id: `notif-${Date.now()}`,
+          userId: 'user-0',
+          username: 'voh',
+          name: 'Harrison',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
+          title: template.title,
+          content: template.text,
+          timestamp: 'Just now',
+          isRead: false,
+          type: template.type
+        };
+
+        setNotifications(prev => [newNotif as any, ...prev]);
+
+        // Dispatch beautiful alert toast
+        window.dispatchEvent(
+          new CustomEvent('toast', { 
+            detail: `🔔 ${template.title}: ${template.text}` 
+          })
+        );
+      }
+    }, 18000); // 18 seconds sync frequency
+
+    return () => clearInterval(activityInterval);
+  }, [currentUser]);
 
   // 3.5. Web Offline & Pending Sync State handlers
   useEffect(() => {
@@ -715,9 +787,11 @@ export default function App() {
       followUserDb(currentUser.id, creatorId);
       updatedFollowing = [...followingIds, creatorId];
       
-      // push visual alert
+      // record recommendation follow event
       const targetCreator = MOCK_CREATORS.find(c => c.id === creatorId);
       if (targetCreator) {
+        recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
+        
         const newNotif: Notification = {
           id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
           type: 'follow',
@@ -739,6 +813,10 @@ export default function App() {
     if (!userIdOrUsername) return;
     // Check if itself
     const cleanIdOrUser = userIdOrUsername.replace('@', '').toLowerCase().trim();
+    
+    // Record profile visit for recommendations
+    recordRecommendationEvent('visit_profile', { creatorId: cleanIdOrUser, creatorUsername: cleanIdOrUser });
+
     if (userIdOrUsername === currentUser.id || currentUser.username.toLowerCase() === cleanIdOrUser) {
       setViewedUser(null);
       setActiveTab('profile');
@@ -902,10 +980,42 @@ export default function App() {
 
   // 8. Studio profile settings update
   const handleUpdateProfile = (updatedData: Partial<User>) => {
-    setCurrentUser(prev => ({
-      ...prev,
-      ...updatedData
-    }));
+    setCurrentUser(prev => {
+      const updatedUser = {
+        ...prev,
+        ...updatedData
+      };
+
+      // Propagate updates in real-time to posts and comments authored by the user
+      setPosts(prevPosts => {
+        return prevPosts.map(post => {
+          let newPost = { ...post };
+
+          if (post.userId === prev.id) {
+            if (updatedData.name !== undefined) newPost.name = updatedData.name;
+            if (updatedData.username !== undefined) newPost.username = updatedData.username;
+            if (updatedData.avatar !== undefined) newPost.avatar = updatedData.avatar;
+          }
+
+          if (post.comments && post.comments.length > 0) {
+            newPost.comments = post.comments.map(comment => {
+              if (comment.userId === prev.id) {
+                const nextComment = { ...comment };
+                if (updatedData.name !== undefined) nextComment.name = updatedData.name;
+                if (updatedData.username !== undefined) nextComment.username = updatedData.username;
+                if (updatedData.avatar !== undefined) nextComment.avatar = updatedData.avatar;
+                return nextComment;
+              }
+              return comment;
+            });
+          }
+
+          return newPost;
+        });
+      });
+
+      return updatedUser;
+    });
   };
 
   // 9. Notifications actions

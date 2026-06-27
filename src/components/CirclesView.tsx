@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { Circle, User } from '../types';
 import { INITIAL_CIRCLES, MOCK_CREATORS, INITIAL_USER } from '../data/database';
+import { recordRecommendationEvent } from '../utils/recommendations';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -72,6 +73,10 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   const handleJoinCircle = (circleId: string, e?: React.MouseEvent) => {
     if (e) {
       e.stopPropagation(); // don't open modal when clicking join button
+    }
+    const target = circles.find(c => c.id === circleId);
+    if (target && !target.isJoinedByMe) {
+      recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
     }
     setCircles(prev => prev.map(c => {
       if (c.id === circleId) {

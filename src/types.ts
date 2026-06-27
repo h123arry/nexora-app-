@@ -47,6 +47,8 @@ export interface User {
   pinnedMusicUrl?: string;
   pinnedPosts?: string[];
   achievements?: { id: string; title: string; description: string; icon: string; date: string }[];
+  lastUsernameChangeTime?: string;
+  lastDisplayNameChangeTime?: string;
 }
 
 export interface SocialMission {
@@ -120,6 +122,7 @@ export interface Post {
   voiceTranscript?: string;
   voiceAudioUrl?: string;
   audience?: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
+  communityName?: string;
   tags: string[];
   likes: number;
   commentsCount: number;

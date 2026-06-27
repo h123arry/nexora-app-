@@ -378,260 +378,8 @@ export default function NotificationsView({
       {/* RENDER THE STORIES / MOMENTS FEATURE AT THE VERY TOP OF ACTIVITY INTERFACE */}
       <StoriesView currentUser={currentUser} />
 
-      {/* ACTIVITY SETTINGS DRAWER / COLLAPSE PANEL */}
-      <AnimatePresence>
-        {isSettingsOpen && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="p-4 rounded-3xl bg-[#09071c] border border-violet-500/20 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-violet-500/5 pb-2">
-                <span className="text-xs font-mono font-black text-violet-300 uppercase flex items-center gap-1.5">
-                  <Settings className="w-4 h-4 text-violet-400" />
-                  Activity Channel Managers
-                </span>
-                <button 
-                  onClick={() => setIsSettingsOpen(false)}
-                  className="text-violet-400 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
+      
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {Object.entries({
-                  messages: 'Unread Messages',
-                  followers: 'Followers / Following',
-                  communities: 'Community Invites',
-                  worldPulse: 'World Pulse Alerts',
-                  vohAi: 'VOH AI Suggestions',
-                  mentions: '@Username Mentions',
-                  comments: 'Post Comments',
-                  sparks: 'Post Sparks',
-                  email: 'Email Notifications',
-                  push: 'Push System Alerts'
-                }).map(([key, label]) => {
-                  const val = settingsToggles[key as keyof typeof settingsToggles];
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => setSettingsToggles(prev => ({
-                        ...prev,
-                        [key]: !val
-                      }))}
-                      className={`p-2.5 rounded-2xl border text-left flex items-center justify-between gap-1.5 transition-all text-[11px] font-sans ${
-                        val 
-                          ? 'bg-violet-950/40 border-violet-500/30 text-white' 
-                          : 'bg-black/40 border-violet-500/5 text-violet-400/40'
-                      }`}
-                    >
-                      <span className="truncate">{label}</span>
-                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border ${
-                        val 
-                          ? 'bg-violet-500 border-violet-300 text-white font-extrabold' 
-                          : 'bg-transparent border-violet-500/20'
-                      }`}>
-                        {val && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-between items-center pt-2 text-[10px] text-violet-300/40 font-mono">
-                <span>Toggle configurations map in real-time to active notification feed filters.</span>
-                <button 
-                  onClick={() => {
-                    setSettingsToggles({
-                      messages: true,
-                      followers: true,
-                      communities: true,
-                      worldPulse: true,
-                      vohAi: true,
-                      mentions: true,
-                      comments: true,
-                      sparks: true,
-                      email: true,
-                      push: true
-                    });
-                    triggerToast("All alert parameters enabled");
-                  }}
-                  className="text-violet-400 hover:text-violet-300 underline uppercase pr-1"
-                >
-                  Reset Toggles
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* DAILY RECAP ENHANCEMENT */}
-      {showDailySummary && (
-        <div className="p-4 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/20 to-[#070514] border border-violet-500/15 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
-          <button 
-            onClick={() => {
-              setShowDailySummary(false);
-              triggerToast("Recap minimized");
-            }}
-            className="absolute top-3 right-3 text-violet-400/40 hover:text-white transition-colors"
-            title="Minimize Recap"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-
-          <div className="flex items-center gap-2.5 mb-3 text-violet-400">
-            <Brain className="w-5 h-5 text-violet-400 animate-pulse" />
-            <span className="text-xs font-mono uppercase tracking-widest font-black text-violet-300">Today on NEXORA</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 font-sans">
-            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
-              <span className="text-[10px] text-violet-300/50 block font-mono">Follow Alerts</span>
-              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>{localNotifications.filter(n => n.type === 'follow').length}</span>
-                <span className="text-emerald-400 text-[10px] font-normal">Active</span>
-              </span>
-            </div>
-            
-            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
-              <span className="text-[10px] text-violet-300/50 block font-mono">Spark Factor</span>
-              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>{localNotifications.filter(n => n.type === 'spark' || n.type === 'like').length}</span>
-                <span className="text-amber-400 text-[10px] font-normal">Sparks</span>
-              </span>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
-              <span className="text-[10px] text-violet-300/50 block font-mono">Discussions</span>
-              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>{localNotifications.filter(n => n.type === 'comment').length}</span>
-                <span className="text-pink-400 text-[10px] font-normal">Comments</span>
-              </span>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
-              <span className="text-[10px] text-violet-300/50 block font-mono">Invitations</span>
-              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
-                <span>{localNotifications.filter(n => n.type === 'community').length}</span>
-                <span className="text-cyan-400 text-[10px] font-normal">Invites</span>
-              </span>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-linear-to-tr from-violet-500/10 to-pink-500/5 border border-violet-500/20 text-left col-span-2 sm:col-span-1">
-              <span className="text-[10px] text-pink-300/50 block font-mono">Reputation</span>
-              <span className="text-sm font-extrabold text-[#F59E0B] mt-0.5 block flex items-center gap-1">
-                <span>{currentUser.reputationPoints || 0}</span>
-                <span className="text-[#F59E0B] text-[9px] font-black tracking-tighter">PTS</span>
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* WATCH HISTORY & CONTINUE WATCHING DESIGN PLATFORM */}
-      <div className="p-5 rounded-3xl bg-[#09071c]/60 border border-violet-500/10 text-left space-y-4 shadow-xl">
-        <div className="flex items-center justify-between border-b border-violet-500/5 pb-2">
-          <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-pink-400" />
-            <span className="text-xs font-mono font-black text-violet-200 uppercase tracking-wider">
-              📺 WATCH HISTORY & CONTINUE WATCHING
-            </span>
-          </div>
-
-          {watchHistory.length > 0 && (
-            <button
-              onClick={handleClearWatchHistory}
-              className="text-[10px] font-mono font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors uppercase"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Clear History</span>
-            </button>
-          )}
-        </div>
-
-        {watchHistory.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {watchHistory.map((item: any) => {
-              const progressPercentage = item.duration ? Math.min(100, Math.floor((item.progress / item.duration) * 100)) : 0;
-              return (
-                <div 
-                  key={item.postId}
-                  className="bg-black/40 border border-white/5 rounded-2xl p-3 flex flex-col justify-between hover:border-violet-500/20 transition-all group relative overflow-hidden"
-                >
-                  <div className="space-y-2.5">
-                    {/* Simulated thumbnail */}
-                    <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10 group-hover:scale-[1.01] transition-transform">
-                      <video 
-                        src={item.videoUrl} 
-                        muted 
-                        playsInline 
-                        className="w-full h-full object-cover opacity-70"
-                      />
-                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
-                        <button
-                          onClick={() => setActiveHistoryVideo(item)}
-                          className="w-9 h-9 rounded-xl bg-purple-600/90 text-white flex items-center justify-center hover:bg-purple-500 hover:scale-105 active:scale-95 transition-all shadow-[0_0_12px_rgba(139,92,246,0.3)] cursor-pointer"
-                        >
-                          <Play className="w-4 h-4 fill-current ml-0.5" />
-                        </button>
-                      </div>
-
-                      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[9px] font-mono text-zinc-300 bg-black/75 px-2 py-1 rounded-md backdrop-blur-md">
-                        <span>@{item.username}</span>
-                        <span>{progressPercentage}% watched</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <img src={item.avatar} alt="" className="w-4 h-4 rounded-full object-cover border border-white/10" />
-                        <span className="text-[10px] font-mono text-violet-300 font-bold">{item.name}</span>
-                      </div>
-                      <p className="text-[11px] text-zinc-100 font-sans line-clamp-2 leading-relaxed">
-                        {item.content || "Awesome video moment on Nexora!"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mt-4 decoration-current">
-                    {/* Visual Progress tracking bar */}
-                    <div className="space-y-1">
-                      <div className="h-1 w-full bg-zinc-800 rounded-lg overflow-hidden">
-                        <div 
-                          className="h-full bg-linear-to-r from-purple-500 to-pink-500 rounded-lg transition-all" 
-                          style={{ width: `${progressPercentage}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-[8px] font-mono text-zinc-500">
-                        <span>Resumed position: {Math.floor(item.progress)}s</span>
-                        <span>Length: {Math.floor(item.duration)}s</span>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => setActiveHistoryVideo(item)}
-                      className="w-full py-1.5 bg-violet-600/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/10 rounded-xl text-[10px] font-mono tracking-wider font-extrabold uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Tv className="w-3 h-3" />
-                      <span>Continue Watching ⏯️</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-6 text-center text-violet-400/30 font-mono text-[10px] flex flex-col items-center justify-center gap-2">
-            <Tv className="w-8 h-8 opacity-25 animate-pulse" />
-            <span>Watch standard videos on the Home Feed to populate your watch resume stream here!</span>
-          </div>
-        )}
-      </div>
 
       {/* SEARCH ACTIVITY BAR */}
       <div className="relative">
@@ -964,6 +712,261 @@ export default function NotificationsView({
           </AnimatePresence>
         )}
       </div>
+
+      {/* WATCH HISTORY & CONTINUE WATCHING DESIGN PLATFORM */}
+      <div className="p-5 rounded-3xl bg-[#09071c]/60 border border-violet-500/10 text-left space-y-4 shadow-xl">
+        <div className="flex items-center justify-between border-b border-violet-500/5 pb-2">
+          <div className="flex items-center gap-2">
+            <History className="w-4 h-4 text-pink-400" />
+            <span className="text-xs font-mono font-black text-violet-200 uppercase tracking-wider">
+              📺 WATCH HISTORY & CONTINUE WATCHING
+            </span>
+          </div>
+
+          {watchHistory.length > 0 && (
+            <button
+              onClick={handleClearWatchHistory}
+              className="text-[10px] font-mono font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors uppercase"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Clear History</span>
+            </button>
+          )}
+        </div>
+
+        {watchHistory.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {watchHistory.map((item: any) => {
+              const progressPercentage = item.duration ? Math.min(100, Math.floor((item.progress / item.duration) * 100)) : 0;
+              return (
+                <div 
+                  key={item.postId}
+                  className="bg-black/40 border border-white/5 rounded-2xl p-3 flex flex-col justify-between hover:border-violet-500/20 transition-all group relative overflow-hidden"
+                >
+                  <div className="space-y-2.5">
+                    {/* Simulated thumbnail */}
+                    <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10 group-hover:scale-[1.01] transition-transform">
+                      <video 
+                        src={item.videoUrl} 
+                        muted 
+                        playsInline 
+                        className="w-full h-full object-cover opacity-70"
+                      />
+                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
+                        <button
+                          onClick={() => setActiveHistoryVideo(item)}
+                          className="w-9 h-9 rounded-xl bg-purple-600/90 text-white flex items-center justify-center hover:bg-purple-500 hover:scale-105 active:scale-95 transition-all shadow-[0_0_12px_rgba(139,92,246,0.3)] cursor-pointer"
+                        >
+                          <Play className="w-4 h-4 fill-current ml-0.5" />
+                        </button>
+                      </div>
+
+                      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[9px] font-mono text-zinc-300 bg-black/75 px-2 py-1 rounded-md backdrop-blur-md">
+                        <span>@{item.username}</span>
+                        <span>{progressPercentage}% watched</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-1.5">
+                        <img src={item.avatar} alt="" className="w-4 h-4 rounded-full object-cover border border-white/10" />
+                        <span className="text-[10px] font-mono text-violet-300 font-bold">{item.name}</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-100 font-sans line-clamp-2 leading-relaxed">
+                        {item.content || "Awesome video moment on Nexora!"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 mt-4 decoration-current">
+                    {/* Visual Progress tracking bar */}
+                    <div className="space-y-1">
+                      <div className="h-1 w-full bg-zinc-800 rounded-lg overflow-hidden">
+                        <div 
+                          className="h-full bg-linear-to-r from-purple-500 to-pink-500 rounded-lg transition-all" 
+                          style={{ width: `${progressPercentage}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[8px] font-mono text-zinc-500">
+                        <span>Resumed position: {Math.floor(item.progress)}s</span>
+                        <span>Length: {Math.floor(item.duration)}s</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => setActiveHistoryVideo(item)}
+                      className="w-full py-1.5 bg-violet-600/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-violet-500/10 rounded-xl text-[10px] font-mono tracking-wider font-extrabold uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Tv className="w-3 h-3" />
+                      <span>Continue Watching ⏯️</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="py-6 text-center text-violet-400/30 font-mono text-[10px] flex flex-col items-center justify-center gap-2">
+            <Tv className="w-8 h-8 opacity-25 animate-pulse" />
+            <span>Watch standard videos on the Home Feed to populate your watch resume stream here!</span>
+          </div>
+        )}
+      </div>
+
+      {/* DAILY RECAP ENHANCEMENT */}
+      {showDailySummary && (
+        <div className="p-4 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/20 to-[#070514] border border-violet-500/15 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+          <button 
+            onClick={() => {
+              setShowDailySummary(false);
+              triggerToast("Recap minimized");
+            }}
+            className="absolute top-3 right-3 text-violet-400/40 hover:text-white transition-colors"
+            title="Minimize Recap"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="flex items-center gap-2.5 mb-3 text-violet-400">
+            <Brain className="w-5 h-5 text-violet-400 animate-pulse" />
+            <span className="text-xs font-mono uppercase tracking-widest font-black text-violet-300">Today on NEXORA</span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 font-sans">
+            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
+              <span className="text-[10px] text-violet-300/50 block font-mono">Follow Alerts</span>
+              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
+                <span>{localNotifications.filter(n => n.type === 'follow').length}</span>
+                <span className="text-emerald-400 text-[10px] font-normal">Active</span>
+              </span>
+            </div>
+            
+            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
+              <span className="text-[10px] text-violet-300/50 block font-mono">Spark Factor</span>
+              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
+                <span>{localNotifications.filter(n => n.type === 'spark' || n.type === 'like').length}</span>
+                <span className="text-amber-400 text-[10px] font-normal">Sparks</span>
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
+              <span className="text-[10px] text-violet-300/50 block font-mono">Discussions</span>
+              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
+                <span>{localNotifications.filter(n => n.type === 'comment').length}</span>
+                <span className="text-pink-400 text-[10px] font-normal">Comments</span>
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-2xl bg-[#09071c]/50 border border-violet-500/5 group hover:border-violet-500/15 transition-all text-left">
+              <span className="text-[10px] text-violet-300/50 block font-mono">Invitations</span>
+              <span className="text-sm font-bold text-white mt-0.5 block flex items-center gap-1">
+                <span>{localNotifications.filter(n => n.type === 'community').length}</span>
+                <span className="text-cyan-400 text-[10px] font-normal">Invites</span>
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-2xl bg-linear-to-tr from-violet-500/10 to-pink-500/5 border border-violet-500/20 text-left col-span-2 sm:col-span-1">
+              <span className="text-[10px] text-pink-300/50 block font-mono">Reputation</span>
+              <span className="text-sm font-extrabold text-[#F59E0B] mt-0.5 block flex items-center gap-1">
+                <span>{currentUser.reputationPoints || 0}</span>
+                <span className="text-[#F59E0B] text-[9px] font-black tracking-tighter">PTS</span>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ACTIVITY SETTINGS DRAWER / COLLAPSE PANEL */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="p-4 rounded-3xl bg-[#09071c] border border-violet-500/20 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-violet-500/5 pb-2">
+                <span className="text-xs font-mono font-black text-violet-300 uppercase flex items-center gap-1.5">
+                  <Settings className="w-4 h-4 text-violet-400" />
+                  Activity Channel Managers
+                </span>
+                <button 
+                  onClick={() => setIsSettingsOpen(false)}
+                  className="text-violet-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {Object.entries({
+                  messages: 'Unread Messages',
+                  followers: 'Followers / Following',
+                  communities: 'Community Invites',
+                  worldPulse: 'World Pulse Alerts',
+                  vohAi: 'VOH AI Suggestions',
+                  mentions: '@Username Mentions',
+                  comments: 'Post Comments',
+                  sparks: 'Post Sparks',
+                  email: 'Email Notifications',
+                  push: 'Push System Alerts'
+                }).map(([key, label]) => {
+                  const val = settingsToggles[key as keyof typeof settingsToggles];
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setSettingsToggles(prev => ({
+                        ...prev,
+                        [key]: !val
+                      }))}
+                      className={`p-2.5 rounded-2xl border text-left flex items-center justify-between gap-1.5 transition-all text-[11px] font-sans ${
+                        val 
+                          ? 'bg-violet-950/40 border-violet-500/30 text-white' 
+                          : 'bg-black/40 border-violet-500/5 text-violet-400/40'
+                      }`}
+                    >
+                      <span className="truncate">{label}</span>
+                      <span className={`w-3.5 h-3.5 rounded-full flex items-center justify-center border ${
+                        val 
+                          ? 'bg-violet-500 border-violet-300 text-white font-extrabold' 
+                          : 'bg-transparent border-violet-500/20'
+                      }`}>
+                        {val && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-between items-center pt-2 text-[10px] text-violet-300/40 font-mono">
+                <span>Toggle configurations map in real-time to active notification feed filters.</span>
+                <button 
+                  onClick={() => {
+                    setSettingsToggles({
+                      messages: true,
+                      followers: true,
+                      communities: true,
+                      worldPulse: true,
+                      vohAi: true,
+                      mentions: true,
+                      comments: true,
+                      sparks: true,
+                      email: true,
+                      push: true
+                    });
+                    triggerToast("All alert parameters enabled");
+                  }}
+                  className="text-violet-400 hover:text-violet-300 underline uppercase pr-1"
+                >
+                  Reset Toggles
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* CONTINUOUS WATCH HISTORY IMMERSIVE PLAYER MODAL */}
       <AnimatePresence>

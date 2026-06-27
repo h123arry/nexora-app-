@@ -7,6 +7,11 @@
 }
 
 /* Custom gorgeous scrollbar aesthetics */
+.custom-scrollbar {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 5px;
   height: 5px;
