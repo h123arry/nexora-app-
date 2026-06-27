@@ -96,6 +96,10 @@ export default function App() {
 
   const [resolvedPosts, setResolvedPosts] = useState<Post[]>([]);
 
+  // User-scoped sparks and bookmarks states
+  const [userBookmarks, setUserBookmarks] = useState<string[]>([]);
+  const [userSparks, setUserSparks] = useState<string[]>([]);
+
   useEffect(() => {
     let active = true;
     const resolveAll = async () => {
@@ -222,6 +226,23 @@ export default function App() {
   // 2. Local Storage Persistence Synchronization sync
   useEffect(() => {
     localStorage.setItem('nexora_user', JSON.stringify(currentUser));
+    
+    // Also sync updates back to the registered accounts registry so profile updates survive logout/login
+    const accountsStr = localStorage.getItem('nexora_registered_accounts');
+    if (accountsStr) {
+      try {
+        const accounts = JSON.parse(accountsStr);
+        const updated = accounts.map((acc: any) => {
+          if (acc.user.id === currentUser.id || acc.user.username === currentUser.username) {
+            return { ...acc, user: currentUser };
+          }
+          return acc;
+        });
+        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
+      } catch (e) {
+        console.error('Failed to sync user to registered accounts registry:', e);
+      }
+    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -233,27 +254,76 @@ export default function App() {
   }, [posts]);
 
   useEffect(() => {
+    if (currentUser && currentUser.id) {
+      localStorage.setItem(`nexora_chats_${currentUser.id}`, JSON.stringify(chats));
+    }
     localStorage.setItem('nexora_chats', JSON.stringify(chats));
-  }, [chats]);
+  }, [chats, currentUser.id]);
 
   useEffect(() => {
+    if (currentUser && currentUser.id) {
+      localStorage.setItem(`nexora_messages_${currentUser.id}`, JSON.stringify(messages));
+    }
     localStorage.setItem('nexora_messages', JSON.stringify(messages));
-  }, [messages]);
+  }, [messages, currentUser.id]);
 
   useEffect(() => {
+    if (currentUser && currentUser.id) {
+      localStorage.setItem(`nexora_notifications_${currentUser.id}`, JSON.stringify(notifications));
+    }
     localStorage.setItem('nexora_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+  }, [notifications, currentUser.id]);
 
   useEffect(() => {
-    // Sync followingIds from follows database table with absolute integrity
-    const follows = JSON.parse(localStorage.getItem('nexora_db_follows') || '[]');
-    const userFollowing = follows.filter((f: any) => f.followerId === currentUser.id).map((f: any) => f.followingId);
-    setFollowingIds(userFollowing);
-  }, [currentUser]);
-
-  useEffect(() => {
+    if (currentUser && currentUser.id) {
+      localStorage.setItem(`nexora_following_ids_${currentUser.id}`, JSON.stringify(followingIds));
+    }
     localStorage.setItem('nexora_following_ids', JSON.stringify(followingIds));
-  }, [followingIds]);
+  }, [followingIds, currentUser.id]);
+
+  // Load user-scoped states whenever currentUser changes
+  useEffect(() => {
+    if (currentUser && currentUser.id) {
+      const uid = currentUser.id;
+
+      const savedBms = localStorage.getItem(`nexora_bookmarks_${uid}`);
+      setUserBookmarks(savedBms ? JSON.parse(savedBms) : []);
+
+      const savedSpks = localStorage.getItem(`nexora_sparks_${uid}`);
+      setUserSparks(savedSpks ? JSON.parse(savedSpks) : []);
+
+      const savedChats = localStorage.getItem(`nexora_chats_${uid}`);
+      setChats(savedChats ? JSON.parse(savedChats) : INITIAL_CHATS);
+
+      const savedMsgs = localStorage.getItem(`nexora_messages_${uid}`);
+      setMessages(savedMsgs ? JSON.parse(savedMsgs) : INITIAL_MESSAGES);
+
+      const savedNotifs = localStorage.getItem(`nexora_notifications_${uid}`);
+      setNotifications(savedNotifs ? JSON.parse(savedNotifs) : INITIAL_NOTIFICATIONS);
+
+      const savedFollowing = localStorage.getItem(`nexora_following_ids_${uid}`);
+      if (savedFollowing) {
+        setFollowingIds(JSON.parse(savedFollowing));
+      } else {
+        const follows = JSON.parse(localStorage.getItem('nexora_db_follows') || '[]');
+        const userFollowing = follows.filter((f: any) => f.followerId === uid).map((f: any) => f.followingId);
+        setFollowingIds(userFollowing);
+      }
+    }
+  }, [currentUser.id]);
+
+  // Sync userBookmarks and userSparks changes
+  useEffect(() => {
+    if (currentUser && currentUser.id) {
+      localStorage.setItem(`nexora_bookmarks_${currentUser.id}`, JSON.stringify(userBookmarks));
+    }
+  }, [userBookmarks, currentUser.id]);
+
+  useEffect(() => {
+    if (currentUser && currentUser.id) {
+      localStorage.setItem(`nexora_sparks_${currentUser.id}`, JSON.stringify(userSparks));
+    }
+  }, [userSparks, currentUser.id]);
 
   useEffect(() => {
     localStorage.setItem('nexora_theme', theme);
@@ -445,10 +515,16 @@ export default function App() {
 
   // 5. Shared Post Interact Controllers
   const handleLikePost = (postId: string) => {
+    const isCurrentlyLiked = userSparks.includes(postId);
+    const updatedSparks = isCurrentlyLiked
+      ? userSparks.filter(id => id !== postId)
+      : [...userSparks, postId];
+    
+    setUserSparks(updatedSparks);
+
     setPosts(prevPosts => 
       prevPosts.map(post => {
         if (post.id === postId) {
-          const isCurrentlyLiked = post.isLikedByUser;
           const updatedLikes = isCurrentlyLiked ? post.likes - 1 : post.likes + 1;
           
           // If liking, push interaction alert
@@ -469,8 +545,7 @@ export default function App() {
 
           return { 
             ...post, 
-            likes: updatedLikes, 
-            isLikedByUser: !isCurrentlyLiked 
+            likes: updatedLikes
           };
         }
         return post;
@@ -479,15 +554,17 @@ export default function App() {
   };
 
   const handleBookmarkPost = (postId: string) => {
-    setPosts(prevPosts =>
-      prevPosts.map(post => {
-        if (post.id === postId) {
-          const isBookmarked = !post.isBookmarkedByUser;
-          return { ...post, isBookmarkedByUser: isBookmarked };
-        }
-        return post;
-      })
-    );
+    const isCurrentlyBookmarked = userBookmarks.includes(postId);
+    const updatedBookmarks = isCurrentlyBookmarked
+      ? userBookmarks.filter(id => id !== postId)
+      : [...userBookmarks, postId];
+    
+    setUserBookmarks(updatedBookmarks);
+    
+    // Also dispatch update collections event
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('update-collections'));
+    }, 100);
   };
 
   const handleAddPost = (

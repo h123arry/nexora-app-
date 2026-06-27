@@ -275,7 +275,19 @@ const loadAccounts = (): RegisteredAccount[] => {
     }
   }
   const defaults: RegisteredAccount[] = [
-    { email: 'ogoulu131@gmail.com', passwordHash: 'password123', user: INITIAL_USER },
+    { 
+      email: 'ogoulu131@gmail.com', 
+      passwordHash: 'password123', 
+      user: {
+        id: 'user-ogoulu',
+        username: 'ogoulu131',
+        name: 'Ogoulu',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        bio: 'Premium NEXORA Creator 🚀 Exploring music, design, and football.',
+        preferredLanguage: 'English',
+        interestDNA: { 'sports': 99, 'music': 99, 'tech': 99 }
+      }
+    },
     { email: 'voh@nexora.com', passwordHash: 'password123', user: INITIAL_USER },
     { email: 'ai@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[0] },
     { email: 'voh_ai@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[1] }
