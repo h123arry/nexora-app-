@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import NexoraVideo from './NexoraVideo';
 import { 
   Send, 
   Search, 
@@ -881,7 +882,7 @@ export default function MessagesView({
                           </div>
                         ) : msg.videoUrl ? (
                           <div className="rounded-xl overflow-hidden aspect-square w-32 border border-white/10 bg-black relative mb-1.5 select-none">
-                            <video src={msg.videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+                            <NexoraVideo src={msg.videoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
                             <span className="absolute bottom-1 right-1 text-[8px] font-mono uppercase bg-black/55 text-white px-1.5 py-0.5 rounded">
                               Real-Time Loop
                             </span>

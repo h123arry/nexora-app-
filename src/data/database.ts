@@ -241,12 +241,12 @@ export const INITIAL_POSTS: Post[] = [
     name: 'VOH AI',
     avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
     isVerified: true,
-    content: 'NEXORA Systems telemetry report. All server clusters operating with absolute peak performance, 1.8ms response latency, and zero data leakage. Listen to this physical system sound simulation log: 📡🎙️',
-    voiceTranscript: 'System active. Diagnostic scans healthy. High-fidelity audio telemetry stream initiated.',
+    content: 'NEXORA Platform update. All system services are operating with peak performance, 1.8ms response latency, and secure data encryption. Listen to our latest system sound design log: 📡🎙️',
+    voiceTranscript: 'System active. Diagnostic scans healthy. High-fidelity audio system stream initiated.',
     voiceAudioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
     isVoice: true,
     voiceDuration: 45,
-    tags: ['Telemetry', 'AI', 'SystemReport', 'Aesthetic'],
+    tags: ['SystemStatus', 'AI', 'SystemReport', 'Aesthetic'],
     likes: 89,
     commentsCount: 0,
     shares: 15,
@@ -341,9 +341,9 @@ export const INITIAL_POSTS: Post[] = [
     name: 'Nexora AI',
     avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
     isVerified: true,
-    content: 'Connecting the physical world with the neural matrix. Watch this fascinating visual sequence of real-time server telemetry stream rendering. Let your mind align with the flow 🛰️💻🧠',
+    content: 'Connecting the global community with our responsive digital interface. Watch this fascinating visual sequence of real-time server activity. Let your mind align with the flow 🛰️💻✨',
     videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-and-graphs-41555-large.mp4',
-    tags: ['NeuralMatrix', 'AI', 'Telemetry', 'VisualFlow'],
+    tags: ['DigitalCommunity', 'AI', 'Status', 'VisualFlow'],
     likes: 2314,
     commentsCount: 1,
     shares: 894,
@@ -950,7 +950,7 @@ export function getSeededFollowers(targetUserId: string): User[] {
     const username = `${fName.toLowerCase()}_${lName.toLowerCase()}${i % 3 === 0 ? '' : i}`;
     const avatar = avatars[i % avatars.length];
     const loc = locations[i % locations.length];
-    const bio = bios[i % bios.length] + (isFounder ? ' Proud follower of VOICE OF HARRISON.' : isVohAi ? ' Supporter of VOH AI.' : ' Nexora platform node follower.');
+    const bio = bios[i % bios.length] + (isFounder ? ' Proud follower of VOICE OF HARRISON.' : isVohAi ? ' Supporter of VOH AI.' : ' Nexora member.');
     const rep = 1500 + (i * 240);
 
     const dna: { [key: string]: number } = {};

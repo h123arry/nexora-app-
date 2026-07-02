@@ -14,7 +14,8 @@ import {
   Globe,
   Plus,
   User as UserIcon,
-  Search
+  Search,
+  MessageSquare
 } from 'lucide-react';
 
 import {
@@ -33,7 +34,8 @@ import {
   Trash2,
   RefreshCw,
   Eye,
-  WifiOff
+  WifiOff,
+  FolderOpen
 } from 'lucide-react';
 
 import { 
@@ -62,6 +64,7 @@ import {
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
+import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -74,6 +77,7 @@ import AuthView from './components/AuthView';
 import AdminDashboardView from './components/AdminDashboardView';
 import MediaCreationEngine from './components/MediaCreationEngine';
 import ExploreView from './components/ExploreView';
+import InboxView from './components/InboxView';
 
 export default function App() {
   // 1. Core State Orchestrator
@@ -87,6 +91,37 @@ export default function App() {
     return saved === 'true';
   });
 
+  // List of saved/remembered accounts on this device for multi-account switching
+  const [savedAccounts, setSavedAccounts] = useState<User[]>(() => {
+    try {
+      const stored = localStorage.getItem('nexora_saved_accounts');
+      const loaded = stored ? JSON.parse(stored) : [];
+      return loaded;
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
+
+  // Sync current user into savedAccounts array if logged in
+  useEffect(() => {
+    if (isLoggedIn && currentUser && currentUser.id) {
+      setSavedAccounts(prev => {
+        const exists = prev.some(acc => acc.id === currentUser.id);
+        if (exists) {
+          return prev.map(acc => acc.id === currentUser.id ? currentUser : acc);
+        }
+        return [...prev, currentUser];
+      });
+    }
+  }, [currentUser, isLoggedIn]);
+
+  // Sync savedAccounts to localStorage
+  useEffect(() => {
+    localStorage.setItem('nexora_saved_accounts', JSON.stringify(savedAccounts));
+  }, [savedAccounts]);
+
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('nexora_posts');
     const loadedPosts = saved ? JSON.parse(saved) : INITIAL_POSTS;
@@ -97,8 +132,33 @@ export default function App() {
   const [resolvedPosts, setResolvedPosts] = useState<Post[]>([]);
 
   // User-scoped sparks and bookmarks states
-  const [userBookmarks, setUserBookmarks] = useState<string[]>([]);
-  const [userSparks, setUserSparks] = useState<string[]>([]);
+  const [userBookmarks, setUserBookmarks] = useState<string[]>(() => {
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) {
+          const saved = localStorage.getItem(`nexora_bookmarks_${u.id}`);
+          return saved ? JSON.parse(saved) : [];
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  const [userSparks, setUserSparks] = useState<string[]>(() => {
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) {
+          const saved = localStorage.getItem(`nexora_sparks_${u.id}`);
+          return saved ? JSON.parse(saved) : [];
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
 
   useEffect(() => {
     let active = true;
@@ -118,8 +178,17 @@ export default function App() {
           modified = true;
         }
 
-        if (modified) {
-          return { ...post, videoUrl: vUrl, voiceAudioUrl: aUrl };
+        const isLikedByUser = userSparks.includes(post.id);
+        const isBookmarkedByUser = userBookmarks.includes(post.id);
+
+        if (modified || post.isLikedByUser !== isLikedByUser || post.isBookmarkedByUser !== isBookmarkedByUser) {
+          return { 
+            ...post, 
+            videoUrl: vUrl, 
+            voiceAudioUrl: aUrl,
+            isLikedByUser,
+            isBookmarkedByUser
+          };
         }
         return post;
       }));
@@ -130,20 +199,52 @@ export default function App() {
     };
     resolveAll();
     return () => { active = false; };
-  }, [posts]);
+  }, [posts, userSparks, userBookmarks]);
 
   const [chats, setChats] = useState<Chat[]>(() => {
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) {
+          const saved = localStorage.getItem(`nexora_chats_${u.id}`);
+          return saved ? JSON.parse(saved) : INITIAL_CHATS;
+        }
+      } catch (e) {}
+    }
     const saved = localStorage.getItem('nexora_chats');
     return saved ? JSON.parse(saved) : INITIAL_CHATS;
   });
 
   const [messages, setMessages] = useState<{ [chatId: string]: Message[] }>(() => {
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) {
+          const saved = localStorage.getItem(`nexora_messages_${u.id}`);
+          return saved ? JSON.parse(saved) : INITIAL_MESSAGES;
+        }
+      } catch (e) {}
+    }
     const saved = localStorage.getItem('nexora_messages');
     return saved ? JSON.parse(saved) : INITIAL_MESSAGES;
   });
 
   const [notifications, setNotifications] = useState<Notification[]>(() => {
-    const saved = localStorage.getItem('nexora_notifications');
+    let saved = null;
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) {
+          saved = localStorage.getItem(`nexora_notifications_${u.id}`);
+        }
+      } catch (e) {}
+    }
+    if (!saved) {
+      saved = localStorage.getItem('nexora_notifications');
+    }
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -164,11 +265,32 @@ export default function App() {
   });
 
   const [followingIds, setFollowingIds] = useState<string[]>(() => {
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) {
+          const savedFollowing = localStorage.getItem(`nexora_following_ids_${u.id}`);
+          if (savedFollowing) {
+            return JSON.parse(savedFollowing);
+          } else {
+            const follows = JSON.parse(localStorage.getItem('nexora_db_follows') || '[]');
+            return follows.filter((f: any) => f.followerId === u.id).map((f: any) => f.followingId);
+          }
+        }
+      } catch (e) {}
+    }
     const saved = localStorage.getItem('nexora_following_ids');
     return saved ? JSON.parse(saved) : ['creator-4', 'voh_ai'];
   });
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'pulse' | 'matrix' | 'activity' | 'profile'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin'>('feed');
+
+  // Pause any playing videos immediately when switching main tabs
+  useEffect(() => {
+    globalVideoPlaybackManager.pauseAll();
+  }, [activeTab]);
+
   const [viewedUser, setViewedUser] = useState<User | null>(null);
   const [matrixSubTabRedirect, setMatrixSubTabRedirect] = useState<'ai' | 'studio' | 'circles' | 'missions' | 'messages'>('ai');
   const [theme, setTheme] = useState<ThemeMood>(() => {
@@ -181,6 +303,9 @@ export default function App() {
   
   // Dialog overlays
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
+  const [creationInitialMode, setCreationInitialMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
+  const [creationInitialTab, setCreationInitialTab] = useState<'feed' | 'story' | 'drafts' | undefined>(undefined);
   const [systemSpeed, setSystemSpeed] = useState('1.8ms');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncPending, setIsSyncPending] = useState(false);
@@ -258,28 +383,28 @@ export default function App() {
       localStorage.setItem(`nexora_chats_${currentUser.id}`, JSON.stringify(chats));
     }
     localStorage.setItem('nexora_chats', JSON.stringify(chats));
-  }, [chats, currentUser.id]);
+  }, [chats]);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
       localStorage.setItem(`nexora_messages_${currentUser.id}`, JSON.stringify(messages));
     }
     localStorage.setItem('nexora_messages', JSON.stringify(messages));
-  }, [messages, currentUser.id]);
+  }, [messages]);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
       localStorage.setItem(`nexora_notifications_${currentUser.id}`, JSON.stringify(notifications));
     }
     localStorage.setItem('nexora_notifications', JSON.stringify(notifications));
-  }, [notifications, currentUser.id]);
+  }, [notifications]);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
       localStorage.setItem(`nexora_following_ids_${currentUser.id}`, JSON.stringify(followingIds));
     }
     localStorage.setItem('nexora_following_ids', JSON.stringify(followingIds));
-  }, [followingIds, currentUser.id]);
+  }, [followingIds]);
 
   // Load user-scoped states whenever currentUser changes
   useEffect(() => {
@@ -317,13 +442,13 @@ export default function App() {
     if (currentUser && currentUser.id) {
       localStorage.setItem(`nexora_bookmarks_${currentUser.id}`, JSON.stringify(userBookmarks));
     }
-  }, [userBookmarks, currentUser.id]);
+  }, [userBookmarks]);
 
   useEffect(() => {
     if (currentUser && currentUser.id) {
       localStorage.setItem(`nexora_sparks_${currentUser.id}`, JSON.stringify(userSparks));
     }
-  }, [userSparks, currentUser.id]);
+  }, [userSparks]);
 
   useEffect(() => {
     localStorage.setItem('nexora_theme', theme);
@@ -419,7 +544,7 @@ export default function App() {
         if (prev) {
           setTimeout(() => {
             setIsSyncPending(false);
-            window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully synchronized!' }));
+            window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully updated!' }));
           }, 2000);
           return true;
         }
@@ -441,7 +566,73 @@ export default function App() {
     };
   }, []);
 
+  // Creator Tools global event listeners (Pin, Delete, Edit Caption, Toggle Comments, Delete Comment)
+  useEffect(() => {
+    const handleDeletePost = (e: Event) => {
+      const { postId } = (e as CustomEvent).detail || {};
+      if (!postId) return;
+      setPosts(prev => {
+        const next = prev.filter(p => p.id !== postId);
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Post deleted successfully.' }));
+    };
 
+    const handleEditCaption = (e: Event) => {
+      const { postId, newCaption } = (e as CustomEvent).detail || {};
+      if (!postId) return;
+      setPosts(prev => {
+        const next = prev.map(p => p.id === postId ? { ...p, content: newCaption } : p);
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📝 Post caption updated.' }));
+    };
+
+    const handleToggleComments = (e: Event) => {
+      const { postId, disabled } = (e as CustomEvent).detail || {};
+      if (!postId) return;
+      setPosts(prev => {
+        const next = prev.map(p => p.id === postId ? { ...p, commentsDisabled: disabled } : p);
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: disabled ? '🔒 Comments disabled for this post.' : '🔓 Comments enabled for this post.' }));
+    };
+
+    const handleDeleteComment = (e: Event) => {
+      const { postId, commentIndex } = (e as CustomEvent).detail || {};
+      if (!postId || commentIndex === undefined) return;
+      setPosts(prev => {
+        const next = prev.map(p => {
+          if (p.id !== postId) return p;
+          const comments = [...(p.comments || [])];
+          comments.splice(commentIndex, 1);
+          return {
+            ...p,
+            comments,
+            commentsCount: Math.max(0, (p.commentsCount || 0) - 1)
+          };
+        });
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Comment deleted by creator.' }));
+    };
+
+    window.addEventListener('nexora-delete-post', handleDeletePost);
+    window.addEventListener('nexora-edit-caption', handleEditCaption);
+    window.addEventListener('nexora-toggle-comments', handleToggleComments);
+    window.addEventListener('nexora-delete-comment', handleDeleteComment);
+
+    return () => {
+      window.removeEventListener('nexora-delete-post', handleDeletePost);
+      window.removeEventListener('nexora-edit-caption', handleEditCaption);
+      window.removeEventListener('nexora-toggle-comments', handleToggleComments);
+      window.removeEventListener('nexora-delete-comment', handleDeleteComment);
+    };
+  }, []);
 
   // 4.5. PWA Installation Event Listeners & Controllers
   useEffect(() => {
@@ -700,7 +891,7 @@ export default function App() {
     
     if (isOffline) {
       setIsSyncPending(true);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📝 Offline Mode: Post saved locally and queued for synchronization!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📝 Offline Mode: Post saved locally and queued for updates!' }));
     }
     
     return postId;
@@ -747,6 +938,17 @@ export default function App() {
             commentsCount: p.commentsCount + 1,
             comments: [...p.comments, newComment]
           };
+        }
+        return p;
+      })
+    );
+  };
+
+  const handleSharePost = (postId: string) => {
+    setPosts(prevPosts =>
+      prevPosts.map(p => {
+        if (p.id === postId) {
+          return { ...p, shares: (p.shares || 0) + 1 };
         }
         return p;
       })
@@ -1225,17 +1427,19 @@ export default function App() {
               onOpenCreatePost={() => {
                 setCreatedPostLink(null);
                 setIsCopied(false);
-                setIsCreatePostModalOpen(true);
+                setCreationInitialMode(null);
+                setCreationInitialTab(undefined);
+                setIsCreateMenuOpen(true);
               }}
-              onLogout={() => setIsLoggedIn(false)}
+              onLogout={() => setIsLogoutConfirming(true)}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
             />
           </div>
 
           {/* Col 2 & 3: Main Immersive View Area */}
-          <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-2 h-full w-full relative" : "lg:col-span-2"}>
-            {activeTab === 'feed' ? (
+          <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-2 h-full w-full relative min-h-0" : "lg:col-span-2 min-h-0"}>
+            <div className={activeTab === 'feed' ? "block h-full w-full" : "hidden h-0 overflow-hidden pointer-events-none"}>
               <FeedView
                 currentUser={getRichUser(currentUser)}
                 posts={resolvedPosts}
@@ -1251,8 +1455,11 @@ export default function App() {
                 onViewProfile={handleViewProfile}
                 onToggleFollow={handleToggleFollow}
                 theme={theme}
+                onSharePost={handleSharePost}
               />
-            ) : (
+            </div>
+            
+            {activeTab !== 'feed' && (
               <div className={`${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -1307,16 +1514,20 @@ export default function App() {
                       onViewProfile={handleViewProfile}
                       theme={theme}
                       setTheme={setTheme}
-                      onLogout={() => setIsLoggedIn(false)}
+                      onLogout={() => setIsLogoutConfirming(true)}
                       onTriggerPWAInstall={handleTriggerPWAInstall}
                       showPWAInstallPrompt={showPWAInstallPrompt}
                     />
                   )}
 
-                  {activeTab === 'activity' && (
-                    <NotificationsView
-                      notifications={notifications}
+                  {(activeTab === 'inbox' || activeTab === 'activity') && (
+                    <InboxView
                       currentUser={getRichUser(currentUser)}
+                      chats={chats}
+                      messages={messages}
+                      onSendMessage={handleSendMessage}
+                      onReceiveBotMessage={handleReceiveBotMessage}
+                      notifications={notifications}
                       onMarkAllAsRead={handleMarkAllNotificationsAsRead}
                       onClearNotifications={handleClearNotifications}
                       onViewProfile={handleViewProfile}
@@ -1370,18 +1581,20 @@ export default function App() {
             onAddPost={handleAddPost}
             theme={theme}
             isOffline={isOffline}
+            initialMode={creationInitialMode}
+            initialTab={creationInitialTab}
             onToggleOffline={() => {
               setIsOffline(prev => {
                 const next = !prev;
                 if (next) {
                   window.dispatchEvent(new CustomEvent('toast', { detail: '🔌 Simulating OFFLINE mode. Actions will be queued.' }));
                 } else {
-                  window.dispatchEvent(new CustomEvent('toast', { detail: '📶 Simulating ONLINE mode. Syncing pending posts...' }));
+                  window.dispatchEvent(new CustomEvent('toast', { detail: '📶 Simulating ONLINE mode. Updating pending posts...' }));
                   setIsSyncPending(prevPending => {
                     if (prevPending) {
                       setTimeout(() => {
                         setIsSyncPending(false);
-                        window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully synchronized!' }));
+                        window.dispatchEvent(new CustomEvent('toast', { detail: '✨ All pending data packets successfully updated!' }));
                       }, 2005);
                       return true;
                     }
@@ -1603,7 +1816,7 @@ export default function App() {
                           className="bg-black/40 border border-white/10 rounded-lg text-[10px] font-sans px-2 py-1 text-violet-300 focus:outline-hidden cursor-pointer"
                         >
                           <option value="public">🌍 Public</option>
-                          <option value="circle">🔵 Circle</option>
+                          <option value="circle">🔵 Close Friends</option>
                           <option value="community">🏟 Community</option>
                           <option value="followers">👥 Followers</option>
                           <option value="onlyme">🔒 Only Me</option>
@@ -1739,7 +1952,7 @@ export default function App() {
                             </span>
                             {loadingAi ? (
                               <p className="text-[10px] text-current/50 italic font-mono animate-pulse">
-                                Running low-latency audio serialization and multilingual translation...
+                                VOH AI is thinking...
                               </p>
                             ) : (
                               <div className="space-y-2">
@@ -2111,14 +2324,14 @@ export default function App() {
                             }}
                             className="bg-[#8B5CF6] text-white px-3 py-1.5 rounded-xl text-[10px] font-sans font-bold hover:brightness-110 cursor-pointer flex items-center gap-1 shadow-sm uppercase tracking-wide"
                           >
-                            {loadingAi ? 'AI COMPILING...' : '🧠 Improve with VOH AI'}
+                            {loadingAi ? 'IMPROVING...' : '✨ Improve Post'}
                           </button>
                         </div>
 
                         {/* LIVE PREVIEW BOX - Highly polished render of post */}
                         {(modalContent.trim() || pollQuestion.trim()) && (
                           <div className="space-y-1.5">
-                            <span className="text-[9px] font-mono text-current/30 uppercase block">LIVE BROADCAST PREVIEW:</span>
+                            <span className="text-[9px] font-mono text-current/30 uppercase block">POST PREVIEW:</span>
                             <div className="p-4 rounded-2xl bg-black/60 border border-white/5 text-left space-y-3">
                               <div className="flex items-center gap-2.5">
                                 <img src={currentUser.avatar} alt="avatar" className="w-8 h-8 rounded-xl object-cover" />
@@ -2442,7 +2655,9 @@ export default function App() {
           onClick={() => {
             setCreatedPostLink(null);
             setIsCopied(false);
-            setIsCreatePostModalOpen(true);
+            setCreationInitialMode(null);
+            setCreationInitialTab(undefined);
+            setIsCreateMenuOpen(true);
           }}
           className="relative -top-4 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 hover:border-white/50 z-10"
           id="nav-create-post-center"
@@ -2520,7 +2735,7 @@ export default function App() {
               className={`absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border border-[#06040f] z-20 shadow-md ${
                 isSyncPending ? 'bg-purple-500' : (isOffline ? 'bg-amber-500' : 'bg-purple-500')
               }`}
-              title={isOffline ? (isSyncPending ? "Offline - Pending Synchronization" : "Offline Mode Active") : "Synchronizing Offline Logs..."}
+              title={isOffline ? (isSyncPending ? "Offline - Pending Updates" : "Offline Mode Active") : "Updating Offline Logs..."}
             >
               <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
                 isSyncPending ? 'bg-purple-400 animate-pulse' : (isOffline ? 'bg-amber-400 animate-pulse' : 'bg-[#c084fc] animate-ping')
@@ -2538,17 +2753,17 @@ export default function App() {
  
         <button 
           onClick={() => {
-            setActiveTab('activity');
+            setActiveTab('inbox');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 relative py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'activity' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-violet-500/10' : 'hover:text-current'}`}
-          id="mobile-nav-activity"
+          className={`flex flex-col items-center gap-1 relative py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${(activeTab === 'inbox' || activeTab === 'activity') ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-violet-500/10' : 'hover:text-current'}`}
+          id="mobile-nav-inbox"
         >
-          <Bell className="w-5 h-5" />
-          {unreadNotificationsCount > 0 && (
-            <span className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-pink-500" />
+          <MessageSquare className="w-5 h-5" />
+          {(unreadNotificationsCount + chats.reduce((acc, c) => acc + c.unreadCount, 0)) > 0 && (
+            <span className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
           )}
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Activity</span>
+          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Inbox</span>
         </button>
         <button 
           onClick={() => {
@@ -2631,6 +2846,265 @@ export default function App() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 🟣 PREMIUM LOGOUT CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {isLogoutConfirming && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1010] flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 30 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 30 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="w-full max-w-sm bg-[#0e0b24] border border-violet-500/20 p-6 rounded-3xl space-y-5 shadow-2xl relative text-center"
+            >
+              {/* User Avatar Circle */}
+              <div className="flex flex-col items-center space-y-3">
+                <div className="relative">
+                  <img
+                    src={currentUser.avatar}
+                    alt={currentUser.name}
+                    referrerPolicy="no-referrer"
+                    className="w-16 h-16 rounded-2xl object-cover ring-4 ring-violet-500/30"
+                  />
+                  <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-rose-500 rounded-full border-2 border-[#0e0b24]" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-sans font-black text-white">{currentUser.name}</h4>
+                  <p className="text-xs font-mono text-zinc-500">@{currentUser.username}</p>
+                </div>
+              </div>
+
+              {/* Title & Description */}
+              <div className="space-y-2">
+                <h3 className="text-lg font-sans font-black text-white">Sign out of Nexora?</h3>
+                <p className="text-xs text-zinc-400 font-sans leading-relaxed">
+                  You'll stop receiving real-time updates until you sign in again. Your account and data will remain safe.
+                </p>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-2 pt-2">
+                <button
+                  onClick={() => {
+                    // Secure sign out
+                    setIsLogoutConfirming(false);
+                    // Clear session state
+                    setIsLoggedIn(false);
+                    localStorage.setItem('nexora_logged_in', 'false');
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '🚪 Signed out successfully' }));
+                  }}
+                  className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-sans text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/20 active:scale-[0.98]"
+                >
+                  SIGN OUT
+                </button>
+                <button
+                  onClick={() => setIsLogoutConfirming(false)}
+                  className="w-full py-3 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-sans text-xs font-bold transition-all cursor-pointer border border-white/10 active:scale-[0.98]"
+                >
+                  CANCEL
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ☰ BEAUTIFUL CREATION CHANNELS BOTTOM SHEET */}
+      <AnimatePresence>
+        {isCreateMenuOpen && (
+          <div className="fixed inset-0 z-[100] overflow-hidden flex items-end justify-center">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCreateMenuOpen(false)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-sm"
+            />
+
+            {/* Bottom Sheet Panel */}
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 220 }}
+              className="relative w-full max-w-lg bg-[#070514] border-t border-violet-500/20 rounded-t-[2.5rem] p-6 pb-12 max-h-[85vh] overflow-y-auto shadow-2xl space-y-6 z-10 scrollbar-none text-left"
+            >
+              {/* Header with pull tab */}
+              <div className="flex flex-col items-center">
+                <div className="w-12 h-1.5 rounded-full bg-zinc-800 mb-4 cursor-pointer" onClick={() => setIsCreateMenuOpen(false)} />
+                <div className="flex items-center justify-between w-full border-b border-white/5 pb-3">
+                  <div>
+                    <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-violet-400" />
+                      Create Node Broadcast
+                    </h3>
+                    <span className="text-[9px] font-mono text-purple-400 uppercase tracking-widest block mt-0.5">
+                      Choose what you want to construct in the matrix
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setIsCreateMenuOpen(false)}
+                    className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white cursor-pointer transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Grid of options */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                
+                {/* 1. Write Post */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    setCreationInitialMode('text');
+                    setCreationInitialTab(undefined);
+                    setIsCreatePostModalOpen(true);
+                  }}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-violet-950/20 border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer text-left group"
+                >
+                  <div className="p-2.5 rounded-xl bg-violet-600/10 text-violet-400 group-hover:scale-110 group-hover:bg-violet-600/20 transition-all shrink-0">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Write Post / Thread</span>
+                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
+                      Share thoughts, formatted text, dynamic polls, and voice.
+                    </span>
+                  </div>
+                </button>
+
+                {/* 2. Upload Media */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    setCreationInitialMode('photo');
+                    setCreationInitialTab(undefined);
+                    setIsCreatePostModalOpen(true);
+                  }}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-emerald-950/20 border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer text-left group"
+                >
+                  <div className="p-2.5 rounded-xl bg-emerald-600/10 text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-600/20 transition-all shrink-0">
+                    <Camera className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Upload Media</span>
+                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
+                      Publish premium image carousels with beautiful custom shaders.
+                    </span>
+                  </div>
+                </button>
+
+                {/* 3. Record Reel */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    setCreationInitialMode('reel');
+                    setCreationInitialTab(undefined);
+                    setIsCreatePostModalOpen(true);
+                  }}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-cyan-950/20 border border-white/5 hover:border-cyan-500/30 transition-all cursor-pointer text-left group"
+                >
+                  <div className="p-2.5 rounded-xl bg-cyan-600/10 text-cyan-400 group-hover:scale-110 group-hover:bg-cyan-600/20 transition-all shrink-0">
+                    <VideoIcon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Cinematic Reel</span>
+                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
+                      Capture short, vertical high-fidelity cinematic video logs.
+                    </span>
+                  </div>
+                </button>
+
+                {/* 4. Go Live */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    setCreationInitialMode('video');
+                    setCreationInitialTab(undefined);
+                    setIsCreatePostModalOpen(true);
+                    setTimeout(() => {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔴 Connected to VOH live-streaming relay. Stream is ready!' }));
+                    }, 500);
+                  }}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-rose-950/20 border border-white/5 hover:border-rose-500/30 transition-all cursor-pointer text-left group"
+                >
+                  <div className="p-2.5 rounded-xl bg-rose-600/10 text-rose-400 group-hover:scale-110 group-hover:bg-rose-600/20 transition-all shrink-0 relative">
+                    <Radio className="w-5 h-5 animate-pulse" />
+                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
+                      Go Live
+                      <span className="px-1 py-0.2 text-[7px] font-mono bg-rose-600 text-white font-extrabold rounded-sm uppercase tracking-widest">LIVE</span>
+                    </span>
+                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
+                      Broadcast raw voice & video streams directly to subscribers.
+                    </span>
+                  </div>
+                </button>
+
+                {/* 5. Create Story */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    setCreationInitialMode(null);
+                    setCreationInitialTab('story');
+                    setIsCreatePostModalOpen(true);
+                  }}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-pink-950/20 border border-white/5 hover:border-pink-500/30 transition-all cursor-pointer text-left group"
+                >
+                  <div className="p-2.5 rounded-xl bg-pink-600/10 text-pink-400 group-hover:scale-110 group-hover:bg-pink-600/20 transition-all shrink-0">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Temporary Story</span>
+                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
+                      Post an ephemeral visual, audio, or text trace lasting 24 hours.
+                    </span>
+                  </div>
+                </button>
+
+                {/* 6. Drafts */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreateMenuOpen(false);
+                    setCreationInitialMode(null);
+                    setCreationInitialTab('drafts');
+                    setIsCreatePostModalOpen(true);
+                  }}
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-amber-950/20 border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer text-left group"
+                >
+                  <div className="p-2.5 rounded-xl bg-amber-600/10 text-amber-400 group-hover:scale-110 group-hover:bg-amber-600/20 transition-all shrink-0">
+                    <FolderOpen className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Saved Drafts</span>
+                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
+                      Access, edit, or publish your unpublished, offline drafts.
+                    </span>
+                  </div>
+                </button>
+
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { recordRecommendationEvent } from '../utils/recommendations';
+import { useResolvedUrl } from '../utils/indexedDbStorage';
+import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { 
   Play, 
   Pause, 
@@ -15,7 +17,15 @@ import {
   MoreVertical,
   Radio,
   Zap,
-  RotateCcw
+  RotateCcw,
+  Heart,
+  MessageSquare,
+  Share2,
+  Music,
+  X,
+  AlertTriangle,
+  EyeOff,
+  CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -30,6 +40,9 @@ interface Post {
   comments: any[];
   tags: string[];
   userId?: string;
+  bookmarksCount?: number;
+  shares?: number;
+  isLikedByUser?: boolean;
 }
 
 interface NexoraVideoPlayerProps {
@@ -40,6 +53,12 @@ interface NexoraVideoPlayerProps {
   isActive?: boolean;
   preloadMode?: 'auto' | 'metadata' | 'none';
   isReleased?: boolean;
+  isFollowing?: boolean;
+  onToggleFollow?: () => void;
+  onCommentToggle?: () => void;
+  isCommentsOpen?: boolean;
+  onNotInterested?: () => void;
+  onViewProfile?: (userId: string) => void;
 }
 
 export default function NexoraVideoPlayer({
@@ -49,15 +68,29 @@ export default function NexoraVideoPlayer({
   onSpark,
   isActive,
   preloadMode,
-  isReleased
+  isReleased,
+  isFollowing = false,
+  onToggleFollow,
+  onCommentToggle,
+  isCommentsOpen = false,
+  onNotInterested,
+  onViewProfile
 }: NexoraVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Generate a unique player ID for this player instance to avoid any collisions
+  const playerId = useRef(`player-${post.id}-${Math.random().toString(36).substring(2, 11)}`).current;
+  const [isNearby, setIsNearby] = useState(false);
+
+  const resolvedUrl = useResolvedUrl(videoUrl);
+  const finalVideoUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
+
   // Connection & Speed playback status states
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isBuffering, setIsBuffering] = useState(false);
   const [isMuted, setIsMuted] = useState(() => {
-    return localStorage.getItem('nexora_video_muted') !== 'false';
+    return globalVideoPlaybackManager.getMute();
   });
   const [autoplayBlocked, setAutoplayBlocked] = useState(false);
   const [showTapForSound, setShowTapForSound] = useState(false);
@@ -65,6 +98,7 @@ export default function NexoraVideoPlayer({
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLongPressing, setIsLongPressing] = useState(false);
+  const [showLongPressMenu, setShowLongPressMenu] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<'1080p' | '720p' | '480p' | 'Auto'>('Auto');
   const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
@@ -74,6 +108,7 @@ export default function NexoraVideoPlayer({
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
   const lastTapRef = useRef<number>(0);
   const longPressTimerRef = useRef<any>(null);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Save System & custom collections list
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -100,14 +135,11 @@ export default function NexoraVideoPlayer({
 
   const handleVolumeToggle = (forcedMute?: boolean) => {
     const newMuted = forcedMute !== undefined ? forcedMute : !isMuted;
+    globalVideoPlaybackManager.setMute(newMuted);
     setIsMuted(newMuted);
     if (videoRef.current) {
       videoRef.current.muted = newMuted;
     }
-    localStorage.setItem('nexora_video_muted', newMuted ? 'true' : 'false');
-    window.dispatchEvent(
-      new CustomEvent('nexora-volume-change', { detail: { muted: newMuted, senderId: post.id } })
-    );
     if (!newMuted) {
       localStorage.setItem('nexora_unmuted_once', 'true');
       setAutoplayBlocked(false);
@@ -130,157 +162,135 @@ export default function NexoraVideoPlayer({
     }
   }, [isPlaying, isMuted]);
 
-  // 1. Unified Play/Pause controller linked to viewport active state or fallback intersection
+  // Register this player instance with the global VideoPlaybackManager
   useEffect(() => {
-    if (!videoRef.current) return;
-
-    if (isActive !== undefined) {
-      if (isActive) {
-        // Trigger customized global event to pause other players before entering local loop
-        window.dispatchEvent(
-          new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
-        );
-
-        // Sync current mute preference
-        const isPrefMuted = localStorage.getItem('nexora_video_muted') !== 'false';
-        setIsMuted(isPrefMuted);
-        videoRef.current.muted = isPrefMuted;
-
-        const playPromise = videoRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise.then(() => {
-            setIsPlaying(true);
-            playStartedTimeRef.current = Date.now();
-          }).catch((error) => {
-            console.log("Autoplay failed. Retrying muted:", error);
-            if (videoRef.current) {
-              videoRef.current.muted = true;
-              setIsMuted(true);
-              videoRef.current.play()
-                .then(() => {
-                  setIsPlaying(true);
-                  playStartedTimeRef.current = Date.now();
-                })
-                .catch(e => console.error("Muted play failed", e));
-            }
-          });
+    globalVideoPlaybackManager.register(playerId, {
+      pause: () => {
+        if (videoRef.current) {
+          try {
+            videoRef.current.pause();
+          } catch (e) {}
         }
-      } else {
-        if (!videoRef.current.paused) {
-          const playDuration = (Date.now() - playStartedTimeRef.current) / 1000;
-          if (playDuration > 0.2 && playDuration < 3.0) {
-            recordRecommendationEvent('skip_quick', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
-          }
-        }
-        videoRef.current.pause();
         setIsPlaying(false);
+      },
+      play: () => {
+        if (videoRef.current && isNearby) {
+          try {
+            videoRef.current.play().catch(() => {});
+          } catch (e) {}
+        }
+        setIsPlaying(true);
+      },
+      setVolumeMuted: (muted) => {
+        setIsMuted(muted);
+        if (videoRef.current) {
+          videoRef.current.muted = muted;
+        }
       }
-      return;
-    }
+    });
 
-    // FALLBACK: If isActive is not specified, use a standard viewport observer
+    return () => {
+      globalVideoPlaybackManager.unregister(playerId);
+    };
+  }, [playerId, isNearby]);
+
+  // Observer 1: Detect if video container is nearby (within 1 viewport height above/below)
+  // Used for preloading / unloading (lazy loading far off-screen videos to free memory)
+  useEffect(() => {
+    if (!containerRef.current) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            window.dispatchEvent(
-              new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
-            );
+          setIsNearby(entry.isIntersecting);
+        });
+      },
+      {
+        rootMargin: '100% 0px', // 100% viewport margin (current & next/prev preloading)
+        threshold: 0.0,
+      }
+    );
 
-            const isPrefMuted = localStorage.getItem('nexora_video_muted') !== 'false';
-            setIsMuted(isPrefMuted);
-            if (videoRef.current) {
-              videoRef.current.muted = isPrefMuted;
-            }
+    observer.observe(containerRef.current);
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
 
-            const playPromise = videoRef.current?.play();
-            if (playPromise !== undefined) {
-              playPromise.then(() => {
-                setIsPlaying(true);
-                playStartedTimeRef.current = Date.now();
-              }).catch((error) => {
-                if (videoRef.current) {
-                  videoRef.current.muted = true;
-                  setIsMuted(true);
-                  videoRef.current.play()
-                    .then(() => {
-                      setIsPlaying(true);
-                      playStartedTimeRef.current = Date.now();
-                    })
-                    .catch(e => console.error(e));
-                }
-              });
+  // Observer 2: Scroll-Based Playback: play only if >= 80% is visible.
+  // If leaves viewport (< 80% visible), pause immediately and save position.
+  useEffect(() => {
+    if (!containerRef.current || !isNearby || !finalVideoUrl) {
+      // If not nearby or no resolved URL yet, ensure paused
+      globalVideoPlaybackManager.pause(playerId);
+      setIsPlaying(false);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.8) {
+            if (videoRef.current && finalVideoUrl) {
+              globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
+                .then((played) => {
+                  if (played) {
+                    setIsPlaying(true);
+                    playStartedTimeRef.current = Date.now();
+                  }
+                });
             }
           } else {
-            if (videoRef.current && !videoRef.current.paused) {
-              const playDuration = (Date.now() - playStartedTimeRef.current) / 1000;
-              if (playDuration > 0.2 && playDuration < 3.0) {
-                recordRecommendationEvent('skip_quick', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
-              }
-            }
-            videoRef.current?.pause();
+            globalVideoPlaybackManager.pause(playerId);
             setIsPlaying(false);
           }
         });
       },
-      { threshold: 0.6 }
+      {
+        threshold: [0.0, 0.8, 1.0] // Observe transition boundaries clearly
+      }
     );
 
-    observer.observe(videoRef.current);
+    observer.observe(containerRef.current);
     return () => {
       observer.disconnect();
     };
-  }, [videoUrl, post.id, isActive]);
+  }, [playerId, videoUrl, isNearby, finalVideoUrl]);
 
-  // 2. Global event listener to support "Only one video plays at a time"
+  // Sync playback with isActive prop to guarantee zero sound bleed from inactive/hidden tabs
   useEffect(() => {
-    const handleGlobalPlay = (e: any) => {
-      if (e.detail?.id !== post.id && videoRef.current) {
-        videoRef.current.pause();
-        setIsPlaying(false);
+    if (!videoRef.current) return;
+    if (isActive && finalVideoUrl) {
+      if (isNearby) {
+        globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
+          .then((played) => {
+            if (played) {
+              setIsPlaying(true);
+            }
+          });
       }
-    };
-    window.addEventListener('nexora-video-play', handleGlobalPlay);
-    return () => {
-      window.removeEventListener('nexora-video-play', handleGlobalPlay);
-    };
-  }, [post.id]);
+    } else {
+      globalVideoPlaybackManager.pause(playerId);
+      setIsPlaying(false);
+    }
+  }, [isActive, isNearby, playerId, videoUrl, finalVideoUrl]);
 
-  // Global Volume-sync listener
-  useEffect(() => {
-    const handleVolumeChange = (e: any) => {
-      if (e.detail && e.detail.senderId !== post.id && videoRef.current) {
-        const newMuted = e.detail.muted;
-        setIsMuted(newMuted);
-        videoRef.current.muted = newMuted;
-        if (!newMuted) {
-          setAutoplayBlocked(false);
-        }
-      }
-    };
-    window.addEventListener('nexora-volume-change', handleVolumeChange);
-    return () => {
-      window.removeEventListener('nexora-volume-change', handleVolumeChange);
-    };
-  }, [post.id]);
-
-  // 3. Try recovering playback history on load
+  // Try recovering playback history on load
   const handleLoadedMetadata = () => {
     if (!videoRef.current) return;
     setDuration(videoRef.current.duration);
     
     // Read saved positions
-    const savedPos = localStorage.getItem(`nexora_vid_pos_${videoUrl}`);
-    if (savedPos) {
-      const position = parseFloat(savedPos);
-      if (position < videoRef.current.duration - 2) {
-        videoRef.current.currentTime = position;
-        setCurrentTime(position);
+    const savedPos = globalVideoPlaybackManager.getPosition(videoUrl);
+    if (savedPos > 0) {
+      if (savedPos < videoRef.current.duration - 2) {
+        videoRef.current.currentTime = savedPos;
+        setCurrentTime(savedPos);
       }
     }
   };
 
-  // 4. periodic update to record position
+  // periodic update to record position
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
     const time = videoRef.current.currentTime;
@@ -353,22 +363,22 @@ export default function NexoraVideoPlayer({
   const togglePlayback = () => {
     if (!videoRef.current) return;
     if (isPlaying) {
-      videoRef.current.pause();
+      globalVideoPlaybackManager.pause(playerId);
       setIsPlaying(false);
       setShowPlayStateIndicator('pause');
     } else {
-      window.dispatchEvent(
-        new CustomEvent('nexora-video-play', { detail: { url: videoUrl, id: post.id } })
-      );
-      
       // If muted because of autoplay, let's unmute on user's direct play request!
       if (autoplayBlocked && isMuted) {
         handleVolumeToggle(false);
       }
       
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-      setShowPlayStateIndicator('play');
+      globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
+        .then((played) => {
+          if (played) {
+            setIsPlaying(true);
+            setShowPlayStateIndicator('play');
+          }
+        });
     }
     setTimeout(() => {
       setShowPlayStateIndicator(null);
@@ -414,22 +424,54 @@ export default function NexoraVideoPlayer({
     lastTapRef.current = now;
   };
 
-  // Long press hold-to-pause triggers while holding
-  const handleStartHold = () => {
+  // Long press hold-to-pause triggers while holding, but avoids intercepting vertical scrolling swipes
+  const handleStartHold = (e: any) => {
+    if (e.type === 'mousedown' && e.button !== 0) return;
+
+    const touch = e.touches ? e.touches[0] : null;
+    const clientX = touch ? touch.clientX : e.clientX;
+    const clientY = touch ? touch.clientY : e.clientY;
+
+    touchStartRef.current = { x: clientX, y: clientY };
+    setIsLongPressing(false);
+
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+
     longPressTimerRef.current = setTimeout(() => {
       if (!videoRef.current) return;
       setIsLongPressing(true);
+      setShowLongPressMenu(true);
       videoRef.current.pause();
       setIsPlaying(false);
       setShowControls(false);
-    }, 450);
+    }, 1500); // 1.5 seconds is perfect for natural, comfortable long-press discovery!
+  };
+
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current) return;
+    const touch = e.touches[0];
+    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+
+    // If movement is > 10px, the user is swiping/scrolling. Cancel long-press to let native scroll work smoothly!
+    if (deltaY > 10 || deltaX > 10) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+      touchStartRef.current = null;
+    }
   };
 
   const handleReleaseHold = () => {
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
     }
-    if (isLongPressing) {
+    touchStartRef.current = null;
+    if (isLongPressing && !showLongPressMenu) {
       if (videoRef.current) {
         videoRef.current.play().catch(() => {});
         setIsPlaying(true);
@@ -438,6 +480,48 @@ export default function NexoraVideoPlayer({
       setShowControls(true);
     }
   };
+
+  // Passive touch event listeners to ensure native vertical scrolling is never blocked on mobile/Android
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      handleStartHold(e);
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!touchStartRef.current) return;
+      const touch = e.touches[0];
+      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+
+      // If vertical movement is detected, cancel the hold-to-pause timers instantly to let native scroll take over smoothly
+      if (deltaY > 8 || deltaX > 8) {
+        if (longPressTimerRef.current) {
+          clearTimeout(longPressTimerRef.current);
+          longPressTimerRef.current = null;
+        }
+        touchStartRef.current = null;
+      }
+    };
+
+    const onTouchEnd = () => {
+      handleReleaseHold();
+    };
+
+    element.addEventListener('touchstart', onTouchStart, { passive: true });
+    element.addEventListener('touchmove', onTouchMove, { passive: true });
+    element.addEventListener('touchend', onTouchEnd, { passive: true });
+    element.addEventListener('touchcancel', onTouchEnd, { passive: true });
+
+    return () => {
+      element.removeEventListener('touchstart', onTouchStart);
+      element.removeEventListener('touchmove', onTouchMove);
+      element.removeEventListener('touchend', onTouchEnd);
+      element.removeEventListener('touchcancel', onTouchEnd);
+    };
+  }, [isLongPressing, showLongPressMenu]);
 
   // Seek bar scrub action
   const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -463,7 +547,7 @@ export default function NexoraVideoPlayer({
         videoRef.current.play().catch(() => {});
       }
       window.dispatchEvent(
-        new CustomEvent('toast', { detail: `✨ Video telemetry stabilized: Switched to ${quality} resolution!` })
+        new CustomEvent('toast', { detail: `✨ Video quality updated to ${quality}!` })
       );
     }, 900);
   };
@@ -555,50 +639,157 @@ export default function NexoraVideoPlayer({
     onOpenFullscreen();
   };
 
-  if (isReleased) {
-    return (
-      <div 
-        className="relative overflow-hidden rounded-none md:rounded-3xl border-y md:border border-violet-500/10 bg-zinc-950/95 select-none w-full h-full min-h-[240px] md:aspect-video flex flex-col items-center justify-center animate-fade-in"
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0b091e]/50 via-black to-[#070518]/50" />
-        <div className="absolute inset-0 bg-violet-500/5 animate-pulse" />
-        
-        <div className="relative z-10 flex flex-col items-center gap-3 text-center px-6">
-          <div className="p-3.5 bg-violet-950/40 border border-violet-500/15 rounded-full text-violet-400/90 shadow-lg shadow-violet-500/5">
-            <Radio className="w-5 h-5 text-violet-400 animate-pulse" />
-          </div>
-          <div className="space-y-1">
-            <span className="text-[10px] font-mono font-bold text-violet-400 uppercase tracking-widest block">NEXORA Stream (Optimized)</span>
-            <span className="text-[9px] font-sans text-zinc-500 block">Memory-released • Swipe to play</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div 
       ref={containerRef}
       onMouseDown={handleStartHold}
       onMouseUp={handleReleaseHold}
       onMouseLeave={handleReleaseHold}
-      onTouchStart={handleStartHold}
-      onTouchEnd={handleReleaseHold}
-      className="relative overflow-hidden rounded-none md:rounded-3xl border-y md:border border-violet-500/10 bg-black select-none group w-full h-full md:aspect-video flex items-center justify-center animate-fade-in"
+      className="relative overflow-hidden rounded-none md:rounded-3xl border-y md:border border-violet-500/10 bg-black select-none group w-full h-full min-h-[260px] md:aspect-video aspect-auto flex items-center justify-center animate-fade-in touch-pan-y"
     >
-      {/* Absolute Video Frame */}
-      <video
-        ref={videoRef}
-        src={videoUrl}
-        loop
-        playsInline
-        preload={preloadMode || "metadata"}
-        muted={isMuted}
-        onLoadedMetadata={handleLoadedMetadata}
-        onTimeUpdate={handleTimeUpdate}
-        onClick={handleTapOrGesture}
-        className="w-full h-full object-cover cursor-pointer"
-      />
+       {/* Absolute Video Frame */}
+       {finalVideoUrl ? (
+          <>
+            <video
+              ref={videoRef}
+              src={isNearby ? finalVideoUrl : undefined}
+              loop
+              playsInline
+              preload={preloadMode || (isNearby ? "auto" : "none")}
+              muted={isMuted}
+              onLoadedMetadata={handleLoadedMetadata}
+              onTimeUpdate={handleTimeUpdate}
+              onClick={handleTapOrGesture}
+              onWaiting={() => setIsBuffering(true)}
+              onPlaying={() => setIsBuffering(false)}
+              onCanPlay={() => setIsBuffering(false)}
+              className="w-full h-full object-cover cursor-pointer"
+            />
+            {isBuffering && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-xs pointer-events-none z-10 animate-fade-in">
+                <div className="flex flex-col items-center gap-2 bg-slate-950/80 border border-violet-500/25 px-4 py-3 rounded-2xl shadow-xl">
+                  <div className="w-7 h-7 border-3 border-violet-500 border-t-transparent animate-spin rounded-full" />
+                  <span className="text-[9px] font-mono font-bold tracking-widest text-violet-300 uppercase animate-pulse">Buffering...</span>
+                </div>
+              </div>
+            )}
+
+            {/* Right-Side Action Rail */}
+            <div className="absolute right-3.5 bottom-16 flex flex-col items-center gap-4.5 z-20">
+              {/* ❤️ Spark */}
+              <button 
+                onClick={(e) => { e.stopPropagation(); onSpark(); }}
+                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+              >
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${post.isLikedByUser ? 'border-pink-500/30' : ''}`}>
+                  <Zap className={`w-5 h-5 transition-transform duration-300 group-hover/btn:scale-110 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]' : 'text-white'}`} />
+                </div>
+                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.likes}</span>
+              </button>
+
+              {/* 💬 Comment */}
+              <button 
+                onClick={(e) => { e.stopPropagation(); onCommentToggle?.(); }}
+                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+              >
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${isCommentsOpen ? 'border-violet-500/30 bg-violet-650/20' : ''}`}>
+                  <MessageSquare className={`w-5 h-5 transition-transform duration-300 group-hover/btn:scale-110 text-white ${isCommentsOpen ? 'text-violet-400 fill-violet-500/20' : 'text-white'}`} />
+                </div>
+                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.comments?.length || 0}</span>
+              </button>
+
+              {/* 🔖 Save */}
+              <button 
+                onClick={(e) => { e.stopPropagation(); setShowSaveModal(true); }}
+                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+              >
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${savedCollectionForThis ? 'border-yellow-500/30 bg-yellow-500/10' : ''}`}>
+                  <Bookmark className={`w-5 h-5 transition-transform duration-300 group-hover/btn:scale-110 ${savedCollectionForThis ? 'fill-yellow-500 text-yellow-400' : 'text-white'}`} />
+                </div>
+                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.bookmarksCount || 0}</span>
+              </button>
+
+              {/* ↗ Share */}
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  const text = `${window.location.origin}/post/${post.id}`;
+                  navigator.clipboard.writeText(text);
+                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
+                  recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+                }}
+                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+              >
+                <div className="w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg">
+                  <Share2 className="w-5 h-5 text-white transition-transform duration-300 group-hover/btn:scale-110" />
+                </div>
+                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.shares || 0}</span>
+              </button>
+            </div>
+
+            {/* Bottom-Left Creator Info Overlay */}
+            <div className="absolute left-3.5 bottom-4 right-16 flex flex-col items-start gap-1.5 z-20 pointer-events-none text-left">
+              <div className="flex items-center gap-2 pointer-events-auto">
+                <img 
+                  src={post.avatar} 
+                  alt={post.name} 
+                  className="w-8 h-8 rounded-lg object-cover border border-white/10 cursor-pointer shadow-md shrink-0"
+                  onClick={() => onViewProfile?.(post.userId || '')}
+                  referrerPolicy="no-referrer"
+                />
+                <div className="flex flex-col leading-tight cursor-pointer" onClick={() => onViewProfile?.(post.userId || '')}>
+                  <div className="flex items-center gap-1">
+                    <span className="font-sans font-extrabold text-xs text-white hover:text-violet-400 transition-colors drop-shadow-md">{post.name}</span>
+                    {(post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai') && (
+                      <CheckCircle className="w-3.5 h-3.5 text-violet-400 fill-current shrink-0" />
+                    )}
+                  </div>
+                  <span className="text-[9.5px] font-mono text-zinc-300/80 drop-shadow-md">@{post.username}</span>
+                </div>
+                {!isFollowing && onToggleFollow && post.userId !== 'user-0' && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onToggleFollow(); }}
+                    className="ml-2 px-2 py-0.5 bg-violet-600 hover:bg-violet-500 text-white rounded-md text-[8.5px] font-mono font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-md shrink-0"
+                  >
+                    + Follow
+                  </button>
+                )}
+              </div>
+
+              {/* Caption */}
+              {post.content && (
+                <p className="text-[11.5px] text-zinc-100 font-sans leading-relaxed drop-shadow-md select-text pointer-events-auto max-w-xs line-clamp-2">
+                  {post.content}
+                </p>
+              )}
+
+              {/* Hashtags */}
+              {post.tags && post.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 pointer-events-auto">
+                  {post.tags.slice(0, 3).map(tag => (
+                    <span
+                      key={tag}
+                      className="text-[9px] font-mono text-violet-300 hover:text-white drop-shadow-md font-semibold"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Future-Ready Music Info */}
+              <div className="flex items-center gap-1 text-[9px] font-mono text-violet-300 drop-shadow-md bg-black/35 backdrop-blur-xs px-2 py-0.5 rounded-full select-none max-w-[150px] truncate">
+                <Music className="w-2.5 h-2.5 text-pink-400 shrink-0 animate-spin" style={{ animationDuration: '6s' }} />
+                <span className="truncate">Original Sound - @{post.username}</span>
+              </div>
+            </div>
+          </>
+        ) : (
+         <div className="w-full h-full bg-black/90 flex flex-col items-center justify-center gap-2">
+           <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent animate-spin rounded-full" />
+           <span className="text-[10px] font-mono text-violet-400">LOADING ENCRYPTED VIDEO FEED...</span>
+         </div>
+       )}
 
       {/* Tap for sound overlay */}
       <AnimatePresence>
@@ -684,19 +875,216 @@ export default function NexoraVideoPlayer({
         )}
       </AnimatePresence>
 
+      {/* Save to Collection Modal */}
+      <AnimatePresence>
+        {showSaveModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={(e) => { e.stopPropagation(); setShowSaveModal(false); }}
+              className="absolute inset-0 bg-black/75 backdrop-blur-xs z-45 flex items-center justify-center p-4 cursor-pointer"
+            >
+              <motion.div
+                initial={{ scale: 0.95, y: 15 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.95, y: 15 }}
+                onClick={(e) => e.stopPropagation()}
+                className="w-full max-w-sm bg-[#0a071d]/95 border border-violet-500/25 p-5 rounded-3xl text-left shadow-2xl backdrop-blur-xl cursor-default"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-[10px] font-mono tracking-widest text-[#8B5CF6] font-extrabold uppercase flex items-center gap-1.5">
+                    🔖 Save to Collection
+                  </span>
+                  <button
+                    onClick={() => setShowSaveModal(false)}
+                    className="p-1 rounded-full hover:bg-white/15 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Collections List */}
+                <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar pr-1 mb-4">
+                  {collections.map((col) => (
+                    <button
+                      key={col}
+                      onClick={() => handleSaveToCollection(col)}
+                      className={`w-full p-3 rounded-2xl text-left text-xs font-sans font-semibold flex items-center justify-between transition-all border cursor-pointer ${
+                        savedCollectionForThis === col
+                          ? 'bg-violet-600/25 border-violet-500/40 text-violet-200'
+                          : 'bg-white/5 border-white/5 hover:border-violet-500/20 text-zinc-300 hover:text-white'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span>📁</span>
+                        <span>{col}</span>
+                      </div>
+                      {savedCollectionForThis === col && (
+                        <Check className="w-3.5 h-3.5 text-violet-400" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Create New Collection Form */}
+                <div className="flex gap-2 pt-2 border-t border-white/5">
+                  <input
+                    type="text"
+                    placeholder="New folder name..."
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    className="flex-1 bg-white/5 hover:bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-violet-500/40 font-sans"
+                  />
+                  <button
+                    onClick={handleCreateNewCollection}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-sans font-extrabold cursor-pointer transition-colors shrink-0"
+                  >
+                    Create
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Polished Bottom Sheet for Long Press Menu */}
+      <AnimatePresence>
+        {showLongPressMenu && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowLongPressMenu(false);
+                if (videoRef.current && isPlaying) {
+                  videoRef.current.play().catch(() => {});
+                }
+              }}
+              className="absolute inset-0 bg-black/65 z-40 cursor-pointer backdrop-blur-xs"
+            />
+            {/* Sheet */}
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute bottom-0 inset-x-0 bg-[#0c0a21]/95 border-t border-violet-500/20 rounded-t-3xl p-5 z-50 text-left shadow-2xl backdrop-blur-xl"
+            >
+              {/* Drag Handle */}
+              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5" />
+              
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-[10px] font-mono font-bold tracking-widest text-violet-400 uppercase">Video Actions</h4>
+                <button
+                  onClick={() => {
+                    setShowLongPressMenu(false);
+                    if (videoRef.current && isPlaying) {
+                      videoRef.current.play().catch(() => {});
+                    }
+                  }}
+                  className="p-1 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="grid grid-cols-3 gap-3">
+                {/* Share */}
+                <button
+                  onClick={() => {
+                    setShowLongPressMenu(false);
+                    const text = `${window.location.origin}/post/${post.id}`;
+                    navigator.clipboard.writeText(text);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
+                    recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <Share2 className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
+                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Share</span>
+                </button>
+
+                {/* Save */}
+                <button
+                  onClick={() => {
+                    setShowLongPressMenu(false);
+                    setShowSaveModal(true);
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <Bookmark className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
+                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Save</span>
+                </button>
+
+                {/* Copy Link */}
+                <button
+                  onClick={() => {
+                    setShowLongPressMenu(false);
+                    const text = `${window.location.origin}/post/${post.id}`;
+                    navigator.clipboard.writeText(text);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <Check className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
+                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Copy Link</span>
+                </button>
+
+                {/* Download */}
+                <button
+                  onClick={() => {
+                    setShowLongPressMenu(false);
+                    handleSimulateDownload();
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <Download className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
+                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Download</span>
+                </button>
+
+                {/* Report */}
+                <button
+                  onClick={() => {
+                    setShowLongPressMenu(false);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Report received! Our moderation team is investigating.' }));
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-red-950/20 border border-white/5 hover:border-red-500/30 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <AlertTriangle className="w-5 h-5 text-zinc-300 group-hover:text-red-400 transition-colors mb-1.5" />
+                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-red-200">Report</span>
+                </button>
+
+                {/* Not Interested */}
+                <button
+                  onClick={() => {
+                    setShowLongPressMenu(false);
+                    if (onNotInterested) {
+                      onNotInterested();
+                    } else {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Tailoring your feed.' }));
+                    }
+                  }}
+                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-zinc-900 border border-white/5 hover:border-zinc-500/30 rounded-2xl transition-all cursor-pointer group"
+                >
+                  <EyeOff className="w-5 h-5 text-zinc-300 group-hover:text-zinc-400 transition-colors mb-1.5" />
+                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Not Interested</span>
+                </button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Floating Bottom custom simplified controls block */}
       <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
-        {/* Mute/Unmute Toggler */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            handleVolumeToggle();
-          }}
-          className="p-2 bg-black/60 hover:bg-black/85 border border-white/10 backdrop-blur-md rounded-full text-white transition-all cursor-pointer active:scale-90 shadow-md"
-        >
-          {isMuted ? <VolumeX className="w-3.5 h-3.5 text-pink-400" /> : <Volume2 className="w-3.5 h-3.5 text-emerald-400" />}
-        </button>
-
         {/* Maximize / Fullscreen Button */}
         <button
           onClick={(e) => {

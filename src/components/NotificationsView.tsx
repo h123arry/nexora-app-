@@ -32,6 +32,7 @@ import {
   VolumeX
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import NexoraVideo from './NexoraVideo';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
@@ -746,7 +747,7 @@ export default function NotificationsView({
                   <div className="space-y-2.5">
                     {/* Simulated thumbnail */}
                     <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10 group-hover:scale-[1.01] transition-transform">
-                      <video 
+                      <NexoraVideo 
                         src={item.videoUrl} 
                         muted 
                         playsInline 
@@ -996,7 +997,7 @@ export default function NotificationsView({
 
               {/* Central Video Frame */}
               <div className="aspect-video w-full bg-black relative flex items-center justify-center">
-                <video
+                <NexoraVideo
                   autoPlay
                   controls
                   src={activeHistoryVideo.videoUrl}

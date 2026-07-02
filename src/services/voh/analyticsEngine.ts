@@ -12,7 +12,7 @@ export class AnalyticsEngine {
 
   static getAudienceExplainer(): string {
     return `### 👥 Audience Growth Explainer
-Your audience consists primarily of **developers, digital designers, and tech-founders** based in Sub-Saharan hubs like Lagos, Port Harcourt, and Abuja, with growing nodes in Berlin and Tokyo.
+Your audience consists primarily of **developers, digital designers, and tech-founders** based in Sub-Saharan hubs like Lagos, Port Harcourt, and Abuja, with growing communities in Berlin and Tokyo.
 
 #### 🎯 Strategic Recommendations
 1. **Interactive Content**: Publish a weekly community poll analyzing development tools to capture high-reputation votes.

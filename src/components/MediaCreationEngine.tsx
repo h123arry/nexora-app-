@@ -35,6 +35,8 @@ interface MediaCreationEngineProps {
   isStoryModeInitially?: boolean;
   isOffline?: boolean;
   onToggleOffline?: () => void;
+  initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null;
+  initialTab?: 'feed' | 'story' | 'drafts';
 }
 
 interface SelectedImage {
@@ -78,11 +80,13 @@ export default function MediaCreationEngine({
   theme,
   isStoryModeInitially = false,
   isOffline = false,
-  onToggleOffline
+  onToggleOffline,
+  initialMode = null,
+  initialTab = undefined
 }: MediaCreationEngineProps) {
   // Navigation categories
-  const [activeTab, setActiveTab] = useState<'feed' | 'story' | 'drafts'>(isStoryModeInitially ? 'story' : 'feed');
-  const [activeMode, setActiveMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
+  const [activeTab, setActiveTab] = useState<'feed' | 'story' | 'drafts'>(initialTab || (isStoryModeInitially ? 'story' : 'feed'));
+  const [activeMode, setActiveMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(initialMode);
 
   // Permissions state
   const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>(() => {
@@ -158,9 +162,13 @@ export default function MediaCreationEngine({
   const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
 
   // Upload/Post Status
-  const [postingStatus, setPostingStatus] = useState<'idle' | 'compressing' | 'uploading' | 'completed' | 'failed'>('idle');
+  const [postingStatus, setPostingStatus] = useState<'idle' | 'compressing' | 'publishing' | 'processing' | 'completed' | 'failed'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isMinimized, setIsMinimized] = useState(false);
+  const activeUploadIntervalRef = useRef<any>(null);
+  const isUploadCancelledRef = useRef<boolean>(false);
+  const isUploadingInProgress = useRef<boolean>(false);
 
   // DOM Refs for capture simulation
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
@@ -455,7 +463,22 @@ export default function MediaCreationEngine({
             if (videoStreamRef.current) {
               try {
                 videoChunksRef.current = [];
-                const recorder = new MediaRecorder(videoStreamRef.current, { mimeType: 'video/webm' });
+                const possibleTypes = [
+                  'video/mp4;codecs=avc1',
+                  'video/mp4',
+                  'video/webm;codecs=vp9,opus',
+                  'video/webm;codecs=vp8,opus',
+                  'video/webm;codecs=h264',
+                  'video/webm'
+                ];
+                let chosenMimeType = 'video/webm';
+                for (const type of possibleTypes) {
+                  if (typeof MediaRecorder !== 'undefined' && (MediaRecorder as any).isTypeSupported && (MediaRecorder as any).isTypeSupported(type)) {
+                    chosenMimeType = type;
+                    break;
+                  }
+                }
+                const recorder = new MediaRecorder(videoStreamRef.current, { mimeType: chosenMimeType });
                 mediaRecorderVideoRef.current = recorder;
                 recorder.ondataavailable = (event) => {
                   if (event.data.size > 0) {
@@ -463,7 +486,7 @@ export default function MediaCreationEngine({
                   }
                 };
                 recorder.onstop = () => {
-                  const videoBlob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+                  const videoBlob = new Blob(videoChunksRef.current, { type: chosenMimeType });
                   const url = URL.createObjectURL(videoBlob);
                   setRecordedVideoUrl(url);
                   setVideoRawBlob(videoBlob);
@@ -672,30 +695,83 @@ export default function MediaCreationEngine({
     setActiveMode(null);
   };
 
+  const handleCancelUpload = () => {
+    isUploadCancelledRef.current = true;
+    isUploadingInProgress.current = false;
+    if (activeUploadIntervalRef.current) {
+      clearInterval(activeUploadIntervalRef.current);
+    }
+    setPostingStatus('idle');
+    setUploadProgress(0);
+    setIsMinimized(false);
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🛑 Upload cancelled by creator.' }));
+  };
+
+  const handleRetryUpload = () => {
+    isUploadCancelledRef.current = false;
+    compressMediaAndSubmit();
+  };
+
   // Quality Optimizer compressor simulation
   const compressMediaAndSubmit = async () => {
+    if (isUploadingInProgress.current) {
+      console.log('[Audit] Upload is already in progress. Preventing duplicate post.');
+      return;
+    }
+
+    isUploadingInProgress.current = true;
+    isUploadCancelledRef.current = false;
+    setErrorMessage('');
+    
+    // Clear any previous interval
+    if (activeUploadIntervalRef.current) {
+      clearInterval(activeUploadIntervalRef.current);
+    }
+
+    // ─── STAGE 1: COMPRESSING (Optimizing and Preparing) ───
     setPostingStatus('compressing');
-    setUploadProgress(15);
+    setUploadProgress(5);
 
-    // Simulate resizing logic, HEIC formatting checks, and intelligent downscaling
-    const compressPromise = new Promise((resolve) => {
-      let progress = 15;
-      const interval = setInterval(() => {
-        progress += 18;
-        if (progress >= 100) {
-          clearInterval(interval);
-          setUploadProgress(100);
-          resolve(true);
-        } else {
-          setUploadProgress(progress);
-        }
-      }, 300);
-    });
+    const runStage = (startVal: number, endVal: number, step: number, status: 'compressing' | 'publishing' | 'processing', duration: number) => {
+      return new Promise<boolean>((resolve) => {
+        let current = startVal;
+        setPostingStatus(status);
+        
+        const tickTime = duration / ((endVal - startVal) / step);
+        const interval = setInterval(() => {
+          if (isUploadCancelledRef.current) {
+            clearInterval(interval);
+            resolve(false);
+            return;
+          }
 
-    await compressPromise;
-    setPostingStatus('uploading');
+          current += step;
+          if (current >= endVal) {
+            clearInterval(interval);
+            setUploadProgress(endVal);
+            resolve(true);
+          } else {
+            setUploadProgress(current);
+          }
+        }, tickTime);
 
-    // Publish post block
+        activeUploadIntervalRef.current = interval;
+      });
+    };
+
+    // Compress
+    let success = await runStage(5, 35, 5, 'compressing', 1000);
+    if (!success || isUploadCancelledRef.current) return;
+
+    // ─── STAGE 2: PUBLISHING (Publishing...) ───
+    success = await runStage(35, 75, 5, 'publishing', 1200);
+    if (!success || isUploadCancelledRef.current) return;
+
+    // ─── STAGE 3: PROCESSING (Processing...) ───
+    success = await runStage(75, 100, 5, 'processing', 1000);
+    if (!success || isUploadCancelledRef.current) return;
+
+    // ─── STAGE 4: WRITE TO DATABASE & SUCCESS ───
     try {
       const imgArray = selectedImages.map(img => img.url);
       const isVoice = activeMode === 'voice';
@@ -708,24 +784,18 @@ export default function MediaCreationEngine({
         console.log('[Audit] Video raw blob detected, starting permanent store pipeline.');
         const mediaId = `video-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
         
-        // Ensure thumbnail is generated and set to database
         try {
-          console.log('[Audit] Launching video thumbnail rendering pipeline...');
           const thumb = await generateVideoThumbnail(videoRawBlob);
           if (thumb) {
             mainImg = thumb;
-            console.log('[Audit] Thumbnail generated successfully and set as post cover image!');
           }
         } catch (thumbErr) {
           console.error('[Audit] Failed to render video thumbnail:', thumbErr);
         }
 
-        // Save actual video blob
         try {
-          console.log('[Audit] Committing video binary stream to long-term database storage...');
           const permanentUri = await saveMediaBlob(mediaId, videoRawBlob);
           vidUrl = permanentUri;
-          console.log(`[Audit] Brand new permanent storage URL created: ${permanentUri}`);
         } catch (storeErr) {
           console.error('[Audit] Permanent storage write failed, fallback to local URL:', storeErr);
         }
@@ -733,13 +803,10 @@ export default function MediaCreationEngine({
 
       // Persist voice audio recording
       if (voiceRawBlob) {
-        console.log('[Audit] Voice raw blob detected, starting audio store pipeline.');
         const audioId = `voice-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
         try {
-          console.log('[Audit] Committing audio binary stream to long-term database storage...');
           const permanentAudioUri = await saveMediaBlob(audioId, voiceRawBlob);
           finalVoiceUrl = permanentAudioUri;
-          console.log(`[Audit] Voice audio committed successfully. Key: ${permanentAudioUri}`);
         } catch (audioStoreErr) {
           console.error('[Audit] Persistent voice store failed:', audioStoreErr);
         }
@@ -748,7 +815,6 @@ export default function MediaCreationEngine({
       const filtersArray = selectedImages.map(img => img.filterStyle || 'none');
       const mainFilter = filtersArray[0] || undefined;
       
-      // Build any poll structure
       let pollModel: any = undefined;
       if (activeMode === 'poll' && pollQuestion.trim()) {
         pollModel = {
@@ -760,14 +826,6 @@ export default function MediaCreationEngine({
           }))
         };
       }
-
-      console.log('[Audit] Initializing database write with:', {
-        caption,
-        mainImg: mainImg ? `${mainImg.substring(0, 50)}...` : 'none',
-        vidUrl,
-        finalVoiceUrl,
-        isVoice
-      });
 
       const newPostId = onAddPost(
         caption,
@@ -792,13 +850,20 @@ export default function MediaCreationEngine({
       console.log(`[Audit] Database write success! New post ID created: ${newPostId}`);
 
       setPostingStatus('completed');
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🚀 Shared directly to network with 0ms delay!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Published Successfully!' }));
+      
+      // Auto-clear drafts on successful publish of autosaved items
+      localStorage.removeItem('nexora_creation_autosave_v1');
+      isUploadingInProgress.current = false;
+
       setTimeout(() => {
+        setIsMinimized(false);
         onClose();
-      }, 800);
+      }, 1500);
 
     } catch (err) {
       console.error('[Audit] Fatal error in publish queue:', err);
+      isUploadingInProgress.current = false;
       setPostingStatus('failed');
       setErrorMessage('Upload failed. Please try again.');
     }
@@ -835,6 +900,7 @@ export default function MediaCreationEngine({
     const updated = [newStory, ...storyList];
     localStorage.setItem('nexora_moments_list', JSON.stringify(updated));
 
+    window.dispatchEvent(new CustomEvent('nexora-moments-updated'));
     window.dispatchEvent(new CustomEvent('toast', { detail: `📖 Story shared to ${isStoryCloseFriends ? 'Close Friends ⭐' : 'Public'}!` }));
     onClose();
   };
@@ -853,6 +919,83 @@ export default function MediaCreationEngine({
     }
     return dim ? 'text-zinc-400' : 'text-white';
   };
+
+  if (isMinimized) {
+    return (
+      <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-violet-500/25 bg-slate-950/95 backdrop-blur-md p-4 shadow-2xl flex flex-col gap-3 font-sans animate-bounce-in">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse" />
+            <span className="text-[10px] font-mono font-black uppercase text-violet-400 tracking-wider">
+              {postingStatus === 'compressing' && '⚙️ Optimizing Media'}
+              {postingStatus === 'publishing' && '📤 Publishing...'}
+              {postingStatus === 'processing' && '🧠 Processing...'}
+              {postingStatus === 'completed' && '✨ Published Successfully!'}
+              {postingStatus === 'failed' && '❌ Upload Failed'}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <button 
+              onClick={() => setIsMinimized(false)}
+              className="text-zinc-400 hover:text-white p-1 hover:bg-white/5 rounded transition-all text-[10px] font-mono cursor-pointer"
+              title="Expand window"
+            >
+              Expand ↗️
+            </button>
+          </div>
+        </div>
+
+        {/* Progress Bar & Preview */}
+        <div className="flex items-center gap-3">
+          {/* Small mode indicator */}
+          <div className="w-10 h-10 rounded-lg bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0 text-xs">
+            {activeMode === 'video' || activeMode === 'reel' ? '🎥' : activeMode === 'photo' ? '📸' : activeMode === 'voice' ? '🎙️' : '📝'}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] text-zinc-300 font-sans truncate mb-1">
+              {caption || 'Drafting media post...'}
+            </p>
+            {/* Progress line */}
+            <div className="relative w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+              <div 
+                className="absolute top-0 left-0 h-full bg-linear-to-r from-violet-500 to-pink-500 transition-all duration-300" 
+                style={{ width: `${uploadProgress}%` }}
+              />
+            </div>
+            <div className="flex justify-between items-center mt-1 text-[9px] font-mono text-zinc-500">
+              <span>{uploadProgress}% completed</span>
+              {postingStatus !== 'completed' && postingStatus !== 'failed' && (
+                <button 
+                  onClick={handleCancelUpload}
+                  className="text-red-400 hover:text-red-300 transition-all font-bold uppercase cursor-pointer"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Action triggers if failed */}
+        {postingStatus === 'failed' && (
+          <div className="flex gap-2 justify-end border-t border-zinc-900 pt-2.5">
+            <button 
+              onClick={handleCancelUpload}
+              className="px-2.5 py-1 text-[9px] font-mono font-bold text-zinc-400 hover:text-white border border-zinc-800 hover:bg-zinc-900 rounded cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button 
+              onClick={handleRetryUpload}
+              className="px-2.5 py-1 text-[9px] font-mono font-bold bg-violet-600 hover:bg-violet-500 text-white rounded cursor-pointer"
+            >
+              Retry Upload
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md bg-slate-950/70 overflow-y-auto">
@@ -971,29 +1114,88 @@ export default function MediaCreationEngine({
         <div className="flex-1 overflow-y-auto pr-1 space-y-4 custom-scrollbar text-left font-sans">
           
           {postingStatus !== 'idle' ? (
-            /* Uploading loading screen */
-            <div className="py-12 flex flex-col items-center justify-center text-center space-y-4 max-w-sm mx-auto">
+            /* Uploading loading screen with advanced states and control actions */
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-5 max-w-sm mx-auto">
               {postingStatus === 'completed' ? (
-                <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
-                  <Check className="w-8 h-8" />
+                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
+                  <Check className="w-9 h-9" />
+                </div>
+              ) : postingStatus === 'failed' ? (
+                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center">
+                  <X className="w-9 h-9 animate-pulse" />
                 </div>
               ) : (
                 <div className="relative flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-violet-500" />
-                  <span className="absolute text-[11px] font-mono text-zinc-300 font-bold">{uploadProgress}%</span>
+                  <div className="animate-spin rounded-full h-20 w-20 border-t-2 border-b-2 border-violet-500 border-r-2 border-l-2 border-l-violet-500/20 border-r-violet-500/20" />
+                  <span className="absolute text-[12px] font-mono text-zinc-200 font-extrabold">{uploadProgress}%</span>
                 </div>
               )}
-              <div className="space-y-1">
-                <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-violet-400">
-                  {postingStatus === 'compressing' && '⚙️ Formatting Media Files'}
-                  {postingStatus === 'uploading' && '📤 Publishing to Feed'}
-                  {postingStatus === 'completed' && '✨ Publication Active & Live'}
+              
+              <div className="space-y-1 w-full">
+                <h4 className="text-xs font-mono font-black uppercase tracking-widest text-violet-400 animate-pulse">
+                  {postingStatus === 'compressing' && '⚙️ Processing & Compressing...'}
+                  {postingStatus === 'publishing' && '📤 Publishing...'}
+                  {postingStatus === 'processing' && '🧠 Indexing Content...'}
+                  {postingStatus === 'completed' && '✨ Published Successfully!'}
+                  {postingStatus === 'failed' && '❌ Upload Failed'}
                 </h4>
-                <p className="text-[11px] text-zinc-500">
-                  {postingStatus === 'compressing' && 'Optimizing image and video formats...'}
-                  {postingStatus === 'uploading' && 'Uploading secure files to database, please hold...'}
-                  {postingStatus === 'completed' && 'Content fully propagated across active home & profile feeds!'}
+                <p className="text-[11px] text-zinc-400">
+                  {postingStatus === 'compressing' && 'Optimizing video resolution, downscaling size, and formatting.'}
+                  {postingStatus === 'publishing' && 'Transmitting secure data blocks to platform database...'}
+                  {postingStatus === 'processing' && 'Loading metadata and rendering feed updates...'}
+                  {postingStatus === 'completed' && 'Your loop media creation is now live across active feeds!'}
+                  {postingStatus === 'failed' && (errorMessage || 'Something went wrong during upload. Please retry.')}
                 </p>
+              </div>
+
+              {/* Progress bar line */}
+              {postingStatus !== 'completed' && postingStatus !== 'failed' && (
+                <div className="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
+                  <div 
+                    className="bg-linear-to-r from-violet-600 to-pink-500 h-full transition-all duration-300"
+                    style={{ width: `${uploadProgress}%` }}
+                  />
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2.5 w-full pt-2">
+                {postingStatus !== 'completed' && postingStatus !== 'failed' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setIsMinimized(true)}
+                      className="flex-1 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
+                    >
+                      Background Upload 📥
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCancelUpload}
+                      className="px-3 py-2 bg-red-950/20 hover:bg-red-950/40 border border-red-500/20 hover:border-red-500/30 text-red-400 rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+                {postingStatus === 'failed' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleCancelUpload}
+                      className="flex-1 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
+                    >
+                      Discard & Cancel
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleRetryUpload}
+                      className="flex-1 px-3 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
+                    >
+                      Retry Upload 🔄
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ) : activeTab === 'drafts' ? (
@@ -1537,7 +1739,7 @@ export default function MediaCreationEngine({
                     <div className="text-left bg-zinc-900 border border-zinc-800 p-4 rounded-xl space-y-2">
                       <span className="text-[8px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">🛰️ Transcribing voice waves (VOH AI Core)</span>
                       {loadingTranscript ? (
-                        <p className="text-xs text-zinc-400 italic animate-pulse">Broadcasting audio streams to transcription queue...</p>
+                        <p className="text-xs text-zinc-400 italic animate-pulse">VOH AI is thinking...</p>
                       ) : (
                         <p className="text-xs text-zinc-200 leading-relaxed font-sans italic font-bold">"{voiceTranscript}"</p>
                       )}

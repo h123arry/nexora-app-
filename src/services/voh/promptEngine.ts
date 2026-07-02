@@ -56,7 +56,7 @@ export class PromptEngine {
         category: 'profile',
         name: '👤 Bio & Name Optimization',
         description: 'Optimize bios to stand out.',
-        promptTemplate: 'Optimize my profile bio to represent me as a leading creator co-building decentralized nodes.'
+        promptTemplate: 'Optimize my profile bio to represent me as a leading creator co-building decentralized networks.'
       },
       {
         id: 'hashtag-trends',

@@ -165,10 +165,10 @@ export default function ReportModal({
               </div>
               <div>
                 <h4 className="text-sm font-black text-white font-mono uppercase tracking-widest">
-                  REPORT REGISTERED
+                  REPORT SUBMITTED
                 </h4>
                 <p className="text-[11px] text-zinc-400 max-w-xs mt-1 leading-normal font-sans">
-                  The security matrix logged your assertion. Administrators will inspect the node within 5 minutes. Thank you!
+                  Thank you for reporting. Our moderation team will review this post within 5 minutes.
                 </p>
               </div>
             </div>

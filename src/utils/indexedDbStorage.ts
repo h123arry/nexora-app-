@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+
 /**
  * Nexora Persistent IndexedDB Media Storage Utility
  * Designed to persist large video and audio binaries in-browser across page refreshes,
@@ -90,7 +92,11 @@ export async function resolveMediaUrl(url: string): Promise<string> {
     return objectUrlCache.get(url)!;
   }
 
-  const id = url.replace('db-media://', '');
+  const basePart = url.split('#')[0].split('?')[0];
+  const hashPart = url.includes('#') ? '#' + url.split('#')[1] : '';
+  const queryPart = url.includes('?') ? '?' + url.split('?')[1].split('#')[0] : '';
+
+  const id = basePart.replace('db-media://', '');
   const blob = await getMediaBlob(id);
   if (!blob) {
     console.warn(`[Storage] Blob not found in IndexedDB for URL: ${url}`);
@@ -98,8 +104,9 @@ export async function resolveMediaUrl(url: string): Promise<string> {
   }
 
   const objectUrl = URL.createObjectURL(blob);
-  objectUrlCache.set(url, objectUrl);
-  return objectUrl;
+  const resolvedWithSuffix = objectUrl + queryPart + hashPart;
+  objectUrlCache.set(url, resolvedWithSuffix);
+  return resolvedWithSuffix;
 }
 
 /**
@@ -151,3 +158,39 @@ export function generateVideoThumbnail(videoBlob: Blob): Promise<string> {
     };
   });
 }
+
+/**
+ * A custom React hook that automatically resolves custom db-media:// URLs or pass-through
+ * standard URLs asynchronously, so standard HTML <video> and <audio> elements work seamlessly.
+ */
+export function useResolvedUrl(url: string | undefined): string {
+  const [resolved, setResolved] = useState<string>('');
+
+  useEffect(() => {
+    if (!url) {
+      setResolved('');
+      return;
+    }
+    
+    let active = true;
+    resolveMediaUrl(url)
+      .then(res => {
+        if (active) {
+          setResolved(res || '');
+        }
+      })
+      .catch(err => {
+        console.error('[Storage] Failed to resolve media URL:', url, err);
+        if (active) {
+          setResolved('');
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [url]);
+
+  return resolved;
+}
+

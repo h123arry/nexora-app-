@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   MapPin, 
   Link as LinkIcon, 
@@ -41,16 +41,47 @@ import {
   Video,
   Film,
   Camera,
-  Image,
-  Mic
+  Image as ImageIcon,
+  Mic,
+  Menu,
+  BarChart2,
+  FolderClosed,
+  QrCode,
+  AlertTriangle,
+  LogOut,
+  ChevronRight,
+  TrendingUp,
+  TrendingDown,
+  Coins,
+  Music,
+  Plus,
+  Tv,
+  EyeOff,
+  UserX,
+  VolumeX,
+  CheckCircle2,
+  LockKeyhole,
+  Briefcase,
+  Layers,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
-import { MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, getFollowersCount, getFollowingCount, getReputationPoints, getSparksReceived, getContributionsCount, getSeededFollowers } from '../data/database';
-import CreatorDashboardView from './CreatorDashboardView';
+import NexoraVideo from './NexoraVideo';
+import { 
+  MOCK_CREATORS, 
+  ADDITIONAL_TEST_ACCOUNTS, 
+  getFollowersCount, 
+  getFollowingCount, 
+  getReputationPoints, 
+  getSparksReceived, 
+  getContributionsCount, 
+  getSeededFollowers,
+  getRichUser 
+} from '../data/database';
 
 interface MediaGridProps {
   gridPosts: Post[];
@@ -61,7 +92,7 @@ interface MediaGridProps {
 const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) => {
   if (gridPosts.length === 0) {
     return (
-      <div className="text-center py-16 border border-dashed border-violet-500/10 rounded-3xl bg-[#09071c]/40 font-mono text-xs text-violet-400/80 w-full">
+      <div className="text-center py-16 border border-dashed border-violet-500/10 rounded-3xl bg-[#09071c]/40 font-mono text-xs text-violet-400/80 w-full col-span-3 md:col-span-4">
         <div className="text-3xl mb-2">📸</div>
         <p className="font-bold">No gallery items here yet</p>
         <p className="text-[10px] text-zinc-500 mt-1">Ready for custom clips, snapshots or audio broadcasts!</p>
@@ -81,7 +112,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
             layout
             key={post.id}
             onClick={() => onSelectPost(post)}
-            className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between transition-all hover:scale-[1.01]"
+            className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between transition-all hover:scale-[1.02]"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -94,10 +125,9 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
                 />
               ) : isVideo ? (
                 <div className="w-full h-full bg-slate-950 relative overflow-hidden">
-                  {/* Premium skeleton loader and neon pulse backdrop */}
                   <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/40 via-[#0a0521]/90 to-[#2c0b3d]/30" />
                   <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-pink-500/5 to-transparent animate-pulse" />
-                  <video 
+                  <NexoraVideo 
                     src={post.videoUrl ? `${post.videoUrl}#t=0.5` : ''} 
                     className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
                     preload="metadata" 
@@ -162,7 +192,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
             {/* Badges */}
             <div className="absolute top-2 left-2 z-10 flex gap-1 items-center">
               {isPinned && (
-                <span className="p-1.5 bg-[#8B5CF6]/90 backdrop-blur-md rounded-full text-white shadow-sm" title="Pinned Post">
+                <span className="p-1.5 bg-[#8B5CF6]/95 backdrop-blur-md rounded-full text-white shadow-sm" title="Pinned Post">
                   <Pin className="w-3 h-3 rotate-45 text-white" />
                 </span>
               )}
@@ -223,4105 +253,1813 @@ export default function ProfileView({
   onTriggerPWAInstall,
   showPWAInstallPrompt
 }: ProfileViewProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [profileTab, setProfileTab] = useState<'posts' | 'videos' | 'reels' | 'media' | 'voice' | 'saved' | 'communities' | 'tagged' | 'analytics'>('posts');
-  const [isCreatorDashboardOpen, setIsCreatorDashboardOpen] = useState(false);
-  const [activeDashboardTab, setActiveDashboardTab] = useState<'overview' | 'content' | 'earnings' | 'insights'>('overview');
+  // Navigation State
+  const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections'>('profile');
+  const [profileTab, setProfileTab] = useState<string>('posts');
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
   const [detailCommentText, setDetailCommentText] = useState<string>('');
 
-  // Account settings center states
-  const [activeSettingsSection, setActiveSettingsSection] = useState<'account' | 'privacy' | 'messaging' | 'safety' | 'notifications' | 'theme'>('account');
-  const [editUsername, setEditUsername] = useState(currentUser.username);
-  const [editEmail, setEditEmail] = useState(currentUser.email || `${currentUser.username}@nexora.ai`);
-  const [editPhone, setEditPhone] = useState(currentUser.phone || '+234 80 123 4567');
-  const [editPassword, setEditPassword] = useState('••••••••••••');
-  
-  // Privacy states
-  const [isPrivateAccount, setIsPrivateAccount] = useState<boolean>(() => {
-    return localStorage.getItem('nexora_privacy_private_account') === 'true';
+  // Local storage account switcher
+  const [savedAccounts, setSavedAccounts] = useState<any[]>(() => {
+    const saved = localStorage.getItem('nexora_saved_accounts');
+    return saved ? JSON.parse(saved) : [
+      { id: 'user-0', username: 'voh', name: 'VOICE OF HARRISON', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' }
+    ];
   });
-  const [showProfileViews, setShowProfileViews] = useState<boolean>(() => {
-    return localStorage.getItem('nexora_privacy_profile_views') !== 'false';
-  });
-  const [showVisitorInsights, setShowVisitorInsights] = useState<boolean>(() => {
-    return localStorage.getItem('nexora_privacy_visitor_insights') !== 'false';
-  });
-  const [allowMentions, setAllowMentions] = useState<'everyone' | 'followers' | 'nobody'>(() => {
-    return (localStorage.getItem('nexora_privacy_allow_mentions') as any) || 'everyone';
-  });
-  const [allowTags, setAllowTags] = useState<'everyone' | 'followers' | 'nobody'>(() => {
-    return (localStorage.getItem('nexora_privacy_allow_tags') as any) || 'everyone';
-  });
-  const [allowDownloads, setAllowDownloads] = useState<boolean>(() => {
-    return localStorage.getItem('nexora_privacy_allow_downloads') !== 'false';
-  });
+  const [showAddAccountModal, setShowAddAccountModal] = useState(false);
+  const [newAccUsername, setNewAccUsername] = useState('');
+  const [newAccName, setNewAccName] = useState('');
 
-  // Messaging states
-  const [whoCanMessageMe, setWhoCanMessageMe] = useState<'everyone' | 'followers' | 'following' | 'nobody'>(() => {
-    return (localStorage.getItem('nexora_privacy_messaging_scope') as any) || 'everyone';
-  });
+  // Reputation breakdown view
+  const [showReputationModal, setShowReputationModal] = useState(false);
 
-  // Safety states
-  const [blockedAccountsList, setBlockedAccountsList] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_privacy_blocked_usernames');
-    return saved ? JSON.parse(saved) : ['spammer_bot_99', 'toxic_agent_4'];
-  });
-  const [newBlockedUsername, setNewBlockedUsername] = useState('');
-  
-  const [mutedAccountsList, setMutedAccountsList] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_privacy_muted_usernames');
-    return saved ? JSON.parse(saved) : ['loud_noise_creator', 'ads_broadcast_hq'];
-  });
-  const [newMutedUsername, setNewMutedUsername] = useState('');
+  // QR Customizer State
+  const [qrColorPalette, setQrColorPalette] = useState<'neon-cyber' | 'solar-flare' | 'holographic'>('neon-cyber');
+  const [qrScanningActive, setQrScanningActive] = useState(false);
+  const [qrScanSuccessText, setQrScanSuccessText] = useState('');
 
-  const [hiddenWordsList, setHiddenWordsList] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_privacy_hidden_words');
-    return saved ? JSON.parse(saved) : ['spam', 'buy crypto', 'free tokens', 'winner'];
-  });
-  const [newHiddenWord, setNewHiddenWord] = useState('');
+  // Relationship states (Muted / Blocked lists)
+  const [relationsTab, setRelationsTab] = useState<'followers' | 'following' | 'close-friends' | 'blocked' | 'muted'>('followers');
+  const [searchRelationQuery, setSearchRelationQuery] = useState('');
+  const [blockedUsers, setBlockedUsers] = useState<string[]>(['toxic_spammer', 'scambot_v8']);
+  const [mutedUsers, setMutedUsers] = useState<string[]>(['overposter_reels', 'ad_beacon_hq']);
+  const [closeFriends, setCloseFriends] = useState<string[]>([]);
 
-  const [restrictedAccountsList, setRestrictedAccountsList] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_privacy_restricted_usernames');
-    return saved ? JSON.parse(saved) : ['creepy_profile_22'];
-  });
-  const [newRestrictedUsername, setNewRestrictedUsername] = useState('');
-
-  // Notifications states
-  const [notifyLikes, setNotifyLikes] = useState<boolean>(() => localStorage.getItem('nexora_notify_likes') !== 'false');
-  const [notifyComments, setNotifyComments] = useState<boolean>(() => localStorage.getItem('nexora_notify_comments') !== 'false');
-  const [notifyFollowers, setNotifyFollowers] = useState<boolean>(() => localStorage.getItem('nexora_notify_followers') !== 'false');
-  const [notifyMessages, setNotifyMessages] = useState<boolean>(() => localStorage.getItem('nexora_notify_messages') !== 'false');
-  const [notifyMentions, setNotifyMentions] = useState<boolean>(() => localStorage.getItem('nexora_notify_mentions') !== 'false');
-  const [notifyCommunityUpdates, setNotifyCommunityUpdates] = useState<boolean>(() => localStorage.getItem('nexora_notify_community') !== 'false');
-  const [notifyLive, setNotifyLive] = useState<boolean>(() => localStorage.getItem('nexora_notify_live') !== 'false');
-
-  // Interactive Live Streaming States
-  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
-  const [liveViewerCount, setLiveViewerCount] = useState(0);
-  const [liveGifts, setLiveGifts] = useState(0);
-  const [liveChatMessages, setLiveChatMessages] = useState<any[]>([]);
-  const [liveNewMessage, setLiveNewMessage] = useState('');
-  const [liveDuration, setLiveDuration] = useState(0);
-  const [showEndStats, setShowEndStats] = useState(false);
-  const [livePeakViewers, setLivePeakViewers] = useState(0);
-  const [liveModerators, setLiveModerators] = useState<string[]>(['alex_sterling', 'sarah_codes']);
-  const [modToAssign, setModToAssign] = useState('');
-
-
-  // Follower actions state
-  const [isFollowing, setIsFollowing] = useState(isFollowingField);
-  const [isConnected, setIsConnected] = useState(false);
-  const [showShareAlert, setShowShareAlert] = useState(false);
-  const [currentPlayingVoice, setCurrentPlayingVoice] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
-  // Local state for editing form
+  // Edit fields live states
   const [editName, setEditName] = useState(currentUser.name);
+  const [editUsername, setEditUsername] = useState(currentUser.username);
   const [editBio, setEditBio] = useState(currentUser.bio);
-  const [editLocation, setEditLocation] = useState(currentUser.location);
-  const [editWebsite, setEditWebsite] = useState(currentUser.website);
-  const [editCover, setEditCover] = useState(currentUser.coverImage);
+  const [editLocation, setEditLocation] = useState(currentUser.location || '');
+  const [editWebsite, setEditWebsite] = useState(currentUser.website || '');
+  const [editPronouns, setEditPronouns] = useState('');
+  const [editCategory, setEditCategory] = useState('Digital Creator');
+  const [editCreatorType, setEditCreatorType] = useState('Premium Node');
   const [editAvatar, setEditAvatar] = useState(currentUser.avatar);
+  const [editCover, setEditCover] = useState(currentUser.coverImage);
+  const [editSocialTwitter, setEditSocialTwitter] = useState('');
+  const [editSocialInsta, setEditSocialInsta] = useState('');
 
-  // Sync edit states when currentUser prop changes (e.g. after successful save)
+  // Webcam capture states
+  const [isWebcamActive, setIsWebcamActive] = useState(false);
+  const [webcamError, setWebcamError] = useState<string | null>(null);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+
+  // Dynamic status presets
+  const [statusText, setStatusText] = useState(() => localStorage.getItem(`nexora_status_text_${currentUser.id}`) || 'Calibrating...');
+  const [statusEmoji, setStatusEmoji] = useState(() => localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) || '🌌');
+
+  // Music Widget States
+  const [pinnedSong, setPinnedSong] = useState(() => localStorage.getItem(`nexora_pinned_song_${currentUser.id}`) || 'Afro-Cosmology');
+  const [pinnedArtist, setPinnedArtist] = useState(() => localStorage.getItem(`nexora_pinned_artist_${currentUser.id}`) || 'Davido & VOH');
+  const [isSongPlaying, setIsSongPlaying] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioOscRef = useRef<OscillatorNode | null>(null);
+
+  // Social Stats follow action toggle
+  const [isFollowing, setIsFollowing] = useState(isFollowingField);
+  const [profilePicExpanded, setProfilePicExpanded] = useState(false);
+
+  // Analytics tab options
+  const [analyticsTimeframe, setAnalyticsTimeframe] = useState<'7d' | '30d' | '90d'>('7d');
+
+  // Live streaming simulation console states
+  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
+  const [liveDuration, setLiveDuration] = useState(0);
+  const [liveViewerCount, setLiveViewerCount] = useState(0);
+  const [liveChat, setLiveChat] = useState<any[]>([]);
+  const [liveMessageInput, setLiveMessageInput] = useState('');
+
+  // Sync edits when user switches
   useEffect(() => {
     setEditName(currentUser.name);
-    setEditBio(currentUser.bio);
-    setEditLocation(currentUser.location);
-    setEditWebsite(currentUser.website);
-    setEditCover(currentUser.coverImage);
-    setEditAvatar(currentUser.avatar);
     setEditUsername(currentUser.username);
+    setEditBio(currentUser.bio);
+    setEditLocation(currentUser.location || '');
+    setEditWebsite(currentUser.website || '');
+    setEditAvatar(currentUser.avatar);
+    setEditCover(currentUser.coverImage);
   }, [currentUser]);
 
-  // Lock tracking states
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [lockWarningText, setLockWarningText] = useState<string | null>(null);
-  const [pendingUpdateData, setPendingUpdateData] = useState<Partial<User> | null>(null);
-
-  // Core profile lock and validation engine
-  const validateAndSaveProfile = (updatedFields: Partial<User>, isSettingsFlow: boolean) => {
-    // 1. Check Display Name Lock (7 Days)
-    const displayChanged = updatedFields.name !== undefined && updatedFields.name !== currentUser.name;
-    if (displayChanged) {
-      const lastChange = currentUser.lastDisplayNameChangeTime;
-      if (lastChange) {
-        const timeDiff = Date.now() - new Date(lastChange).getTime();
-        const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
-        if (daysDiff < 7) {
-          const nextAvailable = new Date(new Date(lastChange).getTime() + 7 * 24 * 60 * 60 * 1000);
-          alert(`⚠️ Display Name change locked! It can only be updated once every 7 days.\nNext available change date: ${nextAvailable.toLocaleDateString()}`);
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Display Name change locked for 7 days!' }));
-          return false;
-        }
-      }
-    }
-
-    // 2. Check Username Lock (30 Days)
-    const usernameChanged = updatedFields.username !== undefined && updatedFields.username !== currentUser.username;
-    if (usernameChanged) {
-      // Validate empty, spaces or special chars
-      const cleanUsername = updatedFields.username.trim().toLowerCase();
-      if (!cleanUsername) {
-        alert('⚠️ Username cannot be empty.');
-        return false;
-      }
-      
-      const lastChange = currentUser.lastUsernameChangeTime;
-      if (lastChange) {
-        const timeDiff = Date.now() - new Date(lastChange).getTime();
-        const daysDiff = timeDiff / (1000 * 60 * 60 * 24);
-        if (daysDiff < 30) {
-          const nextAvailable = new Date(new Date(lastChange).getTime() + 30 * 24 * 60 * 60 * 1000);
-          alert(`⚠️ Username change locked! It can only be changed once every 30 days.\nNext available change date: ${nextAvailable.toLocaleDateString()}`);
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Username change locked for 30 days!' }));
-          return false;
-        }
-      }
-    }
-
-    // Prepare final payload
-    const finalFieldsToUpdate: Partial<User> = { ...updatedFields };
-    if (displayChanged) {
-      finalFieldsToUpdate.lastDisplayNameChangeTime = new Date().toISOString();
-    }
-
-    // 3. If username changed, show a modal warning first
-    if (usernameChanged) {
-      setLockWarningText(`⚠️ Warning: You are about to change your account username to @${updatedFields.username}.\n\nOnce updated, you can NOT change your username again for the next 30 days.\n\nAre you sure you want to proceed?`);
-      setPendingUpdateData({
-        ...finalFieldsToUpdate,
-        lastUsernameChangeTime: new Date().toISOString()
-      });
-      setConfirmModalOpen(true);
-      return true; // Handle via confirmation modal overlay
-    }
-
-    // If no username change, commit immediately!
-    onUpdateProfile(finalFieldsToUpdate);
-    if (isSettingsFlow) {
-      setIsSettingsOpen(false);
-    } else {
-      setIsEditing(false);
-    }
-    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Profile updated successfully!' }));
-    return true;
-  };
-
-  const [isWebcamActive, setIsWebcamActive] = useState(false);
-  const [cameraError, setCameraError] = useState<string | null>(null);
-  const videoRef = React.useRef<HTMLVideoElement | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-
-  // Live stream background simulation effect
+  // Live Stream Clock Effect
   useEffect(() => {
-    let timer: any;
-    let chatInterval: any;
-    let viewerInterval: any;
-
+    let interval: any;
     if (isLiveStreaming) {
-      setLiveDuration(0);
-      setLiveViewerCount(Math.floor(Math.random() * 20) + 20);
-      setLiveGifts(0);
-      setLiveNewMessage('');
-      setShowEndStats(false);
-      setLivePeakViewers(35);
-      
-      const seedChat = [
-        { sender: 'alex_sterling', message: 'Lets go live! 🔴 Welcome everyone!', isSystem: true },
-        { sender: 'sarah_codes', message: 'Yay! Excited for the stream today 🥳', isSystem: false },
-        { sender: 'voh_ai', message: 'Live stream connection established on port 3000.', isSystem: false }
-      ];
-      setLiveChatMessages(seedChat);
-
-      // Duration counter
-      timer = setInterval(() => {
-        setLiveDuration(prev => prev + 1);
+      interval = setInterval(() => {
+        setLiveDuration(p => p + 1);
+        // Fluctuate viewer counts
+        setLiveViewerCount(Math.floor(Math.random() * 20) + 120);
       }, 1000);
-
-      // Viewer count fluctuation: Real activity only (1 viewer - the user themselves)
-      setLiveViewerCount(1);
-      setLivePeakViewers(1);
-
-      // No fake chat comments or gifts: keep stream interactive for host only
-      setLiveGifts(0);
+    } else {
+      setLiveDuration(0);
+      setLiveViewerCount(0);
     }
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(chatInterval);
-      clearInterval(viewerInterval);
-    };
+    return () => clearInterval(interval);
   }, [isLiveStreaming]);
 
-  // Custom status system states
-  const [statusText, setStatusText] = useState<string>(() => {
-    return localStorage.getItem(`nexora_status_text_${currentUser.id}`) || currentUser.statusText || 'Online';
-  });
-  const [statusEmoji, setStatusEmoji] = useState<string>(() => {
-    return localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) || currentUser.statusEmoji || '🟢';
-  });
-
-  // Pinned showpiece song states
-  const [pinnedSong, setPinnedSong] = useState<string>(() => {
-    return localStorage.getItem(`nexora_pinned_song_${currentUser.id}`) || currentUser.pinnedMusicSong || 'Unavailable';
-  });
-  const [pinnedArtist, setPinnedArtist] = useState<string>(() => {
-    return localStorage.getItem(`nexora_pinned_artist_${currentUser.id}`) || currentUser.pinnedMusicArtist || 'Davido';
-  });
-  const [isSongPlaying, setIsSongPlaying] = useState(false);
-  const audioCtxRef = React.useRef<AudioContext | null>(null);
-
-  // Edit form synchronization states
-  const [editStatusText, setEditStatusText] = useState(statusText);
-  const [editStatusEmoji, setEditStatusEmoji] = useState(statusEmoji);
-  const [editSong, setEditSong] = useState(pinnedSong);
-  const [editArtist, setEditArtist] = useState(pinnedArtist);
-
-  // Pinned post IDs (holds up to 3)
-  const [pinnedPostIds, setPinnedPostIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem(`nexora_pinned_posts_${currentUser.id}`);
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Nexora Presence and Privacy Upgrades
-  const [showActiveStatus, setShowActiveStatus] = useState<boolean>(() => {
-    const saved = localStorage.getItem('nexora_privacy_active_status');
-    return saved !== 'false';
-  });
-  const [shareInVisitorLists, setShareInVisitorLists] = useState<boolean>(() => {
-    const saved = localStorage.getItem('nexora_privacy_share_visitor');
-    return saved !== 'false';
-  });
-  const [profileViewFilter, setProfileViewFilter] = useState<'today' | 'week' | 'month'>('week');
-  
-  // Moment / Story Active Overlays inside ProfileView
-  const [selectedMoment, setSelectedMoment] = useState<any | null>(null);
-  const [storyIndex, setStoryIndex] = useState(0);
-
-  // Pending verification requests for the VOH review admin desk
-  const [verificationRequests, setVerificationRequests] = useState<any[]>([]);
-
-  const getActiveUserStory = () => {
-    const saved = localStorage.getItem('nexora_moments_list');
-    let moments = [];
-    if (saved) {
-      try { moments = JSON.parse(saved); } catch (e) {}
-    }
-    // Fall back to seed moments if list is empty
-    if (!moments || moments.length === 0) {
-      moments = [
-        { id: 'm-0', name: 'VOICE OF HARRISION', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', active: true, quotes: ["Building the future of social networks with clean designs.", "Great seeing our community grow so rapidly!", "Continuous listening and iterating with you guys."] },
-        { id: 'm-1', name: 'Alex Sterling', username: 'alex_sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["What a beautiful evening in Port Harcourt today! 🌅", "Just finished writing a clean tutorial for absolute beginners.", "Always keep learning and showing up daily."] },
-        { id: 'm-2', name: 'Sarah Vance', username: 'sarah_codes', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Designing clean UI components with lots of breathing room.", "Taking a coffee break before diving back into CSS! ☕️", "Simple things are often the most elegant ones."] }
-      ];
-    }
-    const userStory = moments.find((m: any) => m.username && m.username.toLowerCase() === currentUser.username.toLowerCase());
-    
-    // Check if the story has expired (older than 24 hours). Fallback stories remain active.
-    if (userStory) {
-      if (userStory.timestamp) {
-        const ageMs = Date.now() - new Date(userStory.timestamp).getTime();
-        const isActive = ageMs < 24 * 60 * 60 * 1000;
-        return isActive ? userStory : null;
-      }
-      return userStory;
-    }
-    return null;
-  };
-
-  const activeUserStory = getActiveUserStory();
-
-  React.useEffect(() => {
-    if (currentUser.username === 'voh') {
-      const reqs = JSON.parse(localStorage.getItem('nexora_verification_requests') || '[]');
-      setVerificationRequests(reqs);
-    }
-  }, [currentUser.username]);
-
-  const handleDismissVerificationRequest = (userId: string) => {
-    const updated = verificationRequests.filter((r: any) => r.userId !== userId);
-    localStorage.setItem('nexora_verification_requests', JSON.stringify(updated));
-    setVerificationRequests(updated);
-    alert("Verification request reviewed and archived. Consistent with policies, only VOICE OF HARRISON is authorized to display the exclusive purple verification tick.");
-  };
-
-  // Toggle pin mechanics (limits to max 3)
-  const togglePinPost = (postId: string) => {
-    setPinnedPostIds(prev => {
-      let updated;
-      if (prev.includes(postId)) {
-        updated = prev.filter(id => id !== postId);
-      } else {
-        if (prev.length >= 3) {
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ You can pin a maximum of 3 posts!' }));
-          return prev;
-        }
-        updated = [...prev, postId];
-      }
-      localStorage.setItem(`nexora_pinned_posts_${currentUser.id}`, JSON.stringify(updated));
-      window.dispatchEvent(new CustomEvent('toast', { 
-        detail: updated.includes(postId) ? '📌 Post pinned to profile!' : '📌 Post unpinned!' 
-      }));
-      return updated;
-    });
-  };
-
-  // Play synthesized audio chords preview using Web Audio API
-  const playSynthesizedPreview = () => {
+  // Audio Showpiece Player (Synthesizer hum on play)
+  const toggleMusicAudio = () => {
     if (isSongPlaying) {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
-        audioCtxRef.current = null;
+      if (audioOscRef.current) {
+        try {
+          audioOscRef.current.stop();
+        } catch(e){}
+        audioOscRef.current = null;
       }
       setIsSongPlaying(false);
-      return;
-    }
-
-    try {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Audio API not supported on this device!' }));
-        return;
-      }
-      const ctx = new AudioCtx();
-      audioCtxRef.current = ctx;
-      setIsSongPlaying(true);
-
-      const playPluck = (freq: number, startTime: number, delay = 0) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, startTime + delay);
-
-        gain.gain.setValueAtTime(0.12, startTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.001, startTime + delay + 0.85);
-
-        osc.start(startTime + delay);
-        osc.stop(startTime + delay + 1.0);
-      };
-
-      const now = ctx.currentTime;
-      // Synthesize elegant afro-futurist chord plucks
-      playPluck(329.63, now, 0); // E4
-      playPluck(392.00, now, 0.15); // G4
-      playPluck(493.88, now, 0.3); // B4
-      playPluck(587.33, now, 0.45); // D5
-
-      setTimeout(() => {
-        setIsSongPlaying(false);
-        if (audioCtxRef.current) {
-          audioCtxRef.current.close().catch(() => {});
-          audioCtxRef.current = null;
+      window.dispatchEvent(new CustomEvent('toast', { detail: '🎵 Music playback paused.' }));
+    } else {
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!audioCtxRef.current) {
+          audioCtxRef.current = new AudioContextClass();
         }
-      }, 2000);
+        const ctx = audioCtxRef.current;
+        if (ctx.state === 'suspended') {
+          ctx.resume();
+        }
+        
+        // Setup simple harmonic ambient oscillator
+        const osc = ctx.createOscillator();
+        const gainNode = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(261.63, ctx.currentTime); // C4 note
+        
+        // Multi-frequency sound effect
+        const filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(400, ctx.currentTime);
 
-    } catch (e) {
-      console.error(e);
-      setIsSongPlaying(false);
+        gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
+        
+        osc.connect(filter);
+        filter.connect(gainNode);
+        gainNode.connect(ctx.destination);
+        
+        osc.start();
+        audioOscRef.current = osc;
+        setIsSongPlaying(true);
+        window.dispatchEvent(new CustomEvent('toast', { detail: `🎵 Now streaming custom profile vibe: ${pinnedSong}!` }));
+      } catch (err) {
+        console.error("Synthesizer failed", err);
+      }
     }
   };
 
-  React.useEffect(() => {
+  // Close audio on component unmount
+  useEffect(() => {
     return () => {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
+      if (audioOscRef.current) {
+        try { audioOscRef.current.stop(); } catch(e){}
       }
     };
   }, []);
 
-  const startCamera = async () => {
-    setCameraError(null);
+  // Web camera activation
+  const startWebcam = async () => {
+    setIsWebcamActive(true);
+    setWebcamError(null);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { width: 300, height: 300, facingMode: 'user' } 
-      });
-      setIsWebcamActive(true);
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 100);
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      mediaStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+      }
     } catch (err: any) {
-      console.error(err);
-      setCameraError('Unable to access camera.');
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Camera access denied or unavailable.' }));
+      setWebcamError('Unable to lock camera stream. Please grant hardware privileges.');
     }
   };
 
-  const stopCamera = () => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
+  const stopWebcam = () => {
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach(track => track.stop());
     }
+    mediaStreamRef.current = null;
     setIsWebcamActive(false);
   };
 
-  const captureCameraPhoto = () => {
+  const capturePhoto = () => {
     if (videoRef.current) {
-      const video = videoRef.current;
       const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth || 320;
-      canvas.height = video.videoHeight || 320;
+      canvas.width = 300;
+      canvas.height = 300;
       const ctx = canvas.getContext('2d');
       if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        try {
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-          setEditAvatar(dataUrl);
-          stopCamera();
-          window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Quick photo snapped and applied!' }));
-        } catch (e) {
-          console.error(e);
+        ctx.drawImage(videoRef.current, 0, 0, 300, 300);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        setEditAvatar(dataUrl);
+        stopWebcam();
+        window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Identity selfie captured successfully!' }));
+      }
+    }
+  };
+
+  // Validate and submit profile updates (Locks rules)
+  const handleSaveProfile = () => {
+    // 7-day display name lock
+    if (editName !== currentUser.name) {
+      const lastChange = currentUser.lastDisplayNameChangeTime;
+      if (lastChange) {
+        const diff = Date.now() - new Date(lastChange).getTime();
+        const days = diff / (1000 * 30 * 60 * 24); // mock days or 7 days limit
+        if (days < 7) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Display Name change is locked for 7 days.' }));
+          alert('⚠️ Change locked: Display name can only be edited once every 7 days.');
+          return;
         }
       }
     }
-  };
 
-  const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setEditAvatar(reader.result);
-          window.dispatchEvent(new CustomEvent('toast', { detail: '📁 Photo uploaded as new avatar!' }));
+    // 30-day username lock
+    if (editUsername !== currentUser.username) {
+      const lastChange = currentUser.lastUsernameChangeTime;
+      if (lastChange) {
+        const diff = Date.now() - new Date(lastChange).getTime();
+        const days = diff / (1000 * 30 * 60 * 24);
+        if (days < 30) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Username change is locked for 30 days.' }));
+          alert('⚠️ Change locked: @username can only be edited once every 30 days.');
+          return;
         }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const [skillsEndorsements, setSkillsEndorsements] = useState<{ [skill: string]: number }>({
-    'Founder Mindset': 420,
-    'Product Architecture': 382,
-    'Community Engineering': 512,
-    'AI Orchestration': 614,
-    'Creative Coding': 295
-  });
-  const [newSkillInput, setNewSkillInput] = useState('');
-
-  // Python Exporter Script Content
-  const pythonExporterCode = `#!/usr/bin/env python3
-import os
-import zipfile
-import sys
-
-def package_project():
-    print("==================================================================")
-    print("      🌌 NEXORA CO-BUILDER PLATFORM - SECURE EXPORTER 🌌")
-    print("==================================================================")
-    print("Preparing secure workspace compression...")
-    
-    zip_name = "nexora_project.zip"
-    
-    excluded_dirs = {
-        'node_modules', 'dist', '.git', '.github', '.next', 
-        '.cache', 'temp', '__pycache__', '.upm'
-    }
-    excluded_files = {
-        zip_name, '.DS_Store', 'package-lock.json', '.env'
-    }
-
-    included_count = 0
-    total_lines = 0
-
-    try:
-        with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, dirs, files in os.walk('.'):
-                dirs[:] = [d for d in dirs if d not in excluded_dirs]
-                for file in files:
-                    if file in excluded_files:
-                        continue
-                    file_path = os.path.join(root, file)
-                    rel_path = os.path.relpath(file_path, '.')
-                    try:
-                        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                            lines = len(f.readlines())
-                            total_lines += lines
-                    except:
-                        lines = 0
-                    zipf.write(file_path, rel_path)
-                    print(f"📦 Paired & Packaged: {rel_path} ({lines} lines)")
-                    included_count += 1
-        print("==================================================================")
-        print("🎉 COMPILATION SUCCESSFUL!")
-        print(f"📁 Export Archive:  {os.path.abspath(zip_name)}")
-        print(f"🌐 Packaged Nodes: {included_count} modules")
-        print(f"📊 Volume Metrics: {total_lines} total lines of code packed")
-        print("==================================================================")
-        print("To extract your workspace locally:")
-        print("  1. Copy 'nexora_project.zip' to your destination directory.")
-        print("  2. Unzip using standard tools or terminal command:")
-        print(f"     unzip {zip_name}")
-        print("==================================================================")
-    except Exception as e:
-        print(f"❌ Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-if __name__ == '__main__':
-    package_project()`;
-
-  // JavaScript/Node Exporter Script Content
-  const jsExporterCode = `#!/usr/bin/env node
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
-
-console.log("==================================================================");
-console.log("      🌌 NEXORA CO-BUILDER PLATFORM - JS NODE EXPORTER 🌌");
-console.log("==================================================================");
-
-const backupDir = 'nexora_backup_source';
-const excludedDirs = new Set([
-  'node_modules', 'dist', '.git', '.github', '.next', 
-  '.cache', 'temp', '__pycache__', '.upm', backupDir
-]);
-const excludedFiles = new Set([
-  'nexora_project.zip', '.DS_Store', 'package-lock.json', '.env'
-]);
-
-let fileCount = 0;
-let totalLines = 0;
-
-function walkSync(dir, callback) {
-  const files = fs.readdirSync(dir);
-  files.forEach((file) => {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-    if (stat.isDirectory()) {
-      if (!excludedDirs.has(file)) {
-        walkSync(filePath, callback);
-      }
-    } else {
-      if (!excludedFiles.has(file)) {
-        callback(filePath, stat);
       }
     }
-  });
-}
 
-try {
-  if (fs.existsSync(backupDir)) {
-    fs.rmSync(backupDir, { recursive: true, force: true });
-  }
-  fs.mkdirSync(backupDir);
-
-  walkSync('.', (filePath) => {
-    const relPath = path.relative('.', filePath);
-    const destPath = path.join(backupDir, relPath);
-    fs.mkdirSync(path.dirname(destPath), { recursive: true });
-    fs.copyFileSync(filePath, destPath);
-    let lines = 0;
-    try {
-      const content = fs.readFileSync(filePath, 'utf8');
-      lines = content.split('\\n').length;
-      totalLines += lines;
-    } catch (e) {}
-    console.log(\`📦 Paired & Backuped: \${relPath} (\${lines} lines)\`);
-    fileCount++;
-  });
-
-  console.log("==================================================================");
-  try {
-    const zipName = "nexora_project_js.zip";
-    if (fs.existsSync(zipName)) {
-      fs.unlinkSync(zipName);
-    }
-    if (process.platform === 'win32') {
-      console.log("On Windows - You can right-click nexora_backup_source -> Compress to ZIP file");
-    } else {
-      execSync(\`zip -r \${zipName} \${backupDir} > /dev/null\`);
-      console.log(\`⚡ Native Unix Zip Compiled: ./\${zipName}\`);
-    }
-  } catch (err) {}
-  console.log("==================================================================");
-  console.log("🎉 COMPILATION SUCCESSFUL!");
-  console.log(\`🌐 Packaged Nodes: \${fileCount} files\`);
-  console.log(\`📊 Volume Metrics: \${totalLines} total lines of code packed\`);
-  console.log("==================================================================");
-} catch (e) {
-  console.error(e);
-}
-`;
-
-  const downloadScriptFile = (filename: string, content: string) => {
-    const element = document.createElement("a");
-    const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
-    element.href = URL.createObjectURL(file);
-    element.download = filename;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
-
-  // User connections modal state
-  const [isConnectionsModalOpen, setIsConnectionsModalOpen] = useState(false);
-  const [connectionsModalTab, setConnectionsModalTab] = useState<'followers' | 'following'>('followers');
-  const [connectionSearchQuery, setConnectionSearchQuery] = useState('');
-
-  // Sync editing fields when currentUser changes
-  React.useEffect(() => {
-    setEditName(currentUser.name);
-    setEditBio(currentUser.bio);
-    setEditLocation(currentUser.location || '');
-    setEditWebsite(currentUser.website || '');
-    setEditCover(currentUser.coverImage || '');
-    setEditAvatar(currentUser.avatar || '');
-    setIsFollowing(isFollowingField);
-    setIsEditing(false); // Close edit form on profile transition
-  }, [currentUser, isFollowingField]);
-
-  // Connections list source
-  const getConnectionsList = () => {
-    const allUsersMap = new Map<string, User>();
-    
-    // Add VOH founder to pool
-    allUsersMap.set('user-0', {
-      id: 'user-0',
-      username: 'voh',
-      name: 'VOICE OF HARRISON',
-      avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg',
-      bio: '🌍 Founder of NEXORA — The World\'s Living Social Network\n🧠 Creator of VOH AI\n📍 Nigeria',
-      location: 'Nigeria',
-      website: 'nexora.ai/voh',
-      followers: 1200000,
-      following: 10,
-      isVerified: true,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined June 2026',
-      reputationPoints: 98700,
-      reputationBreakdown: { contributions: 15300, helpfulness: 51200, missionsCompleted: 127, skillsVerified: 32073 },
-      interestDNA: {},
-      skills: ['Founder']
-    });
-
-    // Populate creators & all additional test accounts (including our 1,000 programmatically generated users!)
-    MOCK_CREATORS.forEach(c => {
-      allUsersMap.set(c.id, c);
-    });
-    ADDITIONAL_TEST_ACCOUNTS.forEach(a => {
-      allUsersMap.set(a.id, a);
-    });
-
-    // Merge custom registered accounts from local storage
-    try {
-      const stored = localStorage.getItem('nexora_registered_accounts');
-      if (stored) {
-        JSON.parse(stored).forEach((acc: any) => {
-          if (acc.user) {
-            allUsersMap.set(acc.user.id, acc.user);
-          }
-        });
-      }
-    } catch(e) {}
-
-    // Load active follow relationships
-    let follows: { followerId: string; followingId: string }[] = [];
-    try {
-      const rawFollows = localStorage.getItem('nexora_db_follows');
-      if (rawFollows) {
-        follows = JSON.parse(rawFollows);
-      }
-    } catch(e) {}
-
-    const list = Array.from(allUsersMap.values());
-
-    if (connectionsModalTab === 'following') {
-      const followingIds = follows
-        .filter(f => f.followerId === currentUser.id)
-        .map(f => f.followingId);
-
-      const followingUsers: User[] = [];
-      followingIds.forEach(id => {
-        const u = allUsersMap.get(id);
-        if (u && id !== currentUser.id) {
-          followingUsers.push(u);
-        }
-      });
-
-      return followingUsers;
-    } else {
-      const followerIds = follows
-        .filter(f => f.followingId === currentUser.id)
-        .map(f => f.followerId);
-
-      const followerUsers: User[] = [];
-      followerIds.forEach(id => {
-        const u = allUsersMap.get(id);
-        if (u && id !== currentUser.id) {
-          followerUsers.push(u);
-        }
-      });
-
-      // Append pre-seeded high-quality followers for VOH, VOH AI, and NEXORA AI
-      const isFounder = currentUser.id === 'user-0' || currentUser.username.toLowerCase() === 'voh';
-      const isNexoraAi = currentUser.username === 'nexora_ai';
-      const isVohAi = currentUser.username === 'voh_ai';
-
-      if (isFounder || isNexoraAi || isVohAi) {
-        const seeded = getSeededFollowers(currentUser.id);
-        const existingIds = new Set(followerUsers.map(u => u.id));
-        seeded.forEach(u => {
-          if (!existingIds.has(u.id)) {
-            followerUsers.push(u);
-          }
-        });
-      }
-
-      return followerUsers;
-    }
-  };
-
-  const filteredConnections = getConnectionsList().filter(user => {
-    const q = connectionSearchQuery.toLowerCase().trim();
-    if (!q) return true;
-    return (
-      user.name.toLowerCase().includes(q) ||
-      user.username.toLowerCase().includes(q) ||
-      user.bio.toLowerCase().includes(q) ||
-      (user.location && user.location.toLowerCase().includes(q))
-    );
-  });
-
-  // Active posts computation: Case-insensitive match on both ID and username
-  const myPosts = posts.filter(post => {
-    if (!post) return false;
-    const postUserId = String(post.userId || '').toLowerCase();
-    const currentUserId = String(currentUser.id || '').toLowerCase();
-    const postUsername = String(post.username || '').toLowerCase();
-    const currentUsername = String(currentUser.username || '').toLowerCase();
-    
-    return postUserId === currentUserId || 
-           (currentUsername && postUsername === currentUsername);
-  });
-
-  const isFounder = currentUser.username === 'voh' || currentUser.id === 'user-0';
-  const isVohAi = currentUser.username === 'voh_ai' || currentUser.id === 'voh_ai';
-  const isNexoraAi = currentUser.username === 'nexora_ai' || currentUser.id === 'creator-4';
-
-  const stats = {
-    followers: isFounder ? 15300000 : isVohAi ? 8700000 : isNexoraAi ? 6400000 : getFollowersCount(currentUser.id),
-    following: isFounder ? 2 : isVohAi ? 2 : isNexoraAi ? 2 : getFollowingCount(currentUser.id),
-    posts: myPosts.length,
-    sparks: isFounder ? 40000000 : isVohAi ? 18000000 : isNexoraAi ? 12000000 : getSparksReceived(currentUser.id),
-    reputation: isFounder ? 9900000 : isVohAi ? 5200000 : isNexoraAi ? 4100000 : getReputationPoints(currentUser.id),
-    contributions: isFounder ? 20000000 : isVohAi ? 7000000 : isNexoraAi ? 5000000 : getContributionsCount(currentUser.id)
-  };
-  
-  // Tab computed contents
-  const mediaPosts = myPosts.filter(post => post.image || (post.images && post.images.length > 0));
-  const savedPosts = posts.filter(post => post.isBookmarkedByUser);
-  const videoPosts = myPosts.filter(post => post.videoUrl);
-  const reelsPosts = myPosts.filter(post => post.videoUrl || post.tags?.includes('reels') || post.tags?.includes('reel') || post.content.toLowerCase().includes('#reel'));
-  const voicePosts = myPosts.filter(post => post.isVoice || post.content.includes('🎙') || post.voiceDuration || post.voiceAudioUrl || post.voiceTranscript);
-
-  // Custom mock data for Voice transmission recordings
-  const voiceTransmissions = [
-    {
-      id: 'voice-1',
-      title: 'Decentralized Social Web Manifesto',
-      description: 'Discussing why social media should focus on real-world connections, human capital balance, and zero cold-starts.',
-      duration: '5 mins 12 secs',
-      published: 'Uploaded 2 days ago'
-    },
-    {
-      id: 'voice-2',
-      title: 'Designing the VOH AI Intelligent Proxy',
-      description: 'Introducing a high-utility algorithmic teammate to help index conversations, summarize objectives, and inspire collaborators.',
-      duration: '8 mins 45 secs',
-      published: 'Uploaded 1 week ago'
-    },
-    {
-      id: 'voice-3',
-      title: 'Living Reputation vs. Static Metrics',
-      description: 'Explaining our algorithmic shift to helpful broadcasts, active social missions, and verified knowledge endorsements.',
-      duration: '12 mins 30 secs',
-      published: 'Uploaded 3 weeks ago'
-    }
-  ];
-
-  // Custom mock data for internal Circles
-  const circlesData = [
-    { id: 'c-1', name: 'The Football Studio', des: 'The official home of local tournaments & tactical discussions.', members: '1,420 members', status: 'Founder Owned', tag: 'Football' },
-    { id: 'c-2', name: 'AI Synthesizers', des: 'Co-programming deep intelligent overlays, voice-thought generators, and spatial code.', members: '3,950 members', status: 'Primary Creator', tag: 'AI' },
-    { id: 'c-3', name: 'Nexora Core Architects', des: 'Engineering real-time connection protocols and zero-lag streaming sockets.', members: '12,400 members', status: 'Primary Owner', tag: 'System Engineering' }
-  ];
-
-  // Custom mock data for Communities
-  const communitiesData = [
-    { id: 'com-1', name: 'Nigeria Tech Founders Hub', location: 'Lagos & Abuja, NG', members: '8,410 members', description: 'Co-creating world-class consumer and enterprise systems.' },
-    { id: 'com-2', name: 'Berlin Neon Photographers', location: 'Berlin, DE', members: '2,210 members', description: 'Exploring high-contrast retro aesthetics, neon signage, and glass structures.' },
-    { id: 'com-3', name: 'EPL Football Analytics', location: 'London, UK / Global', members: '5,120 members', description: 'Tactical analysis, Expected Goals simulations, and historical leagues database.' }
-  ];
-
-  const handleSaveProfile = (e: React.FormEvent) => {
-    e.preventDefault();
-    stopCamera();
-
-    // Save status and music details
-    localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, editStatusEmoji);
-    localStorage.setItem(`nexora_status_text_${currentUser.id}`, editStatusText);
-    localStorage.setItem(`nexora_pinned_song_${currentUser.id}`, editSong);
-    localStorage.setItem(`nexora_pinned_artist_${currentUser.id}`, editArtist);
-
-    setStatusEmoji(editStatusEmoji);
-    setStatusText(editStatusText);
-    setPinnedSong(editSong);
-    setPinnedArtist(editArtist);
-
-    validateAndSaveProfile({
+    // Save
+    onUpdateProfile({
       name: editName,
+      username: editUsername,
       bio: editBio,
       location: editLocation,
       website: editWebsite,
+      avatar: editAvatar,
       coverImage: editCover,
-      avatar: editAvatar
-    }, false);
+      lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
+      lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
+    });
+
+    localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
+    localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, statusEmoji);
+    localStorage.setItem(`nexora_pinned_song_${currentUser.id}`, pinnedSong);
+
+    setActivePanel('profile');
+    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Digital profile successfully re-calibrated!' }));
   };
 
-  const handleEndorseSkill = (skill: string) => {
-    setSkillsEndorsements(prev => ({
-      ...prev,
-      [skill]: (prev[skill] || 0) + 1
-    }));
+  // QR Color theme options
+  const getQrGradients = () => {
+    switch (qrColorPalette) {
+      case 'solar-flare':
+        return 'from-pink-500 via-amber-400 to-rose-600';
+      case 'holographic':
+        return 'from-cyan-400 via-teal-300 to-emerald-500';
+      case 'neon-cyber':
+      default:
+        return 'from-violet-600 via-purple-500 to-fuchsia-600';
+    }
   };
 
-  const handleAddSkill = (e: React.FormEvent) => {
+  // QR Simulator scan action
+  const simulateScan = () => {
+    setQrScanningActive(true);
+    setQrScanSuccessText('');
+    setTimeout(() => {
+      setQrScanningActive(false);
+      setQrScanSuccessText(`Success! Decoded Node identity: @${currentUser.username}. Mutual network link synched.`);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📲 QR Decoded! Profile sync complete.' }));
+    }, 1800);
+  };
+
+  // Switch accounts action
+  const handleSwitchAccount = (acc: any) => {
+    window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Switching node to @${acc.username}...` }));
+    localStorage.setItem('nexora_active_user_id', acc.id);
+    window.location.reload(); // Refresh to boot with new session index
+  };
+
+  const handleAddNewAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSkillInput.trim()) return;
-    const cleanSkill = newSkillInput.trim();
-    if (!skillsEndorsements[cleanSkill]) {
-      setSkillsEndorsements(prev => ({
-        ...prev,
-        [cleanSkill]: 1
-      }));
-    }
-    setNewSkillInput('');
+    if (!newAccUsername) return;
+    const cleanUsername = newAccUsername.trim().toLowerCase().replace('@', '');
+    const id = `user-switch-${Date.now()}`;
+    const newAcc = {
+      id,
+      username: cleanUsername,
+      name: newAccName || `@${cleanUsername}`,
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+    };
+    const updated = [...savedAccounts, newAcc];
+    setSavedAccounts(updated);
+    localStorage.setItem('nexora_saved_accounts', JSON.stringify(updated));
+    setShowAddAccountModal(false);
+    setNewAccUsername('');
+    setNewAccName('');
+    window.dispatchEvent(new CustomEvent('toast', { detail: `✨ Added @${cleanUsername} to device vault.` }));
   };
 
-  const toggleVoicePlay = (id: string) => {
-    if (currentPlayingVoice === id) {
-      setCurrentPlayingVoice(null);
-    } else {
-      setCurrentPlayingVoice(id);
+  const removeSavedAccount = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = savedAccounts.filter(acc => acc.id !== id);
+    setSavedAccounts(updated);
+    localStorage.setItem('nexora_saved_accounts', JSON.stringify(updated));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Removed account from device storage.' }));
+  };
+
+  // Pinned items filtering
+  const pinnedPostIdsList = currentUser.pinnedPosts || [];
+  const myPosts = posts.filter(p => p.username === currentUser.username);
+  
+  // Tab filtered items
+  const getTabContent = () => {
+    switch (profileTab) {
+      case 'videos':
+        return myPosts.filter(p => p.videoUrl);
+      case 'media':
+        return myPosts.filter(p => p.image || p.videoUrl);
+      case 'pinned':
+        return myPosts.filter(p => pinnedPostIdsList.includes(p.id));
+      case 'drafts':
+        return myPosts.filter(p => p.isDraft);
+      case 'private':
+        return myPosts.filter(p => p.audience === 'onlyme');
+      case 'posts':
+      default:
+        return myPosts;
     }
   };
 
-  const formatNumber = (num: number) => {
-    if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
-    }
-    return num.toLocaleString();
-  };
-
-  if (isCreatorDashboardOpen) {
-    return (
-      <div id="voh-profile-container-root" className="space-y-6">
-        <CreatorDashboardView
-          currentUser={currentUser}
-          posts={posts}
-          onClose={() => setIsCreatorDashboardOpen(false)}
-          onUpdateProfile={onUpdateProfile}
-          activeTabOverride={activeDashboardTab}
-        />
-      </div>
-    );
-  }
+  const filteredTabPosts = getTabContent();
 
   return (
-    <div id="voh-profile-container-root" className="space-y-6">
+    <div className="relative w-full min-h-screen bg-[#030112] text-white font-sans overflow-x-hidden pb-24">
       
-      {!isOwnProfile && onCloseProfile && !isSettingsOpen && (
-        <button 
-          onClick={onCloseProfile}
-          className="flex items-center gap-2 px-4 py-2 text-xs font-mono font-black border border-violet-500/20 bg-[#0d0a21]/80 hover:bg-violet-950/40 text-violet-300 rounded-xl transition-all cursor-pointer mb-2 w-max"
-        >
-          ← BACK TO MY NODE
-        </button>
-      )}
-
-      <AnimatePresence mode="wait">
-        {isSettingsOpen ? (
-          <motion.div
-            key="voh-settings-page"
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 15 }}
-            className="p-6 rounded-3xl bg-[#080614] border border-violet-500/20 space-y-6"
-          >
-            {/* Settings Header */}
-            <div className="flex items-center justify-between border-b border-violet-500/10 pb-4">
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className="flex items-center gap-1.5 text-xs font-mono text-violet-400 hover:text-white font-extrabold uppercase transition-colors cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                Back to Profile
-              </button>
-              <span className="text-xs font-mono font-black text-violet-400/80 bg-violet-500/10 px-3 py-1 rounded-full uppercase">
-                ⚙️ SECURE SETTINGS
-              </span>
-            </div>
-
-            {/* Content Categories of Settings */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              
-              {/* Category Selector Side Menu */}
-              <div className="flex flex-col gap-2">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-violet-400/50 block mb-2 px-2">
-                  Settings Directory
-                </span>
-                <div className="p-2.5 rounded-3xl bg-black/40 border border-violet-500/5 space-y-1">
-                  {[
-                    { id: 'account', label: 'My Account', icon: Settings, color: 'text-violet-400' },
-                    { id: 'privacy', label: 'Privacy Center', icon: Shield, color: 'text-cyan-400' },
-                    { id: 'messaging', label: 'Messaging Rules', icon: MessageCircle, color: 'text-emerald-400' },
-                    { id: 'safety', label: 'Safety & Safeguards', icon: Lock, color: 'text-amber-400' },
-                    { id: 'notifications', label: 'Notifications', icon: Bell, color: 'text-pink-400' },
-                    { id: 'theme', label: 'Themes & Appearance', icon: Sliders, color: 'text-purple-400' }
-                  ].map(sec => (
-                    <button
-                      key={sec.id}
-                      onClick={() => setActiveSettingsSection(sec.id as any)}
-                      type="button"
-                      className={`w-full p-3 rounded-xl text-xs font-sans font-bold flex items-center justify-between transition-all cursor-pointer ${
-                        activeSettingsSection === sec.id 
-                          ? 'bg-violet-600/10 text-white border border-violet-500/20' 
-                          : 'bg-transparent text-current/70 hover:bg-white/5 border border-transparent'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <sec.icon className={`w-4 h-4 ${sec.color}`} />
-                        <span>{sec.label}</span>
-                      </div>
-                      <span className="text-[10px] text-zinc-600">→</span>
-                    </button>
-                  ))}
-                </div>
-
-                <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5">
-                  <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase block mb-1">
-                    🟢 Platform Node Active
-                  </span>
-                  <p className="text-[10px] text-zinc-400 font-sans leading-normal">
-                    This settings console is fully offline-secured. Modifying attributes synchronizes with your local browser storage instantly.
-                  </p>
-                </div>
-              </div>
-
-              {/* Main Settings Subsections */}
-              <div className="md:col-span-2 space-y-6">
-                
-                {/* 1. Account Management Tab */}
-                {activeSettingsSection === 'account' && (
-                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <Settings className="w-4 h-4 text-violet-400" /> Account Management
-                    </h4>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-sans">
-                      <div>
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Display Name</label>
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">HQ Location</label>
-                        <input
-                          type="text"
-                          value={editLocation}
-                          onChange={(e) => setEditLocation(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Bio Description</label>
-                        <textarea
-                          value={editBio}
-                          onChange={(e) => setEditBio(e.target.value)}
-                          rows={2}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Website Link</label>
-                        <input
-                          type="text"
-                          value={editWebsite}
-                          onChange={(e) => setEditWebsite(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
-                          placeholder="e.g. nexora.ai/voh"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Account @username</label>
-                        <input
-                          type="text"
-                          value={editUsername}
-                          onChange={(e) => setEditUsername(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white font-mono focus:outline-hidden focus:border-violet-500"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Email Address</label>
-                        <input
-                          type="email"
-                          value={editEmail}
-                          onChange={(e) => setEditEmail(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-violet-500"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Secured Phone Contact</label>
-                        <input
-                          type="text"
-                          value={editPhone}
-                          onChange={(e) => setEditPhone(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white font-mono focus:outline-hidden focus:border-violet-500"
-                        />
-                      </div>
-
-                      <div className="sm:col-span-2">
-                        <label className="text-[9px] font-mono uppercase text-zinc-400 block mb-1">Change Platform Password</label>
-                        <input
-                          type="password"
-                          value={editPassword}
-                          onChange={(e) => setEditPassword(e.target.value)}
-                          className="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white font-mono focus:outline-hidden focus:border-violet-500"
-                          placeholder="••••••••••••"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="pt-4 border-t border-violet-500/10 space-y-4">
-                      {/* Creator mode toggler */}
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className="text-[11px] font-sans font-bold text-white block">🟣 Creator Dashboard Access</span>
-                          <span className="text-[9px] text-[#A78BFA] font-sans block">Activates financial wallets, tip jars, content heatmaps & advanced insights</span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer select-none">
-                          <input 
-                            type="checkbox" 
-                            checked={!!currentUser.creatorModeEnabled}
-                            onChange={(e) => {
-                              onUpdateProfile({ creatorModeEnabled: e.target.checked });
-                              window.dispatchEvent(new CustomEvent('toast', { detail: `Creator Dashboard ${e.target.checked ? 'Enabled 🚀' : 'Disabled'}` }));
-                            }}
-                            className="sr-only peer" 
-                          />
-                          <div className="w-11 h-6 bg-zinc-800 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                        </label>
-                      </div>
-
-                      {/* Verification request block */}
-                      <div className="flex items-center justify-between pt-3 border-t border-white/5">
-                        <div>
-                          <span className="text-[11px] font-sans font-bold text-white block">🟣 Official Blue Verification Badge</span>
-                          <span className="text-[9px] text-zinc-400 block">Apply for professional node identity status checks</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const reqs = JSON.parse(localStorage.getItem('nexora_verification_requests') || '[]');
-                            if (!reqs.some((r: any) => r.userId === currentUser.id)) {
-                              reqs.push({
-                                userId: currentUser.id,
-                                username: editUsername,
-                                name: editName,
-                                timestamp: new Date().toISOString()
-                              });
-                              localStorage.setItem('nexora_verification_requests', JSON.stringify(reqs));
-                            }
-                            alert("Verification requested! Application lodged for administrator check.");
-                            window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Badge request filed!' }));
-                          }}
-                          className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase transition-colors cursor-pointer"
-                        >
-                          Request Badge
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. Privacy Center Tab */}
-                {activeSettingsSection === 'privacy' && (
-                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-cyan-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-cyan-400" /> Privacy & Visibility
-                    </h4>
-
-                    <div className="space-y-3 font-sans text-xs">
-                      {/* Private/Public Toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Private Account Mode</span>
-                          <span className="text-[9px] text-zinc-400 block">Only approved followers can view your clips and voice logs</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={isPrivateAccount}
-                          onChange={(e) => {
-                            setIsPrivateAccount(e.target.checked);
-                            localStorage.setItem('nexora_privacy_private_account', String(e.target.checked));
-                            window.dispatchEvent(new CustomEvent('toast', { detail: `Account set to ${e.target.checked ? 'PRIVATE 🔒' : 'PUBLIC 🌐'}` }));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
-                        />
-                      </div>
-
-                      {/* Active Status toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Pulse Activity Status</span>
-                          <span className="text-[9px] text-zinc-400 block">Show a green activity pulse when you are browsing the app</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={showActiveStatus}
-                          onChange={(e) => {
-                            setShowActiveStatus(e.target.checked);
-                            localStorage.setItem('nexora_privacy_active_status', String(e.target.checked));
-                            window.dispatchEvent(new CustomEvent('toast', { detail: `Activity pulse indicator: ${e.target.checked ? 'ON' : 'OFF'}` }));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
-                        />
-                      </div>
-
-                      {/* Profile view history toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Profile Views Logging</span>
-                          <span className="text-[9px] text-zinc-400 block">Keep track of which accounts visit your space</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={showProfileViews}
-                          onChange={(e) => {
-                            setShowProfileViews(e.target.checked);
-                            localStorage.setItem('nexora_privacy_profile_views', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
-                        />
-                      </div>
-
-                      {/* Visitor insights toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Visitor Insights Panel</span>
-                          <span className="text-[9px] text-zinc-400 block">Allow other nodes to see aggregated statistical insights of your visitations</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={showVisitorInsights}
-                          onChange={(e) => {
-                            setShowVisitorInsights(e.target.checked);
-                            localStorage.setItem('nexora_privacy_visitor_insights', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer"
-                        />
-                      </div>
-
-                      {/* Allow Mentions Radios */}
-                      <div className="p-3.5 rounded-xl bg-black/20 border border-white/5 space-y-2">
-                        <span className="font-bold text-white block text-[11px]">Admissible Mentions Scope</span>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(['everyone', 'followers', 'nobody'] as const).map(option => (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => {
-                                setAllowMentions(option);
-                                localStorage.setItem('nexora_privacy_allow_mentions', option);
-                              }}
-                              className={`p-2 rounded-xl text-[10px] font-mono border font-black uppercase transition-all cursor-pointer ${
-                                allowMentions === option ? 'border-cyan-400 text-cyan-400 bg-cyan-950/25' : 'border-white/5 text-zinc-400 hover:bg-black/20'
-                              }`}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Allow Tags Radios */}
-                      <div className="p-3.5 rounded-xl bg-black/20 border border-white/5 space-y-2">
-                        <span className="font-bold text-white block text-[11px]">Admissible Tags Scope</span>
-                        <div className="grid grid-cols-3 gap-2">
-                          {(['everyone', 'followers', 'nobody'] as const).map(option => (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => {
-                                setAllowTags(option);
-                                localStorage.setItem('nexora_privacy_allow_tags', option);
-                              }}
-                              className={`p-2 rounded-xl text-[10px] font-mono border font-black uppercase transition-all cursor-pointer ${
-                                allowTags === option ? 'border-cyan-400 text-cyan-400 bg-cyan-950/25' : 'border-white/5 text-zinc-400 hover:bg-black/20'
-                              }`}
-                            >
-                              {option}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Download toggle */}
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Allow Downloads of My Videos</span>
-                          <span className="text-[9px] text-zinc-400 block font-sans">Let visitors back up and download your static clips or voice posts</span>
-                        </div>
-                        <input 
-                          type="checkbox" 
-                          checked={allowDownloads}
-                          onChange={(e) => {
-                            setAllowDownloads(e.target.checked);
-                            localStorage.setItem('nexora_privacy_allow_downloads', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-cyan-500 cursor-pointer" 
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 3. Messaging Rules Tab */}
-                {activeSettingsSection === 'messaging' && (
-                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-emerald-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <MessageCircle className="w-4 h-4 text-emerald-400" /> Secure Direct Messages
-                    </h4>
-
-                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3 font-sans">
-                      <div>
-                        <span className="font-bold text-white block text-xs">Who can start private chats with me?</span>
-                        <span className="text-[10px] text-zinc-400 block mt-0.5 leading-normal">
-                          Only selected relationships are permitted to open real-time client socket feeds.
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        {(['everyone', 'followers', 'following', 'nobody'] as const).map(scope => (
-                          <button
-                            key={scope}
-                            type="button"
-                            onClick={() => {
-                              setWhoCanMessageMe(scope);
-                              localStorage.setItem('nexora_privacy_messaging_scope', scope);
-                            }}
-                            className={`p-3 rounded-xl border text-[10px] font-mono font-black uppercase transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
-                              whoCanMessageMe === scope
-                                ? 'border-emerald-500 text-emerald-400 bg-emerald-950/20'
-                                : 'border-white/5 text-zinc-400 hover:bg-black/20'
-                            }`}
-                          >
-                            <span className="block text-sm">{scope === 'everyone' ? '🌐' : scope === 'followers' ? '👥' : scope === 'following' ? '🤝' : '🔒'}</span>
-                            <span>{scope}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-xl bg-emerald-950/10 border border-emerald-500/10 text-[10px] text-emerald-400 leading-normal">
-                      <strong>Reputation Badge Bypass:</strong> Accredited moderator authorities (👑, 🛸, 🟣) bypass DM blocks to deliver urgent service support notes.
-                    </div>
-                  </div>
-                )}
-
-                {/* 4. Safety & Safeguards Tab */}
-                {activeSettingsSection === 'safety' && (
-                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-amber-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-amber-400" /> Safety & Content Filters
-                    </h4>
-
-                    {/* Blocked Accounts Block */}
-                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
-                      <div className="flex justify-between items-center font-sans">
-                        <span className="font-bold text-white block text-[11px]">Blocked Accounts Directory</span>
-                        <span className="font-mono text-[9px] text-zinc-500">{blockedAccountsList.length} blocked</span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Type username to block..."
-                          value={newBlockedUsername}
-                          onChange={(e) => setNewBlockedUsername(e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!newBlockedUsername.trim()) return;
-                            const clean = newBlockedUsername.replace('@', '').trim().toLowerCase();
-                            if (!blockedAccountsList.includes(clean)) {
-                              const updated = [...blockedAccountsList, clean];
-                              setBlockedAccountsList(updated);
-                              localStorage.setItem('nexora_privacy_blocked_usernames', JSON.stringify(updated));
-                            }
-                            setNewBlockedUsername('');
-                          }}
-                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                        >
-                          Block
-                        </button>
-                      </div>
-
-                      {blockedAccountsList.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {blockedAccountsList.map(uname => (
-                            <div key={uname} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
-                              <span>@{uname}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = blockedAccountsList.filter(u => u !== uname);
-                                  setBlockedAccountsList(updated);
-                                  localStorage.setItem('nexora_privacy_blocked_usernames', JSON.stringify(updated));
-                                }}
-                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Muted Accounts Block */}
-                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
-                      <div className="flex justify-between items-center font-sans">
-                        <span className="font-bold text-white block text-[11px]">Muted Accounts</span>
-                        <span className="font-mono text-[9px] text-zinc-500">{mutedAccountsList.length} muted</span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Type username to mute..."
-                          value={newMutedUsername}
-                          onChange={(e) => setNewMutedUsername(e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!newMutedUsername.trim()) return;
-                            const clean = newMutedUsername.replace('@', '').trim().toLowerCase();
-                            if (!mutedAccountsList.includes(clean)) {
-                              const updated = [...mutedAccountsList, clean];
-                              setMutedAccountsList(updated);
-                              localStorage.setItem('nexora_privacy_muted_usernames', JSON.stringify(updated));
-                            }
-                            setNewMutedUsername('');
-                          }}
-                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                        >
-                          Mute
-                        </button>
-                      </div>
-
-                      {mutedAccountsList.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {mutedAccountsList.map(uname => (
-                            <div key={uname} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
-                              <span>@{uname}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = mutedAccountsList.filter(u => u !== uname);
-                                  setMutedAccountsList(updated);
-                                  localStorage.setItem('nexora_privacy_muted_usernames', JSON.stringify(updated));
-                                }}
-                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Word suppression engine block */}
-                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
-                      <div>
-                        <span className="font-bold text-white block text-[11px]">Hidden Word suppression filter</span>
-                        <span className="text-[9px] text-zinc-400 block">Comments or chat messages including these exact terms are immediately filtered.</span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Add hidden keyword trigger word (e.g. lottery)..."
-                          value={newHiddenWord}
-                          onChange={(e) => setNewHiddenWord(e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!newHiddenWord.trim()) return;
-                            const clean = newHiddenWord.trim().toLowerCase();
-                            if (!hiddenWordsList.includes(clean)) {
-                              const updated = [...hiddenWordsList, clean];
-                              setHiddenWordsList(updated);
-                              localStorage.setItem('nexora_privacy_hidden_words', JSON.stringify(updated));
-                            }
-                            setNewHiddenWord('');
-                          }}
-                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                        >
-                          Add Word
-                        </button>
-                      </div>
-
-                      {hiddenWordsList.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {hiddenWordsList.map(word => (
-                            <div key={word} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
-                              <span>"{word}"</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = hiddenWordsList.filter(w => w !== word);
-                                  setHiddenWordsList(updated);
-                                  localStorage.setItem('nexora_privacy_hidden_words', JSON.stringify(updated));
-                                }}
-                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Restricted Accounts Block */}
-                    <div className="p-4 rounded-xl bg-black/20 border border-white/5 space-y-3">
-                      <div>
-                        <span className="font-bold text-white block text-[11px]">Restricted Accounts</span>
-                        <span className="text-[9px] text-zinc-400 block">Comments from restricted accounts are only visible to themselves.</span>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="Type username to restrict..."
-                          value={newRestrictedUsername}
-                          onChange={(e) => setNewRestrictedUsername(e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-black/40 border border-white/10 text-white focus:outline-hidden"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (!newRestrictedUsername.trim()) return;
-                            const clean = newRestrictedUsername.replace('@', '').trim().toLowerCase();
-                            if (!restrictedAccountsList.includes(clean)) {
-                              const updated = [...restrictedAccountsList, clean];
-                              setRestrictedAccountsList(updated);
-                              localStorage.setItem('nexora_privacy_restricted_usernames', JSON.stringify(updated));
-                            }
-                            setNewRestrictedUsername('');
-                          }}
-                          className="px-3 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                        >
-                          Restrict
-                        </button>
-                      </div>
-
-                      {restrictedAccountsList.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 pt-1">
-                          {restrictedAccountsList.map(uname => (
-                            <div key={uname} className="flex items-center gap-1.5 bg-black/30 border border-white/10 px-2.5 py-1 rounded-md text-[10px] font-mono text-zinc-300">
-                              <span>@{uname}</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const updated = restrictedAccountsList.filter(u => u !== uname);
-                                  setRestrictedAccountsList(updated);
-                                  localStorage.setItem('nexora_privacy_restricted_usernames', JSON.stringify(updated));
-                                }}
-                                className="text-amber-500 hover:text-red-400 font-extrabold cursor-pointer"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 5. Notifications Panel */}
-                {activeSettingsSection === 'notifications' && (
-                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn font-sans">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-pink-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <Bell className="w-4 h-4 text-pink-400 animate-swing" /> Push Notification Rules
-                    </h4>
-
-                    <div className="space-y-3 text-xs">
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Likes & Sparks Alerts</span>
-                          <span className="text-[9px] text-[#C084FC] block">Alert when a visitor sparks your text or static clips</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notifyLikes}
-                          onChange={(e) => {
-                            setNotifyLikes(e.target.checked);
-                            localStorage.setItem('nexora_notify_likes', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Media Comments Alerts</span>
-                          <span className="text-[9px] text-[#C084FC] block">Alert when followers leave voice or textual discussions</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notifyComments}
-                          onChange={(e) => {
-                            setNotifyComments(e.target.checked);
-                            localStorage.setItem('nexora_notify_comments', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Follower Connections alerts</span>
-                          <span className="text-[9px] text-[#C084FC] block">Receive highlights when others request contact synchronization</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notifyFollowers}
-                          onChange={(e) => {
-                            setNotifyFollowers(e.target.checked);
-                            localStorage.setItem('nexora_notify_followers', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Socket Direct Messaging alerts</span>
-                          <span className="text-[9px] text-[#C084FC] block">Alert on incoming secure private inquiries</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notifyMessages}
-                          onChange={(e) => {
-                            setNotifyMessages(e.target.checked);
-                            localStorage.setItem('nexora_notify_messages', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Mentions & Bio Tags alerts</span>
-                          <span className="text-[9px] text-[#C084FC] block">Alert when tagged in descriptions or community posts</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notifyMentions}
-                          onChange={(e) => {
-                            setNotifyMentions(e.target.checked);
-                            localStorage.setItem('nexora_notify_mentions', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Community Updates newsletters</span>
-                          <span className="text-[9px] text-[#C084FC] block">Weekly community board newsletters and broadcasts</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notifyCommunityUpdates}
-                          onChange={(e) => {
-                            setNotifyCommunityUpdates(e.target.checked);
-                            localStorage.setItem('nexora_notify_community', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-black/20 border border-white/5">
-                        <div>
-                          <span className="font-bold text-white block text-[11px]">Live Broadcast alarms</span>
-                          <span className="text-[9px] text-[#C084FC] block">Instant alerts when nodes your profile follows click "Go Live"</span>
-                        </div>
-                        <input
-                          type="checkbox"
-                          checked={notifyLive}
-                          onChange={(e) => {
-                            setNotifyLive(e.target.checked);
-                            localStorage.setItem('nexora_notify_live', String(e.target.checked));
-                          }}
-                          className="w-4 h-4 rounded-sm accent-pink-500 cursor-pointer"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* 6. Themes & Colors Tab */}
-                {activeSettingsSection === 'theme' && setTheme && theme && (
-                  <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-4 text-left animate-fadeIn">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-purple-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <Sliders className="w-4 h-4 text-purple-400" /> Platform Skins
-                    </h4>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      {[
-                        { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-violet-600', text: 'Neon Violet' },
-                        { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-700', text: 'Classic Off-Black' },
-                        { id: 'emerald-glass', label: 'Matrix Emerald', color: 'bg-emerald-600', text: 'Classy Green' },
-                        { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-slate-200 border border-slate-400', text: 'Bright Clinical' },
-                      ].map((t) => (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => setTheme(t.id as any)}
-                          className={`p-3 rounded-xl border text-left transition-all hover:scale-102 flex flex-col justify-between h-20 cursor-pointer ${
-                            theme === t.id
-                              ? 'bg-white/10 border-[#8B5CF6] shadow-sm ring-1 ring-[#8B5CF6]/50'
-                              : 'bg-black/40 border-white/5 hover:bg-white/5'
-                          }`}
-                        >
-                          <div className="flex justify-between items-center w-full font-sans">
-                            <span className="text-[10px] font-bold text-white">{t.label}</span>
-                            <div className={`w-3 h-3 rounded-full ${t.color}`} />
-                          </div>
-                          <span className="text-[8px] font-mono text-[#8B5CF6] font-bold uppercase">{t.text}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 9. Communities roles */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <Users className="w-4 h-4 text-purple-400" /> Communities Roles Guide
-                  </h4>
-                  <p className="text-[10.5px] text-current/60 leading-snug">
-                    You hold <strong>Founder Admin rights</strong> in 3 core community spaces, and verified membership in 15 active local groups.
-                  </p>
-                </div>
-
-                {/* VOH ONLY NOTIFICATION CENTER FOR BADGE REQUESTS */}
-                {currentUser.username === 'voh' && (
-                  <div className="p-5 rounded-2xl bg-black/40 border border-violet-500/20 space-y-3 mt-4 text-left">
-                    <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                      <Award className="w-4 h-4 text-violet-400" /> Pending Verification Notifications
-                    </h4>
-                    <span className="text-[9px] font-mono text-violet-400 block uppercase">
-                      Admin review channel
-                    </span>
-                    <div className="space-y-2 mt-2">
-                      {verificationRequests.length === 0 ? (
-                        <p className="text-[10.5px] text-current/50 italic font-sans py-2">
-                          No pending verification requests in the queue.
-                        </p>
-                      ) : (
-                        verificationRequests.map((req: any, i: number) => (
-                          <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-violet-950/25 border border-violet-500/15">
-                            <div className="min-w-0 pr-2">
-                              <p className="text-[11px] font-black text-white truncate">@{req.username}</p>
-                              <p className="text-[9px] text-violet-300/60 truncate">{req.name}</p>
-                            </div>
-                            <button
-                              onClick={() => handleDismissVerificationRequest(req.userId)}
-                              className="px-2.5 py-1 bg-violet-600/30 hover:bg-violet-600/60 text-white rounded-md text-[9px] font-mono uppercase transition-colors cursor-pointer"
-                            >
-                              Review & Archive
-                            </button>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 10. Support Form */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/10 space-y-3">
-                  <h4 className="text-xs font-mono uppercase tracking-wider text-violet-300 border-b border-violet-500/10 pb-2 flex items-center gap-2">
-                    <HelpCircle className="w-4 h-4 text-blue-400" /> Nexora Support Desk
-                  </h4>
-                  <div className="space-y-2">
-                    <textarea 
-                      placeholder="How can we help you today with your Nexora experience?..." 
-                      className="w-full p-2.5 bg-violet-950/20 border border-violet-500/10 rounded-xl text-xs text-white"
-                      rows={2}
-                    />
-                    <button 
-                      onClick={() => alert("Your message has been sent to our customer support team!")}
-                      className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                    >
-                      Send Support Ticket
-                    </button>
-                  </div>
-                </div>
-
-                {/* 11. DEVELOPER WORKSPACE EXPORTER CONSOLE COMPONENT - VISIBLE ONLY TO FOUNDER VOICE OF HARRISON */}
-                {isOwnProfile && currentUser.username === 'voh' && (
-                  <div className="p-5 rounded-2xl bg-linear-to-b from-[#150f38] to-[#05030f] border border-violet-500/30 space-y-4">
-                    <div className="flex items-center justify-between border-b border-violet-500/10 pb-3">
-                      <h4 className="text-xs font-mono uppercase tracking-wider text-transparent bg-clip-text bg-linear-to-r from-violet-400 via-pink-400 to-cyan-400 font-extrabold flex items-center gap-2">
-                        <Terminal className="w-4 h-4 text-violet-400 animate-pulse" /> Code Exporter Console
-                      </h4>
-                      <span className="text-[8px] font-mono bg-violet-500/20 text-violet-300 px-2 py-0.5 rounded border border-violet-500/30 uppercase tracking-widest font-black">
-                        V2.1 // OFFLINE BYPASS
-                      </span>
-                    </div>
-
-                    <p className="text-[10.5px] font-sans text-violet-200/80 leading-relaxed text-left">
-                      Save all workspace files and customized parameters to your <strong>local drive/local storage</strong> instantly. We have pre-compiled standalone package-recovery modules in both <strong>Python</strong> and <strong>Node.js (JavaScript)</strong>.
-                    </p>
-
-                    {/* Direct script downloads */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                      {/* Python module download */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-violet-500/10 flex flex-col justify-between hover:border-violet-500/30 transition-all group">
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono font-bold text-violet-300">🐍 Python Downloader</span>
-                            <span className="text-[8px] font-mono text-violet-400/40 uppercase">download_project.py</span>
-                          </div>
-                          <p className="text-[9.5px] text-current/60 font-sans leading-normal">
-                            A clean python routine that walks directory trees and bundles all assets in a standard compressed ZIP archive.
-                          </p>
-                        </div>
-                        <div className="pt-3 flex flex-col gap-2">
-                          <div className="p-1 px-2.5 rounded bg-black/60 border border-white/5 font-mono text-[9px] text-cyan-400/80 truncate">
-                            $ python download_project.py
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              downloadScriptFile('download_project.py', pythonExporterCode);
-                            }}
-                            className="w-full py-1.5 bg-violet-600/20 hover:bg-violet-600 border border-violet-500/30 text-white font-mono text-[10px] font-bold rounded-lg uppercase flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Save Python Script
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Node JS module download */}
-                      <div className="p-3.5 rounded-xl bg-black/40 border border-violet-500/10 flex flex-col justify-between hover:border-violet-500/30 transition-all group">
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono font-bold text-violet-300">⚡ JS Node Exporter</span>
-                            <span className="text-[8px] font-mono text-violet-400/40 uppercase">download_project.js</span>
-                          </div>
-                          <p className="text-[9.5px] text-current/60 font-sans leading-normal">
-                            A direct Node.js utility runner that creates a backup directory and compiles files on Unix/macOS or Windows instantly.
-                          </p>
-                        </div>
-                        <div className="pt-3 flex flex-col gap-2">
-                          <div className="p-1 px-2.5 rounded bg-black/60 border border-white/5 font-mono text-[9px] text-cyan-400/80 truncate">
-                            $ node download_project.js
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              downloadScriptFile('download_project.js', jsExporterCode);
-                            }}
-                            className="w-full py-1.5 bg-violet-600/20 hover:bg-violet-600 border border-violet-500/30 text-white font-mono text-[10px] font-bold rounded-lg uppercase flex items-center justify-center gap-1.5 transition-all active:scale-98 cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" /> Save Node JS Script
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Interactive ZIP instructions guide */}
-                    <div className="p-3.5 rounded-xl bg-violet-950/20 border border-violet-500/20 space-y-1.5 text-left">
-                      <span className="text-[10.5px] font-mono font-black text-cyan-400 flex items-center gap-1">
-                        ✨ Official Workspace Recovery Guide
-                      </span>
-                      <p className="text-[9.8px] text-violet-300/80 font-sans leading-relaxed">
-                        To download <strong>everything co-created here</strong> (including full React sources, configs, linter schemes, and package dependencies) in one fully packaged file directly to your hard drive:
-                      </p>
-                      <ol className="text-[9.2px] text-current/60 font-mono list-decimal pl-4.5 space-y-1 leading-normal">
-                        <li>Locate the <strong>Google AI Studio Interface</strong>.</li>
-                        <li>In the top right-hand corner of the workspace, click on the **⚙️ settings/three-dot overlay menu**.</li>
-                        <li>Select <strong>Download ZIP</strong> or click <strong>Export to GitHub</strong> to archive all repository parameters instantly!</li>
-                      </ol>
-                    </div>
-                  </div>
-                )}
-
-                {/* 12. About Nexora info */}
-                <div className="p-5 rounded-2xl bg-[#0d0926]/40 border border-violet-500/15 space-y-2 text-center sm:text-left">
-                  <span className="text-[10px] font-mono text-violet-400 font-extrabold flex items-center justify-center sm:justify-start gap-1">
-                    <Info className="w-3.5 h-3.5" /> ABOUT NEXORA NETWORK
-                  </span>
-                  <p className="text-[10px] text-current/50 font-sans leading-relaxed">
-                    NEXORA Living Node social system • Version 2.1.0-STABLE.<br />
-                    All nodes synchronized on safe cryptographic parameters.<br />
-                    Copyright © 2026 Nexora Foundation. All rights reserved.
-                  </p>
-                </div>
-
-                {/* Sign out and Save button */}
-                <div className="pt-4 border-t border-violet-500/10 flex flex-wrap gap-2 justify-between items-center">
-                  {onLogout && (
-                    <button
-                      type="button"
-                      onClick={onLogout}
-                      className="px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-400 text-[10px] font-mono font-bold rounded-lg uppercase cursor-pointer"
-                    >
-                      🚪 Sign Out of Nexora
-                    </button>
-                  )}
-                  <button
-                    onClick={() => {
-                      validateAndSaveProfile({
-                        name: editName,
-                        username: editUsername,
-                        bio: editBio,
-                        location: editLocation,
-                        website: editWebsite,
-                        coverImage: editCover,
-                        avatar: editAvatar
-                      }, true);
-                    }}
-                    className="px-5 py-2.5 text-[10px] font-mono font-bold rounded-xl bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white uppercase tracking-wider cursor-pointer"
-                  >
-                    Save & Return
-                  </button>
-                </div>
-
-              </div>
-
-            </div>
-
-          </motion.div>
+      {/* 1. DYNAMIC PROFILE HEADER COVER BACKGROUND */}
+      <div className="relative w-full h-44 sm:h-56 bg-slate-950 overflow-hidden">
+        {currentUser.coverImage ? (
+          <img 
+            src={currentUser.coverImage} 
+            className="w-full h-full object-cover opacity-60 blur-[1px] transition-all hover:scale-105 duration-700" 
+            alt="Profile Cover Banner"
+            referrerPolicy="no-referrer"
+          />
         ) : (
-          <motion.div
-            key="voh-profile-content"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-6"
-          >
-            {/* Minimalist Profile Layout - Cover banner completely removed */}
+          <div className="w-full h-full bg-linear-to-tr from-violet-950 via-[#0a0521] to-[#2c0b3d]" />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#030112] via-[#030112]/20 to-transparent" />
+        
+        {/* Navigation & Controls header */}
+        <div className="absolute top-4 inset-x-4 flex justify-between items-center z-10">
+          {onCloseProfile ? (
+            <button 
+              onClick={onCloseProfile}
+              className="p-2.5 rounded-2xl bg-black/50 backdrop-blur-md border border-white/10 text-white hover:bg-white/10 hover:scale-105 transition-all cursor-pointer"
+              title="Return to Feed"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-violet-500/10 backdrop-blur-md border border-violet-500/20 text-[10px] font-mono text-violet-300 tracking-wider">
+              <Compass className="w-3.5 h-3.5 animate-spin" style={{ animationDuration: '6s' }} />
+              MY SOCIAL NODE
+            </div>
+          )}
 
-      {/* Editing Form Section */}
-      <AnimatePresence mode="wait">
-        {isEditing ? (
-          <motion.form
-            key="voh-edit-form"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            onSubmit={handleSaveProfile}
-            className="p-6 rounded-3xl bg-[#090715] border border-violet-500/30 space-y-4 shadow-xl"
-            id="voh-edit-profile-form"
-          >
-            <h4 className="text-xs font-mono font-black uppercase text-violet-400">
-              Update Founder Node Parameters
-            </h4>
+          {/* Hamburger Menu & Quick Tools (Progressive Disclosure ceiling) */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setActivePanel('qr-profile')}
+              className="p-2.5 rounded-2xl bg-black/50 backdrop-blur-md border border-white/10 text-violet-300 hover:text-white hover:bg-violet-600/20 transition-all cursor-pointer"
+              title="Show QR Code Identifier"
+            >
+              <QrCode className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setActivePanel('menu')}
+              className="p-2.5 rounded-2xl bg-linear-to-r from-violet-600 to-fuchsia-600 hover:brightness-110 shadow-lg shadow-violet-500/10 text-white transition-all cursor-pointer flex items-center gap-1"
+              title="Open Advanced Hub"
+              id="nexora-advanced-hamburger-trigger"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[9px] font-mono uppercase text-[#A78BFA]/75">Display Name</label>
-                <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  required
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-violet-950/40 border border-violet-500/20 focus:outline-none focus:border-violet-500/50 text-white transition-colors"
-                />
-              </div>
+      {/* 2. PUBLIC PROFILE CARD & INFORMATION ARCHITECTURE */}
+      <div className="max-w-4xl mx-auto px-4 -mt-20 relative z-10 space-y-6">
+        
+        {/* Main Header card container */}
+        <div className="bg-[#0b0922]/90 backdrop-blur-xl border border-violet-500/15 rounded-[32px] p-6 sm:p-8 space-y-6 relative overflow-hidden shadow-2xl">
+          
+          {/* Aesthetic grid lights in backdrop */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-pink-500/5 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="space-y-1">
-                <label className="text-[9px] font-mono uppercase text-[#A78BFA]/75">Twitter/Website Link</label>
-                <input
-                  type="text"
-                  value={editWebsite}
-                  onChange={(e) => setEditWebsite(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-violet-950/40 border border-violet-500/20 focus:outline-none focus:border-violet-500/50 text-white transition-colors"
-                />
-              </div>
+          {/* Profile Identity Layout */}
+          <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+            
+            {/* Left: Avatar with frames & Name plate */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5 text-center sm:text-left">
+              <div className="relative group shrink-0">
+                {/* Simulated dynamic premium halo frame */}
+                <div className="absolute -inset-1.5 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-[28px] blur-xs animate-spin" style={{ animationDuration: '9s' }} />
+                
+                <div 
+                  onClick={() => setProfilePicExpanded(true)}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-[24px] bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 group-hover:scale-[1.02]"
+                >
+                  <img 
+                    src={currentUser.avatar} 
+                    className="w-full h-full object-cover" 
+                    alt="User Avatar picture"
+                    referrerPolicy="no-referrer"
+                  />
+                  {/* Hover visual expand pill */}
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                    <Eye className="w-5 h-5 text-white" />
+                  </div>
+                </div>
 
-              <div className="space-y-1">
-                <label className="text-[9px] font-mono uppercase text-[#A78BFA]/75">HQ Node (Location)</label>
-                <input
-                  type="text"
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-violet-950/40 border border-violet-500/20 focus:outline-none focus:border-violet-500/50 text-white transition-colors"
-                />
-              </div>
-
-              <div className="md:col-span-2 space-y-2 p-4 bg-violet-950/20 rounded-2xl border border-violet-500/10 text-left">
-                <span className="text-[10px] font-mono uppercase text-[#A78BFA] font-bold block">
-                  👤 Profile Picture Node Configuration
+                {/* Status Indicator bubble */}
+                <span className="absolute bottom-0 right-0 z-20 bg-black border border-white/10 px-2 py-0.5 rounded-full text-[10px] flex items-center gap-1 shadow-md">
+                  <span>{statusEmoji}</span>
+                  <span className="font-mono text-[9px] text-zinc-400 font-bold">{statusText}</span>
                 </span>
-                
-                <div className="flex flex-col sm:flex-row gap-4 items-center sm:items-start pt-1">
-                  {/* Miniature Portrait Node Preview */}
-                  <div className="relative group shrink-0">
-                    <img 
-                      src={editAvatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
-                      className="w-16 h-16 rounded-2xl object-cover ring-2 ring-violet-500/30 bg-slate-950" 
-                    />
-                    <span className="absolute -bottom-1 -right-1 bg-violet-600 border border-violet-400 text-white text-[8px] font-mono px-1 rounded scale-90 leading-none py-0.5">
-                      Preview
-                    </span>
-                  </div>
-
-                  {/* Shutter Camera / File selector Actions */}
-                  <div className="flex-1 w-full space-y-2.5">
-                    {isWebcamActive ? (
-                      <div className="space-y-2">
-                        <div className="relative rounded-xl overflow-hidden bg-black border border-violet-500/30 max-w-xs mx-auto sm:mx-0">
-                          <video 
-                            ref={videoRef} 
-                            autoPlay 
-                            playsInline 
-                            className="w-full h-32 object-cover" 
-                          />
-                          <div className="absolute top-1.5 left-1.5 bg-black/60 px-1.5 py-0.5 rounded text-[8px] font-mono text-fuchsia-400 animate-pulse border border-fuchsia-400/20">
-                            SHUTTER ACTIVE
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={captureCameraPhoto}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-mono rounded-lg transition-colors cursor-pointer font-bold uppercase leading-none"
-                          >
-                            📷 Capture Frame
-                          </button>
-                          <button
-                            type="button"
-                            onClick={stopCamera}
-                            className="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-rose-400 text-[10px] font-mono rounded-lg border border-rose-500/10 transition-colors cursor-pointer uppercase leading-none"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        <p className="text-[10px] text-violet-300 font-sans">
-                          Take a direct snapshot from your webcam or select a custom image file:
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            onClick={startCamera}
-                            className="px-3.5 py-2 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-[10px] font-mono rounded-lg transition-all cursor-pointer flex items-center gap-1.5 uppercase font-bold"
-                          >
-                            📸 Snap Quick Shot
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="px-3.5 py-2 bg-cyan-600/10 hover:bg-cyan-600/20 border border-cyan-500/20 text-cyan-300 text-[10px] font-mono rounded-lg transition-all cursor-pointer flex items-center gap-1.5 uppercase font-bold"
-                          >
-                            📁 Choose Photo File
-                          </button>
-                          
-                          {/* Hidden actual file input element */}
-                          <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            onChange={handleGalleryUpload} 
-                            accept="image/*" 
-                            className="hidden" 
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Keep general raw avatar URL field accessible in case user prefers CDN or static asset urls */}
-                    <div className="space-y-1 text-left pt-1">
-                      <label className="text-[8.5px] font-mono uppercase text-violet-400/70">Or specify static image index address (URL)</label>
-                      <input
-                        type="url"
-                        value={editAvatar}
-                        onChange={(e) => setEditAvatar(e.target.value)}
-                        className="w-full px-3 py-1.5 text-[10.5px] rounded-lg bg-zinc-950/60 border border-violet-500/20 focus:outline-none focus:border-violet-500/50 text-white font-mono"
-                        placeholder="https://example.com/matrix_avatar.jpg"
-                      />
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              <div className="md:col-span-2 space-y-1">
-                <label className="text-[9px] font-mono uppercase text-[#A78BFA]/75">Biographical Summary</label>
-                <textarea
-                  value={editBio}
-                  onChange={(e) => setEditBio(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 text-xs rounded-xl bg-violet-950/40 border border-violet-500/20 focus:outline-none focus:border-violet-500/50 text-white transition-colors"
-                />
-              </div>
-            </div>
-
-            {/* Personality Settings */}
-            <div className="pt-4 border-t border-violet-500/10 space-y-4 text-left">
-              <h5 className="text-xs font-bold font-sans text-white uppercase tracking-wider">
-                🟣 Personality Systems (Status & Music)
-              </h5>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-mono uppercase text-violet-400">Set Custom Activity Status</label>
-                  <div className="flex gap-2">
-                    <select
-                      value={editStatusEmoji}
-                      onChange={(e) => setEditStatusEmoji(e.target.value)}
-                      className="bg-zinc-950/80 border border-violet-500/20 text-white rounded-xl p-2 text-xs focus:outline-none"
-                    >
-                      <option value="🟢">🟢 Online</option>
-                      <option value="🎮">🎮 Gaming</option>
-                      <option value="💻">💻 Working</option>
-                      <option value="📚">📚 Studying</option>
-                      <option value="☕">☕ Break</option>
-                      <option value="⚽">⚽ Football</option>
-                      <option value="🔥">🔥 Cooking</option>
-                    </select>
-                    <input
-                      type="text"
-                      value={editStatusText}
-                      onChange={(e) => setEditStatusText(e.target.value)}
-                      placeholder="Custom status text (e.g. Studying, Gaming, working)"
-                      className="flex-1 bg-[#150e3a]/50 border border-violet-500/25 rounded-xl p-2 px-3 text-xs text-white placeholder-violet-400/50"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-mono uppercase text-violet-400">Pin Showpiece Song (Show on Profile)</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={editSong}
-                      onChange={(e) => setEditSong(e.target.value)}
-                      placeholder="Song Title (e.g. Blinding Lights)"
-                      className="w-1/2 bg-[#150e3a]/50 border border-violet-500/25 rounded-xl p-2 px-3 text-xs text-white placeholder-violet-400/50"
-                    />
-                    <input
-                      type="text"
-                      value={editArtist}
-                      onChange={(e) => setEditArtist(e.target.value)}
-                      placeholder="Artist (e.g. The Weeknd)"
-                      className="w-1/2 bg-[#150e3a]/50 border border-violet-500/25 rounded-xl p-2 px-3 text-xs text-white placeholder-violet-400/50"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Appearance Settings Section within Profile Settings */}
-            {setTheme && theme && (
-              <div className="pt-4 border-t border-violet-500/10 space-y-3 text-left">
-                <h5 className="text-xs font-bold font-sans text-white uppercase tracking-wider">
-                  🎨 Appearance (Interface Theme)
-                </h5>
-                <p className="text-[10px] text-current/60 font-sans">
-                  Select a premium aesthetic interface config for your NEXORA experience:
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                  {[
-                    { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-violet-600', text: 'Neon Violet' },
-                    { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-700', text: 'Classic Off-Black' },
-                    { id: 'emerald-glass', label: 'Matrix Emerald', color: 'bg-emerald-600', text: 'Classy Green' },
-                    { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-slate-200 border border-slate-400', text: 'Bright Clinical' },
-                  ].map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTheme(t.id as any)}
-                      className={`p-3 rounded-xl border text-left transition-all hover:scale-102 flex flex-col justify-between h-20 cursor-pointer ${
-                        theme === t.id
-                          ? 'bg-white/10 border-[#8B5CF6] shadow-sm ring-1 ring-[#8B5CF6]/50'
-                          : 'bg-black/40 border-white/5 hover:bg-white/5'
-                      }`}
-                    >
-                      <div className="flex justify-between items-center w-full">
-                        <span className="text-[10px] font-bold text-white font-sans">{t.label}</span>
-                        <div className={`w-3 h-3 rounded-full ${t.color}`} />
-                      </div>
-                      <span className="text-[8px] font-mono text-[#8B5CF6]">{t.text}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Standalone PWA Client Installation Banner */}
-            {onTriggerPWAInstall && showPWAInstallPrompt && (
-              <div className="pt-4 border-t border-violet-500/10 space-y-3 text-left">
-                <h5 className="text-xs font-bold font-sans text-[#A78BFA] uppercase tracking-wider flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-400" />
-                  Standalone Secure client
-                </h5>
-                <p className="text-[10px] text-zinc-400 font-sans leading-relaxed">
-                  Fast-load Nexora with edge-to-edge viewing, zero latency, and launch directly from your device home screen.
-                </p>
-                <button
-                  type="button"
-                  onClick={onTriggerPWAInstall}
-                  className="px-4 py-2 bg-linear-to-r from-violet-600 via-pink-600 to-pink-500 hover:brightness-110 text-white text-[11px] font-sans font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer shadow-[0_0_12px_rgba(139,92,246,0.25)] flex items-center gap-1.5"
-                >
-                  📥 Install Standalone Client App
-                </button>
-              </div>
-            )}
-
-            {/* Account Settings Section with Logout button */}
-            {onLogout && (
-              <div className="pt-4 border-t border-violet-500/10 space-y-3 text-left">
-                <h5 className="text-xs font-bold font-sans text-white uppercase tracking-wider">
-                  ⚙️ Account Management
-                </h5>
-                <p className="text-[10px] text-current/60 font-sans">
-                  Safely sign out or terminate your current session on this device:
-                </p>
-                <button
-                  type="button"
-                  onClick={onLogout}
-                  className="w-full sm:w-auto px-4 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 hover:border-rose-500/50 text-rose-400 text-xs font-mono font-bold rounded-lg transition-all uppercase tracking-wider cursor-pointer"
-                >
-                  🚪 Log Out of Nexora
-                </button>
-              </div>
-            )}
-
-            <div className="pt-4 border-t border-violet-500/10 flex justify-end gap-2">
-              <button
-                type="submit"
-                className="w-full sm:w-auto px-5 py-2.5 text-xs font-mono font-bold rounded-xl bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white shadow-lg shadow-violet-500/25 transition-all text-center uppercase tracking-wider cursor-pointer"
-              >
-                Save Settings
-              </button>
-            </div>
-          </motion.form>
-        ) : (
-          <motion.div
-            key="voh-display-info"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="pt-2 text-left space-y-5"
-          >
-            {/* 1. Profile Picture with presence indicator */}
-            <div className="flex items-center gap-5 relative pl-1">
-              <div 
-                className={`relative shrink-0 ${activeUserStory ? 'cursor-pointer hover:scale-105 transition-all' : ''}`}
-                onClick={() => {
-                  if (activeUserStory) {
-                    setSelectedMoment(activeUserStory);
-                    setStoryIndex(0);
-                  }
-                }}
-              >
-                <img 
-                  src={currentUser.avatar || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=180&auto=format&fit=crop&q=80"} 
-                  alt={currentUser.name} 
-                  referrerPolicy="no-referrer"
-                  className={`w-24 h-24 rounded-full object-cover shadow-xl bg-slate-900 border-2 ${
-                    activeUserStory 
-                      ? 'ring-4 ring-purple-600 ring-offset-2 animate-pulse border-purple-500/20' 
-                      : 'border-violet-550/60'
-                  }`}
-                />
-                
-                {/* Tiny purple dot: replace boldness of "Active Now" with an online presence dot */}
-                <span className="absolute bottom-1 right-1 w-3.5 h-3.5 bg-violet-500 border-2 border-[#090514] rounded-full shadow-md shadow-violet-500/30" title="Online Node active" />
-
-                {activeUserStory && (
-                  <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 px-1 py-0.2 bg-purple-600 border border-purple-400 text-[8px] font-mono font-black text-white rounded-md uppercase tracking-wider select-none">
-                    STORY
-                  </span>
-                )}
-              </div>
-
-              {/* Badges / Creator status */}
-              <div className="space-y-1.5 text-left">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-lg bg-violet-950/40 text-violet-300 border border-violet-500/10 flex items-center gap-1">
-                    <span>{statusEmoji || '👤'}</span>
-                    <span className="font-extrabold tracking-wider">{statusText || 'Synchronized'}</span>
-                  </span>
+              <div className="space-y-1.5 leading-tight">
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5">
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">{currentUser.name}</h1>
+                  {currentUser.isVerified && <PurpleVerifiedBadge className="w-5 h-5" type="founder" />}
                   
-                  {/* Trusted Expert Badges */}
-                  {(currentUser.username === 'voh' || currentUser.username === 'voh_ai') && (
-                    <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-305 border border-amber-500/20 flex items-center gap-0.5" title="Earned through football contributions">
-                      <span>⚽</span> Expert
-                    </span>
-                  )}
-                  {(currentUser.username === 'nexora_ai' || currentUser.username === 'voh_ai') && (
-                    <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded-lg bg-blue-500/10 text-blue-303 border border-blue-500/20 flex items-center gap-0.5" title="Verified system programmer">
-                      <span>💻</span> Developer
-                    </span>
-                  )}
+                  {/* Creator specific tags */}
+                  <span className="px-2 py-0.5 rounded-full bg-linear-to-r from-violet-600/20 to-pink-500/20 border border-violet-500/30 text-[8px] font-mono text-purple-300 uppercase tracking-widest font-black flex items-center gap-1">
+                    <Crown className="w-2.5 h-2.5 text-pink-400" /> Premium Creator
+                  </span>
                 </div>
-                <p className="text-[10px] font-mono text-zinc-500">
-                  {currentUser.username === 'voh' ? '⚡ System Founder Core' : '👤 Synced Member'}
-                </p>
+                
+                <p className="text-xs sm:text-sm font-mono text-violet-400">@{currentUser.username}</p>
+
+                {/* Metadata list */}
+                <div className="flex flex-wrap items-center justify-center sm:justify-start gap-y-1.5 gap-x-3 text-xs text-zinc-400 font-sans mt-2">
+                  {currentUser.location && (
+                    <span className="flex items-center gap-1 text-[11px]">
+                      <MapPin className="w-3.5 h-3.5 text-pink-500" /> {currentUser.location}
+                    </span>
+                  )}
+                  {currentUser.website && (
+                    <a 
+                      href={`https://${currentUser.website}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="flex items-center gap-1 text-[11px] text-cyan-400 hover:underline"
+                    >
+                      <LinkIcon className="w-3.5 h-3.5" /> {currentUser.website}
+                    </a>
+                  )}
+                  <span className="flex items-center gap-1 text-[11px]">
+                    <Calendar className="w-3.5 h-3.5 text-violet-400" /> {currentUser.joinedDate || 'Joined June 2026'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* 2 & 3. Display Name + Purple Badge & Username */}
-            <div className="space-y-1 text-left pl-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="text-xl sm:text-2xl font-black font-sans text-white tracking-tight uppercase leading-none">
-                  {currentUser.name}
-                </h2>
-                {(currentUser.username === 'voh' || currentUser.isVerified) && <PurpleVerifiedBadge className="w-5 h-5 shrink-0" />}
-              </div>
-              <p className="text-sm text-violet-400 font-mono">@{currentUser.username}</p>
-            </div>
-
-            {/* 3b. Stats Row */}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 py-3 border-y border-white/5 pl-1 my-2">
-              <div 
-                onClick={() => {
-                  setConnectionsModalTab('followers');
-                  setIsConnectionsModalOpen(true);
-                }}
-                className="flex items-baseline gap-1 cursor-pointer hover:opacity-80 transition-all"
-              >
-                <span className="text-sm font-sans font-black text-white">{formatNumber(stats.followers)}</span>
-                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">followers</span>
-              </div>
-              <div 
-                onClick={() => {
-                  setConnectionsModalTab('following');
-                  setIsConnectionsModalOpen(true);
-                }}
-                className="flex items-baseline gap-1 cursor-pointer hover:opacity-80 transition-all"
-              >
-                <span className="text-sm font-sans font-black text-white">{formatNumber(stats.following)}</span>
-                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">following</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-sans font-black text-white">{formatNumber(stats.posts)}</span>
-                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">posts</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-sans font-black text-amber-400">✨ {formatNumber(stats.sparks)}</span>
-                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">sparks</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-sans font-black text-emerald-400">⭐ {formatNumber(stats.reputation)}</span>
-                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">rep</span>
-              </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-sm font-sans font-black text-cyan-400">📊 {formatNumber(stats.contributions)}</span>
-                <span className="text-[10px] font-mono text-violet-400/70 uppercase font-bold tracking-wider">contrib</span>
-              </div>
-            </div>
-
-            {/* 4. Edit Profile Button / Follow Button (owner only / visitor) */}
-            <div className="flex flex-wrap items-center gap-2 pl-1">
+            {/* Right: Quick Action Buttons Section */}
+            <div className="flex flex-row md:flex-col items-center justify-center md:items-end gap-2 shrink-0 max-w-full overflow-x-auto">
               {isOwnProfile ? (
-                <div className="flex items-center gap-2">
+                <>
                   <button
-                    onClick={() => setIsEditing(true)}
-                    className="flex items-center gap-1.5 px-4.5 py-2 text-xs font-mono font-bold bg-violet-600/15 hover:bg-violet-600/25 text-violet-200 hover:text-white rounded-xl border border-violet-500/30 backdrop-blur-md transition-all shadow-lg cursor-pointer"
+                    onClick={() => setActivePanel('edit-profile')}
+                    className="flex-1 md:w-full px-5 py-3 bg-[#110e30] border border-violet-500/20 hover:border-violet-500/40 text-violet-300 rounded-2xl text-xs font-mono font-black uppercase tracking-wider flex items-center justify-center gap-1.5 hover:bg-violet-950/20 transition-all cursor-pointer"
                   >
-                    <Edit3 className="w-3.5 h-3.5 text-violet-400" />
-                    <span>Edit Profile</span>
+                    <Edit3 className="w-4 h-4" /> Edit Profile
                   </button>
                   <button
-                    onClick={() => setIsSettingsOpen(true)}
-                    className="p-2 rounded-xl border border-violet-500/20 bg-[#0d0a21]/90 text-violet-400 hover:text-white cursor-pointer transition-all"
-                    title="Open Settings Console (⚙️)"
+                    onClick={() => setActivePanel('creator-studio')}
+                    className="flex-1 md:w-full px-5 py-3 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-2xl text-xs font-mono font-black uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-violet-500/10 cursor-pointer"
                   >
-                    <Settings className="w-4 h-4" />
+                    <BarChart2 className="w-4 h-4 text-white" /> Creator Studio
                   </button>
-                </div>
+                </>
               ) : (
                 <>
                   <button
                     onClick={() => {
-                      if (onToggleFollow) {
-                        onToggleFollow(currentUser.id);
-                      }
                       setIsFollowing(!isFollowing);
+                      onToggleFollow?.(currentUser.id);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: isFollowing ? 'Unfollowed Node connection' : '✨ Node connection established!' }));
                     }}
-                    className={`flex items-center gap-1.5 px-4.5 py-2 rounded-xl text-xs font-mono font-black transition-all cursor-pointer ${
+                    className={`px-6 py-3 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all cursor-pointer flex items-center gap-1.5 ${
                       isFollowing 
-                        ? 'bg-violet-950/65 text-violet-300 border border-violet-500/30 hover:bg-violet-900/40' 
-                        : 'bg-violet-600 text-white hover:bg-violet-550 active:scale-95'
+                        ? 'bg-zinc-900 border border-zinc-700 text-zinc-400' 
+                        : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow'
                     }`}
                   >
-                    {isFollowing ? <UserCheck className="w-4 h-4 text-violet-400" /> : <UserPlus className="w-4 h-4" />}
-                    <span>{isFollowing ? 'FOLLOWED' : 'FOLLOW'}</span>
+                    {isFollowing ? (
+                      <>
+                        <UserCheck className="w-4 h-4 text-emerald-400" /> Connected
+                      </>
+                    ) : (
+                      <>
+                        <UserPlus className="w-4 h-4 text-white animate-pulse" /> Connect Node
+                      </>
+                    )}
                   </button>
-
+                  <button
+                    onClick={() => onStartChat?.(currentUser.id)}
+                    className="px-4 py-3 bg-[#110e30] hover:bg-violet-950/40 border border-violet-500/25 text-violet-300 rounded-2xl text-xs font-mono font-bold flex items-center gap-1 cursor-pointer transition-all"
+                  >
+                    <MessageSquare className="w-4 h-4 text-cyan-400" /> Direct Msg
+                  </button>
                   <button
                     onClick={() => {
-                      if (onStartChat) {
-                        onStartChat(currentUser.id);
-                      } else {
-                        alert(`Opening chat with @${currentUser.username}...`);
-                      }
+                      navigator.clipboard.writeText(window.location.href);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Network node link copied to clipboard!' }));
                     }}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-black border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-200 transition-all active:scale-95 cursor-pointer"
+                    className="p-3 bg-[#110e30] border border-violet-500/25 hover:bg-violet-950/40 text-violet-300 rounded-2xl cursor-pointer transition-all"
+                    title="Share Profile Link"
                   >
-                    <MessageCircle className="w-4 h-4 text-violet-400" />
-                    <span>MESSAGE</span>
+                    <Share2 className="w-4 h-4" />
                   </button>
                 </>
               )}
+            </div>
+          </div>
 
-              <div className="relative">
+          {/* Social Bio summary */}
+          {currentUser.bio && (
+            <div className="p-4 rounded-2xl bg-black/40 border border-violet-500/5 text-left text-xs sm:text-sm leading-relaxed text-zinc-300 italic whitespace-pre-wrap font-sans">
+              "{currentUser.bio}"
+            </div>
+          )}
+
+          {/* 3. RELATIONSHIP COUNTERS & METRICS */}
+          <div className="grid grid-cols-3 gap-3 border-t border-violet-500/10 pt-5 text-center">
+            
+            {/* FOLLOWING */}
+            <div 
+              onClick={() => { setActivePanel('social-graph'); setRelationsTab('following'); }}
+              className="p-3 rounded-2xl bg-black/20 hover:bg-violet-500/5 border border-transparent hover:border-violet-500/10 transition-all cursor-pointer group"
+            >
+              <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 group-hover:text-violet-300">Following</p>
+              <h3 className="text-lg sm:text-xl font-black text-white mt-1 font-sans">
+                {currentUser.following?.toLocaleString() || '184'}
+              </h3>
+            </div>
+
+            {/* FOLLOWERS */}
+            <div 
+              onClick={() => { setActivePanel('social-graph'); setRelationsTab('followers'); }}
+              className="p-3 rounded-2xl bg-black/20 hover:bg-violet-500/5 border border-transparent hover:border-violet-500/10 transition-all cursor-pointer group"
+            >
+              <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 group-hover:text-violet-300">Followers</p>
+              <h3 className="text-lg sm:text-xl font-black text-white mt-1 font-sans">
+                {currentUser.followers?.toLocaleString() || '1,420'}
+              </h3>
+            </div>
+
+            {/* REPUTATION OR SPARKS */}
+            <div 
+              onClick={() => setShowReputationModal(true)}
+              className="p-3 rounded-2xl bg-black/20 hover:bg-pink-500/5 border border-transparent hover:border-pink-500/10 transition-all cursor-pointer group"
+              title="Click to view full reputation score breakdown"
+            >
+              <p className="text-[10px] font-mono uppercase tracking-widest text-zinc-400 group-hover:text-pink-300 flex items-center justify-center gap-1">
+                Reputation <Info className="w-3 h-3 text-pink-400" />
+              </p>
+              <h3 className="text-lg sm:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-violet-400 mt-1 font-sans">
+                {currentUser.reputationPoints?.toLocaleString() || '12.4K'}
+              </h3>
+            </div>
+
+          </div>
+
+          {/* Mutual Friends Banner (Optional - Progressive disclosure) */}
+          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-[#09051d]/60 border border-violet-500/10 text-xs font-sans text-zinc-400">
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-2">
+                <img className="w-6 h-6 rounded-full border border-black" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&auto=format&fit=crop&q=80" alt="mutual 1" />
+                <img className="w-6 h-6 rounded-full border border-black" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&auto=format&fit=crop&q=80" alt="mutual 2" />
+                <img className="w-6 h-6 rounded-full border border-black" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&auto=format&fit=crop&q=80" alt="mutual 3" />
+              </div>
+              <span>Shared connections in this locale grid node</span>
+            </div>
+            <span className="text-[10px] font-mono text-violet-400 uppercase font-black tracking-widest">3 Mutuals</span>
+          </div>
+
+          {/* Innovative Pinned Music Showpiece */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gradient-to-r from-violet-950/40 to-pink-950/20 border border-violet-500/10">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-pink-500/10 text-pink-400 animate-pulse">
+                <Music className="w-5 h-5" />
+              </div>
+              <div className="text-left">
+                <p className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest leading-none">SHOWPIECE SONG VIBE</p>
+                <p className="text-xs font-bold text-white mt-1 leading-tight">{pinnedSong}</p>
+                <p className="text-[10px] text-zinc-400 font-mono">by {pinnedArtist}</p>
+              </div>
+            </div>
+            <button
+              onClick={toggleMusicAudio}
+              className={`p-2.5 px-4 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider flex items-center justify-center gap-1 cursor-pointer transition-all shrink-0 ${
+                isSongPlaying 
+                  ? 'bg-pink-600 text-white shadow-lg shadow-pink-500/20' 
+                  : 'bg-[#150f38] border border-pink-500/20 text-pink-300 hover:bg-pink-950/10'
+              }`}
+            >
+              {isSongPlaying ? (
+                <>
+                  <Pause className="w-3.5 h-3.5 fill-white" /> Pause Synth
+                </>
+              ) : (
+                <>
+                  <Play className="w-3.5 h-3.5 fill-pink-300" /> Play Vibe
+                </>
+              )}
+            </button>
+          </div>
+
+        </div>
+
+        {/* 4. CONTENT STICKY TAB NAVIGATION */}
+        <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-30 py-2 border-b border-white/5">
+          <div className="flex gap-1.5 overflow-x-auto scrollbar-none py-1 max-w-full">
+            {[
+              { id: 'posts', label: 'Posts' },
+              { id: 'videos', label: 'Videos' },
+              { id: 'media', label: 'Media' },
+              { id: 'pinned', label: 'Pinned' },
+              { id: 'drafts', label: 'Drafts', ownerOnly: true },
+              { id: 'private', label: 'Private', ownerOnly: true }
+            ].map(tab => {
+              if (tab.ownerOnly && !isOwnProfile) return null;
+              const isActive = profileTab === tab.id;
+              return (
                 <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(`https://nexora.ai/${currentUser.username}`);
-                    setShowShareAlert(true);
-                    setTimeout(() => setShowShareAlert(false), 2000);
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-black border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/15 text-violet-200 transition-all active:scale-95 cursor-pointer"
+                  key={tab.id}
+                  onClick={() => setProfileTab(tab.id)}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-mono uppercase font-extrabold tracking-wider whitespace-nowrap cursor-pointer transition-all ${
+                    isActive 
+                      ? 'bg-violet-600 text-white shadow-md shadow-violet-500/10' 
+                      : 'bg-white/3 text-zinc-400 hover:bg-white/5'
+                  }`}
                 >
-                  <Share2 className="w-4 h-4 text-violet-400" />
-                  <span>SHARE</span>
+                  {tab.label}
                 </button>
-                {showShareAlert && (
-                  <span className="absolute bottom-10 left-1/2 -translate-x-1/2 px-2.5 py-1 bg-violet-600 text-white font-mono text-[9px] rounded-lg tracking-wider whitespace-nowrap animate-bounce shadow-lg z-50">
-                    COPIED!
-                  </span>
-                )}
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 5. RESPONSIVE GRID CONTENT & PINNED POSTS */}
+        <div className="space-y-4">
+          
+          {/* Render Pinned Items separately if viewing the regular Feed/Posts view */}
+          {profileTab === 'posts' && pinnedPostIdsList.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest">
+                <Pin className="w-3.5 h-3.5 text-pink-400 rotate-45" /> Pinned Showcases
               </div>
+              <MediaGrid 
+                gridPosts={myPosts.filter(p => pinnedPostIdsList.includes(p.id))} 
+                pinnedPostIds={pinnedPostIdsList} 
+                onSelectPost={(post) => setSelectedGridPost(post)} 
+              />
             </div>
+          )}
 
-            {/* Personality Status Section */}
-            <div className="pl-1 flex flex-wrap items-center gap-2 pt-1">
-              <span className="text-[10px] uppercase font-mono px-2.5 py-1 rounded-xl bg-violet-950/50 text-violet-200 border border-violet-500/20 flex items-center gap-1.5 shadow-sm">
-                <span className="animate-pulse">{statusEmoji}</span>
-                <span className="font-extrabold tracking-wider">{statusText}</span>
-              </span>
-
-              {/* Trusted Expert Badges */}
-              {(currentUser.username === 'voh' || currentUser.username === 'voh_ai') && (
-                <span className="text-[10px] uppercase font-mono px-2.5 py-1 rounded-xl bg-amber-500/10 text-amber-300 border border-amber-500/20 flex items-center gap-1.5" title="Earned through football contributions">
-                  <span>⚽</span> Football Expert
-                </span>
-              )}
-              {(currentUser.username === 'nexora_ai' || currentUser.username === 'voh_ai') && (
-                <span className="text-[10px] uppercase font-mono px-2.5 py-1 rounded-xl bg-blue-500/10 text-blue-300 border border-blue-500/20 flex items-center gap-1.5" title="Verified system programmer">
-                  <span>💻</span> Technical Developer
-                </span>
-              )}
-
+          {/* Standard Grid view of posts */}
+          <div className="space-y-3 text-left">
+            <div className="text-xs font-mono text-zinc-500 font-bold uppercase tracking-wider">
+              {profileTab} Stream ({filteredTabPosts.length})
             </div>
-
-            {/* Compact Bio Paragraph & Location info */}
-            <div className="pl-1 space-y-2 text-xs">
-              {currentUser.bio && (
-                <p className="text-violet-100 font-sans leading-relaxed whitespace-pre-wrap max-w-2xl bg-[#09061c]/40 p-3 rounded-2xl border border-violet-500/5">
-                  {currentUser.bio}
-                </p>
-              )}
-
-              {/* Pin Showpiece Song Preview */}
-              {(pinnedSong || pinnedArtist) && (
-                <div className="flex items-center justify-between gap-3 bg-linear-to-r from-violet-950/40 via-purple-950/10 to-pink-950/20 border border-violet-500/15 p-2 px-3 rounded-2xl max-w-md shadow-md">
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-violet-500/10 border border-violet-500/20">
-                      {isSongPlaying ? (
-                        <div className="flex gap-0.5 items-end h-3">
-                          <span className="w-1 bg-violet-400 h-2 animate-bounce" style={{ animationDelay: '0.1s' }} />
-                          <span className="w-1 bg-pink-400 h-3 animate-bounce" style={{ animationDelay: '0.3s' }} />
-                          <span className="w-1 bg-violet-400 h-1.5 animate-bounce" style={{ animationDelay: '0s' }} />
-                        </div>
-                      ) : (
-                        <Volume2 className="w-4 h-4 text-violet-400" />
-                      )}
-                    </div>
-                    <div className="text-left">
-                      <p className="text-[10px] font-mono text-violet-400 uppercase tracking-widest leading-none">PINNED TRACK</p>
-                      <h5 className="text-[11px] font-sans font-bold text-white leading-tight mt-0.5">{pinnedSong}</h5>
-                      <p className="text-[9.5px] font-sans text-violet-300/60 leading-none">{pinnedArtist}</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={playSynthesizedPreview}
-                    className="p-1 px-3.5 rounded-xl text-[10px] font-mono font-bold bg-[#8B5CF6]/15 hover:bg-[#8B5CF6]/30 border border-[#8B5CF6]/25 text-[#D8B4FE] transition-all hover:scale-103 cursor-pointer"
-                  >
-                    {isSongPlaying ? 'PAUSE PREVIEW' : 'TAP TO PREVIEW'}
-                  </button>
+            
+            {filteredTabPosts.length === 0 ? (
+              <div className="p-8 py-14 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-violet-600/10 flex items-center justify-center mx-auto text-violet-400 text-xl">
+                  📭
                 </div>
-              )}
-
-              <div className="flex flex-wrap items-center gap-y-1.5 gap-x-4 text-[11px] font-mono text-violet-300">
-                {currentUser.location && (
-                  <div className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-violet-400" />
-                    <span>{currentUser.location}</span>
-                  </div>
-                )}
-                {currentUser.website && currentUser.website.trim() !== '' && (
-                  <div className="flex items-center gap-1">
-                    <LinkIcon className="w-3.5 h-3.5 text-violet-400" />
-                    <a 
-                      href={`https://${currentUser.website}`} 
-                      target="_blank" 
-                      rel="noreferrer" 
-                      className="hover:text-violet-300 underline decoration-violet-500/40 transition-colors"
-                    >
-                      {currentUser.website}
-                    </a>
-                  </div>
-                )}
-                <div className="flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-violet-400" />
-                  <span>Joined {currentUser.joinedDate}</span>
-                </div>
-              </div>
-
-              {/* Profile Creator Upgrades: Profile Views & Visitor Insights (Owner-Only) */}
-              {isOwnProfile && (
-                <div className="p-4 rounded-2xl bg-[#0d0926]/40 border border-violet-500/15 space-y-4 max-w-2xl mt-3 text-left">
-                  <div className="flex items-center justify-between border-b border-violet-500/10 pb-2">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-violet-200 font-extrabold flex items-center gap-1.5">
-                      <Eye className="w-4 h-4 text-violet-400" />
-                      <span>Creator Live Insights (Owner Only)</span>
-                    </span>
-                    <span className="text-[8px] font-mono text-violet-400 bg-violet-950/50 border border-violet-500/20 px-2 py-0.5 rounded uppercase">
-                      🔒 Private to you
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Left: View Count and Filters */}
-                    <div className="space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] uppercase font-mono text-zinc-400 tracking-wider">Profile Views</span>
-                        <div className="flex items-center bg-black/40 rounded-lg p-0.5 border border-white/5">
-                          {(['today', 'week', 'month'] as const).map((filter) => (
-                            <button
-                              key={filter}
-                              onClick={() => setProfileViewFilter(filter)}
-                              className={`px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider rounded-md transition-all cursor-pointer ${
-                                profileViewFilter === filter
-                                  ? 'bg-purple-600 text-white font-bold'
-                                  : 'text-zinc-500 hover:text-zinc-300'
-                              }`}
-                            >
-                              {filter}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="p-3 bg-black/20 rounded-xl border border-white/5 flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-xl">👁️</span>
-                          <div>
-                            <span className="text-sm font-sans font-black text-white block">
-                              {profileViewFilter === 'today' ? '38' : profileViewFilter === 'week' ? '247' : '894'}{' '}
-                              views
-                            </span>
-                            <span className="text-[9px] text-zinc-500 font-mono block">
-                              {profileViewFilter === 'today'
-                                ? 'Real human activities today'
-                                : profileViewFilter === 'week'
-                                ? 'Profile views this week'
-                                : 'Cumulative monthly coverage'}
-                            </span>
-                          </div>
-                        </div>
-                        <span className="text-emerald-400 text-[10px] font-mono font-bold bg-emerald-500/10 px-1.5 py-0.5 rounded">
-                          +15%
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Right: Visitor Insights with toggle information */}
-                    <div className="space-y-2.5">
-                      <span className="text-[10px] uppercase font-mono text-zinc-400 tracking-wider block">Recent Visitors</span>
-
-                      <div className="space-y-1.5">
-                        {[
-                          { name: 'Alex', username: 'alex_sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80', time: '12m ago' },
-                          { name: 'Sarah', username: 'sarah_codes', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80', time: '2h ago' },
-                          { name: 'David', username: 'david_j', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80', time: '1d ago' }
-                        ].map((visitor, i) => (
-                          <div key={i} className="flex items-center justify-between p-1.5 bg-black/10 rounded-lg border border-white/5 text-[10.5px]">
-                            <div className="flex items-center gap-2">
-                              <img src={visitor.avatar} className="w-5 h-5 rounded-md object-cover" />
-                              <span className="font-sans font-bold text-zinc-100">{visitor.name}</span>
-                              <span className="text-[9px] text-zinc-500 font-mono">@{visitor.username}</span>
-                            </div>
-                            <span className="text-[9px] text-violet-400 font-mono">{visitor.time}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Creator Highlights */}
-              {(() => {
-                // Programmatic Creator Highlights or beautiful fallbacks
-                const sortedByLikes = [...myPosts].sort((a, b) => (b.likes || 0) - (a.likes || 0));
-                const sortedByComments = [...myPosts].sort((a, b) => (b.comments?.length || 0) - (a.comments?.length || 0));
-                
-                const topP = sortedByLikes[0] || null;
-                const trendP = sortedByComments.length > 1 && sortedByComments[0]?.id === topP?.id 
-                  ? sortedByComments[1] 
-                  : (sortedByComments[0] || null);
-                
-                const fallbackTopText = "The journey into decentralised social networking with Nexora. Real connections, absolute design fidelity.";
-                const fallbackTrendText = "Voice node recordings are live! Tap to listen to my newest webm broadcast. 🎙️⚡";
-
-                return (
-                  <div className="space-y-2.5 max-w-2xl mt-4 text-left">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-violet-300 font-extrabold flex items-center gap-1.5">
-                      <span>🏆</span> Creator Highlights
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Top Post Highlights Card */}
-                      <div 
-                        onClick={() => {
-                          if (topP) {
-                            setSelectedGridPost(topP);
-                          } else {
-                            window.dispatchEvent(new CustomEvent('toast', { detail: "🏆 Featured top post: standard system welcome anchor!" }));
-                          }
-                        }}
-                        className="p-3 bg-[#0d0926]/40 border border-violet-500/15 hover:border-violet-400/30 rounded-xl cursor-pointer transition-all hover:-translate-y-0.5 group relative overflow-hidden"
-                      >
-                        <div className="absolute top-0 right-0 p-1 px-2 bg-purple-600 text-white font-mono text-[8px] font-black rounded-bl-lg uppercase tracking-wider select-none">
-                          TOP POST
-                        </div>
-                        <div className="space-y-1">
-                          <span className="text-[9px] font-mono text-purple-400 block tracking-wider font-bold">🏆 HIGH ENGAGEMENT NODE</span>
-                          <p className="text-[11px] text-zinc-100 font-sans leading-relaxed line-clamp-2">
-                            {topP ? topP.content : fallbackTopText}
-                          </p>
-                          <div className="flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 mt-2">
-                            <span>❤️ {topP ? topP.likes : 142} likes</span>
-                            <span>•</span>
-                            <span>💬 {topP ? topP.comments?.length : 24} responses</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Trending Post Highlights Card */}
-                      <div 
-                        onClick={() => {
-                          if (trendP) {
-                            setSelectedGridPost(trendP);
-                          } else if (topP) {
-                            setSelectedGridPost(topP);
-                          } else {
-                            window.dispatchEvent(new CustomEvent('toast', { detail: "🔥 Trending node: real-time voice synthesis broadcast!" }));
-                          }
-                        }}
-                        className="p-3 bg-[#0d0926]/40 border border-pink-500/15 hover:border-pink-400/30 rounded-xl cursor-pointer transition-all hover:-translate-y-0.5 group relative overflow-hidden"
-                      >
-                        <div className="absolute top-0 right-0 p-1 px-2 bg-pink-500 text-white font-mono text-[8px] font-black rounded-bl-lg uppercase tracking-wider select-none">
-                          TRENDING
-                        </div>
-                        <div className="space-y-1 text-left">
-                          <span className="text-[9px] font-mono text-pink-400 block tracking-wider font-bold">🔥 SPECTRUM VELOCITY BOOST</span>
-                          <p className="text-[11px] text-zinc-100 font-sans leading-relaxed line-clamp-2">
-                            {trendP ? trendP.content : fallbackTrendText}
-                          </p>
-                          <div className="flex items-center gap-1 text-[9.5px] font-mono text-zinc-500 mt-2">
-                            <span>💬 {trendP ? trendP.comments?.length : 38} comments</span>
-                            <span>•</span>
-                            <span>🔥 Vitality index: Ultra</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* REAL ACHIEVEMENT BADGES SHELF */}
-            <div className="p-4 rounded-2xl bg-linear-to-b from-[#100c2a]/80 to-[#070514]/90 border border-violet-500/15 text-left mt-2 shadow-inner">
-              <span className="text-[9.5px] font-mono uppercase tracking-widest text-violet-400 font-bold flex items-center gap-1.5 mb-2.5">
-                <Award className="w-3.5 h-3.5 text-violet-400" />
-                <span>Credentials & Credentials (Achievements)</span>
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {[
-                  { title: "First Post", desc: "Shared thoughts with the Nexora world.", emoji: "🏆" },
-                  { title: "100 Followers", desc: "A true community starting to grow.", emoji: "🏆" },
-                  { title: "Builder Guild", desc: "Co-programmed a collaborative hub.", emoji: "🏆" },
-                  { title: "Viral Message", desc: "Resonated with over hundreds of fans.", emoji: "🏆" },
-                  { title: "Top Contributor", desc: "Granted maximum reputation bonus.", emoji: "🏆" }
-                ].map((ach, idx) => (
-                  <div key={idx} className="p-2 bg-[#130f35]/50 rounded-xl border border-violet-500/5 hover:border-violet-500/20 transition-all flex flex-col justify-between h-20 group relative overflow-hidden">
-                    <div className="absolute top-1 right-1 text-xs opacity-80">{ach.emoji}</div>
-                    <div className="mt-3">
-                      <h4 className="text-[10px] font-sans font-extrabold text-white leading-tight group-hover:text-violet-300 transition-colors">{ach.title}</h4>
-                      <p className="text-[8px] font-sans text-zinc-400 leading-none mt-1">{ach.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Creator Tools Section - Only shown on user's own profile */}
-            {isOwnProfile && (
-              <div className="p-4 rounded-2xl bg-[#0e0a25]/60 border border-violet-500/15 text-left mt-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="space-y-1">
-                  <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-extrabold flex items-center gap-1.5">
-                    <span>👉</span> Creator Tools
-                  </h3>
-                  <h4 className="text-sm font-sans font-black text-white">Creator Dashboard</h4>
-                  <p className="text-[11px] text-zinc-400 font-sans">
-                    View analytics, earnings and audience growth.
+                <div>
+                  <h4 className="text-sm font-bold text-violet-100">Empty Network Segment</h4>
+                  <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-normal">
+                    This section has no compiled nodes or post logs. Broadcast your daily stories or snapshots.
                   </p>
                 </div>
-                
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!currentUser.creatorModeEnabled) {
-                        onUpdateProfile({ creatorModeEnabled: true });
-                      }
-                      setActiveDashboardTab('overview');
-                      setIsCreatorDashboardOpen(true);
-                    }}
-                    className="bg-purple-600 hover:bg-purple-500 text-white px-4 py-2.5 text-[11px] font-mono font-black rounded-xl uppercase transition-all flex items-center gap-1.5 border border-transparent cursor-pointer"
+                {isOwnProfile && (
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
+                    className="px-4 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono font-bold text-[10px] uppercase rounded-xl"
                   >
-                    <Sliders className="w-3.5 h-3.5 text-inherit" />
-                    <span>Open Dashboard</span>
+                    + Create First Post
                   </button>
-                </div>
-              </div>
-            )}
-
-            {/* Advanced Developer / Network parameters (collapsed by default) */}
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="text-[10px] font-mono text-violet-500 hover:text-violet-300 transition-colors flex items-center gap-1 cursor-pointer pl-1"
-              >
-                {showAdvanced ? '▼ Hide premium account insights' : '▶ Show premium account insights'}
-              </button>
-
-              <AnimatePresence>
-                {showAdvanced && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: 'auto', opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden space-y-4 pt-3"
-                  >
-                    {/* Primary Statistics Grid - Combined Metrics */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-                      <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-2xl">
-                        <p className="text-[9px] font-mono text-violet-400 uppercase tracking-wider font-extrabold text-left">Reputation Points</p>
-                        <p className="text-lg font-mono font-black text-white mt-1 text-left">{formatNumber(stats.reputation)}</p>
-                      </div>
-
-                      <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-2xl">
-                        <p className="text-[9px] font-mono text-violet-400 uppercase tracking-wider font-extrabold text-left font-semibold">Contributions</p>
-                        <p className="text-lg font-mono font-black text-cyan-400 mt-1 text-left">{formatNumber(stats.contributions)}</p>
-                      </div>
-
-                      <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-2xl">
-                        <p className="text-[9px] font-mono text-violet-400 uppercase tracking-wider text-left">Sync Status</p>
-                        <p className="text-sm font-mono font-bold text-emerald-400 mt-1 text-left">🟢 synced</p>
-                      </div>
-
-                      <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-2xl">
-                        <p className="text-[9px] font-mono text-violet-400 uppercase tracking-wider text-left">Reputation Rank</p>
-                        <p className="text-sm font-mono font-bold text-pink-400 mt-1 text-left">Elite Level</p>
-                      </div>
-                    </div>
-
-                    {/* VOH AI Profile Summary Block */}
-                    <div className="p-4 rounded-2xl bg-[#0a071d] border border-violet-500/20 shadow-md relative overflow-hidden text-left">
-                      <h3 className="text-[10px] font-mono uppercase text-[#A78BFA] font-black tracking-widest flex items-center gap-1.5 mb-2">
-                        <span>🧠</span>
-                        <span>AI Profile Insight</span>
-                      </h3>
-                      <p className="text-xs text-violet-100/90 leading-relaxed font-sans italic">
-                        {currentUser.username === 'voh' 
-                          ? '"VOICE OF HARRISON is the founder of NEXORA and creator of VOH AI. A technology entrepreneur and community builder focused on creating innovative platforms that help people connect, collaborate, learn, and grow."'
-                          : `"${currentUser.name} is an active member of the NEXORA community. They have established a dynamic reputation rating of ${formatNumber(stats.reputation)} points with strong community contributions."`}
-                      </p>
-                    </div>
-
-                    {/* Pinned Founder Message */}
-                    {currentUser.username === 'voh' && (
-                      <div className="p-4 rounded-2xl bg-[#0d0926]/40 border border-violet-500/30 shadow-md relative pl-11 text-left">
-                        <div className="absolute left-4 top-4.5">
-                          <Pin className="w-4 h-4 text-violet-400 rotate-45" />
-                        </div>
-                        <h4 className="text-[10px] font-mono uppercase text-violet-400 font-bold tracking-widest mb-1.5">
-                          📌 Pinned Founder Message
-                        </h4>
-                        <blockquote className="text-xs text-white leading-relaxed font-sans border-l-2 border-violet-500/50 pl-3 italic space-y-2">
-                          <p>Welcome to NEXORA.</p>
-                          <p>Social media should be more than content and scrolling. It should help people discover opportunities, build communities, learn from one another, and create real impact.</p>
-                          <cite className="block text-[10px] text-violet-300 font-mono not-italic mt-2">
-                            — VOICE OF HARRISON <PurpleVerifiedBadge className="w-3.5 h-3.5" />
-                          </cite>
-                        </blockquote>
-                      </div>
-                    )}
-                  </motion.div>
                 )}
-              </AnimatePresence>
-            </div>
-          </motion.div>
+              </div>
+            ) : (
+              <MediaGrid 
+                gridPosts={filteredTabPosts} 
+                pinnedPostIds={pinnedPostIdsList} 
+                onSelectPost={(post) => setSelectedGridPost(post)} 
+              />
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure) */}
+      <AnimatePresence>
+        {activePanel === 'menu' && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex justify-end" onClick={() => setActivePanel('profile')}>
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="w-full max-w-md h-full bg-[#080614] border-l border-violet-500/15 p-6 overflow-y-auto space-y-6 text-left"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <div className="flex items-center gap-2">
+                  <Terminal className="w-5 h-5 text-violet-400" />
+                  <span className="text-xs font-mono text-zinc-400 font-extrabold tracking-widest uppercase">NEXORA CONTROL CENTER</span>
+                </div>
+                <button 
+                  onClick={() => setActivePanel('profile')}
+                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Saved accounts switching module */}
+              <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">👤 Vault Account Switcher</span>
+                <div className="space-y-2">
+                  {savedAccounts.map(acc => {
+                    const isActive = acc.id === currentUser.id || acc.username === currentUser.username;
+                    return (
+                      <div 
+                        key={acc.id}
+                        onClick={() => !isActive && handleSwitchAccount(acc)}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
+                          isActive 
+                            ? 'bg-violet-600/10 border-violet-500/40' 
+                            : 'bg-black/40 border-transparent hover:border-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <img src={acc.avatar} alt={acc.name} className="w-8 h-8 rounded-lg object-cover" />
+                          <div className="min-w-0 leading-tight">
+                            <p className="text-xs font-bold text-white truncate">{acc.name}</p>
+                            <p className="text-[10px] font-mono text-zinc-500">@{acc.username}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {isActive && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
+                          {savedAccounts.length > 1 && !isActive && (
+                            <button 
+                              onClick={(e) => removeSavedAccount(acc.id, e)}
+                              className="p-1 text-zinc-500 hover:text-red-400"
+                              title="Remove credential log"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button
+                  onClick={() => setShowAddAccountModal(true)}
+                  className="w-full py-2 bg-white/5 hover:bg-white/10 text-violet-300 rounded-xl text-[10px] font-mono font-black uppercase tracking-wider transition-all"
+                >
+                  + Switch / Add Node Account
+                </button>
+              </div>
+
+              {/* Grouped control directories */}
+              <div className="space-y-4">
+                
+                {/* 1. Account Settings */}
+                <div className="space-y-1">
+                  <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Account & Identity</p>
+                  <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
+                    <button 
+                      onClick={() => { setActivePanel('edit-profile'); }}
+                      className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold"
+                    >
+                      <span className="flex items-center gap-2 text-zinc-300">
+                        <Settings className="w-4 h-4 text-violet-400" /> Account Settings
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </button>
+                    <button 
+                      onClick={() => { setActivePanel('social-graph'); setRelationsTab('close-friends'); }}
+                      className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold border-t border-white/5"
+                    >
+                      <span className="flex items-center gap-2 text-zinc-300">
+                        <Users className="w-4 h-4 text-pink-400" /> Close Friends Circles
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </button>
+                    <button 
+                      onClick={() => { setActivePanel('social-graph'); setRelationsTab('blocked'); }}
+                      className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold border-t border-white/5"
+                    >
+                      <span className="flex items-center gap-2 text-zinc-300">
+                        <Shield className="w-4 h-4 text-red-400" /> Blocked & Muted Nodes
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 2. Creator Studio links */}
+                <div className="space-y-1">
+                  <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Creator Tools</p>
+                  <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
+                    <button 
+                      onClick={() => { setActivePanel('creator-studio'); }}
+                      className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold"
+                    >
+                      <span className="flex items-center gap-2 text-zinc-300">
+                        <BarChart2 className="w-4 h-4 text-emerald-400" /> Creator Analytics
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </button>
+                    <button 
+                      onClick={() => { setActivePanel('creator-studio'); }}
+                      className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold border-t border-white/5"
+                    >
+                      <span className="flex items-center gap-2 text-zinc-300">
+                        <Coins className="w-4 h-4 text-amber-400" /> Creator Monetization (NEX)
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* 3. Help & About */}
+                <div className="space-y-1">
+                  <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Support & Feedback</p>
+                  <div className="rounded-2xl bg-black/40 border border-white/5 overflow-hidden">
+                    <button 
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('toast', { detail: 'ℹ️ Nexora v1.8.4 - Cloud Native Node Live' }));
+                      }}
+                      className="w-full p-3 flex items-center justify-between text-xs hover:bg-white/5 font-sans font-bold"
+                    >
+                      <span className="flex items-center gap-2 text-zinc-300">
+                        <Info className="w-4 h-4 text-cyan-400" /> About Nexora Matrix
+                      </span>
+                      <ChevronRight className="w-4 h-4 text-zinc-600" />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        onLogout?.();
+                        setActivePanel('profile');
+                      }}
+                      className="w-full p-3 flex items-center justify-between text-xs hover:bg-red-950/20 text-red-400 hover:text-red-300 font-sans font-black border-t border-white/5"
+                    >
+                      <span className="flex items-center gap-2">
+                        <LogOut className="w-4 h-4" /> Terminate Node Session (Log Out)
+                      </span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              <button
+                onClick={() => setActivePanel('profile')}
+                className="w-full py-3.5 bg-violet-950 hover:bg-violet-900 text-violet-300 rounded-xl text-xs font-mono font-black uppercase tracking-wider transition-all"
+              >
+                Close Control Menu
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
-      {/* 📌 Pinned posts section (Max 3) rendered horizontally */}
-      {(() => {
-        const pinnedPosts = myPosts.filter(p => pinnedPostIds.includes(p.id)).slice(0, 3);
-        if (pinnedPosts.length === 0) return null;
-        return (
-          <div className="mt-4 mb-2 bg-[#0c0a25]/60 hover:bg-[#0c0a25]/80 p-4 rounded-3xl border border-violet-500/20 text-left transition-all">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] font-mono tracking-widest text-[#8B5CF6] font-bold uppercase flex items-center gap-1.5">
-                <Pin className="w-3.5 h-3.5 fill-violet-400 rotate-45 text-violet-400" />
-                <span>Pinned Content ({pinnedPosts.length}/3)</span>
-              </span>
-              <span className="text-[9px] font-mono text-zinc-500">Spotlight</span>
-            </div>
-            
-            <div className="flex gap-3 overflow-x-auto pb-1.5 scrollbar-none snap-x">
-              {pinnedPosts.map(post => {
-                const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
-                const isVideo = !!post.videoUrl;
-                
-                return (
-                  <div 
-                    key={post.id}
-                    onClick={() => setSelectedGridPost(post)}
-                    className="w-40 sm:w-48 shrink-0 rounded-2xl overflow-hidden relative border border-violet-500/25 snap-start shadow-md hover:border-violet-500/60 hover:scale-[1.02] transition-all cursor-pointer aspect-video bg-zinc-950 flex flex-col justify-between"
-                  >
-                    {/* Media Thumbnail */}
-                    {post.image ? (
-                      <img src={post.image} className="absolute inset-0 w-full h-full object-cover" />
-                    ) : isVideo ? (
-                      <div className="absolute inset-0 w-full h-full bg-zinc-950 overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/25 via-zinc-950/90 to-transparent animate-pulse" />
-                        <video src={post.videoUrl ? `${post.videoUrl}#t=0.5` : ''} className="w-full h-full object-cover opacity-80" preload="metadata" muted playsInline />
-                        <div className="absolute top-2 right-2 p-1 bg-black/60 rounded-full z-10">
-                          <Film className="w-3 h-3 text-pink-400" />
-                        </div>
-                      </div>
-                    ) : isVoice ? (
-                      <div className="absolute inset-0 bg-gradient-to-tr from-violet-950 via-purple-900 to-[#120835] flex flex-col justify-between p-2">
-                        <div className="flex justify-between items-center w-full">
-                          <Mic className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
-                          <span className="text-[8px] font-mono text-pink-400/85">VOICE TRANS</span>
-                        </div>
-                        <div className="space-y-0.5">
-                          <div className="flex gap-0.5 items-end justify-center h-4 my-1 opacity-70">
-                            <span className="w-0.5 bg-pink-400 h-2 animate-bounce" style={{ animationDelay: '0.1s' }} />
-                            <span className="w-0.5 bg-violet-400 h-3 animate-bounce" style={{ animationDelay: '0.3s' }} />
-                            <span className="w-0.5 bg-pink-400 h-4 animate-bounce" style={{ animationDelay: '0s' }} />
-                            <span className="w-0.5 bg-violet-400 h-2 animate-bounce" style={{ animationDelay: '0.2s' }} />
-                          </div>
-                          <p className="text-[9px] text-center text-white/90 font-sans line-clamp-1 italic">
-                            {post.voiceTranscript || post.content}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-[#1c0d4a] to-[#040212] flex items-center justify-center p-3 text-center">
-                        <p className="text-[9.5px] font-sans font-medium italic text-white/90 line-clamp-3 leading-relaxed">
-                          "{post.content}"
-                        </p>
-                      </div>
-                    )}
-                    
-                    {/* Top Pinned Badge */}
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-[#8B5CF6]/90 backdrop-blur-xs text-[8px] font-mono font-bold text-white uppercase rounded flex items-center gap-1 z-10 shadow-sm">
-                      <Pin className="w-2 h-2 rotate-45" />
-                      PINNED
-                    </div>
-                    
-                    {/* Dark gradient fade for text if image exists */}
-                    {(post.image || isVideo) && (
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent z-1 bg-opacity-40" />
-                    )}
-                    
-                    {/* Info bar at the bottom */}
-                    <div className="p-2 z-2 relative flex items-center justify-between w-full mt-auto bg-black/30 backdrop-blur-xs">
-                      <span className="text-[9px] font-sans font-bold text-white truncate max-w-[70%]">
-                        {post.name || post.username}
-                      </span>
-                      <div className="flex items-center gap-1.5 text-[9px] font-mono text-violet-300">
-                        <span className="flex items-center gap-0.5">⚡ {post.likes || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Profile Tabs List with exactly 5 categories - horizontally smooth scrolling */}
-      <div id="voh-profile-tabs-selector" className="border-b border-violet-500/10 pt-4 overflow-x-auto scrollbar-none">
-        <div className="flex gap-2 text-center text-[10px] sm:text-xs font-mono font-bold px-2 pb-1.5 min-w-max">
-          {[
-            { id: 'posts', label: 'Posts', icon: <FileText className="w-3.5 h-3.5" />, color: 'text-violet-400' },
-            { id: 'videos', label: 'Videos', icon: <Video className="w-3.5 h-3.5" />, color: 'text-pink-500' },
-            { id: 'reels', label: 'Reels', icon: <Film className="w-3.5 h-3.5" />, color: 'text-rose-500' },
-            { id: 'media', label: 'Photos', icon: <Camera className="w-3.5 h-3.5" />, color: 'text-amber-500' },
-            { id: 'voice', label: 'Voice', icon: <Mic className="w-3.5 h-3.5" />, color: 'text-cyan-400' },
-            { id: 'saved', label: 'Saved', icon: <Lock className="w-3.5 h-3.5" />, color: 'text-violet-400' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setProfileTab(tab.id as any)}
-              className={`pb-2 px-3 relative flex items-center gap-1.5 cursor-pointer uppercase tracking-wider transition-colors ${
-                profileTab === tab.id ? `${tab.color} font-extrabold` : 'text-violet-300/60 hover:text-white'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-              {profileTab === tab.id && (
-                <motion.div layoutId="vohProfileTabLine" className={`absolute bottom-0 inset-x-0 h-0.5 bg-violet-500`} />
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tab Render Content */}
-      <div id="voh-tab-content-render" className="space-y-4 pt-2">
-        
-        {/* Contributions tab */}
-        {profileTab === 'posts' && (
-          <MediaGrid gridPosts={myPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
-        )}
-
-        {profileTab === 'videos' && (
-          <MediaGrid gridPosts={videoPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
-        )}
-
-        {profileTab === 'reels' && (
-          <MediaGrid gridPosts={reelsPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
-        )}
-
-        {profileTab === 'disabled_posts_old' && (() => {
-          const sortedMyPosts = [...myPosts].sort((a, b) => {
-            const isAPinned = pinnedPostIds.includes(a.id);
-            const isBPinned = pinnedPostIds.includes(b.id);
-            if (isAPinned && !isBPinned) return -1;
-            if (!isAPinned && isBPinned) return 1;
-            return 0;
-          });
-          return (
-            <div className="grid grid-cols-1 gap-4">
-              {sortedMyPosts.length === 0 ? (
-                <div className="p-8 text-center rounded-2xl border border-dashed border-violet-500/20 bg-[#070513]/50">
-                  <p className="text-xs font-mono text-violet-400/50">
-                    No posts found in this profile.
-                  </p>
-                </div>
-              ) : (
-                sortedMyPosts.map(post => {
-                  const isPinned = pinnedPostIds.includes(post.id);
-                  return (
-                    <div 
-                      key={post.id} 
-                      className={`p-5 rounded-3xl bg-[#0b091c]/80 border transition-all flex flex-col justify-between ${
-                        isPinned 
-                          ? 'border-violet-500/45 shadow-lg shadow-violet-500/5 bg-[#120a2e]/90 ring-1 ring-violet-500/20' 
-                          : 'border-violet-500/10 hover:border-violet-500/25'
-                      }`}
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-2.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-sans font-bold text-white">{post.name}</span>
-                            {(post.username === 'voh' || post.username === 'nexora_ai') && <PurpleVerifiedBadge className="w-3.5 h-3.5" />}
-                            <span className="text-[10px] font-mono text-violet-400">@{post.username}</span>
-                            
-                            {isPinned && (
-                              <span className="flex items-center gap-0.5 bg-violet-600 text-white font-mono text-[8.5px] px-1.5 py-0.5 rounded-md tracking-wider">
-                                <Pin className="w-2.5 h-2.5 fill-current transform rotate-45" />
-                                <span>PINNED</span>
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono text-violet-400">
-                              <RelativeTimestamp timestamp={post.timestamp} />
-                            </span>
-                            {/* Toggle Pinned Status Button */}
-                            {isOwnProfile && (
-                              <button
-                                onClick={() => togglePinPost(post.id)}
-                                className={`p-1 rounded-lg transition-colors cursor-pointer ${
-                                  isPinned 
-                                    ? 'bg-violet-600/20 text-violet-300 hover:bg-violet-600/30' 
-                                    : 'hover:bg-violet-500/10 text-violet-400/40 hover:text-violet-200'
-                                }`}
-                                title={isPinned ? "Unpin post" : "Pin post to profile"}
-                              >
-                                <Pin className={`w-3.5 h-3.5 ${isPinned ? 'fill-current transform rotate-45 text-violet-400' : ''}`} />
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <p className="text-xs text-violet-100 font-sans leading-relaxed mb-3">
-                          {post.content}
-                        </p>
-
-                        {post.image && (
-                          <img 
-                            src={post.image} 
-                            alt="Thumbnail attachment" 
-                            referrerPolicy="no-referrer"
-                            className="w-full max-h-[220px] object-cover rounded-xl border border-violet-500/10 mb-3" 
-                          />
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 pt-3 border-t border-violet-500/5 text-[10px] text-violet-300">
-                        <button 
-                          onClick={() => onLikePost(post.id)}
-                          className="flex items-center gap-1 hover:text-rose-400 transition-colors"
-                        >
-                          <Heart className="w-3.5 h-3.5 text-rose-500/60" />
-                          <span>{post.likes}</span>
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="w-3.5 h-3.5 text-violet-500/60" />
-                          <span>{post.comments?.length || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
-          );
-        })()}
-
-        {/* Media Tab */}
-        {profileTab === 'media' && (
-          <MediaGrid gridPosts={mediaPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
-        )}
-        {profileTab === 'disabled_media_old' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {mediaPosts.length === 0 ? (
-              <div className="p-8 text-center rounded-2xl border border-dashed border-violet-500/20 bg-[#070513]/50 col-span-2">
-                <p className="text-xs font-mono text-violet-400/50">
-                  No media posts found in this profile.
-                </p>
-              </div>
-            ) : (
-              mediaPosts.map(post => (
-                <div 
-                  key={post.id} 
-                  className="p-4 rounded-3xl bg-[#090718] border border-violet-500/10 flex flex-col justify-between"
+      {/* 7. DYNAMIC CREATOR STUDIO & DETAILED ANALYTICS VIEW */}
+      <AnimatePresence>
+        {activePanel === 'creator-studio' && (
+          <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
+            <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+              
+              {/* Back header */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <button
+                  onClick={() => setActivePanel('profile')}
+                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer"
                 >
-                  <div>
-                    <div className="overflow-hidden rounded-xl border border-violet-500/10 mb-3 relative aspect-video bg-black/40">
-                      <img 
-                        src={post.image} 
-                        alt="Media upload" 
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover" 
-                      />
-                    </div>
-                    <p className="text-xs text-violet-100 font-sans leading-relaxed line-clamp-2 mb-2">
-                      {post.content}
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t border-violet-500/5 text-[9px] font-mono text-violet-300">
-                    <span><RelativeTimestamp timestamp={post.timestamp} /></span>
-                    <span className="flex items-center gap-1">
-                      <Heart className="w-3 h-3 text-rose-500" /> {post.likes} likes
-                    </span>
-                  </div>
+                  <ArrowLeft className="w-4 h-4" /> Back to Profile
+                </button>
+                <div className="flex items-center gap-1 text-xs font-mono text-emerald-400 font-black">
+                  <Activity className="w-4 h-4 text-emerald-400 animate-pulse" /> LIVE TELEMETRY ENGINE
                 </div>
-              ))
-            )}
-          </div>
-        )}
-
-        {/* Voice Tab */}
-        {profileTab === 'voice' && (
-          <div className="space-y-4">
-            {voicePosts.length > 0 && (
-              <div className="space-y-2.5">
-                <span className="text-[9.5px] font-mono uppercase tracking-widest text-[#8B5CF6] font-extrabold block text-left">
-                  🎙️ Voice gallery snaps
-                </span>
-                <MediaGrid gridPosts={voicePosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
               </div>
-            )}
 
-            <div className="p-4 rounded-2xl bg-[#090718] border border-violet-500/20">
-              <div className="flex items-center gap-2 mb-2 text-violet-300">
-                <Volume2 className="w-4 h-4 text-violet-400 animate-bounce" />
-                <span className="text-[10px] font-mono uppercase tracking-wider font-extrabold">Voice Posts</span>
+              {/* Revenue & Balance Banner */}
+              <div className="p-6 rounded-3xl bg-linear-to-r from-violet-900 to-pink-900 border border-violet-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="text-left space-y-1">
+                  <p className="text-[9px] font-mono text-pink-300 font-extrabold uppercase tracking-widest leading-none">NEX WALLET BALANCE</p>
+                  <h2 className="text-3xl font-black text-white">
+                    {(currentUser.nexBalance || 24500).toLocaleString()} <span className="text-sm font-mono font-medium text-pink-300">NEX</span>
+                  </h2>
+                  <p className="text-[10px] text-zinc-300 font-sans">Estimated Monetized Earnings: ₦{( (currentUser.nexBalance || 24500) * 1.5 ).toLocaleString()}</p>
+                </div>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: '💸 Disbursing earnings to local bank...' }))}
+                    className="px-4 py-2.5 bg-white text-black font-mono font-bold text-xs uppercase rounded-xl transition-all cursor-pointer hover:bg-zinc-200"
+                  >
+                    Withdraw
+                  </button>
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: '🤝 Opened Brand Collaboration matching platform.' }))}
+                    className="px-4 py-2.5 bg-black/40 border border-white/10 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all hover:bg-black/60"
+                  >
+                    Collab Center
+                  </button>
+                </div>
               </div>
-              <p className="text-xs text-violet-100/75 font-sans leading-relaxed">
-                Listen to voice posts shared on this profile.
-              </p>
-            </div>
 
-            <div className="grid grid-cols-1 gap-3">
-              {voiceTransmissions.map(voice => {
-                const isPlaying = currentPlayingVoice === voice.id;
-                return (
-                  <div 
-                    key={voice.id} 
-                    className={`p-4 rounded-2xl border transition-all duration-300 ${
-                      isPlaying 
-                        ? 'bg-violet-950/40 border-violet-500/50 shadow-lg shadow-violet-500/10' 
-                        : 'bg-[#0b091c]/70 border-violet-500/10 hover:border-violet-500/25'
+              {/* Creator Live Simulation Suite */}
+              <div className="p-5 rounded-3xl bg-[#0b081c] border border-violet-500/10 space-y-4 text-left">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-sans font-bold text-violet-100 flex items-center gap-1.5 uppercase">
+                      <Tv className="w-4 h-4 text-pink-500" /> Nexora Broadcast Simulation
+                    </h3>
+                    <p className="text-[10px] text-zinc-400 font-mono">Test stream rendering performance & viewer triggers</p>
+                  </div>
+                  <button
+                    onClick={() => setIsLiveStreaming(!isLiveStreaming)}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-mono font-black uppercase tracking-widest transition-all cursor-pointer ${
+                      isLiveStreaming 
+                        ? 'bg-red-600 text-white animate-pulse' 
+                        : 'bg-violet-600 text-white'
                     }`}
                   >
-                    <div className="flex items-start gap-4">
-                      <button
-                        onClick={() => toggleVoicePlay(voice.id)}
-                        className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-90 ${
-                          isPlaying ? 'bg-linear-to-r from-violet-600 to-pink-500 text-white' : 'bg-violet-500/10 text-violet-400 hover:bg-violet-500/20'
-                        }`}
-                      >
-                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 ml-1" />}
-                      </button>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-xs font-bold text-white truncate font-sans">{voice.title}</h4>
-                          <span className="text-[9px] font-mono text-violet-400 whitespace-nowrap">{voice.duration}</span>
-                        </div>
-                        <p className="text-[11px] text-violet-200/80 mt-1 lines-clamp-2 leading-relaxed">
-                          {voice.description}
-                        </p>
-                        
-                        {/* Animated waveform visual feedback */}
-                        {isPlaying && (
-                          <div className="flex items-center gap-0.5 h-6 mt-3">
-                            {[...Array(24)].map((_, i) => (
-                              <div 
-                                key={i} 
-                                className="w-[3px] bg-linear-to-t from-violet-500 to-pink-400 rounded-full"
-                                style={{
-                                  height: `${15 + Math.sin(i * 0.8) * 45 + Math.random() * 30}%`,
-                                  animation: 'pulse 1s ease-in-out infinite',
-                                  animationDelay: `${i * 0.05}s`
-                                }}
-                              />
-                            ))}
-                          </div>
-                        )}
-
-                        <div className="text-[9px] font-mono text-violet-400 mt-2">
-                          {voice.published}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Saved posts content tab - upgraded with Collection folders */}
-        {profileTab === 'saved' && (
-          <div className="space-y-4">
-            <MediaGrid gridPosts={savedPosts} pinnedPostIds={pinnedPostIds} onSelectPost={setSelectedGridPost} />
-          </div>
-        )}
-        {profileTab === 'disabled_saved_old' && (
-          <div className="space-y-6 text-left">
-            {!isOwnProfile ? (
-              <div className="p-12 text-center rounded-3xl border border-violet-500/15 bg-black/40 backdrop-blur-md max-w-sm mx-auto space-y-3 shadow-xl my-4">
-                <div className="w-11 h-11 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto text-violet-400">
-                  <Lock className="w-4.5 h-4.5" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="text-xs font-sans font-black text-white">Private Repository Node</h4>
-                  <p className="text-[10.5px] text-violet-300/50 leading-relaxed font-sans">
-                    Saved content collection is secured and private to @{currentUser.username}.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-mono uppercase text-[#8B5CF6] tracking-wider font-extrabold flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5 text-pink-500" />
-                    Private Saved Library Collections
-                  </span>
-                  <span className="text-[9px] font-mono text-violet-400/50">Organized folders</span>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {/* Folder 1 */}
-                  <div className="p-4 rounded-3xl bg-linear-to-b from-[#110931] to-[#04010b] border border-violet-500/15 hover:border-violet-500/30 transition-all cursor-pointer group flex flex-col justify-between h-40 relative overflow-hidden">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-purple-600/10 rounded-full blur-xl group-hover:scale-110 transition-transform" />
-                    <div>
-                      <span className="text-2xl select-none leading-none">🌌</span>
-                      <h4 className="text-xs font-black text-white font-sans mt-2.5 leading-tight">Aesthetics & Atmosphere</h4>
-                      <p className="text-[9.5px] text-violet-300/40 font-sans mt-1">Sleek twilight & retro interfaces</p>
-                    </div>
-                    <span className="text-[9px] font-mono text-violet-400/60 font-bold block mt-3">14 Items saved</span>
-                  </div>
-
-                  {/* Folder 2 */}
-                  <div className="p-4 rounded-3xl bg-linear-to-b from-[#110931] to-[#04010b] border border-violet-500/15 hover:border-violet-500/30 transition-all cursor-pointer group flex flex-col justify-between h-40 relative overflow-hidden">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-cyan-600/10 rounded-full blur-xl group-hover:scale-110 transition-transform" />
-                    <div>
-                      <span className="text-2xl select-none leading-none">💻</span>
-                      <h4 className="text-xs font-black text-white font-sans mt-2.5 leading-tight">Tech & Performance</h4>
-                      <p className="text-[9.5px] text-violet-300/40 font-sans mt-1">Rust logic & socket benchmark formulas</p>
-                    </div>
-                    <span className="text-[9px] font-mono text-violet-400/60 font-bold block mt-3">8 Items saved</span>
-                  </div>
-
-                  {/* Folder 3 */}
-                  <div className="p-4 rounded-3xl bg-linear-to-b from-[#110931] to-[#04010b] border border-violet-500/15 hover:border-violet-500/30 transition-all cursor-pointer group flex flex-col justify-between h-40 relative overflow-hidden">
-                    <div className="absolute right-0 top-0 w-24 h-24 bg-pink-600/10 rounded-full blur-xl group-hover:scale-110 transition-transform" />
-                    <div>
-                      <span className="text-2xl select-none leading-none">🎙️</span>
-                      <h4 className="text-xs font-black text-white font-sans mt-2.5 leading-tight">Vaporwave Broadcasts</h4>
-                      <p className="text-[9.5px] text-violet-300/40 font-sans mt-1">Keynotes and spatial soundscapes</p>
-                    </div>
-                    <span className="text-[9px] font-mono text-violet-400/60 font-bold block mt-3">4 Items saved</span>
-                  </div>
-                </div>
-
-                {/* Flat saved stream feed as fallback */}
-                <div className="pt-4 border-t border-violet-500/5 space-y-4">
-                  <span className="text-[9.5px] font-mono font-bold text-violet-400/50 uppercase">Recent Bookmarks</span>
-                  {savedPosts.map(post => (
-                    <div 
-                      key={post.id} 
-                      className="p-5 rounded-3xl bg-[#0b091c]/80 border border-violet-500/10 flex flex-col justify-between"
-                    >
-                      <div>
-                        <div className="flex justify-between items-start mb-2.5">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-sans font-bold text-white">{post.name}</span>
-                            <PurpleVerifiedBadge className="w-3.5 h-3.5" />
-                            <span className="text-[10px] font-mono text-violet-400 font-normal">@{post.username}</span>
-                          </div>
-                          <span className="text-[9px] font-mono text-violet-400"><RelativeTimestamp timestamp={post.timestamp} /></span>
-                        </div>
-                        
-                        <p className="text-xs text-violet-100 font-sans leading-relaxed mb-3">
-                          {post.content}
-                        </p>
-
-                        {post.image && (
-                          <img 
-                            src={post.image} 
-                            alt="Thumbnail attachment" 
-                            className="w-full max-h-[220px] object-cover rounded-xl border border-violet-500/10 mb-3" 
-                            referrerPolicy="no-referrer"
-                          />
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-4 pt-3 border-t border-violet-500/5 text-[10px] text-violet-300">
-                        <button 
-                          onClick={() => onLikePost(post.id)}
-                          className="flex items-center gap-1 hover:text-rose-400 transition-colors"
-                        >
-                          <Heart className="w-3.5 h-3.5 text-rose-500/60" />
-                          <span>{post.likes}</span>
-                        </button>
-                        <div className="flex items-center gap-1">
-                          <MessageSquare className="w-3.5 h-3.5 text-violet-500/60" />
-                          <span>{post.comments.length}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 🎥 NEW: Videos Tab representation */}
-        {profileTab === 'reels' && (
-          <div className="space-y-4 text-left font-sans">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-mono uppercase text-[#8B5CF6] tracking-wider font-extrabold flex items-center gap-1">
-                🎥 Profile Videos
-              </span>
-              <span className="text-[9px] font-mono text-violet-400/50">Video post feed</span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-              
-              {/* Loop card 1 */}
-              <div className="rounded-3xl border border-violet-500/10 bg-slate-950/20 shadow-lg aspect-[9/16] relative overflow-hidden group">
-                <video src="https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-neon-city-street-at-night-41551-large.mp4" className="absolute inset-0 w-full h-full object-cover opacity-80" muted loop playsInline />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-3.5 flex flex-col justify-between">
-                  <span className="text-[8px] font-mono bg-[#8B5CF6] text-white py-0.5 px-2 rounded-md self-start font-black uppercase">Active Video</span>
-                  <div>
-                    <p className="text-[10px] text-white font-sans line-clamp-2 leading-snug">Finally wrapped up our new mobile app design! Love the spacing and color system. #uidesign</p>
-                    <span className="text-[9px] font-mono text-yellow-400 block mt-1.5 font-bold">⚡ 12.4K Sparks</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Loop card 2 */}
-              <div className="rounded-3xl border border-violet-500/10 bg-slate-950/10 shadow-lg aspect-[9/16] relative overflow-hidden group">
-                <video src="https://assets.mixkit.co/videos/preview/mixkit-holding-smartphone-at-night-with-city-lights-41553-large.mp4" className="absolute inset-0 w-full h-full object-cover opacity-80" muted loop playsInline />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20 p-3.5 flex flex-col justify-between">
-                  <span className="text-[8px] font-mono bg-cyan-600 text-white py-0.5 px-2 rounded-md self-start font-black">1.2K views</span>
-                  <div>
-                    <p className="text-[10px] text-white font-sans line-clamp-2 leading-snug">Spent all evening testing the new UI animations. Everything feels super butter smooth! #webdev</p>
-                    <span className="text-[9px] font-mono text-yellow-400 block mt-1.5 font-semibold">⚡ 8.5K Sparks</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Placeholder bento */}
-              <div className="rounded-3xl border border-dashed border-violet-500/15 bg-slate-950/20 aspect-[9/16] p-4 flex flex-col justify-between text-center">
-                <div className="my-auto space-y-1.5">
-                  <span className="text-xl select-none block">📹</span>
-                  <span className="text-[9.5px] font-mono font-bold text-violet-400/60 uppercase block">Record New Video</span>
-                  <p className="text-[8.5px] text-violet-400/30 leading-normal">Record a short video update for your followers.</p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-        {/* 🏷️ NEW: Tagged Posts Tab content */}
-        {profileTab === 'tagged' && (
-          <div className="space-y-4 text-left">
-            <span className="text-[10px] font-mono uppercase text-[#8B5CF6] tracking-wider font-extrabold block">
-              🏷️ Tagged Posts ({isOwnProfile ? '2' : '0'})
-            </span>
-
-            {isOwnProfile ? (
-              <div className="grid grid-cols-1 gap-4.5 font-sans">
-                {/* Tagged post 1 */}
-                <div className="p-4 rounded-3xl bg-[#0c0a25]/65 border border-violet-500/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80" className="w-6.5 h-6.5 rounded-lg object-cover" />
-                      <div>
-                        <span className="text-[11px] font-sans font-black text-white block leading-none">Nexora AI</span>
-                        <span className="text-[9px] font-mono text-violet-400">@nexora_ai</span>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-mono text-violet-400">1 day ago</span>
-                  </div>
-                  <p className="text-xs text-violet-100 font-sans leading-relaxed">
-                    Collaborating with <span className="text-[#8B5CF6] font-bold">@{currentUser.username}</span> on glassmorphic backglow gradients. The reduction in border width yields premium visual rhythm! check out the design hub.
-                  </p>
-                </div>
-
-                {/* Tagged post 2 */}
-                <div className="p-4 rounded-3xl bg-[#0c0a25]/65 border border-violet-500/10">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80" className="w-6.5 h-6.5 rounded-lg object-cover" />
-                      <div>
-                        <span className="text-[11px] font-sans font-black text-white block leading-none">VOH AI</span>
-                        <span className="text-[9px] font-mono text-violet-400">@voh_ai</span>
-                      </div>
-                    </div>
-                    <span className="text-[9px] font-mono text-violet-400">4 days ago</span>
-                  </div>
-                  <p className="text-xs text-violet-100 font-sans leading-relaxed">
-                    Superb package validation pass with <span className="text-[#8B5CF6] font-bold">@{currentUser.username}</span>! Compiling synchronous data filters achieved under ultra-fast speeds! Absolute beast.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-12 rounded-2xl border border-dashed border-violet-500/10 text-violet-400/40 font-mono text-[10px]">
-                No tagged peer anchors found in this profile.
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 📊 NEW: Creator Analytics Insights tab */}
-        {profileTab === 'analytics' && (
-          <div className="space-y-5 text-left select-none">
-            <div className="flex justify-between items-center bg-[#130d24]/50 p-4 rounded-2xl border border-violet-500/15">
-              <div className="space-y-0.5">
-                <span className="text-[9px] font-mono uppercase tracking-widest text-yellow-400 font-black">Internal metrics dashboards</span>
-                <h3 className="text-xs font-sans font-black text-white uppercase tracking-wider">
-                  Intellectual Creator Insights Index 📊
-                </h3>
-              </div>
-              <Activity className="w-4.5 h-4.5 text-yellow-400 animate-pulse" />
-            </div>
-
-            {/* Metric KPI grids */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-              
-              <div className="p-3.5 rounded-2xl bg-[#0a071d] border border-violet-500/10 text-left">
-                <span className="text-[8.5px] font-mono text-violet-400 uppercase font-black">Net Post views</span>
-                <p className="text-base font-sans font-black text-white mt-1 leading-none">142.84K</p>
-                <span className="text-[8.5px] font-mono text-emerald-400 mt-1 block">📈 +12.4% this week</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#0a071d] border border-violet-500/10 text-left">
-                <span className="text-[8.5px] font-mono text-violet-400 uppercase font-black">Loop Video plays</span>
-                <p className="text-base font-sans font-black text-white mt-1 leading-none">89.41K</p>
-                <span className="text-[8.5px] font-mono text-emerald-400 mt-1 block">📈 +24.1% this week</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#0a071d] border border-violet-500/10 text-left">
-                <span className="text-[8.5px] font-mono text-violet-400 uppercase font-black">Engagements Rate</span>
-                <p className="text-base font-sans font-black text-[#8B5CF6] mt-1 leading-none">7.85%</p>
-                <span className="text-[8.5px] font-mono text-[#8B5CF6]/65 mt-1 block">⭐ Exceptional index</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#0a071d] border border-violet-500/10 text-left">
-                <span className="text-[8.5px] font-mono text-violet-400 uppercase font-black">Total Spark tips</span>
-                <p className="text-base font-sans font-black text-yellow-400 mt-1 leading-none">12.41K</p>
-                <span className="text-[8.5px] font-mono text-yellow-500 mt-1 block">⚡ active sparks</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#0a071d] border border-violet-500/10 text-left">
-                <span className="text-[8.5px] font-mono text-violet-400 uppercase font-black">Profile Visits</span>
-                <p className="text-base font-sans font-black text-cyan-400 mt-1 leading-none">420</p>
-                <span className="text-[8.5px] font-mono text-cyan-500 mt-1 block">👤 +24 today</span>
-              </div>
-
-              <div className="p-3.5 rounded-2xl bg-[#0a071d] border border-violet-500/10 text-left">
-                <span className="text-[8.5px] font-mono text-violet-400 uppercase font-black">Audience growth</span>
-                <p className="text-base font-sans font-black text-pink-400 mt-1 leading-none">+194</p>
-                <span className="text-[8.5px] font-mono text-purple-400 mt-1 block">👥 Net Follow gains</span>
-              </div>
-
-            </div>
-
-            {/* GROWTH METRIC VISUAL CUSTOM CHART */}
-            <div className="p-4 rounded-2xl bg-[#0a071d] border border-violet-500/10 mt-2 space-y-3.5">
-              <div className="flex justify-between items-center sm:items-start flex-col sm:flex-row gap-1 border-b border-violet-500/5 pb-2">
-                <div>
-                  <span className="text-[9px] font-mono text-violet-400 uppercase font-bold block">Audience Metric Growth</span>
-                  <h4 className="text-xs font-sans font-black text-white mt-0.5">Follower Increase Over the Last 6 Days</h4>
-                </div>
-                <span className="text-[9px] font-mono text-yellow-400 uppercase font-black bg-yellow-400/10 px-2 py-0.5 rounded leading-none">
-                  Stable scaling
-                </span>
-              </div>
-
-              <div className="flex items-end justify-between gap-2.5 pt-2.5 h-36">
-                
-                {/* Bar 1 */}
-                <div className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
-                  <div className="w-full relative rounded-t-lg bg-violet-600/30 border border-violet-500/15 group-hover:bg-violet-600/60 transition-colors h-8 flex items-center justify-center text-[9px] font-bold text-white">
-                    +12
-                  </div>
-                  <span className="text-[8.5px] font-mono text-violet-400/60 block">Day 1</span>
-                </div>
-
-                {/* Bar 2 */}
-                <div className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
-                  <div className="w-full relative rounded-t-lg bg-violet-600/35 border border-violet-500/20 group-hover:bg-violet-600/65 transition-colors h-14 flex items-center justify-center text-[9px] font-bold text-white">
-                    +18
-                  </div>
-                  <span className="text-[8.5px] font-mono text-violet-400/60 block">Day 2</span>
-                </div>
-
-                {/* Bar 3 */}
-                <div className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
-                  <div className="w-full relative rounded-t-lg bg-violet-600/40 border border-violet-500/25 group-hover:bg-violet-600/70 transition-colors h-20 flex items-center justify-center text-[9px] font-bold text-white">
-                    +24
-                  </div>
-                  <span className="text-[8.5px] font-mono text-violet-400/60 block">Day 3</span>
-                </div>
-
-                {/* Bar 4 */}
-                <div className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
-                  <div className="w-full relative rounded-t-lg bg-[#8B5CF6]/55 border border-[#8B5CF6]/40 group-hover:bg-[#8B5CF6]/80 transition-colors h-24 flex items-center justify-center text-[9px] font-bold text-white">
-                    +30
-                  </div>
-                  <span className="text-[8.5px] font-mono text-violet-400/60 block">Day 4</span>
-                </div>
-
-                {/* Bar 5 */}
-                <div className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
-                  <div className="w-full relative rounded-t-lg bg-pink-600/60 border border-pink-500/40 group-hover:bg-pink-600/80 transition-colors h-28 flex items-center justify-center text-[9px] font-bold text-white">
-                    +42
-                  </div>
-                  <span className="text-[8.5px] font-mono text-violet-400/6 block">Day 5</span>
-                </div>
-
-                {/* Bar 6 */}
-                <div className="flex-1 flex flex-col items-center gap-2 group cursor-pointer">
-                  <div className="w-full relative rounded-t-lg bg-linear-to-t from-pink-500 to-yellow-400 border border-yellow-500/50 h-32 flex items-center justify-center text-[9px] font-mono font-black text-white">
-                    +64
-                  </div>
-                  <span className="text-[8.5px] font-mono text-violet-400 block font-bold">Today</span>
-                </div>
-
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* Communities Tab */}
-        {profileTab === 'communities' && (
-          <div className="grid grid-cols-1 gap-3.5">
-            {communitiesData.map(com => (
-              <div 
-                key={com.id} 
-                className="p-4 rounded-2xl bg-[#09071c] border border-violet-500/10 hover:border-violet-500/25 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-white font-sans">{com.name}</h4>
-                    <span className="text-[9px] font-mono text-cyan-400">📍 {com.location}</span>
-                  </div>
-                  <p className="text-[11px] text-violet-200/70">{com.description}</p>
-                </div>
-                
-                <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-violet-500/5">
-                  <span className="text-[10px] font-mono text-violet-400 font-bold">{com.members}</span>
-                  <button className="text-[9px] font-mono font-black border border-violet-500/30 hover:border-violet-500/50 bg-violet-500/5 text-violet-300 px-2.5 py-1.5 rounded-lg transition-colors uppercase">
-                    Launch Room
+                    {isLiveStreaming ? 'Stop Broadcast 🔴' : 'Go Live Simulation'}
                   </button>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
 
-
-      </div>
-
-    </motion.div>
-  )}
-</AnimatePresence>
-
-      {/* Dynamic Connections Modal (Alliances & Followers list) */}
-      <AnimatePresence>
-        {isConnectionsModalOpen && (
-          <div className="fixed inset-0 bg-[#06040f]/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-lg bg-[#09071b] border border-violet-500/20 rounded-3xl p-5 overflow-hidden flex flex-col max-h-[85vh] shadow-[0_0_50px_rgba(139,92,246,0.4)]"
-            >
-              {/* Top Accent line */}
-              <div className="absolute top-0 inset-x-0 h-[2px] bg-gradient-to-r from-violet-500 via-pink-500 to-cyan-400" />
-
-              {/* Header */}
-              <div className="flex items-center justify-between pb-3 border-b border-violet-500/10">
-                <div>
-                  <span className="text-[9px] font-mono font-bold tracking-widest text-[#8B5CF6] uppercase">
-                    Network Connections
-                  </span>
-                  <h3 className="text-base font-black text-white tracking-tight flex items-center gap-1.5 font-sans mt-0.5 animate-fade-in">
-                    {connectionsModalTab === 'followers' ? '👥 Followers List' : '⚡ Connected Friends'}
-                    <span className="text-xs text-[#8B5CF6]/85 font-mono font-normal">
-                      ({connectionsModalTab === 'followers' ? formatNumber(stats.followers) : formatNumber(stats.following)} Users)
-                    </span>
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setIsConnectionsModalOpen(false)}
-                  className="p-1.5 rounded-lg border border-white/5 bg-white/[0.02] text-violet-300 hover:text-white hover:border-[#8B5CF6]/30 transition-all cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Tabs */}
-              <div className="grid grid-cols-2 gap-1.5 mt-3.5 bg-[#050410] p-1 rounded-xl border border-violet-500/5">
-                <button
-                  onClick={() => {
-                    setConnectionsModalTab('followers');
-                    setConnectionSearchQuery('');
-                  }}
-                  className={`py-2 text-[10px] font-mono tracking-wider font-extrabold rounded-lg uppercase transition-all cursor-pointer ${connectionsModalTab === 'followers' ? 'bg-[#8B5CF6] text-white shadow-md' : 'text-violet-300/50 hover:text-violet-200'}`}
-                >
-                  Followers ({formatNumber(stats.followers)})
-                </button>
-                <button
-                  onClick={() => {
-                    setConnectionsModalTab('following');
-                    setConnectionSearchQuery('');
-                  }}
-                  className={`py-2 text-[10px] font-mono tracking-wider font-extrabold rounded-lg uppercase transition-all cursor-pointer ${connectionsModalTab === 'following' ? 'bg-[#8B5CF6] text-white shadow-md' : 'text-violet-300/50 hover:text-violet-200'}`}
-                >
-                  Following ({formatNumber(stats.following)})
-                </button>
-              </div>
-
-              {/* Connection Search Bar */}
-              <div className="relative mt-3 group">
-                <Search className="absolute left-3 top-2.5 w-4 h-4 text-violet-500 group-hover:text-violet-400 transition-colors" />
-                <input
-                  type="text"
-                  placeholder="Search connections list by name or username..."
-                  value={connectionSearchQuery}
-                  onChange={(e) => setConnectionSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-purple-950/20 border border-purple-500/10 hover:border-purple-500/25 focus:border-[#8B5CF6] rounded-xl font-mono text-white text-xs placeholder-purple-300/30 focus:outline-hidden focus:ring-1 focus:ring-[#8B5CF6]/15 transition-all"
-                />
-                {connectionSearchQuery && (
-                  <button
-                    onClick={() => setConnectionSearchQuery('')}
-                    className="absolute right-3 top-2.5 text-[9px] font-mono font-bold text-violet-400 hover:text-white cursor-pointer"
-                  >
-                    CLEAR
-                  </button>
+                {isLiveStreaming && (
+                  <div className="p-4 rounded-2xl bg-black/50 border border-red-500/20 space-y-3 font-mono">
+                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                      <div className="bg-[#12080a] p-2 rounded-xl border border-red-500/10">
+                        <p className="text-[9px] text-zinc-500">PEAK VIEWERS</p>
+                        <p className="text-sm font-bold text-red-400">{liveViewerCount}</p>
+                      </div>
+                      <div className="bg-[#080c12] p-2 rounded-xl border border-violet-500/10">
+                        <p className="text-[9px] text-zinc-500">ELAPSED TIME</p>
+                        <p className="text-sm font-bold text-violet-300">
+                          {Math.floor(liveDuration / 60)}m {liveDuration % 60}s
+                        </p>
+                      </div>
+                      <div className="bg-[#08120a] p-2 rounded-xl border border-emerald-500/10">
+                        <p className="text-[9px] text-zinc-500">LIVE COINS</p>
+                        <p className="text-sm font-bold text-emerald-400">{(liveDuration * 4).toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <div className="text-[10px] text-zinc-400 italic">
+                      📡 Syncing broadcast feed data back to Lagos, Nigeria locale grid node.
+                    </div>
+                  </div>
                 )}
               </div>
 
-              {/* Connections list dynamic scroll container */}
-              <div className="flex-1 overflow-y-auto mt-4 pr-1 space-y-2 max-h-[48vh] custom-scrollbar scroll-smooth">
-                {filteredConnections.length > 0 ? (
-                  filteredConnections.map((user, idx) => (
-                    <div
-                      key={user.id || idx}
-                      className="p-3 rounded-2xl bg-white/[0.01] hover:bg-violet-950/25 border border-white/5 hover:border-violet-500/25 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative overflow-hidden group"
+              {/* Growth Analytics Trend with dynamic SVG Chart */}
+              <div className="p-6 rounded-3xl bg-[#0b081c] border border-violet-500/10 space-y-6 text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-4">
+                  <div>
+                    <h3 className="text-sm font-sans font-bold text-violet-100 uppercase tracking-wide">Follower Network Metrics</h3>
+                    <p className="text-[10px] text-zinc-400 font-mono">Dynamic node telemetry & engagement comparison</p>
+                  </div>
+                  <div className="flex gap-1">
+                    {['7d', '30d', '90d'].map(tf => (
+                      <button
+                        key={tf}
+                        onClick={() => setAnalyticsTimeframe(tf as any)}
+                        className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase font-extrabold cursor-pointer transition-all ${
+                          analyticsTimeframe === tf 
+                            ? 'bg-violet-600 text-white' 
+                            : 'bg-white/5 text-zinc-400 hover:bg-white/10'
+                        }`}
+                      >
+                        {tf === '7d' ? '7 Days' : tf === '30d' ? '30 Days' : '90 Days'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Grid stats */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
+                    <span className="text-[9px] font-mono text-zinc-500 block">REACH INDEX</span>
+                    <span className="text-lg font-black text-white mt-1 block">{(currentUser.followers * 2.4).toLocaleString()}</span>
+                    <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-0.5 mt-1">
+                      <TrendingUp className="w-3 h-3" /> +14.2%
+                    </span>
+                  </div>
+                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
+                    <span className="text-[9px] font-mono text-zinc-500 block">ENGAGEMENT RATE</span>
+                    <span className="text-lg font-black text-white mt-1 block">82.4%</span>
+                    <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-0.5 mt-1">
+                      <TrendingUp className="w-3 h-3" /> +5.6%
+                    </span>
+                  </div>
+                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
+                    <span className="text-[9px] font-mono text-zinc-500 block">WATCH TIME (HRS)</span>
+                    <span className="text-lg font-black text-white mt-1 block">18,240</span>
+                    <span className="text-[9px] font-mono text-pink-400 flex items-center gap-0.5 mt-1">
+                      <TrendingUp className="w-3 h-3" /> +24.8%
+                    </span>
+                  </div>
+                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
+                    <span className="text-[9px] font-mono text-zinc-500 block">PROFILE VISITS</span>
+                    <span className="text-lg font-black text-white mt-1 block">{(currentUser.followers * 0.42).toLocaleString()}</span>
+                    <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-0.5 mt-1">
+                      <TrendingUp className="w-3 h-3" /> +9.3%
+                    </span>
+                  </div>
+                </div>
+
+                {/* SVG Line Chart for trends */}
+                <div className="space-y-2">
+                  <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">📈 TELEMETRY TRAFFIC (GRAPH)</span>
+                  <div className="h-44 bg-black/40 border border-white/5 rounded-2xl p-4 relative overflow-hidden flex items-end">
+                    
+                    {/* SVG Line */}
+                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 150" preserveAspectRatio="none">
+                      <defs>
+                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.4" />
+                          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+                      {/* Grid lines */}
+                      <line x1="0" y1="37" x2="400" y2="37" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                      <line x1="0" y1="75" x2="400" y2="75" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                      <line x1="0" y1="112" x2="400" y2="112" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
+                      
+                      {/* Area */}
+                      <path 
+                        d="M0 130 Q 50 80, 100 110 T 200 40 T 300 90 T 400 20 L 400 150 L 0 150 Z" 
+                        fill="url(#chartGrad)" 
+                      />
+                      {/* Path Line */}
+                      <path 
+                        d="M0 130 Q 50 80, 100 110 T 200 40 T 300 90 T 400 20" 
+                        fill="none" 
+                        stroke="#8B5CF6" 
+                        strokeWidth="3.5" 
+                        strokeLinecap="round"
+                      />
+                    </svg>
+
+                    {/* Chart axes details */}
+                    <div className="absolute inset-x-4 bottom-2 flex justify-between text-[8px] font-mono text-zinc-500 uppercase">
+                      <span>MON</span>
+                      <span>TUE</span>
+                      <span>WED</span>
+                      <span>THU</span>
+                      <span>FRI</span>
+                      <span>SAT</span>
+                      <span>SUN</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Demographics Information */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="bg-black/20 border border-white/5 p-4 rounded-2xl">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase block mb-3">🌍 Top Countries</span>
+                    <div className="space-y-2 text-xs">
+                      {[
+                        { flag: '🇳🇬', name: 'Nigeria', percent: '62%' },
+                        { flag: '🇬🇧', name: 'United Kingdom', percent: '14%' },
+                        { flag: '🇺🇸', name: 'United States', percent: '11%' },
+                        { flag: '🇿🇦', name: 'South Africa', percent: '7%' }
+                      ].map(country => (
+                        <div key={country.name} className="flex items-center justify-between">
+                          <span className="text-zinc-300 flex items-center gap-1.5">
+                            <span className="text-sm">{country.flag}</span> {country.name}
+                          </span>
+                          <span className="font-mono text-violet-400 font-bold">{country.percent}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 border border-white/5 p-4 rounded-2xl">
+                    <span className="text-[9px] font-mono text-zinc-500 uppercase block mb-3">🕒 Peak Activity Hours</span>
+                    <div className="space-y-2 text-xs">
+                      {[
+                        { time: '18:00 - 21:00', label: 'Prime Time Rush', percent: '44%' },
+                        { time: '12:00 - 14:00', label: 'Lunch Break Sync', percent: '28%' },
+                        { time: '21:00 - 00:00', label: 'Night Owls Gossip', percent: '18%' },
+                        { time: '08:00 - 11:00', label: 'Morning Calibrating', percent: '10%' }
+                      ].map(hour => (
+                        <div key={hour.time} className="flex items-center justify-between">
+                          <div className="leading-tight">
+                            <p className="text-zinc-300 font-bold">{hour.time}</p>
+                            <p className="text-[10px] text-zinc-500 font-mono">{hour.label}</p>
+                          </div>
+                          <span className="font-mono text-pink-400 font-bold">{hour.percent}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <button
+                onClick={() => setActivePanel('profile')}
+                className="w-full py-3.5 bg-violet-950 hover:bg-violet-900 text-violet-300 rounded-2xl text-xs font-mono font-black uppercase tracking-wider transition-all"
+              >
+                Close Creator Dashboard
+              </button>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 8. QR PROFILE CUSTOMIZER & MOCK SCANNER VIEW */}
+      <AnimatePresence>
+        {activePanel === 'qr-profile' && (
+          <div className="fixed inset-0 z-50 bg-[#04020f]/95 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c0926] border border-violet-500/25 rounded-[36px] p-6 max-w-sm w-full text-center space-y-6 shadow-2xl relative"
+            >
+              <button 
+                onClick={() => setActivePanel('profile')}
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="space-y-1 text-left">
+                <span className="text-[10px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">IDENTIFICATION MATRIX</span>
+                <h3 className="text-sm font-sans font-black text-white uppercase">Your Nexora QR Profile Code</h3>
+                <p className="text-[10px] text-zinc-400 font-mono">Scan on any device to instantly connect node feeds</p>
+              </div>
+
+              {/* Generates a custom gradient themed QR code component */}
+              <div className="relative p-6 rounded-3xl bg-black border border-white/5 flex flex-col items-center justify-center space-y-4">
+                
+                {/* QR Canvas frame */}
+                <div className={`p-4 bg-gradient-to-tr ${getQrGradients()} rounded-2xl relative group overflow-hidden`}>
+                  <div className="absolute inset-0.5 bg-black rounded-xl z-0" />
+                  
+                  {/* Generated SVG QR Code representation */}
+                  <svg className="w-44 h-44 relative z-10 text-white" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm1 1h2v2H5V5zm9-3h8v8h-8V2zm2 2v4h4V4h-4zm1 1h2v2h-2V5zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm1 1h2v2H5v-2zm14-3h3v3h-3v-3zm-2 2h2v2h-2v-2zm2 2h3v3h-3v-3zm-4-4h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm-2-4h2v2h-2v-2zm0 4h2v2h-2v-2zm2-2h2v2h-2v-2z" />
+                    <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" className="text-violet-500 fill-current" />
+                  </svg>
+                </div>
+
+                <div className="leading-tight">
+                  <p className="text-xs font-bold text-white flex items-center justify-center gap-1">
+                    {currentUser.name} {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4" />}
+                  </p>
+                  <p className="text-[10px] text-violet-400 font-mono">@{currentUser.username}</p>
+                </div>
+              </div>
+
+              {/* Customize palette colors */}
+              <div className="space-y-2 text-left">
+                <label className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest block">Palette Themes</label>
+                <div className="flex gap-2">
+                  {[
+                    { id: 'neon-cyber', label: 'Cyber Violet', color: 'bg-violet-600' },
+                    { id: 'solar-flare', label: 'Solar Pink', color: 'bg-pink-500' },
+                    { id: 'holographic', label: 'Holo Green', color: 'bg-cyan-500' }
+                  ].map(pal => (
+                    <button
+                      key={pal.id}
+                      onClick={() => setQrColorPalette(pal.id as any)}
+                      className={`flex-1 p-2 rounded-xl text-[9px] font-mono uppercase font-black flex items-center justify-center gap-1 border transition-all cursor-pointer ${
+                        qrColorPalette === pal.id 
+                          ? 'bg-white/10 border-violet-500 text-white' 
+                          : 'bg-black/40 border-transparent text-zinc-500 hover:text-zinc-300'
+                      }`}
                     >
-                      {/* Left Block info */}
-                      <div className="flex items-start gap-2.5 min-w-0">
-                        <img
-                          src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'}
-                          alt={user.name}
-                          className="w-9 h-9 rounded-full object-cover border border-violet-500/10 ring-2 ring-violet-500/5 group-hover:scale-105 transition-transform"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-black text-white leading-tight truncate">{user.name}</span>
-                            {user.isVerified && <PurpleVerifiedBadge />}
-                          </div>
-                          <span className="text-[10px] text-violet-400 font-mono">@{user.username}</span>
-                          <p className="text-[10.5px] text-violet-200/60 leading-tight mt-1 truncate max-w-[240px] sm:max-w-[280px]">
-                            {user.bio}
+                      <span className={`w-2.5 h-2.5 rounded-full ${pal.color}`} />
+                      {pal.label.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action commands */}
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <button
+                  onClick={simulateScan}
+                  className="p-3 bg-linear-to-r from-violet-600 to-pink-500 text-white rounded-2xl text-[10px] font-mono font-black uppercase tracking-wider cursor-pointer"
+                >
+                  Simulate Scanner Scan
+                </button>
+                <button
+                  onClick={() => {
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 QR Code file exported to disk.' }));
+                  }}
+                  className="p-3 bg-[#130f3a] border border-violet-500/25 text-violet-300 rounded-2xl text-[10px] font-mono font-black uppercase tracking-wider cursor-pointer hover:bg-violet-950/20"
+                >
+                  Download QR png
+                </button>
+              </div>
+
+              {qrScanningActive && (
+                <div className="p-3 rounded-xl bg-violet-600/10 border border-violet-500/20 text-xs font-mono text-violet-300 animate-pulse">
+                  📷 Initializing device camera framework on port 3000...
+                </div>
+              )}
+
+              {qrScanSuccessText && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-sans text-emerald-300">
+                  {qrScanSuccessText}
+                </div>
+              )}
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 9. SOCIAL GRAPH & RELATIONSHIP MANAGER VIEW */}
+      <AnimatePresence>
+        {activePanel === 'social-graph' && (
+          <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
+            <div className="max-w-xl mx-auto px-4 py-6 space-y-6">
+              
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <button
+                  onClick={() => setActivePanel('profile')}
+                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to Profile
+                </button>
+                <span className="text-xs font-mono text-zinc-400 font-extrabold uppercase">Social Network Graph</span>
+              </div>
+
+              {/* Graph subtabs */}
+              <div className="flex gap-1 overflow-x-auto scrollbar-none bg-black/40 p-1 rounded-2xl border border-white/5">
+                {[
+                  { id: 'followers', label: 'Followers' },
+                  { id: 'following', label: 'Following' },
+                  { id: 'close-friends', label: 'Close Friends' },
+                  { id: 'blocked', label: 'Blocked' },
+                  { id: 'muted', label: 'Muted' }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setRelationsTab(tab.id as any)}
+                    className={`flex-1 px-3 py-2 rounded-xl text-[10px] font-mono uppercase font-black tracking-wider whitespace-nowrap cursor-pointer transition-all ${
+                      relationsTab === tab.id 
+                        ? 'bg-violet-600 text-white' 
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Filter search bar */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-500" />
+                <input
+                  type="text"
+                  placeholder="Filter network nodes by username..."
+                  value={searchRelationQuery}
+                  onChange={(e) => setSearchRelationQuery(e.target.value)}
+                  className="w-full pl-9 pr-4 py-3 bg-[#0d0926]/60 border border-violet-500/15 rounded-2xl text-xs font-sans text-white focus:outline-hidden focus:border-violet-500 focus:bg-black/60 font-medium"
+                />
+              </div>
+
+              {/* Relation list render */}
+              <div className="space-y-2 text-left">
+                {(() => {
+                  let list: any[] = [];
+                  if (relationsTab === 'followers') {
+                    list = getSeededFollowers(currentUser.id);
+                  } else if (relationsTab === 'following') {
+                    list = MOCK_CREATORS;
+                  } else if (relationsTab === 'close-friends') {
+                    list = getSeededFollowers(currentUser.id).filter(f => closeFriends.includes(f.id));
+                  } else if (relationsTab === 'blocked') {
+                    list = blockedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80' }));
+                  } else if (relationsTab === 'muted') {
+                    list = mutedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80' }));
+                  }
+
+                  const filtered = list.filter(item => 
+                    item.username.toLowerCase().includes(searchRelationQuery.toLowerCase()) ||
+                    item.name.toLowerCase().includes(searchRelationQuery.toLowerCase())
+                  );
+
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-12 text-zinc-500 font-mono text-xs">
+                        ⚠️ No node logs match filter query.
+                      </div>
+                    );
+                  }
+
+                  return filtered.map(item => (
+                    <div key={item.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0b081c] border border-white/3">
+                      <div className="flex items-center gap-3">
+                        <img src={item.avatar} alt={item.name} className="w-9 h-9 rounded-xl object-cover" />
+                        <div>
+                          <p className="text-xs font-bold text-white flex items-center gap-1">
+                            {item.name} {item.isVerified && <PurpleVerifiedBadge className="w-3.5 h-3.5" />}
                           </p>
-                          <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            {user.location && (
-                              <span className="text-[9px] font-mono text-violet-300/40 flex items-center gap-0.5">
-                                📍 {user.location}
-                              </span>
-                            )}
-                            <span className="text-[9px] font-mono text-purple-400/50">
-                              ⭐ {formatNumber(user.reputationPoints)} rep
-                            </span>
-                          </div>
+                          <p className="text-[10px] text-zinc-500 font-mono">@{item.username}</p>
                         </div>
                       </div>
 
-                      {/* Right Action panel */}
-                      <div className="flex items-center gap-1.5 self-end sm:self-center">
-                        <button
-                          onClick={() => {
-                            setIsConnectionsModalOpen(false);
-                            if (onViewProfile) onViewProfile(user.id);
-                          }}
-                          className="px-3 py-1.5 text-[10px] font-mono font-black text-white bg-violet-600 hover:bg-violet-700 rounded-lg active:scale-95 transition-all cursor-pointer"
-                        >
-                          PROFILE
-                        </button>
-                        {onStartChat && (
+                      {/* Right actions context */}
+                      <div className="flex items-center gap-1.5">
+                        {relationsTab === 'following' && (
+                          <label className="flex items-center gap-1 text-[10px] font-mono text-pink-400 bg-pink-500/5 px-2 py-1 rounded-lg border border-pink-500/10 cursor-pointer">
+                            <input 
+                              type="checkbox" 
+                              checked={closeFriends.includes(item.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCloseFriends([...closeFriends, item.id]);
+                                } else {
+                                  setCloseFriends(closeFriends.filter(id => id !== item.id));
+                                }
+                              }}
+                              className="accent-pink-500"
+                            />
+                            <span>Close Friend</span>
+                          </label>
+                        )}
+
+                        {relationsTab === 'blocked' && (
                           <button
                             onClick={() => {
-                              setIsConnectionsModalOpen(false);
-                              onStartChat(user.id);
+                              setBlockedUsers(blockedUsers.filter(u => u !== item.id));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: '🔓 Node unblocked!' }));
                             }}
-                            className="p-1.5 rounded-lg border border-violet-500/20 bg-violet-500/5 hover:bg-violet-500/20 hover:border-violet-500/40 text-violet-300 transition-all cursor-pointer"
-                            title="Open Message Bridge"
+                            className="p-1 px-2.5 bg-violet-600 text-white rounded-lg text-[9px] font-mono uppercase font-black cursor-pointer"
                           >
-                            <MessageSquare className="w-3.5 h-3.5" />
+                            Unblock
+                          </button>
+                        )}
+
+                        {relationsTab === 'muted' && (
+                          <button
+                            onClick={() => {
+                              setMutedUsers(mutedUsers.filter(u => u !== item.id));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: '🔊 Node unmuted!' }));
+                            }}
+                            className="p-1 px-2.5 bg-violet-600 text-white rounded-lg text-[9px] font-mono uppercase font-black cursor-pointer"
+                          >
+                            Unmute
                           </button>
                         )}
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="text-center py-10 px-4 border border-dashed border-violet-500/10 rounded-2xl bg-white/[0.01]">
-                    <span className="text-2xl select-none">👥</span>
-                    {connectionSearchQuery ? (
-                      <>
-                        <p className="text-xs font-mono font-bold text-violet-300 mt-2">No connections match your search query.</p>
-                        <p className="text-[10px] text-violet-300/40 mt-1">Refine parameters or check your spelling.</p>
-                      </>
-                    ) : connectionsModalTab === 'followers' ? (
-                      <>
-                        <p className="text-xs font-sans font-bold text-violet-300 mt-2">You're just getting started.</p>
-                        <p className="text-[10px] text-violet-300/60 mt-1 leading-relaxed max-w-xs mx-auto">Follow other creators, share high-value insights, and build your social authority to grow your network.</p>
-                      </>
-                    ) : (
-                      <>
-                        <p className="text-xs font-sans font-bold text-violet-300 mt-2">No connections yet.</p>
-                        <p className="text-[10px] text-violet-300/60 mt-1 leading-relaxed max-w-xs mx-auto">Start connecting by following active creators or explorers in the community.</p>
-                      </>
-                    )}
-                  </div>
-                )}
+                  ));
+                })()}
               </div>
 
-              {/* Bottom footer credit indicator */}
-              <div className="border-t border-violet-500/10 pt-3 mt-4 text-center">
-                <p className="text-[9px] font-mono text-violet-300/30">
-                  SECURE CRYPTOGRAPHIC SOCIAL CONNECTIONS FOR NEXORA EXPERIMENTAL PROTOCOLS
-                </p>
-              </div>
-            </motion.div>
+              <button
+                onClick={() => setActivePanel('profile')}
+                className="w-full py-3.5 bg-violet-950 hover:bg-violet-900 text-violet-300 rounded-2xl text-xs font-mono font-black uppercase tracking-wider transition-all"
+              >
+                Close Relationships
+              </button>
+            </div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Story Slideshow Overlay Deck */}
+      {/* 10. EDIT PROFILE MODAL SCREEN (With live preview) */}
       <AnimatePresence>
-        {selectedMoment && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#010006]/95 backdrop-blur-xl p-4">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-[#060413] border border-violet-500/20 rounded-3xl p-6 relative flex flex-col justify-between min-h-[460px] shadow-[0_0_60px_rgba(139,92,246,0.3)]"
+        {activePanel === 'edit-profile' && (
+          <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
+            <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 text-left">
+              
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <button
+                  onClick={() => { stopWebcam(); setActivePanel('profile'); }}
+                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Cancel Re-Calibration
+                </button>
+                <span className="text-xs font-mono text-zinc-400 font-extrabold uppercase">Calibrate Node Parameters</span>
+              </div>
+
+              {/* Two columns: Form on left, live preview on right */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* Left: Input Form */}
+                <div className="space-y-4">
+                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-violet-500/15 space-y-4">
+                    <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">✏️ PROFILE ATTRIBUTES</span>
+                    
+                    {/* Display name */}
+                    <div className="space-y-1 text-xs">
+                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Display Name (7-Day Lock)</label>
+                      <input
+                        type="text"
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                      />
+                    </div>
+
+                    {/* Username */}
+                    <div className="space-y-1 text-xs">
+                      <label className="text-zinc-400 font-mono text-[10px] uppercase">@username ID (30-Day Lock)</label>
+                      <input
+                        type="text"
+                        value={editUsername}
+                        onChange={(e) => setEditUsername(e.target.value)}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white font-mono focus:outline-hidden focus:border-violet-500 font-medium"
+                      />
+                    </div>
+
+                    {/* Pronouns */}
+                    <div className="space-y-1 text-xs">
+                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Pronouns</label>
+                      <input
+                        type="text"
+                        value={editPronouns}
+                        onChange={(e) => setEditPronouns(e.target.value)}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                        placeholder="e.g. they/them"
+                      />
+                    </div>
+
+                    {/* Bio */}
+                    <div className="space-y-1 text-xs">
+                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Bio Summary Description</label>
+                      <textarea
+                        value={editBio}
+                        onChange={(e) => setEditBio(e.target.value)}
+                        rows={3}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium leading-relaxed"
+                      />
+                    </div>
+
+                    {/* Website */}
+                    <div className="space-y-1 text-xs">
+                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Website Link</label>
+                      <input
+                        type="text"
+                        value={editWebsite}
+                        onChange={(e) => setEditWebsite(e.target.value)}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div className="space-y-1 text-xs">
+                      <label className="text-zinc-400 font-mono text-[10px] uppercase">Physical Location</label>
+                      <input
+                        type="text"
+                        value={editLocation}
+                        onChange={(e) => setEditLocation(e.target.value)}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                      />
+                    </div>
+
+                    {/* Custom Category selection */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1 text-xs">
+                        <label className="text-zinc-400 font-mono text-[10px] uppercase">Network Category</label>
+                        <select
+                          value={editCategory}
+                          onChange={(e) => setEditCategory(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500"
+                        >
+                          <option value="Digital Creator">Digital Creator</option>
+                          <option value="Founder Mindset">Founder Mindset</option>
+                          <option value="Community Leader">Community Leader</option>
+                          <option value="Technical Agent">Technical Agent</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1 text-xs">
+                        <label className="text-zinc-400 font-mono text-[10px] uppercase">Creator Type</label>
+                        <select
+                          value={editCreatorType}
+                          onChange={(e) => setEditCreatorType(e.target.value)}
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500"
+                        >
+                          <option value="Premium Node">Premium Node</option>
+                          <option value="Standard Node">Standard Node</option>
+                          <option value="Collaborator Node">Collaborator Node</option>
+                        </select>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Avatar photo editor with Webcam selfie capability */}
+                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-violet-500/15 space-y-4">
+                    <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">📸 AVATAR SOURCE</span>
+                    
+                    {isWebcamActive ? (
+                      <div className="space-y-3">
+                        <div className="relative aspect-square rounded-2xl bg-black overflow-hidden max-w-xs mx-auto border border-violet-500/20">
+                          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
+                          <div className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full animate-pulse text-red-500">
+                            🔴 Live
+                          </div>
+                        </div>
+                        <div className="flex gap-2 justify-center">
+                          <button
+                            onClick={capturePhoto}
+                            className="px-4 py-2 bg-emerald-600 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer"
+                          >
+                            Capture Frame
+                          </button>
+                          <button
+                            onClick={stopWebcam}
+                            className="px-4 py-2 bg-zinc-800 text-zinc-400 font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer"
+                          >
+                            Disable Camera
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <img src={editAvatar} className="w-16 h-16 rounded-xl object-cover border border-violet-500/30" alt="avatar editor" />
+                        <div className="flex gap-2">
+                          <button
+                            onClick={startWebcam}
+                            className="px-3.5 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1"
+                          >
+                            <Camera className="w-3.5 h-3.5" /> Capture selfie webcam
+                          </button>
+                          <button
+                            onClick={() => {
+                              const promptVal = prompt('Enter image URL link address:');
+                              if (promptVal) setEditAvatar(promptVal);
+                            }}
+                            className="px-3.5 py-2 bg-[#120f38] border border-violet-500/20 text-violet-300 font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer hover:bg-violet-950/20"
+                          >
+                            Input Image URL link
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                    {webcamError && <p className="text-[10px] font-mono text-red-400 mt-2">{webcamError}</p>}
+                  </div>
+                </div>
+
+                {/* Right: Real-time live preview */}
+                <div className="space-y-4">
+                  <div className="sticky top-6 space-y-4">
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest pl-2">🔴 REAL-TIME MATRIX PREVIEW</span>
+                    
+                    {/* Simplified Profile Header simulation */}
+                    <div className="bg-[#0b0922] border border-violet-500/20 rounded-[32px] p-6 text-center space-y-4 shadow-xl">
+                      <div className="relative w-20 h-20 rounded-[18px] bg-black overflow-hidden mx-auto border-2 border-violet-500">
+                        <img src={editAvatar} className="w-full h-full object-cover" alt="live preview avatar" />
+                      </div>
+                      <div className="leading-tight">
+                        <h4 className="text-sm font-sans font-black text-white flex items-center justify-center gap-1">
+                          {editName || 'UNNAMED NODE'} <PurpleVerifiedBadge className="w-4 h-4" />
+                        </h4>
+                        <p className="text-[10px] font-mono text-violet-400">@{editUsername || 'username'}</p>
+                      </div>
+                      <p className="text-xs text-zinc-300 italic bg-black/30 p-3 rounded-xl border border-white/5 whitespace-pre-wrap leading-relaxed max-w-xs mx-auto">
+                        "{editBio || 'Write something creative about yourself...'}"
+                      </p>
+                      <div className="flex flex-wrap items-center justify-center gap-x-3 text-[10px] font-mono text-zinc-400">
+                        {editLocation && <span>📍 {editLocation}</span>}
+                        {editWebsite && <span className="text-cyan-400">🔗 {editWebsite}</span>}
+                        {editPronouns && <span>👥 {editPronouns}</span>}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleSaveProfile}
+                      className="w-full py-4 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg shadow-violet-500/15 cursor-pointer"
+                    >
+                      Save & Commit Re-Calibration
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 11. REPUTATION POINTS D3 BREAKDOWN MODAL OVERLAY */}
+      <AnimatePresence>
+        {showReputationModal && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowReputationModal(false)}>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c0926] border border-violet-500/35 rounded-3xl p-6 max-w-md w-full text-left space-y-4"
+              onClick={(e) => e.stopPropagation()}
             >
-              {/* Top Bar: Progress trackers and meta */}
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <span className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                  <Award className="w-4 h-4 text-pink-400 animate-pulse" /> REPUTATION TELEMETRY ARCHIVE
+                </span>
+                <button 
+                  onClick={() => setShowReputationModal(false)}
+                  className="p-1 px-2 rounded-lg bg-white/5 text-zinc-400 hover:text-white text-xs font-mono"
+                >
+                  Close ×
+                </button>
+              </div>
+
               <div className="space-y-4">
-                {/* Tick index bars */}
-                <div className="flex gap-1.5 w-full">
-                  {selectedMoment.quotes.map((_: any, idx: number) => (
-                    <div key={idx} className="flex-1 h-1 bg-zinc-800 rounded-full relative overflow-hidden">
-                      {idx < storyIndex && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-violet-500 to-pink-500" />
-                      )}
-                      {idx === storyIndex && (
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: '100%' }}
-                          transition={{ duration: 5, ease: 'linear' }}
-                          onAnimationComplete={() => {
-                            if (storyIndex < selectedMoment.quotes.length - 1) {
-                              setStoryIndex(idx => idx + 1);
-                            } else {
-                              setSelectedMoment(null);
-                              setStoryIndex(0);
-                            }
-                          }}
-                          className="absolute left-0 top-0 bottom-0 bg-gradient-to-r from-violet-500 to-pink-500"
-                        />
-                      )}
+                <p className="text-xs text-zinc-300 leading-relaxed font-sans">
+                  Reputation represents the summation of validated helper comments, verified technical skills, completed social missions, and positive sparks on Nexora.
+                </p>
+
+                {/* Progress bar metrics for progressive disclosure */}
+                <div className="space-y-3">
+                  {[
+                    { label: 'Contributions Metric', val: currentUser.reputationBreakdown?.contributions || 1400, color: 'bg-violet-500' },
+                    { label: 'Helpfulness Index', val: currentUser.reputationBreakdown?.helpfulness || 82000, color: 'bg-pink-500' },
+                    { label: 'Social Missions Completed', val: currentUser.reputationBreakdown?.missionsCompleted || 12, color: 'bg-cyan-500' },
+                    { label: 'Verified Technical Skills', val: currentUser.reputationBreakdown?.skillsVerified || 4, color: 'bg-emerald-500' }
+                  ].map(metric => (
+                    <div key={metric.label} className="space-y-1">
+                      <div className="flex justify-between text-[10px] font-mono text-zinc-400 uppercase">
+                        <span>{metric.label}</span>
+                        <span className="font-bold text-white">{metric.val.toLocaleString()} pts</span>
+                      </div>
+                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div className={`h-full ${metric.color}`} style={{ width: '65%' }} />
+                      </div>
                     </div>
                   ))}
                 </div>
-
-                {/* Meta bar */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <img src={selectedMoment.avatar} className="w-9 h-9 rounded-xl object-cover ring-2 ring-violet-500/30" />
-                    <div className="text-left">
-                      <h4 className="text-xs font-sans font-black text-white">{selectedMoment.name}</h4>
-                      <span className="text-[9px] font-mono text-purple-400">@{selectedMoment.username} • Story Moment</span>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => {
-                      setSelectedMoment(null);
-                      setStoryIndex(0);
-                    }}
-                    className="p-1.5 px-3 bg-white/5 hover:bg-white/10 rounded-lg text-violet-400 hover:text-white transition-all text-[10px] font-mono cursor-pointer"
-                  >
-                    CLOSE [ESC]
-                  </button>
-                </div>
               </div>
 
-              {/* Quote Content text centered beautifully with elegant display typography */}
-              <div className="my-8 py-8 px-4 text-center select-text">
-                <p className="text-lg sm:text-xl font-sans font-black text-white leading-normal tracking-tight bg-gradient-to-r from-white via-violet-100 to-pink-100 bg-clip-text text-transparent">
-                  "{selectedMoment.quotes[storyIndex]}"
-                </p>
-              </div>
-
-              {/* Actions footer */}
-              <div className="flex items-center justify-between border-t border-violet-500/10 pt-4">
-                <button
-                  onClick={() => {
-                    if (storyIndex > 0) {
-                      setStoryIndex(storyIndex - 1);
-                    }
-                  }}
-                  disabled={storyIndex === 0}
-                  className="px-3.5 py-1.5 text-[10px] font-mono font-bold bg-zinc-900 border border-zinc-800 disabled:opacity-20 text-zinc-400 hover:text-white rounded-lg transition-all"
-                >
-                  ← PREV
-                </button>
-                <span className="text-[9.5px] font-mono text-zinc-500">
-                  Slide {storyIndex + 1} of {selectedMoment.quotes.length}
-                </span>
-                <button
-                  onClick={() => {
-                    if (storyIndex < selectedMoment.quotes.length - 1) {
-                      setStoryIndex(storyIndex + 1);
-                    } else {
-                      setSelectedMoment(null);
-                      setStoryIndex(0);
-                    }
-                  }}
-                  className="px-4 py-1.5 text-[10px] font-mono font-bold bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-all"
-                >
-                  {storyIndex === selectedMoment.quotes.length - 1 ? 'FINISH' : 'NEXT →'}
-                </button>
-              </div>
+              <button
+                onClick={() => setShowReputationModal(false)}
+                className="w-full py-2.5 bg-violet-950 hover:bg-violet-900 text-violet-300 font-mono font-bold text-xs uppercase rounded-xl"
+              >
+                Dismiss Diagnostics
+              </button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* Immersive Post Detail Modal (Instagram/TikTok style layout) */}
+      {/* 12. FULL SCREEN EXPANDED PHOTO OVERLAY */}
       <AnimatePresence>
-        {selectedGridPost && (() => {
-          const activePost = posts.find((p: any) => p.id === selectedGridPost.id) || selectedGridPost;
-          const isVoice = activePost.isVoice || activePost.content.includes('🎙') || activePost.voiceDuration;
-          const isVideo = !!activePost.videoUrl;
-          const isPinned = pinnedPostIds.includes(activePost.id);
-          const isPostLiked = activePost.isLikedByUser;
-
-          return (
-            <div className="fixed inset-0 bg-[#04020a]/95 backdrop-blur-lg z-50 flex items-center justify-center p-2 sm:p-4 animate-fade-in font-sans">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                className="relative w-full max-w-4xl bg-[#09071c] border border-violet-500/25 rounded-3xl overflow-hidden flex flex-col md:flex-row h-[90vh] md:h-[75vh] shadow-[0_0_60px_rgba(139,92,246,0.35)]"
+        {profilePicExpanded && (
+          <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setProfilePicExpanded(false)}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative max-w-md w-full aspect-square rounded-[36px] overflow-hidden border border-white/10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img src={currentUser.avatar} className="w-full h-full object-cover" alt="Expanded user profile avatar" referrerPolicy="no-referrer" />
+              <button 
+                onClick={() => setProfilePicExpanded(false)}
+                className="absolute top-4 right-4 p-2 rounded-2xl bg-black/50 hover:bg-black/80 border border-white/10 text-white"
               >
-                {/* Visual Media Side (Left/Top) */}
-                <div className="w-full md:w-3/5 bg-black/90 flex items-center justify-center relative border-b md:border-b-0 md:border-r border-violet-500/10 h-1/2 md:h-full">
-                  {activePost.image ? (
-                    <img 
-                      src={activePost.image} 
-                      className="w-full h-full object-contain" 
-                      alt={activePost.content}
-                      referrerPolicy="no-referrer"
-                    />
-                  ) : isVideo ? (
-                    <div className="w-full h-full bg-black flex items-center justify-center p-1 md:p-3">
-                      <NexoraVideoPlayer
-                        post={activePost}
-                        videoUrl={activePost.videoUrl}
-                        onOpenFullscreen={() => {
-                          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Immersive video mode active!' }));
-                        }}
-                        onSpark={() => onLikePost(activePost.id)}
-                      />
-                    </div>
-                  ) : isVoice ? (
-                    <div className="w-full h-full bg-gradient-to-br from-[#120a2e] to-[#04010b] flex flex-col items-center justify-center p-6 space-y-6">
-                      <div className="w-16 h-16 rounded-full bg-pink-500/10 border border-pink-500/30 flex items-center justify-center text-pink-400">
-                        <Mic className="w-8 h-8" />
-                      </div>
-                      
-                      {/* Live Waveform motion */}
-                      <div className="flex gap-1.5 items-end justify-center h-16 max-w-xs">
-                        <span className="w-1 bg-[#8B5CF6] h-12 rounded-full animate-bounce" style={{ animationDuration: '0.9s' }} />
-                        <span className="w-1 bg-pink-500 h-16 rounded-full animate-bounce" style={{ animationDelay: '0.1s', animationDuration: '1.2s' }} />
-                        <span className="w-1 bg-cyan-400 h-8 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '0.8s' }} />
-                        <span className="w-1 bg-[#8B5CF6] h-14 rounded-full animate-bounce" style={{ animationDelay: '0.15s', animationDuration: '1.1s' }} />
-                        <span className="w-1 bg-pink-500 h-10 rounded-full animate-bounce" style={{ animationDelay: '0.05s', animationDuration: '0.95s' }} />
-                      </div>
-
-                      <div className="text-center">
-                        <span className="text-[10px] font-mono text-pink-400 uppercase font-black px-2 py-0.5 bg-pink-500/10 rounded border border-pink-500/15">Acoustic Audio</span>
-                        <span className="text-xs text-zinc-400 font-mono block mt-2">Duration: {activePost.voiceDuration || '0:15'}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-violet-950 via-[#100730] to-zinc-950 p-8 flex flex-col justify-between">
-                      <span className="text-4xl text-violet-400/20 font-serif">“</span>
-                      <p className="text-sm md:text-base font-sans font-medium italic text-zinc-200 leading-relaxed text-center max-w-md mx-auto">
-                        {activePost.content}
-                      </p>
-                      <span className="text-4xl text-violet-400/20 font-serif text-right font-extrabold">”</span>
-                    </div>
-                  )}
-
-                  {/* Back glow overlay */}
-                  <div className="absolute inset-0 bg-transparent pointer-events-none border border-violet-500/5" />
-                </div>
-
-                {/* Details & Comments Side (Right/Bottom) */}
-                <div className="w-full md:w-2/5 flex flex-col justify-between h-1/2 md:h-full bg-[#06040f]">
-                  {/* Modal Header */}
-                  <div className="p-4 border-b border-violet-500/10 flex items-center justify-between bg-[#080614]">
-                    <div className="flex items-center gap-2.5 text-left">
-                      <img 
-                        src={currentUser.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"} 
-                        className="w-9 h-9 rounded-full object-cover border border-violet-500/20" 
-                        alt={currentUser.name} 
-                      />
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <span className="text-xs font-bold text-white font-sans block leading-none">{currentUser.name}</span>
-                          {(currentUser.username === 'voh' || currentUser.username === 'nexora_ai') && (
-                            <PurpleVerifiedBadge className="w-3.5 h-3.5" />
-                          )}
-                        </div>
-                        <span className="text-[10px] font-mono text-violet-400 font-bold">@{currentUser.username}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-1.5">
-                      {isOwnProfile && (
-                        <button
-                          onClick={() => togglePinPost(activePost.id)}
-                          className={`p-2 rounded-xl transition-all cursor-pointer ${
-                            isPinned 
-                              ? 'bg-[#8B5CF6]/20 text-violet-300 ring-1 ring-violet-500/30' 
-                              : 'hover:bg-violet-500/10 text-violet-400'
-                          }`}
-                          title={isPinned ? "Unpin post" : "Pin post (Max 3)"}
-                        >
-                          <Pin className={`w-3.5 h-3.5 ${isPinned ? 'rotate-45 fill-current text-[#8B5CF6]' : ''}`} />
-                        </button>
-                      )}
-                      
-                      <button
-                        onClick={() => setSelectedGridPost(null)}
-                        className="p-2 hover:bg-violet-500/10 text-zinc-400 hover:text-white rounded-xl transition-colors cursor-pointer"
-                        title="Close details"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Center Content / Comments Container */}
-                  <div className="flex-1 overflow-y-auto p-4 space-y-3.5 text-left">
-                    {/* Caption block */}
-                    <div className="pb-3 border-b border-violet-500/5">
-                      <p className="text-xs text-zinc-300 font-sans leading-relaxed">
-                        {activePost.content}
-                      </p>
-                      {isVoice && activePost.voiceTranscript && (
-                        <div className="mt-2.5 p-2.5 rounded-xl bg-violet-600/5 border border-violet-500/15">
-                          <span className="text-[8px] font-mono text-purple-400 uppercase font-black block">Voice transcript</span>
-                          <span className="text-[11px] text-zinc-300 italic font-sans mt-0.5 block leading-normal">
-                            "{activePost.voiceTranscript}"
-                          </span>
-                        </div>
-                      )}
-                      <span className="text-[9px] font-mono text-violet-400 mt-2 block opacity-60">
-                        Synthesized on Nexora Node
-                      </span>
-                    </div>
-
-                    {/* Comments list */}
-                    <div className="space-y-3">
-                      <span className="text-[10px] font-mono uppercase tracking-wider text-violet-400 font-black block">
-                        Discussion Forum ({activePost.comments?.length || 0})
-                      </span>
-
-                      {(!activePost.comments || activePost.comments.length === 0) ? (
-                        <div className="text-center py-10">
-                          <p className="text-[11px] text-zinc-500 font-mono">No feedback logs transmitted yet.</p>
-                          <p className="text-[9px] text-zinc-600 mt-1">Be the first to leave a response spark!</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-2.5">
-                          {activePost.comments.map((comment: any, cidx: number) => (
-                            <div key={comment.id || cidx} className="p-2.5 rounded-2xl bg-zinc-950/40 border border-violet-500/5 text-left">
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-[10.5px] font-bold text-white block">
-                                  {comment.name || comment.username}
-                                </span>
-                                <span className="text-[8.5px] font-mono text-zinc-500">
-                                  {comment.timestamp || 'Just now'}
-                                </span>
-                              </div>
-                              <p className="text-[11.5px] text-zinc-300 font-sans leading-relaxed">
-                                {comment.content || comment.comment || comment.text}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Input / Engagement Block (Sticky Bottom) */}
-                  <div className="p-4 bg-[#080614] border-t border-violet-500/10 space-y-3">
-                    {/* Like and Stats Actions row */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <button
-                          onClick={() => onLikePost(activePost.id)}
-                          className={`flex items-center gap-1.5 text-xs font-bold cursor-pointer transition-transform active:scale-95 duration-100 ${
-                            isPostLiked ? 'text-red-400' : 'text-zinc-400 hover:text-white'
-                          }`}
-                        >
-                          <Heart className={`w-4.5 h-4.5 ${isPostLiked ? 'fill-current text-rose-500' : ''}`} />
-                          <span>{activePost.likes || 0} Sparks</span>
-                        </button>
-
-                        <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
-                          <MessageSquare className="w-4.5 h-4.5 text-violet-400" />
-                          <span>{activePost.comments?.length || 0} Comments</span>
-                        </div>
-                      </div>
-
-                      <span className="text-[9px] font-mono text-violet-400/40">
-                        node: #{activePost.id.substring(0, 8)}
-                      </span>
-                    </div>
-
-                    {/* New Comment input form */}
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        value={detailCommentText}
-                        onChange={(e) => setDetailCommentText(e.target.value)}
-                        placeholder="Type response log..."
-                        className="flex-1 bg-zinc-950/80 border border-violet-500/15 focus:border-[#8B5CF6]/60 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden font-sans transition-all"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && detailCommentText.trim()) {
-                            onAddComment(activePost.id, detailCommentText.trim());
-                            setDetailCommentText('');
-                          }
-                        }}
-                      />
-                      <button
-                        disabled={!detailCommentText.trim()}
-                        onClick={() => {
-                          if (selectedGridPost) {
-                            onAddComment(activePost.id, detailCommentText.trim());
-                            setDetailCommentText('');
-                          }
-                        }}
-                        className="bg-violet-600 hover:bg-[#8B5CF6] disabled:opacity-40 disabled:hover:bg-violet-600 text-white font-sans font-black text-xs px-4 py-2 rounded-xl transition-all flex items-center gap-1 cursor-pointer shrink-0"
-                      >
-                        <span>Transmit</span>
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              </motion.div>
-            </div>
-          );
-        })()}
+                <X className="w-5 h-5" />
+              </button>
+            </motion.div>
+          </div>
+        )}
       </AnimatePresence>
 
-      {/* Premium Identity Change Lock Confirmation Dialog */}
+      {/* 13. ADD SWITCH ACCOUNT VAULT MODAL */}
       <AnimatePresence>
-        {confirmModalOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-[#0b0821] border border-violet-500/40 p-6 md:p-8 rounded-3xl max-w-md w-full space-y-6 shadow-[0_0_50px_rgba(139,92,246,0.25)] relative overflow-hidden"
+        {showAddAccountModal && (
+          <div className="fixed inset-0 z-200 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowAddAccountModal(false)}>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0c0926] border border-violet-500/35 rounded-3xl p-6 max-w-sm w-full text-left space-y-4"
+              onClick={(e) => e.stopPropagation()}
             >
-              {/* Decorative premium header border */}
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-violet-600 via-fuchsia-500 to-pink-500" />
-              
-              <div className="space-y-2 text-center sm:text-left">
-                <span className="text-[10px] font-mono tracking-widest text-fuchsia-400 font-extrabold uppercase bg-fuchsia-500/10 px-3 py-1 rounded-full inline-block">
-                  🛡️ Identity Node Protection
+              <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <span className="text-xs font-mono text-violet-300 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                  <UserPlus className="w-4 h-4 text-violet-400" /> REGISTER VAULT CREDENTIALS
                 </span>
-                <h3 className="text-lg font-sans font-black text-white tracking-tight">
-                  Confirm Account Username Change
-                </h3>
-              </div>
-
-              <div className="p-4 bg-violet-950/20 border border-violet-500/15 rounded-2xl text-left">
-                <p className="text-xs font-sans text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                  {lockWarningText}
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (pendingUpdateData) {
-                      onUpdateProfile(pendingUpdateData);
-                      setIsSettingsOpen(false);
-                      setIsEditing(false);
-                      setConfirmModalOpen(false);
-                      setPendingUpdateData(null);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Username locked & synced successfully!' }));
-                    }
-                  }}
-                  className="flex-1 px-5 py-3 bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white text-xs font-mono font-bold rounded-xl transition-all uppercase tracking-wider text-center cursor-pointer shadow-md shadow-violet-500/10 active:scale-98"
+                <button 
+                  onClick={() => setShowAddAccountModal(false)}
+                  className="p-1 px-2 rounded-lg bg-white/5 text-zinc-400 hover:text-white text-xs font-mono"
                 >
-                  Confirm & Commit Lock
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfirmModalOpen(false);
-                    setPendingUpdateData(null);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Username change aborted' }));
-                  }}
-                  className="px-5 py-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-white text-xs font-mono font-bold rounded-xl border border-zinc-800 transition-all uppercase tracking-wider text-center cursor-pointer active:scale-98"
-                >
-                  Cancel
+                  Close ×
                 </button>
               </div>
+
+              <form onSubmit={handleAddNewAccount} className="space-y-4">
+                <div className="space-y-1 text-xs">
+                  <label className="text-zinc-400 font-mono text-[9px] uppercase">New Username ID</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. nexora_fan"
+                    value={newAccUsername}
+                    onChange={(e) => setNewAccUsername(e.target.value)}
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white font-mono focus:outline-hidden focus:border-violet-500"
+                  />
+                </div>
+
+                <div className="space-y-1 text-xs">
+                  <label className="text-zinc-400 font-mono text-[9px] uppercase">Display Name (Optional)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nexora Fan"
+                    value={newAccName}
+                    onChange={(e) => setNewAccName(e.target.value)}
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono font-black text-xs uppercase rounded-xl"
+                >
+                  Store Credential in Switch Vault
+                </button>
+              </form>
             </motion.div>
-          </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 14. GRID SELECTION DETAIL DRAWER (Clicking a thumbnail post opens it) */}
+      <AnimatePresence>
+        {selectedGridPost && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedGridPost(null)}>
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0b0922] border border-violet-500/25 rounded-3xl p-5 max-w-lg w-full text-left relative space-y-4 overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setSelectedGridPost(null)}
+                className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-2 border-b border-white/5 pb-3">
+                <img src={selectedGridPost.avatar} className="w-8 h-8 rounded-lg object-cover" alt="Selected post avatar" />
+                <div>
+                  <h4 className="text-xs font-sans font-black text-white">{selectedGridPost.name}</h4>
+                  <p className="text-[10px] font-mono text-zinc-500">@{selectedGridPost.username} • {selectedGridPost.timestamp}</p>
+                </div>
+              </div>
+
+              {selectedGridPost.image && (
+                <div className="rounded-2xl overflow-hidden aspect-video bg-black max-h-56 relative border border-white/5">
+                  <img src={selectedGridPost.image} className="w-full h-full object-cover" alt="selected post content image" />
+                </div>
+              )}
+
+              <p className="text-xs sm:text-sm font-sans text-zinc-200 whitespace-pre-wrap leading-relaxed">
+                {selectedGridPost.content}
+              </p>
+
+              {/* Likes & commenting interaction row */}
+              <div className="flex justify-between items-center text-xs font-mono text-zinc-400 border-t border-white/5 pt-3">
+                <button
+                  onClick={() => {
+                    onLikePost(selectedGridPost.id);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Spark/Like toggle successfully synchronised!' }));
+                  }}
+                  className="flex items-center gap-1.5 hover:text-pink-400 cursor-pointer"
+                >
+                  <Heart className={`w-4 h-4 ${selectedGridPost.isLikedByUser ? 'fill-pink-500 text-pink-500' : ''}`} />
+                  <span>{selectedGridPost.likes} Sparks</span>
+                </button>
+                <span>{selectedGridPost.comments?.length || 0} Comments</span>
+              </div>
+
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

@@ -103,7 +103,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       ],
       timeline: [
         { time: '14 Hours Ago', event: 'Initial conversation topics start spiking online', status: 'start' },
-        { time: '4 Hours Ago', event: 'Media transmissions peak at 45,000 sparks per min', status: 'peak' },
+        { time: '4 Hours Ago', event: 'Media uploads peak at 45,000 sparks per min', status: 'peak' },
         { time: 'Just Now', event: 'Football discussion groups currently active across 12 countries', status: 'current' }
       ],
       predictionScore: 98
@@ -288,7 +288,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
 
       const data = await response.json();
       setVohReplies(prev => [{ query, reply: data.text }, ...prev]);
-      triggerToast("VOH AI retrieved live pulse matrix!");
+      triggerToast("VOH AI retrieved latest pulse trends!");
     } catch (err) {
       console.error("VOH AI Pulse request failed, using mock:", err);
       let replyText = '';
@@ -309,7 +309,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       }
 
       setVohReplies(prev => [{ query, reply: replyText }, ...prev]);
-      triggerToast("VOH AI retrieved live pulse matrix!");
+      triggerToast("VOH AI retrieved latest pulse trends!");
     } finally {
       setIsVohThinking(false);
     }
@@ -509,6 +509,17 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
 
         {/* Dynamic chat replies logs rendering */}
         <AnimatePresence>
+          {isVohThinking && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="p-3.5 rounded-2xl bg-black/50 border border-violet-500/10 text-xs text-violet-400 font-mono flex items-center gap-2 animate-pulse"
+            >
+              <Brain className="w-4 h-4 text-violet-400 animate-spin" />
+              <span>VOH AI is thinking...</span>
+            </motion.div>
+          )}
           {vohReplies.map((log, idx) => (
             <motion.div
               key={idx}
@@ -874,7 +885,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
             </p>
           </div>
           <div className="text-[9.5px] font-mono text-pink-400/40 border-t border-violet-500/5 pt-2 uppercase">
-            ⚡ Predict Engine Calibrated
+            ⚡ Predict Engine Loaded
           </div>
         </div>
 

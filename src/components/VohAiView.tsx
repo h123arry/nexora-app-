@@ -36,7 +36,17 @@ import {
   Play,
   Square,
   BookOpen,
-  DollarSign
+  DollarSign,
+  Cpu,
+  Database,
+  HardDrive,
+  Bell,
+  Layers,
+  Lock,
+  UserCheck,
+  Activity,
+  Eye,
+  Share2
 } from 'lucide-react';
 import { User, Post, Circle, Notification } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
@@ -58,7 +68,48 @@ import {
   RecommendationEngine,
   SearchEngine,
   ProfileEngine,
-  NotificationEngine
+  NotificationEngine,
+  FeedIntelligenceEngine,
+  CreatorRankingEngine,
+  MediaStreamingEngine,
+  SearchDiscoveryEngine,
+  TrustSafetyEngine,
+  CommunityEngine,
+  MessagingEngine,
+  VohAiIntelligenceEngine,
+  ProfileReputationEngine,
+  SearchIndexData,
+  NotificationItem,
+  CommunityConfig,
+  FeedIntelligenceService,
+  CreatorRankingService,
+  MediaStreamingService,
+  SearchDiscoveryService,
+  RecommendationService,
+  NotificationService,
+  CommunityService,
+  MessagingService,
+  VohAiIntelligenceService,
+  ProfileReputationService,
+  EngagementService,
+  TrendIntelligenceService,
+  ContentDistributionService,
+  ModerationTrustService,
+  AchievementService,
+  CreatorStudioService,
+  SocialGraphService,
+  MediaProcessingService,
+  RealTimeSyncService,
+  PlatformAnalyticsService,
+  SecurityService,
+  OfflineService,
+  PersonalizationService,
+  PlatformHealthService,
+  FeatureFlagService,
+  ALL_25_ENGINES,
+  TERMINOLOGY,
+  updateTerminology,
+  resetTerminology
 } from '../services/voh';
 
 interface VohAiViewProps {
@@ -68,7 +119,7 @@ interface VohAiViewProps {
   setActiveTab: (tab: any) => void;
 }
 
-type AISubView = 'chat' | 'voice' | 'assistants' | 'ecosystem' | 'search' | 'moderation' | 'settings';
+type AISubView = 'chat' | 'voice' | 'assistants' | 'engines' | 'search' | 'ecosystem' | 'moderation' | 'settings';
 
 export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab }: VohAiViewProps) {
   // Navigation
@@ -124,6 +175,95 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // ─── INTERACTIVE CORE ENGINES CONTROL STATES ───
+  const [selectedEngineId, setSelectedEngineId] = useState<string>('feed');
+
+  const [simInputs, setSimInputs] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    const eng = ALL_25_ENGINES.find(e => e.id === selectedEngineId);
+    if (eng) {
+      const defaults: Record<string, any> = {};
+      eng.controls.forEach(c => {
+        defaults[c.key] = c.defaultValue;
+      });
+      setSimInputs(defaults);
+    }
+  }, [selectedEngineId]);
+  
+  // Feed Intelligence states
+  const [feedWatchTime, setFeedWatchTime] = useState<number>(24);
+  const [feedRewatches, setFeedRewatches] = useState<number>(2);
+  const [feedLiked, setFeedLiked] = useState<boolean>(true);
+  const [feedCommented, setFeedCommented] = useState<boolean>(true);
+  const [feedShared, setFeedShared] = useState<boolean>(false);
+  const [feedSaved, setFeedSaved] = useState<boolean>(true);
+  const [feedFollowed, setFeedFollowed] = useState<boolean>(false);
+  const [feedNotInterested, setFeedNotInterested] = useState<boolean>(false);
+  const [feedFreshness, setFeedFreshness] = useState<number>(4);
+
+  // Creator Ranking states
+  const [creatorPostsCount, setCreatorPostsCount] = useState<number>(18);
+  const [creatorRetention, setCreatorRetention] = useState<number>(0.72);
+  const [creatorReplyRate, setCreatorReplyRate] = useState<number>(0.85);
+  const [creatorOriginal, setCreatorOriginal] = useState<boolean>(true);
+  const [creatorSpamFlags, setCreatorSpamFlags] = useState<number>(0);
+
+  // Media Streaming states
+  const [streamNetwork, setStreamNetwork] = useState<'slow-2g' | '2g' | '3g' | '4g' | 'wifi'>('wifi');
+  const [streamBattery, setStreamBattery] = useState<number>(0.85);
+  const [streamMemory, setStreamMemory] = useState<number>(340);
+
+  // Search & Discovery states
+  const [searchEngineQuery, setSearchEngineQuery] = useState<string>('football');
+
+  // Notification states
+  const [notificationSimType, setNotificationSimType] = useState<'spark' | 'comment' | 'follow'>('spark');
+  const [notificationSimCount, setNotificationSimCount] = useState<number>(4);
+
+  // Trust & Safety states
+  const [safetyAuditText, setSafetyAuditText] = useState<string>('Earn fast money! Click here for free crypto doubling now!');
+
+  // Community states
+  const [communityMemberRole, setCommunityMemberRole] = useState<'founder' | 'moderator' | 'member'>('member');
+
+  // Messaging states
+  const [msgSimText, setMsgSimText] = useState<string>('Hey, did you see Nigeria\'s match highlights? Send the video link!');
+  const [msgSimIsRead, setMsgSimIsRead] = useState<boolean>(false);
+  const [msgSimTyping, setMsgSimTyping] = useState<boolean>(true);
+
+  // VOH AI states
+  const [vohAiTopicText, setVohAiTopicText] = useState<string>('Lagos startups networking dinner');
+
+  // Profile & Reputation states
+  const [reputationSimType, setReputationSimType] = useState<'spark_received' | 'comment_received' | 'community_post' | 'reported_spam' | 'achievement_completed'>('spark_received');
+
+  // Next-generation engine simulation states
+  const [trendCategory, setTrendCategory] = useState<'technology' | 'sports' | 'music' | 'business'>('technology');
+  const [distInitialLikes, setDistInitialLikes] = useState<number>(120);
+  const [distWatchPct, setDistWatchPct] = useState<number>(75);
+  const [distShares, setDistShares] = useState<number>(14);
+  const [modReportsCount, setModReportsCount] = useState<number>(0);
+  const [modDupAttempts, setModDupAttempts] = useState<number>(0);
+  const [syncLocalPackets, setSyncLocalPackets] = useState<number>(12);
+  const [syncServerPackets, setSyncServerPackets] = useState<number>(12);
+  const [securityIp, setSecurityIp] = useState<string>('192.168.1.45');
+  const [securityFingerprintMatch, setSecurityFingerprintMatch] = useState<boolean>(true);
+  const [featureFlagTier, setFeatureFlagTier] = useState<'alpha' | 'beta' | 'general'>('beta');
+
+  // Terminology and Copy Dictionary customizer state
+  const [terminologyState, setTerminologyState] = useState(() => ({ ...TERMINOLOGY }));
+
+  const handleTerminologyChange = (key: keyof typeof TERMINOLOGY, val: string) => {
+    updateTerminology(key, val);
+    setTerminologyState({ ...TERMINOLOGY });
+  };
+
+  const handleTerminologyReset = () => {
+    resetTerminology();
+    setTerminologyState({ ...TERMINOLOGY });
   };
 
   // Chat Sessions refs & sync
@@ -299,7 +439,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     } else {
       setIsSynthesizingVoice(true);
       setTimeout(() => {
-        setTranscription("We are designing a gorgeous space-glass interface with high-reputation community nodes in Port Harcourt!");
+        setTranscription("We are designing a gorgeous space-glass interface with high-reputation communities in Port Harcourt!");
         setTranslation("Port Harcourt design parameters.");
         setSummarizedText("Design token blueprint.");
         setIsSynthesizingVoice(false);
@@ -360,7 +500,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       const failedMessage: Message = {
         id: aiMsgId,
         sender: 'voh',
-        text: "❌ **Response Error**: Unable to synchronize with server-side AI engines. Please check your developer instance status and try again.",
+        text: "❌ **Response Error**: We couldn't connect to VOH AI. Please try again in a moment.",
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isFailed: true
       };
@@ -542,7 +682,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
       {/* Main navigation toolbar */}
       <div className="flex flex-wrap border-b border-current/5 gap-1.5 pb-2">
-        {(['chat', 'voice', 'assistants', 'search', 'ecosystem', 'moderation', 'settings'] as const).map((view) => (
+        {(['chat', 'voice', 'assistants', 'engines', 'search', 'ecosystem', 'moderation', 'settings'] as const).map((view) => (
           <button
             key={view}
             onClick={() => {
@@ -839,7 +979,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     </div>
                     <div className="p-3 rounded-2xl text-xs bg-[#0a071c] border border-violet-500/15 text-violet-400 italic font-mono flex items-center gap-2 animate-pulse">
                       <BrainCircuit className="w-4 h-4 animate-spin" />
-                      <span>Seralizing data streams...</span>
+                      <span>VOH AI is thinking...</span>
                     </div>
                   </div>
                 )}
@@ -884,7 +1024,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                 <input
                   type="text"
-                  placeholder={loadingAi ? "VOH AI is working..." : "Ask VOH AI: summarize feed, find job..."}
+                  placeholder={loadingAi ? "VOH AI is thinking..." : "Ask VOH AI: summarize feed, find job..."}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   disabled={loadingAi}
@@ -980,14 +1120,14 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               <div className="md:col-span-7 border border-white/5 bg-[#010104] p-5 rounded-2xl flex flex-col justify-between min-h-[350px]">
                 <div className="space-y-4">
                   <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase">TRANSCRIBED METRICS OUTCOME</span>
+                    <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase">AUDIO TRANSCRIPTION</span>
                     <Award className="w-4 h-4 text-violet-400" />
                   </div>
 
                   {isSynthesizingVoice ? (
                     <div className="py-12 flex flex-col items-center justify-center space-y-2">
                       <BrainCircuit className="w-10 h-10 text-violet-400 animate-spin" />
-                      <p className="text-xs font-mono italic text-violet-300">Synchronizing Audio Channels...</p>
+                      <p className="text-xs font-mono italic text-violet-300">VOH AI is thinking...</p>
                     </div>
                   ) : transcription ? (
                     <div className="space-y-4">
@@ -1097,7 +1237,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <Search className="absolute left-3.5 top-3.5 w-4 h-4 text-current/40" />
                     <input
                       type="text"
-                      placeholder="Search Users, Posts, Communities, or tags..."
+                      placeholder={`Search Users, Posts, ${TERMINOLOGY.communitiesCapitalized}, or tags...`}
                       value={aiSearchInput}
                       onChange={(e) => setAiSearchInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') runAIsuggestedSearch(); }}
@@ -1154,9 +1294,9 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       )}
                     </div>
 
-                    {/* Circles matching */}
+                    {/* Communities matching */}
                     <div className="bg-white/2 border border-white/5 p-4 rounded-2xl space-y-3">
-                      <span className="text-[9px] font-black text-fuchsia-400 block uppercase font-mono">Matched Communities</span>
+                      <span className="text-[9px] font-black text-fuchsia-400 block uppercase font-mono">{`Matched ${TERMINOLOGY.communitiesCapitalized}`}</span>
                       {intelligentResults.suggestedCircles && intelligentResults.suggestedCircles.length > 0 ? (
                         intelligentResults.suggestedCircles.map((c: Circle) => (
                           <div key={c.id} className="flex items-center justify-between border-b border-white/5 pb-2">
@@ -1177,6 +1317,262 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             </div>
           </div>
         )}
+
+        {/* ======================================================== */}
+        {/* NEXORA CORE PLATFORM ENGINES VIEW */}
+        {/* ======================================================== */}
+        {activeSubView === 'engines' && (() => {
+          const activeEngine = ALL_25_ENGINES.find(e => e.id === selectedEngineId) || ALL_25_ENGINES[0];
+          const simulationResult = activeEngine.run(simInputs, posts);
+
+          const getIconComponent = (name) => {
+            switch (name) {
+              case 'Cpu': return Cpu;
+              case 'TrendingUp': return TrendingUp;
+              case 'HardDrive': return HardDrive;
+              case 'Search': return Search;
+              case 'Bell': return Bell;
+              case 'ShieldCheck': return ShieldCheck;
+              case 'Users': return Users;
+              case 'MessageSquare': return MessageSquare;
+              case 'BrainCircuit': return BrainCircuit;
+              case 'Award': return Award;
+              case 'Activity': return Activity;
+              case 'Share2': return Share2;
+              case 'Lock': return Lock;
+              case 'Folder': return Folder;
+              case 'RefreshCw': return RefreshCw;
+              case 'Settings': return Settings;
+              case 'Pin': return Pin;
+              case 'PenSquare': return PenSquare;
+              case 'Layers': return Layers;
+              default: return Cpu;
+            }
+          };
+
+          return (
+            <div className="lg:col-span-12 space-y-4">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left animate-fade-in">
+                
+                {/* Left Column: 25 Engines Grouped List */}
+                <div className="lg:col-span-4 bg-[#03010b]/85 border border-violet-500/15 rounded-3xl p-4 space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar">
+                  <div className="pb-2 border-b border-white/5">
+                    <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">NEXORA NEXT-GEN PLATFORM ENGINES</span>
+                    <p className="text-[11px] text-current/50 leading-relaxed">25 Specialized Services & Core System Frameworks</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {[
+                      {
+                        name: '🧠 Core Personalization',
+                        engines: [
+                          { id: 'feed', name: 'Feed Intelligence', desc: 'Ranks and personalizes the Home Feed', iconName: 'Cpu', badge: 'Active' },
+                          { id: 'creator', name: 'Creator Ranking', desc: 'Calculates organic spread visibility', iconName: 'TrendingUp', badge: 'Active' },
+                          { id: 'recommendation', name: 'Recommendation Engine', desc: 'Suggests creators, communities & topics', iconName: 'Cpu', badge: 'Active' },
+                          { id: 'personalization', name: 'Personalization Engine', desc: 'Learns preferences from user actions', iconName: 'Settings', badge: 'Active' },
+                          { id: 'voh_ai', name: 'VOH AI Intelligence', desc: 'Powers discussions, tags & assist helpers', iconName: 'BrainCircuit', badge: 'AI Native' }
+                        ]
+                      },
+                      {
+                        name: '🎬 Content & Media',
+                        engines: [
+                          { id: 'stream', name: 'Media Streaming', desc: 'Adaptive quality & memory preloading', iconName: 'HardDrive', badge: 'Optimized' },
+                          { id: 'distribution', name: 'Content Distribution', desc: 'Balances freshness with follower spread', iconName: 'Share2', badge: 'Active' },
+                          { id: 'media_processing', name: 'Media Processing', desc: 'Transcodes videos & compresses images', iconName: 'HardDrive', badge: 'Automated' }
+                        ]
+                      },
+                      {
+                        name: '📡 Communication & Network',
+                        engines: [
+                          { id: 'search', name: 'Search & Discovery', desc: 'Indexes & ranks cross-platform results', iconName: 'Search', badge: 'Ready' },
+                          { id: 'notification', name: 'Notification Engine', desc: 'Batches and clusters incoming sparks', iconName: 'Bell', badge: 'Batched' },
+                          { id: 'community', name: 'Community Engine', desc: 'Calculates roles & moderator permissions', iconName: 'Users', badge: 'Online' },
+                          { id: 'messaging', name: 'Messaging Engine', desc: 'Controls DM receipts & typing loops', iconName: 'MessageSquare', badge: 'Encrypted' },
+                          { id: 'social_graph', name: 'Social Graph Engine', desc: 'Maps mutual follows & shared interests', iconName: 'Layers', badge: 'Connected' }
+                        ]
+                      },
+                      {
+                        name: '📈 Creator Growth & Studio',
+                        engines: [
+                          { id: 'engagement', name: 'Engagement Engine', desc: 'Aggregates Sparks, views and retention', iconName: 'Activity', badge: 'Live' },
+                          { id: 'trend', name: 'Trend Intelligence', desc: 'Calculates real viral topics & hashtags', iconName: 'TrendingUp', badge: 'Dynamic' },
+                          { id: 'achievement', name: 'Achievement Engine', desc: 'Awards milestones based on progress', iconName: 'Award', badge: 'Active' },
+                          { id: 'studio', name: 'Creator Studio', desc: 'Provides advanced audience analytics', iconName: 'PenSquare', badge: 'Studio' }
+                        ]
+                      },
+                      {
+                        name: '🛡 Security & Infrastructure',
+                        engines: [
+                          { id: 'moderation', name: 'Moderation & Trust', desc: 'Filters spam, reports, and fake posts', iconName: 'ShieldCheck', badge: 'Secured' },
+                          { id: 'security', name: 'Security Engine', desc: 'Protects sessions, IP audits & alerts', iconName: 'Lock', badge: 'Shielded' },
+                          { id: 'offline', name: 'Offline Engine', desc: 'Supports caching, drafts and queues', iconName: 'Folder', badge: 'Cached' },
+                          { id: 'sync', name: 'Real-Time Sync', desc: 'Synchronizes activity across devices', iconName: 'RefreshCw', badge: 'Live Sync' },
+                          { id: 'analytics', name: 'Platform Analytics', desc: 'Provides platform DAU & system graphs', iconName: 'Activity', badge: 'Admin Only' },
+                          { id: 'health', name: 'Platform Health', desc: 'Monitors latency & memory diagnostics', iconName: 'Activity', badge: 'Healthy' },
+                          { id: 'flags', name: 'Feature Flag Engine', desc: 'Gradually rolls out features to cohorts', iconName: 'Pin', badge: 'Configured' }
+                        ]
+                      }
+                    ].map((cat) => (
+                      <div key={cat.name} className="space-y-1 pt-1 text-left">
+                        <span className="text-[9px] font-sans font-black tracking-wider text-violet-400/80 uppercase block px-1">{cat.name}</span>
+                        {cat.engines.map((eng) => {
+                          const EngIcon = getIconComponent(eng.iconName);
+                          const isActive = selectedEngineId === eng.id;
+                          return (
+                            <button
+                              key={eng.id}
+                              onClick={() => setSelectedEngineId(eng.id)}
+                              className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-start gap-2.5 cursor-pointer ${
+                                isActive 
+                                  ? 'bg-violet-600/15 border-violet-500/50 shadow-md shadow-violet-500/5 text-white' 
+                                  : 'bg-white/2 border-white/5 text-current/70 hover:bg-white/5 hover:text-white'
+                              }`}
+                            >
+                              <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${isActive ? 'bg-violet-600 text-white' : 'bg-white/5 text-violet-400'}`}>
+                                <EngIcon className="w-3.5 h-3.5" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-[11px] font-bold truncate font-sans">{eng.name}</span>
+                                  <span className={`text-[7px] font-mono font-black uppercase px-1 py-0.5 rounded ${
+                                    isActive ? 'bg-violet-500 text-white' : 'bg-violet-950 text-violet-300 border border-violet-500/10'
+                                  }`}>
+                                    {eng.badge}
+                                  </span>
+                                </div>
+                                <p className="text-[9px] text-current/40 truncate leading-normal">{eng.desc}</p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Right Column: Dynamic Engine Simulation Sandbox */}
+                <div className="lg:col-span-8 bg-[#03010b]/80 border border-violet-500/15 rounded-3xl p-6 flex flex-col justify-between min-h-[550px]">
+                  
+                  {/* Header */}
+                  <div className="border-b border-white/5 pb-4 mb-4 flex items-center gap-3">
+                    <div className="p-2.5 bg-violet-600/20 text-violet-400 rounded-2xl">
+                      {React.createElement(getIconComponent(activeEngine.iconName), { className: "w-5 h-5 text-violet-400" })}
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-sans font-black uppercase text-white">{activeEngine.name} Service</h3>
+                      <p className="text-[11px] text-current/50 leading-relaxed">{activeEngine.desc}</p>
+                    </div>
+                  </div>
+
+                  {/* Sandbox Content Split */}
+                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
+                    
+                    {/* Controls (Left) */}
+                    <div className="space-y-4 bg-white/2 p-4 rounded-2xl border border-white/5 text-left flex flex-col justify-center">
+                      <span className="text-[10px] font-mono font-black text-violet-400 uppercase">Input parameters</span>
+                      
+                      {activeEngine.controls.length > 0 ? (
+                        <div className="space-y-3">
+                          {activeEngine.controls.map((ctrl) => (
+                            <div key={ctrl.key} className="space-y-1">
+                              <div className="flex justify-between text-[11px]">
+                                <span className="text-current/60">{ctrl.label}:</span>
+                                <span className="font-bold text-white">
+                                  {simInputs[ctrl.key] === true ? 'TRUE' : simInputs[ctrl.key] === false ? 'FALSE' : simInputs[ctrl.key]}
+                                </span>
+                              </div>
+                              
+                              {ctrl.type === 'slider' && (
+                                <input 
+                                  type="range" 
+                                  min={ctrl.min} 
+                                  max={ctrl.max} 
+                                  step={ctrl.step} 
+                                  value={simInputs[ctrl.key] || ctrl.defaultValue} 
+                                  onChange={(e) => setSimInputs(prev => ({ ...prev, [ctrl.key]: Number(e.target.value) }))}
+                                  className="w-full accent-violet-600 cursor-pointer h-1 bg-white/5 rounded-lg appearance-none"
+                                />
+                              )}
+
+                              {ctrl.type === 'toggle' && (
+                                <button
+                                  onClick={() => setSimInputs(prev => ({ ...prev, [ctrl.key]: !prev[ctrl.key] }))}
+                                  className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-mono font-black border transition-all ${
+                                    simInputs[ctrl.key] 
+                                      ? 'bg-violet-600/20 border-violet-500 text-violet-300' 
+                                      : 'bg-white/2 border-white/5 text-current/50 hover:bg-white/5'
+                                  }`}
+                                >
+                                  {simInputs[ctrl.key] ? 'ENABLED' : 'DISABLED'}
+                                </button>
+                              )}
+
+                              {ctrl.type === 'text' && (
+                                <input 
+                                  type="text" 
+                                  value={simInputs[ctrl.key] || ''} 
+                                  onChange={(e) => setSimInputs(prev => ({ ...prev, [ctrl.key]: e.target.value }))}
+                                  className="w-full bg-black/40 border border-white/10 rounded-lg text-xs p-2 text-violet-300 focus:outline-hidden"
+                                />
+                              )}
+
+                              {ctrl.type === 'select' && (
+                                <select 
+                                  value={simInputs[ctrl.key] || ctrl.defaultValue} 
+                                  onChange={(e) => setSimInputs(prev => ({ ...prev, [ctrl.key]: e.target.value }))}
+                                  className="w-full bg-black/40 border border-white/10 rounded-lg text-xs p-2 text-violet-300 focus:outline-hidden"
+                                >
+                                  {ctrl.options.map(opt => (
+                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10.5px] text-current/40 italic">This diagnostic service runs autonomously on aggregated host parameters. No user inputs required.</p>
+                      )}
+                    </div>
+
+                    {/* Simulation Result (Right) */}
+                    <div className="bg-[#05030f]/60 border border-violet-500/10 p-4 rounded-2xl flex flex-col justify-between text-left">
+                      <div className="space-y-3">
+                        <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-wider block">Real-time Service Outputs</span>
+                        
+                        <div className="space-y-2">
+                          {simulationResult.metrics.map((met, i) => (
+                            <div key={i} className="bg-white/2 p-2.5 rounded-xl border border-white/5">
+                              <span className="text-[9px] font-mono text-current/40 uppercase block">{met.label}</span>
+                              <span className={`text-xs font-sans font-black ${met.accent ? 'text-violet-300' : 'text-white'}`}>{met.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="border-t border-white/5 pt-3 mt-3 text-[10.5px] leading-relaxed text-current/50">
+                        <span className="font-mono text-[9px] font-black text-violet-400 uppercase block mb-1">Service Insight</span>
+                        {simulationResult.insights}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Footer status line */}
+                  <div className="border-t border-white/5 pt-3 mt-4 flex items-center justify-between text-[10px] font-mono text-violet-400/80">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                      <span>NEXORA CORE ENGINES ON-CHAIN HEALTH: READY (100%)</span>
+                    </span>
+                    <span>VERSION 1.0.0</span>
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ======================================================== */}
         {/* ECOSYSTEM & MONETIZATION SUBVIEW */}
@@ -1395,6 +1791,162 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <p className="text-[10.5px] text-current/50 leading-relaxed mt-2">
                       VOH AI utilizes this preference as an active system modifier to custom align its generated layouts.
                     </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Global Terminology Customizer Section */}
+              <div className="bg-white/2 border border-white/5 p-5 rounded-2xl space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-3">
+                  <div>
+                    <span className="text-[10px] font-black text-violet-400 uppercase block tracking-wider">Global Terminology Registry</span>
+                    <p className="text-[11px] text-current/60">Customize core branding terms. Changes propagate in real-time across the platform and VOH AI engines.</p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleTerminologyReset();
+                      showToast('Terminology reset to system defaults.');
+                    }}
+                    className="text-[10px] font-mono uppercase bg-white/5 hover:bg-white/10 text-zinc-300 px-3 py-1.5 rounded-lg transition-all cursor-pointer border border-white/5 self-start sm:self-auto"
+                  >
+                    Reset Defaults
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Category 1: Followers & Relationships */}
+                  <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">👥 Relationships</span>
+                    
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Followers Plural</label>
+                        <input
+                          type="text"
+                          value={terminologyState.followersCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('followersCapitalized', e.target.value);
+                            handleTerminologyChange('followers', e.target.value.toLowerCase());
+                            handleTerminologyChange('followersUpper', e.target.value.toUpperCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Followers"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Follower Singular</label>
+                        <input
+                          type="text"
+                          value={terminologyState.followerCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('followerCapitalized', e.target.value);
+                            handleTerminologyChange('follower', e.target.value.toLowerCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Follower"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Following Label</label>
+                        <input
+                          type="text"
+                          value={terminologyState.followingCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('followingCapitalized', e.target.value);
+                            handleTerminologyChange('following', e.target.value.toLowerCase());
+                            handleTerminologyChange('followingUpper', e.target.value.toUpperCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Following"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Category 2: Communities & Nodes */}
+                  <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">🏟️ Spaces & Nodes</span>
+
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Communities Plural</label>
+                        <input
+                          type="text"
+                          value={terminologyState.communitiesCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('communitiesCapitalized', e.target.value);
+                            handleTerminologyChange('communities', e.target.value.toLowerCase());
+                            handleTerminologyChange('communitiesUpper', e.target.value.toUpperCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Communities"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Community Singular</label>
+                        <input
+                          type="text"
+                          value={terminologyState.communityCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('communityCapitalized', e.target.value);
+                            handleTerminologyChange('community', e.target.value.toLowerCase());
+                            handleTerminologyChange('communityUpper', e.target.value.toUpperCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Community"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Locations (Nodes)</label>
+                        <input
+                          type="text"
+                          value={terminologyState.nodesCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('nodesCapitalized', e.target.value);
+                            handleTerminologyChange('nodes', e.target.value.toLowerCase());
+                            handleTerminologyChange('nodesUpper', e.target.value.toUpperCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Locations"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Category 3: Content Interaction */}
+                  <div className="space-y-3 bg-[#03010b]/50 p-3.5 rounded-xl border border-white/5">
+                    <span className="text-[9px] font-mono text-cyan-400 uppercase font-black tracking-widest block">⚡ Sparks & Loops</span>
+
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Likes (Sparks)</label>
+                        <input
+                          type="text"
+                          value={terminologyState.sparksCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('sparksCapitalized', e.target.value);
+                            handleTerminologyChange('sparks', e.target.value.toLowerCase());
+                            handleTerminologyChange('sparksUpper', e.target.value.toUpperCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Sparks"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-zinc-400">Videos (Loops)</label>
+                        <input
+                          type="text"
+                          value={terminologyState.loopsCapitalized}
+                          onChange={(e) => {
+                            handleTerminologyChange('loopsCapitalized', e.target.value);
+                            handleTerminologyChange('loops', e.target.value.toLowerCase());
+                            handleTerminologyChange('loopsUpper', e.target.value.toUpperCase());
+                          }}
+                          className="w-full bg-[#0d0a26] border border-white/10 rounded-lg p-2 text-xs text-white focus:outline-none focus:border-violet-500 font-bold"
+                          placeholder="Loops"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

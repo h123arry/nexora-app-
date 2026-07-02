@@ -3,6 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { replaceTerminology } from './src/data/copyDictionary';
 
 // Load environment variables
 dotenv.config();
@@ -127,7 +128,7 @@ In the meantime, you can ask me to:
 - **Find collaborative opportunities**`;
       }
 
-      return res.json({ text: replyText, isDemo: true });
+      return res.json({ text: replaceTerminology(replyText), isDemo: true });
     }
 
     // AI is fully configured! Run the actual model call
@@ -157,12 +158,13 @@ When answering:
         { role: 'user', parts: [{ text: contextPrompt }] }
       ],
       config: {
-        systemInstruction,
+        systemInstruction: replaceTerminology(systemInstruction),
         temperature: 0.7,
       }
     });
 
-    res.json({ text: response.text || 'I analyzed the systems but couldn\'t form a response. Let\'s try again!', isDemo: false });
+    const rawText = response.text || 'I analyzed the systems but couldn\'t form a response. Let\'s try again!';
+    res.json({ text: replaceTerminology(rawText), isDemo: false });
 
   } catch (error: any) {
     console.error('VOH AI Chat Error:', error);

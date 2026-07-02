@@ -174,12 +174,39 @@ export default function CreatorDashboardView({
       <div className="p-4 sm:p-6 flex-1 select-none">
         
         {/* TAB 1: OVERVIEW */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between border-b border-violet-500/5 pb-3">
-              <h2 className="text-xs font-mono uppercase tracking-widest text-violet-300 font-extrabold">Engagement Overview</h2>
-              <span className="text-[9px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-md uppercase">7/30 days window</span>
-            </div>
+        {activeTab === 'overview' && (() => {
+          const hasAnalytics = myPosts.length > 0 || currentUser.username === 'voh';
+          if (!hasAnalytics) {
+            return (
+              <div className="flex flex-col items-center justify-center p-8 py-16 text-center space-y-4 rounded-3xl bg-[#09071c]/50 border border-violet-500/10">
+                <Eye className="w-12 h-12 text-violet-500/30 animate-pulse" />
+                <h4 className="text-sm font-sans font-bold text-violet-100">No analytics available yet.</h4>
+                <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
+                  Create and publish your first post, video, or voice moment to start tracking impressions, sparks, watch time, and completion rates.
+                </p>
+              </div>
+            );
+          }
+          return (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-violet-500/5 pb-3">
+                <h2 className="text-xs font-mono uppercase tracking-widest text-violet-300 font-extrabold">Engagement Overview</h2>
+                <span className="text-[9px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-md uppercase">7/30 days window</span>
+              </div>
+
+              {isNewUser && (
+              <div className="p-4 sm:p-5 rounded-2xl bg-violet-600/5 border border-dashed border-violet-500/20 text-center space-y-3 max-w-xl mx-auto mb-2 font-sans">
+                <div className="w-10 h-10 rounded-full bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mx-auto">
+                  <TrendingUp className="w-5 h-5 animate-pulse" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-violet-400">Gathering Insights...</h4>
+                  <p className="text-[10.5px] text-zinc-400 leading-relaxed">
+                    Real-time data will populate as users interact with your content.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Overview Stats Cards Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -236,7 +263,8 @@ export default function CreatorDashboardView({
               </div>
             </div>
           </div>
-        )}
+          );
+        })()}
 
         {/* TAB 2: CONTENT & POSTS ANALYTICS */}
         {activeTab === 'content' && (
@@ -253,7 +281,15 @@ export default function CreatorDashboardView({
                   </span>
                 </div>
 
-                {myPosts.length === 0 ? (
+                {myPosts.length === 0 && currentUser.username !== 'voh' ? (
+                  <div className="flex flex-col items-center justify-center p-8 py-16 text-center space-y-4 rounded-3xl bg-[#09071c]/50 border border-violet-500/10">
+                    <Eye className="w-12 h-12 text-violet-500/30 animate-pulse" />
+                    <h4 className="text-sm font-sans font-bold text-violet-100">No analytics available yet.</h4>
+                    <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
+                      Publish your first content block to start seeing posts list analytics.
+                    </p>
+                  </div>
+                ) : myPosts.length === 0 ? (
                   <div className="py-12 text-center rounded-2xl bg-[#0b081e]/30 border border-dashed border-violet-500/10 space-y-3">
                     <p className="text-xs text-zinc-400">No posts written yet. Write a post to start monitoring content analytics!</p>
                   </div>
@@ -532,10 +568,26 @@ export default function CreatorDashboardView({
               <span className="text-[9px] font-mono text-zinc-400 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-md uppercase">VOH AI Engine</span>
             </div>
 
-            {isNewUser ? (
-              /* No statistics insight card for zero content */
-              <div className="p-6 text-center rounded-2xl bg-zinc-900/30 border border-dashed border-violet-500/10 text-xs text-zinc-400">
-                You do not have enough published content yet to extract intelligent insights. Post your updates and engage with your communities to unlock performance recommendations.
+            {myPosts.length === 0 && currentUser.username !== 'voh' ? (
+              <div className="flex flex-col items-center justify-center p-8 py-16 text-center space-y-4 rounded-3xl bg-[#09071c]/50 border border-violet-500/10">
+                <Eye className="w-12 h-12 text-violet-500/30 animate-pulse" />
+                <h4 className="text-sm font-sans font-bold text-violet-100">No analytics available yet.</h4>
+                <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
+                  Insights and AI suggestions will activate once your content starts receiving active engagements.
+                </p>
+              </div>
+            ) : isNewUser ? (
+              /* Polished Gathering Insights fallback card */
+              <div className="py-12 px-6 text-center rounded-2xl bg-zinc-900/30 border border-dashed border-violet-500/15 max-w-md mx-auto space-y-4 font-sans">
+                <div className="w-12 h-12 rounded-full bg-violet-600/10 border border-violet-500/25 flex items-center justify-center text-violet-400 mx-auto animate-pulse">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-violet-400">Gathering Insights...</h3>
+                  <p className="text-[11px] text-zinc-400 leading-relaxed">
+                    Real-time data will populate as users interact with your content.
+                  </p>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">

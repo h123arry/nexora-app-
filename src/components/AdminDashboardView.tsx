@@ -280,7 +280,7 @@ export default function AdminDashboardView({
             NEXORA Core Control Dashboard
           </h2>
           <p className="text-xs text-purple-200/50 font-sans mt-0.5 max-w-xl">
-            You are logged in as <span className="font-bold text-rose-400 font-mono">@{currentUser.username}</span> (World Node Founder). Moderating posts, accounts, reputation DNA balances, and real-time app telemetry.
+            You are logged in as <span className="font-bold text-rose-400 font-mono">@{currentUser.username}</span> (Founder). Moderating posts, accounts, reputation balances, and system health status.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -325,7 +325,7 @@ export default function AdminDashboardView({
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'health' ? 'bg-cyan-600 border border-cyan-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <Activity className="w-3.5 h-3.5" />
-          App Health & Crash telemetry
+          App Health & Diagnostics
         </button>
       </div>
 
@@ -567,7 +567,7 @@ export default function AdminDashboardView({
 
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
                 <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">GEO WORLD PULSE LOCATIONS</span>
-                <span className="text-2xl font-black font-sans block text-pink-400">12 nodes</span>
+                <span className="text-2xl font-black font-sans block text-pink-400">12 locations</span>
                 <span className="text-[10px] text-amber-400 font-mono block">● 2 spawning critical events</span>
               </div>
             </div>
@@ -634,12 +634,12 @@ export default function AdminDashboardView({
           </div>
         )}
 
-        {/* TAB 4: APP HEALTH TELEMETRY */}
+        {/* TAB 4: APP DIAGNOSTICS */}
         {activeSubTab === 'health' && (
           <div className="space-y-4 text-left font-mono">
             <div className="p-4 rounded-2xl bg-zinc-950/60 border border-cyan-500/10 flex items-center justify-between">
               <div className="space-y-1">
-                <span className="text-[10px] text-cyan-400 font-bold block">● TELEMETRY SERVICES ONLINE</span>
+                <span className="text-[10px] text-cyan-400 font-bold block">● DIAGNOSTIC SERVICES ACTIVE</span>
                 <p className="text-xs text-zinc-300 uppercase">Average Latency: <span className="text-sky-400 font-bold">1.8ms jitters</span> | Memory: 14% heap usage</p>
               </div>
               <Activity className="w-5 h-5 text-cyan-400 animate-pulse shrink-0" />

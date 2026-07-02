@@ -82,7 +82,7 @@ export default function RightSidebar({
         </div>
       </div>
 
-      {/* Recommended Creative Nodes to Follow */}
+      {/* Recommended Creators to Follow */}
       <div id="creators-to-follow-widget" className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <Users className="w-4 h-4 text-cyan-400" />

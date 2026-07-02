@@ -80,7 +80,7 @@ export default function MatrixView({
     { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Create community posts & stories', icon: Paintbrush, color: 'text-fuchsia-400' },
     { id: 'circles' as MatrixSubTab, label: 'Communities', desc: 'Connect around shared interests', icon: Compass, color: 'text-pink-400' },
     { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Goals, challenges & helpers', icon: Target, color: 'text-yellow-400' },
-    { id: 'messages' as MatrixSubTab, label: 'Chats', desc: 'Your direct messages', icon: MessageSquare, color: 'text-sky-400' }
+    { id: 'messages' as MatrixSubTab, label: 'Messages', desc: 'Your direct messages', icon: MessageSquare, color: 'text-sky-400' }
   ];
 
   return (
@@ -98,7 +98,7 @@ export default function MatrixView({
             </h2>
           </div>
           <p className="text-xs text-current/60 font-sans">
-            Your friendly space to talk with AI, share updates, join interest communities, and chat.
+            Your friendly space to talk with AI, share updates, join interest communities, and send messages.
           </p>
         </div>
 

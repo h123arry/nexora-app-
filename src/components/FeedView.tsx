@@ -4,14 +4,18 @@ import {
   Zap, Repeat, MessageSquare, Share2, Bookmark, Cpu, Play, Pause, Volume2, Mic, 
   Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw,
   Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp,
-  MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen
+  MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen,
+  Heart, Wifi, WifiOff, Info, Undo2, Sparkles
 } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
+import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import StoriesView from './StoriesView';
 import { getRecommendationScore, recordRecommendationEvent } from '../utils/recommendations';
+import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
+import { TERMINOLOGY } from '../services/voh';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -151,6 +155,7 @@ interface FeedViewProps {
   onViewProfile?: (userId: string) => void;
   onToggleFollow?: (creatorId: string) => void;
   theme?: ThemeMood;
+  onSharePost?: (postId: string) => void;
 }
 
 export default function FeedView({
@@ -167,15 +172,83 @@ export default function FeedView({
   setSearchQuery,
   onViewProfile,
   onToggleFollow,
-  theme = 'stealth-dark'
+  theme = 'stealth-dark',
+  onSharePost
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
-  const [feedTab, setFeedTab] = useState<'for_you' | 'following' | 'communities' | 'polls' | 'local'>(() => {
+  const [feedTab, setFeedTab] = useState<'for_you' | 'following' | 'friends' | 'trending' | 'local'>(() => {
     const saved = localStorage.getItem('nexora_feed_tab');
-    if (saved === 'contributions' || saved === 'broadcast' || saved === 'pulse') return 'for_you';
+    if (saved === 'communities' || saved === 'polls' || saved === 'contributions' || saved === 'broadcast' || saved === 'pulse') return 'for_you';
     return (saved as any) || 'for_you';
   });
+
+  // Scroll positions memory for each category tab
+  const scrollPositionsRef = useRef<Record<string, number>>({});
+  const prevTabRef = useRef<string>('for_you');
+
+  // Pause previous feed's active video immediately on tab switch and restore position
+  useEffect(() => {
+    globalVideoPlaybackManager.pauseAll();
+    
+    // Save scroll position of previous tab
+    if (scrollContainerRef.current) {
+      scrollPositionsRef.current[prevTabRef.current] = scrollContainerRef.current.scrollTop;
+    }
+    
+    // Set active tab reference
+    prevTabRef.current = feedTab;
+
+    // Restore scroll position for new tab
+    const restoredScrollTop = scrollPositionsRef.current[feedTab] || 0;
+    const timer = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = restoredScrollTop;
+      }
+    }, 50);
+
+    // Set activePostId to null initially so it evaluates the new first post on scroll evaluation
+    setActivePostId(null);
+
+    return () => clearTimeout(timer);
+  }, [feedTab]);
+
+  // Online/Offline tracking
+  const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
+
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '💚 Connected! Restored synchronization tunnel.' }));
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Connection lost. Running in isolated cache mode.' }));
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Pull-to-refresh state
+  const [pullY, setPullY] = useState(0);
+  const [pullState, setPullState] = useState<'idle' | 'pulling' | 'refreshing'>('idle');
+  const pullStartYRef = useRef<number | null>(null);
+  const isMouseDownRef = useRef(false);
+
+  // Double tap floating hearts feedback
+  const [floatingHearts, setFloatingHearts] = useState<Array<{ id: string; x: number; y: number }>>([]);
+
+  // Context menu (long press / right-click)
+  const [contextualMenuPost, setContextualMenuPost] = useState<RefactoredPost | null>(null);
+  const [showTransparencyExplanation, setShowTransparencyExplanation] = useState<RefactoredPost | null>(null);
+  const [lastAction, setLastAction] = useState<{ type: 'not_interested' | 'mute_creator' | 'hide_post'; postId: string; data: any } | null>(null);
+  
+  const longPressTimerRef = useRef<Record<string, any>>({});
+
   const [qualityFilter, setQualityFilter] = useState(false);
   const [visibleCount, setVisibleCount] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -192,6 +265,22 @@ export default function FeedView({
   }, []);
 
   useEffect(() => {
+    const handleMomentsUpdate = () => {
+      const saved = localStorage.getItem('nexora_moments_list');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.length > 0) setMomentsList(parsed);
+        } catch (e) {}
+      }
+    };
+    window.addEventListener('nexora-moments-updated', handleMomentsUpdate);
+    return () => {
+      window.removeEventListener('nexora-moments-updated', handleMomentsUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
     localStorage.setItem('nexora_feed_tab', feedTab);
   }, [feedTab]);
   
@@ -204,9 +293,24 @@ export default function FeedView({
   const [isScrollingFast, setIsScrollingFast] = useState(false);
   const [userSettled, setUserSettled] = useState(false);
   const [activeVideoFullscreen, setActiveVideoFullscreen] = useState<RefactoredPost | null>(null);
-  const [fullscreenVideoMuted, setFullscreenVideoMuted] = useState(true);
+  const [fullscreenVideoMuted, setFullscreenVideoMuted] = useState(() => globalVideoPlaybackManager.getMute());
+  const [globalMutedState, setGlobalMutedState] = useState(() => globalVideoPlaybackManager.getMute());
   const [fullscreenPlaying, setFullscreenPlaying] = useState(true);
   const fullscreenVideoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const handleVolumeChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && typeof customEvent.detail.muted === 'boolean') {
+        setGlobalMutedState(customEvent.detail.muted);
+        setFullscreenVideoMuted(customEvent.detail.muted);
+      }
+    };
+    window.addEventListener('nexora-volume-change', handleVolumeChange);
+    return () => {
+      window.removeEventListener('nexora-volume-change', handleVolumeChange);
+    };
+  }, []);
 
   useEffect(() => {
     if (activeVideoFullscreen) {
@@ -263,10 +367,7 @@ export default function FeedView({
       const newMuted = !fullscreenVideoMuted;
       fullscreenVideoRef.current.muted = newMuted;
       setFullscreenVideoMuted(newMuted);
-      localStorage.setItem('nexora_video_muted', newMuted ? 'true' : 'false');
-      window.dispatchEvent(
-        new CustomEvent('nexora-volume-change', { detail: { muted: newMuted, senderId: 'fullscreen' } })
-      );
+      globalVideoPlaybackManager.setMute(newMuted);
     }
   };
 
@@ -587,8 +688,8 @@ export default function FeedView({
     e.preventDefault();
     // For voice moment, prompt default title if blank
     const defaultCaption = momentCaption.trim() || 
-      (momentMediaType === 'voice' ? "🎙️ Broadcast Voice Insight" : 
-       momentMediaType === 'video' ? "🎥 Looping Media Telemetry" : "📸 Visual Stream Element");
+      (momentMediaType === 'voice' ? "🎙️ Voice Message" : 
+       momentMediaType === 'video' ? "🎥 Video Clip" : "📸 Image Post");
 
     const newMoment = {
       id: `moment-${Date.now()}`,
@@ -903,6 +1004,131 @@ export default function FeedView({
     setComposerOpen(false);
   };
 
+  // Prepend a beautiful simulated post on pull-to-refresh
+  const addNewFreshSimulatedPost = () => {
+    const topics = ['tech', 'afrobeats', 'creative', 'football', 'web3', 'design'];
+    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+    const contentTemplates = [
+      `🚀 Matrix compilation level 9 reached! Seamless H.265 video rendering now fully operational in Nexora's streaming engine. Check out the beautiful custom shaders! #${randomTopic} #matrix #voh`,
+      `⚽ What a spectacular performance in today's match! Fully analyzing player telemetry data and heatmaps. Unbelievable energy from the fans tonight! #${randomTopic} #football #match`,
+      `🎨 Aesthetic minimalism is the ultimate sophistication. Designing this network to support absolute layout rhythm, negative space, and custom color accents. #${randomTopic} #craft #design`,
+      `🎙️ Broadcast channels are live! Streaming premium audio and video traces directly to all active subscribers. The future of decentralized social is here. #${randomTopic} #voice #streaming`,
+    ];
+    const imageTemplates = [
+      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&auto=format&fit=crop&q=80'
+    ];
+    
+    const newPost: RefactoredPost = {
+      id: `simulated-${Date.now()}`,
+      userId: 'user-0',
+      username: 'voh',
+      name: 'VOICE OF HARRISON',
+      avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg',
+      isVerified: true,
+      content: contentTemplates[Math.floor(Math.random() * contentTemplates.length)],
+      image: Math.random() > 0.4 ? imageTemplates[Math.floor(Math.random() * imageTemplates.length)] : undefined,
+      tags: [randomTopic, 'nexora'],
+      likes: Math.floor(Math.random() * 45) + 12,
+      commentsCount: Math.floor(Math.random() * 8),
+      shares: Math.floor(Math.random() * 5),
+      timestamp: 'Just now',
+      comments: [],
+    };
+    
+    setLocalPosts(prev => [newPost, ...prev]);
+  };
+
+  // Recommendation Explanation
+  const getRecommendationExplanation = (postItem: RefactoredPost) => {
+    try {
+      const savedProfile = localStorage.getItem('nexora_recommendation_profile');
+      let profile = { tags: {} as Record<string, number>, creators: {} as Record<string, number>, communities: {} as Record<string, number> };
+      if (savedProfile) {
+        profile = JSON.parse(savedProfile);
+      }
+      const reasons: string[] = [];
+      
+      let maxTag = '';
+      let maxTagScore = -999;
+      (postItem.tags || []).forEach(t => {
+        const clean = t.toLowerCase().replace('#', '').trim();
+        if (profile.tags && profile.tags[clean] !== undefined && profile.tags[clean] > maxTagScore) {
+          maxTagScore = profile.tags[clean];
+          maxTag = t;
+        }
+      });
+      
+      if (maxTagScore > 3) {
+        reasons.push(`You show interest in the topic #${maxTag} (weight: +${maxTagScore}).`);
+      }
+      
+      const creatorScore = (profile.creators && (profile.creators[postItem.userId] || profile.creators[postItem.username])) || 0;
+      if (creatorScore > 3) {
+        reasons.push(`You regularly interact with @${postItem.username} (affinity: +${creatorScore}).`);
+      }
+      
+      if (reasons.length === 0) {
+        if (postItem.isVerified) {
+          reasons.push("Recommended because this verified creator is broadcasting high-fidelity media.");
+        } else {
+          reasons.push("Recommended based on positive engagement signals and overall platform velocity.");
+        }
+      }
+      
+      return reasons;
+    } catch (e) {
+      return ["Recommended based on positive engagement signals and overall platform velocity."];
+    }
+  };
+
+  // Undo Recent Choice
+  const handleUndoRecentChoice = () => {
+    if (!lastAction) return;
+    
+    if (lastAction.type === 'not_interested') {
+      if (lastAction.data.tags && lastAction.data.tags.length > 0) {
+        const tagToUnmute = lastAction.data.tags[0];
+        setNotInterestedTags(prev => prev.filter(t => t !== tagToUnmute));
+      }
+      setHiddenPostIds(prev => prev.filter(id => id !== lastAction.postId));
+    } else if (lastAction.type === 'mute_creator') {
+      setMutedCreatorIds(prev => prev.filter(id => id !== lastAction.data.creatorId));
+    } else if (lastAction.type === 'hide_post') {
+      setHiddenPostIds(prev => prev.filter(id => id !== lastAction.postId));
+    }
+    
+    setLastAction(null);
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Successfully reverted recent recommendation preference!' }));
+  };
+
+  const handlePullEnd = () => {
+    if (pullStartYRef.current !== null) {
+      pullStartYRef.current = null;
+      if (pullY > 50) {
+        setPullState('refreshing');
+        setPullY(50);
+        setIsRefreshing(true);
+        if (navigator.vibrate) navigator.vibrate([30]);
+        
+        setTimeout(() => {
+          setIsRefreshing(false);
+          setPullState('idle');
+          setPullY(0);
+          
+          // Prepend a beautiful simulated post
+          addNewFreshSimulatedPost();
+          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Telemetry sync successful. Feed updated!' }));
+        }, 1200);
+      } else {
+        setPullState('idle');
+        setPullY(0);
+      }
+    }
+    isMouseDownRef.current = false;
+  };
+
   // Search filter options
   const filteredPosts = localPosts.filter(post => {
     // 1. Core moderation overrides
@@ -943,15 +1169,17 @@ export default function FeedView({
     if (feedTab === 'following') {
       const isPostFromFollowed = followingIds.includes(post.userId) || post.userId === currentUser.id;
       if (!isPostFromFollowed) return false;
-    } else if (feedTab === 'communities') {
-      const isCommunityPost = !!(post.communityName || post.audience === 'community' || (post as any).circleName);
-      if (!isCommunityPost) return false;
-    } else if (feedTab === 'polls') {
-      const isPoll = !!(post.interactivePoll || post.content.toLowerCase().includes('poll') || post.tags.some(t => t.toLowerCase().includes('poll')));
-      if (!isPoll) return false;
+    } else if (feedTab === 'friends') {
+      // Friends: standard non-institutional users we follow
+      const isPostFromFriend = (followingIds.includes(post.userId) && post.userId !== 'user-0' && post.username !== 'voh_ai' && post.username !== 'nexora_ai') || post.userId === currentUser.id;
+      if (!isPostFromFriend) return false;
+    } else if (feedTab === 'trending') {
+      // Trending: highly interactive posts and system updates
+      const engagement = (post.likes || 0) + (post.commentsCount || 0) * 3 + (post.shares || 0) * 5;
+      const isHot = engagement > 15 || post.isVerified || post.isBroadcastPost;
+      if (!isHot) return false;
     } else if (feedTab === 'local') {
-      const userCity = currentUser.location.toLowerCase();
-      const inSearchRegion = post.location?.toLowerCase().includes("nigeria") || post.location?.toLowerCase().includes("harcourt") || post.location?.toLowerCase().includes("lagos");
+      const inSearchRegion = post.location?.toLowerCase().includes("nigeria") || post.location?.toLowerCase().includes("harcourt") || post.location?.toLowerCase().includes("lagos") || post.location;
       if (!post.location && !inSearchRegion) return false;
     }
 
@@ -1010,6 +1238,21 @@ export default function FeedView({
   const getRankedPosts = () => {
     let list = [...filteredPosts];
 
+    // Empty Feed Protection: If the For You feed is empty but there are posts on the platform,
+    // fallback to public posts that are not blocked or hidden, ensuring the feed is never blank.
+    if (feedTab === 'for_you' && list.length === 0 && localPosts.length > 0) {
+      const fallbackList = localPosts.filter(post => {
+        if (hiddenPostIds.includes(post.id)) return false;
+        if (blockedUserIds.includes(post.userId)) return false;
+        if (mutedUserIds.includes(post.userId)) return false;
+        if (mutedCreatorIds.includes(post.userId)) return false;
+        return !post.isBroadcastPost;
+      });
+      if (fallbackList.length > 0) {
+        list = fallbackList;
+      }
+    }
+
     // Apply Sorting Filters from Search Engine 2.0
     if (sortBy === 'latest') {
       // Keep feed flow chronological / base sorting
@@ -1030,26 +1273,28 @@ export default function FeedView({
     // Apply For You Engagement boost only if not strictly sorted or in specialized feeds
     const sorted = (() => {
       let sortedList = [...list];
-      if (feedTab === 'for_you' && sortBy === 'latest') {
+      if (feedTab === 'for_you') {
         sortedList.sort((a, b) => {
           let scoreA = 0;
           let scoreB = 0;
 
-          if (a.timestamp === 'Just now') scoreA += 5000;
-          if (b.timestamp === 'Just now') scoreB += 5000;
+          // 1. Recency Boost
+          if (a.timestamp === 'Just now') scoreA += 10000;
+          if (b.timestamp === 'Just now') scoreB += 10000;
+          if (a.timestamp?.includes('m ago') || a.timestamp?.includes('h ago')) scoreA += 5000;
+          if (b.timestamp?.includes('m ago') || b.timestamp?.includes('h ago')) scoreB += 5000;
 
-          scoreA += a.likes + a.shares * 3 + a.comments.length * 2;
-          scoreB += b.likes + b.shares * 3 + b.comments.length * 2;
+          // 2. Engagement score: Likes, Shares, Comments, Bookmarks/Saves
+          const engagementA = (a.likes || 0) * 2 + (a.shares || 0) * 4 + (a.comments?.length || 0) * 3 + (a.bookmarksCount || 0) * 5;
+          const engagementB = (b.likes || 0) * 2 + (b.shares || 0) * 4 + (b.comments?.length || 0) * 3 + (b.bookmarksCount || 0) * 5;
+          scoreA += engagementA;
+          scoreB += engagementB;
 
-          // Boost VOH posts or items matching verified interests
-          if (a.userId === 'user-0') scoreA += 1000;
-          if (b.userId === 'user-0') scoreB += 1000;
+          // 3. Creator / Verification / Authority boosts
+          if (a.userId === 'user-0' || a.username === 'voh' || a.username === 'nexora_ai') scoreA += 1500;
+          if (b.userId === 'user-0' || b.username === 'voh' || b.username === 'nexora_ai') scoreB += 1500;
 
-          // Location relevance boost (e.g. Nigeria, Port Harcourt)
-          if (a.location?.toLowerCase().includes("nigeria")) scoreA += 200;
-          if (b.location?.toLowerCase().includes("nigeria")) scoreB += 200;
-
-          // Adaptive recommendation engine scoring
+          // 4. Recommendation system scores
           scoreA += getRecommendationScore(a);
           scoreB += getRecommendationScore(b);
 
@@ -1057,42 +1302,84 @@ export default function FeedView({
         });
       }
 
-      if (feedTab === 'for_you' || feedTab === 'following') {
-        // Dynamic Interleaving Pass to mix Video, Photo, Voice, Polls naturally without clustering
+      if (feedTab === 'for_you') {
+        // Dynamic Interleaving Pass with Creator Diversity to mix content types and avoid grouping creators
         const mixed: RefactoredPost[] = [];
         const remaining = [...sortedList];
         
         while (remaining.length > 0) {
           const lastItem = mixed[mixed.length - 1];
-          let nextIdx = 0;
+          let nextIdx = -1;
           
           if (lastItem) {
             const lastIsVideo = !!lastItem.videoUrl;
             const lastIsVoice = !!lastItem.isVoice;
             const lastIsPhoto = !!lastItem.image || (lastItem.images && lastItem.images.length > 0);
             const lastIsPoll = !!(lastItem.interactivePoll || lastItem.content.toLowerCase().includes('poll'));
+            const lastIsText = !lastIsVideo && !lastIsVoice && !lastIsPhoto && !lastIsPoll;
+            const lastUserId = lastItem.userId;
             
-            const foundIdx = remaining.findIndex(item => {
+            // Search for an item that has different mediaType AND different creator
+            nextIdx = remaining.findIndex(item => {
               const itemIsVideo = !!item.videoUrl;
               const itemIsVoice = !!item.isVoice;
               const itemIsPhoto = !!item.image || (item.images && item.images.length > 0);
               const itemIsPoll = !!(item.interactivePoll || item.content.toLowerCase().includes('poll'));
+              const itemIsText = !itemIsVideo && !itemIsVoice && !itemIsPhoto && !itemIsPoll;
               
+              const isSameCreator = item.userId === lastUserId;
+              if (isSameCreator) return false; // Force Creator Diversity
+
               if (lastIsVideo && itemIsVideo) return false;
               if (lastIsVoice && itemIsVoice) return false;
               if (lastIsPhoto && itemIsPhoto) return false;
               if (lastIsPoll && itemIsPoll) return false;
+              if (lastIsText && itemIsText) return false;
               return true;
             });
-            if (foundIdx !== -1) {
-              nextIdx = foundIdx;
+
+            // If none matches both, fallback to different mediaType only
+            if (nextIdx === -1) {
+              nextIdx = remaining.findIndex(item => {
+                const itemIsVideo = !!item.videoUrl;
+                const itemIsVoice = !!item.isVoice;
+                const itemIsPhoto = !!item.image || (item.images && item.images.length > 0);
+                const itemIsPoll = !!(item.interactivePoll || item.content.toLowerCase().includes('poll'));
+                const itemIsText = !itemIsVideo && !itemIsVoice && !itemIsPhoto && !itemIsPoll;
+                
+                if (lastIsVideo && itemIsVideo) return false;
+                if (lastIsVoice && itemIsVoice) return false;
+                if (lastIsPhoto && itemIsPhoto) return false;
+                if (lastIsPoll && itemIsPoll) return false;
+                if (lastIsText && itemIsText) return false;
+                return true;
+              });
             }
+
+            // Fallback to different creator only
+            if (nextIdx === -1) {
+              nextIdx = remaining.findIndex(item => item.userId !== lastUserId);
+            }
+          }
+          
+          // Absolute fallback: pick the very next item in sorted order
+          if (nextIdx === -1) {
+            nextIdx = 0;
           }
           
           mixed.push(remaining[nextIdx]);
           remaining.splice(nextIdx, 1);
         }
 
+        return mixed;
+      } else if (feedTab === 'following') {
+        // Keep Following feed behavior as standard/undisturbed but support basic interleaving
+        const mixed: RefactoredPost[] = [];
+        const remaining = [...sortedList];
+        while (remaining.length > 0) {
+          mixed.push(remaining[0]);
+          remaining.splice(0, 1);
+        }
         return mixed;
       }
       return sortedList;
@@ -1217,59 +1504,69 @@ export default function FeedView({
   };
 
   return (
-    <div className="flex flex-col h-full w-full relative overflow-hidden bg-transparent">
+    <div className="flex flex-col h-full w-full relative overflow-hidden bg-transparent min-h-0">
       
       {/* 1. TOP OVERLAYED GLASSY HEADER */}
-      <div className={`absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 px-4 pt-3.5 backdrop-blur-xl select-none ${getHeaderOverlayClass()}`}>
+      <div className={`absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 py-2 px-4 backdrop-blur-xl select-none border-b border-violet-500/10 ${getHeaderOverlayClass()}`}>
         {/* Left: Brand logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 flex items-center justify-center shadow-lg shadow-violet-500/20">
-            <Star className="w-4.5 h-4.5 text-white animate-pulse" />
+          <div className="w-7 h-7 rounded-full bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 flex items-center justify-center shadow-md shadow-violet-500/20">
+            <Star className="w-4 h-4 text-white animate-pulse" />
           </div>
           <div>
-            <span className="font-sans font-black text-lg tracking-wider bg-linear-to-r from-violet-200 via-pink-300 to-cyan-200 bg-clip-text text-transparent">
+            <span className="font-sans font-black text-base tracking-wider bg-linear-to-r from-violet-200 via-pink-300 to-cyan-200 bg-clip-text text-transparent">
               NEXORA
             </span>
-            <span className="text-[10px] font-mono block text-violet-400 leading-none font-bold">SOCIAL NETWORK</span>
+            <span className="text-[9px] font-mono block text-violet-400 leading-none font-extrabold">SOCIAL NETWORK</span>
           </div>
         </div>
 
-        {/* Center: For You / Following / Communities / Pulse / Local */}
-        <div className="flex items-center gap-1 bg-slate-950/40 p-1 rounded-xl border border-white/5 mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full">
-          {(['for_you', 'following', 'communities', 'polls', 'local'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => {
-                setFeedTab(tab);
-                setVisibleCount(8);
-              }}
-              className={`text-center py-1.5 px-3 rounded-lg font-sans text-[11px] font-extrabold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                feedTab === tab 
-                  ? 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow-md' 
-                  : 'text-violet-400/60 hover:text-violet-200'
-              }`}
-            >
-              {tab === 'for_you' && 'For You'}
-              {tab === 'following' && 'Following'}
-              {tab === 'communities' && 'Communities'}
-              {tab === 'polls' && 'Polls'}
-              {tab === 'local' && 'Local'}
-            </button>
-          ))}
+        {/* Center: For You / Following / Friends / Trending / Local */}
+        <div className="flex items-center gap-1 bg-[#09061d]/85 p-1 rounded-xl border border-violet-500/10 mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full">
+          {(['for_you', 'following', 'friends', 'trending', 'local'] as const).map(tab => {
+            const isActive = feedTab === tab;
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setFeedTab(tab);
+                  setVisibleCount(8);
+                }}
+                className={`relative text-center py-1 px-3 rounded-lg font-sans text-[11px] font-extrabold uppercase tracking-wider transition-colors duration-200 cursor-pointer whitespace-nowrap ${
+                  isActive ? 'text-white' : 'text-violet-400/60 hover:text-violet-200'
+                }`}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="activeFeedTab"
+                    className="absolute inset-0 bg-linear-to-r from-violet-600 to-pink-500 rounded-lg"
+                    transition={{ type: "spring", stiffness: 420, damping: 35 }}
+                  />
+                )}
+                <span className="relative z-10">
+                  {tab === 'for_you' && 'For You'}
+                  {tab === 'following' && 'Following'}
+                  {tab === 'friends' && 'Friends'}
+                  {tab === 'trending' && 'Trending'}
+                  {tab === 'local' && 'Local'}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* Right: Messages and AI Oracle */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2">
           {/* VOH AI button */}
           <button 
             onClick={() => {
               window.dispatchEvent(new CustomEvent('toast', { detail: '🧠 VOH AI Oracle: Ask questions or design communities anytime!' }));
               window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'matrix', subTab: 'ai' } }));
             }}
-            className="p-1.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 transition-all border border-violet-500/10 flex items-center gap-1 cursor-pointer"
+            className="p-1 px-2.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 transition-all border border-violet-500/10 flex items-center gap-1.5 cursor-pointer"
             title="VOH AI Assistant Oracle"
           >
-            <Zap className="w-3.5 h-3.5 text-pink-400 animate-bounce" />
+            <Zap className="w-3 h-3 text-pink-400 animate-bounce" />
             <span className="text-[9px] font-mono font-black text-violet-200">VOH AI</span>
           </button>
 
@@ -1279,10 +1576,10 @@ export default function FeedView({
               window.dispatchEvent(new CustomEvent('toast', { detail: '📬 Opening your Direct Messages inbox...' }));
               window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'matrix', subTab: 'messages' } }));
             }}
-            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-violet-300 hover:text-white transition-all border border-white/5 cursor-pointer"
+            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-violet-300 hover:text-white transition-all border border-white/5 cursor-pointer flex items-center justify-center"
             title="Messages"
           >
-            <MessageSquare className="w-4 h-4" />
+            <MessageSquare className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -1292,8 +1589,88 @@ export default function FeedView({
       {/* 5. MAIN FEED CONTENT STREAM (With pull-to-refresh & infinite scroll) */}
       <div 
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto space-y-4 pt-[112px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar scroll-smooth overscroll-contain"
+        onMouseDown={(e) => {
+          if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0 && pullState === 'idle') {
+            pullStartYRef.current = e.clientY;
+            isMouseDownRef.current = true;
+          }
+        }}
+        onMouseMove={(e) => {
+          if (isMouseDownRef.current && pullStartYRef.current !== null) {
+            const diffY = e.clientY - pullStartYRef.current;
+            if (diffY > 0) {
+              const elasticY = Math.min(100, diffY * 0.4);
+              setPullY(elasticY);
+              setPullState('pulling');
+            }
+          }
+        }}
+        onMouseUp={handlePullEnd}
+        onMouseLeave={handlePullEnd}
+        onTouchStart={(e) => {
+          if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0 && pullState === 'idle') {
+            pullStartYRef.current = e.touches[0].clientY;
+          }
+        }}
+        onTouchMove={(e) => {
+          if (pullStartYRef.current !== null) {
+            const diffY = e.touches[0].clientY - pullStartYRef.current;
+            if (diffY > 0) {
+              const elasticY = Math.min(100, diffY * 0.4);
+              setPullY(elasticY);
+              setPullState('pulling');
+              if (e.cancelable) e.preventDefault();
+            }
+          }
+        }}
+        onTouchEnd={handlePullEnd}
+        className="flex-1 overflow-y-auto space-y-4 pt-[112px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar scroll-smooth overscroll-contain snap-y snap-mandatory relative"
       >
+        {/* Animated Pull-To-Refresh indicators */}
+        <AnimatePresence>
+          {pullY > 0 && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: pullY, opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="w-full overflow-hidden flex flex-col items-center justify-center bg-violet-950/20 border-b border-violet-500/10 shrink-0 select-none"
+            >
+              <div className="flex items-center gap-2 text-violet-300 font-mono text-[10px] uppercase tracking-widest font-extrabold py-2">
+                <div className="w-5 h-5 rounded-full bg-linear-to-tr from-violet-600 to-pink-500 flex items-center justify-center animate-spin">
+                  <Star className="w-3 h-3 text-white" />
+                </div>
+                <span>
+                  {pullState === 'refreshing' 
+                    ? 'Synergizing Feed Matrix...' 
+                    : pullY > 50 
+                      ? 'Release to Sync Telemetry' 
+                      : 'Pull to Recalibrate'}
+                </span>
+              </div>
+              <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden mb-2">
+                <motion.div 
+                  className="h-full bg-linear-to-r from-violet-500 to-pink-400"
+                  animate={pullState === 'refreshing' ? { x: [-192, 192] } : { width: `${(pullY / 50) * 100}%` }}
+                  transition={pullState === 'refreshing' ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0.1 }}
+                />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Offline Cache warning bar */}
+        {isOffline && (
+          <div className="mx-4 md:mx-0 bg-red-950/80 border border-red-500/20 p-3 rounded-2xl flex items-center justify-between gap-3 text-red-200 shrink-0 font-sans">
+            <div className="flex items-center gap-2">
+              <WifiOff className="w-4 h-4 text-red-400 animate-pulse" />
+              <div>
+                <p className="text-xs font-bold leading-none">ISOLATED CACHE MODE ACTIVE</p>
+                <p className="text-[10px] text-red-300 font-mono mt-0.5">Showing cached offline logs. Updates will queue.</p>
+              </div>
+            </div>
+            <span className="text-[9px] font-mono border border-red-500/30 px-2 py-0.5 rounded uppercase font-black tracking-wide bg-red-500/10 shrink-0">OFFLINE</span>
+          </div>
+        )}
         {/* Selected Tag Active Indicator (Moved inside scroll) */}
         {selectedTag && (
           <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl mx-4 md:mx-0">
@@ -1306,18 +1683,81 @@ export default function FeedView({
 
         {/* Empty feed state */}
         {filteredPosts.length === 0 && (
-          <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-12 space-y-4 mx-4 md:mx-0">
-            <Globe className="w-10 h-10 text-violet-500/30 mx-auto animate-pulse" />
-            <h4 className="text-sm font-sans font-bold text-violet-100">No posts yet.</h4>
-            <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-              Create your first post and share it with the world! Choose from text, voice notes, video streams, or photos to begin your social journey.
-            </p>
-            <div className="flex justify-center gap-2.5">
+          <div className="p-6 md:p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-10 space-y-6 mx-4 md:mx-0 relative overflow-hidden">
+            {/* Glowing aesthetic backdrop lights */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-2xl" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/10 rounded-full blur-2xl" />
+            
+            <div className="space-y-3 relative z-10">
+              <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-violet-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/10">
+                <Globe className="w-6 h-6 text-white animate-pulse" />
+              </div>
+              <h4 className="text-sm font-sans font-bold text-violet-100 uppercase tracking-wider">No Telemetry Traces Detected</h4>
+              <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
+                There are currently no synchronized broadcast traces inside this category. Pull down to trigger a network sync, explore active communities, or create a post to begin.
+              </p>
+            </div>
+
+            {/* Suggested system users to follow */}
+            <div className="bg-[#0b0a24]/60 border border-violet-500/10 rounded-2xl p-4 text-left space-y-3 relative z-10">
+              <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⭐ Recommended Network Nodes</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {suggestedUsers.map(u => (
+                  <div key={u.id} className="flex items-center justify-between p-2.5 bg-black/30 border border-white/5 rounded-xl">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover border border-violet-500/20 shrink-0" />
+                      <div className="min-w-0 leading-tight">
+                        <p className="text-xs font-bold text-white truncate">{u.name}</p>
+                        <p className="text-[9.5px] font-mono text-violet-400/80 truncate">@{u.username}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => onToggleFollow?.(u.id)}
+                      className={`p-1 px-2.5 rounded-lg text-[9px] font-mono uppercase font-extrabold cursor-pointer transition-all shrink-0 ${
+                        followingIds.includes(u.id) 
+                          ? 'bg-violet-950 text-violet-300 border border-violet-500/20' 
+                          : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow'
+                      }`}
+                    >
+                      {followingIds.includes(u.id) ? 'Followed' : '+ Follow'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-2.5 relative z-10">
               <button 
-                onClick={() => { setSearchQuery(''); setSelectedTag(null); setFeedTab('for_you'); }}
-                className="px-4 py-2 bg-[#0c0823] hover:bg-violet-950 text-violet-300 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer"
+                onClick={() => setComposerOpen(true)}
+                className="px-4 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all hover:shadow-lg hover:shadow-violet-500/20"
               >
-                Reset Feed Filters
+                + Create Post
+              </button>
+              <button 
+                onClick={() => {
+                  setPullY(50);
+                  setPullState('refreshing');
+                  setIsRefreshing(true);
+                  setTimeout(() => {
+                    addNewFreshSimulatedPost();
+                    setIsRefreshing(false);
+                    setPullState('idle');
+                    setPullY(0);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed recalibrated and filled with fresh telemetry!' }));
+                  }, 1200);
+                }}
+                className="px-4 py-2.5 bg-[#0c0823] hover:bg-violet-950 text-violet-300 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all"
+              >
+                Recalibrate Feed 🔄
+              </button>
+              <button 
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'explore' } }));
+                  window.dispatchEvent(new CustomEvent('toast', { detail: '🌐 Redirecting to Explorer panel...' }));
+                }}
+                className="px-4 py-2.5 bg-[#0c0823] hover:bg-violet-950 text-violet-300 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all"
+              >
+                Explore Discover 🌐
               </button>
             </div>
           </div>
@@ -1351,7 +1791,7 @@ export default function FeedView({
             return (
               <div className="space-y-3.5 pt-2 pb-3.5 text-left">
                 <span className="text-[10px] uppercase font-mono tracking-widest text-[#8B5CF6] font-extrabold flex items-center gap-1.5 px-1">
-                  👥 Verified Nexora Nodes ({matchingUsers.length})
+                  👥 Verified Nexora Accounts ({matchingUsers.length})
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {matchingUsers.map(u => (
@@ -1482,121 +1922,82 @@ export default function FeedView({
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.3 }}
-                  className={`rounded-none md:rounded-3xl bg-black/95 border-y border-x-0 md:border border-violet-500/15 overflow-hidden text-left shadow-2xl relative w-full flex flex-col justify-between transition-all ${
-                    isCommentsOpen ? 'h-auto' : 'md:h-auto h-[calc(100vh-170px)]'
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextualMenuPost(post);
+                  }}
+                  onTouchStart={() => {
+                    longPressTimerRef.current[post.id] = setTimeout(() => {
+                      setContextualMenuPost(post);
+                      if (navigator.vibrate) navigator.vibrate(40);
+                    }, 600);
+                  }}
+                  onTouchEnd={() => {
+                    if (longPressTimerRef.current[post.id]) {
+                      clearTimeout(longPressTimerRef.current[post.id]);
+                      delete longPressTimerRef.current[post.id];
+                    }
+                  }}
+                  onDoubleClick={(e) => {
+                    e.preventDefault();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    // Add heart animation
+                    const heartId = `${Date.now()}-${Math.random()}`;
+                    setFloatingHearts(prev => [...prev, { id: heartId, x, y }]);
+                    setTimeout(() => {
+                      setFloatingHearts(prev => prev.filter(h => h.id !== heartId));
+                    }, 1000);
+                    
+                    // Trigger Spark like
+                    if (!post.isLikedByUser) {
+                      handleSpark(post.id);
+                    } else if (navigator.vibrate) {
+                      navigator.vibrate(20);
+                    }
+                  }}
+                  className={`snap-start scroll-mt-[112px] md:scroll-mt-[76px] rounded-none md:rounded-3xl bg-black border-y border-x-0 md:border border-violet-500/15 overflow-hidden text-left shadow-2xl relative w-full flex flex-col justify-between transition-all ${
+                    isCommentsOpen ? 'h-auto' : 'h-[calc(100vh-160px)] md:h-[650px]'
                   }`}
                 >
-                  {/* Premium Creator Header for Immersive Video */}
-                  <div className="p-3 pb-0 shrink-0 flex items-center justify-between z-10">
-                    <div className="flex items-center gap-3">
-                      <img 
-                        src={post.avatar} 
-                        alt={post.name} 
-                        className="w-9 h-9 rounded-xl object-cover border border-violet-500/20 cursor-pointer" 
-                        onClick={() => onViewProfile?.(post.userId)}
-                        referrerPolicy="no-referrer"
-                      />
-                      <div>
-                        <div className="flex items-center gap-1">
-                          <span 
-                            onClick={() => onViewProfile?.(post.userId)}
-                            className="font-sans font-extrabold text-xs text-white hover:text-violet-400 transition-colors cursor-pointer"
-                          >
-                            {post.name}
-                          </span>
-                          {(post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai') && (
-                            <CheckCircle className="w-3 h-3 text-violet-400 fill-current" />
-                          )}
-                        </div>
-                        <span className="text-[9px] font-mono text-violet-400/80 block">@{post.username} • {post.timestamp}</span>
-                      </div>
-                    </div>
-                  </div>
+                  {/* Floating hearts overlay */}
+                  {floatingHearts.map(heart => (
+                    <motion.div
+                      key={heart.id}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: [0, 1.5, 1.2, 1], opacity: [0, 1, 1, 0], y: -90, rotate: (Math.random() - 0.5) * 30 }}
+                      transition={{ duration: 0.8, ease: "easeOut" }}
+                      style={{ left: heart.x, top: heart.y }}
+                      className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50 text-pink-500 text-5xl filter drop-shadow-[0_0_15px_rgba(244,63,94,0.6)]"
+                    >
+                      ❤️
+                    </motion.div>
+                  ))}
 
                   {/* Outer edge-to-edge Video Container */}
-                  <div className="flex-1 min-h-0 relative w-full h-full flex items-center justify-center bg-black/30 my-1">
-                    <div className="w-full h-full max-h-full">
-                      <NexoraVideoPlayer
-                        post={post}
-                        videoUrl={post.videoUrl}
-                        onOpenFullscreen={() => setActiveVideoFullscreen(post)}
-                        onSpark={() => handleSpark(post.id)}
-                        isActive={activePostId === post.id}
-                        preloadMode={preloadMode}
-                        isReleased={isReleased}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Below the video media block */}
-                  <div className="p-3.5 pt-1.5 shrink-0 space-y-2">
-                    {/* Caption: text becomes secondary (small copy font-sans) */}
-                    {post.content && (
-                      <p className="text-[12px] text-zinc-300 font-sans leading-relaxed line-clamp-2">
-                        {post.content}
-                      </p>
-                    )}
-
-                    {/* Hashtags list if any */}
-                    {post.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-1">
-                        {post.tags.slice(0, 3).map(tag => (
-                          <button
-                            key={tag}
-                            onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                            className="text-[9.5px] font-mono text-violet-400 hover:text-white"
-                          >
-                            #{tag}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Actions row: ⚡ (Sparks) 💬 (Comments) 🔁 (Repost) ↗️ (Share) */}
-                    <div className="flex items-center justify-between border-t border-white/5 pt-2 text-zinc-400 text-xs">
-                      {/* Sparks (Like) */}
-                      <button
-                        onClick={() => handleSpark(post.id)}
-                        className={`flex items-center gap-1.5 hover:text-pink-400 transition-colors cursor-pointer ${post.isLikedByUser ? 'text-pink-400 font-bold' : ''}`}
-                      >
-                        <Zap className={`w-3.5 h-3.5 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400' : ''}`} />
-                        <span className="font-mono text-[10px]">{post.likes} Sparks</span>
-                      </button>
-
-                      {/* Comments count */}
-                      <button
-                        onClick={() => setActiveCommentsPostId(isCommentsOpen ? null : post.id)}
-                        className={`flex items-center gap-1.5 hover:text-violet-300 transition-colors cursor-pointer ${isCommentsOpen ? 'text-[#8B5CF6] font-bold' : ''}`}
-                      >
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        <span className="font-mono text-[10px]">{post.comments.length} Reply</span>
-                      </button>
-
-                      {/* Repost (Shares) */}
-                      <button
-                        onClick={() => {
-                          window.dispatchEvent(new CustomEvent('toast', { detail: '🔁 Post reposted to your network profile stream!' }));
-                        }}
-                        className="flex items-center gap-1.5 hover:text-cyan-400 transition-colors cursor-pointer"
-                      >
-                        <RefreshCw className="w-3 h-3" />
-                        <span className="font-mono text-[10px]">{post.shares} Reposts</span>
-                      </button>
-
-                      {/* Share link */}
-                      <button
-                        onClick={() => {
-                          const text = `${window.location.origin}/post/${post.id}`;
-                          navigator.clipboard.writeText(text);
-                          window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
-                        }}
-                        className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer"
-                        title="Copy Link to Share"
-                      >
-                        <Share2 className="w-3 h-3" />
-                        <span className="font-mono text-[10px]">Share</span>
-                      </button>
-                    </div>
+                  <div className={`relative w-full overflow-hidden transition-all duration-350 bg-black ${
+                    isCommentsOpen ? 'h-[40vh] md:h-[450px]' : 'flex-1 min-h-0 h-full'
+                  }`}>
+                    <NexoraVideoPlayer
+                      post={post}
+                      videoUrl={post.videoUrl}
+                      onOpenFullscreen={() => setActiveVideoFullscreen(post)}
+                      onSpark={() => handleSpark(post.id)}
+                      isActive={activePostId === post.id}
+                      preloadMode={preloadMode}
+                      isReleased={isReleased}
+                      isFollowing={followingIds.includes(post.userId || '')}
+                      onToggleFollow={() => onToggleFollow?.(post.userId || '')}
+                      onCommentToggle={() => setActiveCommentsPostId(activeCommentsPostId === post.id ? null : post.id)}
+                      isCommentsOpen={activeCommentsPostId === post.id}
+                      onNotInterested={() => {
+                        setMutedUserIds(prev => [...prev, post.userId || '']);
+                        window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Creator muted.' }));
+                      }}
+                      onViewProfile={(userId) => onViewProfile?.(userId)}
+                    />
                   </div>
 
                   {/* Inline Comments Section from FeedView inside Video Card */}
@@ -1615,7 +2016,7 @@ export default function FeedView({
                               No comments yet. Start the conversation!
                             </p>
                           )}
-                          {post.comments.map(c => (
+                          {post.comments.map((c, commentIndex) => (
                             <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
                               <div className="flex items-start justify-between gap-2 text-xs">
                                 <div className="flex gap-2">
@@ -1625,13 +2026,28 @@ export default function FeedView({
                                     <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • {c.timestamp}</span>
                                   </div>
                                 </div>
-                                <button 
-                                  onClick={() => handleSparkComment(post.id, c.id)}
-                                  className={`flex items-center gap-1 font-mono text-[10px] hover:text-pink-400 ${c.isLikedByUser ? 'text-pink-400' : 'text-violet-400/50'}`}
-                                >
-                                  <Zap className="w-3 h-3 fill-current" />
-                                  <span>{c.likes}</span>
-                                </button>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  <button 
+                                    onClick={() => handleSparkComment(post.id, c.id)}
+                                    className={`flex items-center gap-1 font-mono text-[10px] hover:text-pink-400 ${c.isLikedByUser ? 'text-pink-400' : 'text-violet-400/50'}`}
+                                  >
+                                    <Zap className="w-3 h-3 fill-current" />
+                                    <span>{c.likes}</span>
+                                  </button>
+                                  {(c.username === currentUser.username || post.userId === currentUser.id) && (
+                                    <button
+                                      onClick={() => {
+                                        if (confirm('Delete this comment?')) {
+                                          window.dispatchEvent(new CustomEvent('nexora-delete-comment', { detail: { postId: post.id, commentIndex } }));
+                                        }
+                                      }}
+                                      className="p-1 text-red-400 hover:text-red-300 transition-colors rounded-md hover:bg-white/5 cursor-pointer animate-fade-in"
+                                      title="Delete comment"
+                                    >
+                                      <Trash className="w-3 h-3" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                               
                               <p className="text-xs text-slate-200 pl-9 font-sans">{c.content}</p>
@@ -1725,7 +2141,43 @@ export default function FeedView({
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.3 }}
-                className={`p-4 md:p-5 rounded-none md:rounded-3xl bg-[#0b091e]/80 border-y border-x-0 md:border ${
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextualMenuPost(post);
+                }}
+                onTouchStart={() => {
+                  longPressTimerRef.current[post.id] = setTimeout(() => {
+                    setContextualMenuPost(post);
+                    if (navigator.vibrate) navigator.vibrate(40);
+                  }, 600);
+                }}
+                onTouchEnd={() => {
+                  if (longPressTimerRef.current[post.id]) {
+                    clearTimeout(longPressTimerRef.current[post.id]);
+                    delete longPressTimerRef.current[post.id];
+                  }
+                }}
+                onDoubleClick={(e) => {
+                  e.preventDefault();
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = e.clientX - rect.left;
+                  const y = e.clientY - rect.top;
+                  
+                  // Add heart animation
+                  const heartId = `${Date.now()}-${Math.random()}`;
+                  setFloatingHearts(prev => [...prev, { id: heartId, x, y }]);
+                  setTimeout(() => {
+                    setFloatingHearts(prev => prev.filter(h => h.id !== heartId));
+                  }, 1000);
+                  
+                  // Trigger Spark like
+                  if (!post.isLikedByUser) {
+                    handleSpark(post.id);
+                  } else if (navigator.vibrate) {
+                    navigator.vibrate(20);
+                  }
+                }}
+                className={`snap-start scroll-mt-[112px] md:scroll-mt-[76px] p-4 md:p-5 rounded-none md:rounded-3xl bg-[#0b091e]/80 border-y border-x-0 md:border ${
                   post.isBroadcastPost 
                     ? 'border-amber-500/25 bg-[#171008]/90 shadow-lg shadow-amber-500/5' 
                     : post.userId === 'user-0' 
@@ -1733,6 +2185,19 @@ export default function FeedView({
                       : 'border-violet-500/10'
                 } relative overflow-hidden group text-left w-full`}
               >
+                {/* Floating hearts overlay */}
+                {floatingHearts.map(heart => (
+                  <motion.div
+                    key={heart.id}
+                    initial={{ scale: 0, opacity: 0 }}
+                    animate={{ scale: [0, 1.5, 1.2, 1], opacity: [0, 1, 1, 0], y: -90, rotate: (Math.random() - 0.5) * 30 }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    style={{ left: heart.x, top: heart.y }}
+                    className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50 text-pink-500 text-5xl filter drop-shadow-[0_0_15px_rgba(244,63,94,0.6)]"
+                  >
+                    ❤️
+                  </motion.div>
+                ))}
                 {/* Future scheduled posts warning banner (Only visible to the creator) */}
                 {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (
                   <div className="mb-4 p-3 bg-violet-600/15 border border-violet-500/30 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-violet-300">
@@ -1892,6 +2357,54 @@ export default function FeedView({
                                 </button>
                               )}
 
+                              {/* Edit Caption (If own post) */}
+                              {post.userId === currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    const newCaption = prompt('Edit caption:', post.content);
+                                    if (newCaption !== null && newCaption.trim() !== '') {
+                                      window.dispatchEvent(new CustomEvent('nexora-edit-caption', { detail: { postId: post.id, newCaption } }));
+                                    }
+                                    setActiveDotsMenuPostId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                                  Edit Caption
+                                </button>
+                              )}
+
+                              {/* Toggle Comments (If own post) */}
+                              {post.userId === currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    const disabled = !post.commentsDisabled;
+                                    window.dispatchEvent(new CustomEvent('nexora-toggle-comments', { detail: { postId: post.id, disabled } }));
+                                    setActiveDotsMenuPostId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                                >
+                                  <ShieldAlert className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
+                                  {post.commentsDisabled ? 'Enable Comments' : 'Disable Comments'}
+                                </button>
+                              )}
+
+                              {/* Delete Post (If own post) */}
+                              {post.userId === currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+                                      window.dispatchEvent(new CustomEvent('nexora-delete-post', { detail: { postId: post.id } }));
+                                    }
+                                    setActiveDotsMenuPostId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                                >
+                                  <Trash className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                                  Delete Post
+                                </button>
+                              )}
+
                               {/* Follow/Unfollow Creator (If not own post) */}
                               {post.userId !== currentUser.id && (
                                 <button
@@ -1969,7 +2482,7 @@ export default function FeedView({
                                 onClick={() => {
                                   setNotInterestedTags(prev => [...prev, ...post.tags]);
                                   setActiveDotsMenuPostId(null);
-                                  window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Tag preference customized. Reducing matched stream.' }));
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Preference saved. We will show fewer posts like this.' }));
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-white/5 text-[#A78BFA] flex items-center gap-2 text-xs transition-colors cursor-pointer"
                               >
@@ -1993,7 +2506,7 @@ export default function FeedView({
                                 onClick={() => {
                                   setBlockedUserIds(prev => [...prev, post.userId]);
                                   setActiveDotsMenuPostId(null);
-                                  window.dispatchEvent(new CustomEvent('toast', { detail: `🚫 Blocked @${post.username}. Stream isolated.` }));
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: `🚫 Blocked @${post.username}.` }));
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-red-950/20 text-rose-500 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
                               >
@@ -2006,7 +2519,7 @@ export default function FeedView({
                                   const text = `${window.location.origin}/post/${post.id}`;
                                   navigator.clipboard.writeText(text);
                                   setActiveDotsMenuPostId(null);
-                                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Link copied to clipboard!' }));
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-white/5 text-emerald-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
                               >
@@ -2019,7 +2532,7 @@ export default function FeedView({
                                   const text = `${window.location.origin}/post/${post.id}`;
                                   navigator.clipboard.writeText(text);
                                   setActiveDotsMenuPostId(null);
-                                  window.dispatchEvent(new CustomEvent('toast', { detail: '📤 Share sheet dispatched. Propagating nodes...' }));
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: '📤 Link copied! Ready to share.' }));
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-white/5 text-sky-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
                               >
@@ -2170,6 +2683,15 @@ export default function FeedView({
                       isActive={activePostId === post.id}
                       preloadMode={preloadMode}
                       isReleased={isReleased}
+                      isFollowing={followingIds.includes(post.userId || '')}
+                      onToggleFollow={() => onToggleFollow?.(post.userId || '')}
+                      onCommentToggle={() => setActiveCommentsPostId(activeCommentsPostId === post.id ? null : post.id)}
+                      isCommentsOpen={activeCommentsPostId === post.id}
+                      onNotInterested={() => {
+                        setMutedUserIds(prev => [...prev, post.userId || '']);
+                        window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Creator muted.' }));
+                      }}
+                      onViewProfile={(userId) => onViewProfile?.(userId)}
                     />
                   </div>
                 )}
@@ -2362,66 +2884,93 @@ export default function FeedView({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex items-center justify-between border-t border-white/5 pt-3 text-violet-300/70 text-xs text-left">
-                    {/* Sparks action instead of likes */}
-                    <button
-                      onClick={() => handleSpark(post.id)}
-                      className={`flex items-center gap-1.5 group hover:text-pink-400 transition-colors cursor-pointer ${
-                        post.isLikedByUser ? 'text-pink-400 font-bold' : ''
-                      }`}
-                    >
-                      <Zap className={`w-4 h-4 transition-transform group-hover:scale-120 group-active:scale-130 ${
-                        post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_6px_#f43f5e]' : ''
-                      }`} />
-                      <span className="font-mono">{post.likes} Sparks</span>
-                    </button>
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-3 text-violet-300/70 text-xs text-left">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {/* Sparks action instead of likes */}
+                      <motion.button
+                        whileTap={{ scale: 0.92, y: 0.5 }}
+                        whileHover={{ scale: 1.04 }}
+                        onClick={() => handleSpark(post.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-[11px] ${
+                          post.isLikedByUser 
+                            ? 'bg-pink-500/15 border-pink-500/30 text-pink-400 shadow-[0_0_12px_rgba(244,63,94,0.15)] font-bold' 
+                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
+                        }`}
+                      >
+                        <Zap className={`w-3.5 h-3.5 transition-transform ${
+                          post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_6px_#f43f5e]' : 'text-pink-400/80'
+                        }`} />
+                        <span className="font-mono">{post.likes}</span>
+                      </motion.button>
 
-                    <button
-                      onClick={() => setActiveCommentsPostId(isCommentsOpen ? null : post.id)}
-                      className={`flex items-center gap-1.5 hover:text-violet-300 transition-colors cursor-pointer ${
-                        isCommentsOpen ? 'text-violet-300 font-bold' : ''
-                      }`}
-                    >
-                      <MessageSquare className="w-4 h-4" />
-                      <span>{post.comments.length} Comments</span>
-                    </button>
+                      {/* Comments expand button */}
+                      <motion.button
+                        whileTap={{ scale: 0.92, y: 0.5 }}
+                        whileHover={{ scale: 1.04 }}
+                        onClick={() => setActiveCommentsPostId(isCommentsOpen ? null : post.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-[11px] ${
+                          isCommentsOpen 
+                            ? 'bg-violet-500/20 border-violet-500/30 text-violet-300 font-bold' 
+                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
+                        }`}
+                      >
+                        <MessageSquare className="w-3.5 h-3.5 text-violet-400" />
+                        <span>{post.comments.length}</span>
+                      </motion.button>
 
-                    <button
-                      onClick={() => {
-                        setLocalPosts(prev => prev.map(p => {
-                          if (p.id === post.id) return { ...p, shares: p.shares + 1 };
-                          return p;
-                        }));
-                        alert("Post shared successfully! (+5 reputation)");
-                      }}
-                      className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors cursor-pointer"
-                    >
-                      <Repeat className="w-4 h-4" />
-                      <span>{post.shares} reposts</span>
-                    </button>
+                      {/* Repost button */}
+                      <motion.button
+                        whileTap={{ scale: 0.92, y: 0.5 }}
+                        whileHover={{ scale: 1.04 }}
+                        onClick={() => {
+                          setLocalPosts(prev => prev.map(p => {
+                            if (p.id === post.id) return { ...p, shares: p.shares + 1 };
+                            return p;
+                          }));
+                          if (onSharePost) {
+                            onSharePost(post.id);
+                          }
+                          window.dispatchEvent(new CustomEvent('toast', { detail: "🔁 Post reposted! (+5 Reputation Points)" }));
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 cursor-pointer text-[11px] text-violet-300/90"
+                      >
+                        <Repeat className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{post.shares}</span>
+                      </motion.button>
+                    </div>
 
-                    <button
-                      onClick={() => handleSave(post.id)}
-                      className={`flex items-center gap-1.5 hover:text-cyan-400 transition-colors cursor-pointer ${
-                        post.isBookmarkedByUser ? 'text-cyan-400 font-bold' : ''
-                      }`}
-                    >
-                      <Bookmark className={`w-4 h-4 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : ''}`} />
-                      <span className="hidden sm:inline">Save</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* Save/Bookmark button */}
+                      <motion.button
+                        whileTap={{ scale: 0.92, y: 0.5 }}
+                        whileHover={{ scale: 1.04 }}
+                        onClick={() => handleSave(post.id)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-[11px] ${
+                          post.isBookmarkedByUser 
+                            ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400 font-bold shadow-[0_0_12px_rgba(34,211,238,0.15)]' 
+                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
+                        }`}
+                      >
+                        <Bookmark className={`w-3.5 h-3.5 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-cyan-400/80'}`} />
+                        <span className="hidden sm:inline">Save</span>
+                      </motion.button>
 
-                    <button
-                      onClick={() => {
-                        try {
-                          navigator.clipboard.writeText(`https://nexora.ai/post/${post.id}`);
-                          alert("Post link copied to clipboard.");
-                        } catch(e){}
-                      }}
-                      className="flex items-center gap-1.5 hover:text-violet-300 transition-colors cursor-pointer"
-                    >
-                      <Share2 className="w-4 h-4 text-pink-400" />
-                      <span className="hidden sm:inline">Share</span>
-                    </button>
+                      {/* Clipboard Share button */}
+                      <motion.button
+                        whileTap={{ scale: 0.92, y: 0.5 }}
+                        whileHover={{ scale: 1.04 }}
+                        onClick={() => {
+                          try {
+                            navigator.clipboard.writeText(`https://nexora.ai/post/${post.id}`);
+                            window.dispatchEvent(new CustomEvent('toast', { detail: "📋 Post link copied to clipboard!" }));
+                          } catch(e){}
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 cursor-pointer text-[11px] text-violet-300/90"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-pink-400" />
+                        <span className="hidden sm:inline">Share</span>
+                      </motion.button>
+                    </div>
                   </div>
                 )}
 
@@ -2441,7 +2990,7 @@ export default function FeedView({
                             No comments yet. Start the conversation!
                           </p>
                         )}
-                        {post.comments.map(c => (
+                        {post.comments.map((c, commentIndex) => (
                           <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
                             <div className="flex items-start justify-between gap-2 text-xs">
                               <div className="flex gap-2">
@@ -2451,13 +3000,28 @@ export default function FeedView({
                                   <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • {c.timestamp}</span>
                                 </div>
                               </div>
-                              <button 
-                                onClick={() => handleSparkComment(post.id, c.id)}
-                                className={`flex items-center gap-1 font-mono text-[10px] hover:text-pink-400 ${c.isLikedByUser ? 'text-pink-400' : 'text-violet-400/50'}`}
-                              >
-                                <Zap className="w-3 h-3 fill-current" />
-                                <span>{c.likes}</span>
-                              </button>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button 
+                                  onClick={() => handleSparkComment(post.id, c.id)}
+                                  className={`flex items-center gap-1 font-mono text-[10px] hover:text-pink-400 ${c.isLikedByUser ? 'text-pink-400' : 'text-violet-400/50'}`}
+                                >
+                                  <Zap className="w-3 h-3 fill-current" />
+                                  <span>{c.likes}</span>
+                                </button>
+                                {(c.username === currentUser.username || post.userId === currentUser.id) && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm('Delete this comment?')) {
+                                        window.dispatchEvent(new CustomEvent('nexora-delete-comment', { detail: { postId: post.id, commentIndex } }));
+                                      }
+                                    }}
+                                    className="p-1 text-red-400 hover:text-red-300 transition-colors rounded-md hover:bg-white/5 cursor-pointer animate-fade-in"
+                                    title="Delete comment"
+                                  >
+                                    <Trash className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             
                             <p className="text-xs text-slate-200 pl-9 font-sans">{c.content}</p>
@@ -2876,14 +3440,18 @@ export default function FeedView({
               </div>
             )}
 
-            {selectedMoment.mediaType === 'video' && (
-              <div className="absolute inset-0 z-0 overflow-hidden select-none pointer-events-none opacity-40">
-                {/* Cyber grid loop */}
+            {selectedMoment.mediaType === 'video' && selectedMoment.mediaUrl && (
+              <div className="absolute inset-0 z-0 overflow-hidden select-none">
+                <NexoraVideo
+                  src={selectedMoment.mediaUrl}
+                  autoPlay
+                  loop
+                  muted={false}
+                  playsInline
+                  className="w-full h-full object-cover opacity-80"
+                />
+                <div className="absolute inset-0 bg-gradient-to-b from-[#060413]/70 via-[#060413]/30 to-[#060413]" />
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(139,92,246,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(139,92,246,0.1)_1px,transparent_1px)] bg-[size:30px_30px]" />
-                <div className="absolute w-[200%] h-[200%] top-[-50%] left-[-50%] bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.15),transparent_60%)] animate-spin-slow" />
-                <svg className="absolute inset-0 w-full h-full text-violet-500/20" viewBox="0 0 100 100" preserveAspectRatio="none">
-                  <path d="M 0,50 L 100,50 M 50,0 L 50,100" strokeWidth="0.2" strokeDasharray="2 2" />
-                </svg>
                 <div className="absolute bottom-5 left-5 text-[8px] font-mono text-cyan-400/60 uppercase tracking-widest leading-relaxed">
                   STREAM COMPILING: FEED // LIVE RECORD H.265 // BITRATE 4200 KBPS<br />
                   NODE TIMECODE SECS: {storyIndex * 15}s
@@ -3160,11 +3728,11 @@ export default function FeedView({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black z-50 flex flex-col md:flex-row"
+            className="fixed inset-0 bg-black z-50 flex flex-col md:flex-row overflow-y-auto md:overflow-hidden touch-pan-y"
           >
             {/* Left Column: Full Immersive Video Player */}
-            <div className="flex-1 bg-black relative flex items-center justify-center">
-              <video 
+            <div className="flex-1 bg-black relative flex items-center justify-center touch-pan-y">
+              <NexoraVideo 
                 ref={fullscreenVideoRef}
                 src={activeVideoFullscreen.videoUrl}
                 autoPlay
@@ -3172,7 +3740,7 @@ export default function FeedView({
                 loop
                 playsInline
                 onClick={handleToggleFullscreenPlay}
-                className="w-full h-full max-h-screen object-contain cursor-pointer"
+                className="w-full h-full max-h-screen object-contain cursor-pointer touch-pan-y"
               />
               
               {/* Play/Pause state overlay indicator */}
@@ -3497,7 +4065,7 @@ export default function FeedView({
                     {analyticsPost.likes > 0 ? (12.4 + (analyticsPost.comments.length * 1.5)).toFixed(1) : '8.2'}%
                   </div>
                   <div className="text-[8.5px] font-mono text-violet-400 flex items-center gap-0.5">
-                    <span>⚡ Optimized</span> <span className="text-zinc-500">feed weight</span>
+                    <span>⚡ High</span> <span className="text-zinc-500">engagement</span>
                   </div>
                 </div>
 
@@ -3512,7 +4080,7 @@ export default function FeedView({
                 </div>
 
                 <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Followers Gained</span>
+                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">{TERMINOLOGY.followersCapitalized} Gained</span>
                   <div className="text-lg font-black text-cyan-400 font-sans">
                     +{Math.floor(analyticsPost.likes * 0.1) + 1}
                   </div>
@@ -3528,15 +4096,197 @@ export default function FeedView({
                   💡 NEXORA AUDIENCE INSIGHT
                 </span>
                 <p className="text-[11px] text-violet-200 font-sans leading-relaxed">
-                  Your content has been indexed inside Nigeria & surrounding nodes! Post another item targeting <strong className="text-pink-400">#{analyticsPost.tags[0] || 'Nexora'}</strong> within the next 4 hours to maximize your viral multiplier.
+                  Your content has been indexed inside Nigeria & surrounding networks! Post another item targeting <strong className="text-pink-400">#{analyticsPost.tags[0] || 'Nexora'}</strong> within the next 4 hours to maximize your viral multiplier.
                 </p>
               </div>
 
               <div className="mt-4 text-center">
                 <span className="text-[8.5px] font-mono text-zinc-500 uppercase tracking-wider">
-                  Telemetry verified by Nexora Algorithmic Distribution Server
+                  Verified by Nexora Security
                 </span>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 🔟 CONTEXTUAL ACTION BOTTOM SHEET (Triggered on long-press or right-click) */}
+      <AnimatePresence>
+        {contextualMenuPost && (
+          <div className="fixed inset-0 z-100 bg-black/75 backdrop-blur-md flex items-end justify-center" onClick={() => setContextualMenuPost(null)}>
+            <motion.div
+              initial={{ y: "100%", opacity: 0.5 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0.5 }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="w-full max-w-lg bg-[#0e0c25] border-t border-violet-500/20 rounded-t-[32px] p-6 text-left relative space-y-4 pb-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Drag indicator bar */}
+              <div className="w-12 h-1.5 bg-white/10 rounded-full mx-auto mb-2" />
+
+              <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                <img src={contextualMenuPost.avatar} alt={contextualMenuPost.username} className="w-10 h-10 rounded-xl object-cover" />
+                <div>
+                  <h4 className="text-xs font-sans font-black text-white">{contextualMenuPost.name}</h4>
+                  <p className="text-[10px] font-mono text-violet-400">@{contextualMenuPost.username} • {contextualMenuPost.timestamp}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                {/* Save post */}
+                <button
+                  onClick={() => {
+                    setShowSaveToCollectionModalId(contextualMenuPost.id);
+                    setContextualMenuPost(null);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
+                >
+                  <Folder className="w-4 h-4 text-pink-400" />
+                  Save to Pinterest Collections Folder
+                </button>
+
+                {/* Transparency controls: Explain Why */}
+                <button
+                  onClick={() => {
+                    setShowTransparencyExplanation(true);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
+                >
+                  <Info className="w-4 h-4 text-cyan-400" />
+                  Explain why I see this recommendation
+                </button>
+
+                {/* Not interested */}
+                <button
+                  onClick={() => {
+                    setHiddenPostIds(prev => [...prev, contextualMenuPost.id]);
+                    const cleanTag = (contextualMenuPost.tags?.[0] || 'nexora').toLowerCase().replace('#', '');
+                    setNotInterestedTags(prev => [...prev, cleanTag]);
+                    setLastAction({ type: 'not_interested', postId: contextualMenuPost.id, data: { tags: [cleanTag] } });
+                    setContextualMenuPost(null);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Tag muted. Recommendation engine updated.' }));
+                  }}
+                  className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
+                >
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  Not Interested in this topic (#{contextualMenuPost.tags?.[0] || 'Nexora'})
+                </button>
+
+                {/* Mute Creator */}
+                <button
+                  onClick={() => {
+                    setMutedCreatorIds(prev => [...prev, contextualMenuPost.userId]);
+                    setLastAction({ type: 'mute_creator', postId: contextualMenuPost.id, data: { creatorId: contextualMenuPost.userId } });
+                    setContextualMenuPost(null);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔇 Creator @${contextualMenuPost.username} muted in recommendation feeds.` }));
+                  }}
+                  className="w-full flex items-center gap-3 p-3 bg-white/3 hover:bg-white/10 rounded-xl text-left text-xs font-sans font-bold text-violet-100 transition-colors"
+                >
+                  <VolumeX className="w-4 h-4 text-red-400" />
+                  Mute and Hide posts from this creator
+                </button>
+
+                {/* Report post */}
+                <button
+                  onClick={() => {
+                    setReportingPost(contextualMenuPost);
+                    setContextualMenuPost(null);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 bg-red-950/20 hover:bg-red-900/30 border border-red-500/10 rounded-xl text-left text-xs font-sans font-bold text-red-200 transition-colors"
+                >
+                  <Trash className="w-4 h-4 text-red-400" />
+                  Report or Moderation Flag
+                </button>
+              </div>
+
+              <button
+                onClick={() => setContextualMenuPost(null)}
+                className="w-full py-2.5 bg-violet-950 hover:bg-violet-900 text-violet-300 font-mono font-bold text-xs uppercase rounded-xl transition-colors tracking-wider cursor-pointer"
+              >
+                Close Control Menu
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 11. RECOMMENDATION TRANSPARENCY EXPLANATORY MODAL */}
+      <AnimatePresence>
+        {showTransparencyExplanation && contextualMenuPost && (
+          <div className="fixed inset-0 z-200 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0b081c] border border-violet-500/30 rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl relative text-left"
+            >
+              <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4">
+                <span className="text-xs font-mono text-cyan-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                  <Info className="w-4 h-4 text-cyan-400" /> RECOMMENDER TRANSPARENCY INDEX
+                </span>
+                <button 
+                  onClick={() => setShowTransparencyExplanation(false)}
+                  className="p-1 px-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs font-mono"
+                >
+                  Close ×
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <p className="text-xs text-zinc-300 font-sans leading-relaxed">
+                  Nexora compiles a dynamic telemetry graph mapping interest weights from your interactions (clicks, Sparks/likes, dwell time, comments). Here is why this item was dispatched:
+                </p>
+
+                <div className="p-3 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-2">
+                  <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block font-black">Graph Analysis Signals</span>
+                  {getRecommendationExplanation(contextualMenuPost).map((reason, idx) => (
+                    <div key={idx} className="flex gap-2 text-xs font-sans text-violet-200 leading-normal">
+                      <span className="text-pink-500 font-mono">▸</span>
+                      <span>{reason}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="text-[10px] font-mono text-zinc-500 leading-normal bg-zinc-950/40 p-3 rounded-xl border border-white/3">
+                  💡 <strong>Recommendation Control:</strong> If this content is not relevant, you can mute topic tags or block this creator node directly using the long-press menu options.
+                </div>
+              </div>
+
+              <button 
+                onClick={() => {
+                  setShowTransparencyExplanation(false);
+                  setContextualMenuPost(null);
+                }}
+                className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all tracking-wider cursor-pointer mt-5"
+              >
+                Acknowledge Telemetry
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 12. UNDO FLOATING SNACKBAR (For reversing recommendation actions) */}
+      <AnimatePresence>
+        {lastAction && (
+          <div className="fixed bottom-24 inset-x-4 z-100 flex justify-center pointer-events-none">
+            <motion.div
+              initial={{ y: 50, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 50, opacity: 0 }}
+              className="bg-[#0e0c25] border border-violet-500/40 px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between gap-4 text-xs font-sans text-white pointer-events-auto max-w-sm w-full"
+            >
+              <div className="flex items-center gap-2">
+                <Undo2 className="w-4 h-4 text-amber-400 animate-pulse" />
+                <span>Preference updated. Changed your mind?</span>
+              </div>
+              <button
+                onClick={handleUndoRecentChoice}
+                className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white font-mono font-black text-[10px] uppercase rounded-lg cursor-pointer transition-colors shrink-0"
+              >
+                Undo
+              </button>
             </motion.div>
           </div>
         )}

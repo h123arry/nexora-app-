@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import NexoraVideo from './NexoraVideo';
 import { 
   Compass, 
   Search, 
@@ -39,13 +40,14 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post, Circle } from '../types';
 import { INITIAL_CIRCLES } from '../data/database';
+import { TERMINOLOGY } from '../services/voh';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 
 interface ExploreViewProps {
   creators: User[];
   posts: Post[];
   setSelectedTag: (tag: string | null) => void;
-  setActiveTab: (tab: 'feed' | 'explore' | 'pulse' | 'matrix' | 'activity' | 'profile') => void;
+  setActiveTab: (tab: any) => void;
   onLikePost: (postId: string) => void;
   onToggleFollow?: (creatorId: string) => void;
   followingIds: string[];
@@ -564,7 +566,7 @@ export default function ExploreView({
           <div className="shrink-0 flex items-center gap-2.5">
             <button
               onClick={() => {
-                setLiveComments([{ id: '1', user: 'System', text: 'Live secure video channel established. Camera calibrating...', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' }]);
+                setLiveComments([{ id: '1', user: 'System', text: 'Live secure video channel established. Camera loading...', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' }]);
                 setLiveAccumulatedSparks(0);
                 setIsGoingLiveOwn(true);
                 setLiveStreamStatus('streaming');
@@ -664,7 +666,7 @@ export default function ExploreView({
                 { id: 'posts', label: 'Posts 📝' },
                 { id: 'videos', label: 'Videos 🎥' },
                 { id: 'voice', label: 'Voice Posts 🎙️' },
-                { id: 'communities', label: 'Communities 🏟️' },
+                { id: 'communities', label: `${TERMINOLOGY.communitiesCapitalized} 🏟️` },
                 { id: 'hashtags', label: 'Hashtags 🏷️' },
                 { id: 'polls', label: 'Polls 📊' },
                 { id: 'pulse', label: 'Pulse 🌍' }
@@ -866,6 +868,129 @@ export default function ExploreView({
           </div>
         </div>
       </div>
+      
+      {/* 🟢 IDLE SEARCH STATE: Suggested & Trending Discoveries (Avoid Empty Screen) */}
+      {!(localSearch.trim().length > 0 || searchFilterType !== 'all' || activeCollectionFolder !== null) && (
+        <div className="space-y-6 pt-2">
+          {/* Trending Creators Row */}
+          <div className="space-y-3 text-left">
+            <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest block">
+              👤 SUGGESTED CREATORS FOR YOU
+            </span>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {creators.slice(0, 4).map((user) => (
+                <div 
+                  key={user.id} 
+                  className="p-3.5 rounded-2xl bg-black/45 hover:bg-violet-950/15 border border-violet-500/10 hover:border-violet-500/20 transition-all flex flex-col items-center text-center gap-2 relative overflow-hidden group"
+                >
+                  <img 
+                    src={user.avatar} 
+                    alt={user.name} 
+                    referrerPolicy="no-referrer"
+                    className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-all"
+                  />
+                  <div>
+                    <div className="flex items-center justify-center gap-0.5">
+                      <h4 className="text-[11px] font-black text-white font-sans truncate max-w-[90px]">{user.name}</h4>
+                      {user.isVerified && <PurpleVerifiedBadge />}
+                    </div>
+                    <span className="text-[9px] font-mono text-violet-400/70">@{user.username}</span>
+                  </div>
+                  <button 
+                    onClick={() => onViewProfile?.(user.id)}
+                    className="w-full mt-1 py-1 rounded-lg bg-violet-600/10 hover:bg-violet-600 text-violet-300 hover:text-white font-sans text-[9px] font-bold uppercase tracking-wider transition-all cursor-pointer"
+                  >
+                    View Profile
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Suggested Communities & Trending Videos Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Column A: Suggested Guilds / Communities */}
+            <div className="space-y-3 text-left">
+              <span className="text-[10px] font-mono font-black text-cyan-400 uppercase tracking-widest block">
+                🏟️ POPULAR COMMUNITIES
+              </span>
+              <div className="flex flex-col gap-2.5">
+                {INITIAL_CIRCLES.slice(0, 3).map((circle) => (
+                  <div 
+                    key={circle.id}
+                    className="p-3 bg-black/35 hover:bg-cyan-950/10 border border-cyan-500/10 hover:border-cyan-500/20 rounded-xl flex items-center justify-between gap-3 transition-all"
+                  >
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="w-9 h-9 rounded-lg bg-cyan-950/40 border border-cyan-500/20 flex items-center justify-center text-cyan-300 text-sm shrink-0 font-sans">
+                        🏟️
+                      </div>
+                      <div className="overflow-hidden">
+                        <h4 className="text-xs font-bold text-white truncate">{circle.name}</h4>
+                        <p className="text-[9px] text-zinc-400 truncate">{circle.description}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setLocalSearch(circle.name);
+                        setSearchFilterType('communities');
+                        window.dispatchEvent(new CustomEvent('toast', { detail: `🏟️ Exploring ${circle.name} community...` }));
+                      }}
+                      className="px-2.5 py-1 rounded-md bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-300 text-[9px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0"
+                    >
+                      Explore
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Column B: Trending short video feeds */}
+            <div className="space-y-3 text-left">
+              <span className="text-[10px] font-mono font-black text-rose-400 uppercase tracking-widest block">
+                🎥 TRENDING PLATFORM CLIPS
+              </span>
+              <div className="flex flex-col gap-2.5">
+                {posts.filter(p => p.videoUrl).slice(0, 3).map((videoPost) => (
+                  <div 
+                    key={videoPost.id}
+                    className="p-3 bg-black/35 hover:bg-rose-950/10 border border-rose-500/10 hover:border-rose-500/20 rounded-xl flex items-center justify-between gap-3 transition-all"
+                  >
+                    <div className="flex items-center gap-2.5 overflow-hidden">
+                      <div className="w-12 h-9 rounded-md bg-black/50 border border-rose-500/20 relative overflow-hidden shrink-0">
+                        <video 
+                          src={videoPost.videoUrl} 
+                          className="w-full h-full object-cover opacity-65" 
+                          muted 
+                          playsInline 
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Play className="w-2.5 h-2.5 text-white fill-white" />
+                        </div>
+                      </div>
+                      <div className="overflow-hidden">
+                        <h4 className="text-xs font-bold text-white truncate">{videoPost.name}</h4>
+                        <p className="text-[9px] text-zinc-400 truncate">{videoPost.content}</p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => {
+                        setLocalSearch(videoPost.id);
+                        setSearchFilterType('videos');
+                        window.dispatchEvent(new CustomEvent('toast', { detail: `🎥 Play trending clip...` }));
+                      }}
+                      className="px-2.5 py-1 rounded-md bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-300 text-[9px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0"
+                    >
+                      Watch
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* 🔴 SEARCH RESULTS OVERLAY/DOCK VIEW (Conditional) */}
       {(localSearch.trim().length > 0 || searchFilterType !== 'all' || activeCollectionFolder !== null) && (
@@ -874,7 +999,7 @@ export default function ExploreView({
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#8B5CF6] animate-ping" />
               <h2 className="text-sm font-sans font-black tracking-wider uppercase text-violet-200">
-                Found {matchedCreators.length} Users, {matchedCircles.length} Communities & {sortedMatchedPosts.length} Posts
+                Found {matchedCreators.length} Users, {matchedCircles.length} {TERMINOLOGY.communitiesCapitalized} & {sortedMatchedPosts.length} Posts
               </h2>
             </div>
             <button 
@@ -915,7 +1040,7 @@ export default function ExploreView({
                         </div>
                         {/* Followers level */}
                         <span className="text-[9px] font-mono text-zinc-400 mt-0.5 block font-bold">
-                          ⚡ {user.followers || '14.8K'} Follower Nodes
+                          👥 {user.followers || '14.8K'} {TERMINOLOGY.followersCapitalized}
                         </span>
                         {/* Bio preview */}
                         <p className="text-[11px] text-zinc-300 font-sans mt-0.5 line-clamp-1 max-w-sm">
@@ -932,7 +1057,7 @@ export default function ExploreView({
                           : 'bg-linear-to-r from-violet-600 to-pink-600 text-white'
                       }`}
                     >
-                      {followingIds.includes(user.id) ? 'Following' : 'Follow Node'}
+                      {followingIds.includes(user.id) ? 'Following' : 'Follow'}
                     </button>
                   </div>
                 ))}
@@ -944,7 +1069,7 @@ export default function ExploreView({
           {matchedCircles.length > 0 && (
             <div className="space-y-3 pt-3 border-t border-white/5">
               <span className="text-[10px] font-mono font-black text-emerald-400 uppercase tracking-widest block">
-                🏟️ MATCHED COMMUNITIES & CIRCLES ({matchedCircles.length})
+                🏟️ MATCHED {TERMINOLOGY.communitiesUpper} ({matchedCircles.length})
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {matchedCircles.map(circle => (
@@ -1027,7 +1152,7 @@ export default function ExploreView({
                     {post.videoUrl && (
                       <div className="relative aspect-video max-w-sm rounded-xl overflow-hidden bg-zinc-950 border border-white/5">
                         <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/20 via-zinc-950/95 to-transparent animate-pulse" />
-                        <video src={`${post.videoUrl}#t=0.5`} muted autoPlay loop className="w-full h-full object-cover relative z-10" />
+                        <NexoraVideo src={`${post.videoUrl}#t=0.5`} muted autoPlay loop className="w-full h-full object-cover relative z-10" />
                         <div className="absolute top-2 left-2 bg-black/60 text-[8px] font-mono text-white/80 py-0.5 px-1.5 rounded z-20">AUTO PLAY PREVIEW</div>
                       </div>
                     )}
@@ -1088,7 +1213,7 @@ export default function ExploreView({
                           <p className="text-[10.5px] text-zinc-400 font-sans mt-1 line-clamp-2">{circle.description}</p>
                         </div>
                         <div className="flex items-center justify-between">
-                          <span className="text-[9.5px] font-mono text-zinc-500">{circle.membersCount} active nodes</span>
+                          <span className="text-[9.5px] font-mono text-zinc-500">{circle.membersCount} active members</span>
                           <span className="text-[9px] uppercase font-mono px-2 py-0.5 rounded bg-violet-950/40 text-violet-300 border border-violet-500/10">{circle.tags[0]}</span>
                         </div>
                       </div>
@@ -1133,7 +1258,7 @@ export default function ExploreView({
             <Radio className="w-4 h-4 text-pink-500 animate-pulse" />
             Active Live Video Streams
           </h2>
-          <span className="text-[10px] text-violet-400/50 font-mono">Simultaneous Broadcast Nodes</span>
+          <span className="text-[10px] text-violet-400/50 font-mono">Simultaneous Broadcast Streams</span>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1292,12 +1417,12 @@ export default function ExploreView({
           </div>
         </div>
 
-        {/* Suggested Communities & Circles (Right Side) */}
+        {/* Suggested Communities (Right Side) */}
         <div className="space-y-3.5">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-sans font-black tracking-wider uppercase text-cyan-400 flex items-center gap-1.5">
               <Compass className="w-4 h-4 text-cyan-400" />
-              Suggested Communities
+              Suggested {TERMINOLOGY.communitiesCapitalized}
             </h2>
             <span className="text-[10px] font-mono text-cyan-400/50">Spaces Hub</span>
           </div>
@@ -1427,7 +1552,7 @@ export default function ExploreView({
         ) : (
           <div className="text-center py-16 rounded-3xl border border-dashed border-violet-500/15 bg-slate-900/10">
             <Radio className="w-10 h-10 text-violet-500/20 mx-auto animate-bounce" />
-            <h3 className="text-xs font-mono font-bold text-violet-300 mt-2.5">No Matching Nodes Detected</h3>
+            <h3 className="text-xs font-mono font-bold text-violet-300 mt-2.5">No Matching Streams Detected</h3>
             <p className="text-[10px] text-violet-300/40 mt-1 max-w-xs mx-auto">None of the curated broadcasts matches your custom query or selected filter criteria. Retry clearing search terms.</p>
           </div>
         )}
@@ -2126,7 +2251,7 @@ export default function ExploreView({
                       className="relative rounded-xl overflow-hidden aspect-video cursor-pointer border border-white/5 bg-zinc-950"
                     >
                       <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/10 via-zinc-950/80 to-transparent animate-pulse" />
-                      <video src={`${item.videoUrl}#t=0.5`} className="w-full h-full object-cover opacity-60 relative z-10" muted playsInline />
+                      <NexoraVideo src={`${item.videoUrl}#t=0.5`} className="w-full h-full object-cover opacity-60 relative z-10" muted playsInline />
                       <div className="absolute inset-0 flex items-center justify-center z-20">
                         <Play className="w-4 h-4 text-white hover:scale-110 transition-transform" />
                       </div>

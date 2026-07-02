@@ -16,8 +16,21 @@ const STORAGE_KEYS = {
 };
 
 export class MemoryEngine {
+  static getActiveUserId(): string {
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) return u.id;
+      } catch (e) {}
+    }
+    return 'default';
+  }
+
   static getMemory(): UserMemoryProfile {
-    const data = localStorage.getItem(STORAGE_KEYS.MEMORY);
+    const userId = this.getActiveUserId();
+    const key = `${STORAGE_KEYS.MEMORY}_${userId}`;
+    const data = localStorage.getItem(key);
     if (!data) {
       const defaultMemory: UserMemoryProfile = {
         preferences: {
@@ -25,7 +38,7 @@ export class MemoryEngine {
           aiTone: 'futuristic',
           voiceAutoPlay: false
         },
-        creatorGoals: ['Build open creator nodes', 'Scale micro-payments in Port Harcourt', 'Design high contrast UI components'],
+        creatorGoals: ['Build open creator networks', 'Scale micro-payments in Port Harcourt', 'Design high contrast UI components'],
         writingStyle: 'Professional with space-glass branding and technical Mono accents',
         interests: ['AI', 'UI/UX Design', 'Systems Engineering', 'Football', 'Lagos Startups'],
         recentHashtags: ['SpaceGlass', 'BuildInPublic', 'AIEngines', 'FutureHuman'],
@@ -35,14 +48,16 @@ export class MemoryEngine {
           { id: '3', name: 'Generate Thread Ideas', content: 'Create a highly scannable thread of 5 steps to build an app in Port Harcourt.' }
         ]
       };
-      localStorage.setItem(STORAGE_KEYS.MEMORY, JSON.stringify(defaultMemory));
+      localStorage.setItem(key, JSON.stringify(defaultMemory));
       return defaultMemory;
     }
     return JSON.parse(data);
   }
 
   static saveMemory(memory: UserMemoryProfile): void {
-    localStorage.setItem(STORAGE_KEYS.MEMORY, JSON.stringify(memory));
+    const userId = this.getActiveUserId();
+    const key = `${STORAGE_KEYS.MEMORY}_${userId}`;
+    localStorage.setItem(key, JSON.stringify(memory));
   }
 
   // Future persistence abstraction layer hook

@@ -10,7 +10,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       console.log('[Service Worker] Pre-caching static assets');
-      return cache.addAll(ASSETS_TO_CACHE);
+      const cachePromises = ASSETS_TO_CACHE.map((url) => {
+        return cache.add(url).catch((err) => {
+          console.warn(`[Service Worker] Failed to pre-cache ${url}:`, err);
+        });
+      });
+      return Promise.all(cachePromises);
     }).then(() => self.skipWaiting())
   );
 });
@@ -62,11 +67,12 @@ self.addEventListener('fetch', (event) => {
           }
           return response;
         })
-        .catch(() => {
+        .catch((err) => {
           // Offline fallback
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html');
           }
+          throw err;
         });
     })
   );
