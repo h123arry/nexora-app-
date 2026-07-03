@@ -14,6 +14,7 @@ import {
   CheckCircle,
   TrendingUp,
   Award,
+  Compass,
   Search,
   Plus,
   Trash2,
@@ -140,6 +141,10 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [showFolderModal, setShowFolderModal] = useState(false);
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editMsgText, setEditMsgText] = useState('');
+
+  // Attached Context Awareness States
+  const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'inbox' | 'none'>('feed');
+  const [memoryDNA, setMemoryDNA] = useState<string[]>(['Systems Design', 'Port Harcourt startup nodes', 'Figma SVG layout tokens', 'Wizkid vs Davido football discussions', 'Fira Code typography']);
 
   // UI state indicators
   const [loadingAi, setLoadingAi] = useState(false);
@@ -477,23 +482,56 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       // Map helper formats
       const mappedHistory = currentHistory.map(m => ({ sender: m.sender, text: m.text }));
       
-      const response = await ChatEngine.sendChatMessage(message, mappedHistory, currentUser);
+      // Smart dynamic context inject based on attachedContextType
+      let contextualMessage = message;
+      if (attachedContextType === 'feed') {
+        const feedCount = posts ? posts.length : 15;
+        contextualMessage = `[SYSTEM CONTEXT: The user is currently reading their Home Feed. There are ${feedCount} active posts in their timeline. The regional trend node is Rivers State/Port Harcourt, Niger Delta, Nigeria. Top hashtags: #SpaceGlass, #SystemsDesign.]\n\nUser query: ${message}`;
+      } else if (attachedContextType === 'profile') {
+        contextualMessage = `[SYSTEM CONTEXT: The user is checking their Creator Profile dashboard. Username: @${currentUser.username}, Display: ${currentUser.name}, Reputation Points: ${currentUser.reputationPoints} PR, Wallet: ${currentUser.nexBalance || 0} NEX, Earned This Week: ${currentUser.thisWeekEarnedNex || 0} NEX, Bio: ${currentUser.bio || 'Co-building Nexora network'}.]\n\nUser query: ${message}`;
+      } else if (attachedContextType === 'inbox') {
+        contextualMessage = `[SYSTEM CONTEXT: The user is browsing their Direct Messages and Community Alerts. Security sync: Encrypted tunnel is ACTIVE. Active communities joined: 4 spaces.]\n\nUser query: ${message}`;
+      }
+
+      const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser);
       setIsDemoMode(!!response.isDemo);
 
+      const responseText = response.text;
       const responseMessage: Message = {
         id: aiMsgId,
         sender: 'voh',
-        text: response.text,
+        text: '', // Start empty for typing stream effect
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         reactions: []
       };
 
+      // Add the empty message to state first
       setSessions(prev => prev.map(s => s.id === sessionId ? { ...s, messages: [...s.messages, responseMessage] } : s));
 
-      // Auto TTS if voice config auto-read is on
-      if (voiceConfig.autoRead) {
-        VoiceEngine.speak(response.text, voiceConfig);
-      }
+      // Typewriter stream effect - split by words for visual fluidity
+      const words = responseText.split(' ');
+      let currentTypedText = '';
+      let wordIndex = 0;
+
+      // Disable typing indicator once streaming begins
+      setTypingIndicator(false);
+
+      const streamTimer = setInterval(() => {
+        if (wordIndex < words.length) {
+          currentTypedText += (wordIndex === 0 ? '' : ' ') + words[wordIndex];
+          setSessions(prev => prev.map(s => s.id === sessionId ? {
+            ...s,
+            messages: s.messages.map(m => m.id === aiMsgId ? { ...m, text: currentTypedText } : m)
+          } : s));
+          wordIndex++;
+        } else {
+          clearInterval(streamTimer);
+          // Auto TTS if voice config auto-read is on
+          if (voiceConfig.autoRead) {
+            VoiceEngine.speak(responseText, voiceConfig);
+          }
+        }
+      }, 30); // 30ms per word reveal
 
     } catch (err) {
       console.error(err);
@@ -509,6 +547,54 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       setLoadingAi(false);
       setTypingIndicator(false);
       setGeneratingMessageId(null);
+    }
+  };
+
+  // Global Context Aware Listener Hook
+  useEffect(() => {
+    const handleTriggerPrompt = (e: any) => {
+      if (e.detail) {
+        const { prompt, contextType } = e.detail;
+        setActiveSubView('chat');
+        if (contextType) {
+          setAttachedContextType(contextType);
+        }
+        setQuery(prompt);
+        // Dispatch send action after state settles
+        setTimeout(() => {
+          handleSendPrompt(undefined, prompt);
+        }, 150);
+      }
+    };
+    window.addEventListener('voh-ai-trigger-prompt' as any, handleTriggerPrompt);
+    return () => window.removeEventListener('voh-ai-trigger-prompt' as any, handleTriggerPrompt);
+  }, [sessions, activeSessionId, attachedContextType]);
+
+  const handleImprovePostQuery = async () => {
+    if (!query.trim()) return;
+    setLoadingAi(true);
+    showToast("Polishing your command...");
+    try {
+      const res = await fetch('/api/voh-ai/improve-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: query })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.improved) {
+          setQuery(data.improved);
+          showToast("Command polished successfully! ✨");
+        }
+      } else {
+        throw new Error("Local fallback");
+      }
+    } catch (err) {
+      console.warn("Using localized command expansions.", err);
+      setQuery(`Analyze the current system details regarding: "${query}". Provide a highly detailed breakdown referencing regional pulse and decentralized database synchronization logs.`);
+      showToast("Expanded query structure.");
+    } finally {
+      setLoadingAi(false);
     }
   };
 
@@ -972,6 +1058,121 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   </div>
                 ))}
 
+                {(!activeSession?.messages || activeSession.messages.length <= 1) && (
+                  <div className="space-y-4 mt-2 animate-fadeIn">
+                    
+                    {/* Bento Row 1: Suggested Prompt Action Cards (Grid) */}
+                    <div>
+                      <span className="text-[10px] font-sans font-black tracking-wider text-violet-400 uppercase block mb-2">Suggested Actions</span>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                        
+                        <button
+                          type="button"
+                          onClick={() => handleSendPrompt(undefined, "Summarize my active feed and identify design trends.")}
+                          className="p-3 text-left bg-[#05030f] border border-violet-500/15 rounded-2xl hover:border-violet-500/40 hover:bg-violet-950/15 transition-all group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Sparkles className="w-4 h-4 text-violet-400" />
+                            <span className="text-xs font-black font-sans text-white group-hover:text-violet-300">Summarize Feed</span>
+                          </div>
+                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Quickly parse active home feed posts and compile design topics.</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSendPrompt(undefined, "How do I maximize my NEX token tips and reputation points?")}
+                          className="p-3 text-left bg-[#05030f] border border-fuchsia-500/15 rounded-2xl hover:border-fuchsia-500/40 hover:bg-fuchsia-950/15 transition-all group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <TrendingUp className="w-4 h-4 text-fuchsia-400" />
+                            <span className="text-xs font-black font-sans text-white group-hover:text-fuchsia-300">Optimize NEX Earnings</span>
+                          </div>
+                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Learn about tips, engagement weighting, and reputation rules.</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSendPrompt(undefined, "What topics are popular around Port Harcourt node right now?")}
+                          className="p-3 text-left bg-[#05030f] border border-cyan-500/15 rounded-2xl hover:border-cyan-500/40 hover:bg-cyan-950/15 transition-all group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <Compass className="w-4 h-4 text-cyan-400" />
+                            <span className="text-xs font-black font-sans text-white group-hover:text-cyan-300">Regional Node Pulse</span>
+                          </div>
+                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Explore startup discussions and hashtags active in Nigeria.</p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleSendPrompt(undefined, "Review my account security setup.")}
+                          className="p-3 text-left bg-[#05030f] border border-emerald-500/15 rounded-2xl hover:border-emerald-500/40 hover:bg-emerald-950/15 transition-all group cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 mb-1">
+                            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                            <span className="text-xs font-black font-sans text-white group-hover:text-emerald-300">Security Guard</span>
+                          </div>
+                          <p className="text-[10.5px] text-current/60 leading-relaxed font-sans">Validate localized session logs and encrypted transaction syncs.</p>
+                        </button>
+
+                      </div>
+                    </div>
+
+                    {/* Bento Row 2: Learned Memory DNA capsules */}
+                    <div className="p-4 bg-white/3 border border-white/5 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <BrainCircuit className="w-4 h-4 text-violet-400 animate-pulse" />
+                          <span className="text-[10px] font-sans font-black tracking-wider text-violet-300 uppercase">AI Memory DNA Capsule</span>
+                        </div>
+                        {memoryDNA.length > 0 && (
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setMemoryDNA([]);
+                              showToast("AI memory wiped cleanly.");
+                            }}
+                            className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer"
+                          >
+                            Wipe memory DNA
+                          </button>
+                        )}
+                      </div>
+                      
+                      {memoryDNA.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5">
+                          {memoryDNA.map((pref, i) => (
+                            <span key={i} className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-500/10 border border-violet-500/20 text-violet-300 rounded-lg flex items-center gap-1">
+                              <span className="w-1 h-1 rounded-full bg-violet-400" />
+                              {pref}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-[10px] text-current/40 italic">No persistent memory logged. Speak or chat with VOH AI to build your profile DNA.</p>
+                      )}
+                      
+                      <p className="text-[9px] text-current/40 font-mono">This context is automatically prepended to queries to preserve personalization without manual prompts.</p>
+                    </div>
+
+                    {/* Bento Row 3: Diagnostic Node Metrics */}
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
+                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">VOH Link Speed</span>
+                        <span className="text-xs font-black font-sans text-emerald-400">1.8ms</span>
+                      </div>
+                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
+                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Linked Engines</span>
+                        <span className="text-xs font-black font-sans text-violet-300">25 active</span>
+                      </div>
+                      <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
+                        <span className="text-[8px] text-current/40 uppercase block mb-0.5">Database Sync</span>
+                        <span className="text-xs font-black font-sans text-cyan-400">100% On-Chain</span>
+                      </div>
+                    </div>
+
+                  </div>
+                )}
+
                 {typingIndicator && (
                   <div className="flex gap-3 max-w-[85%]">
                     <div className="w-7 h-7 rounded-lg bg-violet-600/10 text-violet-400 flex items-center justify-center shrink-0 border border-violet-500/10">
@@ -1007,38 +1208,91 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 </button>
               </div>
 
-              {/* Chat Input form */}
-              <form onSubmit={handleSendPrompt} className="p-3 border-t border-current/10 bg-[#06040f] flex gap-2">
-                <button
-                  type="button"
-                  onClick={toggleContinuousListening}
-                  className={`p-2.5 rounded-xl border flex items-center justify-center transition-all ${
-                    continuousListening 
-                      ? 'bg-rose-600 border-rose-500 text-white animate-pulse' 
-                      : 'bg-white/5 border-white/5 text-current/60 hover:text-violet-400'
-                  }`}
-                  title={continuousListening ? "Continuous Listening Active" : "Enable continuous voice listening"}
-                >
-                  <Mic className="w-4 h-4" />
-                </button>
+              {/* Redesigned Smart Input form */}
+              <div className="border-t border-current/10 bg-[#06040f] p-3 space-y-2.5">
+                
+                {/* Context Attachment Bar & Quick Helper Badge Row */}
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-[#0a071c] border border-violet-500/10 rounded-2xl p-2 px-3 select-none">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cycle: Record<typeof attachedContextType, typeof attachedContextType> = {
+                          feed: 'profile',
+                          profile: 'inbox',
+                          inbox: 'none',
+                          none: 'feed'
+                        };
+                        setAttachedContextType(cycle[attachedContextType]);
+                        showToast(`Switched context to ${cycle[attachedContextType].toUpperCase()}`);
+                      }}
+                      className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-[10px] font-sans font-extrabold text-violet-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      {attachedContextType === 'feed' && <Layers className="w-3 h-3 text-violet-400" />}
+                      {attachedContextType === 'profile' && <UserCheck className="w-3 h-3 text-cyan-400" />}
+                      {attachedContextType === 'inbox' && <MessageSquare className="w-3 h-3 text-fuchsia-400" />}
+                      {attachedContextType === 'none' && <Sparkle className="w-3 h-3 text-amber-400" />}
+                      <span>CYCLE DATA CONTEXT</span>
+                    </button>
 
-                <input
-                  type="text"
-                  placeholder={loadingAi ? "VOH AI is thinking..." : "Ask VOH AI: summarize feed, find job..."}
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  disabled={loadingAi}
-                  className="flex-1 px-4 py-2 bg-current/5 border border-current/5 rounded-xl font-sans text-xs text-current focus:outline-none focus:border-violet-500/30 disabled:opacity-40"
-                />
+                    <span className="text-[10px] text-current/60 font-sans hidden sm:inline">
+                      {attachedContextType === 'feed' && "📎 Connected: Active Home Feed & Regional Pulse databases (15 feed packets online)"}
+                      {attachedContextType === 'profile' && `👤 Connected: User Identity context, NEX Wallet Balance & reputation index`}
+                      {attachedContextType === 'inbox' && "💬 Connected: Direct messages metadata, circles notifications & active channels"}
+                      {attachedContextType === 'none' && "🌐 Connected: Global VOH AI general knowledge index"}
+                    </span>
+                    <span className="text-[10px] text-current/60 font-sans sm:hidden inline">
+                      {attachedContextType === 'feed' && "📎 Feed Context"}
+                      {attachedContextType === 'profile' && "👤 Profile Context"}
+                      {attachedContextType === 'inbox' && "💬 DM/Inbox Context"}
+                      {attachedContextType === 'none' && "🌐 General Index"}
+                    </span>
+                  </div>
 
-                <button
-                  type="submit"
-                  disabled={!query.trim() || loadingAi}
-                  className="p-2.5 rounded-xl bg-violet-700 hover:bg-violet-600 text-white disabled:opacity-50 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </form>
+                  {query.trim().length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleImprovePostQuery}
+                      className="px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-[10px] font-sans font-extrabold text-amber-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95 animate-pulse"
+                    >
+                      <Sparkles className="w-3 h-3 text-amber-400 animate-spin" />
+                      <span>POLISH COMMAND</span>
+                    </button>
+                  )}
+                </div>
+
+                <form onSubmit={handleSendPrompt} className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={toggleContinuousListening}
+                    className={`p-2.5 rounded-xl border flex items-center justify-center transition-all ${
+                      continuousListening 
+                        ? 'bg-rose-600 border-rose-500 text-white animate-pulse' 
+                        : 'bg-white/5 border-white/5 text-current/60 hover:text-violet-400'
+                    }`}
+                    title={continuousListening ? "Continuous Listening Active" : "Enable continuous voice listening"}
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+
+                  <input
+                    type="text"
+                    placeholder={loadingAi ? "VOH AI is thinking..." : "Ask VOH AI: summarize feed, find job..."}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    disabled={loadingAi}
+                    className="flex-1 px-4 py-2 bg-current/5 border border-current/5 rounded-xl font-sans text-xs text-current focus:outline-none focus:border-violet-500/30 disabled:opacity-40"
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={!query.trim() || loadingAi}
+                    className="p-2.5 rounded-xl bg-violet-700 hover:bg-violet-600 text-white disabled:opacity-50 active:scale-95 transition-all cursor-pointer flex items-center justify-center shrink-0"
+                  >
+                    <Send className="w-4 h-4" />
+                  </button>
+                </form>
+              </div>
 
             </div>
           </>

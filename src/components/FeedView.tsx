@@ -1692,15 +1692,15 @@ export default function FeedView({
               <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-violet-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/10">
                 <Globe className="w-6 h-6 text-white animate-pulse" />
               </div>
-              <h4 className="text-sm font-sans font-bold text-violet-100 uppercase tracking-wider">No Telemetry Traces Detected</h4>
+              <h4 className="text-sm font-sans font-bold text-violet-100 uppercase tracking-wider">No Posts Yet</h4>
               <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-                There are currently no synchronized broadcast traces inside this category. Pull down to trigger a network sync, explore active communities, or create a post to begin.
+                You haven't shared anything yet. Create your first post and start connecting with the world.
               </p>
             </div>
 
             {/* Suggested system users to follow */}
             <div className="bg-[#0b0a24]/60 border border-violet-500/10 rounded-2xl p-4 text-left space-y-3 relative z-10">
-              <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⭐ Recommended Network Nodes</span>
+              <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⭐ Recommended Creators</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {suggestedUsers.map(u => (
                   <div key={u.id} className="flex items-center justify-between p-2.5 bg-black/30 border border-white/5 rounded-xl">
@@ -3223,7 +3223,7 @@ export default function FeedView({
                       <option value="Collaboration">Collaboration</option>
                       <option value="Job">Job Opportunity</option>
                       <option value="Startup">Startup Seeking Co-Founder</option>
-                      <option value="Mentorship">Mentorship Node</option>
+                      <option value="Mentorship">Mentorship</option>
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -3251,7 +3251,7 @@ export default function FeedView({
                   onClick={handleComposeSubmit}
                   className="px-5 py-2 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 rounded-xl text-white text-xs font-mono font-black uppercase tracking-wider cursor-pointer"
                 >
-                  Publish Broadcast Node ⚡
+                  Publish Post ⚡
                 </button>
               </div>
             </motion.div>
@@ -3453,8 +3453,8 @@ export default function FeedView({
                 <div className="absolute inset-0 bg-gradient-to-b from-[#060413]/70 via-[#060413]/30 to-[#060413]" />
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(139,92,246,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(139,92,246,0.1)_1px,transparent_1px)] bg-[size:30px_30px]" />
                 <div className="absolute bottom-5 left-5 text-[8px] font-mono text-cyan-400/60 uppercase tracking-widest leading-relaxed">
-                  STREAM COMPILING: FEED // LIVE RECORD H.265 // BITRATE 4200 KBPS<br />
-                  NODE TIMECODE SECS: {storyIndex * 15}s
+                  STREAMING // HIGH DEFINITION // 60 FPS<br />
+                  TIMECODE: 00:00:{(storyIndex * 15).toString().padStart(2, '0')}
                 </div>
               </div>
             )}
@@ -3714,7 +3714,7 @@ export default function FeedView({
                 }}
                 className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white rounded-xl font-mono text-xs font-bold cursor-pointer"
               >
-                {storyIndex === selectedMoment.quotes.length - 1 ? 'Exit Board Node' : 'Next Insight →'}
+                {storyIndex === selectedMoment.quotes.length - 1 ? 'Close Story' : 'Next →'}
               </button>
             </div>
           </motion.div>
@@ -4239,7 +4239,7 @@ export default function FeedView({
                 </p>
 
                 <div className="p-3 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-2">
-                  <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block font-black">Graph Analysis Signals</span>
+                  <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block font-black">Personalized Recommendation Details</span>
                   {getRecommendationExplanation(contextualMenuPost).map((reason, idx) => (
                     <div key={idx} className="flex gap-2 text-xs font-sans text-violet-200 leading-normal">
                       <span className="text-pink-500 font-mono">▸</span>
@@ -4249,7 +4249,7 @@ export default function FeedView({
                 </div>
 
                 <div className="text-[10px] font-mono text-zinc-500 leading-normal bg-zinc-950/40 p-3 rounded-xl border border-white/3">
-                  💡 <strong>Recommendation Control:</strong> If this content is not relevant, you can mute topic tags or block this creator node directly using the long-press menu options.
+                  💡 <strong>Recommendation Control:</strong> If this content is not relevant, you can mute topic tags or block this creator directly using the options.
                 </div>
               </div>
 
@@ -4260,7 +4260,7 @@ export default function FeedView({
                 }}
                 className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all tracking-wider cursor-pointer mt-5"
               >
-                Acknowledge Telemetry
+                Got It
               </button>
             </motion.div>
           </div>

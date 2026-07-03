@@ -1409,7 +1409,7 @@ export default function ExploreView({
                         : 'bg-[#8B5CF6] text-white hover:bg-violet-600 shadow-md shadow-violet-500/5'
                     }`}
                   >
-                    {isFollowingUser ? 'Following' : 'Follow Node'}
+                    {isFollowingUser ? 'Following' : 'Follow'}
                   </button>
                 </div>
               );
@@ -1499,7 +1499,7 @@ export default function ExploreView({
             <Grid className="w-4 h-4 text-cyan-400" />
             Curated Discovery Feed
           </h2>
-          <span className="text-[10px] font-mono text-cyan-400/50">Unified Node Matches</span>
+          <span className="text-[10px] font-mono text-cyan-400/50">Curated Posts</span>
         </div>
 
         {filteredPosts.length > 0 ? (
@@ -2137,17 +2137,17 @@ export default function ExploreView({
                         Live Stream Broadcast Completed!
                       </h3>
                       <p className="text-[10px] text-violet-300/40 font-mono uppercase tracking-widest">
-                        Room Node Session Analytics
+                        Live Stream Session Analytics
                       </p>
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-0.5">
-                        <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest">Broadcasting time</span>
+                        <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest">Broadcast Duration</span>
                         <p className="text-lg font-black text-white font-sans">01:42:08</p>
                       </div>
                       <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-0.5">
-                        <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest">Accumulated Sparks</span>
+                        <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest">Likes Received</span>
                         <p className="text-lg font-black text-yellow-400 font-sans">⚡ +1,582</p>
                       </div>
                       <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/5 space-y-0.5">

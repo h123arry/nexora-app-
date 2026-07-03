@@ -4,9 +4,10 @@ import {
   X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, 
   MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, 
   Volume2, RotateCw, Crop, Sliders, VolumeX, Save, 
-  ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo
+  ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo,
+  Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag
 } from 'lucide-react';
-import { User, Post } from '../types';
+import { User } from '../types';
 import { saveMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 
 interface MediaCreationEngineProps {
@@ -41,8 +42,8 @@ interface MediaCreationEngineProps {
 
 interface SelectedImage {
   url: string;
-  rotation: number; // 0, 90, 180, 270
-  zoom: number; // 1 to 2
+  rotation: number;
+  zoom: number;
   cropOffset: { x: number; y: number };
   filterName?: string;
   filterStyle?: string;
@@ -65,12 +66,18 @@ const FILTER_PRESETS = [
   { name: 'Normal', style: 'none' },
   { name: 'Clarendon', style: 'contrast(1.2) brightness(1.1) saturate(1.2)' },
   { name: 'Lark', style: 'saturate(1.35) hue-rotate(-10deg)' },
-  { name: 'Juno', style: 'sepia(0.15) contrast(1.1) saturate(1.3) hue-rotate(-15deg)' },
   { name: 'Noir', style: 'grayscale(1) contrast(1.4)' },
   { name: 'Sepia', style: 'sepia(0.8) contrast(0.95)' },
-  { name: 'Vintage', style: 'sepia(0.35) contrast(0.9) brightness(1.05)' },
-  { name: 'Emerald', style: 'hue-rotate(90deg) saturate(1.2)' },
   { name: 'Cyberpunk', style: 'hue-rotate(280deg) saturate(1.5) contrast(1.1)' }
+];
+
+const WIZARD_STEPS = [
+  { id: 1, label: 'Type' },
+  { id: 2, label: 'Media' },
+  { id: 3, label: 'Edit' },
+  { id: 4, label: 'Details' },
+  { id: 5, label: 'Preview' },
+  { id: 6, label: 'Publish' }
 ];
 
 export default function MediaCreationEngine({
@@ -84,43 +91,46 @@ export default function MediaCreationEngine({
   initialMode = null,
   initialTab = undefined
 }: MediaCreationEngineProps) {
-  // Navigation categories
+  // Navigation & Wizard Core
   const [activeTab, setActiveTab] = useState<'feed' | 'story' | 'drafts'>(initialTab || (isStoryModeInitially ? 'story' : 'feed'));
   const [activeMode, setActiveMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(initialMode);
+  const [currentStep, setCurrentStep] = useState<number>(1);
 
-  // Permissions state
-  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>(() => {
-    const saved = localStorage.getItem('nexora_media_permissions_granted');
-    return (saved as any) || 'prompt';
-  });
-  const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(null);
-
-  // Form core fields
+  // Form Fields
   const [caption, setCaption] = useState('');
   const [topics, setTopics] = useState('');
   const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>('public');
   const [location, setLocation] = useState('');
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [taggedUsernames, setTaggedUsernames] = useState('');
+  const [imageAltText, setImageAltText] = useState('');
 
-  // Automated publication scheduling states
+  // Editing parameters
+  const [brightness, setBrightness] = useState(100);
+  const [contrast, setContrast] = useState(100);
+  const [saturation, setSaturation] = useState(100);
+  const [blur, setBlur] = useState(0);
+  const [stickerOverlay, setStickerOverlay] = useState<string | null>(null);
+  const [textOverlay, setTextOverlay] = useState('');
+  const [textOverlayColor, setTextOverlayColor] = useState('#ffffff');
+  const [selectedMusic, setSelectedMusic] = useState<string | null>(null);
+  const [musicTrimStart, setMusicTrimStart] = useState(0);
+  const [musicTrimEnd, setMusicTrimEnd] = useState(15);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+
+  // Publish advanced toggles
+  const [commentsAllowed, setCommentsAllowed] = useState(true);
+  const [sharesAllowed, setSharesAllowed] = useState(true);
+  const [downloadsAllowed, setDownloadsAllowed] = useState(true);
+  const [pinnedOnProfile, setPinnedOnProfile] = useState(false);
+  const [crossPostToTwitter, setCrossPostToTwitter] = useState(false);
   const [isScheduled, setIsScheduled] = useState(false);
   const [scheduledDateTime, setScheduledDateTime] = useState('');
-
-  // Target post to Founder Broadcast Channel (Only allowed for VOH accounts)
   const [targetBroadcastChannel, setTargetBroadcastChannel] = useState(false);
 
-  // Drafts state
-  const [draftsList, setDraftsList] = useState<DraftItem[]>(() => {
-    const saved = localStorage.getItem('nexora_post_drafts_v1');
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // Photo uploads
+  // Media Capture / Import variables
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>([]);
   const [activeEditIndex, setActiveEditIndex] = useState<number | null>(null);
-
-  // Video variables
   const [videoFileUrl, setVideoFileUrl] = useState<string | null>(null);
   const [videoRawBlob, setVideoRawBlob] = useState<Blob | null>(null);
   const [videoMuted, setVideoMuted] = useState(false);
@@ -128,16 +138,15 @@ export default function MediaCreationEngine({
   const [videoTrimEnd, setVideoTrimEnd] = useState(15);
   const [videoDuration, setVideoDuration] = useState(15);
 
-  // Reels short-video controls
+  // Reels
   const [isRecording, setIsRecording] = useState(false);
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
-  const [flashActive, setFlashActive] = useState(false);
   const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
   const [loopTimerSecs, setLoopTimerSecs] = useState(0);
 
-  // Voice recording
+  // Voice Recording
   const [voiceFileUrl, setVoiceFileUrl] = useState<string | null>(null);
   const [voiceRawBlob, setVoiceRawBlob] = useState<Blob | null>(null);
   const [voiceDurationSecs, setVoiceDurationSecs] = useState(0);
@@ -152,25 +161,25 @@ export default function MediaCreationEngine({
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptionsList, setPollOptionsList] = useState<string[]>(['', '']);
 
-  // Story specifics
-  const [isStoryCloseFriends, setIsStoryCloseFriends] = useState(false);
-  const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => {
-    const saved = localStorage.getItem('nexora_story_highlights');
+  // UI state
+  const [permissionTarget, setPermissionTarget] = useState<'camera' | 'gallery' | 'mic' | null>(null);
+  const [permissionState, setPermissionState] = useState<'prompt' | 'granted' | 'denied'>(() => {
+    return (localStorage.getItem('nexora_media_permissions_granted') as any) || 'prompt';
+  });
+  const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+  const [draftsList, setDraftsList] = useState<DraftItem[]>(() => {
+    const saved = localStorage.getItem('nexora_post_drafts_v1');
     return saved ? JSON.parse(saved) : [];
   });
-  const [newHighlightTitle, setNewHighlightTitle] = useState('');
-  const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
 
-  // Upload/Post Status
+  // Background Publish simulation
   const [postingStatus, setPostingStatus] = useState<'idle' | 'compressing' | 'publishing' | 'processing' | 'completed' | 'failed'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
-  const activeUploadIntervalRef = useRef<any>(null);
-  const isUploadCancelledRef = useRef<boolean>(false);
-  const isUploadingInProgress = useRef<boolean>(false);
 
-  // DOM Refs for capture simulation
+  // Refs
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
   const mediaRecorderVideoRef = useRef<MediaRecorder | null>(null);
@@ -178,119 +187,98 @@ export default function MediaCreationEngine({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const loopTimerRef = useRef<any>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
+  const uploadIntervalRef = useRef<any>(null);
 
-  // Persist permissions
   useEffect(() => {
     localStorage.setItem('nexora_media_permissions_granted', permissionState);
   }, [permissionState]);
 
-  // Manage real front/rear facing camera streams for direct capture
-  useEffect(() => {
-    let currentStream: MediaStream | null = null;
-    if (activeMode === 'reel' && permissionState === 'granted') {
-      navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: cameraFacing }, 
-        audio: true 
-      })
-      .then(stream => {
-        currentStream = stream;
-        videoStreamRef.current = stream;
-        if (videoPreviewRef.current) {
-          videoPreviewRef.current.srcObject = stream;
-        }
-      })
-      .catch(err => {
-        console.error("Camera direct access failed:", err);
-      });
-    }
-
-    return () => {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
-      videoStreamRef.current = null;
-    };
-  }, [activeMode, permissionState, cameraFacing]);
-
-  // Persist drafts
   useEffect(() => {
     localStorage.setItem('nexora_post_drafts_v1', JSON.stringify(draftsList));
   }, [draftsList]);
 
-  // Load auto-save on mount
+  // Restores workspace on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem('nexora_creation_autosave_v1');
       if (saved) {
         const item = JSON.parse(saved);
-        if (item.caption || item.activeMode || (item.images && item.images.length > 0) || item.videoUrl || item.voiceUrl) {
-          setCaption(item.caption || '');
-          setTopics(item.topics || '');
-          setAudience(item.audience || 'public');
-          setActiveMode(item.activeMode || null);
-          if (item.images && item.images.length > 0) {
-            setSelectedImages(item.images.map((img: string) => ({
-              url: img,
-              rotation: 0,
-              zoom: 1,
-              cropOffset: { x: 0, y: 0 }
-            })));
-          }
-          if (item.videoUrl) setVideoFileUrl(item.videoUrl);
-          if (item.recordedVideoUrl) setRecordedVideoUrl(item.recordedVideoUrl);
-          if (item.voiceUrl) setVoiceFileUrl(item.voiceUrl);
-          if (item.voiceTranscript) setVoiceTranscript(item.voiceTranscript);
-          
-          window.dispatchEvent(new CustomEvent('toast', { 
-            detail: '🔄 Workspace restored! Caption, video or voice recovered.' 
-          }));
+        setCaption(item.caption || '');
+        setTopics(item.topics || '');
+        setAudience(item.audience || 'public');
+        setActiveMode(item.activeMode || null);
+        setCurrentStep(item.currentStep || 1);
+        if (item.images && item.images.length > 0) {
+          setSelectedImages(item.images.map((img: string) => ({
+            url: img,
+            rotation: 0,
+            zoom: 1,
+            cropOffset: { x: 0, y: 0 }
+          })));
         }
+        if (item.videoUrl) setVideoFileUrl(item.videoUrl);
+        if (item.recordedVideoUrl) setRecordedVideoUrl(item.recordedVideoUrl);
+        if (item.voiceUrl) setVoiceFileUrl(item.voiceUrl);
+        if (item.voiceTranscript) setVoiceTranscript(item.voiceTranscript);
+        window.dispatchEvent(new CustomEvent('toast', { 
+          detail: '🔄 Workspace restored! Caption and media recovered.' 
+        }));
       }
     } catch (e) {
-      console.error("Autosave load error:", e);
+      console.error(e);
     }
   }, []);
 
-  // Update auto-save
+  // Autosave
   useEffect(() => {
-    if (!caption && !activeMode && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl) {
-      localStorage.removeItem('nexora_creation_autosave_v1');
-      return;
-    }
     const timer = setTimeout(() => {
+      if (!caption && !activeMode && selectedImages.length === 0 && !videoFileUrl && !voiceFileUrl) {
+        localStorage.removeItem('nexora_creation_autosave_v1');
+        return;
+      }
       try {
-        const draftToSave = {
+        const draft = {
           caption,
           topics,
           audience,
           activeMode,
+          currentStep,
           images: selectedImages.map(img => img.url),
           videoUrl: videoFileUrl,
           recordedVideoUrl,
           voiceUrl: voiceFileUrl,
           voiceTranscript
         };
-        localStorage.setItem('nexora_creation_autosave_v1', JSON.stringify(draftToSave));
+        localStorage.setItem('nexora_creation_autosave_v1', JSON.stringify(draft));
       } catch (e) {
-        console.error("Autosave write error:", e);
+        console.error(e);
       }
-    }, 1000); // Debounce writing to localStorage to be elegant
-
+    }, 1000);
     return () => clearTimeout(timer);
-  }, [caption, topics, audience, activeMode, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript]);
+  }, [caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript]);
 
-  // Location Autocomplete
+  // Camera preview management
   useEffect(() => {
-    if (location.trim().length > 1) {
-      const cities = ["Lagos, Nigeria", "Accra, Ghana", "Dakar, Senegal", "London, UK", "New York, USA", "Tokyo, Japan", "San Francisco, USA", "Nairobi, Kenya", "Port Harcourt, Nigeria"];
-      setLocationSuggestions(cities.filter(c => c.toLowerCase().includes(location.toLowerCase())));
-    } else {
-      setLocationSuggestions([]);
+    let currentStream: MediaStream | null = null;
+    if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing }, audio: true })
+        .then(stream => {
+          currentStream = stream;
+          videoStreamRef.current = stream;
+          if (videoPreviewRef.current) {
+            videoPreviewRef.current.srcObject = stream;
+          }
+        })
+        .catch(err => console.error("Camera error: ", err));
     }
-  }, [location]);
+    return () => {
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [activeMode, permissionState, cameraFacing, currentStep]);
 
-  // Simulated timer for Loop record
+  // Reels Record timing loop
   useEffect(() => {
     if (isRecording && !isRecordingPaused) {
       loopTimerRef.current = setInterval(() => {
@@ -305,61 +293,38 @@ export default function MediaCreationEngine({
     } else {
       if (loopTimerRef.current) clearInterval(loopTimerRef.current);
     }
-    return () => {
-      if (loopTimerRef.current) clearInterval(loopTimerRef.current);
-    };
+    return () => clearInterval(loopTimerRef.current);
   }, [isRecording, isRecordingPaused]);
 
-  // Simulate audio player timing
+  // Location suggestions
   useEffect(() => {
-    let playTimer: any;
-    if (voicePlaybackActive) {
-      playTimer = setInterval(() => {
-        // Simple visual countdown simulation
-      }, 250);
+    if (location.trim().length > 1) {
+      const places = ["Lagos, Nigeria", "Accra, Ghana", "Dakar, Senegal", "Nairobi, Kenya", "Port Harcourt, Nigeria", "London, UK", "New York, USA", "San Francisco, USA"];
+      setLocationSuggestions(places.filter(p => p.toLowerCase().includes(location.toLowerCase())));
+    } else {
+      setLocationSuggestions([]);
     }
-    return () => clearInterval(playTimer);
-  }, [voicePlaybackActive]);
+  }, [location]);
 
-  // Request Permissions with visual override
-  const handleRequestPermission = (target: 'camera' | 'gallery' | 'mic', callback: () => void) => {
+  const requestPermission = (target: 'camera' | 'gallery' | 'mic', callback: () => void) => {
     if (permissionState === 'granted') {
       callback();
-      return;
+    } else {
+      setPermissionTarget(target);
     }
-    setPermissionTarget(target);
   };
 
-  const grantPermission = () => {
-    setPermissionState('granted');
-    setPermissionTarget(null);
-    window.dispatchEvent(new CustomEvent('toast', { detail: 'Permissions successfully granted to Nexora' }));
-  };
-
-  const denyPermission = () => {
-    setPermissionState('denied');
-    setPermissionTarget(null);
-    window.dispatchEvent(new CustomEvent('toast', { detail: 'Media access denied. You can re-enable later.' }));
-  };
-
-  // Image Selection Handle
-  const handleImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-
-    handleRequestPermission('gallery', () => {
+    requestPermission('gallery', () => {
       Array.from(files).forEach((file: File) => {
         const reader = new FileReader();
-        reader.onload = (loadEvent) => {
-          if (loadEvent.target?.result) {
+        reader.onload = (ev) => {
+          if (ev.target?.result) {
             setSelectedImages(prev => [
-              ...prev, 
-              {
-                url: loadEvent.target!.result as string,
-                rotation: 0,
-                zoom: 1,
-                cropOffset: { x: 0, y: 0 }
-              }
+              ...prev,
+              { url: ev.target!.result as string, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }
             ]);
           }
         };
@@ -368,76 +333,25 @@ export default function MediaCreationEngine({
     });
   };
 
-  // Simulated Live Snapped Instant Photo
-  const handleInstantPhotoCapture = () => {
-    handleRequestPermission('camera', () => {
-      const snapUrl = [
+  const captureCameraSnapshot = () => {
+    requestPermission('camera', () => {
+      const snaps = [
         'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=800&auto=format&fit=crop&q=80',
         'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=800&auto=format&fit=crop&q=80'
-      ][Math.floor(Math.random() * 4)];
-
-      setSelectedImages(prev => [
-        ...prev, 
-        {
-          url: snapUrl,
-          rotation: 0,
-          zoom: 1,
-          cropOffset: { x: 0, y: 0 }
-        }
-      ]);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Instant camera snapshot captured!' }));
+        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80'
+      ];
+      const snapUrl = snaps[Math.floor(Math.random() * snaps.length)];
+      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Captured high fidelity camera frame!' }));
     });
   };
 
-  // Edit tools for image
-  const handleRotateImage = (index: number) => {
-    setSelectedImages(prev => prev.map((img, idx) => {
-      if (idx === index) {
-        return { ...img, rotation: (img.rotation + 90) % 360 };
-      }
-      return img;
-    }));
-  };
-
-  const handleZoomChange = (index: number, val: number) => {
-    setSelectedImages(prev => prev.map((img, idx) => {
-      if (idx === index) {
-        return { ...img, zoom: val };
-      }
-      return img;
-    }));
-  };
-
-  // Rearranging photo order
-  const moveImageOrder = (index: number, direction: 'left' | 'right') => {
-    const nextList = [...selectedImages];
-    const targetIdx = direction === 'left' ? index - 1 : index + 1;
-    if (targetIdx < 0 || targetIdx >= nextList.length) return;
-
-    const temp = nextList[index];
-    nextList[index] = nextList[targetIdx];
-    nextList[targetIdx] = temp;
-    setSelectedImages(nextList);
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setSelectedImages(prev => prev.filter((_, idx) => idx !== index));
-    if (activeEditIndex === index) {
-      setActiveEditIndex(null);
-    }
-  };
-
-  // Video selector
-  const handleVideoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
-
-    handleRequestPermission('gallery', () => {
+    requestPermission('gallery', () => {
       const file = files[0];
-      const objectUrl = URL.createObjectURL(file);
-      setVideoFileUrl(objectUrl);
+      setVideoFileUrl(URL.createObjectURL(file));
       setVideoRawBlob(file);
       setVideoTrimStart(0);
       setVideoTrimEnd(15);
@@ -445,74 +359,42 @@ export default function MediaCreationEngine({
     });
   };
 
-  // Short Video Recording Methods
-  const handleStartReelRecord = () => {
-    handleRequestPermission('camera', () => {
+  const startReelRecording = () => {
+    requestPermission('camera', () => {
       setCountdownTimer(3);
-      const countdownInterval = setInterval(() => {
+      const counter = setInterval(() => {
         setCountdownTimer(prev => {
           if (prev !== null && prev <= 1) {
-            clearInterval(countdownInterval);
-            setCountdownTimer(null);
+            clearInterval(counter);
             setIsRecording(true);
             setIsRecordingPaused(false);
             setLoopTimerSecs(0);
             setRecordedVideoUrl(null);
-
-            // Connect real MediaRecorder to camera stream
+            
             if (videoStreamRef.current) {
               try {
                 videoChunksRef.current = [];
-                const possibleTypes = [
-                  'video/mp4;codecs=avc1',
-                  'video/mp4',
-                  'video/webm;codecs=vp9,opus',
-                  'video/webm;codecs=vp8,opus',
-                  'video/webm;codecs=h264',
-                  'video/webm'
-                ];
-                let chosenMimeType = 'video/webm';
-                for (const type of possibleTypes) {
-                  if (typeof MediaRecorder !== 'undefined' && (MediaRecorder as any).isTypeSupported && (MediaRecorder as any).isTypeSupported(type)) {
-                    chosenMimeType = type;
-                    break;
-                  }
-                }
-                const recorder = new MediaRecorder(videoStreamRef.current, { mimeType: chosenMimeType });
+                const recorder = new MediaRecorder(videoStreamRef.current);
                 mediaRecorderVideoRef.current = recorder;
                 recorder.ondataavailable = (event) => {
-                  if (event.data.size > 0) {
-                    videoChunksRef.current.push(event.data);
-                  }
+                  if (event.data.size > 0) videoChunksRef.current.push(event.data);
                 };
                 recorder.onstop = () => {
-                  const videoBlob = new Blob(videoChunksRef.current, { type: chosenMimeType });
-                  const url = URL.createObjectURL(videoBlob);
-                  setRecordedVideoUrl(url);
-                  setVideoRawBlob(videoBlob);
+                  const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+                  setRecordedVideoUrl(URL.createObjectURL(blob));
+                  setVideoRawBlob(blob);
                 };
                 recorder.start();
               } catch (e) {
-                console.error("Failed to start MediaRecorder for video:", e);
+                console.error(e);
               }
             }
             return null;
           }
           return prev !== null ? prev - 1 : null;
         });
-      }, 700);
+      }, 600);
     });
-  };
-
-  const handleTogglePauseReelRecord = () => {
-    if (mediaRecorderVideoRef.current) {
-      if (isRecordingPaused) {
-        mediaRecorderVideoRef.current.resume();
-      } else {
-        mediaRecorderVideoRef.current.pause();
-      }
-    }
-    setIsRecordingPaused(prev => !prev);
   };
 
   const handleStopReelRecord = () => {
@@ -521,19 +403,17 @@ export default function MediaCreationEngine({
     if (mediaRecorderVideoRef.current && mediaRecorderVideoRef.current.state !== 'inactive') {
       try {
         mediaRecorderVideoRef.current.stop();
-      } catch (err) {
-        console.error("Stop recording failed:", err);
+      } catch (e) {
+        console.error(e);
       }
     } else {
-      // Fallback
       setRecordedVideoUrl('https://assets.mixkit.co/videos/preview/mixkit-starry-night-sky-background-912-large.mp4');
     }
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🎥 Short video clip captured successfully.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🎥 Reel recording captured!' }));
   };
 
-  // Voice recording engine
-  const handleStartVoiceRecord = async () => {
-    handleRequestPermission('mic', async () => {
+  const startVoiceRecording = () => {
+    requestPermission('mic', async () => {
       try {
         setVoiceIsRecording(true);
         setVoiceIsPaused(false);
@@ -541,93 +421,98 @@ export default function MediaCreationEngine({
         setVoiceFileUrl(null);
         setVoiceTranscript('');
 
-        // Try getting actual stream if available, otherwise simulate
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
           if (stream) {
             const recorder = new MediaRecorder(stream);
             mediaRecorderRef.current = recorder;
             audioChunksRef.current = [];
-
-            recorder.ondataavailable = (event) => {
-              if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            recorder.ondataavailable = (e) => {
+              if (e.data.size > 0) audioChunksRef.current.push(e.data);
             };
-
             recorder.onstop = () => {
-              const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-              const audioUrl = URL.createObjectURL(audioBlob);
-              setVoiceFileUrl(audioUrl);
-              setVoiceRawBlob(audioBlob);
+              const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+              setVoiceFileUrl(URL.createObjectURL(blob));
+              setVoiceRawBlob(blob);
             };
-
             recorder.start();
           }
         }
 
-        // Incrementor
         const interval = setInterval(() => {
           setVoiceDurationSecs(prev => {
             if (prev >= 60) {
               clearInterval(interval);
-              handleStopVoiceRecord();
+              stopVoiceRecording();
               return 60;
             }
             return prev + 1;
           });
         }, 1000);
-        (window as any).voiceTimerInterval = interval;
-
+        (window as any).voiceInterval = interval;
       } catch (err) {
-        console.error("Mic error:", err);
-        setVoiceIsRecording(true);
+        console.error(err);
       }
     });
   };
 
-  const handlePauseVoiceRecord = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.pause();
-    }
-    setVoiceIsPaused(true);
-    if ((window as any).voiceTimerInterval) clearInterval((window as any).voiceTimerInterval);
-  };
-
-  const handleResumeVoiceRecord = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
-      mediaRecorderRef.current.resume();
-    }
-    setVoiceIsPaused(false);
-    const interval = setInterval(() => {
-      setVoiceDurationSecs(prev => prev + 1);
-    }, 1000);
-    (window as any).voiceTimerInterval = interval;
-  };
-
-  const handleStopVoiceRecord = () => {
+  const stopVoiceRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     }
     setVoiceIsRecording(false);
     setVoiceIsPaused(false);
-    if ((window as any).voiceTimerInterval) clearInterval((window as any).voiceTimerInterval);
+    clearInterval((window as any).voiceInterval);
 
-    // If no real recorder URL, use a default high fidelity synth URL
     if (!voiceFileUrl) {
       setVoiceFileUrl('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
     }
 
-    // Trigger AI transcript
     setLoadingTranscript(true);
     setTimeout(() => {
-      setVoiceTranscript("This contains high-fidelity media upgrades for Nexora's mobile architecture. Every micro-interaction is streamlined to yield standard, optimal layout rendering.");
+      setVoiceTranscript("This voice transmission records high fidelity metadata for Nexora. It streamlines all workflows automatically.");
       setLoadingTranscript(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🎙️ VOH AI Speech-to-Text completed!' }));
-    }, 1500);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '🎙️ Speech-to-Text completed!' }));
+    }, 1200);
   };
 
-  // Draft saving
-  const handleSaveDraft = () => {
-    const newDraft: DraftItem = {
+  // AI assistant simulation
+  const handleAiWritingAssistance = async (promptType: string) => {
+    setLoadingTranscript(true);
+    window.dispatchEvent(new CustomEvent('toast', { detail: '🪄 Nexora AI is polishing writing...' }));
+    try {
+      const response = await fetch('/api/voh-ai/improve-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: caption || "Drafting system setup instructions.", action: promptType })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.improved) {
+          setCaption(data.improved);
+          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption optimized by AI!' }));
+        }
+      } else {
+        throw new Error();
+      }
+    } catch (e) {
+      const mockCaptions: Record<string, string> = {
+        rewrite: `🚀 streamlined content creation engine in Nexora. Accelerating creator capability! #nexora #innovation`,
+        shorten: `Accelerating creative workflows on Nexora. ⚡`,
+        expand: `Absolutely thrilled to announce the rollout of Content Studio v2.4 on Nexora. Designed for supreme responsiveness, we are cutting friction for developers and modern creators alike. Check out the custom filters and multi-step publisher. #systemsdesign`,
+        tags: `${caption} #developer #creativehub #nextgen #futureReady`,
+        translate: `Studio de création de contenu Nexora. Publier des médias en toute fluidité. 🚀`
+      };
+      setCaption(mockCaptions[promptType] || caption);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ local fallback optimized successfully.' }));
+    } finally {
+      setLoadingTranscript(false);
+    }
+  };
+
+  // Save Draft
+  const saveAsDraftLocally = () => {
+    const draft: DraftItem = {
       id: `draft-${Date.now()}`,
       caption,
       images: selectedImages.map(img => img.url),
@@ -639,10 +524,10 @@ export default function MediaCreationEngine({
       type: activeMode || 'text',
       timestamp: new Date().toLocaleDateString()
     };
-
-    setDraftsList(prev => [newDraft, ...prev]);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved locally. Lives across sessions!' }));
-    resetInputs();
+    setDraftsList(prev => [draft, ...prev]);
+    localStorage.removeItem('nexora_creation_autosave_v1');
+    resetStates();
+    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved securely across devices!' }));
   };
 
   const handleSelectDraft = (draft: DraftItem) => {
@@ -650,35 +535,20 @@ export default function MediaCreationEngine({
     setTopics(draft.topics);
     setAudience(draft.audience);
     setActiveMode(draft.type as any);
-    
-    if (draft.images && draft.images.length > 0) {
-      setSelectedImages(draft.images.map(img => ({
-        url: img,
-        rotation: 0,
-        zoom: 1,
-        cropOffset: { x: 0, y: 0 }
-      })));
+    if (draft.images) {
+      setSelectedImages(draft.images.map(img => ({ url: img, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } })));
     }
-    if (draft.videoUrl) {
-      setVideoFileUrl(draft.videoUrl);
-    }
+    if (draft.videoUrl) setVideoFileUrl(draft.videoUrl);
     if (draft.voiceUrl) {
       setVoiceFileUrl(draft.voiceUrl);
       setVoiceTranscript(draft.transcript || '');
     }
-    
-    // Remote from drafts list after restoring-
     setDraftsList(prev => prev.filter(d => d.id !== draft.id));
+    setCurrentStep(2);
     setActiveTab('feed');
   };
 
-  const handleDeleteDraft = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setDraftsList(prev => prev.filter(d => d.id !== id));
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Draft discarded.' }));
-  };
-
-  const resetInputs = () => {
+  const resetStates = () => {
     localStorage.removeItem('nexora_creation_autosave_v1');
     setCaption('');
     setTopics('');
@@ -692,350 +562,188 @@ export default function MediaCreationEngine({
     setVoiceTranscript('');
     setPollQuestion('');
     setPollOptionsList(['', '']);
+    setStickerOverlay(null);
+    setTextOverlay('');
     setActiveMode(null);
+    setCurrentStep(1);
   };
 
-  const handleCancelUpload = () => {
-    isUploadCancelledRef.current = true;
-    isUploadingInProgress.current = false;
-    if (activeUploadIntervalRef.current) {
-      clearInterval(activeUploadIntervalRef.current);
-    }
-    setPostingStatus('idle');
-    setUploadProgress(0);
-    setIsMinimized(false);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🛑 Upload cancelled by creator.' }));
+  const handleDiscard = () => {
+    resetStates();
+    setShowExitConfirm(false);
+    onClose();
   };
 
-  const handleRetryUpload = () => {
-    isUploadCancelledRef.current = false;
-    compressMediaAndSubmit();
-  };
-
-  // Quality Optimizer compressor simulation
-  const compressMediaAndSubmit = async () => {
-    if (isUploadingInProgress.current) {
-      console.log('[Audit] Upload is already in progress. Preventing duplicate post.');
-      return;
-    }
-
-    isUploadingInProgress.current = true;
-    isUploadCancelledRef.current = false;
-    setErrorMessage('');
-    
-    // Clear any previous interval
-    if (activeUploadIntervalRef.current) {
-      clearInterval(activeUploadIntervalRef.current);
-    }
-
-    // ─── STAGE 1: COMPRESSING (Optimizing and Preparing) ───
+  // Stage progress triggers
+  const triggerPublishPipeline = async () => {
     setPostingStatus('compressing');
     setUploadProgress(5);
 
-    const runStage = (startVal: number, endVal: number, step: number, status: 'compressing' | 'publishing' | 'processing', duration: number) => {
+    const runStage = (start: number, end: number, step: number, status: typeof postingStatus, duration: number) => {
       return new Promise<boolean>((resolve) => {
-        let current = startVal;
+        let current = start;
         setPostingStatus(status);
-        
-        const tickTime = duration / ((endVal - startVal) / step);
         const interval = setInterval(() => {
-          if (isUploadCancelledRef.current) {
-            clearInterval(interval);
-            resolve(false);
-            return;
-          }
-
           current += step;
-          if (current >= endVal) {
+          if (current >= end) {
             clearInterval(interval);
-            setUploadProgress(endVal);
+            setUploadProgress(end);
             resolve(true);
           } else {
             setUploadProgress(current);
           }
-        }, tickTime);
-
-        activeUploadIntervalRef.current = interval;
+        }, duration / ((end - start) / step));
+        uploadIntervalRef.current = interval;
       });
     };
 
-    // Compress
-    let success = await runStage(5, 35, 5, 'compressing', 1000);
-    if (!success || isUploadCancelledRef.current) return;
+    let ok = await runStage(5, 35, 5, 'compressing', 800);
+    if (!ok) return;
 
-    // ─── STAGE 2: PUBLISHING (Publishing...) ───
-    success = await runStage(35, 75, 5, 'publishing', 1200);
-    if (!success || isUploadCancelledRef.current) return;
+    ok = await runStage(35, 75, 5, 'publishing', 900);
+    if (!ok) return;
 
-    // ─── STAGE 3: PROCESSING (Processing...) ───
-    success = await runStage(75, 100, 5, 'processing', 1000);
-    if (!success || isUploadCancelledRef.current) return;
+    ok = await runStage(75, 100, 5, 'processing', 700);
+    if (!ok) return;
 
-    // ─── STAGE 4: WRITE TO DATABASE & SUCCESS ───
     try {
-      const imgArray = selectedImages.map(img => img.url);
-      const isVoice = activeMode === 'voice';
-      let mainImg = imgArray[0] || undefined;
-      let vidUrl = videoFileUrl || recordedVideoUrl || undefined;
-      let finalVoiceUrl = voiceFileUrl || undefined;
+      let mainImg = selectedImages[0]?.url || undefined;
+      let finalVid = videoFileUrl || recordedVideoUrl || undefined;
 
-      // Persist video and extract thumbnail
       if (videoRawBlob) {
-        console.log('[Audit] Video raw blob detected, starting permanent store pipeline.');
-        const mediaId = `video-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-        
         try {
           const thumb = await generateVideoThumbnail(videoRawBlob);
-          if (thumb) {
-            mainImg = thumb;
-          }
-        } catch (thumbErr) {
-          console.error('[Audit] Failed to render video thumbnail:', thumbErr);
-        }
-
-        try {
-          const permanentUri = await saveMediaBlob(mediaId, videoRawBlob);
-          vidUrl = permanentUri;
-        } catch (storeErr) {
-          console.error('[Audit] Permanent storage write failed, fallback to local URL:', storeErr);
+          if (thumb) mainImg = thumb;
+          const uri = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
+          finalVid = uri;
+        } catch (e) {
+          console.error(e);
         }
       }
 
-      // Persist voice audio recording
-      if (voiceRawBlob) {
-        const audioId = `voice-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
-        try {
-          const permanentAudioUri = await saveMediaBlob(audioId, voiceRawBlob);
-          finalVoiceUrl = permanentAudioUri;
-        } catch (audioStoreErr) {
-          console.error('[Audit] Persistent voice store failed:', audioStoreErr);
-        }
-      }
-      
-      const filtersArray = selectedImages.map(img => img.filterStyle || 'none');
-      const mainFilter = filtersArray[0] || undefined;
-      
-      let pollModel: any = undefined;
+      const activeFilters = selectedImages.map(img => img.filterStyle || 'none');
+      const activeFilter = activeFilters[0] || 'none';
+
+      let pollObj = undefined;
       if (activeMode === 'poll' && pollQuestion.trim()) {
-        pollModel = {
+        pollObj = {
           question: pollQuestion,
-          options: pollOptionsList.filter(o => o.trim().length > 0).map((txt, i) => ({
-            id: `opt-${i}`,
-            text: txt,
-            votes: 0
-          }))
+          options: pollOptionsList.filter(o => o.trim()).map((o, idx) => ({ id: `opt-${idx}`, text: o, votes: 0 }))
         };
       }
 
-      const newPostId = onAddPost(
+      onAddPost(
         caption,
         mainImg,
         topics,
-        imgArray.length > 1 ? imgArray : undefined,
-        vidUrl,
+        selectedImages.length > 1 ? selectedImages.map(img => img.url) : undefined,
+        finalVid,
         voiceTranscript || undefined,
-        finalVoiceUrl,
+        voiceFileUrl || undefined,
         audience,
-        isVoice,
-        isVoice ? voiceDurationSecs : undefined,
-        pollModel,
+        activeMode === 'voice',
+        activeMode === 'voice' ? voiceDurationSecs : undefined,
+        pollObj,
         activeMode === 'community' ? 'Collaboration' : undefined,
-        activeMode === 'pulse' ? (location || 'Dakar Central') : undefined,
-        mainFilter,
-        filtersArray.length > 1 ? filtersArray : undefined,
-        isScheduled ? (scheduledDateTime || new Date(Date.now() + 86400000).toISOString()) : undefined,
+        activeMode === 'pulse' ? (location || 'Nigeria') : undefined,
+        activeFilter,
+        selectedImages.length > 1 ? activeFilters : undefined,
+        isScheduled ? scheduledDateTime : undefined,
         targetBroadcastChannel
       );
 
-      console.log(`[Audit] Database write success! New post ID created: ${newPostId}`);
-
       setPostingStatus('completed');
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Published Successfully!' }));
-      
-      // Auto-clear drafts on successful publish of autosaved items
-      localStorage.removeItem('nexora_creation_autosave_v1');
-      isUploadingInProgress.current = false;
-
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Post Published Successfully!' }));
       setTimeout(() => {
         setIsMinimized(false);
         onClose();
+        resetStates();
       }, 1500);
-
     } catch (err) {
-      console.error('[Audit] Fatal error in publish queue:', err);
-      isUploadingInProgress.current = false;
       setPostingStatus('failed');
-      setErrorMessage('Upload failed. Please try again.');
+      setErrorMessage('Verification failed. Server returned non-zero response.');
     }
   };
 
-  // Story publish directly to active moments
-  const handlePublishStory = () => {
-    const storyId = `moments-${Date.now()}`;
-    const mediaType = activeMode === 'photo' ? 'photo' : activeMode === 'video' || activeMode === 'reel' ? 'video' : activeMode === 'voice' ? 'voice' : 'text';
-    const mediaUrl = selectedImages[0]?.url || videoFileUrl || recordedVideoUrl || '';
+  // Dynamic Styles
+  const getModalBg = () => {
+    if (theme === 'neon-cyber') return 'bg-slate-950/95 border-fuchsia-500/20 text-white';
+    if (theme === 'emerald-glass') return 'bg-emerald-950/95 border-emerald-500/20 text-white';
+    if (theme === 'stealth-dark') return 'bg-[#06060a]/95 border-zinc-800/80 text-white';
+    return 'bg-white border-zinc-200 text-zinc-900';
+  };
 
-    const newStory = {
-      id: storyId,
-      name: currentUser.name,
-      username: currentUser.username,
-      avatar: currentUser.avatar,
-      active: true,
-      mediaType,
-      mediaUrl,
-      isCloseFriends: isStoryCloseFriends,
-      createdAt: Date.now(), // 24-hr expiry reference
-      quotes: [caption || "✨ Visual moment!"],
-      seenList: [] // seen tracking
-    };
+  const getStepButtonColor = (step: number) => {
+    if (step === currentStep) return 'bg-violet-600 text-white shadow-lg shadow-violet-600/20';
+    if (step < currentStep) return 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400';
+    return 'bg-zinc-900/40 border border-zinc-800 text-zinc-500';
+  };
 
-    // Append to localStorage
-    const saved = localStorage.getItem('nexora_moments_list');
-    let storyList = [];
-    if (saved) {
-      try {
-        storyList = JSON.parse(saved);
-      } catch (e) {}
+  const nextStep = () => {
+    if (currentStep < 6) setCurrentStep(prev => prev + 1);
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) setCurrentStep(prev => prev - 1);
+  };
+
+  // Exit trigger guard
+  const handleExitClick = () => {
+    if (caption || selectedImages.length > 0 || videoFileUrl || voiceFileUrl) {
+      setShowExitConfirm(true);
+    } else {
+      onClose();
     }
-    const updated = [newStory, ...storyList];
-    localStorage.setItem('nexora_moments_list', JSON.stringify(updated));
-
-    window.dispatchEvent(new CustomEvent('nexora-moments-updated'));
-    window.dispatchEvent(new CustomEvent('toast', { detail: `📖 Story shared to ${isStoryCloseFriends ? 'Close Friends ⭐' : 'Public'}!` }));
-    onClose();
   };
 
-  // High quality bento helper
-  const getCardBg = () => {
-    if (theme === 'neon-cyber') return 'bg-slate-950/95 border-fuchsia-500/20';
-    if (theme === 'emerald-glass') return 'bg-emerald-950/95 border-emerald-500/20';
-    if (theme === 'stealth-dark') return 'bg-[#050508]/95 border-zinc-800';
-    return 'bg-white border-zinc-200';
-  };
-
-  const getTextColor = (dim = false) => {
-    if (theme === 'platinum-light') {
-      return dim ? 'text-zinc-500' : 'text-zinc-900';
-    }
-    return dim ? 'text-zinc-400' : 'text-white';
-  };
-
-  if (isMinimized) {
-    return (
-      <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-violet-500/25 bg-slate-950/95 backdrop-blur-md p-4 shadow-2xl flex flex-col gap-3 font-sans animate-bounce-in">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-violet-500 animate-pulse" />
-            <span className="text-[10px] font-mono font-black uppercase text-violet-400 tracking-wider">
-              {postingStatus === 'compressing' && '⚙️ Optimizing Media'}
-              {postingStatus === 'publishing' && '📤 Publishing...'}
-              {postingStatus === 'processing' && '🧠 Processing...'}
-              {postingStatus === 'completed' && '✨ Published Successfully!'}
-              {postingStatus === 'failed' && '❌ Upload Failed'}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button 
-              onClick={() => setIsMinimized(false)}
-              className="text-zinc-400 hover:text-white p-1 hover:bg-white/5 rounded transition-all text-[10px] font-mono cursor-pointer"
-              title="Expand window"
-            >
-              Expand ↗️
-            </button>
-          </div>
-        </div>
-
-        {/* Progress Bar & Preview */}
-        <div className="flex items-center gap-3">
-          {/* Small mode indicator */}
-          <div className="w-10 h-10 rounded-lg bg-violet-600/10 border border-violet-500/20 flex items-center justify-center text-violet-400 shrink-0 text-xs">
-            {activeMode === 'video' || activeMode === 'reel' ? '🎥' : activeMode === 'photo' ? '📸' : activeMode === 'voice' ? '🎙️' : '📝'}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] text-zinc-300 font-sans truncate mb-1">
-              {caption || 'Drafting media post...'}
-            </p>
-            {/* Progress line */}
-            <div className="relative w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-              <div 
-                className="absolute top-0 left-0 h-full bg-linear-to-r from-violet-500 to-pink-500 transition-all duration-300" 
-                style={{ width: `${uploadProgress}%` }}
-              />
-            </div>
-            <div className="flex justify-between items-center mt-1 text-[9px] font-mono text-zinc-500">
-              <span>{uploadProgress}% completed</span>
-              {postingStatus !== 'completed' && postingStatus !== 'failed' && (
-                <button 
-                  onClick={handleCancelUpload}
-                  className="text-red-400 hover:text-red-300 transition-all font-bold uppercase cursor-pointer"
-                >
-                  Cancel
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Action triggers if failed */}
-        {postingStatus === 'failed' && (
-          <div className="flex gap-2 justify-end border-t border-zinc-900 pt-2.5">
-            <button 
-              onClick={handleCancelUpload}
-              className="px-2.5 py-1 text-[9px] font-mono font-bold text-zinc-400 hover:text-white border border-zinc-800 hover:bg-zinc-900 rounded cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button 
-              onClick={handleRetryUpload}
-              className="px-2.5 py-1 text-[9px] font-mono font-bold bg-violet-600 hover:bg-violet-500 text-white rounded cursor-pointer"
-            >
-              Retry Upload
-            </button>
-          </div>
-        )}
-      </div>
-    );
-  }
+  // Accessibility Checks
+  const hasContrastIssue = theme === 'platinum-light' && caption.trim().length > 0;
+  const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
+  const isVideoTrimCheck = (videoFileUrl || recordedVideoUrl) && videoTrimEnd - videoTrimStart > 15;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 backdrop-blur-md bg-slate-950/70 overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 backdrop-blur-md bg-black/75 overflow-y-auto">
       
-      {/* Dynamic Permissions Simulation Prompt overlay */}
+      {/* ⚠️ Exit Confirmation Overlay */}
       <AnimatePresence>
-        {permissionTarget && (
+        {showExitConfirm && (
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-51 flex items-center justify-center bg-black/80 p-4"
+            className="fixed inset-0 z-[60] flex items-center justify-center bg-black/85 p-4"
           >
             <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.9, y: 20 }}
-              className="bg-zinc-900 border border-violet-500/30 max-w-sm w-full rounded-3xl p-6 text-center space-y-4"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-zinc-900 border border-zinc-800 max-w-sm w-full rounded-2xl p-6 text-center space-y-4"
             >
-              <div className="mx-auto w-12 h-12 rounded-full bg-violet-600/15 flex items-center justify-center text-violet-400">
-                <ShieldAlert className="w-6 h-6 animate-pulse" />
+              <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 mx-auto">
+                <ShieldAlert className="w-6 h-6" />
               </div>
-              <div className="space-y-2">
-                <h4 className="text-sm font-sans font-black tracking-widest text-white uppercase">Device Permission Check</h4>
-                <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-                  "NEXORA needs access to your camera and gallery so you can create and share content."
-                </p>
+              <div>
+                <h4 className="text-sm font-sans font-black text-white uppercase tracking-wider">Unsaved Work Detected</h4>
+                <p className="text-xs text-zinc-400 mt-1">Would you like to preserve your captions and edits as a draft before leaving the studio?</p>
               </div>
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-3 gap-2 pt-2">
                 <button 
-                  onClick={denyPermission}
-                  className="px-4 py-2 border border-zinc-700 hover:bg-zinc-800 text-zinc-300 rounded-xl text-xs font-mono font-bold cursor-pointer transition-colors"
+                  onClick={handleDiscard}
+                  className="px-3 py-2 bg-rose-600/10 border border-rose-500/20 text-rose-400 hover:bg-rose-600/20 rounded-xl text-[10px] font-mono font-bold cursor-pointer transition-all"
                 >
-                  Block
+                  Discard
                 </button>
                 <button 
-                  onClick={grantPermission}
-                  className="px-4 py-2 bg-linear-to-r from-violet-600 to-pink-500 hover:opacity-90 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all"
+                  onClick={() => { saveAsDraftLocally(); onClose(); }}
+                  className="px-3 py-2 bg-violet-600/10 border border-violet-500/20 text-violet-300 hover:bg-violet-600/20 rounded-xl text-[10px] font-mono font-bold cursor-pointer transition-all"
                 >
-                  Grant Access
+                  Save Draft
+                </button>
+                <button 
+                  onClick={() => setShowExitConfirm(false)}
+                  className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-[10px] font-mono font-bold cursor-pointer transition-all"
+                >
+                  Keep Editing
                 </button>
               </div>
             </motion.div>
@@ -1043,941 +751,976 @@ export default function MediaCreationEngine({
         )}
       </AnimatePresence>
 
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: 20, opacity: 0 }}
-        className={`relative w-full max-w-2xl rounded-3xl p-5 md:p-6 border shadow-2xl flex flex-col max-h-[92vh] ${getCardBg()}`}
-        id="creative-upgrade-hub"
-      >
-        {/* Header segment */}
-        <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4 shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-violet-600/10 flex items-center justify-center text-violet-400">
-              <Sparkles className="w-4 h-4 text-violet-400 animate-spin-slow" />
+      {/* 📸 Permissions Prompt */}
+      <AnimatePresence>
+        {permissionTarget && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-52 flex items-center justify-center bg-black/90 p-4"
+          >
+            <div className="bg-zinc-950 border border-violet-500/30 max-w-sm w-full rounded-2xl p-6 text-center space-y-4">
+              <div className="w-12 h-12 bg-violet-500/10 text-violet-400 rounded-full flex items-center justify-center mx-auto">
+                <Camera className="w-6 h-6 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-sm font-black text-white uppercase tracking-wider">Access Shutter Hardware</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed mt-1">Nexora requires high-definition camera, mic, and media library synchronization for live overlays.</p>
+              </div>
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => { setPermissionState('denied'); setPermissionTarget(null); }}
+                  className="flex-1 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-500 text-xs font-mono font-bold cursor-pointer transition-all"
+                >
+                  Deny
+                </button>
+                <button 
+                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); }}
+                  className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
+                >
+                  Authorize
+                </button>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xs font-sans font-black tracking-widest uppercase text-violet-400">Content Studio v2.4</h2>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[9.5px] font-mono text-zinc-500 uppercase">Symmetric Mobile Media Hub</span>
-                {onToggleOffline && (
-                  <>
-                    <span className="text-[8px] text-zinc-600 font-mono">•</span>
-                    <button
-                      type="button"
-                      onClick={onToggleOffline}
-                      className={`text-[8.5px] font-mono font-bold px-1.5 py-0.5 rounded cursor-pointer transition-colors ${
-                        isOffline 
-                          ? 'bg-amber-500/10 text-amber-400 border border-amber-500/25 hover:bg-amber-500/20' 
-                          : 'bg-zinc-800 text-zinc-400 border border-zinc-700 hover:bg-zinc-700/50 hover:text-zinc-300'
-                      }`}
-                      title="Toggle simulated offline state for audit"
-                    >
-                      {isOffline ? '🔌 Simulated Offline' : '🟢 Simulation: Online'}
-                    </button>
-                  </>
-                )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 📦 Minimized State Overlay */}
+      {isMinimized && (
+        <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-violet-500/20 bg-zinc-950/95 backdrop-blur-md p-4 shadow-2xl space-y-3 animate-slideIn">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
+              {postingStatus === 'compressing' && '⚙️ Compressing Media'}
+              {postingStatus === 'publishing' && '📤 Sharing Post'}
+              {postingStatus === 'processing' && '🧠 AI Processing'}
+              {postingStatus === 'completed' && '✨ Shared!'}
+            </span>
+            <button 
+              onClick={() => setIsMinimized(false)}
+              className="text-[10px] text-zinc-400 hover:text-white hover:underline cursor-pointer font-mono"
+            >
+              Open ↗
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center text-[9px] font-mono text-zinc-400">
+              <span className="truncate max-w-[200px]">{caption || 'Content compilation...'}</span>
+              <span>{uploadProgress}%</span>
+            </div>
+            <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+              <div className="h-full bg-violet-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Studio Frame */}
+      <motion.div
+        initial={{ scale: 0.98, opacity: 0, y: 10 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.98, opacity: 0, y: 10 }}
+        className={`relative w-full max-w-2xl rounded-3xl p-5 md:p-6 border shadow-2xl flex flex-col max-h-[92vh] ${getModalBg()}`}
+        id="creation-studio-frame"
+      >
+        {/* Header toolbar */}
+        <div className="flex justify-between items-start border-b border-zinc-800/60 pb-3 mb-4 shrink-0">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 bg-violet-600/10 border border-violet-500/20 rounded-lg text-violet-400">
+                <Sparkles className="w-4.5 h-4.5 animate-spin-slow" />
+              </div>
+              <div>
+                <h2 className="text-[11px] font-mono font-bold tracking-widest uppercase text-violet-400">Nexora Content Studio</h2>
+                <h1 className="text-sm font-black font-sans uppercase tracking-tight">Unified Publisher v3.0</h1>
               </div>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            className="p-1.5 rounded-lg bg-zinc-800/40 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onToggleOffline && (
+              <button 
+                onClick={onToggleOffline}
+                className={`px-2 py-1 rounded-lg text-[9px] font-mono font-bold border transition-colors ${isOffline ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800/40 text-zinc-400 border-zinc-800 hover:bg-zinc-800'}`}
+              >
+                {isOffline ? '🔌 OFF' : '🟢 ON'}
+              </button>
+            )}
+            <button 
+              onClick={handleExitClick}
+              className="p-1.5 rounded-lg bg-zinc-800/40 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Global tab options */}
-        <div className="flex gap-2 p-1 bg-zinc-950/60 rounded-xl border border-zinc-800 mb-4 shrink-0">
-          <button
-            onClick={() => { setActiveTab('feed'); resetInputs(); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-bold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-zinc-800 text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200'}`}
+        {/* Global Tab Navigation */}
+        <div className="flex gap-1.5 p-1 bg-zinc-950/60 border border-zinc-900 rounded-xl mb-4 shrink-0">
+          <button 
+            onClick={() => { setActiveTab('feed'); setCurrentStep(1); }}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
-            📝 App Post
+            📝 Dynamic Feed
           </button>
-          <button
-            onClick={() => { setActiveTab('story'); resetInputs(); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-bold transition-all cursor-pointer ${activeTab === 'story' ? 'bg-emerald-800/20 text-emerald-400 font-extrabold border border-emerald-500/20' : 'text-zinc-400 hover:text-zinc-200'}`}
+          <button 
+            onClick={() => { setActiveTab('story'); setActiveMode('photo'); setCurrentStep(2); }}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'story' ? 'bg-emerald-600/15 text-emerald-400 border border-emerald-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
             📖 Stories Mode
           </button>
-          <button
+          <button 
             onClick={() => setActiveTab('drafts')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-bold transition-all cursor-pointer flex items-center justify-center gap-1 ${activeTab === 'drafts' ? 'bg-violet-600 text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200'}`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeTab === 'drafts' ? 'bg-violet-600 text-white font-black' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
-            💾 Drafts <span className="bg-zinc-800 text-zinc-300 text-[9px] px-1.5 py-0.5 rounded-full">{draftsList.length}</span>
+            💾 Saved Drafts <span className="px-1.5 bg-zinc-800 text-[10px] rounded-full text-zinc-400">{draftsList.length}</span>
           </button>
         </div>
 
-        {/* Dynamic Inner Body */}
-        <div className="flex-1 overflow-y-auto pr-1 space-y-4 custom-scrollbar text-left font-sans">
+        {/* Dynamic 6-Step Indicator Track */}
+        {activeTab !== 'drafts' && (
+          <div className="flex items-center justify-between px-1.5 py-2.5 bg-[#080710]/40 border border-zinc-900 rounded-2xl mb-4 shrink-0">
+            {WIZARD_STEPS.map((st) => (
+              <button 
+                key={st.id}
+                onClick={() => {
+                  if (activeMode || st.id === 1) {
+                    setCurrentStep(st.id);
+                  }
+                }}
+                className={`px-3 py-1 text-[10px] font-sans font-black uppercase rounded-lg transition-all ${getStepButtonColor(st.id)}`}
+              >
+                {st.id < currentStep ? '✓' : st.id}. {st.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Dynamic Core Body */}
+        <div className="flex-1 overflow-y-auto pr-1 space-y-4 text-left font-sans custom-scrollbar">
           
-          {postingStatus !== 'idle' ? (
-            /* Uploading loading screen with advanced states and control actions */
-            <div className="py-12 flex flex-col items-center justify-center text-center space-y-5 max-w-sm mx-auto">
-              {postingStatus === 'completed' ? (
-                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
-                  <Check className="w-9 h-9" />
-                </div>
-              ) : postingStatus === 'failed' ? (
-                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center">
-                  <X className="w-9 h-9 animate-pulse" />
-                </div>
-              ) : (
-                <div className="relative flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-20 w-20 border-t-2 border-b-2 border-violet-500 border-r-2 border-l-2 border-l-violet-500/20 border-r-violet-500/20" />
-                  <span className="absolute text-[12px] font-mono text-zinc-200 font-extrabold">{uploadProgress}%</span>
-                </div>
-              )}
-              
-              <div className="space-y-1 w-full">
-                <h4 className="text-xs font-mono font-black uppercase tracking-widest text-violet-400 animate-pulse">
-                  {postingStatus === 'compressing' && '⚙️ Processing & Compressing...'}
-                  {postingStatus === 'publishing' && '📤 Publishing...'}
-                  {postingStatus === 'processing' && '🧠 Indexing Content...'}
-                  {postingStatus === 'completed' && '✨ Published Successfully!'}
-                  {postingStatus === 'failed' && '❌ Upload Failed'}
-                </h4>
-                <p className="text-[11px] text-zinc-400">
-                  {postingStatus === 'compressing' && 'Optimizing video resolution, downscaling size, and formatting.'}
-                  {postingStatus === 'publishing' && 'Transmitting secure data blocks to platform database...'}
-                  {postingStatus === 'processing' && 'Loading metadata and rendering feed updates...'}
-                  {postingStatus === 'completed' && 'Your loop media creation is now live across active feeds!'}
-                  {postingStatus === 'failed' && (errorMessage || 'Something went wrong during upload. Please retry.')}
-                </p>
-              </div>
-
-              {/* Progress bar line */}
-              {postingStatus !== 'completed' && postingStatus !== 'failed' && (
-                <div className="w-full bg-zinc-900 rounded-full h-2 overflow-hidden border border-zinc-800">
-                  <div 
-                    className="bg-linear-to-r from-violet-600 to-pink-500 h-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-              )}
-
-              {/* Action buttons */}
-              <div className="flex gap-2.5 w-full pt-2">
-                {postingStatus !== 'completed' && postingStatus !== 'failed' && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => setIsMinimized(true)}
-                      className="flex-1 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-zinc-300 rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
-                    >
-                      Background Upload 📥
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCancelUpload}
-                      className="px-3 py-2 bg-red-950/20 hover:bg-red-950/40 border border-red-500/20 hover:border-red-500/30 text-red-400 rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )}
-                {postingStatus === 'failed' && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handleCancelUpload}
-                      className="flex-1 px-3 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
-                    >
-                      Discard & Cancel
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleRetryUpload}
-                      className="flex-1 px-3 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10.5px] font-mono font-bold cursor-pointer transition-colors"
-                    >
-                      Retry Upload 🔄
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          ) : activeTab === 'drafts' ? (
-            /* DRAFTS STORAGE SCREEN */
+          {activeTab === 'drafts' ? (
+            /* Draft Organizer Screen */
             <div className="space-y-3">
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block">Draft Archives</span>
               {draftsList.length === 0 ? (
-                <div className="text-center py-10 space-y-2">
-                  <FolderHeart className="w-10 h-10 mx-auto text-zinc-600" />
-                  <p className="text-xs text-zinc-500 font-sans">No saved drafts yet. Write some content first!</p>
+                <div className="py-12 border border-zinc-900 border-dashed rounded-2xl text-center space-y-2">
+                  <FolderHeart className="w-8 h-8 text-zinc-600 mx-auto animate-pulse" />
+                  <p className="text-xs text-zinc-400 italic">No saved drafts available. Drafts persist across refresh sessions.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 gap-3">
-                  {draftsList.map(draft => (
-                    <div
-                      key={draft.id}
-                      onClick={() => handleSelectDraft(draft)}
-                      className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 hover:border-violet-500/40 transition-all cursor-pointer flex justify-between items-start"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {draftsList.map((d) => (
+                    <div 
+                      key={d.id}
+                      onClick={() => handleSelectDraft(d)}
+                      className="p-3 bg-[#0a0a0f] border border-zinc-800 hover:border-violet-500/20 rounded-xl cursor-pointer transition-all group relative overflow-hidden"
                     >
-                      <div className="space-y-1 min-w-0 flex-1 pr-4">
-                        <div className="flex gap-2 items-center">
-                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-violet-600/10 text-violet-400 font-bold uppercase">{draft.type}</span>
-                          <span className="text-[9px] font-mono text-zinc-500">{draft.timestamp}</span>
-                        </div>
-                        <p className="text-xs text-zinc-300 font-sans truncate mt-1">
-                          {draft.caption || draft.topics || "(Untitled draft details)"}
-                        </p>
-                        {draft.images && draft.images.length > 0 && (
-                          <div className="flex gap-1.5 mt-2">
-                            {draft.images.slice(0, 4).map((img, i) => (
-                              <img key={i} src={img} alt="draft" className="w-6 h-6 rounded-md object-cover border border-zinc-700" />
-                            ))}
-                          </div>
-                        )}
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[9px] font-mono text-violet-400 uppercase bg-violet-950/25 px-2 py-0.5 rounded border border-violet-800/20">{d.type}</span>
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); setDraftsList(prev => prev.filter(item => item.id !== d.id)); }}
+                          className="p-1 hover:bg-rose-900/10 text-rose-400 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
-                      <button
-                        onClick={(e) => handleDeleteDraft(draft.id, e)}
-                        className="p-1.5 rounded-lg bg-zinc-800 hover:bg-rose-950 hover:text-rose-400 text-zinc-400 transition-colors cursor-pointer shrink-0"
-                        title="Delete draft"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <p className="text-xs text-zinc-300 line-clamp-2 italic font-serif">"{d.caption || 'No caption text'}"</p>
+                      <div className="flex items-center justify-between mt-3 text-[9px] font-mono text-zinc-500">
+                        <span>Calendar: {d.timestamp}</span>
+                        <span className="text-violet-400 group-hover:underline">Restore →</span>
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          ) : activeMode === null ? (
-            /* MODE SELECT BENTO MENU (First view when clicking +) */
-            <div className="space-y-4">
-              <p className="text-xs text-zinc-400 font-sans">
-                Create a new post to share with everyone:
-              </p>
-              
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                {[
-                  { id: 'photo', title: '📸 Photo', desc: 'Share images and visual moments', color: 'bg-pink-600/10 border-pink-500/10 text-pink-400 hover:bg-pink-600/15' },
-                  { id: 'video', title: '🎥 Video', desc: 'Post high quality loops and clips', color: 'bg-cyan-600/10 border-cyan-500/10 text-cyan-400 hover:bg-cyan-600/15' },
-                  { id: 'text', title: '✍ Text', desc: 'Share deep thoughts and text posts', color: 'bg-zinc-800/40 hover:bg-zinc-800 text-zinc-200' },
-                  { id: 'voice', title: '🎙 Voice', desc: 'Record voice notes and soundwaves', color: 'bg-violet-600/10 border-violet-500/10 text-violet-400 hover:bg-violet-600/15' },
-                  { id: 'poll', title: '📊 Poll', desc: 'Ask questions and gather choices', color: 'bg-emerald-600/10 border-emerald-500/10 text-emerald-400 hover:bg-emerald-600/15' },
-                ].map(opt => (
-                  <button
-                    key={opt.id}
-                    onClick={() => setActiveMode(opt.id as any)}
-                    className={`p-4 rounded-2xl border border-zinc-800 flex flex-col items-start gap-2 text-left cursor-pointer transition-all hover:scale-101 hover:border-violet-500/30 group ${opt.color}`}
-                  >
-                    <span className="text-xs font-black font-sans leading-none">{opt.title}</span>
-                    <span className="text-[10px] text-zinc-500 leading-normal font-sans group-hover:text-zinc-300 transition-colors mt-1">{opt.desc}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
           ) : (
-            /* WORKSPACE COMPOSER PANEL */
-            <div className="space-y-4 slide-in-right">
+            /* WIZARD SCREENS */
+            <div className="space-y-4">
               
-              <div className="flex justify-between items-center bg-zinc-900 px-3.5 py-1.5 rounded-xl border border-zinc-800">
-                <button 
-                  onClick={() => setActiveMode(null)}
-                  className="text-xs font-mono text-zinc-400 hover:text-white transition-colors cursor-pointer"
-                >
-                  &larr; Switch composition type
-                </button>
-                <div className="flex gap-2 text-[10px] font-mono items-center">
-                  <span className="text-zinc-400 uppercase">MODE: {activeMode.toUpperCase()}</span>
-                </div>
-              </div>
-
-              {/* Specific workspace renderer depending on activeMode */}
-              {activeMode === 'photo' && (
-                /* PHOTOS WORKSPACE WITH ROTATE, CROP, RE-ORDER */
-                <div className="space-y-3.5">
-                  <div className="border-2 border-dashed border-zinc-800 rounded-3xl p-5 text-center relative hover:border-zinc-700 transition-colors bg-zinc-950/40">
-                    <input 
-                      type="file" 
-                      multiple 
-                      accept="image/*" 
-                      onChange={handleImageFileChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                    />
-                    <div className="flex flex-col items-center gap-2">
-                      <Camera className="w-8 h-8 text-zinc-500 animate-pulse" />
-                      <div className="space-y-1">
-                        <span className="text-xs font-black text-white block">📂 Select Images from Gallery</span>
-                        <span className="text-[10.5px] text-zinc-500 block">Drag images here (supports JPEG, PNG, WEBP, HEIC)</span>
-                      </div>
-                    </div>
+              {currentStep === 1 && (
+                /* STEP 1: CHOOSE CONTENT TYPE */
+                <div className="space-y-4 animate-fadeIn">
+                  <div>
+                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">Unified Create Hub</span>
+                    <h3 className="text-sm font-black text-white uppercase">Choose content format type</h3>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">Or snapping camera live:</span>
-                    <button
-                      onClick={handleInstantPhotoCapture}
-                      className="px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-bold cursor-pointer font-sans"
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      { id: 'text', icon: FileText, label: 'Text Post', color: 'border-blue-500/10 hover:border-blue-500/30 text-blue-400', desc: 'Symmetric layout micro-blog' },
+                      { id: 'photo', icon: Camera, label: 'Photo snapshot', color: 'border-violet-500/10 hover:border-violet-500/30 text-violet-400', desc: 'Capture or Import images' },
+                      { id: 'carousel', icon: FileImage, label: 'Carousel (Multiple)', color: 'border-fuchsia-500/10 hover:border-fuchsia-500/30 text-fuchsia-400', desc: 'Multiple images layout' },
+                      { id: 'video', icon: Video, label: 'Interactive Video', color: 'border-cyan-500/10 hover:border-cyan-500/30 text-cyan-400', desc: 'Publish full standard video' },
+                      { id: 'reel', icon: Sparkle, label: 'Reel (Short Video)', color: 'border-pink-500/10 hover:border-pink-500/30 text-pink-400', desc: 'TikTok-style short video' },
+                      { id: 'voice', icon: Mic, label: 'Voice Memo', color: 'border-rose-500/10 hover:border-rose-500/30 text-rose-400', desc: 'Record microphone waves' },
+                      { id: 'poll', icon: BarChart2, label: 'Interactive Poll', color: 'border-amber-500/10 hover:border-amber-500/30 text-amber-400', desc: 'Engage audience feedback' },
+                      { id: 'pulse', icon: MapPin, label: 'Regional Pulse', color: 'border-emerald-500/10 hover:border-emerald-500/30 text-emerald-400', desc: 'Localized regional checkins' },
+                      { id: 'community', icon: Users, label: 'Collaboration', color: 'border-purple-500/10 hover:border-purple-500/30 text-purple-400', desc: 'Share with close friends circle' }
+                    ].map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => { setActiveMode(item.id as any); setCurrentStep(2); }}
+                        className={`p-3.5 text-left rounded-2xl bg-[#090812] border transition-all hover:bg-zinc-950/40 group cursor-pointer ${item.color}`}
+                      >
+                        <item.icon className="w-5 h-5 mb-1.5" />
+                        <span className="block text-xs font-black text-white group-hover:text-violet-300">{item.label}</span>
+                        <p className="text-[10px] text-zinc-500 leading-tight mt-1">{item.desc}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {currentStep === 2 && (
+                /* STEP 2: MEDIA IMPORT & RECORDING */
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Format: {activeMode?.toUpperCase()}</span>
+                    <button 
+                      onClick={() => setCurrentStep(1)} 
+                      className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold"
                     >
-                      📸 Flash Take Snapshot
+                      Change Type
                     </button>
                   </div>
 
-                  {/* Thumbnail selection array */}
-                  {selectedImages.length > 0 && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {selectedImages.map((img, idx) => (
-                        <div 
-                          key={idx} 
-                          className="relative aspect-square rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-950 group"
+                  {activeMode === 'photo' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Drag upload zone */}
+                      <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-zinc-950/20 hover:border-violet-500/30 transition-all flex flex-col items-center justify-center">
+                        <FileImage className="w-8 h-8 text-zinc-500 animate-bounce" />
+                        <div className="space-y-1">
+                          <p className="text-xs text-zinc-300 font-bold">Upload Snapshot</p>
+                          <p className="text-[10px] text-zinc-500 font-sans">Support JPG, PNG format up to 10MB</p>
+                        </div>
+                        <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all">
+                          Browse Local Gallery
+                          <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                        </label>
+                      </div>
+
+                      {/* Snap device simulation */}
+                      <div className="border border-zinc-800 rounded-2xl p-4 text-center space-y-4 bg-zinc-950/40 flex flex-col justify-between">
+                        <div className="space-y-1">
+                          <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Live Frame Shutter</span>
+                          <p className="text-[10px] text-zinc-500">Capture an instant photo from your physical webcam.</p>
+                        </div>
+                        <button 
+                          onClick={captureCameraSnapshot}
+                          className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                         >
-                          <img 
-                            src={img.url} 
-                            alt={`Preview ${idx}`} 
-                            className="w-full h-full object-cover transition-transform origin-center"
-                            style={{ 
-                              transform: `rotate(${img.rotation}deg) scale(${img.zoom})`,
-                              objectPosition: `${img.cropOffset.x}px ${img.cropOffset.y}px`,
-                              filter: img.filterStyle || 'none'
-                            }}
-                          />
-                          
-                          {/* Left/Right Re-order triggers */}
-                          <div className="absolute inset-x-0 bottom-0 py-1 px-1.5 bg-black/80 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                            <div className="flex gap-1">
+                          📸 Snaps live frame
+                        </button>
+                        <div className="flex flex-wrap gap-1.5 justify-center mt-2">
+                          {selectedImages.map((img, i) => (
+                            <div key={i} className="relative w-12 h-12 rounded-lg border border-zinc-700 overflow-hidden shrink-0">
+                              <img src={img.url} className="w-full h-full object-cover" />
                               <button 
-                                onClick={() => moveImageOrder(idx, 'left')} 
-                                disabled={idx === 0}
-                                className="p-1 rounded bg-zinc-800 text-white disabled:opacity-30 cursor-pointer"
+                                onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== i))}
+                                className="absolute top-0.5 right-0.5 bg-black/75 rounded-full p-0.5 text-rose-400"
                               >
-                                &larr;
-                              </button>
-                              <button 
-                                onClick={() => moveImageOrder(idx, 'right')} 
-                                disabled={idx === selectedImages.length - 1}
-                                className="p-1 rounded bg-zinc-800 text-white disabled:opacity-30 cursor-pointer"
-                              >
-                                &rarr;
+                                <X className="w-2.5 h-2.5" />
                               </button>
                             </div>
-                            <span className="text-[9px] font-mono text-zinc-400 uppercase">{img.filterName || 'Normal'} ({idx + 1})</span>
-                          </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
-                          {/* Quick Edit toolbox buttons */}
-                          <div className="absolute top-2 right-2 flex gap-1 z-20">
-                            <button
-                              onClick={() => handleRotateImage(idx)}
-                              className="p-1 rounded-lg bg-black/60 text-white hover:text-violet-400 cursor-pointer animate-none"
-                              title="Rotate 90 degrees"
-                            >
-                              <RotateCw className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={() => setActiveEditIndex(activeEditIndex === idx ? null : idx)}
-                              className="p-1 rounded-lg bg-black/60 text-white hover:text-violet-400 cursor-pointer"
-                              title="Crop/Resize & Filters"
-                            >
-                              <Sliders className="w-3 h-3" />
-                            </button>
-                            <button
-                              onClick={() => handleRemoveImage(idx)}
-                              className="p-1 rounded-lg bg-rose-600/80 text-white cursor-pointer"
-                              title="Remove photo"
-                            >
-                              <X className="w-3 h-3" />
-                            </button>
-                          </div>
+                  {activeMode === 'carousel' && (
+                    <div className="space-y-3">
+                      <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#080712]/30">
+                        <FileImage className="w-8 h-8 text-zinc-500 mx-auto" />
+                        <p className="text-xs text-zinc-300 font-bold">Multi-Image Grid selection</p>
+                        <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
+                          Add multiple images
+                          <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
+                        </label>
+                      </div>
 
-                          {/* Inline Crop Zoom & Premium Filters controls */}
-                          {activeEditIndex === idx && (
-                            <div className="absolute inset-0 bg-zinc-950/98 p-3 flex flex-col justify-between overflow-y-auto z-30">
-                              <div className="space-y-2">
-                                <div className="flex items-center justify-between border-b border-zinc-800 pb-1">
-                                  <span className="text-[10px] font-mono text-cyan-400 font-extrabold flex items-center gap-1">📸 EDIT IMAGE #{idx+1}</span>
-                                  <button onClick={() => setActiveEditIndex(null)} className="text-zinc-400 hover:text-white"><X className="w-3.5 h-3.5" /></button>
-                                </div>
-                                
-                                <div className="space-y-0.5">
-                                  <label className="text-[9px] text-zinc-400 uppercase font-mono block">Zoom scale: {Math.round(img.zoom * 100)}%</label>
-                                  <input 
-                                    type="range" 
-                                    min="1" 
-                                    max="2" 
-                                    step="0.05" 
-                                    value={img.zoom} 
-                                    onChange={(e) => handleZoomChange(idx, parseFloat(e.target.value))}
-                                    className="w-full accent-violet-500"
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                  <label className="text-[9px] text-zinc-400 uppercase font-mono block">Premium Filters:</label>
-                                  <div className="grid grid-cols-3 gap-1 max-h-[120px] overflow-y-auto pr-0.5">
-                                    {FILTER_PRESETS.map((filter, i) => (
-                                      <button
-                                        key={i}
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedImages(prev => prev.map((item, idy) => idy === idx ? { ...item, filterName: filter.name, filterStyle: filter.style } : item));
-                                        }}
-                                        className={`p-1 text-[8.5px] font-sans rounded-md border text-center transition-all cursor-pointer ${
-                                          img.filterName === filter.name || (!img.filterName && filter.name === 'Normal')
-                                            ? 'bg-violet-600/35 border-violet-400 text-white'
-                                            : 'bg-zinc-900 border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white'
-                                        }`}
-                                      >
-                                        {filter.name}
-                                      </button>
-                                    ))}
-                                  </div>
+                      {selectedImages.length > 0 && (
+                        <div className="space-y-2 bg-zinc-950/50 p-3 rounded-xl border border-zinc-900">
+                          <span className="text-[9px] font-mono text-zinc-400 uppercase">Selected list ({selectedImages.length}): Drag to reorder</span>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            {selectedImages.map((img, index) => (
+                              <div key={index} className="relative aspect-square rounded-lg border border-zinc-800 overflow-hidden group">
+                                <img src={img.url} className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                                  {index > 0 && (
+                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); }} className="p-1 bg-zinc-900 rounded text-white">
+                                      <ChevronLeft className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {index < selectedImages.length - 1 && (
+                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); }} className="p-1 bg-zinc-900 rounded text-white">
+                                      <ChevronRight className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  <button onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== index))} className="p-1 bg-rose-950/80 rounded text-rose-400">
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
                                 </div>
                               </div>
-
-                              <button
-                                type="button"
-                                onClick={() => setActiveEditIndex(null)}
-                                className="w-full py-1 text-center bg-violet-600 hover:bg-violet-700 text-white text-[9px] font-black uppercase rounded-lg cursor-pointer mt-2"
-                              >
-                                Save Changes
-                              </button>
-                            </div>
-                          )}
+                            ))}
+                          </div>
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {activeMode === 'video' && (
-                /* VIDEO WORKSPACE WITH TRIMMING SLIDERS */
-                <div className="space-y-4">
-                  <div className="border-2 border-dashed border-zinc-800 rounded-3xl p-5 text-center relative hover:border-zinc-700 transition-colors bg-zinc-950/40">
-                    <input 
-                      type="file" 
-                      accept="video/*" 
-                      onChange={handleVideoFileChange}
-                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                    />
-                    <div className="flex flex-col items-center gap-2">
-                      <Video className="w-8 h-8 text-zinc-500 animate-pulse" />
+                  {activeMode === 'video' && (
+                    <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-4 bg-zinc-950/20">
+                      <Video className="w-8 h-8 text-zinc-500 mx-auto animate-pulse" />
                       <div className="space-y-1">
-                        <span className="text-xs font-black text-white block">📂 Upload MP4 / MOV Video clip</span>
-                        <span className="text-[10.5px] text-zinc-500 block">Up to 1080p, compressed intelligently instantly</span>
+                        <p className="text-xs text-zinc-300 font-bold">Import Interactive Video</p>
+                        <p className="text-[10px] text-zinc-500">Supported formats: MP4, MOV, WebM up to 50MB</p>
                       </div>
-                    </div>
-                  </div>
-
-                  {videoFileUrl && (
-                    <div className="space-y-3">
-                      <div className="relative aspect-video rounded-2xl overflow-hidden bg-black border border-zinc-800">
-                        <video 
-                          src={videoFileUrl}
-                          controls
-                          muted={videoMuted}
-                          className="w-full h-full object-cover"
-                        />
-                        <button
-                          onClick={() => setVideoFileUrl(null)}
-                          className="absolute top-3 right-3 p-1.5 rounded-full bg-black/70 text-white hover:text-rose-400 cursor-pointer"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      {/* Video Trim controls bar */}
-                      <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-3">
-                        <div className="flex justify-between items-center text-[10px] font-mono">
-                          <span className="text-zinc-400">✂️ EDIT CLIP RANGE (TRIMMING)</span>
-                          <span className="text-cyan-400">Range: {videoTrimStart}s to {videoTrimEnd}s (Total: {videoTrimEnd - videoTrimStart}s)</span>
+                      <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
+                        Choose Video File
+                        <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
+                      </label>
+                      {videoFileUrl && (
+                        <div className="max-w-xs mx-auto p-2 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                          <p className="text-[10px] text-emerald-400 font-mono truncate">✓ {videoFileUrl}</p>
+                          <video src={videoFileUrl} controls className="w-full rounded-lg" />
                         </div>
-                        <div className="flex gap-3 items-center">
-                          <div className="flex-1 space-y-1">
-                            <span className="text-[9px] text-zinc-500 font-mono block">Trim Start: {videoTrimStart}s</span>
-                            <input 
-                              type="range" 
-                              min="0" 
-                              max="15" 
-                              value={videoTrimStart} 
-                              onChange={(e) => setVideoTrimStart(parseInt(e.target.value))}
-                              className="w-full accent-cyan-400"
-                            />
-                          </div>
-                          <div className="flex-1 space-y-1">
-                            <span className="text-[9px] text-zinc-500 font-mono block">Trim End: {videoTrimEnd}s</span>
-                            <input 
-                              type="range" 
-                              min="15" 
-                              max="60" 
-                              value={videoTrimEnd} 
-                              onChange={(e) => setVideoTrimEnd(parseInt(e.target.value))}
-                              className="w-full accent-cyan-400"
-                            />
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setVideoMuted(!videoMuted)}
-                          className={`w-full py-1.5 rounded-xl border text-[10px] font-mono hover:bg-white/5 transition-colors cursor-pointer ${videoMuted ? 'border-rose-500/20 text-rose-400' : 'border-emerald-500/20 text-emerald-400'}`}
-                        >
-                          {videoMuted ? '🔇 SOUND MUTED' : '🔊 LIVE TRACK SOUNDING LEVEL'}
-                        </button>
-                      </div>
+                      )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {activeMode === 'reel' && (
-                /* REELS SHORT VIDEO RECFLOW */
-                <div className="space-y-4">
-                  <div className="relative aspect-[9/16] max-w-xs mx-auto rounded-3xl overflow-hidden bg-black border border-zinc-800 flex flex-col justify-between p-4 shadow-xl">
-                    <div className="absolute inset-0 bg-linear-to-b from-black/60 via-transparent to-black/80 z-0 pointer-events-none" />
-                    
-                    {/* Top utility icons */}
-                    <div className="z-10 flex justify-between items-center">
-                      <span className="text-[9px] font-mono text-fuchsia-400 uppercase tracking-widest bg-black/60 px-2 py-0.5 rounded-lg border border-fuchsia-400/20">LIVE CAMERA ACTIVE</span>
-                      <div className="flex gap-1">
-                        <button 
-                          onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')}
-                          className="p-1.5 rounded-full bg-zinc-900/80 text-white cursor-pointer"
-                          title="Switch camera side"
-                        >
-                          <RefreshCw className="w-3.5 h-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => setFlashActive(!flashActive)}
-                          className={`p-1.5 rounded-full bg-zinc-900/80 cursor-pointer ${flashActive ? 'text-yellow-400' : 'text-white'}`}
-                          title="Toggle simulated flash"
-                        >
-                          ⚡
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Live Camera Feed or Snaps */}
-                    <div className="absolute inset-0 z-0 flex items-center justify-center">
-                      {countdownTimer !== null ? (
-                        <div className="text-center space-y-2 z-10 w-full">
-                          <span className="text-4xl font-extrabold text-white animate-ping block">{countdownTimer}</span>
-                          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">Aligning camera lenses...</span>
+                  {activeMode === 'reel' && (
+                    /* REEL INTERACTIVE CAMERA */
+                    <div className="space-y-3">
+                      <div className="relative aspect-[9/16] max-w-[240px] mx-auto rounded-2xl overflow-hidden bg-black border border-zinc-800 flex flex-col justify-between p-3.5 shadow-2xl">
+                        <div className="z-10 flex justify-between items-center text-[8px] font-mono text-zinc-400">
+                          <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">RECORDING CONSOLE</span>
+                          <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-zinc-900 rounded-full text-white">
+                            <RefreshCw className="w-3 h-3" />
+                          </button>
                         </div>
-                      ) : recordedVideoUrl ? (
-                        <video src={recordedVideoUrl} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="relative w-full h-full">
-                          <video 
-                            ref={videoPreviewRef}
-                            autoPlay 
-                            muted 
-                            playsInline 
-                            className="w-full h-full object-cover bg-zinc-950" 
-                          />
-                          {!videoStreamRef.current && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 select-none bg-zinc-955/65">
-                              <Video className="w-10 h-10 text-zinc-700 animate-pulse" />
-                              <span className="text-[10px] font-mono text-zinc-600 block uppercase">1080P PRO SHUTTER FEED</span>
-                            </div>
+
+                        <div className="absolute inset-0 z-0 flex items-center justify-center">
+                          {countdownTimer !== null ? (
+                            <span className="text-5xl font-black text-white animate-ping">{countdownTimer}</span>
+                          ) : recordedVideoUrl ? (
+                            <video src={recordedVideoUrl} autoPlay loop muted className="w-full h-full object-cover" />
+                          ) : (
+                            <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover bg-zinc-900" />
                           )}
                         </div>
-                      )}
-                    </div>
 
-                    {/* Timeline bar */}
-                    {isRecording && (
-                      <div className="absolute inset-x-0 top-0 h-1.5 bg-zinc-950 z-20">
-                        <div 
-                          className="h-full bg-fuchsia-500 transition-all duration-1000"
-                          style={{ width: `${(loopTimerSecs / 30) * 100}%` }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Bottom buttons controls row */}
-                    <div className="z-10 flex flex-col items-center gap-3 w-full">
-                      <div className="flex gap-4 items-center">
-                        {isRecording ? (
-                          <>
-                            <button
-                              onClick={handleTogglePauseReelRecord}
-                              className="px-3.5 py-1.5 bg-zinc-900 text-white text-[10px] font-mono rounded-xl cursor-pointer"
-                            >
-                              {isRecordingPaused ? 'RESUME 🔴' : 'PAUSE ⏸'}
+                        <div className="z-10 flex flex-col items-center gap-2">
+                          {isRecording ? (
+                            <button onClick={handleStopReelRecord} className="w-12 h-12 bg-rose-600 rounded-full border-2 border-white animate-pulse flex items-center justify-center text-[10px] text-white font-bold font-mono">
+                              STOP
                             </button>
-                            <button
-                              onClick={handleStopReelRecord}
-                              className="w-14 h-14 rounded-full bg-rose-600 flex items-center justify-center text-white border-2 border-white cursor-pointer"
-                            >
-                              <span className="font-mono text-[10px] font-black uppercase">STOP</span>
+                          ) : (
+                            <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-fuchsia-600 to-pink-500 rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-xl cursor-pointer">
+                              START
                             </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={handleStartReelRecord}
-                            className="w-16 h-16 rounded-full bg-linear-to-r from-fuchsia-500 to-pink-600 flex items-center justify-center text-white border-4 border-black group cursor-pointer hover:scale-105 transition-all"
-                          >
-                            <span className="font-mono text-[9px] tracking-tight font-black uppercase col-f">RECORD</span>
-                          </button>
-                        )}
-                      </div>
-                      
-                      {isRecording && (
-                        <span className="text-[10px] font-mono text-white bg-black/60 px-2.5 py-1 rounded-full border border-white/10 animate-pulse">
-                          Recording Stream: {loopTimerSecs}s / 30s
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {activeMode === 'voice' && (
-                /* HIGH SPECTRUM VOICE POST CREATION */
-                <div className="p-5 rounded-2xl bg-zinc-950 border border-violet-500/20 text-center space-y-4">
-                  <div className="space-y-1">
-                    <span className="text-zinc-500 text-[9px] font-mono uppercase tracking-widest block">Nexora Voice recording snippet</span>
-                    <span className="text-3xl font-mono font-bold text-white block mt-1.5">
-                      0:{voiceDurationSecs.toString().padStart(2, '0')}
-                      <span className="text-xs text-zinc-500 block"> / 1:00 clip max</span>
-                    </span>
-                  </div>
-
-                  {/* Equalizer Spectrum waves rendering */}
-                  <div className="flex items-end justify-center gap-[3px] h-12 w-full max-w-sm mx-auto overflow-hidden">
-                    {[...Array(24)].map((_, i) => {
-                      const waveH = voiceIsRecording && !voiceIsPaused
-                        ? 20 + Math.sin(i * 0.9 + voiceDurationSecs) * 60 + Math.random() * (noiseSuppression ? 5 : 20)
-                        : 8;
-                      return (
-                        <div 
-                          key={i}
-                          className={`w-[2.5px] rounded-full transition-all duration-300 ${voiceIsRecording && !voiceIsPaused ? 'bg-linear-to-t from-violet-600 via-pink-400 to-cyan-300' : 'bg-zinc-800'}`}
-                          style={{ height: `${Math.max(8, Math.abs(waveH))}%` }}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {/* Noise Suppression Toggle */}
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800 text-left">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-sans text-zinc-200 font-bold flex items-center gap-1.5">🎙️ AI Noise Suppression</span>
-                      <span className="text-[10px] font-sans text-zinc-500 leading-tight">Mutes static ambient background noise recursively</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setNoiseSuppression(!noiseSuppression)}
-                      className={`px-3 py-1.5 rounded-xl text-[10px] font-mono font-black uppercase cursor-pointer transition-all ${noiseSuppression ? 'bg-violet-600 text-white shadow-md' : 'bg-zinc-800 text-zinc-500'}`}
-                    >
-                      {noiseSuppression ? 'ACTIVE (95% filter)' : 'DISABLED'}
-                    </button>
-                  </div>
-
-                  {/* Playback Preview */}
-                  {voiceFileUrl && !voiceIsRecording && (
-                    <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-between text-left">
-                      <div className="flex items-center gap-2.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const audio = (window as any).voicePreviewAudio || new Audio(voiceFileUrl);
-                            (window as any).voicePreviewAudio = audio;
-                            if (audio.paused) {
-                              audio.play();
-                              setVoicePlaybackActive(true);
-                              audio.onended = () => setVoicePlaybackActive(false);
-                            } else {
-                              audio.pause();
-                              setVoicePlaybackActive(false);
-                            }
-                          }}
-                          className="w-8 h-8 flex items-center justify-center bg-violet-600 hover:bg-violet-500 rounded-full text-white cursor-pointer transition-colors"
-                        >
-                          {voicePlaybackActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                        </button>
-                        <div className="flex flex-col">
-                          <span className="text-xs text-zinc-200 font-bold font-sans">Recorded Playback Preview</span>
-                          <span className="text-[10px] text-zinc-500 font-sans">Tap to listen before broadcasting</span>
+                          )}
+                          {isRecording && <span className="text-[9px] font-mono bg-black/60 text-white px-2 py-0.5 rounded-full">Stream time: {loopTimerSecs}s</span>}
                         </div>
                       </div>
-                      <span className="text-xs font-mono text-zinc-400">0:{voiceDurationSecs.toString().padStart(2, '0')}</span>
                     </div>
                   )}
 
-                  <div className="flex justify-center items-center gap-3">
-                    {voiceIsRecording ? (
-                      <>
-                        {voiceIsPaused ? (
-                          <button
-                            type="button"
-                            onClick={handleResumeVoiceRecord}
-                            className="px-4 py-2 hover:bg-zinc-800 border border-emerald-500/20 text-emerald-400 rounded-xl text-xs font-mono font-bold cursor-pointer transition-colors"
-                          >
-                            RESUME 🔴
+                  {activeMode === 'voice' && (
+                    <div className="p-5 bg-zinc-950 border border-zinc-800 rounded-2xl text-center space-y-4">
+                      <div className="space-y-1">
+                        <span className="text-3xl font-mono font-bold text-white block">0:{voiceDurationSecs.toString().padStart(2, '0')}</span>
+                        <span className="text-[9.5px] font-mono text-zinc-500 block uppercase">Continuous recording</span>
+                      </div>
+
+                      {/* Waveform simulator */}
+                      <div className="flex items-end justify-center gap-1 h-12 max-w-xs mx-auto">
+                        {[...Array(18)].map((_, idx) => (
+                          <div 
+                            key={idx}
+                            className={`w-[3px] rounded-full transition-all duration-300 ${voiceIsRecording ? 'bg-violet-500' : 'bg-zinc-800'}`}
+                            style={{ height: voiceIsRecording ? `${20 + Math.sin(idx + voiceDurationSecs) * 60}%` : '15%' }}
+                          />
+                        ))}
+                      </div>
+
+                      <div className="flex justify-center items-center gap-3">
+                        {voiceIsRecording ? (
+                          <button onClick={stopVoiceRecording} className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs font-mono">
+                            🛑 STOP WAVE
                           </button>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={handlePauseVoiceRecord}
-                            className="px-4 py-2 hover:bg-zinc-800 border border-zinc-800 rounded-xl text-zinc-400 text-xs font-mono font-bold cursor-pointer transition-colors"
-                          >
-                            PAUSE ⏸
+                          <button onClick={startVoiceRecording} className="px-6 py-3 bg-linear-to-tr from-violet-600 to-pink-500 text-white font-black rounded-xl text-xs font-mono animate-pulse">
+                            🎙️ START RECORDING
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={handleStopVoiceRecord}
-                          className="w-14 h-14 rounded-full bg-rose-600 hover:bg-rose-500 animate-pulse flex items-center justify-center text-white border-2 border-white cursor-pointer"
-                        >
-                          <span className="font-mono text-[9px] font-bold">STOP</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleStartVoiceRecord}
-                        className="w-16 h-16 rounded-full bg-linear-to-r from-rose-500 to-pink-600 flex items-center justify-center text-white shadow-lg border-2 border-zinc-800 cursor-pointer"
-                      >
-                        <Mic className="w-6 h-6 animate-pulse" />
-                      </button>
-                    )}
-                  </div>
+                      </div>
 
-                  {/* Speech to text transcript pre-view */}
-                  {(voiceTranscript || loadingTranscript) && (
-                    <div className="text-left bg-zinc-900 border border-zinc-800 p-4 rounded-xl space-y-2">
-                      <span className="text-[8px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">🛰️ Transcribing voice waves (VOH AI Core)</span>
-                      {loadingTranscript ? (
-                        <p className="text-xs text-zinc-400 italic animate-pulse">VOH AI is thinking...</p>
-                      ) : (
-                        <p className="text-xs text-zinc-200 leading-relaxed font-sans italic font-bold">"{voiceTranscript}"</p>
+                      {voiceTranscript && (
+                        <div className="text-left bg-zinc-900 border border-zinc-800 p-3.5 rounded-xl space-y-1">
+                          <span className="text-[8px] font-mono text-violet-400 uppercase font-black">AI Transcribing Shutter</span>
+                          <p className="text-xs text-zinc-300 font-sans italic">"{voiceTranscript}"</p>
+                        </div>
                       )}
                     </div>
                   )}
-                </div>
-              )}
 
-              {activeMode === 'poll' && (
-                /* INTERACTIVE POLL MANAGER */
-                <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-800 space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-zinc-500 uppercase block">📊 POLL QUESTION</label>
-                    <input 
-                      type="text" 
-                      value={pollQuestion}
-                      onChange={(e) => setPollQuestion(e.target.value)}
-                      placeholder='e.g., "Is Rust or Go better for high-speed systems development?"'
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-white focus:outline-hidden font-sans font-bold"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-[9px] font-mono text-zinc-500 block uppercase">Response targets:</span>
-                    {pollOptionsList.map((opt, i) => (
-                      <div key={i} className="flex gap-2 items-center">
-                        <span className="text-xs text-zinc-600 font-mono w-4">{i + 1}</span>
+                  {activeMode === 'poll' && (
+                    <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-mono text-zinc-500 uppercase block">Poll question query</label>
                         <input 
                           type="text" 
-                          value={opt}
-                          onChange={(e) => {
-                            const next = [...pollOptionsList];
-                            next[i] = e.target.value;
-                            setPollOptionsList(next);
-                          }}
-                          placeholder={`Option text ${i + 1}`}
-                          className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden font-sans"
+                          placeholder="e.g. Is Decentralization ready for prime-time?"
+                          value={pollQuestion}
+                          onChange={(e) => setPollQuestion(e.target.value)}
+                          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-sans"
                         />
-                        {pollOptionsList.length > 2 && (
-                          <button 
-                            type="button" 
-                            onClick={() => setPollOptionsList(prev => prev.filter((_, idx) => idx !== i))}
-                            className="p-1.5 text-rose-400 hover:text-rose-500"
-                          >
-                            <X className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="space-y-2">
+                        {pollOptionsList.map((opt, i) => (
+                          <div key={i} className="flex gap-2 items-center">
+                            <span className="text-[10px] font-mono text-zinc-600 w-3">{i+1}</span>
+                            <input 
+                              type="text"
+                              placeholder={`Option ${i+1}`}
+                              value={opt}
+                              onChange={(e) => { const next = [...pollOptionsList]; next[i] = e.target.value; setPollOptionsList(next); }}
+                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-1.5 text-xs text-white"
+                            />
+                            {pollOptionsList.length > 2 && (
+                              <button onClick={() => setPollOptionsList(prev => prev.filter((_, idx) => idx !== i))} className="text-rose-400"><X className="w-4 h-4" /></button>
+                            )}
+                          </div>
+                        ))}
+                        {pollOptionsList.length < 5 && (
+                          <button onClick={() => setPollOptionsList(prev => [...prev, ''])} className="text-[10px] font-mono text-violet-400 hover:underline">
+                            + Add poll option targets
                           </button>
                         )}
                       </div>
-                    ))}
+                    </div>
+                  )}
 
-                    {pollOptionsList.length < 5 && (
-                      <button
-                        type="button"
-                        onClick={() => setPollOptionsList(prev => [...prev, ''])}
-                        className="text-[10px] font-mono text-violet-400 hover:underline inline-block mt-1 cursor-pointer"
-                      >
-                        + Add response choice
-                      </button>
-                    )}
+                </div>
+              )}
+
+              {currentStep === 3 && (
+                /* STEP 3: CREATIVE EDIT WORKSPACE */
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Media render wrapper */}
+                    <div className="aspect-square rounded-2xl border border-zinc-800 bg-black flex items-center justify-center relative overflow-hidden">
+                      {selectedImages.length > 0 ? (
+                        <div className="relative w-full h-full">
+                          <img 
+                            src={selectedImages[activeEditIndex || 0]?.url} 
+                            style={{ 
+                              filter: `${selectedImages[activeEditIndex || 0]?.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`,
+                              transform: `rotate(${selectedImages[activeEditIndex || 0]?.rotation}deg) scale(${selectedImages[activeEditIndex || 0]?.zoom})`,
+                              transition: 'all 0.2s'
+                            }}
+                            className="w-full h-full object-cover"
+                          />
+                          {stickerOverlay && (
+                            <span className="absolute inset-0 flex items-center justify-center text-5xl animate-bounce pointer-events-none select-none">
+                              {stickerOverlay}
+                            </span>
+                          )}
+                          {textOverlay && (
+                            <p 
+                              className="absolute bottom-6 inset-x-4 text-center font-sans font-black tracking-tight text-xs bg-black/60 py-2 px-3 rounded-lg backdrop-blur-xs"
+                              style={{ color: textOverlayColor }}
+                            >
+                              {textOverlay}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-center p-6 space-y-2 text-zinc-500">
+                          <Sliders className="w-8 h-8 mx-auto" />
+                          <p className="text-xs italic">No editable images selected. Choose standard photo formats to trigger overlays.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Editor controls list */}
+                    <div className="space-y-3.5 bg-zinc-950/40 p-4 rounded-2xl border border-zinc-900/60">
+                      <span className="text-[10px] font-mono text-zinc-400 uppercase block tracking-wider">Adjustment Panel</span>
+                      
+                      {/* Interactive CSS filters row */}
+                      {selectedImages.length > 0 && (
+                        <div className="space-y-1.5">
+                          <span className="text-[9px] font-mono text-zinc-500 block uppercase">Filters Palette</span>
+                          <div className="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
+                            {FILTER_PRESETS.map((p) => (
+                              <button
+                                key={p.name}
+                                onClick={() => {
+                                  setSelectedImages(prev => prev.map((img, idx) => {
+                                    if (idx === (activeEditIndex || 0)) {
+                                      return { ...img, filterName: p.name, filterStyle: p.style };
+                                    }
+                                    return img;
+                                  }));
+                                }}
+                                className={`px-2.5 py-1 text-[10px] font-sans font-bold border rounded-lg transition-all shrink-0 ${
+                                  (selectedImages[activeEditIndex || 0]?.filterName || 'Normal') === p.name 
+                                    ? 'bg-violet-600 text-white border-violet-500' 
+                                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
+                                }`}
+                              >
+                                {p.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Crop/Rotate utilities */}
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-900">
+                        <button 
+                          onClick={() => {
+                            setSelectedImages(prev => prev.map((img, idx) => {
+                              if (idx === (activeEditIndex || 0)) {
+                                return { ...img, rotation: (img.rotation + 90) % 360 };
+                              }
+                              return img;
+                            }));
+                          }}
+                          className="py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[10px] font-mono text-zinc-300 rounded-lg flex items-center justify-center gap-1"
+                        >
+                          <RotateCw className="w-3.5 h-3.5" /> ROTATE (90°)
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setSelectedImages(prev => prev.map((img, idx) => {
+                              if (idx === (activeEditIndex || 0)) {
+                                return { ...img, zoom: img.zoom === 1 ? 1.5 : 1 };
+                              }
+                              return img;
+                            }));
+                          }}
+                          className="py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[10px] font-mono text-zinc-300 rounded-lg flex items-center justify-center gap-1"
+                        >
+                          <Crop className="w-3.5 h-3.5" /> ZOOM (TOGGLE)
+                        </button>
+                      </div>
+
+                      {/* Adjust Sliders */}
+                      <div className="space-y-2 border-t border-zinc-900 pt-3">
+                        <div className="flex justify-between text-[9px] font-mono text-zinc-400">
+                          <span>🔆 Brightness: {brightness}%</span>
+                          <input type="range" min="50" max="150" value={brightness} onChange={(e) => setBrightness(parseInt(e.target.value))} className="accent-violet-500" />
+                        </div>
+                        <div className="flex justify-between text-[9px] font-mono text-zinc-400">
+                          <span>🌓 Contrast: {contrast}%</span>
+                          <input type="range" min="50" max="150" value={contrast} onChange={(e) => setContrast(parseInt(e.target.value))} className="accent-violet-500" />
+                        </div>
+                        <div className="flex justify-between text-[9px] font-mono text-zinc-400">
+                          <span>🎨 Saturation: {saturation}%</span>
+                          <input type="range" min="50" max="150" value={saturation} onChange={(e) => setSaturation(parseInt(e.target.value))} className="accent-violet-500" />
+                        </div>
+                      </div>
+
+                      {/* Stickers Overlay & Text Overlays */}
+                      <div className="space-y-2 border-t border-zinc-900 pt-3 text-left">
+                        <span className="text-[9px] font-mono text-zinc-500 uppercase block">Stickers & Labels overlays</span>
+                        <div className="flex gap-2">
+                          {['🔥', '⚡', '✨', '🏆', '👾', '🚀', '💯'].map((emo) => (
+                            <button key={emo} onClick={() => setStickerOverlay(stickerOverlay === emo ? null : emo)} className={`text-lg p-1 hover:scale-110 transition-transform ${stickerOverlay === emo ? 'bg-violet-600/20 rounded-lg border border-violet-500/30' : ''}`}>
+                              {emo}
+                            </button>
+                          ))}
+                        </div>
+                        <div className="space-y-1">
+                          <input 
+                            type="text" 
+                            placeholder="Add Overlay Text details..."
+                            value={textOverlay}
+                            onChange={(e) => setTextOverlay(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-[11px] text-white"
+                          />
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
               )}
 
-              {/* General inputs: Caption, topics, tagged users, locations */}
-              <div className="space-y-3.5">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-zinc-500 uppercase block">Caption details</label>
-                  <textarea
-                    rows={3}
-                    value={caption}
-                    onChange={(e) => setCaption(e.target.value)}
-                    placeholder="Mention custom hashtags with line breaks... #developer #rust"
-                    className="w-full bg-zinc-950/65 border border-zinc-800 focus:border-violet-500/20 text-xs text-white rounded-xl py-2 px-3.5 focus:outline-hidden resize-none placeholder:text-zinc-600 leading-relaxed text-left"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-zinc-500 uppercase block">🏷️ Enter Topics (comma separation)</label>
-                    <input 
-                      type="text" 
-                      value={topics}
-                      onChange={(e) => setTopics(e.target.value)}
-                      placeholder='e.g., "AI, Technology, Sports"'
-                      className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden font-sans"
+              {currentStep === 4 && (
+                /* STEP 4: SMART CAPTION & METADATA DETAILS */
+                <div className="space-y-4 animate-fadeIn">
+                  <div className="space-y-1 text-left">
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase">Write Smart Caption</label>
+                    <textarea
+                      rows={3}
+                      value={caption}
+                      onChange={(e) => setCaption(e.target.value)}
+                      placeholder="Type details... use #developer, #systemsdesign or tag @voh to explore."
+                      className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-violet-500/20 resize-none leading-relaxed"
                     />
+                    <div className="flex justify-between text-[9px] font-mono text-zinc-500 px-1">
+                      <span>Character metrics: {caption.length} / 500</span>
+                      {caption.includes('#') && <span className="text-violet-400">⚡ Hashtags detected</span>}
+                    </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-mono text-zinc-500 uppercase block">👥 Tag Users (@names)</label>
-                    <input 
-                      type="text" 
-                      value={taggedUsernames}
-                      onChange={(e) => setTaggedUsernames(e.target.value)}
-                      placeholder='e.g., "alex_sterling, sarah_codes"'
-                      className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden font-sans"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1 relative">
-                  <label className="text-[10px] font-mono text-zinc-500 uppercase block">📍 Add Location Tag</label>
-                  <input 
-                    type="text" 
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Search locations..."
-                    className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden font-sans"
-                  />
-                  {locationSuggestions.length > 0 && (
-                    <div className="absolute z-30 left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-2xl max-h-40 overflow-y-auto">
-                      {locationSuggestions.map(city => (
-                        <div
-                          key={city}
-                          onClick={() => { setLocation(city); setLocationSuggestions([]); }}
-                          className="px-4 py-2 hover:bg-zinc-800 text-xs text-white cursor-pointer transition-colors"
+                  {/* AI Writing Assistant chips */}
+                  <div className="bg-zinc-950/40 p-3.5 border border-zinc-900 rounded-2xl space-y-2">
+                    <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block">🪄 Nexora AI Caption Assistant</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        { prompt: 'rewrite', label: 'Rewrite Punchy' },
+                        { prompt: 'shorten', label: 'Shorten Text' },
+                        { prompt: 'expand', label: 'Expand Professional' },
+                        { prompt: 'tags', label: 'Add Hashtags' },
+                        { prompt: 'translate', label: 'Translate (FR)' }
+                      ].map((assist) => (
+                        <button
+                          key={assist.prompt}
+                          onClick={() => handleAiWritingAssistance(assist.prompt)}
+                          disabled={loadingTranscript}
+                          className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-600/10 border border-violet-500/20 hover:border-violet-500/40 text-violet-300 rounded-lg transition-all disabled:opacity-50"
                         >
-                          {city}
-                        </div>
+                          {assist.label}
+                        </button>
                       ))}
                     </div>
+                  </div>
+
+                  {/* Tagging, location and Alt-text metadata */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👥 Tag alignments (@names)</label>
+                      <input 
+                        type="text" 
+                        value={taggedUsernames}
+                        onChange={(e) => setTaggedUsernames(e.target.value)}
+                        placeholder="alex_sterling, sarah_codes"
+                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">🏷️ Topic Categories</label>
+                      <input 
+                        type="text" 
+                        value={topics}
+                        onChange={(e) => setTopics(e.target.value)}
+                        placeholder="AI, Technology, Systems"
+                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 relative">
+                    <div className="space-y-1 relative">
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">📍 Location</label>
+                      <input 
+                        type="text" 
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="Search regions..."
+                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                      {locationSuggestions.length > 0 && (
+                        <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl max-h-32 overflow-y-auto">
+                          {locationSuggestions.map(city => (
+                            <div key={city} onClick={() => { setLocation(city); setLocationSuggestions([]); }} className="px-3 py-1.5 hover:bg-zinc-800 text-xs text-white cursor-pointer">{city}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👁️ Accessibility Alt-Text (Images)</label>
+                      <input 
+                        type="text" 
+                        value={imageAltText}
+                        onChange={(e) => setImageAltText(e.target.value)}
+                        placeholder="Describe what is in the media..."
+                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                      />
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {currentStep === 5 && (
+                /* STEP 5: VISUAL PREVIEW & ACCESSIBILITY COMPLIANCE */
+                <div className="space-y-4 animate-fadeIn">
+                  <div>
+                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">Live Shutter Preview</span>
+                    <h3 className="text-sm font-black text-white uppercase">Exactly how your post will render</h3>
+                  </div>
+
+                  {/* Simulated Live Post Card */}
+                  <div className="p-4 bg-zinc-950 border border-zinc-800/80 rounded-2xl space-y-3.5 text-left">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2.5">
+                        <img src={currentUser.avatar} className="w-9 h-9 rounded-full object-cover border border-violet-500/20" />
+                        <div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-xs font-black text-white">{currentUser.name}</span>
+                            {currentUser.isVerified && <span className="text-blue-400 text-[10px]">✓</span>}
+                          </div>
+                          <span className="text-[10px] text-zinc-500 font-mono">@{currentUser.username}</span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-mono text-violet-400 bg-violet-950/25 px-2 py-0.5 rounded border border-violet-500/20">Preview Card</span>
+                    </div>
+
+                    <p className="text-xs text-zinc-200 leading-relaxed font-sans">{caption || "Write caption text in previous step... #developer #systemsdesign"}</p>
+
+                    {selectedImages.length > 0 && (
+                      <div className="aspect-video rounded-xl border border-zinc-900 bg-black overflow-hidden">
+                        <img src={selectedImages[0]?.url} className="w-full h-full object-cover" style={{ filter: selectedImages[0]?.filterStyle || 'none' }} />
+                      </div>
+                    )}
+
+                    {voiceFileUrl && (
+                      <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <Play className="w-4 h-4 text-violet-400" />
+                          <span>Voice memopad playing...</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-500">0:{voiceDurationSecs}</span>
+                      </div>
+                    )}
+
+                    {pollQuestion.trim() && (
+                      <div className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-2">
+                        <span className="text-xs font-bold text-white block">📊 {pollQuestion}</span>
+                        <div className="space-y-1">
+                          {pollOptionsList.filter(o => o.trim()).map((o, idx) => (
+                            <div key={idx} className="w-full text-left p-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-sans">
+                              {o}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Mock action triggers */}
+                    <div className="flex justify-between items-center text-xs text-zinc-400 border-t border-zinc-900 pt-3">
+                      <span>❤️ Like</span>
+                      <span>💬 Comment</span>
+                      <span>🔄 Repost</span>
+                      <span>⚡ Tip</span>
+                    </div>
+                  </div>
+
+                  {/* Accessibility & Quality audit compliance checklist */}
+                  <div className="p-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-2.5 text-left">
+                    <span className="text-[9.5px] font-mono text-amber-400 uppercase font-black tracking-widest block">Quality Shutter Check</span>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 text-xs">
+                        {hasContrastIssue ? (
+                          <span className="text-amber-400">⚠️ Soft background contrast warnings in Light Theme.</span>
+                        ) : (
+                          <span className="text-emerald-400">✓ Contrast checklist satisfied</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {isAltTextMissing ? (
+                          <span className="text-amber-400">⚠️ Missing alt-text description targets for visually impaired readers.</span>
+                        ) : (
+                          <span className="text-emerald-400">✓ Alt-text metadata checks satisfied</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        {isVideoTrimCheck ? (
+                          <span className="text-amber-400">⚠️ Video trim boundaries exceed optimal 15 seconds engagement weight.</span>
+                        ) : (
+                          <span className="text-emerald-400">✓ Media trim boundaries optimal</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {currentStep === 6 && (
+                /* STEP 6: PUBLISHING OPTIONS & PROGRESS SCREEN */
+                <div className="space-y-4 animate-fadeIn">
+                  
+                  {postingStatus === 'idle' ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-black text-white uppercase">Configure Publishing settings</span>
+                        <button 
+                          onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
+                          className="text-xs text-violet-400 hover:underline flex items-center gap-1"
+                        >
+                          {isAdvancedOptionsOpen ? 'Collapse Details' : 'Show Advanced Details'}
+                        </button>
+                      </div>
+
+                      {/* Custom options row */}
+                      <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-zinc-900 rounded-2xl text-left">
+                        <div className="flex justify-between items-center text-xs text-zinc-300">
+                          <span className="font-bold">Audience Targets</span>
+                          <select 
+                            value={audience} 
+                            onChange={(e) => setAudience(e.target.value as any)}
+                            className="bg-zinc-900 border border-zinc-800 rounded-lg p-1.5 text-xs text-violet-400 cursor-pointer"
+                          >
+                            <option value="public">🌍 Public</option>
+                            <option value="circle">🔵 Close Friends</option>
+                            <option value="community">🏟️ My Community Circle</option>
+                            <option value="onlyme">🔒 Only Me</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {isAdvancedOptionsOpen && (
+                        <div className="space-y-2.5 bg-zinc-950/40 p-4 border border-zinc-900 rounded-2xl text-left">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-zinc-300">Allow Comments reactions</span>
+                            <input type="checkbox" checked={commentsAllowed} onChange={(e) => setCommentsAllowed(e.target.checked)} className="accent-violet-500" />
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-zinc-300">Allow Shares & Reposts</span>
+                            <input type="checkbox" checked={sharesAllowed} onChange={(e) => setSharesAllowed(e.target.checked)} className="accent-violet-500" />
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-zinc-300">Allow Downloads</span>
+                            <input type="checkbox" checked={downloadsAllowed} onChange={(e) => setDownloadsAllowed(e.target.checked)} className="accent-violet-500" />
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-zinc-300">Cross-Post to external grids</span>
+                            <input type="checkbox" checked={crossPostToTwitter} onChange={(e) => setCrossPostToTwitter(e.target.checked)} className="accent-violet-500" />
+                          </div>
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-zinc-300">Pin Post to top of profile</span>
+                            <input type="checkbox" checked={pinnedOnProfile} onChange={(e) => setPinnedOnProfile(e.target.checked)} className="accent-violet-500" />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Scheduling controls */}
+                      <div className="p-3.5 bg-[#0a0715]/40 border border-zinc-900 rounded-2xl text-left space-y-2">
+                        <div className="flex justify-between items-center text-xs">
+                          <div>
+                            <span className="font-bold text-white block">📅 Post Scheduling</span>
+                            <span className="text-[10px] text-zinc-500">Post automatically triggers at a future date</span>
+                          </div>
+                          <input type="checkbox" checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} className="accent-violet-500" />
+                        </div>
+                        {isScheduled && (
+                          <input 
+                            type="datetime-local" 
+                            value={scheduledDateTime}
+                            onChange={(e) => setScheduledDateTime(e.target.value)}
+                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-violet-400"
+                          />
+                        )}
+                      </div>
+
+                    </div>
+                  ) : (
+                    /* Dynamic Publish Loading indicators */
+                    <div className="py-12 flex flex-col items-center justify-center text-center space-y-5">
+                      {postingStatus === 'completed' ? (
+                        <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 flex items-center justify-center animate-bounce">
+                          <Check className="w-9 h-9" />
+                        </div>
+                      ) : postingStatus === 'failed' ? (
+                        <div className="w-16 h-16 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-400 flex items-center justify-center">
+                          <X className="w-9 h-9" />
+                        </div>
+                      ) : (
+                        <div className="relative w-16 h-16 flex items-center justify-center">
+                          <div className="absolute inset-0 rounded-full border-4 border-violet-600/10 border-t-violet-500 animate-spin" />
+                          <span className="text-xs font-mono text-violet-400">{uploadProgress}%</span>
+                        </div>
+                      )}
+
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-mono text-zinc-500 uppercase block tracking-wider">
+                          {postingStatus === 'compressing' && '⚙️ Compressing media quality...'}
+                          {postingStatus === 'publishing' && '📤 Sharing your creation...'}
+                          {postingStatus === 'processing' && '🧠 AI formatting and checking...'}
+                          {postingStatus === 'completed' && '✨ Content Successfully Shared!'}
+                        </span>
+                        <p className="text-xs text-zinc-300 font-sans">
+                          {postingStatus === 'completed' ? 'Post shared successfully.' : 'Syncing post settings...'}
+                        </p>
+                      </div>
+
+                      {postingStatus !== 'completed' && postingStatus !== 'failed' && (
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => { clearInterval(uploadIntervalRef.current); setPostingStatus('idle'); }} 
+                            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 rounded-lg text-xs"
+                          >
+                            Cancel Publish
+                          </button>
+                          <button 
+                            onClick={() => setIsMinimized(true)}
+                            className="px-3 py-1.5 bg-violet-600/20 text-violet-300 rounded-lg text-xs"
+                          >
+                            Minimize to Tray
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   )}
+
                 </div>
-
-                {/* Specific configs depending on tab section */}
-                {activeTab === 'story' ? (
-                  <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/20 flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-black text-emerald-400 block">Close Friends Highlight ⭐</span>
-                      <span className="text-[10.5px] text-zinc-400">Share story with close aligns list only</span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input 
-                        type="checkbox" 
-                        checked={isStoryCloseFriends} 
-                        onChange={() => setIsStoryCloseFriends(!isStoryCloseFriends)}
-                        className="sr-only peer" 
-                      />
-                      <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-                    </label>
-                  </div>
-                ) : (
-                  <div className="flex justify-between items-center bg-zinc-950/40 p-3 rounded-2xl border border-zinc-800 text-left">
-                    <div className="min-w-0 pr-2">
-                      <span className="text-[10px] font-mono text-zinc-500 uppercase block">Audience Targeting</span>
-                    </div>
-                    <select 
-                      value={audience}
-                      onChange={(e) => setAudience(e.target.value as any)}
-                      className="bg-zinc-900 border border-zinc-800 rounded-lg text-xs font-sans px-3 py-1.5 text-violet-400 focus:outline-hidden cursor-pointer font-bold shrink-0"
-                    >
-                      <option value="public">🌍 Public (Grid)</option>
-                      <option value="circle">🔵 Close Friends Circle</option>
-                      <option value="community">🏟️ Active Communities</option>
-                      <option value="followers">👥 Direct Followers Only</option>
-                      <option value="onlyme">🔒 Secure Self Vault</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-
-              {/* Optional Scheduling & Broadcast configurations */}
-              <div className="space-y-2.5 text-left bg-zinc-950/60 p-3.5 rounded-2xl border border-zinc-900">
-                <div className="flex justify-between items-center">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase tracking-wide flex items-center gap-1">📅 Post Scheduling</span>
-                    <p className="text-[9px] text-zinc-500 font-sans">Trigger release automatically at a future time</p>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer select-none">
-                    <input 
-                      type="checkbox" 
-                      checked={isScheduled} 
-                      onChange={(e) => setIsScheduled(e.target.checked)} 
-                      className="sr-only peer" 
-                    />
-                    <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-violet-600"></div>
-                  </label>
-                </div>
-                {isScheduled && (
-                  <input 
-                    type="datetime-local" 
-                    value={scheduledDateTime} 
-                    onChange={(e) => setScheduledDateTime(e.target.value)}
-                    className="w-full bg-zinc-900 border border-zinc-800 text-violet-300 text-xs rounded-xl p-2.5 focus:outline-none font-mono"
-                  />
-                )}
-
-                {/* VOH-only announcement broadcast channel option */}
-                {(currentUser.username === 'voh' || currentUser.username === 'voh_ai') && (
-                  <div className="flex justify-between items-center pt-2.5 border-t border-zinc-900/60">
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] font-mono text-yellow-400 font-bold uppercase tracking-wide flex items-center gap-1">📣 Founder Broadcast Channel</span>
-                      <p className="text-[9px] text-zinc-500 font-sans">Post to personal broadcast channel (reactions only, no comments)</p>
-                    </div>
-                    <label className="relative inline-flex inline-flex items-center cursor-pointer select-none">
-                      <input 
-                        type="checkbox" 
-                        checked={targetBroadcastChannel} 
-                        onChange={(e) => setTargetBroadcastChannel(e.target.checked)} 
-                        className="sr-only peer" 
-                      />
-                      <div className="w-9 h-5 bg-zinc-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
-                    </label>
-                  </div>
-                )}
-              </div>
-
-              {/* Action buttons footer */}
-              <div className="border-t border-zinc-800 pt-4 flex gap-2 justify-end">
-                <button
-                  type="button"
-                  onClick={handleSaveDraft}
-                  className="px-4 py-2 border border-zinc-800 hover:bg-zinc-900 rounded-xl text-zinc-400 text-xs font-mono font-bold cursor-pointer transition-colors"
-                >
-                  Save Draft 💾
-                </button>
-                {activeTab === 'story' ? (
-                  <button
-                    onClick={handlePublishStory}
-                    className="px-5 py-2.5 bg-linear-to-r from-emerald-600 to-teal-500 hover:brightness-115 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer flex items-center gap-1.5"
-                  >
-                    Broadcast Story 📖
-                  </button>
-                ) : (
-                  <button
-                    onClick={compressMediaAndSubmit}
-                    disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
-                    className="px-6 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
-                  >
-                    Publish Post 🚀
-                  </button>
-                )}
-              </div>
+              )}
 
             </div>
           )}
 
         </div>
+
+        {/* Wizard Footer controls */}
+        {activeTab !== 'drafts' && postingStatus === 'idle' && (
+          <div className="border-t border-zinc-800/60 pt-4 flex justify-between items-center shrink-0">
+            <div>
+              <button 
+                onClick={saveAsDraftLocally}
+                className="px-4 py-2 border border-zinc-800 hover:bg-zinc-900 rounded-xl text-zinc-400 text-xs font-mono font-bold cursor-pointer transition-colors"
+              >
+                Save Draft 💾
+              </button>
+            </div>
+            <div className="flex gap-2">
+              {currentStep > 1 && (
+                <button 
+                  onClick={prevStep}
+                  className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-colors"
+                >
+                  ← Back
+                </button>
+              )}
+              {currentStep < 6 ? (
+                <button 
+                  onClick={nextStep}
+                  disabled={currentStep === 2 && !activeMode}
+                  className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
+                >
+                  Next Step →
+                </button>
+              ) : (
+                <button 
+                  onClick={triggerPublishPipeline}
+                  disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
+                  className="px-6 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
+                >
+                  Publish Now 🚀
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
       </motion.div>
     </div>

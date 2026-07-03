@@ -78,6 +78,7 @@ import AdminDashboardView from './components/AdminDashboardView';
 import MediaCreationEngine from './components/MediaCreationEngine';
 import ExploreView from './components/ExploreView';
 import InboxView from './components/InboxView';
+import SystemHubControlPanel from './components/SystemHubControlPanel';
 
 export default function App() {
   // 1. Core State Orchestrator
@@ -309,6 +310,72 @@ export default function App() {
   const [systemSpeed, setSystemSpeed] = useState('1.8ms');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncPending, setIsSyncPending] = useState(false);
+
+  // Global System Hub states
+  const [isSystemHubOpen, setIsSystemHubOpen] = useState(false);
+  const [textScale, setTextScale] = useState<number>(() => {
+    const saved = localStorage.getItem('nexora_text_scale');
+    return saved ? parseFloat(saved) : 1.0;
+  });
+  const [isHighContrast, setIsHighContrast] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_high_contrast') === 'true';
+  });
+  const [reducedMotion, setReducedMotion] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_reduced_motion') === 'true';
+  });
+  const [colorblindLabels, setColorblindLabels] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_colorblind_labels') === 'true';
+  });
+  const [screenReaderVoice, setScreenReaderVoice] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_screen_reader_voice') === 'true';
+  });
+  const [layoutDirection, setLayoutDirection] = useState<'ltr' | 'rtl'>(() => {
+    return (localStorage.getItem('nexora_layout_direction') as 'ltr' | 'rtl') || 'ltr';
+  });
+  const [lazyLoadImages, setLazyLoadImages] = useState<boolean>(() => {
+    return localStorage.getItem('nexora_lazy_load_images') !== 'false';
+  });
+
+  // Sync System Hub options to local storage and browser document settings
+  useEffect(() => {
+    localStorage.setItem('nexora_text_scale', String(textScale));
+    document.documentElement.style.fontSize = `${textScale * 100}%`;
+  }, [textScale]);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_high_contrast', String(isHighContrast));
+  }, [isHighContrast]);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_reduced_motion', String(reducedMotion));
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_colorblind_labels', String(colorblindLabels));
+  }, [colorblindLabels]);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_screen_reader_voice', String(screenReaderVoice));
+  }, [screenReaderVoice]);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_layout_direction', layoutDirection);
+    document.documentElement.dir = layoutDirection;
+  }, [layoutDirection]);
+
+  useEffect(() => {
+    localStorage.setItem('nexora_lazy_load_images', String(lazyLoadImages));
+  }, [lazyLoadImages]);
+
+  useEffect(() => {
+    const handleOpenSystemHub = () => setIsSystemHubOpen(true);
+    window.addEventListener('open-system-hub', handleOpenSystemHub);
+    return () => window.removeEventListener('open-system-hub', handleOpenSystemHub);
+  }, []);
+
+  // Global VOH AI Command Center overlay state variables
+  const [isAiCommandCenterOpen, setIsAiCommandCenterOpen] = useState(false);
+  const [quickAiQuery, setQuickAiQuery] = useState('');
 
   // PWA Installation state variables
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -1359,6 +1426,9 @@ export default function App() {
 
   // 11. Determine specific theme CSS configurations dynamically
   const getThemeWrapperClass = (mood: ThemeMood) => {
+    if (isHighContrast) {
+      return 'bg-black text-white min-h-screen';
+    }
     switch (mood) {
       case 'neon-cyber':
         return 'bg-[#050409] text-purple-100 min-h-screen';
@@ -1373,6 +1443,9 @@ export default function App() {
   };
 
   const getCardClass = (mood: ThemeMood) => {
+    if (isHighContrast) {
+      return 'bg-black border-2 border-white shadow-none text-white';
+    }
     switch (mood) {
       case 'neon-cyber':
         return 'bg-[#0c0a15]/90 border border-violet-500/20 shadow-md shadow-violet-500/5';
@@ -3105,6 +3178,203 @@ export default function App() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      {/* ⚡ NEXORA AI GLOBAL FLOATING ACTION BUBBLE */}
+      {activeTab !== 'matrix' && (
+        <button
+          onClick={() => setIsAiCommandCenterOpen(true)}
+          className="fixed bottom-24 right-6 md:bottom-10 md:right-10 z-40 p-4 rounded-full bg-gradient-to-tr from-violet-600 to-pink-500 hover:scale-105 active:scale-95 text-white transition-all shadow-xl shadow-violet-600/30 group cursor-pointer border border-violet-400/20"
+          title="Open Nexora AI Command Center"
+        >
+          <Sparkles className="w-5 h-5 animate-pulse text-white group-hover:rotate-12 transition-transform" />
+        </button>
+      )}
+
+      {/* ⚡ NEXORA AI GLOBAL COMMAND CENTER MODAL */}
+      <AnimatePresence>
+        {isAiCommandCenterOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAiCommandCenterOpen(false)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-md"
+            />
+
+            {/* glass container */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ type: "spring", duration: 0.3 }}
+              className="relative w-full max-w-lg bg-[#070514] border border-violet-500/20 rounded-3xl p-6 shadow-2xl z-10 text-left overflow-hidden"
+            >
+              {/* Decorative neon blur */}
+              <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-[-20%] right-[-10%] w-64 h-64 bg-pink-600/10 rounded-full blur-3xl pointer-events-none" />
+
+              {/* Header */}
+              <div className="flex justify-between items-start border-b border-white/5 pb-3.5 mb-4 relative z-10">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-violet-400">
+                    <Sparkles className="w-4.5 h-4.5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-mono font-bold text-violet-400 tracking-wider uppercase">NEXORA AI HUB</h3>
+                    <h2 className="text-base font-black font-sans text-white uppercase tracking-tight">VOH Command Center</h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsAiCommandCenterOpen(false)}
+                  className="p-1 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white cursor-pointer transition-colors"
+                >
+                  <X className="w-4.5 h-4.5" />
+                </button>
+              </div>
+
+              <p className="text-zinc-300 font-sans leading-relaxed mb-4 relative z-10 text-[11px]">
+                Access VOH AI, Nexora's core intelligence, from anywhere. Submit a query below to immediately trigger on-chain summaries, feed optimization, or direct assistant dialogues.
+              </p>
+
+              {/* Suggested Direct Triggers */}
+              <div className="space-y-2 mb-4 relative z-10">
+                <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block">Quick AI Commands</span>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAiCommandCenterOpen(false);
+                      setActiveTab('matrix');
+                      setMatrixSubTabRedirect('ai');
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('voh-ai-trigger-prompt', {
+                          detail: { prompt: "Summarize my active feed.", contextType: "feed" }
+                        }));
+                      }, 300);
+                    }}
+                    className="p-2.5 rounded-xl bg-white/3 border border-white/5 hover:border-violet-500/30 text-left hover:bg-violet-950/20 transition-all group cursor-pointer"
+                  >
+                    <span className="block text-[10.5px] font-black text-white group-hover:text-violet-300 font-sans">#SummarizeFeed</span>
+                    <span className="block text-[9px] text-zinc-400 font-sans mt-0.5">Parse active timeline posts</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAiCommandCenterOpen(false);
+                      setActiveTab('matrix');
+                      setMatrixSubTabRedirect('ai');
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('voh-ai-trigger-prompt', {
+                          detail: { prompt: "How do I maximize my NEX token tips and reputation points?", contextType: "profile" }
+                        }));
+                      }, 300);
+                    }}
+                    className="p-2.5 rounded-xl bg-white/3 border border-white/5 hover:border-cyan-500/30 text-left hover:bg-cyan-950/20 transition-all group cursor-pointer"
+                  >
+                    <span className="block text-[10.5px] font-black text-white group-hover:text-cyan-300 font-sans">#OptimizeEarnings</span>
+                    <span className="block text-[9px] text-zinc-400 font-sans mt-0.5">Learn about reach weightings</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Core Command Input */}
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (!quickAiQuery.trim()) return;
+                  const inputQuery = quickAiQuery;
+                  setQuickAiQuery('');
+                  setIsAiCommandCenterOpen(false);
+                  
+                  // Redirect to AI matrix view
+                  setActiveTab('matrix');
+                  setMatrixSubTabRedirect('ai');
+                  
+                  // Dispatch custom event to trigger prompt in VohAiView
+                  setTimeout(() => {
+                    window.dispatchEvent(new CustomEvent('voh-ai-trigger-prompt', {
+                      detail: { prompt: inputQuery, contextType: "feed" }
+                    }));
+                  }, 300);
+                }}
+                className="space-y-3 relative z-10"
+              >
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-mono tracking-wider text-zinc-400 uppercase block">What is your request?</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. Find startup opportunities in Nigeria..."
+                      value={quickAiQuery}
+                      onChange={(e) => setQuickAiQuery(e.target.value)}
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-xs text-white focus:outline-none focus:border-violet-500/40"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!quickAiQuery.trim()}
+                      className="px-4 bg-gradient-to-tr from-violet-600 to-pink-500 text-white font-sans text-xs font-black rounded-xl hover:brightness-110 shadow-md flex items-center justify-center shrink-0 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Send className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-white/5">
+                  <span className="text-[9px] font-mono text-zinc-500">Linked to VOH Core v3.5</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAiCommandCenterOpen(false);
+                      setActiveTab('matrix');
+                      setMatrixSubTabRedirect('ai');
+                    }}
+                    className="text-[10px] text-violet-400 hover:underline font-bold font-sans cursor-pointer"
+                  >
+                    Go to Full Dedicated Space →
+                  </button>
+                </div>
+              </form>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 🔮 NEXORA SYSTEM HUB - GLOBAL UX, ACCESSIBILITY, AND PERFORMANCE CONTROL DECK */}
+      <AnimatePresence>
+        {isSystemHubOpen && (
+          <SystemHubControlPanel
+            isOpen={isSystemHubOpen}
+            onClose={() => setIsSystemHubOpen(false)}
+            theme={theme}
+            setTheme={setTheme}
+            textScale={textScale}
+            setTextScale={setTextScale}
+            isHighContrast={isHighContrast}
+            setIsHighContrast={setIsHighContrast}
+            reducedMotion={reducedMotion}
+            setReducedMotion={setReducedMotion}
+            colorblindLabels={colorblindLabels}
+            setColorblindLabels={setColorblindLabels}
+            screenReaderVoice={screenReaderVoice}
+            setScreenReaderVoice={setScreenReaderVoice}
+            preferredLanguage={currentUser.preferredLanguage || 'en'}
+            setPreferredLanguage={(lang) => {
+              setCurrentUser(prev => ({ ...prev, preferredLanguage: lang }));
+            }}
+            layoutDirection={layoutDirection}
+            setLayoutDirection={setLayoutDirection}
+            isOffline={isOffline}
+            setIsOffline={setIsOffline}
+            lazyLoadImages={lazyLoadImages}
+            setLazyLoadImages={setLazyLoadImages}
+          />
         )}
       </AnimatePresence>
 

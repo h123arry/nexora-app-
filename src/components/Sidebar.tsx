@@ -190,6 +190,24 @@ export default function Sidebar({
         )}
       </div>
 
+      {/* System Control Deck Button */}
+      <button
+        onClick={() => window.dispatchEvent(new CustomEvent('open-system-hub'))}
+        className="flex items-center gap-2.5 w-full p-2.5 rounded-xl border bg-black/35 border-current/5 hover:border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/10 transition-all text-left group cursor-pointer mb-3"
+      >
+        <div className="p-1.5 rounded-lg bg-cyan-600/10 text-cyan-400 group-hover:scale-105 transition-all">
+          <Sliders className="w-3.5 h-3.5 text-cyan-400" />
+        </div>
+        <div className="flex-1 overflow-hidden">
+          <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-cyan-300 group-hover:text-cyan-200">
+            System Core Hub ⚡
+          </span>
+          <span className="block text-[9px] text-current/40 font-mono truncate">
+            Settings & Accessibility
+          </span>
+        </div>
+      </button>
+
       {/* Quick Action Post Button */}
       <button 
         id="sidebar-create-post-cta"
