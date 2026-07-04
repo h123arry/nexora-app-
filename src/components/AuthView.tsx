@@ -25,6 +25,7 @@ import { User } from '../types';
 import { INITIAL_USER, MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, INITIAL_CIRCLES } from '../data/database';
 import { followUserDb, unfollowUserDb, joinCircleDb, leaveCircleDb, getRichUser } from '../data/database';
 import NexoraPremiumLogo from './NexoraPremiumLogo';
+import { validateUsername } from '../utils/username';
 
 // Policy Content Panels
 const TERMS_TEXT = (
@@ -492,7 +493,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           const phoneUser: User = {
             id: `user-phone-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
             username: generatedUsername,
-            name: `Phone Node (${selectedCountry.code} ${phoneNumber})`,
+            name: `Phone User (${selectedCountry.code} ${phoneNumber})`,
             avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
             bio: `Authenticated securely with mobile SMS link routing.`,
             location: 'Mobile Range',
@@ -557,6 +558,13 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         setErrorMsg('Please specify a unique username handle.');
         return;
       }
+      
+      const usernameError = validateUsername(usernameInput);
+      if (usernameError) {
+        setErrorMsg(usernameError);
+        return;
+      }
+
       if (password.length < 8) {
         setErrorMsg('Password must contain at least 8 characters.');
         return;
@@ -587,9 +595,9 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         const newUser: User = {
           id: `user-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
           username: cleanUsername,
-          name: fullName || 'New Node',
+          name: fullName || 'New User',
           avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-          bio: 'Secured node member of the NEXORA decentralized stream.',
+          bio: 'Member of the NEXORA community.',
           location: 'Global Hub',
           website: '',
           followers: 0,
@@ -636,6 +644,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
   // Onboarding Skip Utility: allows entering home feed instantly
   const handleOnboardingSkip = () => {
     if (onboardingUser) {
+      localStorage.setItem('nexora_just_signed_up', 'true');
       window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Welcome! Profile setup skipped (you can finish later)' }));
       onLoginSuccess(getRichUser(onboardingUser));
     }
@@ -738,6 +747,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         return a;
       });
       localStorage.setItem('nexora_registered_accounts', JSON.stringify(updatedRegistry));
+      localStorage.setItem('nexora_just_signed_up', 'true');
       onLoginSuccess(getRichUser(finalUser));
     };
 
@@ -753,7 +763,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
         <div className="flex justify-between items-center max-w-2xl w-full mx-auto mb-4 z-10">
           <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-purple-400">
-            Node setup
+            Account Setup
           </span>
           <button
             onClick={handleOnboardingSkip}
@@ -942,7 +952,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                     onClick={finalizeOnboarding}
                     className="px-6 py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-extrabold text-xs rounded-xl active:scale-95 transition-all tracking-widest uppercase cursor-pointer"
                   >
-                    Initialize Node & Enter
+                    Complete Setup & Enter
                   </button>
                 </div>
               </div>
@@ -1067,8 +1077,8 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                     <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                       {[
                         { email: 'ogoulu131@gmail.com', name: 'Ogoulu', desc: 'Voice of Harrison', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80' },
-                        { email: 'voh@nexora.com', name: 'VOH Creator', desc: 'Nexora Core Network Node', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80' },
-                        { email: 'guest.explorer@gmail.com', name: 'Guest Explorer', desc: 'Local Public Stream Node', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' }
+                        { email: 'voh@nexora.com', name: 'VOH Creator', desc: 'Nexora Creator', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=80' },
+                        { email: 'guest.explorer@gmail.com', name: 'Guest Explorer', desc: 'Guest Explorer', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' }
                       ].map((act, i) => (
                         <button
                           key={i}
@@ -1120,7 +1130,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                       </div>
                       <div className="flex gap-2 items-start">
                         <span className="text-violet-400 font-black">✓</span>
-                        <span>Associate your verified Google email with a Nexora Node session.</span>
+                        <span>Associate your verified Google email with your Nexora account.</span>
                       </div>
                     </div>
 
@@ -1925,7 +1935,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
               </div>
               <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider">Agreement Required</h3>
               <p className="text-xs text-zinc-400 font-sans leading-relaxed">
-                Before generating a secure Nexora Node, you must review and explicitly agree to the Nexora Terms of Service, Privacy Policy, and Community Guidelines.
+                Before creating a secure Nexora account, you must review and explicitly agree to the Nexora Terms of Service, Privacy Policy, and Community Guidelines.
               </p>
               <button
                 onClick={() => {

@@ -146,7 +146,7 @@ export default function CallScreen({
               {partnerName}
             </h2>
             <p className="text-xs font-mono text-violet-300 tracking-widest uppercase font-extrabold animate-pulse">
-              {callStatus === 'ringing' ? '☎️ Ringing Secured Node...' : '⚡ Session Connected'}
+              {callStatus === 'ringing' ? '☎️ Ringing...' : '⚡ Session Connected'}
             </p>
             {callStatus === 'connected' && (
               <p className="text-xl font-mono font-black text-emerald-400 mt-2">

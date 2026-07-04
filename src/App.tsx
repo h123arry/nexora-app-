@@ -79,6 +79,7 @@ import MediaCreationEngine from './components/MediaCreationEngine';
 import ExploreView from './components/ExploreView';
 import InboxView from './components/InboxView';
 import SystemHubControlPanel from './components/SystemHubControlPanel';
+import NidaView from './components/NidaView';
 
 export default function App() {
   // 1. Core State Orchestrator
@@ -285,7 +286,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : ['creator-4', 'voh_ai'];
   });
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida'>('feed');
 
   // Pause any playing videos immediately when switching main tabs
   useEffect(() => {
@@ -703,6 +704,18 @@ export default function App() {
 
   // 4.5. PWA Installation Event Listeners & Controllers
   useEffect(() => {
+    // Increment session count
+    const sessionCountStr = localStorage.getItem('nexora_session_count') || '0';
+    const nextSessionCount = parseInt(sessionCountStr, 10) + 1;
+    localStorage.setItem('nexora_session_count', nextSessionCount.toString());
+
+    // If dismissed, increment sessions since dismissal
+    const dismissedAt = localStorage.getItem('nexora_pwa_dismissed_at');
+    if (dismissedAt) {
+      const currentSessionsSince = parseInt(localStorage.getItem('nexora_pwa_sessions_since_dismissed') || '0', 10);
+      localStorage.setItem('nexora_pwa_sessions_since_dismissed', (currentSessionsSince + 1).toString());
+    }
+
     // Check if app is launched in standalone mode
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
     if (isStandalone) {
@@ -713,8 +726,30 @@ export default function App() {
       console.log('💡 Captured PWA beforeinstallprompt anchor');
       e.preventDefault();
       setDeferredPrompt(e);
-      // Open the elegant installation banner so the user can easily proceed
-      setShowPWAInstallPrompt(true);
+      
+      // Auto-trigger prompt check
+      const standalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
+      if (standalone) return;
+
+      const justSignedUp = localStorage.getItem('nexora_just_signed_up') === 'true';
+      if (justSignedUp) {
+        localStorage.removeItem('nexora_just_signed_up');
+        setShowPWAInstallPrompt(true);
+        return;
+      }
+
+      const dismissed = localStorage.getItem('nexora_pwa_dismissed_at');
+      const sessionsSinceDismissed = parseInt(localStorage.getItem('nexora_pwa_sessions_since_dismissed') || '0', 10);
+
+      if (dismissed) {
+        const daysDiff = (Date.now() - parseInt(dismissed, 10)) / (1000 * 60 * 60 * 24);
+        if (sessionsSinceDismissed >= 3 && daysDiff >= 1) {
+          setShowPWAInstallPrompt(true);
+        }
+      } else {
+        // No dismissal recorded yet, show prompt
+        setShowPWAInstallPrompt(true);
+      }
     };
 
     const handleAppInstalled = () => {
@@ -739,12 +774,27 @@ export default function App() {
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('changeTab', handleChangeTab);
 
+    // If a new user just signed up and we missed beforeinstallprompt (or browser doesn't support),
+    // still display the setup guidance prompt so they can learn how to install!
+    const justSignedUp = localStorage.getItem('nexora_just_signed_up') === 'true';
+    if (justSignedUp && !isStandalone) {
+      localStorage.removeItem('nexora_just_signed_up');
+      setShowPWAInstallPrompt(true);
+    }
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('changeTab', handleChangeTab);
     };
   }, []);
+
+  const handleMaybeLaterPWA = () => {
+    localStorage.setItem('nexora_pwa_dismissed_at', Date.now().toString());
+    localStorage.setItem('nexora_pwa_sessions_since_dismissed', '0');
+    setShowPWAInstallPrompt(false);
+    window.dispatchEvent(new CustomEvent('toast', { detail: '👍 Preference saved. We\'ll remind you later!' }));
+  };
 
   const handleTriggerPWAInstall = async () => {
     if (!deferredPrompt) {
@@ -1591,6 +1641,10 @@ export default function App() {
                       onTriggerPWAInstall={handleTriggerPWAInstall}
                       showPWAInstallPrompt={showPWAInstallPrompt}
                     />
+                  )}
+
+                  {activeTab === 'nida' && (
+                    <NidaView currentUser={getRichUser(currentUser)} />
                   )}
 
                   {(activeTab === 'inbox' || activeTab === 'activity') && (
@@ -2584,14 +2638,14 @@ export default function App() {
 
       {/* 📥 PWA CUSTOM INSTALLATION POPUP & OVERLAY */}
       <AnimatePresence>
-        {currentUser.username === 'voh' && showPWAInstallPrompt && (
+        {showPWAInstallPrompt && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
             {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              onClick={() => setShowPWAInstallPrompt(false)}
+              onClick={handleMaybeLaterPWA}
               className="absolute inset-0 bg-slate-950/70"
             />
 
@@ -2607,7 +2661,7 @@ export default function App() {
               <div className="absolute left-0 bottom-0 w-32 h-32 bg-cyan-600/15 rounded-full blur-2xl" />
 
               <button
-                onClick={() => setShowPWAInstallPrompt(false)}
+                onClick={handleMaybeLaterPWA}
                 className="absolute top-4 right-4 p-2 text-violet-400/60 hover:text-white rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer z-20"
               >
                 <X className="w-3.5 h-3.5" />
@@ -2635,10 +2689,10 @@ export default function App() {
                     <span>Fast Web Version Ready</span>
                   </div>
                   <h3 className="text-base font-black font-sans text-white uppercase tracking-wider leading-tight">
-                    Install Nexora App
+                    Install Nexora
                   </h3>
                   <p className="text-[10.5px] text-violet-300/65 font-sans leading-relaxed max-w-xs mx-auto">
-                    Install Nexora on your phone to open and use it anytime from your home screen. It will look like a real app without needing to open a browser!
+                    Install Nexora for a faster, full-screen experience with quicker loading and easier access.
                   </p>
                 </div>
 
@@ -2682,10 +2736,10 @@ export default function App() {
                   )}
 
                   <button
-                    onClick={() => setShowPWAInstallPrompt(false)}
+                    onClick={handleMaybeLaterPWA}
                     className="text-[9px] font-mono text-violet-400/40 hover:text-white uppercase block mx-auto underline transition-colors"
                   >
-                    Close and use in browser
+                    Maybe Later
                   </button>
                 </div>
 

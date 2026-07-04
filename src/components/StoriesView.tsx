@@ -559,7 +559,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                   type="submit"
                   className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white text-xs font-sans font-extrabold uppercase rounded-xl tracking-wider select-none active:scale-97 transition-all cursor-pointer"
                 >
-                  Publish Story Node
+                  Publish Story
                 </button>
               </form>
             </motion.div>

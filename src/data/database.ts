@@ -819,18 +819,18 @@ export function getRichUser(user: User): User {
   const completedMissionsCount = getCompletedMissionsCount(user.id);
 
   if (isFounder) {
-    // Founder Exception: manually assigned metrics (15.3 Million Followers) + local changes
+    // Founder Exception: manually assigned metrics (25.5 Million Followers) + local changes
     return {
       ...user,
       name: 'VOICE OF HARRISON',
       username: 'voh',
       isVerified: true,
-      followers: 15300000 + followersCount,
-      following: 2 + followingCount,
-      reputationPoints: 9900000 + reputationVal,
-      sparks: 40000000 + getSparksReceived(user.id),
+      followers: 25500000 + followersCount,
+      following: 5 + followingCount,
+      reputationPoints: 20000000 + reputationVal,
+      sparks: 80000000 + getSparksReceived(user.id),
       reputationBreakdown: {
-        contributions: 20000000 + contributionsCount,
+        contributions: 40000000 + contributionsCount,
         helpfulness: 121000 + breakdown.helpfulness,
         missionsCompleted: 350 + completedMissionsCount,
         skillsVerified: 83650 + breakdown.skillsVerified,
@@ -839,18 +839,18 @@ export function getRichUser(user: User): User {
   }
 
   if (isNexoraAi) {
-    // Nexora AI details requested (6.4M Followers, following only voh_ai & VOH)
+    // Nexora AI details: slightly lesser than VOH AI & different
     return {
       ...user,
       name: 'Nexora AI',
       username: 'nexora_ai',
       isVerified: true,
-      followers: 6400000 + followersCount,
-      following: 2 + followingCount,
-      reputationPoints: 4100000 + reputationVal,
-      sparks: 12000000 + getSparksReceived(user.id),
+      followers: 12400000 + followersCount,
+      following: 3 + followingCount,
+      reputationPoints: 11000000 + reputationVal,
+      sparks: 45000000 + getSparksReceived(user.id),
       reputationBreakdown: {
-        contributions: 5000000 + contributionsCount,
+        contributions: 22000000 + contributionsCount,
         helpfulness: 1250000 + breakdown.helpfulness,
         missionsCompleted: 800 + completedMissionsCount,
         skillsVerified: 500000 + breakdown.skillsVerified,
@@ -859,18 +859,18 @@ export function getRichUser(user: User): User {
   }
 
   if (isVohAi) {
-    // VOH AI details requested (8.7M Followers, following only VOICE OF HARRISON)
+    // VOH AI details: slightly lesser than VOH & different
     return {
       ...user,
       name: 'VOH AI',
       username: 'voh_ai',
       isVerified: true,
-      followers: 8700000 + followersCount,
-      following: 2 + followingCount,
-      reputationPoints: 5200000 + reputationVal,
-      sparks: 18000000 + getSparksReceived(user.id),
+      followers: 18500000 + followersCount,
+      following: 4 + followingCount,
+      reputationPoints: 15000000 + reputationVal,
+      sparks: 62000000 + getSparksReceived(user.id),
       reputationBreakdown: {
-        contributions: 7000000 + contributionsCount,
+        contributions: 30000000 + contributionsCount,
         helpfulness: 1120000 + breakdown.helpfulness,
         missionsCompleted: 750 + completedMissionsCount,
         skillsVerified: 510000 + breakdown.skillsVerified,

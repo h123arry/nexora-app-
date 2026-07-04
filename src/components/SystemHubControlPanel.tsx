@@ -211,13 +211,13 @@ export default function SystemHubControlPanel({
     const nextVal = !isOffline;
     setIsOffline(nextVal);
     playHapticHum(nextVal ? 110 : 280, 0.15);
-    speakAnnouncement(nextVal ? "Simulating offline state. Transactions will be queued locally." : "Simulating online state. Synced queue with blockchain nodes.");
+    speakAnnouncement(nextVal ? "Simulating offline state. Transactions will be queued locally." : "Simulating online state. Synced queue.");
     
     // Dispatch custom event to App to show the toast
     window.dispatchEvent(new CustomEvent('toast', { 
       detail: nextVal 
         ? '🔌 Nexora Offline Mode simulated! Drafts will write locally.' 
-        : '📶 Connected back to Nexora Node Mesh! Local queue synced.' 
+        : '📶 Connected back to Nexora! Local drafts synced.' 
     }));
   };
 

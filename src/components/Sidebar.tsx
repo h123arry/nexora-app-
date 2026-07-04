@@ -20,8 +20,8 @@ import NexoraPremiumLogo from './NexoraPremiumLogo';
 
 interface SidebarProps {
   currentUser: User;
-  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin';
-  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin') => void;
+  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida';
+  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida') => void;
   unreadMessagesCount: number;
   unreadNotificationsCount: number;
   theme: ThemeMood;
@@ -101,6 +101,7 @@ export default function Sidebar({
         {[
           { id: 'feed', label: 'Home', desc: 'Sleek social feed', icon: Home, count: 0 },
           { id: 'explore', label: 'Search', desc: 'Find trends & tags', icon: Search, count: 0 },
+          { id: 'nida', label: 'NIDA AI', desc: 'Discovery Algorithm', icon: Sparkles, count: 0 },
           { id: 'create_btn', label: 'Create Post', desc: 'Share photos, video, voice, poll', icon: PlusCircle, isCreate: true, count: 0 },
           { id: 'inbox', label: 'Inbox', desc: 'Messages & Alerts', icon: MessageSquare, count: unreadMessagesCount + unreadNotificationsCount },
           { id: 'profile', label: 'Profile', desc: 'Your personal views', icon: UserIcon, count: 0 }

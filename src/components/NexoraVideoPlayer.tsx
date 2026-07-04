@@ -645,11 +645,20 @@ export default function NexoraVideoPlayer({
       onMouseDown={handleStartHold}
       onMouseUp={handleReleaseHold}
       onMouseLeave={handleReleaseHold}
-      className="relative overflow-hidden rounded-none md:rounded-3xl border-y md:border border-violet-500/10 bg-black select-none group w-full h-full min-h-[260px] md:aspect-video aspect-auto flex items-center justify-center animate-fade-in touch-pan-y"
+      className="relative overflow-hidden bg-black select-none group w-full h-full flex items-center justify-center animate-fade-in touch-pan-y"
     >
        {/* Absolute Video Frame */}
        {finalVideoUrl ? (
           <>
+            {/* Soft Ambient Contrast Gradients for Controls Readability */}
+            <div className="bg-gradient-to-t from-black/90 via-black/25 to-transparent absolute bottom-0 inset-x-0 h-52 pointer-events-none z-10" />
+            <div className="bg-gradient-to-l from-black/55 via-transparent to-transparent absolute right-0 inset-y-0 w-28 pointer-events-none z-10" />
+            
+            {/* Prevent Next-Video Bleeding, Glows, and Flickering (Solid Black cover when inactive) */}
+            {!isActive && (
+              <div className="absolute inset-0 bg-black z-30 pointer-events-none transition-opacity duration-300" />
+            )}
+
             <video
               ref={videoRef}
               src={isNearby ? finalVideoUrl : undefined}

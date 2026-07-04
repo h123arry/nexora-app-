@@ -792,11 +792,11 @@ export default function MessagesView({
                     onClick={() => {
                       setPinnedMessageInChat(msg);
                       setActiveContextMessageId(null);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: "📌 Message pinned to dialogue banner!" }));
+                      window.dispatchEvent(new CustomEvent('toast', { detail: "📌 Message pinned to chat!" }));
                     }} 
                     className="p-1.5 hover:bg-white/5 rounded-lg flex items-center gap-2 cursor-pointer"
                   >
-                    <Pin className="w-3 h-3" /> Pin Dialogue
+                    <Pin className="w-3 h-3" /> Pin Message
                   </button>
                   <button 
                     onClick={() => handleDeleteMessage(msg.id, isMe)} 
@@ -1121,12 +1121,12 @@ export default function MessagesView({
                   onClick={() => {
                     const bubble = document.getElementById(`bubble-${pinnedMessageInChat.id}`);
                     bubble?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    window.dispatchEvent(new CustomEvent('toast', { detail: "📍 Scrolled to pinned conversation landmark" }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: "📍 Scrolled to pinned message" }));
                   }}
                 >
                   <Pin className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                   <p className="text-[10px] font-sans text-violet-200 truncate pr-4">
-                    Pinned Dialogue: <span className="italic">"{pinnedMessageInChat.content}"</span>
+                    Pinned Message: <span className="italic">"{pinnedMessageInChat.content}"</span>
                   </p>
                 </div>
                 <button
@@ -1319,10 +1319,10 @@ export default function MessagesView({
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#05030d]">
-            <ShieldAlert className="w-12 h-12 text-violet-500/30 mb-3 animate-bounce" />
-            <p className="font-sans font-medium text-violet-300 text-sm">No Secure Dialogue Selected</p>
-            <p className="font-mono text-[10px] text-violet-300/40 mt-1 max-w-xs text-center leading-normal">
-              Activate an authorized coordinator in Secure Channels list or accept incoming requests inbox peer queries.
+            <ShieldAlert className="w-12 h-12 text-violet-500/30 mb-3 animate-pulse" />
+            <p className="font-sans font-medium text-violet-300 text-sm">No Conversation Selected</p>
+            <p className="font-sans text-[11px] text-zinc-500 mt-1.5 max-w-xs text-center leading-normal">
+              Select a contact from your messages list to start chatting. All conversations on Nexora are fully secure.
             </p>
           </div>
         )}

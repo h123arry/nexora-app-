@@ -1772,7 +1772,7 @@ export default function NotificationsView({
                   </div>
                   <div>
                     <h3 className="text-base font-extrabold text-white uppercase tracking-wider animate-pulse">
-                      Simulated Live Broadcaster Node
+                      Simulated Live Stream
                     </h3>
                     <p className="text-xs text-zinc-400 mt-1">
                       Stream source: RTMP Encrypted Feed • 1080p 60fps

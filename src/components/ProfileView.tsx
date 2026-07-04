@@ -67,11 +67,13 @@ import {
   Laptop,
   Smartphone,
   Key,
-  RefreshCw
+  RefreshCw,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import { validateUsername } from '../utils/username';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraVideo from './NexoraVideo';
@@ -185,7 +187,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
                         {post.content}
                       </p>
                       <div className="text-right">
-                        <span className="text-[8px] font-mono text-violet-400/50">Nexora Node</span>
+                        <span className="text-[8px] font-mono text-violet-400/50">Nexora App</span>
                       </div>
                     </div>
                   );
@@ -333,6 +335,7 @@ export default function ProfileView({
 
   // Reputation breakdown view
   const [showReputationModal, setShowReputationModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   // QR Customizer State
   const [qrColorPalette, setQrColorPalette] = useState<'neon-cyber' | 'solar-flare' | 'holographic'>('neon-cyber');
@@ -366,8 +369,95 @@ export default function ProfileView({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
 
+  // Profile dropdown menu state
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  // Exquisite Interactive Avatar modal editor state
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
+  const [avatarSourceType, setAvatarSourceType] = useState<'select' | 'webcam' | 'gallery_edit'>('select');
+  const [galleryImage, setGalleryImage] = useState<string | null>(null);
+  const [avatarZoom, setAvatarZoom] = useState(1.0);
+  const [avatarRotation, setAvatarRotation] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleGalleryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setGalleryImage(reader.result as string);
+        setAvatarSourceType('gallery_edit');
+        setAvatarZoom(1.0);
+        setAvatarRotation(0);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const capturePhotoToGallery = () => {
+    if (videoRef.current) {
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(videoRef.current, 0, 0, 400, 400);
+        const dataUrl = canvas.toDataURL('image/jpeg');
+        stopWebcam();
+        setGalleryImage(dataUrl);
+        setAvatarSourceType('gallery_edit');
+        setAvatarZoom(1.0);
+        setAvatarRotation(0);
+        window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Frame captured! Now crop and zoom your photo.' }));
+      }
+    }
+  };
+
+  const handleSaveCroppedAvatar = () => {
+    if (!galleryImage) return;
+
+    const img = new Image();
+    img.src = galleryImage;
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const size = 300;
+      canvas.width = size;
+      canvas.height = size;
+
+      ctx.clearRect(0, 0, size, size);
+      ctx.save();
+      ctx.translate(size / 2, size / 2);
+      ctx.rotate((avatarRotation * Math.PI) / 180);
+      ctx.scale(avatarZoom, avatarZoom);
+
+      const drawSize = size;
+      const aspect = img.width / img.height;
+      let dw, dh;
+      if (aspect > 1) {
+        dw = drawSize * aspect;
+        dh = drawSize;
+      } else {
+        dw = drawSize;
+        dh = drawSize / aspect;
+      }
+      ctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+      ctx.restore();
+
+      const finalDataUrl = canvas.toDataURL('image/jpeg');
+      setEditAvatar(finalDataUrl);
+      setIsAvatarModalOpen(false);
+      setGalleryImage(null);
+      setAvatarZoom(1.0);
+      setAvatarRotation(0);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Profile photo cropped & saved!' }));
+    };
+  };
+
   // Dynamic status presets
-  const [statusText, setStatusText] = useState(() => localStorage.getItem(`nexora_status_text_${currentUser.id}`) || 'Calibrating...');
+  const [statusText, setStatusText] = useState(() => localStorage.getItem(`nexora_status_text_${currentUser.id}`) || 'Exploring...');
   const [statusEmoji, setStatusEmoji] = useState(() => localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) || '🌌');
 
   // Music Widget States
@@ -533,6 +623,13 @@ export default function ProfileView({
 
     // 30-day username lock
     if (editUsername !== currentUser.username) {
+      const usernameError = validateUsername(editUsername, currentUser.id);
+      if (usernameError) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${usernameError}` }));
+        alert(`⚠️ ${usernameError}`);
+        return;
+      }
+
       const lastChange = currentUser.lastUsernameChangeTime;
       if (lastChange) {
         const diff = Date.now() - new Date(lastChange).getTime();
@@ -566,6 +663,19 @@ export default function ProfileView({
     window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Digital profile successfully re-calibrated!' }));
   };
 
+  const handleCancelEditProfile = () => {
+    stopWebcam();
+    setEditName(currentUser.name);
+    setEditUsername(currentUser.username);
+    setEditBio(currentUser.bio);
+    setEditLocation(currentUser.location || '');
+    setEditWebsite(currentUser.website || '');
+    setEditAvatar(currentUser.avatar);
+    setEditCover(currentUser.coverImage);
+    setActivePanel('profile');
+    window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Re-calibration cancelled. No changes saved.' }));
+  };
+
   // QR Color theme options
   const getQrGradients = () => {
     switch (qrColorPalette) {
@@ -585,14 +695,14 @@ export default function ProfileView({
     setQrScanSuccessText('');
     setTimeout(() => {
       setQrScanningActive(false);
-      setQrScanSuccessText(`Success! Decoded Node identity: @${currentUser.username}. Mutual network link synched.`);
+      setQrScanSuccessText(`Success! Decoded Creator identity: @${currentUser.username}. Mutual network link synched.`);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📲 QR Decoded! Profile sync complete.' }));
     }, 1800);
   };
 
   // Switch accounts action
   const handleSwitchAccount = (acc: any) => {
-    window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Switching node to @${acc.username}...` }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Switching account to @${acc.username}...` }));
     localStorage.setItem('nexora_active_user_id', acc.id);
     window.location.reload(); // Refresh to boot with new session index
   };
@@ -651,33 +761,58 @@ export default function ProfileView({
   const filteredTabPosts = getTabContent();
 
   const formatSecondaryStat = (num: number) => {
+    if (num === undefined || num === null || isNaN(num)) return '0';
     if (num >= 1000000) {
-      return (num / 1000000).toFixed(1) + 'M';
+      const val = num / 1000000;
+      const rounded = Math.floor(val * 10) / 10;
+      return (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)) + 'M';
     }
     if (num >= 1000) {
-      return (num / 1000).toFixed(1) + 'K';
+      const val = num / 1000;
+      const rounded = Math.floor(val * 10) / 10;
+      return (rounded % 1 === 0 ? rounded.toFixed(0) : rounded.toFixed(1)) + 'K';
     }
     return num.toString();
   };
 
+  const getPostsCount = () => {
+    if (currentUser.username === 'voh') {
+      const extra = Math.max(0, myPosts.length - 2);
+      return 14 + extra;
+    }
+    if (currentUser.username === 'voh_ai') {
+      return 10;
+    }
+    if (currentUser.username === 'nexora_ai') {
+      return 8;
+    }
+    return myPosts.length;
+  };
+
   const getSecondaryMetric = (type: 'sparks' | 'reputation' | 'contributions') => {
-    const seed = (currentUser.username || 'user').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    if (currentUser.username === 'voh') {
+      if (type === 'sparks') return formatSecondaryStat(80000000);
+      if (type === 'reputation') return formatSecondaryStat(20000000);
+      return formatSecondaryStat(40000000);
+    }
+    if (currentUser.username === 'voh_ai') {
+      if (type === 'sparks') return formatSecondaryStat(62000000);
+      if (type === 'reputation') return formatSecondaryStat(15000000);
+      return formatSecondaryStat(30000000);
+    }
+    if (currentUser.username === 'nexora_ai') {
+      if (type === 'sparks') return formatSecondaryStat(45000000);
+      if (type === 'reputation') return formatSecondaryStat(11000000);
+      return formatSecondaryStat(22000000);
+    }
+
     if (type === 'sparks') {
-      const real = currentUser.sparks;
-      if (real !== undefined && real > 0) return formatSecondaryStat(real);
-      const mockVal = (seed % 40) + 5.2;
-      return `${mockVal.toFixed(1)}M`;
+      return formatSecondaryStat(currentUser.sparks || 0);
     }
     if (type === 'reputation') {
-      const real = currentUser.reputationPoints;
-      if (real !== undefined && real > 0) return formatSecondaryStat(real);
-      const mockVal = (seed % 10) + 1.5;
-      return `${mockVal.toFixed(1)}M`;
+      return formatSecondaryStat(currentUser.reputationPoints || 0);
     }
-    const real = currentUser.reputationBreakdown?.contributions;
-    if (real !== undefined && real > 0) return formatSecondaryStat(real);
-    const mockVal = (seed % 20) + 2.1;
-    return `${mockVal.toFixed(1)}M`;
+    return formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0);
   };
 
   return (
@@ -685,8 +820,8 @@ export default function ProfileView({
       
       {/* 1. TOP NAVIGATION ACTION BAR */}
       <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-40 border-b border-white/5 py-3 px-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {onCloseProfile ? (
+        <div className="flex items-center gap-3 relative">
+          {onCloseProfile && (
             <button 
               onClick={onCloseProfile}
               className="p-1.5 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
@@ -694,15 +829,79 @@ export default function ProfileView({
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-          ) : (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/3 text-[10px] font-mono text-zinc-400">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Active Profile
-            </div>
           )}
-          <span className="text-xs font-mono font-bold tracking-wider text-zinc-300 uppercase">
-            {isOwnProfile ? 'My Profile' : currentUser.name}
-          </span>
+          
+          <div className="relative">
+            {isOwnProfile ? (
+              <button 
+                onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-white/5 text-xs font-mono font-bold tracking-wider text-zinc-200 uppercase transition-all cursor-pointer select-none border border-white/10 bg-white/3"
+              >
+                <span>My Profile</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+            ) : (
+              <span className="text-xs font-mono font-bold tracking-wider text-zinc-300 uppercase">
+                {currentUser.name}
+              </span>
+            )}
+
+            <AnimatePresence>
+              {isProfileMenuOpen && isOwnProfile && (
+                <>
+                  {/* Backdrop to dismiss */}
+                  <div className="fixed inset-0 z-40 bg-black/40" onClick={() => setIsProfileMenuOpen(false)} />
+                  
+                  {/* Dropdown Card */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2, ease: 'easeOut' }}
+                    className="absolute left-0 mt-2 w-56 rounded-2xl bg-[#0c0926] border border-violet-500/25 shadow-2xl p-2 z-50 overflow-hidden space-y-0.5"
+                  >
+                    {[
+                      { label: 'Profile Settings', action: () => { setActivePanel('edit-profile'); setIsProfileMenuOpen(false); }, icon: Edit3, iconColor: 'text-violet-400' },
+                      { label: 'Analytics', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('storage'); setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '📊 Loading Profile Analytics...' })); }, icon: BarChart2, iconColor: 'text-pink-400' },
+                      { label: 'Achievements', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🏆 You earned: "Founders Genesis" achievement!' })); }, icon: Award, iconColor: 'text-amber-400' },
+                      { label: 'Saved Posts', action: () => { setActivePanel('collections'); setIsProfileMenuOpen(false); }, icon: FolderClosed, iconColor: 'text-cyan-400' },
+                      { label: 'Account Status', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🟢 Secure Account Status: Optimal.' })); }, icon: Shield, iconColor: 'text-emerald-400' },
+                      { label: 'Creator Dashboard', action: () => { setActivePanel('creator-studio'); setIsProfileMenuOpen(false); }, icon: Coins, iconColor: 'text-yellow-400' },
+                      { label: 'Privacy', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('privacy'); setIsProfileMenuOpen(false); }, icon: Lock, iconColor: 'text-teal-400' },
+                      { label: 'Share Profile', action: () => { setActivePanel('qr-profile'); setIsProfileMenuOpen(false); }, icon: QrCode, iconColor: 'text-indigo-400' },
+                      { label: 'Export Profile', action: () => { 
+                          setIsProfileMenuOpen(false);
+                          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentUser, null, 2));
+                          const downloadAnchor = document.createElement('a');
+                          downloadAnchor.setAttribute("href", dataStr);
+                          downloadAnchor.setAttribute("download", `nexora_profile_${currentUser.username}.json`);
+                          document.body.appendChild(downloadAnchor);
+                          downloadAnchor.click();
+                          downloadAnchor.remove();
+                          window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Profile credentials exported successfully!' }));
+                        }, icon: Download, iconColor: 'text-sky-400' },
+                      { label: 'View Public Profile', action: () => { 
+                          setIsProfileMenuOpen(false);
+                          window.dispatchEvent(new CustomEvent('toast', { detail: '🌐 Switched to public guest mode preview.' }));
+                        }, icon: Eye, iconColor: 'text-purple-400' },
+                    ].map(item => {
+                      const IconComponent = item.icon;
+                      return (
+                        <button
+                          key={item.label}
+                          onClick={item.action}
+                          className="w-full text-left px-3.5 py-2 hover:bg-white/5 rounded-xl transition-all flex items-center gap-2.5 text-xs font-sans text-zinc-300 hover:text-white cursor-pointer"
+                        >
+                          <IconComponent className={`w-4 h-4 ${item.iconColor}`} />
+                          <span className="font-semibold">{item.label}</span>
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -786,53 +985,85 @@ export default function ProfileView({
           </div>
         </div>
 
-        {/* 3. PRIMARY STATISTICS */}
-        <div className="grid grid-cols-3 gap-1 py-1.5 text-center border-t border-b border-white/5">
-          {/* Posts */}
-          <div className="py-0.5 flex flex-col items-center">
-            <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-400">Posts</span>
-            <span className="text-base font-extrabold text-white mt-0.5">{myPosts.length}</span>
+        {/* 3. PROFILE STATISTICS (Compact Premium Layout) */}
+        <div className="py-2 select-none space-y-2.5">
+          {/* Row 1: Followers, Following, Posts */}
+          <div className="flex flex-wrap items-baseline gap-x-5 sm:gap-x-7 gap-y-1 text-left">
+            {/* Followers */}
+            <button 
+              onClick={() => { setActivePanel('social-graph'); setRelationsTab('followers'); }}
+              className="flex items-baseline gap-1 cursor-pointer group text-left transition-all"
+            >
+              <span className="text-sm sm:text-base font-black text-white group-hover:text-violet-300 transition-colors">
+                {formatSecondaryStat(currentUser.followers || 0)}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 group-hover:text-violet-300/90 transition-colors uppercase">
+                FOLLOWERS
+              </span>
+            </button>
+
+            {/* Following */}
+            <button 
+              onClick={() => { setActivePanel('social-graph'); setRelationsTab('following'); }}
+              className="flex items-baseline gap-1 cursor-pointer group text-left transition-all"
+            >
+              <span className="text-sm sm:text-base font-black text-white group-hover:text-violet-300 transition-colors">
+                {formatSecondaryStat(currentUser.following || 0)}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 group-hover:text-violet-300/90 transition-colors uppercase">
+                FOLLOWING
+              </span>
+            </button>
+
+            {/* Posts */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm sm:text-base font-black text-white">
+                {formatSecondaryStat(getPostsCount())}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 uppercase">
+                POSTS
+              </span>
+            </div>
           </div>
 
-          {/* Followers */}
-          <div 
-            onClick={() => { setActivePanel('social-graph'); setRelationsTab('followers'); }}
-            className="py-0.5 flex flex-col items-center hover:bg-white/3 rounded-xl transition-all cursor-pointer"
-          >
-            <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-400 hover:text-violet-400">Followers</span>
-            <span className="text-base font-extrabold text-white mt-0.5">
-              {currentUser.followers?.toLocaleString() || '1,420'}
-            </span>
-          </div>
+          {/* Row 2: Sparks, Reputation (REP), Contributions (CONTRIB) */}
+          <div className="flex flex-wrap items-baseline gap-x-5 sm:gap-x-7 gap-y-1 text-left">
+            {/* Sparks */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm sm:text-base font-black text-amber-400 flex items-center gap-0.5">
+                <span className="text-[11px] sm:text-xs">✨</span>
+                {getSecondaryMetric('sparks')}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 uppercase">
+                SPARKS
+              </span>
+            </div>
 
-          {/* Following */}
-          <div 
-            onClick={() => { setActivePanel('social-graph'); setRelationsTab('following'); }}
-            className="py-0.5 flex flex-col items-center hover:bg-white/3 rounded-xl transition-all cursor-pointer"
-          >
-            <span className="text-[9px] font-mono font-bold uppercase tracking-widest text-zinc-400 hover:text-violet-400">Following</span>
-            <span className="text-base font-extrabold text-white mt-0.5">
-              {currentUser.following?.toLocaleString() || '184'}
-            </span>
-          </div>
-        </div>
+            {/* Reputation (REP) */}
+            <button 
+              onClick={() => { setActivePanel('menu'); setSettingsActiveSubPanel('contributor'); }}
+              className="flex items-baseline gap-1 cursor-pointer group text-left transition-all"
+            >
+              <span className="text-sm sm:text-base font-black text-emerald-400 flex items-center gap-0.5 group-hover:text-emerald-300 transition-colors">
+                <span className="text-[11px] sm:text-xs">⭐</span>
+                {getSecondaryMetric('reputation')}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 group-hover:text-violet-300/90 transition-colors uppercase">
+                REP
+              </span>
+            </button>
 
-        {/* Secondary Creator Statistics Achievements */}
-        <div className="flex items-center justify-center gap-4 text-[10px] text-zinc-500 py-1 font-mono">
-          <span className="flex items-center gap-1 hover:text-zinc-300 transition-colors">
-            <span>✨</span>
-            <span className="text-zinc-300 font-extrabold">{getSecondaryMetric('sparks')} Sparks</span>
-          </span>
-          <span className="text-zinc-800">•</span>
-          <span className="flex items-center gap-1 hover:text-zinc-300 transition-colors">
-            <span>⭐</span>
-            <span className="text-zinc-300 font-extrabold">{getSecondaryMetric('reputation')} Reputation</span>
-          </span>
-          <span className="text-zinc-800">•</span>
-          <span className="flex items-center gap-1 hover:text-zinc-300 transition-colors">
-            <span>📊</span>
-            <span className="text-zinc-300 font-extrabold">{getSecondaryMetric('contributions')} Contributions</span>
-          </span>
+            {/* Contributions (CONTRIB) */}
+            <div className="flex items-baseline gap-1">
+              <span className="text-sm sm:text-base font-black text-cyan-400 flex items-center gap-0.5">
+                <span className="text-[11px] sm:text-xs">📊</span>
+                {getSecondaryMetric('contributions')}
+              </span>
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 uppercase">
+                CONTRIB
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* 4. ACTION BUTTONS with tapped micro-interactions */}
@@ -848,10 +1079,7 @@ export default function ProfileView({
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Profile link copied to clipboard!' }));
-                }}
+                onClick={() => setShowShareModal(true)}
                 className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-200 rounded-xl text-xs font-semibold transition-all cursor-pointer"
               >
                 Share Profile
@@ -890,10 +1118,7 @@ export default function ProfileView({
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Profile link copied!' }));
-                }}
+                onClick={() => setShowShareModal(true)}
                 className="py-2 px-3 bg-white/5 hover:bg-white/10 text-zinc-200 rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center border border-white/5"
                 title="Share Profile Link"
               >
@@ -988,9 +1213,9 @@ export default function ProfileView({
                 📭
               </div>
               <div>
-                <h4 className="text-sm font-bold text-zinc-200">Empty Section</h4>
+                <h4 className="text-sm font-bold text-zinc-200">Nothing here yet</h4>
                 <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-normal">
-                  No posts have been published in this section yet.
+                  Your journey starts with your first post. This space will come alive soon.
                 </p>
               </div>
               {isOwnProfile && (
@@ -1191,7 +1416,7 @@ export default function ProfileView({
                           onClick={() => setShowAddAccountModal(true)}
                           className="w-full py-2 bg-white/5 hover:bg-white/10 text-violet-300 rounded-xl text-[9px] font-mono font-black uppercase tracking-wider transition-all"
                         >
-                          + Add Another Node Account
+                          + Add Another Account
                         </button>
                       </div>
                     </div>
@@ -1346,8 +1571,8 @@ export default function ProfileView({
                             <span className="flex items-center gap-2.5">
                               <LogOut className="w-4 h-4" />
                               <div className="text-left">
-                                <p className="leading-none text-xs font-extrabold">Terminate Node Session</p>
-                                <p className="text-[9px] text-zinc-500 font-normal mt-1">Safely exit and lock local data logs</p>
+                                <p className="leading-none text-xs font-extrabold">Log Out of Account</p>
+                                <p className="text-[9px] text-zinc-500 font-normal mt-1">Safely exit and clear active session</p>
                               </div>
                             </span>
                             <ChevronRight className="w-4 h-4" />
@@ -1360,7 +1585,7 @@ export default function ProfileView({
                             <span className="flex items-center gap-2.5">
                               <Trash2 className="w-4 h-4" />
                               <div className="text-left">
-                                <p className="leading-none text-xs font-extrabold">Delete Nexora Node</p>
+                                <p className="leading-none text-xs font-extrabold">Delete Nexora Account</p>
                                 <p className="text-[9px] text-red-500/50 font-normal mt-1">Irreversible wipe of social graph and posts</p>
                               </div>
                             </span>
@@ -1954,7 +2179,7 @@ export default function ProfileView({
                             onClick={() => {
                               const conf = window.confirm('🧹 Clear system temporary local cache indices? This action will reload necessary images.');
                               if (conf) {
-                                setCacheSize('Recalibrating cache...');
+                                setCacheSize('Clearing cache...');
                                 window.dispatchEvent(new CustomEvent('toast', { detail: '🧹 Emptying temporary asset indexes...' }));
                                 setTimeout(() => {
                                   setCacheSize('0.0 B');
@@ -2057,9 +2282,9 @@ export default function ProfileView({
                               </div>
 
                               <div className="space-y-1">
-                                <label className="text-[9px] font-mono text-zinc-400 uppercase">Describe Node Issue</label>
+                                <label className="text-[9px] font-mono text-zinc-400 uppercase">Describe Your Issue</label>
                                 <textarea
-                                  placeholder="Describe what occurred, including system parameters..."
+                                  placeholder="Describe what occurred, including details of your issue..."
                                   value={supportMessage}
                                   rows={4}
                                   onChange={(e) => setSupportMessage(e.target.value)}
@@ -2489,7 +2714,7 @@ export default function ProfileView({
                         { time: '18:00 - 21:00', label: 'Prime Time Rush', percent: '44%' },
                         { time: '12:00 - 14:00', label: 'Lunch Break Sync', percent: '28%' },
                         { time: '21:00 - 00:00', label: 'Night Owls Gossip', percent: '18%' },
-                        { time: '08:00 - 11:00', label: 'Morning Calibrating', percent: '10%' }
+                        { time: '08:00 - 11:00', label: 'Morning Catch-up', percent: '10%' }
                       ].map(hour => (
                         <div key={hour.time} className="flex items-center justify-between">
                           <div className="leading-tight">
@@ -2553,11 +2778,14 @@ export default function ProfileView({
                   </svg>
                 </div>
 
-                <div className="leading-tight">
+                <div className="leading-tight space-y-1">
                   <p className="text-xs font-bold text-white flex items-center justify-center gap-1">
                     {currentUser.name} {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4" />}
                   </p>
                   <p className="text-[10px] text-violet-400 font-mono">@{currentUser.username}</p>
+                  <p className="text-[9px] text-zinc-500 font-mono mt-1 select-all hover:text-cyan-400 transition-colors">
+                    https://nexora.ai/@{currentUser.username}
+                  </p>
                 </div>
               </div>
 
@@ -2896,56 +3124,27 @@ export default function ProfileView({
 
                   </div>
 
-                  {/* Avatar photo editor with Webcam selfie capability */}
+                  {/* Avatar photo editor trigger */}
                   <div className="bg-[#0b081c] p-6 rounded-3xl border border-violet-500/15 space-y-4">
                     <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">📸 PROFILE PHOTO</span>
                     
-                    {isWebcamActive ? (
-                      <div className="space-y-3">
-                        <div className="relative aspect-square rounded-2xl bg-black overflow-hidden max-w-xs mx-auto border border-violet-500/20">
-                          <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
-                          <div className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full animate-pulse text-red-500">
-                            🔴 Live
-                          </div>
-                        </div>
-                        <div className="flex gap-2 justify-center">
-                          <button
-                            onClick={capturePhoto}
-                            className="px-4 py-2 bg-emerald-600 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer"
-                          >
-                            Capture Frame
-                          </button>
-                          <button
-                            onClick={stopWebcam}
-                            className="px-4 py-2 bg-zinc-800 text-zinc-400 font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer"
-                          >
-                            Disable Camera
-                          </button>
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                      <div className="relative group cursor-pointer shrink-0" onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}>
+                        <img src={editAvatar} className="w-16 h-16 rounded-xl object-cover border border-violet-500/30 group-hover:brightness-75 transition-all" alt="avatar editor" />
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-xl">
+                          <Camera className="w-4 h-4 text-white" />
                         </div>
                       </div>
-                    ) : (
-                      <div className="flex flex-col sm:flex-row items-center gap-4">
-                        <img src={editAvatar} className="w-16 h-16 rounded-xl object-cover border border-violet-500/30" alt="avatar editor" />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={startWebcam}
-                            className="px-3.5 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1"
-                          >
-                            <Camera className="w-3.5 h-3.5" /> Capture selfie webcam
-                          </button>
-                          <button
-                            onClick={() => {
-                              const promptVal = prompt('Enter image URL link address:');
-                              if (promptVal) setEditAvatar(promptVal);
-                            }}
-                            className="px-3.5 py-2 bg-[#120f38] border border-violet-500/20 text-violet-300 font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer hover:bg-violet-950/20"
-                          >
-                            Input Image URL link
-                          </button>
-                        </div>
+                      <div className="flex flex-col gap-2 text-left">
+                        <button
+                          onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
+                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" /> Configure Avatar
+                        </button>
+                        <p className="text-[9px] font-mono text-zinc-500">Supports Camera capture, Device gallery, Rotation, and Zoom controls</p>
                       </div>
-                    )}
-                    {webcamError && <p className="text-[10px] font-mono text-red-400 mt-2">{webcamError}</p>}
+                    </div>
                   </div>
                 </div>
 
@@ -2975,12 +3174,20 @@ export default function ProfileView({
                       </div>
                     </div>
 
-                    <button
-                      onClick={handleSaveProfile}
-                      className="w-full py-4 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg shadow-violet-500/15 cursor-pointer"
-                    >
-                      Save & Commit Re-Calibration
-                    </button>
+                    <div className="flex gap-3">
+                      <button
+                        onClick={handleCancelEditProfile}
+                        className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-300 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSaveProfile}
+                        className="flex-1 py-3.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg shadow-violet-500/15 cursor-pointer"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -2990,6 +3197,199 @@ export default function ProfileView({
           </div>
         )}
       </AnimatePresence>
+
+      {/* EXQUISITE INTERACTIVE PROFILE PICTURE EDITOR MODAL */}
+      <AnimatePresence>
+        {isAvatarModalOpen && (
+          <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.92, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.92, opacity: 0 }}
+              className="bg-[#0b0821] border border-violet-500/30 rounded-[28px] max-w-sm w-full overflow-hidden shadow-2xl p-6 space-y-5 text-left"
+            >
+              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <span className="text-[10px] font-mono text-pink-400 font-extrabold uppercase tracking-widest">
+                  Avatar Configuration
+                </span>
+                <button
+                  onClick={() => {
+                    stopWebcam();
+                    setIsAvatarModalOpen(false);
+                    setGalleryImage(null);
+                  }}
+                  className="p-1 text-zinc-400 hover:text-white text-xs font-mono cursor-pointer"
+                >
+                  Close ×
+                </button>
+              </div>
+
+              {avatarSourceType === 'select' && (
+                <div className="flex flex-col gap-2 pt-2">
+                  <button
+                    onClick={() => {
+                      setAvatarSourceType('webcam');
+                      startWebcam();
+                    }}
+                    className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-mono text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Camera className="w-4 h-4" /> Take Photo
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                    }}
+                    className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-200 font-mono text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <ImageIcon className="w-4 h-4" /> Choose From Gallery
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setEditAvatar('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80');
+                      setIsAvatarModalOpen(false);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Profile photo removed.' }));
+                    }}
+                    className="w-full py-3 bg-red-950/40 hover:bg-red-900/50 border border-red-900/25 text-red-400 font-mono text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" /> Remove Photo
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setIsAvatarModalOpen(false);
+                    }}
+                    className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-mono text-[11px] font-black uppercase tracking-wider rounded-xl transition-all cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+
+              {avatarSourceType === 'webcam' && (
+                <div className="space-y-4">
+                  {isWebcamActive ? (
+                    <div className="relative aspect-square rounded-2xl bg-black overflow-hidden border border-violet-500/20 max-w-xs mx-auto">
+                      <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
+                      <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 rounded-full animate-pulse text-red-500 text-[10px] font-mono">
+                        🔴 LIVE
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-square rounded-2xl bg-black/40 border border-white/5 flex items-center justify-center text-zinc-500 text-xs font-mono">
+                      Initializing camera...
+                    </div>
+                  )}
+
+                  {webcamError && <p className="text-[10px] font-mono text-red-400 text-center">{webcamError}</p>}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={capturePhotoToGallery}
+                      className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] font-bold uppercase rounded-lg transition-all cursor-pointer"
+                    >
+                      Capture
+                    </button>
+                    <button
+                      onClick={() => {
+                        stopWebcam();
+                        setAvatarSourceType('select');
+                      }}
+                      className="flex-1 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-400 font-mono text-[10px] font-bold uppercase rounded-lg transition-all cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {avatarSourceType === 'gallery_edit' && galleryImage && (
+                <div className="space-y-4">
+                  {/* Circular Preview Container */}
+                  <div className="relative w-44 h-44 mx-auto rounded-full overflow-hidden border-2 border-violet-500 bg-black/40 flex items-center justify-center">
+                    <div className="absolute inset-0 border border-white/5 rounded-full pointer-events-none z-10" />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                      <div className="w-full h-[1px] bg-white/10" />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                      <div className="h-full w-[1px] bg-white/10" />
+                    </div>
+                    
+                    <img
+                      src={galleryImage}
+                      alt="Crop target"
+                      className="max-w-none origin-center transition-all duration-75"
+                      style={{
+                        transform: `scale(${avatarZoom}) rotate(${avatarRotation}deg)`,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                  </div>
+
+                  {/* Zoom Slider */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] font-mono text-zinc-400 uppercase">
+                      <span>Zoom / Scale</span>
+                      <span>{avatarZoom.toFixed(1)}x</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="1"
+                      max="3"
+                      step="0.1"
+                      value={avatarZoom}
+                      onChange={(e) => setAvatarZoom(parseFloat(e.target.value))}
+                      className="w-full accent-violet-500 bg-zinc-800 rounded-lg appearance-none h-1.5 cursor-pointer"
+                    />
+                  </div>
+
+                  {/* Rotate Control */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Rotation Angle</span>
+                    <button
+                      onClick={() => setAvatarRotation(prev => (prev + 90) % 360)}
+                      className="px-3 py-1.5 bg-white/5 border border-white/10 text-white font-mono text-[9px] uppercase font-bold rounded-lg hover:bg-white/10 cursor-pointer flex items-center gap-1"
+                    >
+                      <RefreshCw className="w-3 h-3 text-pink-400 animate-spin" /> Rotate 90°
+                    </button>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-2 border-t border-white/5">
+                    <button
+                      onClick={() => {
+                        setGalleryImage(null);
+                        setAvatarSourceType('select');
+                      }}
+                      className="flex-1 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 font-mono text-[10px] font-bold uppercase rounded-lg transition-all cursor-pointer"
+                    >
+                      Back
+                    </button>
+                    <button
+                      onClick={handleSaveCroppedAvatar}
+                      className="flex-1 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white font-mono text-[10px] font-black uppercase rounded-lg transition-all cursor-pointer"
+                    >
+                      Save Photo
+                    </button>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* HIDDEN FILE INPUT FOR GALLERY SELECT */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleGalleryFileSelect}
+        className="hidden"
+      />
 
       {/* 11. REPUTATION POINTS D3 BREAKDOWN MODAL OVERLAY */}
       <AnimatePresence>
@@ -3184,6 +3584,152 @@ export default function ProfileView({
                 <span>{selectedGridPost.comments?.length || 0} Comments</span>
               </div>
 
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 📥 NEXORA SOCIAL SHARE SHEET MODAL */}
+      <AnimatePresence>
+        {showShareModal && (
+          <div className="fixed inset-0 z-50 bg-[#04020f]/80 backdrop-blur-md flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowShareModal(false)}
+              className="absolute inset-0 bg-slate-950/70"
+            />
+
+            {/* Modal Content Card */}
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 15 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 15 }}
+              className="relative w-full max-w-sm rounded-[32px] bg-linear-to-b from-[#110931] to-[#04010b] border border-violet-500/25 p-6 text-center shadow-2xl overflow-hidden z-10"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setShowShareModal(false)}
+                className="absolute top-4 right-4 p-2 text-violet-400/60 hover:text-white rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer z-20"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+
+              <div className="space-y-4 pt-1 text-left">
+                <div className="space-y-1">
+                  <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">SHARE PROFILE</span>
+                  <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider leading-tight">
+                    Share Profile
+                  </h3>
+                  <p className="text-[10px] text-violet-300/60">
+                    Invite others to view your professional feed, projects, and stream on Nexora.
+                  </p>
+                </div>
+
+                {/* Display Link */}
+                <div className="relative flex items-center gap-2 p-2.5 rounded-2xl bg-black border border-violet-500/10">
+                  <span className="text-[10.5px] font-mono text-violet-400 truncate flex-1 select-all">
+                    https://nexora.ai/@{currentUser.username}
+                  </span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Profile link copied to clipboard!' }));
+                    }}
+                    className="p-1.5 rounded-lg bg-violet-600/15 border border-violet-500/30 text-violet-300 hover:text-white hover:bg-violet-600/30 transition-all cursor-pointer shrink-0"
+                    title="Copy Profile URL"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Social Share Grid */}
+                <div className="space-y-2 pt-1">
+                  {/* Copy Link */}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Profile link copied to clipboard!' }));
+                    }}
+                    className="w-full p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 text-white font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
+                  >
+                    <span className="text-base">🔗</span>
+                    <span className="flex-1 text-left">Copy Link</span>
+                    <span className="text-[9px] text-zinc-500 font-mono font-bold uppercase">CLIPBOARD</span>
+                  </button>
+
+                  {/* Share to X */}
+                  <a
+                    href={`https://x.com/intent/tweet?url=${encodeURIComponent(`https://nexora.ai/@${currentUser.username}`)}&text=${encodeURIComponent(`Connect with me on Nexora: @${currentUser.username}!`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full p-3 rounded-2xl bg-[#000000] border border-white/5 hover:bg-[#111] text-white font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
+                  >
+                    <span className="text-base font-black">𝕏</span>
+                    <span className="flex-1 text-left font-semibold">Share on X</span>
+                    <span className="text-[9px] text-zinc-500 font-mono font-bold uppercase">POST</span>
+                  </a>
+
+                  {/* Share to WhatsApp */}
+                  <a
+                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Connect with me on Nexora: https://nexora.ai/@${currentUser.username}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full p-3 rounded-2xl bg-[#128C7E]/10 border border-[#128C7E]/20 hover:bg-[#128C7E]/20 text-[#25D366] font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
+                  >
+                    <span className="text-base">💬</span>
+                    <span className="flex-1 text-left font-semibold">Share to WhatsApp</span>
+                    <span className="text-[9px] text-emerald-500/70 font-mono font-bold uppercase">CHAT</span>
+                  </a>
+
+                  {/* Share to Instagram */}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copied! Paste on Instagram Bio or Stories.' }));
+                    }}
+                    className="w-full p-3 rounded-2xl bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-400 font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
+                  >
+                    <span className="text-base">📸</span>
+                    <span className="flex-1 text-left font-semibold">Share to Instagram</span>
+                    <span className="text-[9px] text-pink-500/70 font-mono font-bold uppercase">BIO LINK</span>
+                  </button>
+
+                  {/* Share to Facebook */}
+                  <a
+                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://nexora.ai/@${currentUser.username}`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full p-3 rounded-2xl bg-[#3b5998]/10 border border-[#3b5998]/20 hover:bg-[#3b5998]/20 text-[#8b9dc3] font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
+                  >
+                    <span className="text-base">👥</span>
+                    <span className="flex-1 text-left font-semibold">Share on Facebook</span>
+                    <span className="text-[9px] text-[#8b9dc3]/70 font-mono font-bold uppercase">FEED</span>
+                  </a>
+
+                  {/* System Share sheet */}
+                  <button
+                    onClick={() => {
+                      if (navigator.share) {
+                        navigator.share({
+                          title: `${currentUser.name} on Nexora`,
+                          text: `Connect with me on Nexora: @${currentUser.username}`,
+                          url: `https://nexora.ai/@${currentUser.username}`
+                        }).catch(err => console.log('Share sheet dismissed:', err));
+                      } else {
+                        navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
+                        window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 System share unsupported. Profile link copied!' }));
+                      }
+                    }}
+                    className="w-full p-3 rounded-2xl bg-violet-600/20 border border-violet-500/30 hover:bg-violet-600/35 text-violet-300 font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
+                  >
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Device Share Sheet</span>
+                  </button>
+                </div>
+              </div>
             </motion.div>
           </div>
         )}

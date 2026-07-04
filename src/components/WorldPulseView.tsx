@@ -211,7 +211,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       category: 'education',
       desc: 'Coordinating student groups through secure, peer-verified learning milestones. Earn reputation indices upon curriculum test completion.',
       trendingScope: 'Trending Worldwide',
-      communities: ['📚 Global Scholars Node', '📚 Open Tech Curriculum', '🧠 Premium AI Forge'],
+      communities: ['📚 Global Scholars', '📚 Open Tech Curriculum', '🧠 Premium AI Forge'],
       contributors: [
         { name: 'Sarah' },
         { name: 'David' },

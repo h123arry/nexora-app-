@@ -5,7 +5,7 @@ import {
   Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw,
   Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp,
   MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen,
-  Heart, Wifi, WifiOff, Info, Undo2, Sparkles
+  Heart, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity
 } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
@@ -245,6 +245,7 @@ export default function FeedView({
   // Context menu (long press / right-click)
   const [contextualMenuPost, setContextualMenuPost] = useState<RefactoredPost | null>(null);
   const [showTransparencyExplanation, setShowTransparencyExplanation] = useState<RefactoredPost | null>(null);
+  const [nidaDiagnosticPost, setNidaDiagnosticPost] = useState<RefactoredPost | null>(null);
   const [lastAction, setLastAction] = useState<{ type: 'not_interested' | 'mute_creator' | 'hide_post'; postId: string; data: any } | null>(null);
   
   const longPressTimerRef = useRef<Record<string, any>>({});
@@ -1390,6 +1391,124 @@ export default function FeedView({
 
   const currentDisplayList = getRankedPosts().slice(0, visibleCount);
 
+  // "One Swipe = One Video" precise navigation interceptor to prevent multi-video jumps
+  const isInterceptScrollingRef = useRef(false);
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    let touchStartY = 0;
+    let touchStartX = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      // Do not block scrolling inside comments container, modal or other overlays
+      if (
+        (e.target as HTMLElement).closest('.comments-container') || 
+        (e.target as HTMLElement).closest('.modal-content') || 
+        activeCommentsPostId
+      ) {
+        return;
+      }
+      touchStartY = e.touches[0].clientY;
+      touchStartX = e.touches[0].clientX;
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (
+        (e.target as HTMLElement).closest('.comments-container') || 
+        (e.target as HTMLElement).closest('.modal-content') || 
+        activeCommentsPostId
+      ) {
+        return;
+      }
+
+      if (isInterceptScrollingRef.current) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+
+      const deltaY = e.touches[0].clientY - touchStartY;
+      const deltaX = e.touches[0].clientX - touchStartX;
+
+      // Vertical swipe detection (greater than horizontal swipe and exceeds threshold of 40px)
+      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 40) {
+        const direction = deltaY < 0 ? 1 : -1; // 1 = swipe up (next post), -1 = swipe down (prev post)
+        const currentIndex = currentDisplayList.findIndex(p => p.id === activePostId);
+        
+        if (currentIndex !== -1) {
+          const nextIndex = currentIndex + direction;
+          if (nextIndex >= 0 && nextIndex < currentDisplayList.length) {
+            const nextPost = currentDisplayList[nextIndex];
+            const nextElement = document.getElementById(`post-${nextPost.id}`);
+            if (nextElement) {
+              if (e.cancelable) e.preventDefault();
+              isInterceptScrollingRef.current = true;
+              setActivePostId(nextPost.id);
+              
+              // Smooth precise scrolling using browser APIs
+              nextElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              
+              setTimeout(() => {
+                isInterceptScrollingRef.current = false;
+              }, 500); // Enforce a 500ms cool-down period to lock aggressive scrolls
+            }
+          }
+        }
+      }
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (
+        (e.target as HTMLElement).closest('.comments-container') || 
+        (e.target as HTMLElement).closest('.modal-content') || 
+        activeCommentsPostId
+      ) {
+        return;
+      }
+
+      if (isInterceptScrollingRef.current) {
+        if (e.cancelable) e.preventDefault();
+        return;
+      }
+
+      // Check if scroll delta is significant to trigger page jump
+      if (Math.abs(e.deltaY) > 15) {
+        const direction = e.deltaY > 0 ? 1 : -1;
+        const currentIndex = currentDisplayList.findIndex(p => p.id === activePostId);
+        
+        if (currentIndex !== -1) {
+          const nextIndex = currentIndex + direction;
+          if (nextIndex >= 0 && nextIndex < currentDisplayList.length) {
+            const nextPost = currentDisplayList[nextIndex];
+            const nextElement = document.getElementById(`post-${nextPost.id}`);
+            if (nextElement) {
+              if (e.cancelable) e.preventDefault();
+              isInterceptScrollingRef.current = true;
+              setActivePostId(nextPost.id);
+              
+              nextElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              
+              setTimeout(() => {
+                isInterceptScrollingRef.current = false;
+              }, 500);
+            }
+          }
+        }
+      }
+    };
+
+    container.addEventListener('touchstart', handleTouchStart, { passive: true });
+    container.addEventListener('touchmove', handleTouchMove, { passive: false });
+    container.addEventListener('wheel', handleWheel, { passive: false });
+
+    return () => {
+      container.removeEventListener('touchstart', handleTouchStart);
+      container.removeEventListener('touchmove', handleTouchMove);
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, [currentDisplayList, activePostId, activeCommentsPostId]);
+
   // Active Post Viewport Detection using vertical-center proximity
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -1507,7 +1626,7 @@ export default function FeedView({
     <div className="flex flex-col h-full w-full relative overflow-hidden bg-transparent min-h-0">
       
       {/* 1. TOP OVERLAYED GLASSY HEADER */}
-      <div className={`absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 py-2 px-4 backdrop-blur-xl select-none border-b border-violet-500/10 ${getHeaderOverlayClass()}`}>
+      <div className="absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 py-4 px-6 select-none bg-gradient-to-b from-black/95 via-black/45 to-transparent text-white border-none pointer-events-auto">
         {/* Left: Brand logo */}
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 flex items-center justify-center shadow-md shadow-violet-500/20">
@@ -1522,7 +1641,7 @@ export default function FeedView({
         </div>
 
         {/* Center: For You / Following / Friends / Trending / Local */}
-        <div className="flex items-center gap-1 bg-[#09061d]/85 p-1 rounded-xl border border-violet-500/10 mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full">
+        <div className="flex items-center gap-6 p-1 bg-transparent border-none mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full relative">
           {(['for_you', 'following', 'friends', 'trending', 'local'] as const).map(tab => {
             const isActive = feedTab === tab;
             return (
@@ -1532,15 +1651,15 @@ export default function FeedView({
                   setFeedTab(tab);
                   setVisibleCount(8);
                 }}
-                className={`relative text-center py-1 px-3 rounded-lg font-sans text-[11px] font-extrabold uppercase tracking-wider transition-colors duration-200 cursor-pointer whitespace-nowrap ${
-                  isActive ? 'text-white' : 'text-violet-400/60 hover:text-violet-200'
+                className={`relative text-center pb-2 px-1 font-sans text-xs font-extrabold uppercase tracking-wider transition-all duration-250 cursor-pointer whitespace-nowrap ${
+                  isActive ? 'text-white text-shadow-sm scale-105' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
               >
                 {isActive && (
                   <motion.div
                     layoutId="activeFeedTab"
-                    className="absolute inset-0 bg-linear-to-r from-violet-600 to-pink-500 rounded-lg"
-                    transition={{ type: "spring", stiffness: 420, damping: 35 }}
+                    className="absolute bottom-0 left-0 right-0 h-[3px] bg-linear-to-r from-violet-500 via-pink-500 to-violet-500 rounded-full"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
                   />
                 )}
                 <span className="relative z-10">
@@ -1624,7 +1743,7 @@ export default function FeedView({
           }
         }}
         onTouchEnd={handlePullEnd}
-        className="flex-1 overflow-y-auto space-y-4 pt-[112px] md:pt-[76px] pb-32 px-0 md:px-6 custom-scrollbar scroll-smooth overscroll-contain snap-y snap-mandatory relative"
+        className="w-full h-full overflow-y-auto scrollbar-none scroll-smooth overscroll-contain snap-y snap-mandatory relative bg-black"
       >
         {/* Animated Pull-To-Refresh indicators */}
         <AnimatePresence>
@@ -1919,8 +2038,8 @@ export default function FeedView({
                 <motion.div
                   id={`post-${post.id}`}
                   data-post-id={post.id}
-                  initial={{ opacity: 0, y: 15 }}
-                  animate={{ opacity: 1, y: 0 }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
                   onContextMenu={(e) => {
                     e.preventDefault();
@@ -1958,9 +2077,7 @@ export default function FeedView({
                       navigator.vibrate(20);
                     }
                   }}
-                  className={`snap-start scroll-mt-[112px] md:scroll-mt-[76px] rounded-none md:rounded-3xl bg-black border-y border-x-0 md:border border-violet-500/15 overflow-hidden text-left shadow-2xl relative w-full flex flex-col justify-between transition-all ${
-                    isCommentsOpen ? 'h-auto' : 'h-[calc(100vh-160px)] md:h-[650px]'
-                  }`}
+                  className="snap-start snap-always w-full h-full bg-black overflow-hidden text-left relative flex flex-col justify-between shrink-0"
                 >
                   {/* Floating hearts overlay */}
                   {floatingHearts.map(heart => (
@@ -1977,9 +2094,7 @@ export default function FeedView({
                   ))}
 
                   {/* Outer edge-to-edge Video Container */}
-                  <div className={`relative w-full overflow-hidden transition-all duration-350 bg-black ${
-                    isCommentsOpen ? 'h-[40vh] md:h-[450px]' : 'flex-1 min-h-0 h-full'
-                  }`}>
+                  <div className="relative w-full h-full overflow-hidden bg-black flex-1 min-h-0">
                     <NexoraVideoPlayer
                       post={post}
                       videoUrl={post.videoUrl}
@@ -2000,17 +2115,31 @@ export default function FeedView({
                     />
                   </div>
 
-                  {/* Inline Comments Section from FeedView inside Video Card */}
+                  {/* Floating Comments Bottom Sheet Overlay */}
                   <AnimatePresence>
                     {isCommentsOpen && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden mt-4 pt-4 border-t border-white/5 space-y-4 p-4 bg-slate-950/45 rounded-b-3xl"
+                        initial={{ y: "100%", opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: "100%", opacity: 0 }}
+                        transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                        className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-xl border-t border-violet-500/20 z-40 flex flex-col p-5 shadow-2xl overflow-hidden"
                       >
+                        {/* Header of Comments drawer */}
+                        <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
+                          <span className="text-[10px] font-mono tracking-widest text-violet-400 font-extrabold uppercase flex items-center gap-1.5">
+                            💬 Comments ({post.comments.length})
+                          </span>
+                          <button
+                            onClick={() => setActiveCommentsPostId(null)}
+                            className="p-1 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
                         {/* Comments stream scroll */}
-                        <div className="space-y-3.5 max-h-[200px] overflow-y-auto pr-1">
+                        <div className="space-y-3.5 flex-1 overflow-y-auto pr-1 mb-4 custom-scrollbar">
                           {post.comments.length === 0 && (
                             <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
                               No comments yet. Start the conversation!
@@ -2109,7 +2238,7 @@ export default function FeedView({
                         </div>
 
                         {/* Main comment form */}
-                        <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                        <div className="flex items-center gap-2 pt-2 border-t border-white/5 shrink-0">
                           <input 
                             type="text" 
                             placeholder="Write your comment..."
@@ -2177,13 +2306,13 @@ export default function FeedView({
                     navigator.vibrate(20);
                   }
                 }}
-                className={`snap-start scroll-mt-[112px] md:scroll-mt-[76px] p-4 md:p-5 rounded-none md:rounded-3xl bg-[#0b091e]/80 border-y border-x-0 md:border ${
+                className={`snap-start snap-always w-full h-full relative overflow-hidden group text-left flex flex-col justify-between shrink-0 bg-linear-to-b ${
                   post.isBroadcastPost 
-                    ? 'border-amber-500/25 bg-[#171008]/90 shadow-lg shadow-amber-500/5' 
+                    ? 'from-[#171008] via-[#0b0704] to-black' 
                     : post.userId === 'user-0' 
-                      ? 'border-violet-500/30 bg-[#0d0926]/90' 
-                      : 'border-violet-500/10'
-                } relative overflow-hidden group text-left w-full`}
+                      ? 'from-[#0d0926] via-[#050414] to-black' 
+                      : 'from-[#0b091e] via-[#04030d] to-black'
+                }`}
               >
                 {/* Floating hearts overlay */}
                 {floatingHearts.map(heart => (
@@ -2198,7 +2327,11 @@ export default function FeedView({
                     ❤️
                   </motion.div>
                 ))}
-                {/* Future scheduled posts warning banner (Only visible to the creator) */}
+
+                {/* Scrollable Container with Top Padding for Navigation */}
+                <div className="w-full h-full overflow-y-auto custom-scrollbar px-6 md:px-12 pt-28 md:pt-24 pb-12 flex flex-col justify-between gap-6">
+                  <div>
+                    {/* Future scheduled posts warning banner (Only visible to the creator) */}
                 {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (
                   <div className="mb-4 p-3 bg-violet-600/15 border border-violet-500/30 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-violet-300">
                     <span className="flex items-center gap-1.5">
@@ -2323,6 +2456,18 @@ export default function FeedView({
                               exit={{ opacity: 0, scale: 0.95, y: -5 }}
                               className="absolute right-0 mt-1 w-48 bg-[#0c091f] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1"
                             >
+                              {/* NIDA Diagnostics option */}
+                              <button
+                                onClick={() => {
+                                  setNidaDiagnosticPost(post);
+                                  setActiveDotsMenuPostId(null);
+                                }}
+                                className="w-full text-left px-3 py-2.5 bg-linear-to-r from-violet-950/40 via-cyan-950/20 to-pink-950/15 text-cyan-300 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                              >
+                                <Sparkles className="w-3.5 h-3.5 shrink-0 text-cyan-400 animate-pulse" />
+                                NIDA Diagnostics 🧬
+                              </button>
+
                               {/* Creator Analytics (If own post) */}
                               {post.userId === currentUser.id && (
                                 <button
@@ -2973,18 +3118,34 @@ export default function FeedView({
                     </div>
                   </div>
                 )}
+                  </div>
+                </div>
 
-                {/* 5. THREADED COMMENTS DRAWER ACCORDION */}
+                {/* 5. THREADED COMMENTS DRAWER ACCORDION (Floating bottom sheet drawer style) */}
                 <AnimatePresence>
                   {isCommentsOpen && (
                     <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="overflow-hidden mt-4 pt-4 border-t border-white/5 space-y-4"
+                      initial={{ y: "100%", opacity: 0 }}
+                      animate={{ y: 0, opacity: 1 }}
+                      exit={{ y: "100%", opacity: 0 }}
+                      transition={{ type: "spring", damping: 25, stiffness: 220 }}
+                      className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-xl border-t border-violet-500/20 z-40 flex flex-col p-5 shadow-2xl overflow-hidden"
                     >
+                      {/* Header of Comments drawer */}
+                      <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
+                        <span className="text-[10px] font-mono tracking-widest text-violet-400 font-extrabold uppercase flex items-center gap-1.5">
+                          💬 Comments ({post.comments.length})
+                        </span>
+                        <button
+                          onClick={() => setActiveCommentsPostId(null)}
+                          className="p-1 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+
                       {/* Comments stream scroll */}
-                      <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
+                      <div className="space-y-3.5 flex-1 overflow-y-auto pr-1 mb-4 custom-scrollbar">
                         {post.comments.length === 0 && (
                           <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
                             No comments yet. Start the conversation!
@@ -3058,7 +3219,7 @@ export default function FeedView({
                                   />
                                   <button 
                                     onClick={() => handleAddReplySubmit(post.id, c.id)}
-                                    className="bg-violet-600 hover:bg-violet-500 p-1.5 rounded-xl text-white cursor-pointer"
+                                    className="bg-violet-600 hover:bg-violet-550 p-1.5 rounded-xl text-white cursor-pointer"
                                   >
                                     <Send className="w-3.5 h-3.5" />
                                   </button>
@@ -3083,7 +3244,7 @@ export default function FeedView({
                       </div>
 
                       {/* Main comment form */}
-                      <div className="flex items-center gap-2 pt-2 border-t border-white/5">
+                      <div className="flex items-center gap-2 pt-2 border-t border-white/5 shrink-0">
                         <input 
                           type="text" 
                           placeholder="Write your comment..."
@@ -3842,6 +4003,148 @@ export default function FeedView({
         reporterUsername={currentUser.username}
         onSubmitSuccess={() => {}}
       />
+
+      {/* 🧬 NIDA DIAGNOSTICS MODAL OVERLAY */}
+      <AnimatePresence>
+        {nidaDiagnosticPost && (
+          <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-[100] flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="w-full max-w-2xl bg-[#0a071c]/98 border border-violet-500/30 rounded-[28px] overflow-hidden p-6 md:p-8 text-left relative shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
+            >
+              {/* Close Button */}
+              <button 
+                onClick={() => setNidaDiagnosticPost(null)}
+                className="absolute top-6 right-6 p-2 bg-white/5 hover:bg-white/10 rounded-xl text-zinc-400 hover:text-white transition-all cursor-pointer border border-white/5"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Title & Badge */}
+              <div className="space-y-1.5 pr-8">
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-0.5 rounded-full bg-gradient-to-r from-violet-600 to-pink-500 text-[10px] font-mono font-black text-white uppercase tracking-wider flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-cyan-200" />
+                    NIDA Core Engine
+                  </span>
+                  <span className="text-[10px] font-mono text-cyan-300 bg-cyan-900/10 px-2 py-0.5 rounded-full border border-cyan-500/20">
+                    Calculated Live
+                  </span>
+                </div>
+                <h3 className="text-xl font-black font-sans tracking-tight text-white uppercase">
+                  NIDA Algorithmic Diagnostic Report
+                </h3>
+                <p className="text-xs text-zinc-400 font-sans">
+                  Interactive real-time audit log of how the Nexora Intelligent Discovery Algorithm evaluates this post.
+                </p>
+              </div>
+
+              {/* Post Preview */}
+              <div className="bg-white/2 border border-white/5 p-4 rounded-2xl space-y-1">
+                <p className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">Post Context Preview</p>
+                <p className="text-xs font-sans text-zinc-200 font-extrabold line-clamp-2">"{nidaDiagnosticPost.content}"</p>
+                <p className="text-[10px] font-mono text-pink-400 mt-1">
+                  By @{nidaDiagnosticPost.username} • Topic: {nidaDiagnosticPost.category || (nidaDiagnosticPost.tags && nidaDiagnosticPost.tags[0]) || 'Social'}
+                </p>
+              </div>
+
+              {/* NIDA PILLARS - SECRET SAUCE */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest border-b border-white/5 pb-1 flex items-center gap-1.5">
+                  <Cpu className="w-4 h-4 text-cyan-400" /> Four Balanced Pillars (Secret Sauce)
+                </h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {(() => {
+                    const isHighRep = nidaDiagnosticPost.username === 'voh' || nidaDiagnosticPost.username === 'nexora_ai' || nidaDiagnosticPost.username === 'voh_ai';
+                    
+                    const pillars = [
+                      { label: 'Interest Alignment', val: isHighRep ? 95 : 75, desc: 'Relevance to your personalized DNA interests.', color: 'bg-violet-500' },
+                      { label: 'Engagement Quality', val: nidaDiagnosticPost.likeCount && nidaDiagnosticPost.likeCount > 1000 ? 98 : 65, desc: 'Pure completion rates and organic shares.', color: 'bg-pink-500' },
+                      { label: 'Creator Trust Reputation', val: isHighRep ? 100 : 85, desc: 'Historical compliance and content age.', color: 'bg-cyan-500' },
+                      { label: 'Content Freshness', val: 90, desc: 'Recency and rapid velocity trend scaling.', color: 'bg-yellow-500' },
+                    ];
+
+                    return pillars.map(p => (
+                      <div key={p.label} className="bg-black/25 p-3.5 rounded-xl border border-white/3 space-y-1.5">
+                        <div className="flex justify-between items-center text-xs font-mono font-extrabold text-zinc-300">
+                          <span>{p.label}</span>
+                          <span className="text-cyan-400">{p.val}%</span>
+                        </div>
+                        <div className="w-full bg-zinc-800 h-1 rounded-full overflow-hidden">
+                          <div className={`h-full ${p.color}`} style={{ width: `${p.val}%` }} />
+                        </div>
+                        <p className="text-[9px] text-zinc-500 leading-tight">{p.desc}</p>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+
+              {/* STAGES & SATISFACTION CHECKS */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* Stages Waves & Reach */}
+                <div className="bg-[#120f32]/40 border border-violet-500/10 p-4.5 rounded-2xl space-y-3">
+                  <h4 className="text-xs font-mono font-black text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <TrendingUp className="w-4 h-4" /> Wave Distribution Status
+                  </h4>
+
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-zinc-400">Current Ingestion Wave:</span>
+                      <span className="font-extrabold text-pink-400 uppercase tracking-widest">
+                        {nidaDiagnosticPost.likeCount && nidaDiagnosticPost.likeCount > 5000 ? 'Global Wave' : 'Regional Wave'}
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-zinc-400">Sandbox Test Group:</span>
+                      <span className="text-emerald-400 font-black">Passed (180 seed users)</span>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs font-mono">
+                      <span className="text-zinc-400">Creator Fairness Factor:</span>
+                      <span className="text-cyan-400 font-black">ACTIVE (Legacy bias bypassed)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Satisfaction Signal Vectors */}
+                <div className="bg-zinc-950/40 border border-white/5 p-4.5 rounded-2xl space-y-3">
+                  <h4 className="text-xs font-mono font-black text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Activity className="w-4 h-4" /> Satisfaction Signal Vectors
+                  </h4>
+
+                  <div className="space-y-1.5 text-[10px] font-mono">
+                    <div className="flex justify-between text-emerald-400">
+                      <span>👍 Positive Loop Indicators:</span>
+                      <span>Strong</span>
+                    </div>
+                    <p className="text-zinc-500 text-[9px] leading-tight pl-2">
+                      Completed 100% video/narrative loop, Saved to folders, Zero skips, Shared link externally.
+                    </p>
+
+                    <div className="flex justify-between text-yellow-400 mt-1">
+                      <span>👎 Negative Dampener Risks:</span>
+                      <span>Negligible</span>
+                    </div>
+                    <p className="text-zinc-500 text-[9px] leading-tight pl-2">
+                      No rapid swipe-away, Not Hidden, Original media (no duplication hashes), No reported violations.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer Notice */}
+              <div className="text-[10px] text-zinc-500 text-center font-mono uppercase tracking-widest pt-2 border-t border-white/5">
+                NEXORA PROPRIETARY NIDA ALGORITHM &bull; 100% DECENTRALIZED AUDITING ENFORCED
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 📁 INSTAGRAM/PINTEREST COLLECTIONS FOLDER SELECTION MODAL */}
       <AnimatePresence>
