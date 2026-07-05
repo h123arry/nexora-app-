@@ -803,6 +803,33 @@ export function leaveCircleDb(userId: string, circleId: string) {
   localStorage.setItem(KEYS.CIRCLES, JSON.stringify(list));
 }
 
+// Verification central manager
+export function isUserVerified(username: string): boolean {
+  if (!username) return false;
+  const lower = username.toLowerCase().trim();
+  return lower === 'voh' || lower === 'voh_ai' || lower === 'nexora_ai' || lower === 'lunash';
+}
+
+// Generate an ultra-modern high-contrast deterministic gradient monogram default avatar
+export function getDefaultAvatar(name: string): string {
+  const initial = (name || 'N').trim().charAt(0).toUpperCase();
+  const charCodeSum = (name || '').split('').reduce((sum, char) => sum + char.charCodeAt(0), 0) || 12;
+  const hue1 = charCodeSum % 360;
+  const hue2 = (hue1 + 140) % 360;
+  
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100"><defs><linearGradient id="grad-${charCodeSum}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="hsl(${hue1}, 75%, 60%)" /><stop offset="100%" stop-color="hsl(${hue2}, 85%, 45%)" /></linearGradient></defs><circle cx="50" cy="50" r="50" fill="url(#grad-${charCodeSum})" /><text x="50%" y="54%" fill="white" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-weight="900" font-size="42" text-anchor="middle" dominant-baseline="middle" style="letter-spacing:-0.05em">${initial}</text></svg>`;
+  
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+}
+
+// Automatically maps old Unsplash male portraits or missing avatars to the beautiful default monogram
+export function getSafeAvatar(avatar: string | undefined, name: string): string {
+  if (!avatar || avatar.includes('photo-1535713875002-d1d0cf377fde') || avatar.trim() === '') {
+    return getDefaultAvatar(name);
+  }
+  return avatar;
+}
+
 // Compute dynamically calculated profile with absolute integrity
 export function getRichUser(user: User): User {
   if (!user) return user;
@@ -818,12 +845,15 @@ export function getRichUser(user: User): User {
   const contributionsCount = getContributionsCount(user.id);
   const completedMissionsCount = getCompletedMissionsCount(user.id);
 
+  // Apply safe avatar transformation
+  const resolvedAvatar = getSafeAvatar(user.avatar, user.name || user.username);
+  const isVerified = isUserVerified(user.username);
+
   if (isFounder) {
     // Founder Exception: manually assigned metrics (25.5 Million Followers) + local changes
     return {
       ...user,
-      name: 'VOICE OF HARRISON',
-      username: 'voh',
+      avatar: resolvedAvatar,
       isVerified: true,
       followers: 25500000 + followersCount,
       following: 5 + followingCount,
@@ -842,8 +872,7 @@ export function getRichUser(user: User): User {
     // Nexora AI details: slightly lesser than VOH AI & different
     return {
       ...user,
-      name: 'Nexora AI',
-      username: 'nexora_ai',
+      avatar: resolvedAvatar,
       isVerified: true,
       followers: 12400000 + followersCount,
       following: 3 + followingCount,
@@ -862,8 +891,7 @@ export function getRichUser(user: User): User {
     // VOH AI details: slightly lesser than VOH & different
     return {
       ...user,
-      name: 'VOH AI',
-      username: 'voh_ai',
+      avatar: resolvedAvatar,
       isVerified: true,
       followers: 18500000 + followersCount,
       following: 4 + followingCount,
@@ -881,7 +909,8 @@ export function getRichUser(user: User): User {
   // Normal users
   return {
     ...user,
-    isVerified: user.isVerified || false,
+    avatar: resolvedAvatar,
+    isVerified,
     followers: followersCount,
     following: followingCount,
     reputationPoints: reputationVal,

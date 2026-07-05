@@ -62,6 +62,7 @@ import PurpleVerifiedBadge from './VohVerifiedBadge';
 import CallScreen from './CallScreen';
 import MediaGallery from './MediaGallery';
 import GroupDashboard from './GroupDashboard';
+import RelativeTime from './RelativeTime';
 
 interface MessagesViewProps {
   currentUser: User;
@@ -686,7 +687,7 @@ export default function MessagesView({
 
                 {/* Bottom detail row */}
                 <div className="flex items-center justify-end gap-1 mt-1 text-[8.5px] opacity-75 font-mono select-none">
-                  <span className="opacity-60">{msg.timestamp}</span>
+                  <span className="opacity-60"><RelativeTime timestamp={msg.timestamp} /></span>
                   {msg.isEdited && <span className="text-[8px] uppercase tracking-wider text-violet-400">Edited</span>}
                   {isMe && (
                     <div className="flex items-center">
@@ -1008,8 +1009,12 @@ export default function MessagesView({
           })}
 
           {filteredChats.length === 0 && (
-            <div className="p-8 text-center text-violet-400/20 font-mono text-[10px]">
-              No secure alignments matching query.
+            <div className="p-8 text-center flex flex-col items-center justify-center gap-3 select-none h-48">
+              <MessageSquare className="w-8 h-8 text-violet-500/20 mb-1 animate-pulse" />
+              <p className="text-[11px] font-black uppercase tracking-wider text-violet-300">No Chats Available</p>
+              <p className="text-[10px] text-zinc-500 leading-normal max-w-[200px]">
+                No matching active encrypted chats. Start a private discussion with other members.
+              </p>
             </div>
           )}
         </div>

@@ -60,6 +60,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
 import StoriesView from './StoriesView';
+import RelativeTime from './RelativeTime';
 
 interface NotificationsViewProps {
   notifications: Notification[];
@@ -1373,7 +1374,7 @@ export default function NotificationsView({
 
                               <div className="flex items-center gap-2 mt-2">
                                 <span className="text-[9px] font-mono text-violet-400/30 uppercase">
-                                  {notif.timestamp}
+                                  <RelativeTime timestamp={notif.timestamp} />
                                 </span>
                                 {!notif.isRead && (
                                   <button

@@ -10,6 +10,7 @@ import {
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
+import RelativeTime from './RelativeTime';
 import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import StoriesView from './StoriesView';
@@ -1626,7 +1627,13 @@ export default function FeedView({
     <div className="flex flex-col h-full w-full relative overflow-hidden bg-transparent min-h-0">
       
       {/* 1. TOP OVERLAYED GLASSY HEADER */}
-      <div className="absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 py-4 px-6 select-none bg-gradient-to-b from-black/95 via-black/45 to-transparent text-white border-none pointer-events-auto">
+      <div 
+        className="absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 px-6 select-none bg-gradient-to-b from-black/85 via-black/45 to-transparent text-white border-none pointer-events-auto"
+        style={{
+          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
+          paddingBottom: '24px'
+        }}
+      >
         {/* Left: Brand logo */}
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-full bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 flex items-center justify-center shadow-md shadow-violet-500/20">
@@ -2152,7 +2159,7 @@ export default function FeedView({
                                   <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
                                   <div>
                                     <span className="font-sans font-bold text-violet-200">{c.name}</span>
-                                    <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • {c.timestamp}</span>
+                                    <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-1.5 shrink-0">
@@ -2190,7 +2197,7 @@ export default function FeedView({
                                         <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
                                         <div>
                                           <span className="font-sans font-black text-violet-200 text-[11px]">{rep.name}</span>
-                                          <span className="text-[9px] font-mono text-violet-400/50 block">@{rep.username} • {rep.timestamp}</span>
+                                          <span className="text-[9px] font-mono text-violet-400/50 block">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
                                         </div>
                                       </div>
                                       <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>
@@ -2394,7 +2401,7 @@ export default function FeedView({
                       <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-violet-400/80 leading-tight">
                         <span>@{post.username}</span>
                         <span>•</span>
-                        <span>{post.timestamp}</span>
+                        <span><RelativeTime timestamp={post.timestamp} /></span>
                         <span>•</span>
                         <span className="flex items-center gap-0.5 text-[10px] text-pink-400 bg-pink-500/5 px-1 py-0.5 rounded border border-pink-500/10">
                           <BookOpen className="w-2.5 h-2.5 shrink-0" />
@@ -3158,7 +3165,7 @@ export default function FeedView({
                                 <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
                                 <div>
                                   <span className="font-sans font-bold text-violet-200">{c.name}</span>
-                                  <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • {c.timestamp}</span>
+                                  <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
@@ -3196,7 +3203,7 @@ export default function FeedView({
                                       <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
                                       <div>
                                         <span className="font-sans font-black text-violet-200 text-[11px]">{rep.name}</span>
-                                        <span className="text-[9px] font-mono text-violet-400/50 block">@{rep.username} • {rep.timestamp}</span>
+                                        <span className="text-[9px] font-mono text-violet-400/50 block">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
                                       </div>
                                     </div>
                                     <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>

@@ -77,6 +77,7 @@ import { validateUsername } from '../utils/username';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraVideo from './NexoraVideo';
+import CreatorDashboardView from './CreatorDashboardView';
 import { 
   MOCK_CREATORS, 
   ADDITIONAL_TEST_ACCOUNTS, 
@@ -86,7 +87,8 @@ import {
   getSparksReceived, 
   getContributionsCount, 
   getSeededFollowers,
-  getRichUser 
+  getRichUser,
+  getDefaultAvatar
 } from '../data/database';
 
 interface MediaGridProps {
@@ -264,6 +266,15 @@ export default function ProfileView({
   const [profileTab, setProfileTab] = useState<string>('posts');
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
   const [detailCommentText, setDetailCommentText] = useState<string>('');
+  const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+
+  useEffect(() => {
+    setIsLoadingProfile(true);
+    const timer = setTimeout(() => {
+      setIsLoadingProfile(false);
+    }, 450);
+    return () => clearTimeout(timer);
+  }, [currentUser.id]);
 
   // Redesigned Settings & Privacy Hub state
   const [settingsSearchQuery, setSettingsSearchQuery] = useState('');
@@ -341,6 +352,10 @@ export default function ProfileView({
   const [qrColorPalette, setQrColorPalette] = useState<'neon-cyber' | 'solar-flare' | 'holographic'>('neon-cyber');
   const [qrScanningActive, setQrScanningActive] = useState(false);
   const [qrScanSuccessText, setQrScanSuccessText] = useState('');
+  
+  // Realistic Saving UX states
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [showSavedFeedback, setShowSavedFeedback] = useState(false);
 
   // Relationship states (Muted / Blocked lists)
   const [relationsTab, setRelationsTab] = useState<'followers' | 'following' | 'close-friends' | 'blocked' | 'muted'>('followers');
@@ -490,7 +505,7 @@ export default function ProfileView({
     setEditWebsite(currentUser.website || '');
     setEditAvatar(currentUser.avatar);
     setEditCover(currentUser.coverImage);
-  }, [currentUser]);
+  }, [currentUser.id]);
 
   // Live Stream Clock Effect
   useEffect(() => {
@@ -607,12 +622,14 @@ export default function ProfileView({
 
   // Validate and submit profile updates (Locks rules)
   const handleSaveProfile = () => {
+    if (isSavingProfile || showSavedFeedback) return;
+
     // 7-day display name lock
     if (editName !== currentUser.name) {
       const lastChange = currentUser.lastDisplayNameChangeTime;
       if (lastChange) {
         const diff = Date.now() - new Date(lastChange).getTime();
-        const days = diff / (1000 * 30 * 60 * 24); // mock days or 7 days limit
+        const days = diff / (1000 * 60 * 60 * 24); // days limit
         if (days < 7) {
           window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Display Name change is locked for 7 days.' }));
           alert('⚠️ Change locked: Display name can only be edited once every 7 days.');
@@ -633,7 +650,7 @@ export default function ProfileView({
       const lastChange = currentUser.lastUsernameChangeTime;
       if (lastChange) {
         const diff = Date.now() - new Date(lastChange).getTime();
-        const days = diff / (1000 * 30 * 60 * 24);
+        const days = diff / (1000 * 60 * 60 * 24);
         if (days < 30) {
           window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Username change is locked for 30 days.' }));
           alert('⚠️ Change locked: @username can only be edited once every 30 days.');
@@ -642,25 +659,39 @@ export default function ProfileView({
       }
     }
 
-    // Save
-    onUpdateProfile({
-      name: editName,
-      username: editUsername,
-      bio: editBio,
-      location: editLocation,
-      website: editWebsite,
-      avatar: editAvatar,
-      coverImage: editCover,
-      lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
-      lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
-    });
+    // Start saving animation & lock controls
+    setIsSavingProfile(true);
 
-    localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
-    localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, statusEmoji);
-    localStorage.setItem(`nexora_pinned_song_${currentUser.id}`, pinnedSong);
+    setTimeout(() => {
+      // Complete save
+      onUpdateProfile({
+        name: editName,
+        username: editUsername,
+        bio: editBio,
+        location: editLocation,
+        website: editWebsite,
+        avatar: editAvatar,
+        coverImage: editCover,
+        lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
+        lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
+      });
 
-    setActivePanel('profile');
-    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Digital profile successfully re-calibrated!' }));
+      localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
+      localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, statusEmoji);
+      localStorage.setItem(`nexora_pinned_song_${currentUser.id}`, pinnedSong);
+
+      setIsSavingProfile(false);
+      setShowSavedFeedback(true);
+
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✓ Profile updated successfully' }));
+
+      // Wait 1.5s for the success message feedback, then transition back smoothly
+      setTimeout(() => {
+        setShowSavedFeedback(false);
+        setActivePanel('profile');
+      }, 1500);
+
+    }, 1200);
   };
 
   const handleCancelEditProfile = () => {
@@ -716,7 +747,7 @@ export default function ProfileView({
       id,
       username: cleanUsername,
       name: newAccName || `@${cleanUsername}`,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+      avatar: getDefaultAvatar(newAccName || cleanUsername)
     };
     const updated = [...savedAccounts, newAcc];
     setSavedAccounts(updated);
@@ -924,7 +955,60 @@ export default function ProfileView({
       </div>
 
       {/* 2. PUBLIC PROFILE CARD & INFORMATION ARCHITECTURE */}
-      <div className="max-w-xl mx-auto px-4 pt-4 pb-2 space-y-3.5">
+      {isLoadingProfile ? (
+        <div className="max-w-xl mx-auto px-4 pt-6 pb-2 space-y-6 text-left animate-pulse">
+          {/* Header Banner Skeleton */}
+          <div className="h-28 w-full rounded-2xl bg-violet-950/20 border border-violet-500/10" />
+          
+          {/* Identity skeleton */}
+          <div className="flex gap-4 items-start">
+            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-violet-950/30 shrink-0" />
+            <div className="space-y-2 flex-1 pt-2">
+              <div className="h-4.5 w-1/3 bg-violet-900/30 rounded-lg" />
+              <div className="h-3 w-1/4 bg-violet-900/25 rounded-md" />
+              <div className="h-2.5 w-1/5 bg-violet-900/25 rounded-md" />
+            </div>
+          </div>
+
+          {/* Bio skeleton */}
+          <div className="space-y-2">
+            <div className="h-3 w-full bg-violet-900/25 rounded-md" />
+            <div className="h-3 w-5/6 bg-violet-900/25 rounded-md" />
+            <div className="h-3 w-2/3 bg-violet-900/20 rounded-md" />
+          </div>
+
+          {/* Followers metrics skeleton */}
+          <div className="grid grid-cols-3 gap-3 p-3 bg-[#0b091e]/60 border border-violet-500/10 rounded-2xl">
+            <div className="space-y-1.5 py-1 text-center">
+              <div className="h-3 w-12 bg-violet-900/30 rounded-md mx-auto" />
+              <div className="h-2 w-8 bg-violet-900/20 rounded-md mx-auto" />
+            </div>
+            <div className="space-y-1.5 py-1 text-center">
+              <div className="h-3 w-12 bg-violet-900/30 rounded-md mx-auto" />
+              <div className="h-2 w-8 bg-violet-900/20 rounded-md mx-auto" />
+            </div>
+            <div className="space-y-1.5 py-1 text-center">
+              <div className="h-3 w-12 bg-violet-900/30 rounded-md mx-auto" />
+              <div className="h-2 w-8 bg-violet-900/20 rounded-md mx-auto" />
+            </div>
+          </div>
+
+          {/* Profile Tab bar skeleton */}
+          <div className="flex border-b border-white/5 pb-2 gap-4">
+            <div className="h-5 w-16 bg-violet-900/30 rounded-md" />
+            <div className="h-5 w-16 bg-violet-900/20 rounded-md" />
+            <div className="h-5 w-16 bg-violet-900/20 rounded-md" />
+          </div>
+
+          {/* Feed Grid skeleton */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
+            <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
+            <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
+          </div>
+        </div>
+      ) : (<>
+        <div className="max-w-xl mx-auto px-4 pt-4 pb-2 space-y-3.5">
         
         {/* Profile Identity (Redesigned Side-by-Side Compact Layout) */}
         <div className="flex items-start gap-4 text-left">
@@ -1129,11 +1213,9 @@ export default function ProfileView({
         </div>
 
         {/* 5. ELEGANT TYPOGRAPHIC BIO */}
-        {currentUser.bio && (
-          <div className="text-zinc-300 font-sans text-xs sm:text-[13px] leading-relaxed max-w-xl text-left whitespace-pre-wrap py-0.5">
-            {currentUser.bio}
-          </div>
-        )}
+        <div className="text-zinc-300 font-sans text-xs sm:text-[13px] leading-relaxed max-w-xl text-left whitespace-pre-wrap py-0.5">
+          {currentUser.bio ? currentUser.bio : <span className="text-zinc-500 italic">No bio yet.</span>}
+        </div>
 
         {/* 6. MUTUAL FRIENDS (Progressive Disclosure) */}
         {!isOwnProfile && (
@@ -1237,6 +1319,7 @@ export default function ProfileView({
         </div>
 
       </div>
+      </>)}
 
       {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure - Redesigned Settings & Privacy Hub) */}
       <AnimatePresence>
@@ -2498,244 +2581,13 @@ export default function ProfileView({
       <AnimatePresence>
         {activePanel === 'creator-studio' && (
           <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
-            <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-              
-              {/* Back header */}
-              <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                <button
-                  onClick={() => setActivePanel('profile')}
-                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer"
-                >
-                  <ArrowLeft className="w-4 h-4" /> Back to Profile
-                </button>
-                <div className="flex items-center gap-1 text-xs font-mono text-emerald-400 font-black">
-                  <Activity className="w-4 h-4 text-emerald-400 animate-pulse" /> LIVE TELEMETRY ENGINE
-                </div>
-              </div>
-
-              {/* Revenue & Balance Banner */}
-              <div className="p-6 rounded-3xl bg-linear-to-r from-violet-900 to-pink-900 border border-violet-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="text-left space-y-1">
-                  <p className="text-[9px] font-mono text-pink-300 font-extrabold uppercase tracking-widest leading-none">NEX WALLET BALANCE</p>
-                  <h2 className="text-3xl font-black text-white">
-                    {(currentUser.nexBalance || 24500).toLocaleString()} <span className="text-sm font-mono font-medium text-pink-300">NEX</span>
-                  </h2>
-                  <p className="text-[10px] text-zinc-300 font-sans">Estimated Monetized Earnings: ₦{( (currentUser.nexBalance || 24500) * 1.5 ).toLocaleString()}</p>
-                </div>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: '💸 Disbursing earnings to local bank...' }))}
-                    className="px-4 py-2.5 bg-white text-black font-mono font-bold text-xs uppercase rounded-xl transition-all cursor-pointer hover:bg-zinc-200"
-                  >
-                    Withdraw
-                  </button>
-                  <button 
-                    onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: '🤝 Opened Brand Collaboration matching platform.' }))}
-                    className="px-4 py-2.5 bg-black/40 border border-white/10 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all hover:bg-black/60"
-                  >
-                    Collab Center
-                  </button>
-                </div>
-              </div>
-
-              {/* Creator Live Simulation Suite */}
-              <div className="p-5 rounded-3xl bg-[#0b081c] border border-violet-500/10 space-y-4 text-left">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm font-sans font-bold text-violet-100 flex items-center gap-1.5 uppercase">
-                      <Tv className="w-4 h-4 text-pink-500" /> Nexora Broadcast Simulation
-                    </h3>
-                    <p className="text-[10px] text-zinc-400 font-mono">Test stream rendering performance & viewer triggers</p>
-                  </div>
-                  <button
-                    onClick={() => setIsLiveStreaming(!isLiveStreaming)}
-                    className={`px-4 py-2 rounded-xl text-[10px] font-mono font-black uppercase tracking-widest transition-all cursor-pointer ${
-                      isLiveStreaming 
-                        ? 'bg-red-600 text-white animate-pulse' 
-                        : 'bg-violet-600 text-white'
-                    }`}
-                  >
-                    {isLiveStreaming ? 'Stop Broadcast 🔴' : 'Go Live Simulation'}
-                  </button>
-                </div>
-
-                {isLiveStreaming && (
-                  <div className="p-4 rounded-2xl bg-black/50 border border-red-500/20 space-y-3 font-mono">
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="bg-[#12080a] p-2 rounded-xl border border-red-500/10">
-                        <p className="text-[9px] text-zinc-500">PEAK VIEWERS</p>
-                        <p className="text-sm font-bold text-red-400">{liveViewerCount}</p>
-                      </div>
-                      <div className="bg-[#080c12] p-2 rounded-xl border border-violet-500/10">
-                        <p className="text-[9px] text-zinc-500">ELAPSED TIME</p>
-                        <p className="text-sm font-bold text-violet-300">
-                          {Math.floor(liveDuration / 60)}m {liveDuration % 60}s
-                        </p>
-                      </div>
-                      <div className="bg-[#08120a] p-2 rounded-xl border border-emerald-500/10">
-                        <p className="text-[9px] text-zinc-500">LIVE COINS</p>
-                        <p className="text-sm font-bold text-emerald-400">{(liveDuration * 4).toLocaleString()}</p>
-                      </div>
-                    </div>
-                    <div className="text-[10px] text-zinc-400 italic">
-                      📡 Syncing your feed data back to Lagos, Nigeria.
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Growth Analytics Trend with dynamic SVG Chart */}
-              <div className="p-6 rounded-3xl bg-[#0b081c] border border-violet-500/10 space-y-6 text-left">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-white/5 pb-4">
-                  <div>
-                    <h3 className="text-sm font-sans font-bold text-violet-100 uppercase tracking-wide">Follower Network Metrics</h3>
-                    <p className="text-[10px] text-zinc-400 font-mono">Profile analytics and engagement metrics</p>
-                  </div>
-                  <div className="flex gap-1">
-                    {['7d', '30d', '90d'].map(tf => (
-                      <button
-                        key={tf}
-                        onClick={() => setAnalyticsTimeframe(tf as any)}
-                        className={`px-3 py-1 rounded-lg text-[10px] font-mono uppercase font-extrabold cursor-pointer transition-all ${
-                          analyticsTimeframe === tf 
-                            ? 'bg-violet-600 text-white' 
-                            : 'bg-white/5 text-zinc-400 hover:bg-white/10'
-                        }`}
-                      >
-                        {tf === '7d' ? '7 Days' : tf === '30d' ? '30 Days' : '90 Days'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Grid stats */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
-                    <span className="text-[9px] font-mono text-zinc-500 block">REACH INDEX</span>
-                    <span className="text-lg font-black text-white mt-1 block">{(currentUser.followers * 2.4).toLocaleString()}</span>
-                    <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-0.5 mt-1">
-                      <TrendingUp className="w-3 h-3" /> +14.2%
-                    </span>
-                  </div>
-                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
-                    <span className="text-[9px] font-mono text-zinc-500 block">ENGAGEMENT RATE</span>
-                    <span className="text-lg font-black text-white mt-1 block">82.4%</span>
-                    <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-0.5 mt-1">
-                      <TrendingUp className="w-3 h-3" /> +5.6%
-                    </span>
-                  </div>
-                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
-                    <span className="text-[9px] font-mono text-zinc-500 block">WATCH TIME (HRS)</span>
-                    <span className="text-lg font-black text-white mt-1 block">18,240</span>
-                    <span className="text-[9px] font-mono text-pink-400 flex items-center gap-0.5 mt-1">
-                      <TrendingUp className="w-3 h-3" /> +24.8%
-                    </span>
-                  </div>
-                  <div className="bg-black/30 p-4 rounded-2xl border border-white/5 leading-tight">
-                    <span className="text-[9px] font-mono text-zinc-500 block">PROFILE VISITS</span>
-                    <span className="text-lg font-black text-white mt-1 block">{(currentUser.followers * 0.42).toLocaleString()}</span>
-                    <span className="text-[9px] font-mono text-emerald-400 flex items-center gap-0.5 mt-1">
-                      <TrendingUp className="w-3 h-3" /> +9.3%
-                    </span>
-                  </div>
-                </div>
-
-                {/* SVG Line Chart for trends */}
-                <div className="space-y-2">
-                  <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">📈 TELEMETRY TRAFFIC (GRAPH)</span>
-                  <div className="h-44 bg-black/40 border border-white/5 rounded-2xl p-4 relative overflow-hidden flex items-end">
-                    
-                    {/* SVG Line */}
-                    <svg className="absolute inset-0 w-full h-full" viewBox="0 0 400 150" preserveAspectRatio="none">
-                      <defs>
-                        <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="#8B5CF6" stopOpacity="0.4" />
-                          <stop offset="100%" stopColor="#8B5CF6" stopOpacity="0.0" />
-                        </linearGradient>
-                      </defs>
-                      {/* Grid lines */}
-                      <line x1="0" y1="37" x2="400" y2="37" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-                      <line x1="0" y1="75" x2="400" y2="75" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-                      <line x1="0" y1="112" x2="400" y2="112" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-                      
-                      {/* Area */}
-                      <path 
-                        d="M0 130 Q 50 80, 100 110 T 200 40 T 300 90 T 400 20 L 400 150 L 0 150 Z" 
-                        fill="url(#chartGrad)" 
-                      />
-                      {/* Path Line */}
-                      <path 
-                        d="M0 130 Q 50 80, 100 110 T 200 40 T 300 90 T 400 20" 
-                        fill="none" 
-                        stroke="#8B5CF6" 
-                        strokeWidth="3.5" 
-                        strokeLinecap="round"
-                      />
-                    </svg>
-
-                    {/* Chart axes details */}
-                    <div className="absolute inset-x-4 bottom-2 flex justify-between text-[8px] font-mono text-zinc-500 uppercase">
-                      <span>MON</span>
-                      <span>TUE</span>
-                      <span>WED</span>
-                      <span>THU</span>
-                      <span>FRI</span>
-                      <span>SAT</span>
-                      <span>SUN</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Demographics Information */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="bg-black/20 border border-white/5 p-4 rounded-2xl">
-                    <span className="text-[9px] font-mono text-zinc-500 uppercase block mb-3">🌍 Top Countries</span>
-                    <div className="space-y-2 text-xs">
-                      {[
-                        { flag: '🇳🇬', name: 'Nigeria', percent: '62%' },
-                        { flag: '🇬🇧', name: 'United Kingdom', percent: '14%' },
-                        { flag: '🇺🇸', name: 'United States', percent: '11%' },
-                        { flag: '🇿🇦', name: 'South Africa', percent: '7%' }
-                      ].map(country => (
-                        <div key={country.name} className="flex items-center justify-between">
-                          <span className="text-zinc-300 flex items-center gap-1.5">
-                            <span className="text-sm">{country.flag}</span> {country.name}
-                          </span>
-                          <span className="font-mono text-violet-400 font-bold">{country.percent}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-black/20 border border-white/5 p-4 rounded-2xl">
-                    <span className="text-[9px] font-mono text-zinc-500 uppercase block mb-3">🕒 Peak Activity Hours</span>
-                    <div className="space-y-2 text-xs">
-                      {[
-                        { time: '18:00 - 21:00', label: 'Prime Time Rush', percent: '44%' },
-                        { time: '12:00 - 14:00', label: 'Lunch Break Sync', percent: '28%' },
-                        { time: '21:00 - 00:00', label: 'Night Owls Gossip', percent: '18%' },
-                        { time: '08:00 - 11:00', label: 'Morning Catch-up', percent: '10%' }
-                      ].map(hour => (
-                        <div key={hour.time} className="flex items-center justify-between">
-                          <div className="leading-tight">
-                            <p className="text-zinc-300 font-bold">{hour.time}</p>
-                            <p className="text-[10px] text-zinc-500 font-mono">{hour.label}</p>
-                          </div>
-                          <span className="font-mono text-pink-400 font-bold">{hour.percent}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-              <button
-                onClick={() => setActivePanel('profile')}
-                className="w-full py-3.5 bg-violet-950 hover:bg-violet-900 text-violet-300 rounded-2xl text-xs font-mono font-black uppercase tracking-wider transition-all"
-              >
-                Close Creator Dashboard
-              </button>
+            <div className="max-w-4xl mx-auto px-4 py-6">
+              <CreatorDashboardView
+                currentUser={currentUser}
+                posts={posts}
+                onClose={() => setActivePanel('profile')}
+                onUpdateProfile={onUpdateProfile}
+              />
             </div>
           </div>
         )}
@@ -2911,9 +2763,9 @@ export default function ProfileView({
                   } else if (relationsTab === 'close-friends') {
                     list = getSeededFollowers(currentUser.id).filter(f => closeFriends.includes(f.id));
                   } else if (relationsTab === 'blocked') {
-                    list = blockedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80' }));
+                    list = blockedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: getDefaultAvatar(u) }));
                   } else if (relationsTab === 'muted') {
-                    list = mutedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80' }));
+                    list = mutedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: getDefaultAvatar(u) }));
                   }
 
                   const filtered = list.filter(item => 
@@ -3032,7 +2884,8 @@ export default function ProfileView({
                         type="text"
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                        disabled={isSavingProfile || showSavedFeedback}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -3043,7 +2896,8 @@ export default function ProfileView({
                         type="text"
                         value={editUsername}
                         onChange={(e) => setEditUsername(e.target.value)}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white font-mono focus:outline-hidden focus:border-violet-500 font-medium"
+                        disabled={isSavingProfile || showSavedFeedback}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white font-mono focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -3054,7 +2908,8 @@ export default function ProfileView({
                         type="text"
                         value={editPronouns}
                         onChange={(e) => setEditPronouns(e.target.value)}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                        disabled={isSavingProfile || showSavedFeedback}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                         placeholder="e.g. they/them"
                       />
                     </div>
@@ -3065,8 +2920,9 @@ export default function ProfileView({
                       <textarea
                         value={editBio}
                         onChange={(e) => setEditBio(e.target.value)}
+                        disabled={isSavingProfile || showSavedFeedback}
                         rows={3}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium leading-relaxed"
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium leading-relaxed disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -3077,7 +2933,8 @@ export default function ProfileView({
                         type="text"
                         value={editWebsite}
                         onChange={(e) => setEditWebsite(e.target.value)}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                        disabled={isSavingProfile || showSavedFeedback}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -3088,7 +2945,8 @@ export default function ProfileView({
                         type="text"
                         value={editLocation}
                         onChange={(e) => setEditLocation(e.target.value)}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium"
+                        disabled={isSavingProfile || showSavedFeedback}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </div>
 
@@ -3099,7 +2957,8 @@ export default function ProfileView({
                         <select
                           value={editCategory}
                           onChange={(e) => setEditCategory(e.target.value)}
-                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500"
+                          disabled={isSavingProfile || showSavedFeedback}
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 disabled:opacity-50"
                         >
                           <option value="Digital Creator">Digital Creator</option>
                           <option value="Founder Mindset">Founder Mindset</option>
@@ -3113,7 +2972,8 @@ export default function ProfileView({
                         <select
                           value={editCreatorType}
                           onChange={(e) => setEditCreatorType(e.target.value)}
-                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500"
+                          disabled={isSavingProfile || showSavedFeedback}
+                          className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500 disabled:opacity-50"
                         >
                           <option value="Premium Node">Premium</option>
                           <option value="Standard Node">Standard</option>
@@ -3129,7 +2989,7 @@ export default function ProfileView({
                     <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">📸 PROFILE PHOTO</span>
                     
                     <div className="flex flex-col sm:flex-row items-center gap-4">
-                      <div className="relative group cursor-pointer shrink-0" onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}>
+                      <div className="relative group cursor-pointer shrink-0" onClick={() => { if (!isSavingProfile && !showSavedFeedback) { setAvatarSourceType('select'); setIsAvatarModalOpen(true); } }}>
                         <img src={editAvatar} className="w-16 h-16 rounded-xl object-cover border border-violet-500/30 group-hover:brightness-75 transition-all" alt="avatar editor" />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-xl">
                           <Camera className="w-4 h-4 text-white" />
@@ -3137,8 +2997,9 @@ export default function ProfileView({
                       </div>
                       <div className="flex flex-col gap-2 text-left">
                         <button
+                          disabled={isSavingProfile || showSavedFeedback}
                           onClick={() => { setAvatarSourceType('select'); setIsAvatarModalOpen(true); }}
-                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5"
+                          className="px-4 py-2 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono text-[10px] uppercase font-black rounded-lg cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Edit3 className="w-3.5 h-3.5" /> Configure Avatar
                         </button>
@@ -3176,16 +3037,34 @@ export default function ProfileView({
 
                     <div className="flex gap-3">
                       <button
+                        disabled={isSavingProfile || showSavedFeedback}
                         onClick={handleCancelEditProfile}
-                        className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-300 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all cursor-pointer"
+                        className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-300 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         Cancel
                       </button>
                       <button
+                        disabled={isSavingProfile || showSavedFeedback}
                         onClick={handleSaveProfile}
-                        className="flex-1 py-3.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg shadow-violet-500/15 cursor-pointer"
+                        className={`flex-1 py-3.5 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all shadow-lg cursor-pointer flex items-center justify-center gap-2 ${
+                          showSavedFeedback 
+                            ? 'bg-emerald-950/80 text-emerald-400 border border-emerald-500/30' 
+                            : 'bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white shadow-violet-500/15 disabled:opacity-50 disabled:cursor-not-allowed'
+                        }`}
                       >
-                        Save Changes
+                        {isSavingProfile && (
+                          <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                          </svg>
+                        )}
+                        {showSavedFeedback ? (
+                          <span className="flex items-center gap-1">✓ Profile updated successfully</span>
+                        ) : isSavingProfile ? (
+                          'Saving...'
+                        ) : (
+                          'Save Changes'
+                        )}
                       </button>
                     </div>
                   </div>
@@ -3247,7 +3126,7 @@ export default function ProfileView({
 
                   <button
                     onClick={() => {
-                      setEditAvatar('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80');
+                      setEditAvatar(getDefaultAvatar(editName || editUsername));
                       setIsAvatarModalOpen(false);
                       window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Profile photo removed.' }));
                     }}

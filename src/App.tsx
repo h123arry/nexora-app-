@@ -119,6 +119,20 @@ export default function App() {
     }
   }, [currentUser, isLoggedIn]);
 
+  useEffect(() => {
+    const handleSwitchIdentity = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const targetUser = customEvent.detail;
+      if (targetUser) {
+        setCurrentUser(targetUser);
+        localStorage.setItem('nexora_user', JSON.stringify(targetUser));
+        window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Switched active identity to @${targetUser.username}` }));
+      }
+    };
+    window.addEventListener('nexora-switch-identity', handleSwitchIdentity);
+    return () => window.removeEventListener('nexora-switch-identity', handleSwitchIdentity);
+  }, []);
+
   // Sync savedAccounts to localStorage
   useEffect(() => {
     localStorage.setItem('nexora_saved_accounts', JSON.stringify(savedAccounts));
@@ -299,6 +313,8 @@ export default function App() {
     const saved = localStorage.getItem('nexora_theme');
     return (saved as ThemeMood) || 'neon-cyber';
   });
+
+  const [toasts, setToasts] = useState<{ id: string; message: string }[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
@@ -625,12 +641,27 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ You are currently offline. New posts will be queued.' }));
     };
 
+    const handleToast = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      const message = customEvent.detail;
+      if (!message) return;
+      
+      const id = `${Date.now()}-${Math.random()}`;
+      setToasts(prev => [...prev, { id, message }]);
+      
+      setTimeout(() => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+      }, 3500);
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+    window.addEventListener('toast', handleToast);
 
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('toast', handleToast);
     };
   }, []);
 
@@ -3239,7 +3270,7 @@ export default function App() {
       {activeTab !== 'matrix' && (
         <button
           onClick={() => setIsAiCommandCenterOpen(true)}
-          className="fixed bottom-24 right-6 md:bottom-10 md:right-10 z-40 p-4 rounded-full bg-gradient-to-tr from-violet-600 to-pink-500 hover:scale-105 active:scale-95 text-white transition-all shadow-xl shadow-violet-600/30 group cursor-pointer border border-violet-400/20"
+          className="fixed top-24 right-4 md:top-auto md:bottom-10 md:right-10 z-45 p-4 rounded-full bg-gradient-to-tr from-violet-600 to-pink-500 hover:scale-105 active:scale-95 text-white transition-all shadow-xl shadow-violet-600/30 group cursor-pointer border border-violet-400/20"
           title="Open Nexora AI Command Center"
         >
           <Sparkles className="w-5 h-5 animate-pulse text-white group-hover:rotate-12 transition-transform" />
@@ -3431,6 +3462,24 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* 🥞 LIGHTWEIGHT TOAST NOTIFICATIONS */}
+      <div id="nexora-global-toast-container" className="fixed bottom-24 right-6 left-6 md:left-auto md:right-8 md:w-80 z-50 flex flex-col gap-2 pointer-events-none">
+        <AnimatePresence>
+          {toasts.map(toast => (
+            <motion.div
+              key={toast.id}
+              initial={{ opacity: 0, y: 15, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15 } }}
+              className="p-3.5 rounded-2xl bg-zinc-950/95 border border-violet-500/20 backdrop-blur-xl shadow-2xl flex items-center gap-2.5 pointer-events-auto text-left"
+            >
+              <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
+              <p className="text-xs font-sans font-medium text-white leading-relaxed">{toast.message}</p>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
 
     </div>
   );

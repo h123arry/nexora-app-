@@ -43,6 +43,7 @@ interface Post {
   bookmarksCount?: number;
   shares?: number;
   isLikedByUser?: boolean;
+  isVerified?: boolean;
 }
 
 interface NexoraVideoPlayerProps {
@@ -683,8 +684,14 @@ export default function NexoraVideoPlayer({
               </div>
             )}
 
-            {/* Right-Side Action Rail */}
-            <div className="absolute right-3.5 bottom-16 flex flex-col items-center gap-4.5 z-20">
+             {/* Right-Side Action Rail */}
+            <div 
+              className="absolute flex flex-col items-center gap-4.5 z-20"
+              style={{
+                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)',
+                right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
+              }}
+            >
               {/* ❤️ Spark */}
               <button 
                 onClick={(e) => { e.stopPropagation(); onSpark(); }}
@@ -737,30 +744,41 @@ export default function NexoraVideoPlayer({
             </div>
 
             {/* Bottom-Left Creator Info Overlay */}
-            <div className="absolute left-3.5 bottom-4 right-16 flex flex-col items-start gap-1.5 z-20 pointer-events-none text-left">
+            <div 
+              className="absolute flex flex-col items-start gap-1.5 z-20 pointer-events-none text-left"
+              style={{
+                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
+                left: 'calc(env(safe-area-inset-left, 0px) + 14px)',
+                right: 'calc(env(safe-area-inset-right, 0px) + 64px)'
+              }}
+            >
               <div className="flex items-center gap-2 pointer-events-auto">
                 <img 
                   src={post.avatar} 
                   alt={post.name} 
-                  className="w-8 h-8 rounded-lg object-cover border border-white/10 cursor-pointer shadow-md shrink-0"
+                  className="w-8 h-8 rounded-lg object-cover border border-white/10 cursor-pointer shadow-md shrink-0 animate-fade-in"
                   onClick={() => onViewProfile?.(post.userId || '')}
                   referrerPolicy="no-referrer"
                 />
                 <div className="flex flex-col leading-tight cursor-pointer" onClick={() => onViewProfile?.(post.userId || '')}>
                   <div className="flex items-center gap-1">
                     <span className="font-sans font-extrabold text-xs text-white hover:text-violet-400 transition-colors drop-shadow-md">{post.name}</span>
-                    {(post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai') && (
+                    {(post.isVerified || post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai' || post.username === 'nexora_ai' || post.username === 'lunash') && (
                       <CheckCircle className="w-3.5 h-3.5 text-violet-400 fill-current shrink-0" />
                     )}
                   </div>
                   <span className="text-[9.5px] font-mono text-zinc-300/80 drop-shadow-md">@{post.username}</span>
                 </div>
-                {!isFollowing && onToggleFollow && post.userId !== 'user-0' && (
+                {onToggleFollow && post.userId !== 'user-0' && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onToggleFollow(); }}
-                    className="ml-2 px-2 py-0.5 bg-violet-600 hover:bg-violet-500 text-white rounded-md text-[8.5px] font-mono font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-md shrink-0"
+                    className={`ml-2 px-2 py-0.5 rounded-md text-[8.5px] font-mono font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-md shrink-0 ${
+                      isFollowing 
+                        ? 'bg-zinc-800/80 border border-zinc-700/50 text-violet-300' 
+                        : 'bg-violet-600 hover:bg-violet-500 text-white'
+                    }`}
                   >
-                    + Follow
+                    {isFollowing ? '✓ Mutual' : '+ Follow'}
                   </button>
                 )}
               </div>
