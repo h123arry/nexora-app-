@@ -20,7 +20,7 @@ import {
   Trophy,
   Megaphone,
   UserCheck,
-  BarChart3,
+  BarChart2,
   Download,
   Award
 } from 'lucide-react';
@@ -463,7 +463,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     { id: 'members', label: '👥 Members', icon: Users },
                     { id: 'events', label: '📅 Events', icon: Calendar },
                     { id: 'files', label: '📁 Files', icon: FileText },
-                    { id: 'polls', label: '📊 Polls', icon: BarChart3 },
+                    { id: 'polls', label: '📊 Polls', icon: BarChart2 },
                     { id: 'voice', label: '🎙 Voice Room', icon: Volume2 },
                     { id: 'chat', label: '💬 Chat', icon: Send },
                     { id: 'announcements', label: '🔔 Announcements', icon: Megaphone },

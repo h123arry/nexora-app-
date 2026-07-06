@@ -2009,7 +2009,14 @@ export default function FeedView({
           const postVideoIndex = videoPosts.findIndex(p => p.id === post.id);
 
           // Release video player memory if not previous, current, or next video
-          const isReleased = hasVideo && (() => {
+          const shouldPreload = hasVideo && activeVideoIndex !== -1 && (
+            postVideoIndex === activeVideoIndex - 1 || 
+            postVideoIndex === activeVideoIndex + 1 ||
+            postVideoIndex === activeVideoIndex + 2 ||
+            postVideoIndex === activeVideoIndex + 3
+          );
+
+          const isReleased = hasVideo && !shouldPreload && activePostId !== post.id && (() => {
             if (activeVideoIndex === -1) {
               const activeIndexInAll = currentDisplayList.findIndex(p => p.id === activePostId);
               return Math.abs(index - activeIndexInAll) > 2;
@@ -2031,10 +2038,8 @@ export default function FeedView({
           let preloadMode: 'auto' | 'metadata' | 'none' = 'metadata';
           if (activePostId === post.id) {
             preloadMode = 'auto';
-          } else if (isNextPost) {
-            preloadMode = (isConnectionSlow || userSettled) ? 'metadata' : 'auto';
-          } else if (isSecondNextPost && isScrollingFast && !isConnectionSlow) {
-            preloadMode = 'auto'; // Predictive Prefetch
+          } else if (shouldPreload) {
+            preloadMode = isConnectionSlow ? 'metadata' : 'auto';
           } else {
             preloadMode = 'none'; // Unneeded videos have zero preload to conserve data
           }
@@ -2111,6 +2116,7 @@ export default function FeedView({
                       isActive={activePostId === post.id}
                       preloadMode={preloadMode}
                       isReleased={isReleased}
+                      shouldPreload={shouldPreload}
                       isFollowing={followingIds.includes(post.userId || '')}
                       onToggleFollow={() => onToggleFollow?.(post.userId || '')}
                       onCommentToggle={() => setActiveCommentsPostId(activeCommentsPostId === post.id ? null : post.id)}
@@ -2836,6 +2842,7 @@ export default function FeedView({
                       isActive={activePostId === post.id}
                       preloadMode={preloadMode}
                       isReleased={isReleased}
+                      shouldPreload={shouldPreload}
                       isFollowing={followingIds.includes(post.userId || '')}
                       onToggleFollow={() => onToggleFollow?.(post.userId || '')}
                       onCommentToggle={() => setActiveCommentsPostId(activeCommentsPostId === post.id ? null : post.id)}

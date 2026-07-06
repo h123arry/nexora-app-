@@ -21,10 +21,12 @@ class VideoPlaybackManager {
 
   constructor() {
     if (typeof window !== 'undefined') {
-      // Listen to visibility change to pause video on backgrounding
+      // Listen to visibility change to pause video on backgrounding and resume on returning!
       window.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           this.pauseActive();
+        } else {
+          this.resumeActive();
         }
       });
       
@@ -32,6 +34,24 @@ class VideoPlaybackManager {
       window.addEventListener('nexora-video-global-pause-all', () => {
         this.pauseAll();
       });
+    }
+  }
+
+  /**
+   * Resume the active player that was paused
+   */
+  public resumeActive() {
+    if (this.activePlayerId && this.activeVideoElement && this.activeVideoUrl) {
+      const callbacks = this.registeredPlayers.get(this.activePlayerId);
+      if (callbacks && callbacks.play) {
+        try {
+          callbacks.play();
+        } catch (e) {
+          this.play(this.activePlayerId, this.activeVideoElement, this.activeVideoUrl).catch(() => {});
+        }
+      } else {
+        this.play(this.activePlayerId, this.activeVideoElement, this.activeVideoUrl).catch(() => {});
+      }
     }
   }
 

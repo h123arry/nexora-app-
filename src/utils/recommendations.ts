@@ -28,7 +28,7 @@ export function saveRecommendationProfile(profile: RecommendationProfile) {
 }
 
 export function recordRecommendationEvent(
-  type: 'watch_complete' | 'watch_partial' | 'skip_quick' | 'spark' | 'comment' | 'share' | 'save' | 'join_community' | 'follow' | 'search' | 'visit_profile',
+  type: 'watch_complete' | 'watch_partial' | 'skip_quick' | 'spark' | 'comment' | 'share' | 'save' | 'join_community' | 'follow' | 'search' | 'visit_profile' | 'not_interested',
   payload: { tags?: string[]; creatorId?: string; creatorUsername?: string; communityName?: string; keyword?: string; watchTimeRatio?: number }
 ) {
   const profile = getRecommendationProfile();
@@ -45,7 +45,8 @@ export function recordRecommendationEvent(
     join_community: 30,
     follow: 30,
     search: 10,
-    visit_profile: 15
+    visit_profile: 15,
+    not_interested: -35 // strong negative signal
   };
   
   let score = modifiers[type] || 0;

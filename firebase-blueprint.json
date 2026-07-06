@@ -66,6 +66,130 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userId", "type", "createdAt"]
+    },
+    "notification": {
+      "title": "Notification",
+      "description": "Platform notifications",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "content": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "read", "createdAt"]
+    },
+    "draft": {
+      "title": "Draft",
+      "description": "User unpublished posts",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "caption": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "updatedAt"]
+    },
+    "creatorAnalytics": {
+      "title": "CreatorAnalytics",
+      "description": "Creator professional analytics",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "totalViews": { "type": "number" },
+        "followersGained": { "type": "number" },
+        "engagementRate": { "type": "number" },
+        "retentionCurve": { "type": "array", "items": { "type": "number" } },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "updatedAt"]
+    },
+    "content": {
+      "title": "Content",
+      "description": "Creator content library",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "isOptimized": { "type": "boolean" },
+        "processingStatus": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "type", "status"]
+    },
+    "post": {
+      "title": "Post",
+      "description": "User posts",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "content": { "type": "string" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "content", "updatedAt"]
+    },
+    "automationLog": {
+      "title": "AutomationLog",
+      "description": "Platform automation logs",
+      "type": "object",
+      "properties": {
+        "taskName": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["taskName", "status", "createdAt"]
+    },
+    "moderationReport": {
+      "title": "ModerationReport",
+      "description": "User reported content",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string" },
+        "targetType": { "type": "string" },
+        "targetId": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterId", "targetType", "targetId", "reason", "status", "createdAt"]
+    },
+    "privacySetting": {
+      "title": "PrivacySetting",
+      "description": "User privacy settings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "isPrivate": { "type": "boolean" },
+        "commentPermission": { "type": "string" }
+      },
+      "required": ["userId"]
+    },
+    "page": {
+      "title": "Page",
+      "description": "Creator or business pages",
+      "type": "object",
+      "properties": {
+        "ownerId": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["ownerId", "name", "username", "category"]
+    },
+    "community": {
+      "title": "Community",
+      "description": "User communities",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "ownerId": { "type": "string" }
+      },
+      "required": ["name", "ownerId"]
     }
   },
   "firestore": {
@@ -88,6 +212,38 @@
     "/activities/{activityId}": {
       "schema": { "$ref": "activity" },
       "description": "Platform activities"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "notification" },
+      "description": "Platform notifications"
+    },
+    "/creatorAnalytics/{analyticsId}": {
+      "schema": { "$ref": "creatorAnalytics" },
+      "description": "Creator analytics"
+    },
+    "/pages/{pageId}": {
+      "schema": { "$ref": "page" },
+      "description": "Platform pages"
+    },
+    "/communities/{communityId}": {
+      "schema": { "$ref": "community" },
+      "description": "Platform communities"
+    },
+    "/automationLogs/{logId}": {
+      "schema": { "$ref": "automationLog" },
+      "description": "Platform automation logs"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "post" },
+      "description": "User posts"
+    },
+    "/moderationReports/{reportId}": {
+      "schema": { "$ref": "moderationReport" },
+      "description": "Moderation reports"
+    },
+    "/privacySettings/{userId}": {
+      "schema": { "$ref": "privacySetting" },
+      "description": "Privacy settings"
     }
   }
 }

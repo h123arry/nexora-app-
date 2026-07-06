@@ -1,29 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  X, Heart, MessageSquare, Share2, Bookmark, Eye, 
-  ChevronLeft, ChevronRight, UserPlus, Clock, Play
+  X, ChevronLeft, ChevronRight, Zap, Trash, Send, MessageSquare 
 } from 'lucide-react';
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
-import RelativeTimestamp from './RelativeTimestamp';
+import RelativeTime from './RelativeTime';
 
 interface ImmersiveVideoViewerProps {
   initialPost: Post;
   creatorPosts: Post[];
+  currentUser: User;
   onClose: () => void;
   onLikePost: (postId: string) => void;
   onToggleFollow?: (userId: string) => void;
   isFollowing?: boolean;
+  onAddComment?: (postId: string, content: string) => void;
 }
 
 export default function ImmersiveVideoViewer({
   initialPost,
   creatorPosts,
+  currentUser,
   onClose,
   onLikePost,
   onToggleFollow,
-  isFollowing = false
+  isFollowing = false,
+  onAddComment
 }: ImmersiveVideoViewerProps) {
   // Only include posts that have videoUrl for the swipeable list
   const videoPosts = creatorPosts.filter(p => p.videoUrl);
@@ -37,25 +40,11 @@ export default function ImmersiveVideoViewer({
   const postsToShow = videoPosts.length > 0 && startIndex >= 0 ? videoPosts : [initialPost];
   const currentPost = postsToShow[currentIndex];
 
-  const [viewsCount, setViewsCount] = useState(currentPost?.views || 0);
-
-  useEffect(() => {
-    setViewsCount(currentPost?.views || 0);
-  }, [currentPost]);
-
-  const handleNext = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentIndex < postsToShow.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
-  };
-
-  const handlePrev = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
-    }
-  };
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [commentInput, setCommentInput] = useState('');
+  const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
+  const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
 
   // Prevent background scrolling
   useEffect(() => {
@@ -65,13 +54,42 @@ export default function ImmersiveVideoViewer({
     };
   }, []);
 
-  const formatVal = (val: number) => {
-    if (val >= 1000000) return (val / 1000000).toFixed(1) + 'M';
-    if (val >= 1000) return (val / 1000).toFixed(1) + 'K';
-    return val.toString();
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        if (currentIndex > 0) {
+          setCurrentIndex(prev => prev - 1);
+          setIsCommentsOpen(false);
+        }
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        if (currentIndex < postsToShow.length - 1) {
+          setCurrentIndex(prev => prev + 1);
+          setIsCommentsOpen(false);
+        }
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentIndex, postsToShow.length, onClose]);
+
+  const handleNext = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (currentIndex < postsToShow.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+      setIsCommentsOpen(false);
+    }
   };
 
-  const [isProcessing, setIsProcessing] = useState(false);
+  const handlePrev = (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    if (currentIndex > 0) {
+      setCurrentIndex(currentIndex - 1);
+      setIsCommentsOpen(false);
+    }
+  };
 
   const handleLike = async () => {
     setIsProcessing(true);
@@ -79,170 +97,292 @@ export default function ImmersiveVideoViewer({
     setIsProcessing(false);
   };
 
+  // Touch/Swipe Gesture Detection Engine
+  const touchStartY = useRef(0);
+  const touchStartX = useRef(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diffY = touchStartY.current - e.changedTouches[0].clientY;
+    const diffX = touchStartX.current - e.changedTouches[0].clientX;
+
+    // Distinguish scrolling up/down or swiping left/right
+    if (Math.abs(diffY) > 50 && Math.abs(diffY) > Math.abs(diffX)) {
+      if (diffY > 0 && currentIndex < postsToShow.length - 1) {
+        handleNext();
+      } else if (diffY < 0 && currentIndex > 0) {
+        handlePrev();
+      }
+    } else if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+      if (diffX > 0 && currentIndex < postsToShow.length - 1) {
+        handleNext();
+      } else if (diffX < 0 && currentIndex > 0) {
+        handlePrev();
+      }
+    }
+  };
+
+  // Comment Actions
+  const handleSendComment = () => {
+    if (!commentInput.trim() || !onAddComment) return;
+    onAddComment(currentPost.id, commentInput.trim());
+    setCommentInput('');
+  };
+
+  const handleSparkCommentLocal = (commentId: string) => {
+    window.dispatchEvent(new CustomEvent('nexora-spark-comment', { 
+      detail: { postId: currentPost.id, commentId } 
+    }));
+  };
+
+  const handleSendReply = (commentId: string) => {
+    const content = replyInputs[commentId]?.trim();
+    if (!content) return;
+    window.dispatchEvent(new CustomEvent('nexora-add-reply', { 
+      detail: { postId: currentPost.id, commentId, replyContent: content } 
+    }));
+    setReplyInputs(prev => ({ ...prev, [commentId]: '' }));
+    setActiveReplyFieldId(null);
+  };
+
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col md:flex-row">
-      {/* Video Player Section - takes up full mobile screen or left side on desktop */}
-      <div className="relative flex-1 h-full bg-black flex items-center justify-center overflow-hidden">
-        {/* Navigation Arrows */}
-        {currentIndex > 0 && (
-          <button 
-            onClick={handlePrev}
-            className="absolute left-4 z-20 p-3 bg-black/50 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all hidden md:block"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-        )}
-        
-        {currentIndex < postsToShow.length - 1 && (
-          <button 
-            onClick={handleNext}
-            className="absolute right-4 z-20 p-3 bg-black/50 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all hidden md:block"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        )}
+    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
+      {/* Absolute Close button */}
+      <button 
+        onClick={onClose}
+        className="absolute top-6 left-6 z-50 p-3 bg-black/60 hover:bg-black/90 text-white rounded-full border border-white/10 backdrop-blur-md transition-all shadow-xl active:scale-95 cursor-pointer"
+        title="Exit player"
+      >
+        <X className="w-5 h-5" />
+      </button>
 
+      {/* Desktop Navigation Arrows */}
+      {currentIndex > 0 && (
         <button 
-          onClick={onClose}
-          className="absolute top-6 left-4 z-20 p-2 bg-black/50 hover:bg-black/80 rounded-full text-white backdrop-blur-md transition-all md:hidden"
+          onClick={handlePrev}
+          className="absolute left-6 z-40 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer"
+          title="Previous video"
         >
-          <X className="w-5 h-5" />
+          <ChevronLeft className="w-6 h-6" />
         </button>
-
-        {currentPost.videoUrl ? (
-          <div className="w-full h-full max-w-[500px] mx-auto relative">
-            <NexoraVideoPlayer
-              post={currentPost}
-              videoUrl={currentPost.videoUrl}
-              onOpenFullscreen={() => {}}
-              onSpark={handleLike}
-              isProcessing={isProcessing}
-              isActive={true}
-              preloadMode="auto"
-            />
-          </div>
-        ) : (
-          <div className="w-full max-w-lg mx-auto p-4 relative">
-             {currentPost.image && (
-                <img src={currentPost.image} className="w-full rounded-2xl object-cover mb-4" alt="content" />
-             )}
-             <p className="text-white text-lg">{currentPost.content}</p>
-          </div>
-        )}
-      </div>
-
-      {/* Analytics & Interaction Sidebar (Visible on desktop, overlay on mobile?) 
-          Let's make it a sidebar on md+ and a bottom sheet on mobile. */}
-      <div className="w-full md:w-[400px] h-1/2 md:h-full bg-[#0b0922] border-t md:border-t-0 md:border-l border-white/10 flex flex-col z-20 shrink-0 absolute bottom-0 md:relative">
-        <div className="p-4 flex items-center justify-between border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <img src={currentPost.avatar} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="avatar" />
-            <div>
-              <h4 className="text-sm font-sans font-black text-white">{currentPost.name}</h4>
-              <p className="text-xs font-mono text-zinc-400">@{currentPost.username}</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            {!isFollowing && onToggleFollow && (
-               <button 
-                 onClick={() => onToggleFollow(currentPost.userId || currentPost.id)}
-                 className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-lg text-xs font-black uppercase tracking-wide transition-all"
-               >
-                 Follow
-               </button>
-            )}
-            <button 
-              onClick={onClose}
-              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white hidden md:block transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* Detailed Stats Pane */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          <div>
-            <h3 className="text-xs font-mono font-black text-zinc-500 uppercase tracking-widest mb-3">Analytics Preview</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-xl text-blue-400"><Eye className="w-4 h-4" /></div>
-                <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase">Total Views</p>
-                  <p className="text-lg font-black text-white">{formatVal(viewsCount)}</p>
-                </div>
-              </div>
-              <div className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center gap-3">
-                <div className="p-2 bg-pink-500/10 rounded-xl text-pink-400"><Heart className="w-4 h-4" /></div>
-                <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase">Sparks</p>
-                  <p className="text-lg font-black text-white">{formatVal(currentPost.likes || 0)}</p>
-                </div>
-              </div>
-              <div className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center gap-3">
-                <div className="p-2 bg-violet-500/10 rounded-xl text-violet-400"><MessageSquare className="w-4 h-4" /></div>
-                <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase">Comments</p>
-                  <p className="text-lg font-black text-white">{formatVal(currentPost.commentsCount || currentPost.comments?.length || 0)}</p>
-                </div>
-              </div>
-              <div className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/10 rounded-xl text-emerald-400"><Share2 className="w-4 h-4" /></div>
-                <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase">Shares</p>
-                  <p className="text-lg font-black text-white">{formatVal(currentPost.shares || 0)}</p>
-                </div>
-              </div>
-              <div className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center gap-3">
-                <div className="p-2 bg-amber-500/10 rounded-xl text-amber-400"><Bookmark className="w-4 h-4" /></div>
-                <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase">Saves</p>
-                  <p className="text-lg font-black text-white">{formatVal(currentPost.saves || 0)}</p>
-                </div>
-              </div>
-              <div className="bg-black/30 p-3 rounded-2xl border border-white/5 flex items-center gap-3">
-                <div className="p-2 bg-zinc-500/10 rounded-xl text-zinc-400"><Clock className="w-4 h-4" /></div>
-                <div>
-                  <p className="text-[10px] font-mono text-zinc-500 uppercase">Uploaded</p>
-                  <p className="text-xs font-black text-white mt-1"><RelativeTimestamp timestamp={currentPost.timestamp} /></p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="mt-4 bg-black/20 p-3 rounded-xl border border-white/5">
-               <p className="text-xs text-zinc-400 font-mono">Posted: <RelativeTimestamp timestamp={currentPost.timestamp} /></p>
-            </div>
-          </div>
-          
-          <div>
-            <h3 className="text-xs font-mono font-black text-zinc-500 uppercase tracking-widest mb-3">Caption</h3>
-            <p className="text-sm font-sans text-zinc-200 leading-relaxed whitespace-pre-wrap">
-              {currentPost.content}
-            </p>
-          </div>
-        </div>
-      </div>
+      )}
       
-      {/* Mobile navigation overlays */}
-      <div className="absolute top-1/3 left-2 z-30 md:hidden">
-         {currentIndex > 0 && (
-          <button 
-            onClick={handlePrev}
-            className="p-2 bg-black/40 rounded-full text-white backdrop-blur-sm"
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
+      {currentIndex < postsToShow.length - 1 && (
+        <button 
+          onClick={handleNext}
+          className="absolute right-6 z-40 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer"
+          title="Next video"
+        >
+          <ChevronRight className="w-6 h-6" />
+        </button>
+      )}
+
+      {/* Interactive Unified Player Stage */}
+      <div 
+        className="w-full h-full max-w-[480px] bg-black relative flex flex-col justify-center overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.85)]"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
+        {postsToShow.map((post, idx) => {
+          if (!post.videoUrl) return null;
+          const isCurrent = idx === currentIndex;
+          const isNearby = idx >= currentIndex - 1 && idx <= currentIndex + 3;
+          if (!isNearby) return null;
+
+          return (
+            <div 
+              key={post.id} 
+              className="w-full h-full" 
+              style={{ display: isCurrent ? 'block' : 'none' }}
+            >
+              <NexoraVideoPlayer
+                post={post}
+                videoUrl={post.videoUrl}
+                onOpenFullscreen={() => {}}
+                onSpark={handleLike}
+                isProcessing={isProcessing}
+                isActive={isCurrent}
+                preloadMode={isCurrent ? "auto" : "metadata"}
+                shouldPreload={true}
+                isFollowing={isFollowing}
+                onToggleFollow={onToggleFollow ? () => onToggleFollow(post.userId || post.id) : undefined}
+                onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
+                isCommentsOpen={isCommentsOpen}
+                onNotInterested={handleNext}
+              />
+            </div>
+          );
+        })}
+        
+        {!currentPost.videoUrl && (
+          <div className="w-full p-6 text-center select-none flex flex-col items-center justify-center h-full">
+            {currentPost.image && (
+              <img 
+                src={currentPost.image} 
+                className="w-full max-h-[60vh] rounded-3xl object-cover mb-6 border border-white/10 shadow-2xl" 
+                alt="post content" 
+                referrerPolicy="no-referrer"
+              />
+            )}
+            <p className="text-white text-base font-sans leading-relaxed font-bold px-4">{currentPost.content}</p>
+          </div>
         )}
-      </div>
-      <div className="absolute top-1/3 right-2 z-30 md:hidden">
-        {currentIndex < postsToShow.length - 1 && (
-          <button 
-            onClick={handleNext}
-            className="p-2 bg-black/40 rounded-full text-white backdrop-blur-sm"
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-        )}
+
+        {/* THREADED COMMENTS DRAWER ACCORDION OVERLAY */}
+        <AnimatePresence>
+          {isCommentsOpen && (
+            <motion.div
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: "spring", damping: 26, stiffness: 220 }}
+              className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-2xl border-t border-violet-500/20 z-40 flex flex-col p-5 shadow-2xl overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
+                <span className="text-[10px] font-mono tracking-widest text-violet-400 font-extrabold uppercase flex items-center gap-1.5">
+                  💬 Comments ({currentPost.comments?.length || 0})
+                </span>
+                <button
+                  onClick={() => setIsCommentsOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Scrollable List */}
+              <div className="space-y-3.5 flex-1 overflow-y-auto pr-1 mb-4 custom-scrollbar">
+                {(!currentPost.comments || currentPost.comments.length === 0) && (
+                  <p className="text-[11px] font-mono text-violet-300/40 italic py-6 text-center">
+                    No comments yet. Start the conversation!
+                  </p>
+                )}
+                {currentPost.comments?.map((c, commentIndex) => (
+                  <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
+                    <div className="flex items-start justify-between gap-2 text-xs">
+                      <div className="flex gap-2">
+                        <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
+                        <div>
+                          <span className="font-sans font-bold text-violet-200">{c.name}</span>
+                          <span className="text-[10px] font-mono text-violet-400/60 block">
+                            @{c.username} • <RelativeTime timestamp={c.timestamp} />
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button 
+                          onClick={() => handleSparkCommentLocal(c.id)}
+                          className={`flex items-center gap-1 font-mono text-[10px] hover:text-pink-400 cursor-pointer transition-colors ${
+                            c.isLikedByUser ? 'text-pink-400' : 'text-violet-400/50'
+                          }`}
+                        >
+                          <Zap className="w-3 h-3 fill-current" />
+                          <span>{c.likes}</span>
+                        </button>
+                        {(c.username === currentUser.username || currentPost.userId === currentUser.id) && (
+                          <button
+                            onClick={() => {
+                              if (confirm('Delete this comment?')) {
+                                window.dispatchEvent(new CustomEvent('nexora-delete-comment', { 
+                                  detail: { postId: currentPost.id, commentIndex } 
+                                }));
+                              }
+                            }}
+                            className="p-1 text-red-400 hover:text-red-300 transition-colors rounded-md hover:bg-white/5 cursor-pointer"
+                            title="Delete comment"
+                          >
+                            <Trash className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <p className="text-xs text-slate-200 pl-9 font-sans">{c.content}</p>
+
+                    {/* Standard Threaded/Nested Replies */}
+                    {c.replies && c.replies.length > 0 && (
+                      <div className="pl-9 space-y-2.5 pt-1.5 border-l border-violet-500/10 ml-3.5">
+                        {c.replies.map(rep => (
+                          <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
+                              <div>
+                                <span className="font-sans font-black text-violet-200 text-[11px]">{rep.name}</span>
+                                <span className="text-[9px] font-mono text-violet-400/50 block">
+                                  @{rep.username} • <RelativeTime timestamp={rep.timestamp} />
+                                </span>
+                              </div>
+                            </div>
+                            <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Reply compose activator */}
+                    <div className="pl-9">
+                      {activeReplyFieldId === c.id ? (
+                        <div className="flex gap-2 mt-2">
+                          <input 
+                            type="text"
+                            placeholder="Write nested thread reply..."
+                            value={replyInputs[c.id] || ''}
+                            onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
+                            onKeyDown={(e) => { if(e.key === 'Enter') handleSendReply(c.id); }}
+                            className="flex-1 bg-slate-900 border border-violet-500/15 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
+                          />
+                          <button 
+                            onClick={() => handleSendReply(c.id)}
+                            className="bg-violet-600 hover:bg-violet-500 p-1.5 rounded-xl text-white cursor-pointer"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={() => setActiveReplyFieldId(null)}
+                            className="text-violet-400 text-xs hover:text-white cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button 
+                          onClick={() => setActiveReplyFieldId(c.id)}
+                          className="text-[10px] font-mono text-violet-400 hover:text-white flex items-center gap-1 mt-1 cursor-pointer"
+                        >
+                          Reply to Thread 💬
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Main comment form */}
+              <div className="flex items-center gap-2 pt-2 border-t border-white/5 shrink-0">
+                <input 
+                  type="text"
+                  placeholder="Add a friendly comment..."
+                  value={commentInput}
+                  onChange={(e) => setCommentInput(e.target.value)}
+                  onKeyDown={(e) => { if(e.key === 'Enter') handleSendComment(); }}
+                  className="flex-1 bg-slate-950 border border-white/10 rounded-2xl py-2 px-4 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/50"
+                />
+                <button 
+                  onClick={handleSendComment}
+                  className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-mono font-bold text-xs px-4 py-2 rounded-2xl transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Send</span>
+                  <Send className="w-3 h-3" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   );

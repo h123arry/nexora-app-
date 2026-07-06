@@ -11,7 +11,8 @@ import {
   Compass,
   Zap,
   Search,
-  Bot
+  Bot,
+  BarChart2
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { User, ThemeMood } from '../types';
@@ -20,8 +21,8 @@ import NexoraPremiumLogo from './NexoraPremiumLogo';
 
 interface SidebarProps {
   currentUser: User;
-  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida';
-  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida') => void;
+  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator';
+  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator') => void;
   unreadMessagesCount: number;
   unreadNotificationsCount: number;
   theme: ThemeMood;
@@ -162,6 +163,28 @@ export default function Sidebar({
             </span>
             <span className="block text-[9px] text-current/40 font-mono truncate">
               Ask any helpful topic
+            </span>
+          </div>
+        </button>
+
+        {/* Conditional Creator panel link */}
+        <button
+          onClick={() => setActiveTab('creator')}
+          className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl border transition-all text-left group cursor-pointer mt-1 ${
+            activeTab === 'creator'
+              ? 'bg-linear-to-r from-violet-600/25 to-indigo-500/10 border-violet-500/40 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5'
+              : 'bg-black/35 border-violet-500/10 hover:border-violet-500/20 text-violet-400/80 hover:bg-violet-950/10'
+          }`}
+        >
+          <div className="p-1.5 rounded-lg bg-violet-600/10 text-violet-400 group-hover:scale-105 transition-all">
+            <BarChart2 className="w-3.5 h-3.5 text-violet-500" />
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-violet-400 group-hover:text-violet-300">
+              Creator Studio 📈
+            </span>
+            <span className="block text-[9px] text-current/40 font-mono truncate">
+              Professional Publishing
             </span>
           </div>
         </button>

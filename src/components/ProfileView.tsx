@@ -101,7 +101,7 @@ interface MediaGridProps {
 const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) => {
   if (gridPosts.length === 0) {
     return (
-      <div className="text-center py-16 border border-dashed border-violet-500/10 rounded-3xl bg-[#09071c]/40 font-mono text-xs text-violet-400/80 w-full col-span-3 md:col-span-4">
+      <div className="text-center py-16 border border-dashed border-violet-500/10 rounded-3xl bg-[#09071c]/40 font-mono text-xs text-violet-400/80 w-full col-span-3">
         <div className="text-3xl mb-2">📸</div>
         <p className="font-bold">No gallery items here yet</p>
         <p className="text-[10px] text-zinc-500 mt-1">Ready for custom clips, snapshots or audio broadcasts!</p>
@@ -110,7 +110,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
   }
 
   return (
-    <div className="grid grid-cols-3 md:grid-cols-4 gap-1.5 sm:gap-3 w-full">
+    <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 w-full">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -121,14 +121,18 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
             layout
             key={post.id}
             onClick={() => onSelectPost(post)}
-            className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between transition-all hover:scale-[1.02]"
+            whileHover={{ scale: 1.02, y: -2 }}
+            whileTap={{ scale: 0.98 }}
+            transition={{ type: "spring", stiffness: 400, damping: 18 }}
+            className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
               {post.image ? (
                 <img 
                   src={post.image} 
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                  loading="lazy"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
                   alt={post.content}
                   referrerPolicy="no-referrer"
                 />
@@ -146,9 +150,25 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
                   <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">
                     <Film className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
                   </div>
-                  <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[10px] font-mono font-bold z-20 flex items-center gap-1">
-                    <Play className="w-2.5 h-2.5 fill-white text-white" />
-                    {post.views ? (post.views > 999 ? (post.views/1000).toFixed(1) + 'K' : post.views) : '18.4K'}
+                  {/* Consistent Bottom overlays for video count and duration */}
+                  <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20 flex items-center gap-1">
+                    <Play className="w-2 h-2 fill-white text-white" />
+                    {(() => {
+                      const views = post.views !== undefined ? post.views : 0;
+                      const formatted = views >= 1000000 
+                        ? (views / 1000000).toFixed(1).replace(/\.0$/, '') + 'M' 
+                        : views >= 1000 
+                          ? (views / 1000).toFixed(1).replace(/\.0$/, '') + 'K' 
+                          : views.toString();
+                      return `${formatted}`;
+                    })()}
+                  </div>
+                  <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20">
+                    {post.videoDuration || (() => {
+                      const num = post.id.charCodeAt(post.id.length - 1) || 12;
+                      const secs = (num % 45) + 10;
+                      return `0:${secs < 10 ? '0' + secs : secs}`;
+                    })()}
                   </div>
                 </div>
               ) : isVoice ? (
@@ -961,41 +981,42 @@ export default function ProfileView({
 
       {/* 2. PUBLIC PROFILE CARD & INFORMATION ARCHITECTURE */}
       {isLoadingProfile ? (
-        <div className="max-w-xl mx-auto px-4 pt-6 pb-2 space-y-6 text-left animate-pulse">
+        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-8 pb-2 space-y-6 text-left animate-pulse">
           {/* Header Banner Skeleton */}
           <div className="h-28 w-full rounded-2xl bg-violet-950/20 border border-violet-500/10" />
           
           {/* Identity skeleton */}
-          <div className="flex gap-4 items-start">
-            <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-violet-950/30 shrink-0" />
-            <div className="space-y-2 flex-1 pt-2">
-              <div className="h-4.5 w-1/3 bg-violet-900/30 rounded-lg" />
-              <div className="h-3 w-1/4 bg-violet-900/25 rounded-md" />
-              <div className="h-2.5 w-1/5 bg-violet-900/25 rounded-md" />
+          <div className="flex gap-5 sm:gap-6 items-center text-left">
+            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-violet-950/30 shrink-0" />
+            <div className="space-y-2 flex-1">
+              <div className="h-6 w-1/3 bg-violet-900/30 rounded-lg" />
+              <div className="h-4 w-1/4 bg-violet-900/25 rounded-md" />
+              <div className="h-3.5 w-1/5 bg-violet-900/25 rounded-md" />
             </div>
+          </div>
+
+          {/* Followers metrics skeleton */}
+          <div className="grid grid-cols-3 gap-y-4 gap-x-4 sm:gap-x-8 py-4 my-3 border-y border-white/5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="space-y-2 text-left">
+                <div className="h-5 w-14 bg-violet-900/30 rounded-md" />
+                <div className="h-3 w-10 bg-violet-900/20 rounded-md" />
+              </div>
+            ))}
+          </div>
+
+          {/* Action buttons skeleton */}
+          <div className="flex gap-2">
+            <div className="flex-1 h-[38px] bg-violet-900/20 rounded-xl" />
+            <div className="flex-1 h-[38px] bg-violet-900/20 rounded-xl" />
+            <div className="flex-1 h-[38px] bg-violet-900/20 rounded-xl" />
           </div>
 
           {/* Bio skeleton */}
           <div className="space-y-2">
-            <div className="h-3 w-full bg-violet-900/25 rounded-md" />
-            <div className="h-3 w-5/6 bg-violet-900/25 rounded-md" />
-            <div className="h-3 w-2/3 bg-violet-900/20 rounded-md" />
-          </div>
-
-          {/* Followers metrics skeleton */}
-          <div className="grid grid-cols-3 gap-3 p-3 bg-[#0b091e]/60 border border-violet-500/10 rounded-2xl">
-            <div className="space-y-1.5 py-1 text-center">
-              <div className="h-3 w-12 bg-violet-900/30 rounded-md mx-auto" />
-              <div className="h-2 w-8 bg-violet-900/20 rounded-md mx-auto" />
-            </div>
-            <div className="space-y-1.5 py-1 text-center">
-              <div className="h-3 w-12 bg-violet-900/30 rounded-md mx-auto" />
-              <div className="h-2 w-8 bg-violet-900/20 rounded-md mx-auto" />
-            </div>
-            <div className="space-y-1.5 py-1 text-center">
-              <div className="h-3 w-12 bg-violet-900/30 rounded-md mx-auto" />
-              <div className="h-2 w-8 bg-violet-900/20 rounded-md mx-auto" />
-            </div>
+            <div className="h-3.5 w-full bg-violet-900/25 rounded-md" />
+            <div className="h-3.5 w-5/6 bg-violet-900/25 rounded-md" />
+            <div className="h-3.5 w-2/3 bg-violet-900/20 rounded-md" />
           </div>
 
           {/* Profile Tab bar skeleton */}
@@ -1006,324 +1027,328 @@ export default function ProfileView({
           </div>
 
           {/* Feed Grid skeleton */}
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
             <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
             <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
             <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
           </div>
         </div>
       ) : (<>
-        <div className="max-w-xl mx-auto px-4 pt-4 pb-2 space-y-3.5">
+        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-8 sm:pt-10 pb-3 text-left">
         
-        {/* Profile Identity (Redesigned Side-by-Side Compact Layout) */}
-        <div className="flex items-start gap-4 text-left">
-          {/* Circular Avatar with minimal premium halo */}
-          <div className="relative shrink-0">
-            <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px]" />
-            <div 
-              onClick={() => setProfilePicExpanded(true)}
-              className="w-18 h-18 sm:w-20 sm:h-20 rounded-full bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.02]"
-            >
-              <img 
-                src={currentUser.avatar} 
-                className="w-full h-full object-cover" 
-                alt="User Avatar"
-                referrerPolicy="no-referrer"
-              />
-              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
-                <Eye className="w-4 h-4 text-white" />
+          {/* Profile Identity (Redesigned Side-by-Side Compact Layout) */}
+          <div className="flex items-center gap-5 sm:gap-6 text-left">
+            {/* Circular Avatar with minimal premium halo */}
+            <div className="relative shrink-0">
+              <div className="absolute -inset-1.5 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[3px] opacity-80" />
+              <div 
+                onClick={() => setProfilePicExpanded(true)}
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
+              >
+                <img 
+                  src={currentUser.avatar} 
+                  className="w-full h-full object-cover" 
+                  alt="User Avatar"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Eye className="w-5 h-5 text-white" />
+                </div>
+              </div>
+            </div>
+
+            {/* Identity details and compact metadata */}
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight tracking-tight">{currentUser.name}</h1>
+                {currentUser.isVerified && <PurpleVerifiedBadge className="w-4.5 h-4.5 shrink-0" type="founder" />}
+                
+                {/* Creator Tag - simplified and clean */}
+                <span className="px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/25 text-[8px] font-mono text-violet-300 uppercase tracking-widest font-black flex items-center gap-1 shrink-0">
+                  <Crown className="w-2.5 h-2.5 text-pink-400 animate-pulse" /> Premium
+                </span>
+              </div>
+              
+              <p className="text-xs sm:text-sm font-bold text-violet-400/70 font-mono tracking-wider">@{currentUser.username}</p>
+
+              {/* Compact location & web links */}
+              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px] text-zinc-400 font-medium font-sans pt-1">
+                {currentUser.location && (
+                  <span className="flex items-center gap-1 hover:text-white transition-colors duration-150">
+                    <MapPin className="w-3.5 h-3.5 text-violet-500/80" /> {currentUser.location}
+                  </span>
+                )}
+                {currentUser.website && (
+                  <a 
+                    href={`https://${currentUser.website}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors hover:underline"
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" /> {currentUser.website}
+                  </a>
+                )}
+                <span className="flex items-center gap-1 text-zinc-500">
+                  <Calendar className="w-3.5 h-3.5 text-zinc-600" /> {currentUser.joinedDate || 'Joined June 2026'}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Identity details and compact metadata */}
-          <div className="flex-1 min-w-0 space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-black text-white leading-tight tracking-tight">{currentUser.name}</h1>
-              {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
-              
-              {/* Creator Tag - simplified and clean */}
-              <span className="px-1.5 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-[7px] font-mono text-violet-300 uppercase tracking-widest font-black flex items-center gap-0.5 shrink-0">
-                <Crown className="w-2.5 h-2.5 text-pink-400" /> Premium
-              </span>
-            </div>
-            
-            <p className="text-xs font-semibold text-zinc-400 font-mono">@{currentUser.username}</p>
-
-            {/* Compact location & web links */}
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[10px] text-zinc-500 font-medium font-sans pt-0.5">
-              {currentUser.location && (
-                <span className="flex items-center gap-0.5">
-                  <MapPin className="w-3 h-3 text-zinc-600" /> {currentUser.location}
-                </span>
-              )}
-              {currentUser.website && (
-                <a 
-                  href={`https://${currentUser.website}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
-                  className="flex items-center gap-0.5 text-cyan-500 hover:underline"
-                >
-                  <LinkIcon className="w-3 h-3" /> {currentUser.website}
-                </a>
-              )}
-              <span className="flex items-center gap-0.5">
-                <Calendar className="w-3 h-3 text-zinc-600" /> {currentUser.joinedDate || 'Joined June 2026'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. PROFILE STATISTICS (Compact Premium Layout) */}
-        <div className="py-2 select-none space-y-2.5">
-          {/* Row 1: Followers, Following, Posts */}
-          <div className="flex flex-wrap items-baseline gap-x-5 sm:gap-x-7 gap-y-1 text-left">
-            {/* Followers */}
+          {/* 3. PROFILE STATISTICS (Compact Premium Layout) */}
+          <div className="grid grid-cols-3 gap-y-4 gap-x-4 sm:gap-x-8 py-4 my-6 border-y border-white/5 select-none text-left">
+            {/* Column 1, Row 1: Followers */}
             <button 
               onClick={() => { setActivePanel('social-graph'); setRelationsTab('followers'); }}
-              className="flex items-baseline gap-1 cursor-pointer group text-left transition-all"
+              className="flex flex-col items-start gap-1 cursor-pointer group transition-all text-left"
             >
-              <span className="text-sm sm:text-base font-black text-white group-hover:text-violet-300 transition-colors">
+              <span className="text-base sm:text-lg font-black text-white group-hover:text-violet-300 transition-colors tracking-tight">
                 {formatSecondaryStat(currentUser.followers || 0)}
               </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 group-hover:text-violet-300/90 transition-colors uppercase">
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 group-hover:text-violet-300/80 transition-colors uppercase">
                 FOLLOWERS
               </span>
             </button>
 
-            {/* Following */}
+            {/* Column 2, Row 1: Following */}
             <button 
               onClick={() => { setActivePanel('social-graph'); setRelationsTab('following'); }}
-              className="flex items-baseline gap-1 cursor-pointer group text-left transition-all"
+              className="flex flex-col items-start gap-1 cursor-pointer group transition-all text-left"
             >
-              <span className="text-sm sm:text-base font-black text-white group-hover:text-violet-300 transition-colors">
+              <span className="text-base sm:text-lg font-black text-white group-hover:text-violet-300 transition-colors tracking-tight">
                 {formatSecondaryStat(currentUser.following || 0)}
               </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 group-hover:text-violet-300/90 transition-colors uppercase">
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 group-hover:text-violet-300/80 transition-colors uppercase">
                 FOLLOWING
               </span>
             </button>
 
-            {/* Posts */}
-            <div className="flex items-baseline gap-1">
-              <span className="text-sm sm:text-base font-black text-white">
+            {/* Column 3, Row 1: Posts */}
+            <div className="flex flex-col items-start gap-1 text-left">
+              <span className="text-base sm:text-lg font-black text-white tracking-tight">
                 {formatSecondaryStat(getPostsCount())}
               </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 uppercase">
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 uppercase">
                 POSTS
               </span>
             </div>
-          </div>
 
-          {/* Row 2: Sparks, Reputation (REP), Contributions (CONTRIB) */}
-          <div className="flex flex-wrap items-baseline gap-x-5 sm:gap-x-7 gap-y-1 text-left">
-            {/* Sparks */}
-            <div className="flex items-baseline gap-1">
-              <span className="text-sm sm:text-base font-black text-amber-400 flex items-center gap-0.5">
-                <span className="text-[11px] sm:text-xs">✨</span>
+            {/* Column 1, Row 2: Sparks */}
+            <div className="flex flex-col items-start gap-1 text-left">
+              <span className="text-base sm:text-lg font-black text-amber-400 flex items-center gap-1 tracking-tight">
+                <span className="text-xs sm:text-sm">✨</span>
                 {getSecondaryMetric('sparks')}
               </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 uppercase">
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 uppercase">
                 SPARKS
               </span>
             </div>
 
-            {/* Reputation (REP) */}
+            {/* Column 2, Row 2: Reputation (REP) */}
             <button 
               onClick={() => { setActivePanel('menu'); setSettingsActiveSubPanel('contributor'); }}
-              className="flex items-baseline gap-1 cursor-pointer group text-left transition-all"
+              className="flex flex-col items-start gap-1 cursor-pointer group transition-all text-left"
             >
-              <span className="text-sm sm:text-base font-black text-emerald-400 flex items-center gap-0.5 group-hover:text-emerald-300 transition-colors">
-                <span className="text-[11px] sm:text-xs">⭐</span>
+              <span className="text-base sm:text-lg font-black text-emerald-400 flex items-center gap-1 group-hover:text-emerald-300 transition-colors tracking-tight">
+                <span className="text-xs sm:text-sm">⭐</span>
                 {getSecondaryMetric('reputation')}
               </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 group-hover:text-violet-300/90 transition-colors uppercase">
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 group-hover:text-violet-300/80 transition-colors uppercase">
                 REP
               </span>
             </button>
 
-            {/* Contributions (CONTRIB) */}
-            <div className="flex items-baseline gap-1">
-              <span className="text-sm sm:text-base font-black text-cyan-400 flex items-center gap-0.5">
-                <span className="text-[11px] sm:text-xs">📊</span>
+            {/* Column 3, Row 2: Contributions (CONTRIB) */}
+            <div className="flex flex-col items-start gap-1 text-left">
+              <span className="text-base sm:text-lg font-black text-cyan-400 flex items-center gap-1 tracking-tight">
+                <span className="text-xs sm:text-sm">📊</span>
                 {getSecondaryMetric('contributions')}
               </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-wider text-violet-400/60 uppercase">
+              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 uppercase">
                 CONTRIB
               </span>
             </div>
           </div>
-        </div>
 
-        {/* 4. ACTION BUTTONS with tapped micro-interactions */}
-        <div className="flex gap-2">
-          {isOwnProfile ? (
-            <>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setActivePanel('edit-profile')}
-                className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-200 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-              >
-                Edit Profile
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowShareModal(true)}
-                className="flex-1 py-2 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-200 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-              >
-                Share Profile
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setActivePanel('creator-studio')}
-                className="flex-1 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
-              >
-                Creator Studio
-              </motion.button>
-            </>
-          ) : (
-            <>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => {
-                  setIsFollowing(!isFollowing);
-                  onToggleFollow?.(currentUser.id);
-                  window.dispatchEvent(new CustomEvent('toast', { detail: isFollowing ? 'Unfollowed connection' : '✨ Connected!' }));
-                }}
-                className={`flex-1 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                  isFollowing 
-                    ? 'bg-zinc-850 text-zinc-400 border border-zinc-750' 
-                    : 'bg-violet-600 text-white hover:bg-violet-500'
-                }`}
-              >
-                {isFollowing ? 'Connected' : 'Connect'}
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => onStartChat?.(currentUser.id)}
-                className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-zinc-200 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-              >
-                Message
-              </motion.button>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setShowShareModal(true)}
-                className="py-2 px-3 bg-white/5 hover:bg-white/10 text-zinc-200 rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center border border-white/5"
-                title="Share Profile Link"
-              >
-                <Share2 className="w-4 h-4" />
-              </motion.button>
-            </>
-          )}
-        </div>
-
-        {/* 5. ELEGANT TYPOGRAPHIC BIO */}
-        <div className="text-zinc-300 font-sans text-xs sm:text-[13px] leading-relaxed max-w-xl text-left whitespace-pre-wrap py-0.5">
-          {currentUser.bio ? currentUser.bio : <span className="text-zinc-500 italic">No bio yet.</span>}
-        </div>
-
-        {/* 6. MUTUAL FRIENDS (Progressive Disclosure) */}
-        {!isOwnProfile && (
-          <div className="flex items-center gap-2 text-xs font-sans text-zinc-500 text-left pt-0.5">
-            <div className="flex -space-x-1.5">
-              <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&auto=format&fit=crop&q=80" alt="mutual 1" referrerPolicy="no-referrer" />
-              <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&auto=format&fit=crop&q=80" alt="mutual 2" referrerPolicy="no-referrer" />
-              <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&auto=format&fit=crop&q=80" alt="mutual 3" referrerPolicy="no-referrer" />
-            </div>
-            <span>3 mutual friends in common</span>
-          </div>
-        )}
-
-      </div>
-
-      {/* 8. CONTENT STICKY TAB NAVIGATION (Redesigned with Underline Highlight) */}
-      <div className="sticky top-12 bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 overflow-x-auto scrollbar-none">
-        <div className="max-w-xl mx-auto flex justify-around px-2">
-          {[
-            { id: 'posts', label: 'Posts' },
-            { id: 'videos', label: 'Videos' },
-            { id: 'media', label: 'Media' },
-            { id: 'pinned', label: 'Pinned' },
-            { id: 'drafts', label: 'Drafts', ownerOnly: true }
-          ].map(tab => {
-            if (tab.ownerOnly && !isOwnProfile) return null;
-            const isActive = profileTab === tab.id;
-            return (
-              <motion.button
-                key={tab.id}
-                onClick={() => setProfileTab(tab.id)}
-                whileTap={{ scale: 0.95 }}
-                className={`relative py-3 px-4 text-xs font-sans font-medium tracking-wide whitespace-nowrap cursor-pointer transition-colors duration-200 ${
-                  isActive ? 'text-violet-400 font-semibold' : 'text-zinc-400 hover:text-white'
-                }`}
-              >
-                {tab.label}
-                {isActive && (
-                  <motion.div 
-                    layoutId="profileActiveTabLine"
-                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-violet-500" 
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-              </motion.button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 9. RESPONSIVE GRID CONTENT & PINNED POSTS */}
-      <div className="max-w-xl mx-auto px-4 py-4 space-y-4">
-        
-        {/* Render Pinned Items separately if viewing the regular Feed/Posts view */}
-        {profileTab === 'posts' && pinnedPostIdsList.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest">
-              <Pin className="w-3.5 h-3.5 text-pink-400 rotate-45" /> Pinned
-            </div>
-            <MediaGrid 
-              gridPosts={myPosts.filter(p => pinnedPostIdsList.includes(p.id))} 
-              pinnedPostIds={pinnedPostIdsList} 
-              onSelectPost={(post) => setSelectedGridPost(post)} 
-            />
-          </div>
-        )}
-
-        {/* Standard Grid view of posts */}
-        <div className="space-y-3 text-left">
-          <div className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-wider">
-            {profileTab} • {filteredTabPosts.length} Items
-          </div>
-          
-          {filteredTabPosts.length === 0 ? (
-            <div className="p-8 py-14 rounded-3xl bg-white/2 border border-white/5 text-center space-y-4">
-              <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-xl">
-                📭
-              </div>
-              <div>
-                <h4 className="text-sm font-bold text-zinc-200">Nothing here yet</h4>
-                <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-normal">
-                  Your journey starts with your first post. This space will come alive soon.
-                </p>
-              </div>
-              {isOwnProfile && (
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
-                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-[10px] uppercase rounded-xl transition-all"
+          {/* 4. ACTION BUTTONS with tapped micro-interactions */}
+          <div className="flex gap-2.5 my-6">
+            {isOwnProfile ? (
+              <>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActivePanel('edit-profile')}
+                  className="flex-1 h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 border border-white/5 text-zinc-200 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer"
                 >
-                  + Create Post
-                </button>
-              )}
+                  Edit Profile
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowShareModal(true)}
+                  className="flex-1 h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 border border-white/5 text-zinc-200 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer"
+                >
+                  Share Profile
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setActivePanel('creator-studio')}
+                  className="flex-1 h-[38px] flex items-center justify-center bg-violet-600 hover:bg-violet-500 border border-violet-500/15 text-white rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer shadow-lg shadow-violet-600/10"
+                >
+                  Creator Studio
+                </motion.button>
+              </>
+            ) : (
+              <>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setIsFollowing(!isFollowing);
+                    onToggleFollow?.(currentUser.id);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: isFollowing ? 'Unfollowed connection' : '✨ Connected!' }));
+                  }}
+                  className={`flex-1 h-[38px] flex items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    isFollowing 
+                      ? 'bg-zinc-900 border border-white/10 text-zinc-400 hover:text-zinc-200' 
+                      : 'bg-violet-600 text-white hover:bg-violet-500 border border-violet-500/10'
+                  }`}
+                >
+                  {isFollowing ? 'Connected' : 'Connect'}
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onStartChat?.(currentUser.id)}
+                  className="flex-1 h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 border border-white/5 text-zinc-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                >
+                  Message
+                </motion.button>
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowShareModal(true)}
+                  className="w-[38px] h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 text-zinc-200 rounded-xl text-xs transition-all cursor-pointer border border-white/5"
+                  title="Share Profile Link"
+                >
+                  <Share2 className="w-4 h-4" />
+                </motion.button>
+              </>
+            )}
+          </div>
+
+          {/* 5. ELEGANT TYPOGRAPHIC BIO */}
+          <div className="text-zinc-300/95 font-sans text-xs sm:text-[13px] leading-relaxed max-w-2xl text-left whitespace-pre-wrap py-1.5 mt-5 mb-3 tracking-wide">
+            {currentUser.bio ? (
+              currentUser.bio.split('\n').map((line, idx) => (
+                <p key={idx} className={idx > 0 ? "mt-1.5" : ""}>
+                  {line}
+                </p>
+              ))
+            ) : (
+              <span className="text-zinc-500 italic">No bio yet.</span>
+            )}
+          </div>
+
+          {/* 6. MUTUAL FRIENDS (Progressive Disclosure) */}
+          {!isOwnProfile && (
+            <div className="flex items-center gap-2 text-xs font-sans text-zinc-500 text-left pt-2 mt-2">
+              <div className="flex -space-x-1.5">
+                <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&auto=format&fit=crop&q=80" alt="mutual 1" referrerPolicy="no-referrer" />
+                <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&auto=format&fit=crop&q=80" alt="mutual 2" referrerPolicy="no-referrer" />
+                <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&auto=format&fit=crop&q=80" alt="mutual 3" referrerPolicy="no-referrer" />
+              </div>
+              <span>3 mutual friends in common</span>
             </div>
-          ) : (
-            <MediaGrid 
-              gridPosts={filteredTabPosts} 
-              pinnedPostIds={pinnedPostIdsList} 
-              onSelectPost={(post) => setSelectedGridPost(post)} 
-            />
           )}
+
         </div>
 
-      </div>
+        {/* 8. CONTENT STICKY TAB NAVIGATION (Redesigned with Underline Highlight) */}
+        <div className="sticky top-12 bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 overflow-x-auto scrollbar-none">
+          <div className="w-full max-w-4xl mx-auto flex justify-between sm:justify-start sm:gap-8 px-2.5 sm:px-4 md:px-6">
+            {[
+              { id: 'posts', label: 'Posts' },
+              { id: 'videos', label: 'Videos' },
+              { id: 'media', label: 'Media' },
+              { id: 'pinned', label: 'Pinned' },
+              { id: 'drafts', label: 'Drafts', ownerOnly: true }
+            ].map(tab => {
+              if (tab.ownerOnly && !isOwnProfile) return null;
+              const isActive = profileTab === tab.id;
+              return (
+                <motion.button
+                  key={tab.id}
+                  onClick={() => setProfileTab(tab.id)}
+                  whileTap={{ scale: 0.96 }}
+                  className={`relative h-12 flex items-center justify-center px-4 sm:px-2 text-xs sm:text-sm font-sans tracking-wide whitespace-nowrap cursor-pointer transition-all duration-200 ${
+                    isActive 
+                      ? 'text-white font-bold' 
+                      : 'text-zinc-500 hover:text-zinc-300 font-medium'
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  {isActive && (
+                    <motion.div 
+                      layoutId="profileActiveTabLine"
+                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 rounded-t-full" 
+                      transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                    />
+                  )}
+                </motion.button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* 9. RESPONSIVE GRID CONTENT & PINNED POSTS */}
+        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 py-6 space-y-6">
+          
+          {/* Render Pinned Items separately if viewing the regular Feed/Posts view */}
+          {profileTab === 'posts' && pinnedPostIdsList.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-1.5 text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest">
+                <Pin className="w-3.5 h-3.5 text-pink-400 rotate-45" /> Pinned
+              </div>
+              <MediaGrid 
+                gridPosts={myPosts.filter(p => pinnedPostIdsList.includes(p.id))} 
+                pinnedPostIds={pinnedPostIdsList} 
+                onSelectPost={(post) => setSelectedGridPost(post)} 
+              />
+            </div>
+          )}
+
+          {/* Standard Grid view of posts */}
+          <div className="space-y-3 text-left">
+            <div className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-wider">
+              {profileTab} • {filteredTabPosts.length} Items
+            </div>
+            
+            {filteredTabPosts.length === 0 ? (
+              <div className="p-8 py-14 rounded-3xl bg-white/2 border border-white/5 text-center space-y-4">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-xl">
+                  📭
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-200">Nothing here yet</h4>
+                  <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-normal">
+                    Your journey starts with your first post. This space will come alive soon.
+                  </p>
+                </div>
+                {isOwnProfile && (
+                  <button 
+                    onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
+                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-[10px] uppercase rounded-xl transition-all"
+                  >
+                    + Create Post
+                  </button>
+                )}
+              </div>
+            ) : (
+              <MediaGrid 
+                gridPosts={filteredTabPosts} 
+                pinnedPostIds={pinnedPostIdsList} 
+                onSelectPost={(post) => setSelectedGridPost(post)} 
+              />
+            )}
+          </div>
+
+        </div>
       </>)}
 
       {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure - Redesigned Settings & Privacy Hub) */}
@@ -3423,6 +3448,7 @@ export default function ProfileView({
           <ImmersiveVideoViewer
             initialPost={selectedGridPost}
             creatorPosts={myPosts}
+            currentUser={currentUser}
             onClose={() => setSelectedGridPost(null)}
             onLikePost={(postId) => {
               onLikePost(postId);
@@ -3430,6 +3456,7 @@ export default function ProfileView({
             }}
             onToggleFollow={onToggleFollow}
             isFollowing={isFollowing}
+            onAddComment={onAddComment}
           />
         )}
       </AnimatePresence>

@@ -8,7 +8,7 @@ import {
   RotateCcw, 
   Trash2, 
   AlertTriangle, 
-  BarChart3, 
+  BarChart2, 
   Activity, 
   Globe, 
   Users, 
@@ -316,7 +316,7 @@ export default function AdminDashboardView({
           onClick={() => setActiveSubTab('analytics')}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'analytics' ? 'bg-violet-600 border border-violet-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
-          <BarChart3 className="w-3.5 h-3.5" />
+          <BarChart2 className="w-3.5 h-3.5" />
           Analytics & Geo Pulse
         </button>
 

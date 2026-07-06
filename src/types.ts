@@ -104,6 +104,15 @@ export interface Comment {
   timestamp: string;
   likes: number;
   isLikedByUser?: boolean;
+  replies?: Array<{
+    id: string;
+    userId: string;
+    username: string;
+    name: string;
+    avatar: string;
+    content: string;
+    timestamp: string;
+  }>;
 }
 
 export interface Post {
@@ -137,6 +146,7 @@ export interface Post {
   comments: Comment[];
   isVoice?: boolean;
   voiceDuration?: number;
+  videoDuration?: string;
   media?: string;
   opportunityType?: string;
   // Collaboration Post extension
@@ -159,6 +169,7 @@ export interface Post {
   editHistory?: { content: string; timestamp: string }[];
   scheduledTime?: string;
   isDraft?: boolean;
+  isArchived?: boolean;
   isBroadcastPost?: boolean;
   broadcastReactions?: { [emoji: string]: number };
   discussionModeEnabled?: boolean;
@@ -217,6 +228,12 @@ export interface AppState {
   theme: ThemeMood;
   searchQuery: string;
   selectedTag: string | null;
+}
+
+export interface PrivacySettings {
+  userId: string;
+  isPrivate: boolean;
+  commentPermission: 'everyone' | 'followers' | 'none';
 }
 
 export interface Report {

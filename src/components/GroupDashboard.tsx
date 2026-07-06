@@ -257,27 +257,82 @@ export default function GroupDashboard({
             </div>
 
             <div className="divide-y divide-violet-500/5 bg-[#09071c]/50 border border-violet-500/5 rounded-2xl overflow-hidden">
-              {members.map(member => (
-                <div key={member.id} className="p-3 flex items-center justify-between hover:bg-violet-500/5 transition-colors">
-                  <div className="flex items-center gap-2.5">
-                    <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-lg object-cover" />
-                    <div className="text-left">
-                      <p className="text-xs font-bold text-white leading-none">{member.name}</p>
-                      <span className="text-[9px] font-mono text-zinc-500 mt-0.5 block">@username</span>
+              {members.map(member => {
+                const isMe = member.id === 'm1';
+                const isMuted = (member as any).isMuted;
+                
+                return (
+                  <div key={member.id} className="p-3 flex items-center justify-between hover:bg-violet-500/5 transition-all">
+                    <div className="flex items-center gap-2.5">
+                      <img src={member.avatar} alt={member.name} className="w-8 h-8 rounded-lg object-cover" />
+                      <div className="text-left">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-bold text-white leading-none">{member.name}</p>
+                          {isMuted && <span className="text-[7px] bg-red-500/20 text-red-400 font-mono px-1 rounded uppercase tracking-wider">Muted</span>}
+                        </div>
+                        <span className="text-[9px] font-mono text-zinc-500 mt-0.5 block">@{member.name.toLowerCase().replace(/[^a-z0-9]/g, '')}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`px-2 py-0.5 rounded-md text-[8.5px] font-mono font-extrabold uppercase ${
+                        member.role === 'Admin' 
+                          ? 'bg-rose-500/20 text-rose-300 border border-rose-500/20' 
+                          : member.role === 'Moderator' 
+                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/20' 
+                            : 'bg-zinc-800 text-zinc-400 border border-white/5'
+                      }`}>
+                        {member.role}
+                      </span>
+
+                      {!isMe && (
+                        <div className="flex items-center gap-1.5 pl-2 border-l border-white/10">
+                          {/* Mute action */}
+                          <button
+                            onClick={() => {
+                              setMembers(prev => prev.map(m => m.id === member.id ? { ...m, isMuted: !isMuted } as any : m));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: `${isMuted ? '🔊 Unmuted' : '🔇 Muted'} ${member.name} in group!` }));
+                            }}
+                            className={`p-1 rounded-md text-[10px] transition-colors cursor-pointer ${
+                              isMuted ? 'bg-red-500/20 text-red-400' : 'hover:bg-white/5 text-zinc-400 hover:text-white'
+                            }`}
+                            title={isMuted ? "Unmute member" : "Mute member"}
+                          >
+                            {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                          </button>
+
+                          {/* Promote/Demote action */}
+                          <button
+                            onClick={() => {
+                              const nextRole = member.role === 'Member' ? 'Moderator' : 'Member';
+                              setMembers(prev => prev.map(m => m.id === member.id ? { ...m, role: nextRole as any } : m));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: `👑 ${member.name} designated as ${nextRole}!` }));
+                            }}
+                            className="p-1 hover:bg-white/5 rounded-md text-zinc-400 hover:text-violet-300 cursor-pointer text-[10px]"
+                            title={member.role === 'Member' ? "Promote to Moderator" : "Demote to Member"}
+                          >
+                            <Shield className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Kick action */}
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Are you sure you want to eject ${member.name} from this conversation?`)) {
+                                setMembers(prev => prev.filter(m => m.id !== member.id));
+                                window.dispatchEvent(new CustomEvent('toast', { detail: `🚪 Ejected ${member.name} from group ledger.` }));
+                              }
+                            }}
+                            className="p-1 hover:bg-red-500/10 rounded-md text-zinc-400 hover:text-red-400 cursor-pointer"
+                            title="Kick member"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-
-                  <span className={`px-2 py-0.5 rounded-md text-[8.5px] font-mono font-extrabold uppercase ${
-                    member.role === 'Admin' 
-                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/20' 
-                      : member.role === 'Moderator' 
-                        ? 'bg-amber-500/20 text-amber-300 border border-amber-500/20' 
-                        : 'bg-zinc-800 text-zinc-400 border border-white/5'
-                  }`}>
-                    {member.role}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

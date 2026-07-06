@@ -1,4 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
+import QuickActionsSheet from './QuickActionsSheet';
+import ShareSheet from './ShareSheet';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
@@ -27,7 +29,8 @@ import {
   AlertTriangle,
   EyeOff,
   Search,
-  CheckCircle
+  CheckCircle,
+  Sun
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -59,6 +62,7 @@ interface NexoraVideoPlayerProps {
   isActive?: boolean;
   preloadMode?: 'auto' | 'metadata' | 'none';
   isReleased?: boolean;
+  shouldPreload?: boolean;
   isFollowing?: boolean;
   isProcessing?: boolean; // New prop
   onToggleFollow?: () => void;
@@ -83,6 +87,7 @@ export default function NexoraVideoPlayer({
   isActive,
   preloadMode,
   isReleased,
+  shouldPreload = false,
   isFollowing = false,
   isProcessing = false, // New prop
   onToggleFollow,
@@ -115,14 +120,30 @@ export default function NexoraVideoPlayer({
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [showLongPressMenu, setShowLongPressMenu] = useState(false);
+  const [showQuickActions, setShowQuickActions] = useState(false);
+  const [showShareSheet, setShowShareSheet] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<'1080p' | '720p' | '480p' | 'Auto'>('Auto');
   const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
+  
+  // Premium Player Adjustments & HUD Telemetry
+  const [brightnessLevel, setBrightnessLevel] = useState(100);
+  const [volumeLevel, setVolumeLevel] = useState(() => {
+    return globalVideoPlaybackManager.getMute() ? 0 : 80;
+  });
+  const [hud, setHud] = useState<{ type: 'volume' | 'brightness' | null; value: number; visible: boolean }>({
+    type: null,
+    value: 100,
+    visible: false
+  });
+  const singleTapTimeoutRef = useRef<any>(null);
+  const controlsTimeoutRef = useRef<any>(null);
   
   // Double-tap pulse effect
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
   const lastTapRef = useRef<number>(0);
+  const lastTimeRef = useRef<number>(0);
   const longPressTimerRef = useRef<any>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
@@ -291,6 +312,53 @@ export default function NexoraVideoPlayer({
     }
   }, [isActive, isNearby, playerId, videoUrl, finalVideoUrl]);
 
+  // Intelligent Video Quality Engine: adapt background network speed
+  useEffect(() => {
+    if (selectedQuality !== 'Auto') return;
+    
+    const checkQuality = () => {
+      if (typeof navigator === 'undefined') return;
+      const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+      
+      let speedQuality: '1080p' | '720p' | '480p' = '720p';
+      if (conn) {
+        if (conn.saveData) {
+          speedQuality = '480p';
+        } else {
+          const downlink = conn.downlink || 5; // default 5 Mbps
+          if (downlink > 6) speedQuality = '1080p';
+          else if (downlink > 2) speedQuality = '720p';
+          else speedQuality = '480p';
+        }
+      }
+      
+      // Update simulated background quality without interrupting active playback!
+      setIsSwitchingQuality(true);
+      setTimeout(() => {
+        setIsSwitchingQuality(false);
+      }, 400);
+    };
+
+    checkQuality();
+    
+    // Periodically adapt quality to background bandwidth changes
+    const interval = setInterval(checkQuality, 12000);
+    return () => clearInterval(interval);
+  }, [selectedQuality]);
+
+  // Recover gracefully after temporary network loss
+  useEffect(() => {
+    const handleOnline = () => {
+      if (isActive && videoRef.current) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Connection restored! Restabilizing playback stream...' }));
+        videoRef.current.load();
+        videoRef.current.play().catch(() => {});
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [isActive]);
+
   // Try recovering playback history on load
   const handleLoadedMetadata = () => {
     if (!videoRef.current) return;
@@ -314,9 +382,18 @@ export default function NexoraVideoPlayer({
     localStorage.setItem(`nexora_vid_pos_${videoUrl}`, String(time));
 
     // Reset watchCompletedRef if wrapped/replayed
-    if (time < 0.5 && watchCompletedRef.current) {
+    if (time < 0.5 && lastTimeRef.current > duration - 1.5 && duration > 0) {
+      watchCompletedRef.current = false;
+      recordRecommendationEvent('watch_complete', { 
+        tags: post.tags, 
+        creatorId: post.userId, 
+        creatorUsername: post.username
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Quiet replay engagement boost synced!' }));
+    } else if (time < 0.5 && watchCompletedRef.current) {
       watchCompletedRef.current = false;
     }
+    lastTimeRef.current = time;
 
     // Detect complete watch
     if (duration > 0 && time > duration - 0.5) {
@@ -330,6 +407,30 @@ export default function NexoraVideoPlayer({
     if (time > 3.0 && !viewLoggedRef.current) {
       viewLoggedRef.current = true;
       logToWatchHistory();
+
+      try {
+        const currentUserStr = localStorage.getItem('nexora_user');
+        const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+        
+        // Block creator watching their own video from inflating views
+        const isCreatorWatching = currentUser && (currentUser.id === post.userId || currentUser.username === post.username);
+        
+        if (!isCreatorWatching) {
+          // Prevent rapid duplicate views within same session
+          const viewedPostsJson = sessionStorage.getItem('nexora_viewed_posts');
+          const viewedPosts = viewedPostsJson ? JSON.parse(viewedPostsJson) : [];
+          
+          if (!viewedPosts.includes(post.id)) {
+            viewedPosts.push(post.id);
+            sessionStorage.setItem('nexora_viewed_posts', JSON.stringify(viewedPosts));
+            
+            // Dispatch to root posts state (Single Source of Truth)
+            window.dispatchEvent(new CustomEvent('nexora-increment-view', { detail: { postId: post.id } }));
+          }
+        }
+      } catch (e) {
+        console.error("View counting verification error:", e);
+      }
     }
   };
 
@@ -401,19 +502,96 @@ export default function NexoraVideoPlayer({
     }, 600);
   };
 
+  const handleStartHold = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
+    touchStartRef.current = { x: e.clientX, y: e.clientY };
+    setIsLongPressing(false);
+    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = setTimeout(() => {
+      if (!videoRef.current) return;
+      setIsLongPressing(true);
+      setShowQuickActions(true);
+      videoRef.current.pause();
+      setIsPlaying(false);
+      setShowControls(false);
+    }, 500);
+  };
+
+  const handleReleaseHold = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    const wasLongPressing = isLongPressing;
+    setIsLongPressing(false);
+    if (wasLongPressing && !showQuickActions) {
+      if (videoRef.current) {
+        videoRef.current.play().catch(() => {});
+        setIsPlaying(true);
+      }
+      setShowControls(true);
+    } else if (!wasLongPressing && touchStartRef.current) {
+      handleTapOrGesture(touchStartRef.current.x, touchStartRef.current.y);
+    }
+    touchStartRef.current = null;
+  };
+
+  // Variables to hold swipe state
+  const isDraggingVerticalRef = useRef(false);
+  const initialVolumeRef = useRef(80);
+  const initialBrightnessRef = useRef(100);
+  const hudTimeoutRef = useRef<any>(null);
+  const touchStartTimeRef = useRef<number>(0);
+
+  // Helper to show HUD temporarily
+  const triggerHud = (type: 'volume' | 'brightness', value: number) => {
+    setHud({ type, value, visible: true });
+    if (hudTimeoutRef.current) clearTimeout(hudTimeoutRef.current);
+    hudTimeoutRef.current = setTimeout(() => {
+      setHud(prev => ({ ...prev, visible: false }));
+    }, 1200); // 1.2s fade out
+  };
+
+  const resetControlsTimeout = () => {
+    setShowControls(true);
+    if (controlsTimeoutRef.current) {
+      clearTimeout(controlsTimeoutRef.current);
+    }
+    if (isPlaying) {
+      controlsTimeoutRef.current = setTimeout(() => {
+        setShowControls(false);
+      }, 3000); // 3 seconds autohide when playing
+    }
+  };
+
+  useEffect(() => {
+    resetControlsTimeout();
+    return () => {
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+    };
+  }, [isPlaying]);
+
   // Handle single tap, double tap, and long press gestures
-  const handleTapOrGesture = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleTapOrGesture = (clientX: number, clientY: number) => {
     const clickArea = containerRef.current?.getBoundingClientRect();
     if (!clickArea) return;
 
-    // Relative mouse taps
-    const x = e.clientX - clickArea.left;
-    const y = e.clientY - clickArea.top;
+    // Relative coordinates
+    const x = clientX - clickArea.left;
+    const y = clientY - clickArea.top;
 
     const now = Date.now();
-    const DOUBLE_TAP_DELAY = 300;
+    const DOUBLE_TAP_DELAY = 280;
 
     if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
+      // Clear single tap timeout if any
+      if (singleTapTimeoutRef.current) {
+        clearTimeout(singleTapTimeoutRef.current);
+        singleTapTimeoutRef.current = null;
+      }
+
       // DOUBLE TAP: Spark post
       setHeartPosition({ x, y });
       setShowDoubleTapHeart(true);
@@ -425,75 +603,24 @@ export default function NexoraVideoPlayer({
         handleVolumeToggle(false);
       }
 
-      // Clear double-tap heart visual after 1000ms
+      // Clear double-tap heart visual after 800ms
       setTimeout(() => setShowDoubleTapHeart(false), 800);
       lastTapRef.current = 0;
     } else {
-      // If autoplay was blocked and we single tap, unmute immediately rather than toggling playback
-      if (autoplayBlocked && isMuted) {
-        handleVolumeToggle(false);
-      } else {
-        // SINGLE TAP: Toggle playback/pause
-        togglePlayback();
+      lastTapRef.current = now;
+
+      // SINGLE TAP: Schedule with 280ms delay to check for double tap
+      if (singleTapTimeoutRef.current) {
+        clearTimeout(singleTapTimeoutRef.current);
       }
-    }
-    lastTapRef.current = now;
-  };
-
-  // Long press hold-to-pause triggers while holding, but avoids intercepting vertical scrolling swipes
-  const handleStartHold = (e: any) => {
-    if (e.type === 'mousedown' && e.button !== 0) return;
-
-    const touch = e.touches ? e.touches[0] : null;
-    const clientX = touch ? touch.clientX : e.clientX;
-    const clientY = touch ? touch.clientY : e.clientY;
-
-    touchStartRef.current = { x: clientX, y: clientY };
-    setIsLongPressing(false);
-
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-    }
-
-    longPressTimerRef.current = setTimeout(() => {
-      if (!videoRef.current) return;
-      setIsLongPressing(true);
-      setShowLongPressMenu(true);
-      videoRef.current.pause();
-      setIsPlaying(false);
-      setShowControls(false);
-    }, 1500); // 1.5 seconds is perfect for natural, comfortable long-press discovery!
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!touchStartRef.current) return;
-    const touch = e.touches[0];
-    const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
-    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
-
-    // If movement is > 10px, the user is swiping/scrolling. Cancel long-press to let native scroll work smoothly!
-    if (deltaY > 10 || deltaX > 10) {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
-      touchStartRef.current = null;
-    }
-  };
-
-  const handleReleaseHold = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    touchStartRef.current = null;
-    if (isLongPressing && !showLongPressMenu) {
-      if (videoRef.current) {
-        videoRef.current.play().catch(() => {});
-        setIsPlaying(true);
-      }
-      setIsLongPressing(false);
-      setShowControls(true);
+      singleTapTimeoutRef.current = setTimeout(() => {
+        if (autoplayBlocked && isMuted) {
+          handleVolumeToggle(false);
+        } else {
+          togglePlayback();
+        }
+        singleTapTimeoutRef.current = null;
+      }, DOUBLE_TAP_DELAY);
     }
   };
 
@@ -503,31 +630,132 @@ export default function NexoraVideoPlayer({
     if (!element) return;
 
     const onTouchStart = (e: TouchEvent) => {
-      handleStartHold(e);
+      const touch = e.touches[0];
+      touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+      touchStartTimeRef.current = Date.now();
+      isDraggingVerticalRef.current = false;
+      initialVolumeRef.current = videoRef.current ? videoRef.current.volume * 100 : volumeLevel;
+      initialBrightnessRef.current = brightnessLevel;
+
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+      }
+
+      const startXPercent = (touch.clientX / window.innerWidth) * 100;
+      
+      // Reserve left 25% and right 25% for HUD drags. Only start long-press hold-to-pause in center 50%
+      if (startXPercent >= 25 && startXPercent <= 75) {
+        longPressTimerRef.current = setTimeout(() => {
+          if (!videoRef.current) return;
+          setIsLongPressing(true);
+          setShowQuickActions(true);
+          videoRef.current.pause();
+          setIsPlaying(false);
+          setShowControls(false);
+        }, 500); // Quick, responsive long press
+      }
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (!touchStartRef.current) return;
       const touch = e.touches[0];
-      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
-      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+      const deltaX = touch.clientX - touchStartRef.current.x;
+      const deltaY = touch.clientY - touchStartRef.current.y;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
 
-      // If vertical movement is detected, cancel the hold-to-pause timers instantly to let native scroll take over smoothly
-      if (deltaY > 8 || deltaX > 8) {
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
+      const startXPercent = (touchStartRef.current.x / window.innerWidth) * 100;
+
+      // Detect vertical swipe on side boundaries
+      if (!isDraggingVerticalRef.current) {
+        if (absY > 12 && absY > absX) {
+          if (startXPercent < 25 || startXPercent > 75) {
+            isDraggingVerticalRef.current = true;
+            if (longPressTimerRef.current) {
+              clearTimeout(longPressTimerRef.current);
+              longPressTimerRef.current = null;
+            }
+          } else {
+            // Center vertical movement means scrolling feed - cancel hold timer
+            if (longPressTimerRef.current) {
+              clearTimeout(longPressTimerRef.current);
+              longPressTimerRef.current = null;
+            }
+            touchStartRef.current = null;
+          }
+        } else if (absX > 10) {
+          // Horizontal movement - cancel hold timer
+          if (longPressTimerRef.current) {
+            clearTimeout(longPressTimerRef.current);
+            longPressTimerRef.current = null;
+          }
+          touchStartRef.current = null;
         }
-        touchStartRef.current = null;
+      }
+
+      // Perform Swipe volume/brightness adjustments
+      if (isDraggingVerticalRef.current) {
+        if (e.cancelable) e.preventDefault();
+        
+        // Negative deltaY means moving UP (increasing)
+        const change = (deltaY / window.innerHeight) * 150;
+        
+        if (startXPercent < 25) {
+          // LEFT SIDE: Brightness
+          const newB = Math.max(10, Math.min(100, initialBrightnessRef.current - change));
+          setBrightnessLevel(newB);
+          triggerHud('brightness', Math.round(newB));
+        } else if (startXPercent > 75) {
+          // RIGHT SIDE: Volume
+          const newV = Math.max(0, Math.min(100, initialVolumeRef.current - change));
+          setVolumeLevel(newV);
+          if (videoRef.current) {
+            videoRef.current.volume = newV / 100;
+            if (newV > 0 && isMuted) {
+              handleVolumeToggle(false);
+            }
+          }
+          triggerHud('volume', Math.round(newV));
+        }
       }
     };
 
-    const onTouchEnd = () => {
-      handleReleaseHold();
+    const onTouchEnd = (e: TouchEvent) => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+
+      const wasLongPressing = isLongPressing;
+      setIsLongPressing(false);
+
+      if (wasLongPressing && !showQuickActions) {
+        if (videoRef.current) {
+          videoRef.current.play().catch(() => {});
+          setIsPlaying(true);
+        }
+        setShowControls(true);
+      }
+
+      // Check if this was a quick tap instead of a drag or hold
+      if (!isDraggingVerticalRef.current && touchStartRef.current) {
+        const duration = Date.now() - touchStartTimeRef.current;
+        const endTouch = e.changedTouches[0];
+        const deltaX = Math.abs(endTouch.clientX - touchStartRef.current.x);
+        const deltaY = Math.abs(endTouch.clientY - touchStartRef.current.y);
+
+        if (duration < 280 && deltaX < 8 && deltaY < 8) {
+          handleTapOrGesture(endTouch.clientX, endTouch.clientY);
+        }
+      }
+
+      touchStartRef.current = null;
+      isDraggingVerticalRef.current = false;
     };
 
+    // Attach with { passive: false } on onTouchMove to allow scroll prevention when dragging HUD
     element.addEventListener('touchstart', onTouchStart, { passive: true });
-    element.addEventListener('touchmove', onTouchMove, { passive: true });
+    element.addEventListener('touchmove', onTouchMove, { passive: false });
     element.addEventListener('touchend', onTouchEnd, { passive: true });
     element.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
@@ -537,7 +765,7 @@ export default function NexoraVideoPlayer({
       element.removeEventListener('touchend', onTouchEnd);
       element.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [isLongPressing, showLongPressMenu]);
+  }, [isLongPressing, showLongPressMenu, brightnessLevel, volumeLevel, isMuted, autoplayBlocked]);
 
   // Seek bar scrub action
   const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -677,24 +905,23 @@ export default function NexoraVideoPlayer({
 
             <video
               ref={videoRef}
-              src={isNearby ? finalVideoUrl : undefined}
+              src={isNearby || shouldPreload ? finalVideoUrl : undefined}
               loop
               playsInline
-              preload={preloadMode || (isNearby ? "auto" : "none")}
+              preload={preloadMode || ((isNearby || shouldPreload) ? "auto" : "none")}
               muted={isMuted}
               onLoadedMetadata={handleLoadedMetadata}
               onTimeUpdate={handleTimeUpdate}
-              onClick={handleTapOrGesture}
               onWaiting={() => setIsBuffering(true)}
               onPlaying={() => setIsBuffering(false)}
               onCanPlay={() => setIsBuffering(false)}
               className="w-full h-full object-cover cursor-pointer"
+              style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             {isBuffering && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-xs pointer-events-none z-10 animate-fade-in">
                 <div className="flex flex-col items-center gap-2 bg-slate-950/80 border border-violet-500/25 px-4 py-3 rounded-2xl shadow-xl">
                   <div className="w-7 h-7 border-3 border-violet-500 border-t-transparent animate-spin rounded-full" />
-                  <span className="text-[9px] font-mono font-bold tracking-widest text-violet-300 uppercase animate-pulse">Buffering...</span>
                 </div>
               </div>
             )}
@@ -703,7 +930,7 @@ export default function NexoraVideoPlayer({
             <div 
               className="absolute flex flex-col items-center gap-4.5 z-20"
               style={{
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 72px)',
+                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 110px)',
                 right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
               }}
             >
@@ -924,6 +1151,32 @@ export default function NexoraVideoPlayer({
         )}
       </AnimatePresence>
 
+      {/* Sleek Central HUD Overlay for Volume/Brightness gesture feedback */}
+      <AnimatePresence>
+        {hud.visible && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-3.5 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex flex-col items-center gap-2.5 z-50 shadow-2xl min-w-[120px]"
+          >
+            {hud.type === 'brightness' ? (
+              <Sun className="w-5 h-5 text-amber-400" />
+            ) : (
+              <Volume2 className="w-5 h-5 text-violet-400" />
+            )}
+            <span className="text-[9px] font-mono text-zinc-400 font-bold uppercase tracking-widest">{hud.type}</span>
+            <div className="w-20 h-1 bg-white/15 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-75" 
+                style={{ width: `${hud.value}%` }}
+              />
+            </div>
+            <span className="text-xs font-mono text-white font-extrabold">{hud.value}%</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Save to Collection Modal */}
       <AnimatePresence>
         {showSaveModal && (
@@ -999,6 +1252,38 @@ export default function NexoraVideoPlayer({
         )}
       </AnimatePresence>
 
+      {/* Nexora Quick Actions Sheet */}
+      <QuickActionsSheet 
+        isOpen={showQuickActions} 
+        onClose={() => setShowQuickActions(false)} 
+        onAction={(action) => {
+          if (action === 'save') setShowSaveModal(true);
+          else if (action === 'report') recordRecommendationEvent('skip_quick', { creatorId: post.userId });
+        }}
+      />
+
+      {/* Nexora Share Sheet */}
+      <ShareSheet 
+        isOpen={showShareSheet} 
+        onClose={() => setShowShareSheet(false)} 
+        post={post}
+        onShare={(recipientId) => {
+          recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+        }}
+        onReport={() => {
+          recordRecommendationEvent('skip_quick', { creatorId: post.userId, creatorUsername: post.username });
+          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Video report filed. Moderation team is auditing this stream!' }));
+        }}
+        onNotInterested={() => {
+          recordRecommendationEvent('skip_quick', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+          window.dispatchEvent(new CustomEvent('toast', { detail: '🙈 Tuned: We will show you fewer videos like this.' }));
+          onNotInterested?.();
+        }}
+        onSave={() => {
+          setShowSaveModal(true);
+        }}
+      />
+
       {/* Polished Bottom Sheet for Long Press Menu */}
       <AnimatePresence>
         {showLongPressMenu && (
@@ -1049,11 +1334,7 @@ export default function NexoraVideoPlayer({
                 {/* Share */}
                 <button
                   onClick={() => {
-                    setShowLongPressMenu(false);
-                    const text = `${window.location.origin}/post/${post.id}`;
-                    navigator.clipboard.writeText(text);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
-                    recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+                    setShowShareSheet(true);
                   }}
                   className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
                 >

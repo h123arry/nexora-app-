@@ -61,6 +61,7 @@ import {
   INITIAL_NOTIFICATIONS,
   ADDITIONAL_TEST_ACCOUNTS
 } from './data/database';
+import { getGlobalPosts } from './services/dataService';
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
@@ -75,6 +76,7 @@ import WorldPulseView from './components/WorldPulseView';
 import MatrixView from './components/MatrixView';
 import AuthView from './components/AuthView';
 import AdminDashboardView from './components/AdminDashboardView';
+import CreatorDashboardView from './components/CreatorDashboardView';
 import MediaCreationEngine from './components/MediaCreationEngine';
 import ExploreView from './components/ExploreView';
 import InboxView from './components/InboxView';
@@ -144,11 +146,94 @@ export default function App() {
     localStorage.setItem('nexora_saved_accounts', JSON.stringify(savedAccounts));
   }, [savedAccounts]);
 
+  const normalizePosts = (rawPosts: any[]): Post[] => {
+    return rawPosts.map((post: any) => {
+      let permanentTime = post.createdAt || post.timestamp;
+      
+      const parsedMillis = Date.parse(permanentTime);
+      const isISOString = !isNaN(parsedMillis) && isNaN(Number(permanentTime));
+      const isNumber = !isNaN(Number(permanentTime)) && /^\d+$/.test(String(permanentTime));
+      
+      if (!isISOString && !isNumber) {
+        const now = Date.now();
+        let targetTime = now;
+        const lower = String(permanentTime).toLowerCase();
+        if (lower === 'just now') {
+          targetTime = now;
+        } else if (lower === 'yesterday') {
+          targetTime = now - 24 * 3600 * 1000;
+        } else {
+          const numberMatch = String(permanentTime).match(/^(\d+)\s+(second|sec|min|minute|hour|hr|day|week|month|year)s?\s+ago$/i);
+          if (numberMatch) {
+            const val = parseInt(numberMatch[1], 10);
+            const unit = numberMatch[2].toLowerCase();
+            if (unit.startsWith('sec')) targetTime = now - val * 1000;
+            else if (unit.startsWith('min')) targetTime = now - val * 60 * 1000;
+            else if (unit.startsWith('hour') || unit.startsWith('hr')) targetTime = now - val * 60 * 60 * 1000;
+            else if (unit.startsWith('day')) targetTime = now - val * 24 * 60 * 60 * 1000;
+            else if (unit.startsWith('week')) targetTime = now - val * 7 * 24 * 60 * 60 * 1000;
+            else if (unit.startsWith('month')) targetTime = now - val * 30 * 24 * 60 * 60 * 1000;
+          }
+        }
+        permanentTime = new Date(targetTime).toISOString();
+      } else if (isNumber) {
+        permanentTime = new Date(Number(permanentTime)).toISOString();
+      } else {
+        permanentTime = new Date(parsedMillis).toISOString();
+      }
+
+      const comments = (post.comments || []).map((c: any) => {
+        let cTime = c.timestamp;
+        const cParsed = Date.parse(cTime);
+        if (isNaN(cParsed) || !isNaN(Number(cTime))) {
+          const now = Date.now();
+          let cTarget = now;
+          const cLower = String(cTime).toLowerCase();
+          if (cLower === 'yesterday') cTarget = now - 24 * 3600 * 1000;
+          else {
+            const cMatch = String(cTime).match(/^(\d+)\s+(second|sec|min|minute|hour|hr|day|week|month|year)s?\s+ago$/i);
+            if (cMatch) {
+              const val = parseInt(cMatch[1], 10);
+              const unit = cMatch[2].toLowerCase();
+              if (unit.startsWith('sec')) cTarget = now - val * 1000;
+              else if (unit.startsWith('min')) cTarget = now - val * 60 * 1000;
+              else if (unit.startsWith('hour') || unit.startsWith('hr')) cTarget = now - val * 60 * 60 * 1000;
+              else if (unit.startsWith('day')) cTarget = now - val * 24 * 60 * 60 * 1000;
+            }
+          }
+          cTime = new Date(cTarget).toISOString();
+        } else {
+          cTime = new Date(cParsed).toISOString();
+        }
+        return { ...c, timestamp: cTime };
+      });
+      
+      return {
+        ...post,
+        timestamp: permanentTime,
+        createdAt: post.createdAt || permanentTime,
+        comments
+      };
+    });
+  };
+
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('nexora_posts');
     const loadedPosts = saved ? JSON.parse(saved) : INITIAL_POSTS;
-    return loadedPosts;
+    const normalized = normalizePosts(loadedPosts);
+    localStorage.setItem('nexora_posts', JSON.stringify(normalized));
+    return normalized;
   });
+
+  useEffect(() => {
+    async function fetchPosts() {
+      const dbPosts = await getGlobalPosts();
+      if (dbPosts && dbPosts.length > 0) {
+        setPosts(normalizePosts(dbPosts));
+      }
+    }
+    fetchPosts();
+  }, []);
 
   const [resolvedPosts, setResolvedPosts] = useState<Post[]>([]);
 
@@ -303,7 +388,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : ['creator-4', 'voh_ai'];
   });
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator'>('feed');
 
   // Pause any playing videos immediately when switching main tabs
   useEffect(() => {
@@ -602,7 +687,7 @@ export default function App() {
           avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
           title: template.title,
           content: template.text,
-          timestamp: 'Just now',
+          timestamp: new Date().toISOString(),
           isRead: false,
           type: template.type
         };
@@ -723,16 +808,97 @@ export default function App() {
       window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Comment deleted by creator.' }));
     };
 
+    const handleSparkComment = (e: Event) => {
+      const { postId, commentId } = (e as CustomEvent).detail || {};
+      if (!postId || !commentId) return;
+      setPosts(prev => {
+        const next = prev.map(p => {
+          if (p.id !== postId) return p;
+          return {
+            ...p,
+            comments: (p.comments || []).map(c => {
+              if (c.id !== commentId) return c;
+              const isLiked = !!c.isLikedByUser;
+              return {
+                ...c,
+                likes: isLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
+                isLikedByUser: !isLiked
+              };
+            })
+          };
+        });
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+    };
+
+    const handleAddReply = (e: Event) => {
+      const { postId, commentId, replyContent } = (e as CustomEvent).detail || {};
+      if (!postId || !commentId || !replyContent) return;
+      
+      const newReply = {
+        id: `reply-${Date.now()}`,
+        userId: currentUser.id,
+        username: currentUser.username,
+        name: currentUser.name,
+        avatar: currentUser.avatar,
+        content: replyContent,
+        timestamp: new Date().toISOString()
+      };
+
+      setPosts(prev => {
+        const next = prev.map(p => {
+          if (p.id !== postId) return p;
+          return {
+            ...p,
+            comments: (p.comments || []).map(c => {
+              if (c.id !== commentId) return c;
+              return {
+                ...c,
+                replies: [...(c.replies || []), newReply]
+              };
+            })
+          };
+        });
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+    };
+
+    const handleIncrementView = (e: Event) => {
+      const { postId } = (e as CustomEvent).detail || {};
+      if (!postId) return;
+      setPosts(prev => {
+        const next = prev.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              views: (p.views || 0) + 1
+            };
+          }
+          return p;
+        });
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+    };
+
     window.addEventListener('nexora-delete-post', handleDeletePost);
     window.addEventListener('nexora-edit-caption', handleEditCaption);
     window.addEventListener('nexora-toggle-comments', handleToggleComments);
     window.addEventListener('nexora-delete-comment', handleDeleteComment);
+    window.addEventListener('nexora-spark-comment', handleSparkComment);
+    window.addEventListener('nexora-add-reply', handleAddReply);
+    window.addEventListener('nexora-increment-view', handleIncrementView);
 
     return () => {
       window.removeEventListener('nexora-delete-post', handleDeletePost);
       window.removeEventListener('nexora-edit-caption', handleEditCaption);
       window.removeEventListener('nexora-toggle-comments', handleToggleComments);
       window.removeEventListener('nexora-delete-comment', handleDeleteComment);
+      window.removeEventListener('nexora-spark-comment', handleSparkComment);
+      window.removeEventListener('nexora-add-reply', handleAddReply);
+      window.removeEventListener('nexora-increment-view', handleIncrementView);
     };
   }, []);
 
@@ -876,7 +1042,7 @@ export default function App() {
               avatar: currentUser.avatar,
               targetId: post.id,
               content: `liked your post: "${post.content.slice(0, 30)}..."`,
-              timestamp: 'Just now',
+              timestamp: new Date().toISOString(),
               isRead: false
             };
             setNotifications(prev => [newNotif, ...prev]);
@@ -953,7 +1119,7 @@ export default function App() {
       shares: 0,
       views: 0,
       saves: 0,
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       isLikedByUser: false,
       isBookmarkedByUser: false,
       comments: [],
@@ -992,7 +1158,7 @@ export default function App() {
         avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
         targetId: postId,
         content: `liked your post: "${content.slice(0, 30)}..."`,
-        timestamp: 'Just now',
+        timestamp: new Date().toISOString(),
         isRead: false
       };
       setNotifications(prev => [likeNotif, ...prev]);
@@ -1008,7 +1174,7 @@ export default function App() {
         name: 'NEXORA AI',
         avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
         content: `Outstanding share! The metadata integration on this is fantastic. Let us boost this node in the feed index! 🚀`,
-        timestamp: 'Just now',
+        timestamp: new Date().toISOString(),
         likes: 0
       };
 
@@ -1033,7 +1199,7 @@ export default function App() {
         avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
         targetId: postId,
         content: `commented on your post: "Outstanding share! The metadata integration on this..."`,
-        timestamp: 'Just now',
+        timestamp: new Date().toISOString(),
         isRead: false
       };
       setNotifications(prev => [commentNotif, ...prev]);
@@ -1060,7 +1226,7 @@ export default function App() {
       name: currentUser.name,
       avatar: currentUser.avatar,
       content: commentContent,
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       likes: 0
     };
 
@@ -1077,7 +1243,7 @@ export default function App() {
               avatar: currentUser.avatar,
               targetId: p.id,
               content: `commented on your post: "${commentContent.slice(0, 30)}..."`,
-              timestamp: 'Just now',
+              timestamp: new Date().toISOString(),
               isRead: false
             };
             setNotifications(prev => [newNotif, ...prev]);
@@ -1113,7 +1279,7 @@ export default function App() {
       chatId,
       senderId: currentUser.id,
       content,
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       status: 'sent'
     };
 
@@ -1128,7 +1294,7 @@ export default function App() {
           return {
             ...c,
             lastMessage: content,
-            lastTimestamp: 'Just now'
+            lastTimestamp: new Date().toISOString()
           };
         }
         return c;
@@ -1164,7 +1330,7 @@ export default function App() {
       chatId,
       senderId,
       content,
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       status: 'read'
     };
 
@@ -1182,7 +1348,7 @@ export default function App() {
       avatar: senderUser.avatar,
       targetId: chatId,
       content: `sent you a direct message: "${content.slice(0, 30)}..."`,
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       isRead: false
     };
     setNotifications(prev => [newNotif, ...prev]);
@@ -1195,7 +1361,7 @@ export default function App() {
           return {
             ...c,
             lastMessage: content,
-            lastTimestamp: 'Just now',
+            lastTimestamp: new Date().toISOString(),
             unreadCount: isStillCurrentActive ? 0 : c.unreadCount + 1
           };
         }
@@ -1228,7 +1394,7 @@ export default function App() {
           username: targetCreator.username,
           avatar: targetCreator.avatar,
           content: `joined your close friends circle with your studio channel.`,
-          timestamp: 'Just now',
+          timestamp: new Date().toISOString(),
           isRead: false
         };
         setNotifications(prev => [newNotif, ...prev]);
@@ -1384,7 +1550,7 @@ export default function App() {
         isPartnerOnline: true,
         unreadCount: 0,
         lastMessage: "Secure voice connection established.",
-        lastTimestamp: "Just now"
+        lastTimestamp: new Date().toISOString()
       };
       setChats(prev => [newChat, ...prev]);
       setMessages(prev => ({
@@ -1395,7 +1561,7 @@ export default function App() {
             chatId: cid!,
             senderId: partner!.id,
             content: `Hello! Welcome to my secure channel. Let's exchange thoughts in orbit.`,
-            timestamp: "Just now",
+            timestamp: new Date().toISOString(),
             status: "read"
           }
         ]
@@ -1700,6 +1866,13 @@ export default function App() {
                       posts={resolvedPosts}
                       onRemovePost={handleRemovePost}
                       lang={TRANSLATIONS[currentUser.preferredLanguage as any] || TRANSLATIONS.en}
+                    />
+                  )}
+
+                  {activeTab === 'creator' && (
+                    <CreatorDashboardView
+                      currentUser={getRichUser(currentUser)}
+                      posts={resolvedPosts}
                     />
                   )}
                 </motion.div>

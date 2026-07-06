@@ -54,7 +54,8 @@ import {
   Shield,
   CheckCircle,
   Heart,
-  Share2
+  Share2,
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Chat, Message } from '../types';
@@ -63,6 +64,12 @@ import CallScreen from './CallScreen';
 import MediaGallery from './MediaGallery';
 import GroupDashboard from './GroupDashboard';
 import RelativeTime from './RelativeTime';
+
+// Custom sub-components
+import NewGroupModal from './NewGroupModal';
+import PrivacySettingsModal from './PrivacySettingsModal';
+import CallTestingConsole from './CallTestingConsole';
+import AttachmentGrid from './AttachmentGrid';
 
 interface MessagesViewProps {
   currentUser: User;
@@ -182,6 +189,79 @@ export default function MessagesView({
   const [highContrast, setHighContrast] = useState(false);
   const [fontSize, setFontSize] = useState<'normal' | 'large'>('normal');
 
+  // New Phase 18 State Definitions
+  const [isCreatingGroupOpen, setIsCreatingGroupOpen] = useState(false);
+  const [isPrivacyOpen, setIsPrivacyOpen] = useState(false);
+  const [privacySettings, setPrivacySettings] = useState({
+    visibility: 'everyone' as 'everyone' | 'contacts' | 'nobody',
+    lastSeen: 'everyone' as 'everyone' | 'contacts' | 'nobody',
+    readReceipts: true,
+    mediaQuality: 'saver' as 'hd' | 'saver'
+  });
+  const [showCallTestingConsole, setShowCallTestingConsole] = useState(false);
+  const [callLogs, setCallLogs] = useState<any[]>([
+    { id: 'cl-1', name: 'Sophia', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', type: 'video', direction: 'missed', timestamp: 'Yesterday, 10:45 AM' },
+    { id: 'cl-2', name: 'Harrison', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100', type: 'voice', direction: 'incoming', duration: '5m 24s', timestamp: '2 days ago' },
+    { id: 'cl-3', name: 'Luna', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', type: 'video', direction: 'outgoing', timestamp: '3 days ago' },
+    { id: 'cl-4', name: 'Marcus', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100', type: 'video', direction: 'incoming', duration: '12m 40s', timestamp: 'Last week' }
+  ]);
+  const [starredMessages, setStarredMessages] = useState<string[]>([]);
+  const [partnerPresenceAction, setPartnerPresenceAction] = useState<'typing' | 'recording' | 'uploading' | null>(null);
+  const [isComposerAttachmentOpen, setIsComposerAttachmentOpen] = useState(false);
+  const [mediaUploadProgress, setMediaUploadProgress] = useState({ active: false, name: '', progress: 0, speed: '' });
+  const [isForwardModalOpen, setIsForwardModalOpen] = useState(false);
+  const [messageToForward, setMessageToForward] = useState<ExtendedMessage | null>(null);
+  const [isSyncingLedger, setIsSyncingLedger] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+
+  // Voice Note Playback Engine States
+  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
+  const [voiceProgress, setVoiceProgress] = useState(0);
+  const [voicePlaybackSpeed, setVoicePlaybackSpeed] = useState<1 | 1.5 | 2>(1);
+
+  // Active Playback ticker effect
+  useEffect(() => {
+    if (!playingVoiceId) {
+      setVoiceProgress(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setVoiceProgress(p => {
+        if (p >= 100) {
+          setPlayingVoiceId(null);
+          clearInterval(interval);
+          return 0;
+        }
+        return p + (4 * voicePlaybackSpeed);
+      });
+    }, 100);
+    return () => clearInterval(interval);
+  }, [playingVoiceId, voicePlaybackSpeed]);
+
+  // Persistence Engine - local state recovery on startup
+  useEffect(() => {
+    const recoveryChats = localStorage.getItem(`nexora_chats_v3_${currentUser.id}`);
+    const recoveryMsgs = localStorage.getItem(`nexora_msgs_v3_${currentUser.id}`);
+    const recoveryStarred = localStorage.getItem(`nexora_starred_v3_${currentUser.id}`);
+    const recoveryCallLogs = localStorage.getItem(`nexora_calls_v3_${currentUser.id}`);
+    const recoveryPrivacy = localStorage.getItem(`nexora_privacy_v3_${currentUser.id}`);
+
+    if (recoveryChats) setChatsList(JSON.parse(recoveryChats));
+    if (recoveryMsgs) setLocalMessages(JSON.parse(recoveryMsgs));
+    if (recoveryStarred) setStarredMessages(JSON.parse(recoveryStarred));
+    if (recoveryCallLogs) setCallLogs(JSON.parse(recoveryCallLogs));
+    if (recoveryPrivacy) setPrivacySettings(JSON.parse(recoveryPrivacy));
+  }, []);
+
+  // Save state on any modifications
+  useEffect(() => {
+    localStorage.setItem(`nexora_chats_v3_${currentUser.id}`, JSON.stringify(chatsList));
+    localStorage.setItem(`nexora_msgs_v3_${currentUser.id}`, JSON.stringify(localMessages));
+    localStorage.setItem(`nexora_starred_v3_${currentUser.id}`, JSON.stringify(starredMessages));
+    localStorage.setItem(`nexora_calls_v3_${currentUser.id}`, JSON.stringify(callLogs));
+    localStorage.setItem(`nexora_privacy_v3_${currentUser.id}`, JSON.stringify(privacySettings));
+  }, [chatsList, localMessages, starredMessages, callLogs, privacySettings]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeChat = chatsList.find(c => c.id === activeChatId);
   const activeChatMessages = activeChatId ? (localMessages[activeChatId] || []) : [];
@@ -224,28 +304,43 @@ export default function MessagesView({
   // Offline connection synchronization logic
   useEffect(() => {
     if (!isOffline && offlineQueue.length > 0) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: "📶 Network connection re-established! Synchronizing ledger..." }));
-      
-      const timer = setTimeout(() => {
-        setLocalMessages(prev => {
-          const updated = { ...prev };
-          const stream = updated[activeChatId] || [];
-          const synchronized = stream.map(m => {
-            if (m.isOfflineUnsent) {
-              return { ...m, isOfflineUnsent: false, status: 'delivered' as const };
-            }
-            return m;
-          });
-          updated[activeChatId] = synchronized;
-          return updated;
-        });
-        setOfflineQueue([]);
-        window.dispatchEvent(new CustomEvent('toast', { detail: "✨ All queued messages synchronized successfully!" }));
-      }, 1500);
+      setIsSyncingLedger(true);
+      setSyncProgress(0);
+      window.dispatchEvent(new CustomEvent('toast', { detail: "📶 Network online! Reconnecting and syncing decentral-ledger..." }));
 
-      return () => clearTimeout(timer);
+      const interval = setInterval(() => {
+        setSyncProgress(p => {
+          if (p >= 100) {
+            clearInterval(interval);
+            
+            // Reconcile messages in all chats
+            setLocalMessages(prev => {
+              const updated = { ...prev };
+              Object.keys(updated).forEach(chatId => {
+                updated[chatId] = updated[chatId].map(m => {
+                  if (m.isOfflineUnsent) {
+                    return { ...m, isOfflineUnsent: false, status: 'delivered' as const };
+                  }
+                  return m;
+                });
+              });
+              return updated;
+            });
+
+            // Empty queues
+            const count = offlineQueue.length;
+            setOfflineQueue([]);
+            setIsSyncingLedger(false);
+            window.dispatchEvent(new CustomEvent('toast', { detail: `✨ Ledger synced! ${count} message(s) broadcasted successfully.` }));
+            return 100;
+          }
+          return p + 10;
+        });
+      }, 150);
+
+      return () => clearInterval(interval);
     }
-  }, [isOffline, offlineQueue, activeChatId]);
+  }, [isOffline, offlineQueue]);
 
   // Handle disappearing messages
   useEffect(() => {
@@ -317,7 +412,10 @@ export default function MessagesView({
     }
   };
 
-  const simulateAutomaticBotReply = (userQuery: string) => {
+  const simulateAutomaticBotReply = (userQuery: string, customAction?: 'typing' | 'recording' | 'uploading') => {
+    const action = customAction || 'typing';
+    setPartnerPresenceAction(action);
+
     if (activeChatId === 'group-main') {
       setTimeout(() => {
         const botMsg: ExtendedMessage = {
@@ -332,6 +430,7 @@ export default function MessagesView({
           ...prev,
           [activeChatId]: [...(prev[activeChatId] || []), botMsg]
         }));
+        setPartnerPresenceAction(null);
       }, 1500);
       return;
     }
@@ -357,7 +456,8 @@ export default function MessagesView({
         ...prev,
         [activeChatId]: [...(prev[activeChatId] || []), partnerReply]
       }));
-    }, 1200);
+      setPartnerPresenceAction(null);
+    }, 2000);
   };
 
   // Voice recording simulation methods
@@ -404,21 +504,94 @@ export default function MessagesView({
       isOfflineUnsent: isOffline || undefined
     };
 
-    if (isOffline) {
-      setOfflineQueue(prev => [...prev, newMsg]);
-    }
-
-    setLocalMessages(prev => ({
-      ...prev,
-      [activeChatId]: [...(prev[activeChatId] || []), newMsg]
-    }));
-
     setVoiceRecordState('idle');
     setVoiceTimer(0);
     setVoiceWaveform([]);
 
-    if (!isOffline) {
-      simulateAutomaticBotReply("voice message note");
+    if (isOffline) {
+      setOfflineQueue(prev => [...prev, newMsg]);
+      setLocalMessages(prev => ({
+        ...prev,
+        [activeChatId]: [...(prev[activeChatId] || []), newMsg]
+      }));
+    } else {
+      // Simulate HD Audio Compression & Secure Server Upload
+      setMediaUploadProgress({ active: true, name: `🎙️ Voice Note (HD Secure, ${durStr})`, progress: 0, speed: '1.4 MB/s' });
+      
+      let p = 0;
+      const interval = setInterval(() => {
+        p += 25;
+        setMediaUploadProgress(prev => ({ ...prev, progress: p }));
+        
+        if (p >= 100) {
+          clearInterval(interval);
+          setMediaUploadProgress({ active: false, name: '', progress: 0, speed: '' });
+          
+          setLocalMessages(prev => ({
+            ...prev,
+            [activeChatId]: [...(prev[activeChatId] || []), newMsg]
+          }));
+          
+          simulateAutomaticBotReply("secure voice memo note", "recording");
+        }
+      }, 250);
+    }
+  };
+
+  // Upgraded Rich Media Exchange Engine
+  const handleSendRichMedia = (type: string, data: any) => {
+    setIsComposerAttachmentOpen(false);
+    
+    let contentSummary = "";
+    switch (type) {
+      case 'sticker': contentSummary = `👾 Sticker: ${data.name}`; break;
+      case 'gif': contentSummary = `🎬 GIF: Animation`; break;
+      case 'contact': contentSummary = `📇 Contact: ${data.name} (${data.role})`; break;
+      case 'post': contentSummary = `📺 Shared Post: "${data.title}"`; break;
+      case 'location': contentSummary = `🗺️ Share Location: Coordinate Marker`; break;
+      default: contentSummary = `📁 Shared asset`;
+    }
+
+    const newMsg: ExtendedMessage & { customMediaType?: string; customMediaData?: any } = {
+      id: 'media-' + Date.now(),
+      chatId: activeChatId,
+      senderId: currentUser.id,
+      content: contentSummary,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      status: isOffline ? 'sent' : 'delivered',
+      isOfflineUnsent: isOffline || undefined,
+      customMediaType: type,
+      customMediaData: data
+    };
+
+    if (isOffline) {
+      setOfflineQueue(prev => [...prev, newMsg]);
+      setLocalMessages(prev => ({
+        ...prev,
+        [activeChatId]: [...(prev[activeChatId] || []), newMsg]
+      }));
+    } else {
+      // Simulate Content Delivery Network Optimization
+      const compressionRatio = privacySettings.mediaQuality === 'hd' ? 'Lossless HD' : 'Optimized Data Saver';
+      setMediaUploadProgress({ active: true, name: `📤 Sharing ${type.toUpperCase()} (${compressionRatio})`, progress: 0, speed: '2.8 MB/s' });
+      
+      let p = 0;
+      const interval = setInterval(() => {
+        p += 20;
+        setMediaUploadProgress(prev => ({ ...prev, progress: p }));
+        
+        if (p >= 100) {
+          clearInterval(interval);
+          setMediaUploadProgress({ active: false, name: '', progress: 0, speed: '' });
+          
+          setLocalMessages(prev => ({
+            ...prev,
+            [activeChatId]: [...(prev[activeChatId] || []), newMsg]
+          }));
+          
+          simulateAutomaticBotReply(`rich media attachment ${type}`, "uploading");
+        }
+      }, 200);
     }
   };
 
@@ -849,45 +1022,138 @@ export default function MessagesView({
               <span className="text-[8px] font-mono text-zinc-500 uppercase">Online</span>
             </div>
           </div>
+
+          <div className="flex items-center gap-1.5">
+            {/* Privacy Controls trigger */}
+            <button
+              onClick={() => setIsPrivacyOpen(true)}
+              className="p-1 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-violet-400 cursor-pointer transition-colors"
+              title="Secure Privacy Settings"
+            >
+              <Shield className="w-3.5 h-3.5" />
+            </button>
+            {/* Create Group trigger */}
+            <button
+              onClick={() => setIsCreatingGroupOpen(true)}
+              className="p-1 hover:bg-white/5 rounded-lg text-zinc-400 hover:text-violet-400 cursor-pointer transition-colors"
+              title="Initialize Secure Group Ledger"
+            >
+              <Users className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
-        {/* Global Connection Search box */}
-        <div className="p-3 border-b border-violet-500/5 space-y-2 shrink-0">
-          <div className="relative">
-            <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-violet-400/50" />
-            <input
-              type="text"
-              placeholder="Search chat database..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-[#8B5CF6] focus:outline-hidden text-xs text-white placeholder-violet-400/20 font-sans"
-            />
-          </div>
+        {/* Chats vs Call Sandbox segment selector */}
+        <div className="px-3 py-2 border-b border-white/5 flex gap-1.5 bg-[#03010c]/30 shrink-0">
+          <button
+            onClick={() => setShowCallTestingConsole(false)}
+            className={`flex-1 py-1 rounded-lg text-[9px] font-mono uppercase tracking-wider font-extrabold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+              !showCallTestingConsole ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-500 hover:text-white bg-black/10'
+            }`}
+          >
+            <MessageSquare className="w-3 h-3" /> Chats
+          </button>
+          <button
+            onClick={() => setShowCallTestingConsole(true)}
+            className={`flex-1 py-1 rounded-lg text-[9px] font-mono uppercase tracking-wider font-extrabold transition-all cursor-pointer text-center flex items-center justify-center gap-1.5 ${
+              showCallTestingConsole ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-500 hover:text-white bg-black/10'
+            }`}
+          >
+            <Phone className="w-3 h-3" /> Call Logs
+          </button>
+        </div>
 
-          {searchQuery && (
-            <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5">
+        {showCallTestingConsole ? (
+          <CallTestingConsole 
+            logs={callLogs} 
+            onClearLogs={() => {
+              setCallLogs([]);
+              window.dispatchEvent(new CustomEvent('toast', { detail: "🧹 Call logs registry purged." }));
+            }} 
+            onTriggerSimulatedCall={(partner, type) => {
+              setActiveCall({ 
+                type, 
+                partnerName: partner, 
+                partnerAvatar: partner === 'Sophia' 
+                  ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' 
+                  : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' 
+              });
+              const newCall = {
+                id: 'cl-' + Date.now(),
+                name: partner,
+                avatar: partner === 'Sophia' 
+                  ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' 
+                  : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
+                type,
+                direction: 'outgoing',
+                timestamp: 'Just now'
+              };
+              setCallLogs(prev => [newCall, ...prev]);
+            }}
+          />
+        ) : (
+          <>
+            {/* Global Connection Search box */}
+            <div className="p-3 border-b border-violet-500/5 space-y-2 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-violet-400/50" />
+                <input
+                  type="text"
+                  placeholder="Search chat database..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-[#8B5CF6] focus:outline-hidden text-xs text-white placeholder-violet-400/20 font-sans"
+                />
+              </div>
+
+              {searchQuery && (
+                <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5">
+                  {[
+                    { id: 'all', label: 'All Matches' },
+                    { id: 'media', label: 'Media shared' },
+                    { id: 'files', label: 'Documents' },
+                    { id: 'links', label: 'Hyperlinks' }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      onClick={() => setSearchFilter(f.id as any)}
+                      className={`px-2 py-1 rounded-lg text-[8px] font-mono uppercase shrink-0 ${
+                        searchFilter === f.id ? 'bg-violet-600 text-white' : 'bg-black/30 text-zinc-500 hover:text-white'
+                      }`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Scrolling pill category selector */}
+            <div className="px-3 py-2 flex gap-1 overflow-x-auto no-scrollbar shrink-0 border-b border-violet-500/5 bg-[#03010c]/10">
               {[
-                { id: 'all', label: 'All Matches' },
-                { id: 'media', label: 'Media shared' },
-                { id: 'files', label: 'Documents' },
-                { id: 'links', label: 'Hyperlinks' }
-              ].map(f => (
+                { id: 'all', label: 'All' },
+                { id: 'groups', label: 'Groups' },
+                { id: 'requests', label: 'Requests' },
+                { id: 'archived', label: 'Archived' },
+                { id: 'ai', label: 'AI' },
+                { id: 'starred', label: '⭐ Starred' }
+              ].map(tab => (
                 <button
-                  key={f.id}
-                  onClick={() => setSearchFilter(f.id as any)}
-                  className={`px-2 py-1 rounded-lg text-[8px] font-mono uppercase shrink-0 ${
-                    searchFilter === f.id ? 'bg-violet-600 text-white' : 'bg-black/30 text-zinc-500 hover:text-white'
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`px-2.5 py-1 rounded-lg text-[8.5px] font-mono uppercase tracking-wider font-black shrink-0 transition-all cursor-pointer ${
+                    activeTab === tab.id 
+                      ? 'bg-violet-600 text-white shadow-sm ring-1 ring-violet-400/20' 
+                      : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
                   }`}
                 >
-                  {f.label}
+                  {tab.label}
                 </button>
               ))}
             </div>
-          )}
-        </div>
 
-        {/* Dynamic Contacts Card stream */}
-        <div className="flex-1 overflow-y-auto divide-y divide-violet-500/5">
+            {/* Dynamic Contacts Card stream */}
+            <div className="flex-1 overflow-y-auto divide-y divide-violet-500/5">
           {filteredChats.map(chat => {
             const isSelected = chat.id === activeChatId;
             const isPinned = pinnedChats.includes(chat.id);
@@ -962,8 +1228,8 @@ export default function MessagesView({
             </div>
           )}
         </div>
-
-        {/* Footer removed */}
+          </>
+        )}
       </div>
 
       {/* ======================================================== */}
