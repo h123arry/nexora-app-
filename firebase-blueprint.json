@@ -1,0 +1,93 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "username": { "type": "string" },
+        "avatarUrl": { "type": "string" },
+        "bio": { "type": "string" },
+        "isVerified": { "type": "boolean" },
+        "creatorLevel": { "type": "number" },
+        "achievements": { "type": "array", "items": { "type": "string" } },
+        "stats": { 
+          "type": "object",
+          "properties": {
+            "totalViews": { "type": "number" },
+            "totalFollowers": { "type": "number" }
+          }
+        }
+      },
+      "required": ["displayName", "username"]
+    },
+    "post": {
+      "title": "Post",
+      "description": "User posts/videos",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "videoUrl": { "type": "string" },
+        "caption": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string" },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "views": { "type": "number" },
+            "sparks": { "type": "number" },
+            "shares": { "type": "number" },
+            "bookmarks": { "type": "number" }
+          }
+        }
+      },
+      "required": ["userId", "videoUrl", "createdAt", "status"]
+    },
+    "follow": {
+      "title": "Follow",
+      "description": "User relationships",
+      "type": "object",
+      "properties": {
+        "followerId": { "type": "string" },
+        "followingId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["followerId", "followingId", "createdAt"]
+    },
+    "activity": {
+      "title": "Activity",
+      "description": "Platform activity",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "targetId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "user" },
+      "description": "User profiles"
+    },
+    "/posts/{postId}": {
+      "schema": { "$ref": "post" },
+      "description": "User posts"
+    },
+    "/drafts/{draftId}": {
+      "schema": { "$ref": "draft" },
+      "description": "User drafts"
+    },
+    "/follows/{followId}": {
+      "schema": { "$ref": "follow" },
+      "description": "User follows"
+    },
+    "/activities/{activityId}": {
+      "schema": { "$ref": "activity" },
+      "description": "Platform activities"
+    }
+  }
+}

@@ -479,7 +479,7 @@ export default function MediaCreationEngine({
   // AI assistant simulation
   const handleAiWritingAssistance = async (promptType: string) => {
     setLoadingTranscript(true);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🪄 Nexora AI is polishing writing...' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Nexora is polishing writing...' }));
     try {
       const response = await fetch('/api/voh-ai/improve-post', {
         method: 'POST',

@@ -40,8 +40,8 @@ const MOCK_MOMENTS = [
   },
   { 
     id: 'm-nexora-1', 
-    name: 'Nexora AI', 
-    username: 'nexora_ai', 
+    name: 'Nexora Official ✓', 
+    username: 'nexora_official', 
     avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', 
     active: true, 
     quotes: [

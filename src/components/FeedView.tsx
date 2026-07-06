@@ -74,6 +74,7 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
               alt={`Slide ${idx + 1}`} 
               className="w-full h-full object-cover pointer-events-none"
               referrerPolicy="no-referrer"
+              loading="lazy"
               style={{ filter: (filters && filters[idx]) || 'none' }}
             />
           </div>
@@ -131,13 +132,13 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
 // Active moments structure
 const MOCK_MOMENTS = [
   { id: 'm-0', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', active: true, quotes: ["Building the future of social networks with clean designs.", "Great seeing our community grow so rapidly!", "Continuous listening and iterating with you guys."] },
-  { id: 'm-1', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Official NEXORA AI Companion 🌟 Keeping you posted with football updates!", "Super excited to chat with everyone today.", "Always online to suggest Davido and Wizkid jams!"] },
+  { id: 'm-1', name: 'Nexora Official', username: 'nexora_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Official NEXORA platform account 🌟 Keeping you posted with community updates!", "Super excited to share our latest developments today.", "Always working to bring you the best experience!"] },
   { id: 'm-2', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["The Intelligent AI assistant by VOICE OF HARRISON.", "Connected and ready to assist you anytime.", "Analyzing daily premier league matches."] }
 ];
 
 const SEARCHABLE_SYSTEM_USERS = [
   { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 15300000, bio: 'Nexora Founder & System Architect. Building social systems with absolute visual rhythm.' },
-  { id: 'nexora_ai', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 6400000, bio: 'Official NEXORA AI Companion 🌟 Keeping you posted with football updates, Wizkid/Davido jams, local food tips, and everyday stories.' },
+  { id: 'nexora_official', name: 'Nexora Official', username: 'nexora_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 6400000, bio: 'Official NEXORA platform account 🌟 Keeping you posted with community updates, feature releases, and everyday stories.' },
   { id: 'voh_ai', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 8700000, bio: 'The Intelligent AI assistant by VOICE OF HARRISON. Syncing daily matches (Messi vs Ronaldo!), movie trends, and helper scripts.' }
 ];
 
@@ -1608,7 +1609,7 @@ export default function FeedView({
   ];
 
   const suggestedUsers = [
-    { id: 'creator-4', name: "Nexora AI", username: "nexora_ai", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "Official NEXORA AI Companion. Sharing football updates, food vibes, and daily stories." },
+    { id: 'creator-4', name: "Nexora Official ✓", username: "nexora_official", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "Official NEXORA platform account 🌟 Keeping you posted with community updates, feature releases, and everyday stories." },
     { id: 'voh_ai', name: "VOH AI", username: "voh_ai", avatar: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "The Intelligent AI assistant by VOICE OF HARRISON. Discussing football, music tracks, and daily trends." }
   ];
 
@@ -1648,7 +1649,7 @@ export default function FeedView({
         </div>
 
         {/* Center: For You / Following / Friends / Trending / Local */}
-        <div className="flex items-center gap-6 p-1 bg-transparent border-none mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full relative">
+        <div className="flex items-center gap-6 p-1 bg-transparent border-none mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
           {(['for_you', 'following', 'friends', 'trending', 'local'] as const).map(tab => {
             const isActive = feedTab === tab;
             return (
@@ -2362,7 +2363,7 @@ export default function FeedView({
                   {(() => {
                     if (post.userId === 'user-0') return '⭐ Highlight: Recommended by Founder';
                     if (post.username === 'voh_ai') return '🧠 Intelligence: Recommended by VOH AI';
-                    if (post.username === 'nexora_ai') return '🌌 System: Recommended by Nexora AI';
+                    if (post.username === 'nexora_official') return '🌌 System: Nexora Official Update';
                     if (post.isBroadcastPost) return '📣 Broadcast channel propagation';
                     if (followingIds.includes(post.userId)) return '👥 Followed Creator';
                     if (post.tags && post.tags.length > 0) {

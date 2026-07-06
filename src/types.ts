@@ -127,6 +127,9 @@ export interface Post {
   likes: number;
   commentsCount: number;
   shares: number;
+  views?: number;
+  saves?: number;
+  searchSuggestion?: string;
   timestamp: string;
   isLikedByUser?: boolean;
   isBookmarkedByUser?: boolean;

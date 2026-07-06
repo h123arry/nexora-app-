@@ -271,7 +271,7 @@ export default function ExploreView({
     },
     {
       id: 'vr-2',
-      creator: { id: 'creator-4', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true },
+      creator: { id: 'creator-4', name: 'Nexora Official ✓', username: 'nexora_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true },
       videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-holding-smartphone-at-night-with-city-lights-41553-large.mp4',
       caption: 'Discussing our latest football matches, Wizkid tunes, and Davido jams. Let us build connected spaces! #NEXORA #football #afrobeat',
       likes: 8520,
@@ -1274,7 +1274,7 @@ export default function ExploreView({
             </div>
             
             <div className="mt-8 space-y-1">
-              <span className="text-[9px] text-[#8B5CF6] font-mono uppercase tracking-widest block">Nexora AI</span>
+              <span className="text-[9px] text-[#8B5CF6] font-mono uppercase tracking-widest block">Nexora Official ✓</span>
               <h3 className="text-sm font-black text-white font-sans line-clamp-2 leading-snug">
                 🎵 Live Afrobeat DJ set and Music Jams Session
               </h3>
@@ -1293,7 +1293,7 @@ export default function ExploreView({
                   ]);
                   setLiveAccumulatedSparks(120);
                   setLiveViewersCount(2102);
-                  setActiveWatchLive({ id: 'live-nexora', name: 'Nexora AI', username: 'nexora_ai', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100', topic: '🎵 Live Afrobeat DJ set and Music Jams' });
+                  setActiveWatchLive({ id: 'live-nexora', name: 'Nexora Official ✓', username: 'nexora_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100', topic: '🎵 Live Afrobeat DJ set and Music Jams' });
                 }}
                 className="text-[9px] font-mono font-black bg-pink-500 hover:bg-pink-600 text-white px-3 py-1.5 rounded-lg active:scale-95 transition-all uppercase cursor-pointer"
               >

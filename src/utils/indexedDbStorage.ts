@@ -36,7 +36,6 @@ export function initMediaDB(): Promise<IDBDatabase> {
  * Saves a binary blob to the IndexedDB media store
  */
 export async function saveMediaBlob(id: string, blob: Blob): Promise<string> {
-  console.log(`[Storage] Saving binary media to permanent IndexedDB: ${id} (${blob.type}, ${blob.size} bytes)`);
   const db = await initMediaDB();
   return new Promise((resolve, reject) => {
     const transaction = db.transaction([STORE_NAME], 'readwrite');
@@ -44,7 +43,6 @@ export async function saveMediaBlob(id: string, blob: Blob): Promise<string> {
     const request = store.put(blob, id);
 
     request.onsuccess = () => {
-      console.log(`[Storage] Media successfully committed in IndexedDB: ${id}`);
       resolve(`db-media://${id}`);
     };
 
@@ -138,7 +136,6 @@ export function generateVideoThumbnail(videoBlob: Blob): Promise<string> {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
           URL.revokeObjectURL(url);
-          console.log('[Storage] Automatically extracted video thumbnail frame.');
           resolve(dataUrl);
         } else {
           URL.revokeObjectURL(url);

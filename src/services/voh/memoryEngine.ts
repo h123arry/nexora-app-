@@ -62,7 +62,6 @@ export class MemoryEngine {
 
   // Future persistence abstraction layer hook
   static async syncWithCloud(userId: string, memory: UserMemoryProfile): Promise<boolean> {
-    console.log(`[Memory Cloud Synchronization Layer]: Syncing memory profile for user ${userId}...`);
     // Simulated cloud sync success
     return true;
   }

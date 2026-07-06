@@ -78,6 +78,7 @@ import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
+import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import { 
   MOCK_CREATORS, 
   ADDITIONAL_TEST_ACCOUNTS, 
@@ -144,6 +145,10 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
                   />
                   <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">
                     <Film className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                  </div>
+                  <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[10px] font-mono font-bold z-20 flex items-center gap-1">
+                    <Play className="w-2.5 h-2.5 fill-white text-white" />
+                    {post.views ? (post.views > 999 ? (post.views/1000).toFixed(1) + 'K' : post.views) : '18.4K'}
                   </div>
                 </div>
               ) : isVoice ? (
@@ -3415,56 +3420,17 @@ export default function ProfileView({
       {/* 14. GRID SELECTION DETAIL DRAWER (Clicking a thumbnail post opens it) */}
       <AnimatePresence>
         {selectedGridPost && (
-          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto" onClick={() => setSelectedGridPost(null)}>
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0b0922] border border-violet-500/25 rounded-3xl p-5 max-w-lg w-full text-left relative space-y-4 overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button 
-                onClick={() => setSelectedGridPost(null)}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <div className="flex items-center gap-2 border-b border-white/5 pb-3">
-                <img src={selectedGridPost.avatar} className="w-8 h-8 rounded-lg object-cover" alt="Selected post avatar" />
-                <div>
-                  <h4 className="text-xs font-sans font-black text-white">{selectedGridPost.name}</h4>
-                  <p className="text-[10px] font-mono text-zinc-500">@{selectedGridPost.username} • {selectedGridPost.timestamp}</p>
-                </div>
-              </div>
-
-              {selectedGridPost.image && (
-                <div className="rounded-2xl overflow-hidden aspect-video bg-black max-h-56 relative border border-white/5">
-                  <img src={selectedGridPost.image} className="w-full h-full object-cover" alt="selected post content image" />
-                </div>
-              )}
-
-              <p className="text-xs sm:text-sm font-sans text-zinc-200 whitespace-pre-wrap leading-relaxed">
-                {selectedGridPost.content}
-              </p>
-
-              {/* Likes & commenting interaction row */}
-              <div className="flex justify-between items-center text-xs font-mono text-zinc-400 border-t border-white/5 pt-3">
-                <button
-                  onClick={() => {
-                    onLikePost(selectedGridPost.id);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Spark/Like toggle successfully synchronised!' }));
-                  }}
-                  className="flex items-center gap-1.5 hover:text-pink-400 cursor-pointer"
-                >
-                  <Heart className={`w-4 h-4 ${selectedGridPost.isLikedByUser ? 'fill-pink-500 text-pink-500' : ''}`} />
-                  <span>{selectedGridPost.likes} Sparks</span>
-                </button>
-                <span>{selectedGridPost.comments?.length || 0} Comments</span>
-              </div>
-
-            </motion.div>
-          </div>
+          <ImmersiveVideoViewer
+            initialPost={selectedGridPost}
+            creatorPosts={myPosts}
+            onClose={() => setSelectedGridPost(null)}
+            onLikePost={(postId) => {
+              onLikePost(postId);
+              window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Spark synchronised!' }));
+            }}
+            onToggleFollow={onToggleFollow}
+            isFollowing={isFollowing}
+          />
         )}
       </AnimatePresence>
 
@@ -3596,7 +3562,7 @@ export default function ProfileView({
                           title: `${currentUser.name} on Nexora`,
                           text: `Connect with me on Nexora: @${currentUser.username}`,
                           url: `https://nexora.ai/@${currentUser.username}`
-                        }).catch(err => console.log('Share sheet dismissed:', err));
+                        }).catch(() => {});
                       } else {
                         navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
                         window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 System share unsupported. Profile link copied!' }));

@@ -121,9 +121,9 @@ export default function CreatorDashboardView({
   const [newPageAbout, setNewPageAbout] = useState('');
 
   // 2. Monetization States
-  const [walletBalance, setWalletBalance] = useState(currentUser.nexBalance ?? 24500);
+  const [walletBalance, setWalletBalance] = useState(currentUser.nexBalance ?? 0);
   const [lifetimeEarnings, setLifetimeEarnings] = useState(walletBalance * 1.3);
-  const [pendingEarnings, setPendingEarnings] = useState(1850);
+  const [pendingEarnings, setPendingEarnings] = useState(0);
   const [payoutMethod, setPayoutMethod] = useState<'bank' | 'paypal' | 'crypto'>('bank');
   const [bankName, setBankName] = useState('Zenith Bank Plc');
   const [accountNumber, setAccountNumber] = useState('2208947231');
@@ -260,7 +260,7 @@ export default function CreatorDashboardView({
       joinedDate: 'Joined July 2026',
       email: page.email,
       phone: page.phone,
-      nexBalance: 500,
+      nexBalance: 0,
       reputationPoints: 100,
       reputationBreakdown: { contributions: 50, helpfulness: 50, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: { 'Tech': 80 },
@@ -384,6 +384,7 @@ export default function CreatorDashboardView({
             { id: 'pages', label: 'My Pages', icon: Globe },
             { id: 'earnings', label: 'Wallet & Monetization', icon: DollarSign },
             { id: 'collabs', label: 'Collab Center', icon: UserCheck },
+            { id: 'drafts', label: 'Drafts', icon: FileText },
             { id: 'insights', label: 'Scheduler', icon: Lightbulb }
           ].map(tab => (
             <button
@@ -1044,6 +1045,17 @@ export default function CreatorDashboardView({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: DRAFTS */}
+        {activeTab === 'drafts' && (
+          <div className="p-5 rounded-3xl bg-[#0b081c] border border-violet-500/10 space-y-6 text-left">
+            <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider">My Drafts</h3>
+            <p className="text-xs text-zinc-400">Manage your unpublished video drafts.</p>
+            <div className="p-10 rounded-3xl bg-black/40 border border-violet-500/10 text-center text-zinc-500 text-xs font-mono">
+              No drafts available. Create new content to get started.
             </div>
           </div>
         )}

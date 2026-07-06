@@ -85,7 +85,13 @@ export default function App() {
   // 1. Core State Orchestrator
   const [currentUser, setCurrentUser] = useState<User>(() => {
     const saved = localStorage.getItem('nexora_user');
-    return saved ? JSON.parse(saved) : INITIAL_USER;
+    const user = saved ? JSON.parse(saved) : INITIAL_USER;
+    
+    // Reset all temporary development balances to 0 for V1.1
+    user.nexBalance = 0;
+    user.thisWeekEarnedNex = 0;
+    
+    return user;
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -141,7 +147,6 @@ export default function App() {
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('nexora_posts');
     const loadedPosts = saved ? JSON.parse(saved) : INITIAL_POSTS;
-    console.log('[Audit] Retrieved raw posts from persistent store. Total:', loadedPosts.length);
     return loadedPosts;
   });
 
@@ -179,7 +184,6 @@ export default function App() {
   useEffect(() => {
     let active = true;
     const resolveAll = async () => {
-      console.log('[Audit] Running lazy media url resolver for feed and profile views...');
       const updated = await Promise.all(posts.map(async (post) => {
         let modified = false;
         let vUrl = post.videoUrl;
@@ -210,7 +214,6 @@ export default function App() {
       }));
       if (active) {
         setResolvedPosts(updated);
-        console.log('[Audit] Media url resolver completed successfully!');
       }
     };
     resolveAll();
@@ -754,7 +757,6 @@ export default function App() {
     }
 
     const handleBeforeInstallPrompt = (e: Event) => {
-      console.log('💡 Captured PWA beforeinstallprompt anchor');
       e.preventDefault();
       setDeferredPrompt(e);
       
@@ -784,7 +786,6 @@ export default function App() {
     };
 
     const handleAppInstalled = () => {
-      console.log('⚡ PWA Nexora successfully installed to local host system!');
       setPwaInstallStatus('installed');
       setDeferredPrompt(null);
       setShowPWAInstallPrompt(false);
@@ -838,7 +839,6 @@ export default function App() {
     try {
       deferredPrompt.prompt();
       const { outcome } = await deferredPrompt.userChoice;
-      console.log(`👤 User installation choice: ${outcome}`);
       if (outcome === 'accepted') {
         setPwaInstallStatus('installed');
         setDeferredPrompt(null);
@@ -951,6 +951,8 @@ export default function App() {
       likes: 0,
       commentsCount: 0,
       shares: 0,
+      views: 0,
+      saves: 0,
       timestamp: 'Just now',
       isLikedByUser: false,
       isBookmarkedByUser: false,
@@ -3464,14 +3466,14 @@ export default function App() {
       </AnimatePresence>
 
       {/* 🥞 LIGHTWEIGHT TOAST NOTIFICATIONS */}
-      <div id="nexora-global-toast-container" className="fixed bottom-24 right-6 left-6 md:left-auto md:right-8 md:w-80 z-50 flex flex-col gap-2 pointer-events-none">
+      <div id="nexora-global-toast-container" className="fixed top-16 right-6 left-6 md:left-auto md:right-8 md:w-80 z-50 flex flex-col gap-2 pointer-events-none" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <AnimatePresence>
           {toasts.map(toast => (
             <motion.div
               key={toast.id}
-              initial={{ opacity: 0, y: 15, scale: 0.95 }}
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -10, scale: 0.95, transition: { duration: 0.15 } }}
+              exit={{ opacity: 0, y: -15, scale: 0.95, transition: { duration: 0.2 } }}
               className="p-3.5 rounded-2xl bg-zinc-950/95 border border-violet-500/20 backdrop-blur-xl shadow-2xl flex items-center gap-2.5 pointer-events-auto text-left"
             >
               <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse shrink-0" />

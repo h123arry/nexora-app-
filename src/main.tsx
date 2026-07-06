@@ -2,13 +2,13 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import {FirebaseProvider} from './context/FirebaseContext.tsx';
 
 // Register PWA Service Worker
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/service-worker.js')
       .then((registration) => {
-        console.log('⚡ Nexora Pulse PWA Service Worker online with scope:', registration.scope);
       })
       .catch((error) => {
         console.error('❌ Service Worker registration failure:', error);
@@ -18,6 +18,8 @@ if ('serviceWorker' in navigator) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <FirebaseProvider>
+      <App />
+    </FirebaseProvider>
   </StrictMode>,
 );

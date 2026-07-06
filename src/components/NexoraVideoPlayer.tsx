@@ -21,10 +21,12 @@ import {
   Heart,
   MessageSquare,
   Share2,
+  Forward,
   Music,
   X,
   AlertTriangle,
   EyeOff,
+  Search,
   CheckCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -42,6 +44,9 @@ interface Post {
   userId?: string;
   bookmarksCount?: number;
   shares?: number;
+  views?: number;
+  saves?: number;
+  searchSuggestion?: string;
   isLikedByUser?: boolean;
   isVerified?: boolean;
 }
@@ -55,12 +60,20 @@ interface NexoraVideoPlayerProps {
   preloadMode?: 'auto' | 'metadata' | 'none';
   isReleased?: boolean;
   isFollowing?: boolean;
+  isProcessing?: boolean; // New prop
   onToggleFollow?: () => void;
   onCommentToggle?: () => void;
   isCommentsOpen?: boolean;
   onNotInterested?: () => void;
   onViewProfile?: (userId: string) => void;
+  onViewSound?: (soundId: string) => void;
 }
+
+const VerificationBadge = () => (
+  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center border border-white/10 shadow-lg ml-1.5 shrink-0">
+    <Check className="w-2.5 h-2.5 text-white" />
+  </div>
+);
 
 export default function NexoraVideoPlayer({
   post,
@@ -71,11 +84,13 @@ export default function NexoraVideoPlayer({
   preloadMode,
   isReleased,
   isFollowing = false,
+  isProcessing = false, // New prop
   onToggleFollow,
   onCommentToggle,
   isCommentsOpen = false,
   onNotInterested,
-  onViewProfile
+  onViewProfile,
+  onViewSound
 }: NexoraVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -692,10 +707,26 @@ export default function NexoraVideoPlayer({
                 right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
               }}
             >
+              {/* Profile & Follow */}
+              <div className="relative group/avatar mb-2">
+                <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden shadow-lg cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile?.(post.userId || ''); }}>
+                  <img src={post.avatar} alt={post.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
+                </div>
+                {onToggleFollow && !isFollowing && post.userId !== 'user-0' && (
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); onToggleFollow(); }}
+                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-white border border-black shadow-md hover:scale-110 active:scale-90 transition-transform"
+                  >
+                    <Plus className="w-3.5 h-3.5 stroke-[3px]" />
+                  </button>
+                )}
+              </div>
+
               {/* ❤️ Spark */}
               <button 
                 onClick={(e) => { e.stopPropagation(); onSpark(); }}
-                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+                disabled={isProcessing}
+                className={`flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${post.isLikedByUser ? 'border-pink-500/30' : ''}`}>
                   <Zap className={`w-5 h-5 transition-transform duration-300 group-hover/btn:scale-110 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]' : 'text-white'}`} />
@@ -737,66 +768,57 @@ export default function NexoraVideoPlayer({
                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
               >
                 <div className="w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg">
-                  <Share2 className="w-5 h-5 text-white transition-transform duration-300 group-hover/btn:scale-110" />
+                  <Forward className="w-5 h-5 text-white transition-transform duration-300 group-hover/btn:scale-110" />
                 </div>
                 <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.shares || 0}</span>
               </button>
             </div>
 
-            {/* Bottom-Left Creator Info Overlay */}
-            <div 
-              className="absolute flex flex-col items-start gap-1.5 z-20 pointer-events-none text-left"
+                          <div 
+              className="absolute flex flex-col items-start gap-1 z-20 pointer-events-none text-left"
               style={{
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 20px)',
+                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 90px)',
                 left: 'calc(env(safe-area-inset-left, 0px) + 14px)',
                 right: 'calc(env(safe-area-inset-right, 0px) + 64px)'
               }}
             >
-              <div className="flex items-center gap-2 pointer-events-auto">
-                <img 
-                  src={post.avatar} 
-                  alt={post.name} 
-                  className="w-8 h-8 rounded-lg object-cover border border-white/10 cursor-pointer shadow-md shrink-0 animate-fade-in"
-                  onClick={() => onViewProfile?.(post.userId || '')}
-                  referrerPolicy="no-referrer"
-                />
-                <div className="flex flex-col leading-tight cursor-pointer" onClick={() => onViewProfile?.(post.userId || '')}>
-                  <div className="flex items-center gap-1">
-                    <span className="font-sans font-extrabold text-xs text-white hover:text-violet-400 transition-colors drop-shadow-md">{post.name}</span>
-                    {(post.isVerified || post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai' || post.username === 'nexora_ai' || post.username === 'lunash') && (
-                      <CheckCircle className="w-3.5 h-3.5 text-violet-400 fill-current shrink-0" />
-                    )}
-                  </div>
-                  <span className="text-[9.5px] font-mono text-zinc-300/80 drop-shadow-md">@{post.username}</span>
+              {/* Search Suggestion */}
+              {post.searchSuggestion && (
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Searching: ${post.searchSuggestion}` }));
+                  }}
+                  className="flex items-center gap-1.5 px-2.5 py-1 mb-1 rounded-sm bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 transition-colors pointer-events-auto"
+                >
+                  <Search className="w-3 h-3 text-white" />
+                  <span className="text-[10px] font-mono text-white tracking-wider">Search • {post.searchSuggestion}</span>
+                </button>
+              )}
+
+              {/* Creator Info */}
+              <div className="flex flex-col items-start gap-0.5 pointer-events-auto text-left" onClick={() => onViewProfile?.(post.userId || '')}>
+                <div className="flex items-center gap-1">
+                  <span className="font-sans font-extrabold text-lg text-white drop-shadow-md truncate max-w-[200px]">{post.name}</span>
+                  {post.isVerified && <VerificationBadge />}
                 </div>
-                {onToggleFollow && post.userId !== 'user-0' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); onToggleFollow(); }}
-                    className={`ml-2 px-2 py-0.5 rounded-md text-[8.5px] font-mono font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-all shadow-md shrink-0 ${
-                      isFollowing 
-                        ? 'bg-zinc-800/80 border border-zinc-700/50 text-violet-300' 
-                        : 'bg-violet-600 hover:bg-violet-500 text-white'
-                    }`}
-                  >
-                    {isFollowing ? '✓ Mutual' : '+ Follow'}
-                  </button>
-                )}
+                <span className="text-xs font-mono text-zinc-300 drop-shadow-md font-medium">@{post.username}</span>
               </div>
 
               {/* Caption */}
               {post.content && (
-                <p className="text-[11.5px] text-zinc-100 font-sans leading-relaxed drop-shadow-md select-text pointer-events-auto max-w-xs line-clamp-2">
+                <p className="text-xs text-zinc-100 font-sans leading-relaxed drop-shadow-md select-text pointer-events-auto max-w-xs line-clamp-2 mt-1">
                   {post.content}
                 </p>
               )}
 
               {/* Hashtags */}
               {post.tags && post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 pointer-events-auto">
+                <div className="flex flex-wrap gap-1 pointer-events-auto mt-0.5">
                   {post.tags.slice(0, 3).map(tag => (
                     <span
                       key={tag}
-                      className="text-[9px] font-mono text-violet-300 hover:text-white drop-shadow-md font-semibold"
+                      className="text-[10px] font-mono text-violet-300 hover:text-white drop-shadow-md font-semibold"
                     >
                       #{tag}
                     </span>
@@ -804,10 +826,10 @@ export default function NexoraVideoPlayer({
                 </div>
               )}
 
-              {/* Future-Ready Music Info */}
-              <div className="flex items-center gap-1 text-[9px] font-mono text-violet-300 drop-shadow-md bg-black/35 backdrop-blur-xs px-2 py-0.5 rounded-full select-none max-w-[150px] truncate">
-                <Music className="w-2.5 h-2.5 text-pink-400 shrink-0 animate-spin" style={{ animationDuration: '6s' }} />
-                <span className="truncate">Original Sound - @{post.username}</span>
+              {/* Music Info - Interactive */}
+              <div className="flex items-center gap-1.5 text-[11px] font-mono text-white drop-shadow-md mt-1 cursor-pointer hover:text-violet-300 transition-colors pointer-events-auto" onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}>
+                <Music className="w-3 h-3 text-white shrink-0" />
+                <span className="truncate max-w-[150px]">Original Sound • {post.name.toUpperCase()}</span>
               </div>
             </div>
           </>

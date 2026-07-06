@@ -105,7 +105,7 @@ export default function NotificationsView({
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [showDailySummary, setShowDailySummary] = useState(true);
+
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [visibleCount, setVisibleCount] = useState(12);
@@ -140,6 +140,7 @@ export default function NotificationsView({
 
   // Pinned Notification overlay/highlight
   const [pinnedNotifId, setPinnedNotifId] = useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   // Notification configuration preferences
   const [settingsToggles, setSettingsToggles] = useState({
@@ -218,171 +219,7 @@ export default function NotificationsView({
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const seedMockNotifications = () => {
-      const mockNotifs: RichNotification[] = [
-        // TODAY - HIGH PRIORITY - SECURITY
-        {
-          id: 'notif-security-1',
-          type: 'system',
-          userId: 'system',
-          username: 'nexora_secops',
-          avatar: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100',
-          content: 'Suspicious login block: A login request from Linux (Berlin, DE) was blocked due to abnormal token rotation velocity.',
-          timestamp: 'Just now',
-          isRead: false,
-          timeSection: 'today',
-          priorityLevel: 'high',
-          previewText: 'Device: Ubuntu Chrome • Berlin, Germany'
-        },
-        // TODAY - HIGH PRIORITY - LIVE
-        {
-          id: 'notif-live-1',
-          type: 'pulse_alert',
-          userId: 'sophia_id',
-          username: 'sophia_design',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-          content: 'is LIVE now: "Framer Motion Drag Gestures masterclass!" 🔮 Join now to earn 50 Reputation Points.',
-          timestamp: '3 mins ago',
-          isRead: false,
-          timeSection: 'today',
-          priorityLevel: 'high',
-          previewText: 'Live Viewership: 1.2K • interactive masterclass',
-          actionText: 'Join Live',
-          actionType: 'join_community'
-        },
-        // TODAY - HIGH PRIORITY - FRIEND REQUEST
-        {
-          id: 'notif-friend-req-1',
-          type: 'follow',
-          userId: 'alex_id',
-          username: 'alex_creative',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-          content: 'sent you a Connection Request. "Let\'s collaborate on the Nexora premium glass UI template!"',
-          timestamp: '15 mins ago',
-          isRead: false,
-          timeSection: 'today',
-          priorityLevel: 'high',
-          friendRequestStatus: 'pending'
-        },
-        // TODAY - MEDIUM PRIORITY - SMART GROUPED LIKES
-        {
-          id: 'notif-group-likes-1',
-          type: 'like',
-          userId: 'multiple',
-          username: 'marcus_dev',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
-          content: 'and 32 others Sparked your latest post "The Future of Fluid Interfaces in Nexora v3".',
-          timestamp: '2 hours ago',
-          isRead: false,
-          timeSection: 'today',
-          priorityLevel: 'medium',
-          mediaThumbnail: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150',
-          previewText: 'Design variables verified! Peak latency under 1.8ms.',
-          subActivities: [
-            { userId: 'user-m1', username: 'marcus_dev', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=50', isVerified: true, timestamp: '2h ago' },
-            { userId: 'user-m2', username: 'elena_flux', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=50', isVerified: false, timestamp: '2.5h ago' },
-            { userId: 'user-m3', username: 'quantum_coder', avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50', isVerified: true, timestamp: '3h ago' }
-          ]
-        },
-        // TODAY - MEDIUM PRIORITY - CREATOR MILESTONE
-        {
-          id: 'notif-creator-1',
-          type: 'reputation_milestone',
-          userId: 'system',
-          username: 'nexora_creator_hub',
-          avatar: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=100',
-          content: 'Milestone Unlocked: Your tutorial video on WebGL Performance reached 10,000 views! You earned the "Peak Shader" reputation badge. 🏆',
-          timestamp: '4 hours ago',
-          isRead: false,
-          timeSection: 'today',
-          priorityLevel: 'medium',
-          reputationAwarded: 500,
-          previewText: 'Trending category: Engineering & Design • 10K views limit passed'
-        },
-        // TODAY - HIGH PRIORITY - COMMENT REPLY / DEEP LINK TARGET
-        {
-          id: 'notif-comment-1',
-          type: 'comment',
-          userId: 'julia_id',
-          username: 'julia_ux',
-          avatar: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=100',
-          content: 'replied to your comment: "Exactly! Reducing standard layout flickering makes the entire viewport feel infinitely faster."',
-          timestamp: '5 hours ago',
-          isRead: false,
-          timeSection: 'today',
-          priorityLevel: 'high',
-          targetId: 'post-glass-ui',
-          previewText: 'On post: "NEXORA Dev Log v2.4..."',
-          actionText: 'Reply Inline'
-        },
-        // YESTERDAY - HIGH PRIORITY - VERIFICATION UPDATE
-        {
-          id: 'notif-verify-1',
-          type: 'reputation_milestone',
-          userId: 'system',
-          username: 'nexora_safety',
-          avatar: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=100',
-          content: 'Verification Confirmed! Your professional portfolio and developer signature have been verified. Standard Blue Star badge updated. 🌟',
-          timestamp: 'Yesterday, 3:15 PM',
-          isRead: true,
-          timeSection: 'yesterday',
-          priorityLevel: 'high',
-          previewText: 'Verification audit ID: NEX-889410'
-        },
-        // YESTERDAY - MEDIUM PRIORITY - COMMUNITY EVENT INVITATION
-        {
-          id: 'notif-event-1',
-          type: 'community',
-          userId: 'nexora_hq',
-          username: 'nexora_events',
-          avatar: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=100',
-          content: 'invited you to register for the upcoming "Global Design-Con & Hackathon 2026" event hosted virtually.',
-          timestamp: 'Yesterday, 11:20 AM',
-          isRead: true,
-          timeSection: 'yesterday',
-          priorityLevel: 'medium',
-          eventStatus: 'unregistered',
-          previewText: 'Date: July 20, 2026 • Live Stream • virtual workspace'
-        },
-        // THIS WEEK - LOW PRIORITY - RECOMMENDATION
-        {
-          id: 'notif-suggest-1',
-          type: 'ai_recommendation',
-          userId: 'system',
-          username: 'voh_ai_core',
-          avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100',
-          content: 'Recommended Creator: Based on your interest in "Motion Layouts", we suggest following @hugo_animate (Senior Animator at Pixar).',
-          timestamp: '3 days ago',
-          isRead: true,
-          timeSection: 'this_week',
-          priorityLevel: 'low'
-        },
-        // THIS WEEK - MEDIUM PRIORITY - REPOST / SHARE
-        {
-          id: 'notif-repost-1',
-          type: 'spark',
-          userId: 'repost_guy_id',
-          username: 'repost_master',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-          content: 'Reposted your article: "Tailwind CSS - Clean vs Cluttered classes guide".',
-          timestamp: '4 days ago',
-          isRead: true,
-          timeSection: 'this_week',
-          priorityLevel: 'medium'
-        },
-        // EARLIER - HIGH PRIORITY - SECURITY LOGIN (ANOTHER)
-        {
-          id: 'notif-security-old',
-          type: 'system',
-          userId: 'system',
-          username: 'nexora_secops',
-          avatar: 'https://images.unsplash.com/photo-1614064641938-3bbee52942c7?w=100',
-          content: 'Password Changed: Your account password was successfully updated via secure 2FA prompt.',
-          timestamp: '2 weeks ago',
-          isRead: true,
-          timeSection: 'earlier',
-          priorityLevel: 'high'
-        }
-      ];
+      const mockNotifs: RichNotification[] = [];
 
       // Convert propNotifications to RichNotifications if any are supplied by the app
       const resolvedProps = (propNotifications || []).map((n, i) => ({
@@ -824,11 +661,8 @@ export default function NotificationsView({
             </div>
             <div>
               <h2 className="text-xl font-black font-sans text-white tracking-tight flex items-center gap-2">
-                NEXORA Activity Center
+                Notifications
               </h2>
-              <p className="text-[11px] font-mono text-violet-400/60 uppercase tracking-wider">
-                Intelligent Grouping • Multi-priority ledger
-              </p>
             </div>
           </div>
         </div>
@@ -1158,63 +992,6 @@ export default function NotificationsView({
         </div>
       </div>
 
-      {/* ----------------------------------------------------------------------- */}
-      {/* DAILY RECAPPING STATS */}
-      {/* ----------------------------------------------------------------------- */}
-      {showDailySummary && (
-        <motion.div 
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="p-4 rounded-3xl bg-linear-to-r from-violet-950/40 via-[#0d0a27] to-[#04020c] border border-violet-500/15 relative overflow-hidden text-left"
-        >
-          <div className="absolute top-0 right-0 w-32 h-32 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
-          <button 
-            onClick={() => {
-              setShowDailySummary(false);
-              addToast("Daily Summary dismissed.");
-            }}
-            className="absolute top-3.5 right-3.5 text-violet-400/40 hover:text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
-          <div className="flex items-center gap-2 mb-3">
-            <Brain className="w-5 h-5 text-violet-400 animate-pulse" />
-            <span className="text-xs font-mono font-black text-violet-300 uppercase tracking-widest">Nexora AI Daily Digest</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-sans">
-            <div className="p-3 rounded-2xl bg-black/40 border border-violet-500/5 hover:border-violet-500/15 transition-all">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase block">Active Spark Ledger</span>
-              <span className="text-base font-extrabold text-white mt-1 block flex items-center gap-1">
-                <span>32 Sparks</span>
-                <span className="text-amber-400 text-[10px] font-normal font-mono">+12%</span>
-              </span>
-            </div>
-            <div className="p-3 rounded-2xl bg-black/40 border border-violet-500/5 hover:border-violet-500/15 transition-all">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase block">Connection Ratio</span>
-              <span className="text-base font-extrabold text-white mt-1 block flex items-center gap-1">
-                <span>1 Mutual</span>
-                <span className="text-emerald-400 text-[10px] font-normal font-mono">Synced</span>
-              </span>
-            </div>
-            <div className="p-3 rounded-2xl bg-black/40 border border-violet-500/5 hover:border-violet-500/15 transition-all">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase block">Security Quotient</span>
-              <span className="text-base font-extrabold text-emerald-400 mt-1 block flex items-center gap-1">
-                <span>100% SECURE</span>
-                <span className="text-emerald-500 text-[10px] font-normal">Safe</span>
-              </span>
-            </div>
-            <div className="p-3 rounded-2xl bg-linear-to-tr from-violet-600/10 to-pink-500/10 border border-violet-500/20">
-              <span className="text-[10px] font-mono text-pink-300 uppercase block">Reputation Index</span>
-              <span className="text-base font-extrabold text-[#F59E0B] mt-1 block flex items-center gap-1">
-                <span>{currentUser.reputationPoints || 2500} pts</span>
-                <span className="text-[9px] font-black tracking-tighter bg-amber-500/10 px-1 py-0.5 rounded text-amber-400 font-mono">LEVEL 4</span>
-              </span>
-            </div>
-          </div>
-        </motion.div>
-      )}
 
       {/* ----------------------------------------------------------------------- */}
       {/* NOTIFICATIONS STREAM RENDERING */}
@@ -1277,7 +1054,8 @@ export default function NotificationsView({
                       const isPinned = notif.id === pinnedNotifId;
 
                       // Smart Expand State for grouped Likes
-                      const [isGroupExpanded, setIsGroupExpanded] = useState(false);
+                      const isGroupExpanded = expandedGroups[notif.id] || false;
+                      const setIsGroupExpanded = (val: boolean) => setExpandedGroups(prev => ({ ...prev, [notif.id]: val }));
 
                       return (
                         <motion.div

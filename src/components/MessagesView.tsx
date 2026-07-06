@@ -833,31 +833,8 @@ export default function MessagesView({
       {/* ======================================================== */}
       <div className="border-r border-violet-500/10 flex flex-col h-full bg-[#09071c]/45">
         
-        {/* Modern Segmented Navigation Header */}
-        <div className="grid grid-cols-4 gap-1 p-2 bg-[#050410] border-b border-violet-500/5 shrink-0">
-          {[
-            { id: 'all', label: 'All' },
-            { id: 'groups', label: 'Groups' },
-            { id: 'requests', label: 'Inbox' },
-            { id: 'archived', label: 'Archive' }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`py-2 text-[8px] font-mono tracking-wider font-extrabold rounded-lg uppercase transition-all cursor-pointer text-center relative ${
-                activeTab === tab.id ? 'bg-[#8B5CF6] text-white shadow-md' : 'text-violet-400/50 hover:text-white'
-              }`}
-            >
-              {tab.label}
-              {tab.id === 'requests' && (
-                <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-pink-500 rounded-full animate-pulse" />
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Current Presence Profile Switcher */}
-        <div className="p-2.5 bg-[#03010c] border-b border-white/5 flex items-center justify-between">
+        {/* Messages List Header */}
+        <div className="p-3 bg-[#03010c] border-b border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="relative">
               <img 
@@ -866,46 +843,11 @@ export default function MessagesView({
                 className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/30" 
                 referrerPolicy="no-referrer"
               />
-              <span className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
-                myPresence === 'online' ? 'bg-emerald-500' : myPresence === 'away' ? 'bg-amber-500' : myPresence === 'busy' ? 'bg-rose-500' : 'bg-zinc-600'
-              }`} />
             </div>
             <div className="text-left leading-none">
               <p className="text-[10px] font-sans font-bold text-white">{currentUser.name}</p>
-              <span className="text-[8px] font-mono text-zinc-500 uppercase">{myPresence}</span>
+              <span className="text-[8px] font-mono text-zinc-500 uppercase">Online</span>
             </div>
-          </div>
-
-          <div className="relative">
-            <button 
-              onClick={() => setShowPresenceDropdown(!showPresenceDropdown)}
-              className="p-1 hover:bg-white/5 rounded-lg text-zinc-500 hover:text-white transition-colors cursor-pointer"
-            >
-              <ChevronDown className="w-3.5 h-3.5" />
-            </button>
-
-            {showPresenceDropdown && (
-              <div className="absolute right-0 top-6 z-30 bg-[#09071c] border border-violet-500/20 rounded-xl p-1.5 space-y-1 w-32 shadow-2xl text-left">
-                {[
-                  { id: 'online', label: 'Online 🟢' },
-                  { id: 'away', label: 'Away 🟡' },
-                  { id: 'busy', label: 'Busy 🔴' },
-                  { id: 'invisible', label: 'Invisible 👤' }
-                ].map(item => (
-                  <button
-                    key={item.id}
-                    onClick={() => {
-                      setMyPresence(item.id as any);
-                      setShowPresenceDropdown(false);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: `Presence status updated: ${item.label}` }));
-                    }}
-                    className="w-full text-left p-1.5 hover:bg-white/5 rounded-lg text-[10px] font-mono uppercase tracking-wider text-violet-200"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         </div>
 
@@ -1009,30 +951,19 @@ export default function MessagesView({
           })}
 
           {filteredChats.length === 0 && (
-            <div className="p-8 text-center flex flex-col items-center justify-center gap-3 select-none h-48">
-              <MessageSquare className="w-8 h-8 text-violet-500/20 mb-1 animate-pulse" />
-              <p className="text-[11px] font-black uppercase tracking-wider text-violet-300">No Chats Available</p>
+            <div className="p-8 text-center flex flex-col items-center justify-center gap-3 select-none h-48 py-20">
+              <div className="w-12 h-12 rounded-full bg-violet-600/5 border border-violet-500/15 flex items-center justify-center mx-auto text-violet-400/40">
+                <MessageSquare className="w-5 h-5 text-violet-500/30" />
+              </div>
+              <p className="text-[11px] font-black uppercase tracking-wider text-white">No messages yet</p>
               <p className="text-[10px] text-zinc-500 leading-normal max-w-[200px]">
-                No matching active encrypted chats. Start a private discussion with other members.
+                When someone sends you a message, your conversations will appear here.
               </p>
             </div>
           )}
         </div>
 
-        {/* Offline Simulation toggle footer bar */}
-        <div className="p-3 bg-black/40 border-t border-white/5 flex items-center justify-between text-xs font-mono shrink-0">
-          <span className="text-zinc-500 uppercase tracking-widest text-[9px] font-extrabold">Simulate Offline</span>
-          <button 
-            onClick={() => setIsOffline(!isOffline)}
-            className={`px-3 py-1 rounded-xl transition-all cursor-pointer ${
-              isOffline 
-                ? 'bg-rose-500 text-white font-extrabold border border-rose-400/30 shadow-md animate-pulse' 
-                : 'bg-zinc-800 text-zinc-400 border border-white/5'
-            }`}
-          >
-            {isOffline ? 'OFFLINE ACTIVE 🔴' : 'ONLINE STABLE 🟢'}
-          </button>
-        </div>
+        {/* Footer removed */}
       </div>
 
       {/* ======================================================== */}
@@ -1072,23 +1003,7 @@ export default function MessagesView({
               {/* Call and settings actions */}
               <div className="flex items-center gap-1.5 relative">
                 
-                {/* Voice Call */}
-                <button
-                  onClick={() => setActiveCall({ type: 'voice', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
-                  className="p-1.5 bg-[#0a071d] hover:bg-[#110c2e] border border-violet-500/10 hover:border-violet-500/20 rounded-lg text-violet-400 hover:text-white transition-colors cursor-pointer"
-                  title="Secure Voice Call"
-                >
-                  <Phone className="w-3.5 h-3.5" />
-                </button>
-
-                {/* Video Call */}
-                <button
-                  onClick={() => setActiveCall({ type: 'video', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
-                  className="p-1.5 bg-[#0a071d] hover:bg-[#110c2e] border border-violet-500/10 hover:border-violet-500/20 rounded-lg text-violet-400 hover:text-white transition-colors cursor-pointer"
-                  title="Secure Video Call"
-                >
-                  <Video className="w-3.5 h-3.5" />
-                </button>
+                {/* No call buttons here */}
 
                 {/* Disappearing Mode */}
                 <button
@@ -1324,11 +1239,16 @@ export default function MessagesView({
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#05030d]">
-            <ShieldAlert className="w-12 h-12 text-violet-500/30 mb-3 animate-pulse" />
-            <p className="font-sans font-medium text-violet-300 text-sm">No Conversation Selected</p>
-            <p className="font-sans text-[11px] text-zinc-500 mt-1.5 max-w-xs text-center leading-normal">
-              Select a contact from your messages list to start chatting. All conversations on Nexora are fully secure.
+            <div className="w-16 h-16 rounded-full bg-violet-600/5 border border-violet-500/15 flex items-center justify-center mx-auto text-violet-400/40 mb-4">
+              <MessageSquare className="w-8 h-8 text-violet-500/30" />
+            </div>
+            <p className="font-sans font-black text-white text-base">No messages yet</p>
+            <p className="font-sans text-xs text-zinc-500 mt-2 max-w-xs text-center leading-relaxed">
+              When someone sends you a message, your conversations will appear here. All conversations on Nexora are fully secure.
             </p>
+            <button className="mt-6 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer">
+              Start a Conversation
+            </button>
           </div>
         )}
 

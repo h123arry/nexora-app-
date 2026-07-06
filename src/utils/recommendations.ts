@@ -14,7 +14,7 @@ export function getRecommendationProfile(): RecommendationProfile {
   // Provide some high quality default weights so the feed has rich seed content for new users
   return { 
     tags: { 'football': 10, 'tech': 5, 'afrobeats': 8, 'nigeria': 4, 'creative': 6 }, 
-    creators: { 'voh': 15, 'nexora_ai': 10 }, 
+    creators: { 'voh': 15 }, 
     communities: { 'Afrobeats Central': 5, 'Developer Synergy': 5 } 
   };
 }
@@ -28,26 +28,32 @@ export function saveRecommendationProfile(profile: RecommendationProfile) {
 }
 
 export function recordRecommendationEvent(
-  type: 'watch_complete' | 'skip_quick' | 'spark' | 'comment' | 'share' | 'save' | 'join_community' | 'follow' | 'search' | 'visit_profile',
-  payload: { tags?: string[]; creatorId?: string; creatorUsername?: string; communityName?: string; keyword?: string }
+  type: 'watch_complete' | 'watch_partial' | 'skip_quick' | 'spark' | 'comment' | 'share' | 'save' | 'join_community' | 'follow' | 'search' | 'visit_profile',
+  payload: { tags?: string[]; creatorId?: string; creatorUsername?: string; communityName?: string; keyword?: string; watchTimeRatio?: number }
 ) {
   const profile = getRecommendationProfile();
   
   // Tag score modifiers
   const modifiers = {
-    watch_complete: 12,
-    skip_quick: -15, // strong skip penalty to adjust quickly!
-    spark: 10,
-    comment: 15,
-    share: 18,
-    save: 15,
-    join_community: 25,
-    follow: 25,
-    search: 8,
-    visit_profile: 12
+    watch_complete: 20,
+    watch_partial: 5,
+    skip_quick: -20, // strong skip penalty to adjust quickly!
+    spark: 12,
+    comment: 18,
+    share: 22,
+    save: 18,
+    join_community: 30,
+    follow: 30,
+    search: 10,
+    visit_profile: 15
   };
   
-  const score = modifiers[type] || 0;
+  let score = modifiers[type] || 0;
+  
+  // Apply watch time ratio for partial watches
+  if (type === 'watch_partial' && payload.watchTimeRatio) {
+    score = Math.floor(score * payload.watchTimeRatio);
+  }
 
   // Process tags
   if (payload.tags) {
