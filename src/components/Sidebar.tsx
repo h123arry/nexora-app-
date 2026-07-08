@@ -1,19 +1,4 @@
-import { 
-  Home, 
-  MessageSquare, 
-  User as UserIcon, 
-  Bell, 
-  PlusCircle, 
-  Globe, 
-  Sliders,
-  Sparkles,
-  Target,
-  Compass,
-  Zap,
-  Search,
-  Bot,
-  BarChart2
-} from 'lucide-react';
+import { Home, MessageSquare, User as UserIcon, Bell, PlusCircle, Globe, Sliders, Sparkles, Target, Compass, Zap, Search, Bot, BarChart2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { User, ThemeMood } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -21,8 +6,8 @@ import NexoraPremiumLogo from './NexoraPremiumLogo';
 
 interface SidebarProps {
   currentUser: User;
-  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator';
-  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator') => void;
+  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities';
+  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities') => void;
   unreadMessagesCount: number;
   unreadNotificationsCount: number;
   theme: ThemeMood;
@@ -102,6 +87,7 @@ export default function Sidebar({
         {[
           { id: 'feed', label: 'Home', desc: 'Sleek social feed', icon: Home, count: 0 },
           { id: 'explore', label: 'Search', desc: 'Find trends & tags', icon: Search, count: 0 },
+          { id: 'communities', label: 'Hub', desc: 'Communities & Pages', icon: Compass, count: 0 },
           { id: 'nida', label: 'NIDA AI', desc: 'Discovery Algorithm', icon: Sparkles, count: 0 },
           { id: 'create_btn', label: 'Create Post', desc: 'Share photos, video, voice, poll', icon: PlusCircle, isCreate: true, count: 0 },
           { id: 'inbox', label: 'Inbox', desc: 'Messages & Alerts', icon: MessageSquare, count: unreadMessagesCount + unreadNotificationsCount },
@@ -145,28 +131,6 @@ export default function Sidebar({
           );
         })}
 
-        {/* Optional VOH AI system bot deck */}
-        <button
-          onClick={() => setActiveTab('matrix')}
-          className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl border transition-all text-left group cursor-pointer mt-1 ${
-            activeTab === 'matrix'
-              ? 'bg-linear-to-r from-violet-600/25 to-pink-500/10 border-violet-500/40 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5'
-              : 'bg-black/35 border-current/5 hover:border-violet-500/20 text-violet-400 hover:bg-violet-950/10'
-          }`}
-        >
-          <div className="p-1.5 rounded-lg bg-violet-600/10 text-violet-400 group-hover:scale-105 transition-all">
-            <Bot className="w-3.5 h-3.5 text-violet-400" />
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-cyan-300 group-hover:text-cyan-200">
-              VOH AI Assistant
-            </span>
-            <span className="block text-[9px] text-current/40 font-mono truncate">
-              Ask any helpful topic
-            </span>
-          </div>
-        </button>
-
         {/* Conditional Creator panel link */}
         <button
           onClick={() => setActiveTab('creator')}
@@ -181,7 +145,7 @@ export default function Sidebar({
           </div>
           <div className="flex-1 overflow-hidden">
             <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-violet-400 group-hover:text-violet-300">
-              Creator Studio 📈
+              Nexora Studio 📈
             </span>
             <span className="block text-[9px] text-current/40 font-mono truncate">
               Professional Publishing

@@ -1,29 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Compass, 
-  Sparkles, 
-  Users, 
-  Coins, 
-  Wand2, 
-  Check, 
-  Plus,
-  Flame,
-  Globe,
-  X,
-  Send,
-  Volume2,
-  Lock,
-  FileText,
-  Calendar,
-  Shield,
-  Trophy,
-  Megaphone,
-  UserCheck,
-  BarChart2,
-  Download,
-  Award
-} from 'lucide-react';
+import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Download, Award } from 'lucide-react';
 import { Circle, User } from '../types';
 import { INITIAL_CIRCLES, MOCK_CREATORS, INITIAL_USER } from '../data/database';
 import { recordRecommendationEvent } from '../utils/recommendations';

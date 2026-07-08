@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Zap, Repeat, MessageSquare, Share2, Bookmark, Cpu, Play, Pause, Volume2, Mic, 
-  Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw,
-  Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp,
-  MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen,
-  Heart, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity
-} from 'lucide-react';
+import { Zap, Repeat, MessageSquare, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Forward } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -144,6 +138,7 @@ const SEARCHABLE_SYSTEM_USERS = [
 
 interface FeedViewProps {
   currentUser: User;
+  creators?: User[];
   posts: Post[];
   followingIds: string[];
   onLikePost: (postId: string) => void;
@@ -158,10 +153,12 @@ interface FeedViewProps {
   onToggleFollow?: (creatorId: string) => void;
   theme?: ThemeMood;
   onSharePost?: (postId: string) => void;
+  activeTab?: string;
 }
 
 export default function FeedView({
   currentUser,
+  creators = [],
   posts,
   followingIds,
   onLikePost,
@@ -175,7 +172,8 @@ export default function FeedView({
   onViewProfile,
   onToggleFollow,
   theme = 'stealth-dark',
-  onSharePost
+  onSharePost,
+  activeTab = 'feed'
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
@@ -576,11 +574,78 @@ export default function FeedView({
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // State to hold pending posts received in the background while scrolling
+  const [pendingPosts, setPendingPosts] = useState<RefactoredPost[]>([]);
+
   // 1. Hydrate the feed and synchronize with Parent posts
   useEffect(() => {
     const seeded = seedWorldFeed(posts);
-    setLocalPosts(seeded);
-  }, [posts]);
+    
+    setLocalPosts(currentLocalPosts => {
+      if (currentLocalPosts.length === 0) {
+        // Initial load
+        return seeded;
+      }
+      
+      // Separate existing and new posts
+      const currentIds = new Set(currentLocalPosts.map(p => p.id));
+      const newSeededPosts = seeded.filter(p => !currentIds.has(p.id));
+      
+      // Update existing posts in-place to preserve their exact order and indices
+      const updatedLocalPosts = currentLocalPosts.map(existingPost => {
+        const matchingIncoming = seeded.find(p => p.id === existingPost.id);
+        if (matchingIncoming) {
+          const hasChanged = 
+            existingPost.likes !== matchingIncoming.likes ||
+            existingPost.comments.length !== matchingIncoming.comments.length ||
+            existingPost.isLikedByUser !== matchingIncoming.isLikedByUser ||
+            existingPost.isBookmarkedByUser !== matchingIncoming.isBookmarkedByUser ||
+            existingPost.shares !== matchingIncoming.shares ||
+            existingPost.scheduledTime !== matchingIncoming.scheduledTime ||
+            existingPost.name !== matchingIncoming.name ||
+            existingPost.avatar !== matchingIncoming.avatar ||
+            existingPost.username !== matchingIncoming.username ||
+            existingPost.isVerified !== matchingIncoming.isVerified;
+            
+          if (hasChanged) {
+            return {
+              ...existingPost,
+              ...matchingIncoming,
+              comments: matchingIncoming.comments
+            };
+          }
+        }
+        return existingPost;
+      });
+
+      // Handle new incoming posts
+      if (newSeededPosts.length > 0) {
+        // Split new posts into user-created posts (prepend immediately) and background posts (queue as pending)
+        const currentUserNewPosts = newSeededPosts.filter(p => p.userId === currentUser.id);
+        const otherNewPosts = newSeededPosts.filter(p => p.userId !== currentUser.id);
+        
+        // Also check if user is at the top of the feed to allow immediate update for background posts
+        const isAtTop = scrollContainerRef.current ? scrollContainerRef.current.scrollTop <= 20 : true;
+        
+        if (isAtTop && otherNewPosts.length > 0) {
+          // Prepend all new posts since user is at top
+          return [...newSeededPosts, ...updatedLocalPosts];
+        } else {
+          // Add other users' posts to pendingPosts and prepend current user's own posts immediately
+          if (otherNewPosts.length > 0) {
+            setPendingPosts(prev => {
+              const existingPendingIds = new Set(prev.map(p => p.id));
+              const freshPending = otherNewPosts.filter(p => !existingPendingIds.has(p.id));
+              return [...prev, ...freshPending];
+            });
+          }
+          return [...currentUserNewPosts, ...updatedLocalPosts];
+        }
+      }
+
+      return updatedLocalPosts;
+    });
+  }, [posts, currentUser.id]);
 
   const audioCtxRef = useRef<any>(null);
   const [voiceMomentSeconds, setVoiceMomentSeconds] = useState(0);
@@ -749,35 +814,73 @@ export default function FeedView({
     };
   }, [localPosts, visibleCount]);
 
-  // Restore scroll position on load
+  // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
-    const savedPos = localStorage.getItem('nexora_feed_scroll_pos');
-    if (savedPos && scrollContainerRef.current) {
-      const timer = setTimeout(() => {
-        if (scrollContainerRef.current) {
-          scrollContainerRef.current.scrollTop = Number(savedPos);
-        }
-      }, 300);
-      return () => clearTimeout(timer);
+    if (activeTab === 'feed') {
+      const savedPos = localStorage.getItem('nexora_feed_scroll_pos');
+      if (savedPos && scrollContainerRef.current) {
+        const timer = setTimeout(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = Number(savedPos);
+          }
+        }, 150);
+        return () => clearTimeout(timer);
+      }
     }
-  }, []);
+  }, [activeTab]);
+
+  // Track previous activeTab to save scroll position right before/during tab switch
+  const prevActiveTabRef = useRef(activeTab);
+  
+  useEffect(() => {
+    if (prevActiveTabRef.current === 'feed' && activeTab !== 'feed') {
+      if (scrollContainerRef.current) {
+        localStorage.setItem('nexora_feed_scroll_pos', String(scrollContainerRef.current.scrollTop));
+      }
+    }
+    prevActiveTabRef.current = activeTab;
+  }, [activeTab]);
+
+  // Apply pending background posts smoothly
+  const handleApplyPendingPosts = () => {
+    if (pendingPosts.length > 0) {
+      setLocalPosts(prev => [...pendingPosts, ...prev]);
+      setPendingPosts([]);
+      setVisibleCount(8);
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed updated with latest background activities!' }));
+    }
+  };
 
   // Pull-down refresh simulator
   const triggerRefresh = () => {
     setIsRefreshing(true);
     setTimeout(() => {
       setIsRefreshing(false);
-      // Shuffle posts gently or add new generated ones
-      setLocalPosts(prev => {
-        const copy = [...prev];
-        // Shift a few posts for fresh layout
-        if (copy.length > 5) {
-          const first = copy.shift();
-          if (first) copy.splice(3, 0, first);
-        }
-        return copy;
-      });
+      
+      if (pendingPosts.length > 0) {
+        // Apply background posts immediately on pull refresh
+        setLocalPosts(prev => [...pendingPosts, ...prev]);
+        setPendingPosts([]);
+      } else {
+        // Shuffle posts gently or add new generated ones if no pending ones
+        setLocalPosts(prev => {
+          const copy = [...prev];
+          // Shift a few posts for fresh layout
+          if (copy.length > 5) {
+            const first = copy.shift();
+            if (first) copy.splice(3, 0, first);
+          }
+          return copy;
+        });
+      }
+      
       setVisibleCount(8);
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0;
+      }
     }, 1200);
   };
 
@@ -1134,6 +1237,9 @@ export default function FeedView({
 
   // Search filter options
   const filteredPosts = localPosts.filter(post => {
+    // 0. Filter out archived posts
+    if (post.isArchived) return false;
+
     // 1. Core moderation overrides
     if (hiddenPostIds.includes(post.id)) return false;
     if (blockedUserIds.includes(post.userId)) return false;
@@ -1288,8 +1394,9 @@ export default function FeedView({
           if (b.timestamp?.includes('m ago') || b.timestamp?.includes('h ago')) scoreB += 5000;
 
           // 2. Engagement score: Likes, Shares, Comments, Bookmarks/Saves
-          const engagementA = (a.likes || 0) * 2 + (a.shares || 0) * 4 + (a.comments?.length || 0) * 3 + (a.bookmarksCount || 0) * 5;
-          const engagementB = (b.likes || 0) * 2 + (b.shares || 0) * 4 + (b.comments?.length || 0) * 3 + (b.bookmarksCount || 0) * 5;
+          // Added weights for sparks, shares, and bookmarks to reflect engagement depth.
+          const engagementA = (a.likes || 0) * 3 + (a.shares || 0) * 6 + (a.comments?.length || 0) * 4 + (a.bookmarksCount || 0) * 8;
+          const engagementB = (b.likes || 0) * 3 + (b.shares || 0) * 6 + (b.comments?.length || 0) * 4 + (b.bookmarksCount || 0) * 8;
           scoreA += engagementA;
           scoreB += engagementB;
 
@@ -1391,7 +1498,54 @@ export default function FeedView({
     return sorted;
   };
 
-  const currentDisplayList = getRankedPosts().slice(0, visibleCount);
+  // State to hold the stable cached/rendered posts list to prevent re-sorting on engagement updates
+  const [orderedPosts, setOrderedPosts] = useState<RefactoredPost[]>([]);
+  const lastStateKeyRef = useRef<string>('');
+
+  useEffect(() => {
+    // Generate a unique state key representing current filters & tab selection
+    const stateKey = [
+      feedTab,
+      sortBy,
+      searchFilterType,
+      searchQuery,
+      selectedTag,
+      activeCollectionFolder,
+      qualityFilter
+    ].join('|');
+    
+    const hasFiltersChanged = stateKey !== lastStateKeyRef.current;
+    lastStateKeyRef.current = stateKey;
+
+    setOrderedPosts(currentOrdered => {
+      // If we already have ordered posts and the main filters haven't changed,
+      // we only update existing post content (likes, comments, isLikedByUser, etc.)
+      // in place to prevent layout shifting or re-ranking during interaction!
+      if (currentOrdered.length > 0 && !hasFiltersChanged) {
+        const existingIdsOrder = currentOrdered.map(p => p.id);
+        const updatedOrdered = existingIdsOrder.map(id => {
+          const freshPost = localPosts.find(p => p.id === id);
+          const oldPost = currentOrdered.find(p => p.id === id);
+          return freshPost || oldPost!;
+        }).filter(Boolean) as RefactoredPost[];
+        
+        // Also prepend any brand-new posts (e.g. if the current user just added a post, or we applied pending posts)
+        // without disturbing the rest of the list
+        const currentOrderedIds = new Set(existingIdsOrder);
+        const brandNewPosts = localPosts.filter(p => !currentOrderedIds.has(p.id));
+        if (brandNewPosts.length > 0) {
+          return [...brandNewPosts, ...updatedOrdered];
+        }
+        
+        return updatedOrdered;
+      }
+
+      // Otherwise, perform the full filtering, sorting and interleaving pass
+      return getRankedPosts();
+    });
+  }, [localPosts, feedTab, sortBy, searchFilterType, searchQuery, selectedTag, activeCollectionFolder, qualityFilter]);
+
+  const currentDisplayList = orderedPosts.slice(0, visibleCount);
 
   // "One Swipe = One Video" precise navigation interceptor to prevent multi-video jumps
   const isInterceptScrollingRef = useRef(false);
@@ -1608,10 +1762,7 @@ export default function FeedView({
     { name: "🎓 Afrobeat Jams", members: "1,840 members", desc: "Conversations on the finest Afrobeat songs and artists." }
   ];
 
-  const suggestedUsers = [
-    { id: 'creator-4', name: "Nexora Official ✓", username: "nexora_official", avatar: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "Official NEXORA platform account 🌟 Keeping you posted with community updates, feature releases, and everyday stories." },
-    { id: 'voh_ai', name: "VOH AI", username: "voh_ai", avatar: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80", location: "Lagos, Nigeria", bio: "The Intelligent AI assistant by VOICE OF HARRISON. Discussing football, music tracks, and daily trends." }
-  ];
+  const suggestedUsers = creators.filter(c => c.id !== currentUser.id && c.id !== 'user-0').slice(0, 4);
 
   // Theme-aware backdrop container style for the fixed/overlay top navigation
   const getHeaderOverlayClass = () => {
@@ -1684,19 +1835,6 @@ export default function FeedView({
 
         {/* Right: Messages and AI Oracle */}
         <div className="flex items-center gap-2">
-          {/* VOH AI button */}
-          <button 
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('toast', { detail: '🧠 VOH AI Oracle: Ask questions or design communities anytime!' }));
-              window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'matrix', subTab: 'ai' } }));
-            }}
-            className="p-1 px-2.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 transition-all border border-violet-500/10 flex items-center gap-1.5 cursor-pointer"
-            title="VOH AI Assistant Oracle"
-          >
-            <Zap className="w-3 h-3 text-pink-400 animate-bounce" />
-            <span className="text-[9px] font-mono font-black text-violet-200">VOH AI</span>
-          </button>
-
           {/* Message Inbox button */}
           <button 
             onClick={() => {
@@ -1710,6 +1848,27 @@ export default function FeedView({
           </button>
         </div>
       </div>
+
+      {/* Floating Pill for Pending background posts */}
+      <AnimatePresence>
+        {pendingPosts.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, x: "-50%" }}
+            animate={{ opacity: 1, y: 12, x: "-50%" }}
+            exit={{ opacity: 0, y: -20, x: "-50%" }}
+            transition={{ type: "spring", stiffness: 450, damping: 28 }}
+            className="absolute top-28 md:top-20 left-1/2 z-50 pointer-events-auto"
+          >
+            <button
+              onClick={handleApplyPendingPosts}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-violet-600 hover:bg-violet-500 text-white text-[10px] font-mono font-bold shadow-lg shadow-violet-950/50 border border-violet-400/20 cursor-pointer backdrop-blur-md transition-all uppercase tracking-widest"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-pink-300 animate-pulse shrink-0" />
+              <span>{pendingPosts.length} New {pendingPosts.length === 1 ? 'Post' : 'Posts'} available</span>
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
 
 
@@ -2241,7 +2400,7 @@ export default function FeedView({
                                 ) : (
                                   <button 
                                     onClick={() => setActiveReplyFieldId(c.id)}
-                                    className="text-[10px] font-mono text-violet-400 hover:text-white flex items-center gap-1 mt-1 cursor-pointer"
+                                    className="text-xs font-mono text-violet-400 hover:text-white flex items-center gap-1 mt-1 cursor-pointer"
                                   >
                                     Reply to Thread 💬
                                   </button>
@@ -2263,7 +2422,7 @@ export default function FeedView({
                           />
                           <button 
                             onClick={() => handleAddCommentSubmit(post.id)}
-                            className="p-2.5 bg-violet-600 hover:bg-violet-550 rounded-xl text-white transition-colors cursor-pointer"
+                            className="p-3 bg-violet-600 hover:bg-violet-550 rounded-xl text-white transition-colors cursor-pointer"
                           >
                             <Send className="w-4 h-4" />
                           </button>
@@ -2548,6 +2707,21 @@ export default function FeedView({
                                 </button>
                               )}
 
+                              {/* Archive / Restore Post (If own post) */}
+                              {post.userId === currentUser.id && (
+                                <button
+                                  onClick={() => {
+                                    const archiveState = !post.isArchived;
+                                    window.dispatchEvent(new CustomEvent('nexora-archive-post', { detail: { postId: post.id, archiveState } }));
+                                    setActiveDotsMenuPostId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                                >
+                                  <Archive className="w-3.5 h-3.5 shrink-0 text-fuchsia-400" />
+                                  {post.isArchived ? 'Restore Post' : 'Archive Post'}
+                                </button>
+                              )}
+
                               {/* Delete Post (If own post) */}
                               {post.userId === currentUser.id && (
                                 <button
@@ -2682,7 +2856,7 @@ export default function FeedView({
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-white/5 text-emerald-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
                               >
-                                <Share2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                                <Forward className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
                                 Copy Link
                               </button>
 
@@ -2695,7 +2869,7 @@ export default function FeedView({
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-white/5 text-sky-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
                               >
-                                <Share2 className="w-3.5 h-3.5 shrink-0 text-sky-400" />
+                                <Forward className="w-3.5 h-3.5 shrink-0 text-sky-400" />
                                 Share
                               </button>
 
@@ -3127,7 +3301,7 @@ export default function FeedView({
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 cursor-pointer text-[11px] text-violet-300/90"
                       >
-                        <Share2 className="w-3.5 h-3.5 text-pink-400" />
+                        <Forward className="w-3.5 h-3.5 text-pink-400" />
                         <span className="hidden sm:inline">Share</span>
                       </motion.button>
                     </div>

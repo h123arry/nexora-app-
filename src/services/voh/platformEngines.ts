@@ -250,7 +250,7 @@ export class AchievementService {
   }
 }
 
-// 16. Creator Studio Engine
+// 16. Nexora Studio Engine
 export class CreatorStudioService {
   static getStudioInsights(likesCount: number, sharesCount: number, rawViews: number): { views: number; averageWatchTimeSec: number; audienceRetentionRate: number; projectedEarningsNex: number; engagementRate: number } {
     const views = Math.max(rawViews, likesCount * 4 + sharesCount * 5);
@@ -527,7 +527,7 @@ export const ALL_25_ENGINES: EngineDefinition[] = [
     id: 'distribution',
     name: 'Content Distribution',
     desc: 'Balances freshness with follower spread',
-    iconName: 'Share2',
+    iconName: 'Forward',
     badge: 'Active',
     category: '🎬 Content & Media',
     controls: [
@@ -769,7 +769,7 @@ export const ALL_25_ENGINES: EngineDefinition[] = [
   },
   {
     id: 'studio',
-    name: 'Creator Studio',
+    name: 'Nexora Studio',
     desc: 'Provides advanced audience analytics',
     iconName: 'PenSquare',
     badge: 'Studio',

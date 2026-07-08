@@ -80,6 +80,20 @@ export interface Circle {
   membersCount: number;
   tags: string[];
   isJoinedByMe?: boolean;
+  avatarImage?: string;
+  onlineCount?: number;
+  moderators?: string[];
+  admins?: string[];
+  ownerId?: string;
+  type?: 'public' | 'private' | 'invite-only';
+  bannedUsers?: string[];
+  mutedUsers?: string[];
+  pendingMembers?: string[];
+  pinnedPosts?: string[];
+  reports?: Array<{ id: string; targetType: string; targetId: string; targetContent: string; reason: string; status: 'pending' | 'resolved' }>;
+  activityLog?: string[];
+  events?: Array<{ id: string; title: string; date: string; time: string; location: string; rsvpedUsers: string[] }>;
+  mediaLibrary?: Array<{ id: string; name: string; type: 'photo' | 'video' | 'doc' | 'link'; url: string; size?: string; uploadedBy: string; timestamp: string }>;
 }
 
 export interface PulseEvent {
@@ -258,3 +272,55 @@ export interface CrashLog {
   status: 'logged' | 'investigated' | 'resolved';
   severity: 'low' | 'medium' | 'high';
 }
+
+export interface Page {
+  id: string;
+  name: string;
+  username: string;
+  avatar: string;
+  coverImage: string;
+  category: 'Creator' | 'Business' | 'Brand' | 'Organization' | 'School' | 'Sports Club' | 'Entertainment' | 'Music Artist' | 'Public Figure' | 'Community' | 'News & Media' | 'Non-Profit';
+  description: string;
+  website: string;
+  contactInfo: string;
+  isVerified: boolean;
+  followersCount: number;
+  postsCount: number;
+  videosCount: number;
+  sparksReceived: number;
+  joinedDate: string;
+  ownerId: string;
+  followers: string[];
+}
+
+export interface LiveStream {
+  id: string;
+  creatorId: string;
+  creatorName: string;
+  creatorAvatar: string;
+  title: string;
+  description: string;
+  category: string;
+  thumbnail: string;
+  streamUrl: string;
+  viewers: number;
+  duration: number; // in seconds
+  timestamp: string;
+  status: 'live' | 'ended';
+  isFollowersOnly: boolean;
+  isCommunityLive: boolean;
+  communityId?: string;
+}
+
+export interface LiveEvent {
+  id: string;
+  title: string;
+  description: string;
+  date: string; // ISO string
+  hostId: string;
+  hostName: string;
+  hostAvatar: string;
+  rsvpedUserIds: string[];
+  isRemindEnabled: boolean;
+}
+

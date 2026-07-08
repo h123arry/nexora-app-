@@ -1,36 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Globe, 
-  Map, 
-  Flame, 
-  Check, 
-  Briefcase, 
-  Compass, 
-  Cpu, 
-  Music, 
-  Search,
-  Plus,
-  Users,
-  Radio,
-  Sparkles,
-  Award,
-  BookOpen,
-  MapPin,
-  TrendingUp,
-  Brain,
-  MessageSquare,
-  Share2,
-  Bell,
-  X,
-  Target,
-  Clock,
-  ArrowRight,
-  User,
-  Zap,
-  Info,
-  Calendar
-} from 'lucide-react';
+import { Globe, Map, Flame, Check, Briefcase, Compass, Cpu, Music, Search, Plus, Users, Radio, Sparkles, Award, BookOpen, MapPin, TrendingUp, Brain, MessageSquare, Bell, X, Target, Clock, ArrowRight, User, Zap, Info, Calendar, Forward } from 'lucide-react';
 
 export interface WorldPulseViewProps {
   theme: string;

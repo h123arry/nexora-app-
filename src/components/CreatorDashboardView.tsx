@@ -1,13 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  TrendingUp, Award, Clock, Eye, Sparkles, Share2, Bookmark, Users,
-  Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight,
-  X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive,
-  RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun,
-  Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone,
-  Tablet, CheckCircle, MessageSquare, Heart, ChevronDown
-} from 'lucide-react';
+import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, Forward } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
 import { 
@@ -500,7 +493,7 @@ export default function CreatorDashboardView({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 border border-violet-500/15 backdrop-blur-md">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-black text-white tracking-tight">Creator Studio V1.2</h2>
+            <h2 className="text-2xl font-black text-white tracking-tight">Nexora Studio V1.2</h2>
             <span className="flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" /> Good Standing
             </span>
@@ -513,7 +506,7 @@ export default function CreatorDashboardView({
               onClick={onClose} 
               className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-xs font-bold border border-white/5 transition-colors cursor-pointer"
             >
-              Exit Studio
+              Exit Nexora Studio
             </button>
           )}
           <button 
@@ -1162,7 +1155,7 @@ export default function CreatorDashboardView({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {mediaLibrary.length === 0 ? (
                   <div className="col-span-full py-12 text-center text-xs text-zinc-500 font-mono">
-                    No uploads logged in your creator studio library.
+                    No uploads logged in your Nexora Studio library.
                   </div>
                 ) : (
                   mediaLibrary.map(media => (

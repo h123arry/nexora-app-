@@ -1,19 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Search, 
-  Image as ImageIcon, 
-  Video as VideoIcon, 
-  FileText, 
-  Link as LinkIcon, 
-  Music, 
-  Download, 
-  ExternalLink,
-  ChevronUp,
-  SlidersHorizontal,
-  Calendar,
-  Grid
-} from 'lucide-react';
+import { X, Search, Image as ImageIcon, Video as VideoIcon, FileText, Link as LinkIcon, Music, Download, ExternalLink, ChevronUp, SlidersHorizontal, Calendar, Grid } from 'lucide-react';
 
 interface MediaItem {
   id: string;

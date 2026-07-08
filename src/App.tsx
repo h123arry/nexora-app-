@@ -1,42 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sparkles, 
-  HelpCircle, 
-  X, 
-  Radio, 
-  Code, 
-  Share2,
-  Bell,
-  Check,
-  Send,
-  Home,
-  Globe,
-  Plus,
-  User as UserIcon,
-  Search,
-  MessageSquare
-} from 'lucide-react';
+import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward } from 'lucide-react';
 
-import {
-  Camera,
-  Video as VideoIcon,
-  Mic,
-  BarChart2,
-  FileText,
-  Award,
-  Users as UsersIcon,
-  MapPin,
-  Smile,
-  ChevronRight,
-  Play,
-  Pause,
-  Trash2,
-  RefreshCw,
-  Eye,
-  WifiOff,
-  FolderOpen
-} from 'lucide-react';
+import { Camera, Video as VideoIcon, Mic, BarChart2, FileText, Award, Users as UsersIcon, MapPin, Smile, ChevronRight, Play, Pause, Trash2, RefreshCw, Eye, WifiOff, FolderOpen } from 'lucide-react';
 
 import { 
   User, 
@@ -61,7 +27,9 @@ import {
   INITIAL_NOTIFICATIONS,
   ADDITIONAL_TEST_ACCOUNTS
 } from './data/database';
-import { getGlobalPosts } from './services/dataService';
+import { getGlobalPosts, subscribeToPosts, subscribeToUsers, saveUserToDb, savePostToDb, subscribeToNotifications, subscribeToFollows, syncEngine } from './services/dataService';
+import { db, auth, signInAnonymously } from './lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
@@ -77,23 +45,28 @@ import MatrixView from './components/MatrixView';
 import AuthView from './components/AuthView';
 import AdminDashboardView from './components/AdminDashboardView';
 import CreatorDashboardView from './components/CreatorDashboardView';
+import OnboardingTour from './components/OnboardingTour';
 import MediaCreationEngine from './components/MediaCreationEngine';
 import ExploreView from './components/ExploreView';
 import InboxView from './components/InboxView';
+import LiveView from './components/LiveView';
 import SystemHubControlPanel from './components/SystemHubControlPanel';
 import NidaView from './components/NidaView';
+import CommunitiesHubView from './components/CommunitiesHubView';
+import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
-  // 1. Core State Orchestrator
   const [currentUser, setCurrentUser] = useState<User>(() => {
     const saved = localStorage.getItem('nexora_user');
-    const user = saved ? JSON.parse(saved) : INITIAL_USER;
-    
-    // Reset all temporary development balances to 0 for V1.1
-    user.nexBalance = 0;
-    user.thisWeekEarnedNex = 0;
-    
-    return user;
+    return saved ? JSON.parse(saved) : INITIAL_USER;
+  });
+
+  const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
+    const map: Record<string, User> = {};
+    const accounts = JSON.parse(localStorage.getItem('nexora_registered_accounts') || '[]');
+    [INITIAL_USER, ...MOCK_CREATORS.filter(u => ['user-0', 'creator-4', 'voh_ai'].includes(u.id))].forEach(u => map[u.id] = u);
+    accounts.forEach((a: any) => map[a.user.id] = a.user);
+    return map;
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(() => {
@@ -101,53 +74,100 @@ export default function App() {
     return saved === 'true';
   });
 
-  // List of saved/remembered accounts on this device for multi-account switching
-  const [savedAccounts, setSavedAccounts] = useState<User[]>(() => {
-    try {
-      const stored = localStorage.getItem('nexora_saved_accounts');
-      const loaded = stored ? JSON.parse(stored) : [];
-      return loaded;
-    } catch (e) {
-      return [];
-    }
+  const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !localStorage.getItem('nexora_onboarding_completed');
   });
 
-  const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
-
-  // Sync current user into savedAccounts array if logged in
   useEffect(() => {
-    if (isLoggedIn && currentUser && currentUser.id) {
-      setSavedAccounts(prev => {
-        const exists = prev.some(acc => acc.id === currentUser.id);
-        if (exists) {
-          return prev.map(acc => acc.id === currentUser.id ? currentUser : acc);
-        }
-        return [...prev, currentUser];
-      });
-    }
-  }, [currentUser, isLoggedIn]);
+    setGlobalUsersMap(prev => ({
+      ...prev,
+      [currentUser.id]: currentUser
+    }));
+  }, [currentUser]);
 
   useEffect(() => {
-    const handleSwitchIdentity = (e: Event) => {
-      const customEvent = e as CustomEvent;
-      const targetUser = customEvent.detail;
-      if (targetUser) {
-        setCurrentUser(targetUser);
-        localStorage.setItem('nexora_user', JSON.stringify(targetUser));
-        window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Switched active identity to @${targetUser.username}` }));
+    signInAnonymously(auth).catch((err) => {
+      if (err.code === 'auth/admin-restricted-operation') {
+        console.warn('Anonymous Auth is disabled. Using offline mode.');
       }
-    };
-    window.addEventListener('nexora-switch-identity', handleSwitchIdentity);
-    return () => window.removeEventListener('nexora-switch-identity', handleSwitchIdentity);
+    });
   }, []);
 
-  // Sync savedAccounts to localStorage
   useEffect(() => {
-    localStorage.setItem('nexora_saved_accounts', JSON.stringify(savedAccounts));
-  }, [savedAccounts]);
+    let unsubPosts: () => void;
+    let unsubUsers: () => void;
+    let unsubFollows: () => void;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        unsubPosts = subscribeToPosts((dbPosts) => {
+          if (dbPosts && dbPosts.length > 0) {
+            setPosts(normalizePosts(dbPosts));
+          } else {
+            console.log('[App] Firestore is empty, seeding INITIAL_POSTS and users...');
+            INITIAL_POSTS.forEach(post => savePostToDb(post));
+            saveUserToDb(INITIAL_USER);
+            MOCK_CREATORS.forEach(creator => saveUserToDb(creator));
+          }
+        });
+        
+        unsubUsers = subscribeToUsers((dbUsers) => {
+          if (dbUsers && dbUsers.length > 0) {
+            setGlobalUsersMap(prev => {
+              const newMap = { ...prev };
+              dbUsers.forEach(u => newMap[u.id] = u);
+              return newMap;
+            });
+          }
+        });
+
+        unsubFollows = subscribeToFollows((dbFollows) => {
+          if (dbFollows && dbFollows.length > 0) {
+            localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
+            const currentUserId = auth.currentUser?.uid || currentUser.id;
+            const updatedFollowing = dbFollows.filter((f: any) => f.followerId === currentUserId).map((f: any) => f.followingId);
+            setFollowingIds(updatedFollowing);
+          }
+        });
+      }
+    });
+
+    return () => {
+      unsubscribeAuth();
+      if (unsubPosts) unsubPosts();
+      if (unsubUsers) unsubUsers();
+      if (unsubFollows) unsubFollows();
+    };
+  }, []);
+
+  // Real-time notifications synchronization for active logged-in identity
+  useEffect(() => {
+    if (!currentUser?.id) return;
+    const unsubNotif = subscribeToNotifications(currentUser.id, (dbNotifs) => {
+      if (dbNotifs && dbNotifs.length > 0) {
+        setNotifications(dbNotifs);
+      }
+    });
+    return () => {
+      if (unsubNotif) unsubNotif();
+    };
+  }, [currentUser?.id]);
+
+  // Poll background synchronization status from dataService queue
+  useEffect(() => {
+    const checkSyncStatus = () => {
+      setIsSyncPending(syncEngine.getQueue().length > 0);
+    };
+    checkSyncStatus();
+    const interval = setInterval(checkSyncStatus, 2000);
+    return () => clearInterval(interval);
+  }, []);
 
   const normalizePosts = (rawPosts: any[]): Post[] => {
-    return rawPosts.map((post: any) => {
+    return rawPosts.filter((post: any) => {
+      return !!post.userId;
+    }).map((post: any) => {
       let permanentTime = post.createdAt || post.timestamp;
       
       const parsedMillis = Date.parse(permanentTime);
@@ -219,21 +239,14 @@ export default function App() {
 
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('nexora_posts');
-    const loadedPosts = saved ? JSON.parse(saved) : INITIAL_POSTS;
+    // Filter out fake seeded users
+
+    const OFFICIAL_IDS = ['user-0', 'creator-4', 'voh_ai'];
+    const loadedPosts = saved ? JSON.parse(saved).filter((p: any) => !p.id.startsWith('post-') || OFFICIAL_IDS.includes(p.userId) || p.userId.length > 20) : INITIAL_POSTS.filter(p => OFFICIAL_IDS.includes(p.userId));
     const normalized = normalizePosts(loadedPosts);
     localStorage.setItem('nexora_posts', JSON.stringify(normalized));
     return normalized;
   });
-
-  useEffect(() => {
-    async function fetchPosts() {
-      const dbPosts = await getGlobalPosts();
-      if (dbPosts && dbPosts.length > 0) {
-        setPosts(normalizePosts(dbPosts));
-      }
-    }
-    fetchPosts();
-  }, []);
 
   const [resolvedPosts, setResolvedPosts] = useState<Post[]>([]);
 
@@ -283,27 +296,48 @@ export default function App() {
           modified = true;
         }
 
+        const author = globalUsersMap[post.userId];
+        if (author && (post.name !== author.name || post.avatar !== author.avatar || post.username !== author.username || post.isVerified !== author.isVerified)) {
+           modified = true;
+        }
+
+        let commentsModified = false;
+        const syncedComments = (post.comments || []).map(c => {
+           const cAuthor = globalUsersMap[c.userId];
+           if (cAuthor && (c.name !== cAuthor.name || c.avatar !== cAuthor.avatar || c.username !== cAuthor.username)) {
+              commentsModified = true;
+              return { ...c, name: cAuthor.name, avatar: cAuthor.avatar, username: cAuthor.username };
+           }
+           return c;
+        });
+
         const isLikedByUser = userSparks.includes(post.id);
         const isBookmarkedByUser = userBookmarks.includes(post.id);
 
-        if (modified || post.isLikedByUser !== isLikedByUser || post.isBookmarkedByUser !== isBookmarkedByUser) {
+        if (modified || commentsModified || post.isLikedByUser !== isLikedByUser || post.isBookmarkedByUser !== isBookmarkedByUser) {
           return { 
             ...post, 
             videoUrl: vUrl, 
             voiceAudioUrl: aUrl,
             isLikedByUser,
-            isBookmarkedByUser
+            isBookmarkedByUser,
+            ...(author ? { name: author.name, avatar: author.avatar, username: author.username, isVerified: author.isVerified } : {}),
+            comments: syncedComments
           };
         }
         return post;
       }));
       if (active) {
-        setResolvedPosts(updated);
+        // Only update state if the resolved posts array differs from the previous posts array
+        // because of the reference check in the Promise.all mapper
+        if (updated !== posts) {
+          setResolvedPosts(updated);
+        }
       }
     };
     resolveAll();
     return () => { active = false; };
-  }, [posts, userSparks, userBookmarks]);
+  }, [posts, userSparks, userBookmarks, globalUsersMap]);
 
   const [chats, setChats] = useState<Chat[]>(() => {
     const savedUser = localStorage.getItem('nexora_user');
@@ -388,7 +422,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : ['creator-4', 'voh_ai'];
   });
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live'>('feed');
 
   // Pause any playing videos immediately when switching main tabs
   useEffect(() => {
@@ -635,77 +669,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // 3.8 Simulated Real-Time Platform Social Activity Sync (VOH and other users interacting live)
-  useEffect(() => {
-    const activityInterval = setInterval(() => {
-      // 1. Randomly increment sparks (likes) on existing posts to simulate active network traffic
-      setPosts(prev => {
-        if (!prev || prev.length === 0) return prev;
-        const indexToUpdate = Math.floor(Math.random() * prev.length);
-        const updated = [...prev];
-        const p = updated[indexToUpdate];
-        if (p && p.username !== currentUser.username) {
-          updated[indexToUpdate] = {
-            ...p,
-            likes: p.likes + Math.floor(Math.random() * 2) + 1
-          };
-        }
-        return updated;
-      });
-
-      // 2. Randomly trigger a smart contextual notification
-      const notificationTemplates = [
-        {
-          text: "120 new people viewed your profile today. Check Creator Studio!",
-          title: "Trending Momentum",
-          type: "system"
-        },
-        {
-          text: "Voice of Harrison mentioned you: 'Exploring afrobeats rhythms with V2!'",
-          title: "Mention Alert",
-          type: "mention"
-        },
-        {
-          text: "Your recent post is trending in Port Harcourt local feed! ⚡",
-          title: "Local Pulse",
-          type: "system"
-        },
-        {
-          text: "Harrison left a comment on your video post.",
-          title: "New Comment",
-          type: "comment"
-        }
-      ];
-
-      if (Math.random() > 0.6) {
-        const template = notificationTemplates[Math.floor(Math.random() * notificationTemplates.length)];
-        const newNotif = {
-          id: `notif-${Date.now()}`,
-          userId: 'user-0',
-          username: 'voh',
-          name: 'Harrison',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-          title: template.title,
-          content: template.text,
-          timestamp: new Date().toISOString(),
-          isRead: false,
-          type: template.type
-        };
-
-        setNotifications(prev => [newNotif as any, ...prev]);
-
-        // Dispatch beautiful alert toast
-        window.dispatchEvent(
-          new CustomEvent('toast', { 
-            detail: `🔔 ${template.title}: ${template.text}` 
-          })
-        );
-      }
-    }, 18000); // 18 seconds sync frequency
-
-    return () => clearInterval(activityInterval);
-  }, [currentUser]);
-
   // 3.5. Web Offline & Pending Sync State handlers
   useEffect(() => {
     const handleOnline = () => {
@@ -755,7 +718,7 @@ export default function App() {
 
   // Creator Tools global event listeners (Pin, Delete, Edit Caption, Toggle Comments, Delete Comment)
   useEffect(() => {
-    const handleDeletePost = (e: Event) => {
+    const handleDeletePost = async (e: Event) => {
       const { postId } = (e as CustomEvent).detail || {};
       if (!postId) return;
       setPosts(prev => {
@@ -763,6 +726,12 @@ export default function App() {
         localStorage.setItem('nexora_posts', JSON.stringify(next));
         return next;
       });
+      try {
+        const { deleteDoc, doc } = await import('firebase/firestore');
+        await deleteDoc(doc(db, 'posts', postId));
+      } catch (err) {
+        console.error(err);
+      }
       window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Post deleted successfully.' }));
     };
 
@@ -883,6 +852,38 @@ export default function App() {
       });
     };
 
+    const handleArchivePost = (e: Event) => {
+      const { postId, archiveState } = (e as CustomEvent).detail || {};
+      if (!postId) return;
+      setPosts(prev => {
+        const next = prev.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              isArchived: !!archiveState
+            };
+          }
+          return p;
+        });
+        localStorage.setItem('nexora_posts', JSON.stringify(next));
+        return next;
+      });
+
+      try {
+        const updateDocInFirebase = async () => {
+          const { updateDoc, doc } = await import('firebase/firestore');
+          await updateDoc(doc(db, 'posts', postId), { isArchived: !!archiveState });
+        };
+        updateDocInFirebase();
+      } catch (err) {
+        console.error('Firestore archive update error:', err);
+      }
+
+      window.dispatchEvent(new CustomEvent('toast', { 
+        detail: archiveState ? '📥 Post sent to studio archives.' : '📤 Post restored to live feed!' 
+      }));
+    };
+
     window.addEventListener('nexora-delete-post', handleDeletePost);
     window.addEventListener('nexora-edit-caption', handleEditCaption);
     window.addEventListener('nexora-toggle-comments', handleToggleComments);
@@ -890,6 +891,7 @@ export default function App() {
     window.addEventListener('nexora-spark-comment', handleSparkComment);
     window.addEventListener('nexora-add-reply', handleAddReply);
     window.addEventListener('nexora-increment-view', handleIncrementView);
+    window.addEventListener('nexora-archive-post', handleArchivePost);
 
     return () => {
       window.removeEventListener('nexora-delete-post', handleDeletePost);
@@ -899,6 +901,7 @@ export default function App() {
       window.removeEventListener('nexora-spark-comment', handleSparkComment);
       window.removeEventListener('nexora-add-reply', handleAddReply);
       window.removeEventListener('nexora-increment-view', handleIncrementView);
+      window.removeEventListener('nexora-archive-post', handleArchivePost);
     };
   }, []);
 
@@ -1031,6 +1034,7 @@ export default function App() {
       prevPosts.map(post => {
         if (post.id === postId) {
           const updatedLikes = isCurrentlyLiked ? post.likes - 1 : post.likes + 1;
+          savePostToDb({ ...post, likes: updatedLikes });
           
           // If liking, push interaction alert
           if (!isCurrentlyLiked && post.userId !== currentUser.id) {
@@ -1089,7 +1093,8 @@ export default function App() {
     imageFilter?: string,
     imageFilters?: string[],
     scheduledTime?: string,
-    isBroadcastPost?: boolean
+    isBroadcastPost?: boolean,
+    communityName?: string
   ): string => {
     // Parse tags safely
     const parsedTags = tagsString
@@ -1112,7 +1117,8 @@ export default function App() {
       videoUrl,
       voiceTranscript,
       voiceAudioUrl,
-      audience,
+      audience: communityName ? 'community' : audience,
+      communityName,
       tags: parsedTags,
       likes: 0,
       commentsCount: 0,
@@ -1133,6 +1139,7 @@ export default function App() {
     };
 
     setPosts(prev => [newPost, ...prev]);
+    savePostToDb(newPost);
     // Log post in database to grant reputation and increment contribution records
     createPostDb(currentUser.id);
 
@@ -1249,11 +1256,13 @@ export default function App() {
             setNotifications(prev => [newNotif, ...prev]);
           }
 
-          return {
+          const updatedPost = {
             ...p,
             commentsCount: p.commentsCount + 1,
             comments: [...p.comments, newComment]
           };
+          savePostToDb(updatedPost);
+          return updatedPost;
         }
         return p;
       })
@@ -1264,7 +1273,9 @@ export default function App() {
     setPosts(prevPosts =>
       prevPosts.map(p => {
         if (p.id === postId) {
-          return { ...p, shares: (p.shares || 0) + 1 };
+          const updatedPost = { ...p, shares: (p.shares || 0) + 1 };
+          savePostToDb(updatedPost);
+          return updatedPost;
         }
         return p;
       })
@@ -1339,7 +1350,7 @@ export default function App() {
       [chatId]: [...(prev[chatId] || []), newMsg]
     }));
 
-    const senderUser = MOCK_CREATORS.find(c => c.id === senderId) || { name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' };
+    const senderUser = (Object.values(globalUsersMap) as User[]).find(c => c.id === senderId) || { name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' };
     const newNotif: Notification = {
       id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
       type: 'message',
@@ -1383,7 +1394,7 @@ export default function App() {
       updatedFollowing = [...followingIds, creatorId];
       
       // record recommendation follow event
-      const targetCreator = MOCK_CREATORS.find(c => c.id === creatorId);
+      const targetCreator = (Object.values(globalUsersMap) as User[]).find(c => c.id === creatorId);
       if (targetCreator) {
         recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
         
@@ -1418,65 +1429,68 @@ export default function App() {
       return;
     }
 
+    let finalUserToView: User | null = null;
+
     // Try finding in Creators
-    const creator = MOCK_CREATORS.find(c => c.id === userIdOrUsername || c.username.toLowerCase() === cleanIdOrUser);
+    const creator = (Object.values(globalUsersMap) as User[]).find(c => c.id === userIdOrUsername || c.username.toLowerCase() === cleanIdOrUser);
     if (creator) {
-      setViewedUser(creator);
-      setActiveTab('profile');
-      return;
+      finalUserToView = creator;
     }
 
     // Try finding in Additional Test Accounts
-    const testAccount = ADDITIONAL_TEST_ACCOUNTS.find(a => a.id === userIdOrUsername || a.username.toLowerCase() === cleanIdOrUser);
-    if (testAccount) {
-      setViewedUser(testAccount);
-      setActiveTab('profile');
-      return;
+    if (!finalUserToView) {
+      const testAccount = ADDITIONAL_TEST_ACCOUNTS.find(a => a.id === userIdOrUsername || a.username.toLowerCase() === cleanIdOrUser);
+      if (testAccount) {
+        finalUserToView = testAccount;
+      }
     }
 
     // Try finding in registered database accounts
-    try {
-      const stored = localStorage.getItem('nexora_registered_accounts');
-      if (stored) {
-        const accounts = JSON.parse(stored);
-        const match = accounts.find((a: any) => 
-          a.user.id === userIdOrUsername || 
-          a.user.username.toLowerCase() === cleanIdOrUser || 
-          a.email.toLowerCase() === cleanIdOrUser
-        );
-        if (match) {
-          setViewedUser(match.user);
-          setActiveTab('profile');
-          return;
+    if (!finalUserToView) {
+      try {
+        const stored = localStorage.getItem('nexora_registered_accounts');
+        if (stored) {
+          const accounts = JSON.parse(stored);
+          const match = accounts.find((a: any) => 
+            a.user.id === userIdOrUsername || 
+            a.user.username.toLowerCase() === cleanIdOrUser || 
+            a.email.toLowerCase() === cleanIdOrUser
+          );
+          if (match) {
+            finalUserToView = match.user;
+          }
         }
-      }
-    } catch(e) {}
+      } catch(e) {}
+    }
 
     // Dynamic builder if not pre-configured
-    const matchingPost = posts.find(p => p.userId === userIdOrUsername || p.username.toLowerCase() === cleanIdOrUser);
-    if (matchingPost) {
-      const builtUser: User = {
-        id: matchingPost.userId,
-        username: matchingPost.username,
-        name: matchingPost.name,
-        avatar: matchingPost.avatar,
-        bio: `Prominent broadcaster specializing in secure data flows. Follow @${matchingPost.username} to find active discussions.`,
-        location: 'Earth Orbit',
-        website: `nexora.ai/${matchingPost.username}`,
-        followers: 130,
-        following: 58,
-        isVerified: matchingPost.isVerified || false,
-        coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-        joinedDate: 'Joined June 2026',
-        reputationPoints: 1200,
-        reputationBreakdown: { contributions: 300, helpfulness: 250, missionsCompleted: 2, skillsVerified: 650 },
-        interestDNA: { 'AI': 80, 'Technology': 70, 'Creative Coding': 60 },
-        skills: ['Broadcasting']
-      };
-      setViewedUser(builtUser);
-    } else {
-      // Fallback: build standard template
-      setViewedUser({
+    if (!finalUserToView) {
+      const matchingPost = posts.find(p => p.userId === userIdOrUsername || p.username.toLowerCase() === cleanIdOrUser);
+      if (matchingPost) {
+        finalUserToView = {
+          id: matchingPost.userId,
+          username: matchingPost.username,
+          name: matchingPost.name,
+          avatar: matchingPost.avatar,
+          bio: `Prominent broadcaster specializing in secure data flows. Follow @${matchingPost.username} to find active discussions.`,
+          location: 'Earth Orbit',
+          website: `nexora.ai/${matchingPost.username}`,
+          followers: 130,
+          following: 58,
+          isVerified: matchingPost.isVerified || false,
+          coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+          joinedDate: 'Joined June 2026',
+          reputationPoints: 1200,
+          reputationBreakdown: { contributions: 300, helpfulness: 250, missionsCompleted: 2, skillsVerified: 650 },
+          interestDNA: { 'AI': 80, 'Technology': 70, 'Creative Coding': 60 },
+          skills: ['Broadcasting']
+        };
+      }
+    }
+
+    // Fallback: build standard template
+    if (!finalUserToView) {
+      finalUserToView = {
         id: userIdOrUsername,
         username: cleanIdOrUser,
         name: cleanIdOrUser.charAt(0).toUpperCase() + cleanIdOrUser.slice(1),
@@ -1493,15 +1507,21 @@ export default function App() {
         reputationBreakdown: { contributions: 10, helpfulness: 10, missionsCompleted: 0, skillsVerified: 30 },
         interestDNA: { 'Technology': 100 },
         skills: ['Explorer']
-      });
+      };
     }
+
+    // Get instantly from ProfileEngine with quiet background revalidation
+    const instantUser = ProfileEngine.getProfileInstantly(finalUserToView, (freshUser) => {
+      setViewedUser(freshUser);
+    });
+    setViewedUser(instantUser);
     setActiveTab('profile');
   };
 
   const handleStartChat = (userId: string) => {
     if (!userId) return;
     // Find partner detail
-    let partner = MOCK_CREATORS.find(c => c.id === userId);
+    let partner = (Object.values(globalUsersMap) as User[]).find(c => c.id === userId);
     if (!partner) {
       try {
         const accounts = JSON.parse(localStorage.getItem('nexora_registered_accounts') || '[]');
@@ -1600,6 +1620,8 @@ export default function App() {
                 if (updatedData.username !== undefined) nextComment.username = updatedData.username;
                 if (updatedData.avatar !== undefined) nextComment.avatar = updatedData.avatar;
                 return nextComment;
+// Wait, let's just do it at the end of the handler
+
               }
               return comment;
             });
@@ -1611,6 +1633,42 @@ export default function App() {
 
       return updatedUser;
     });
+    saveUserToDb({ ...currentUser, ...updatedData });
+
+  };
+
+  // 8.5. Identity Switcher
+  const handleSwitchIdentity = (identity: { id: string; name: string; username: string; avatar: string; isPage: boolean; originalUser?: User }) => {
+    if (identity.isPage) {
+      const pageUser: User = {
+        id: identity.id,
+        username: identity.username,
+        name: identity.name,
+        avatar: identity.avatar,
+        bio: 'Official Page on Nexora.',
+        location: 'Nexora Network',
+        website: '',
+        followers: 120,
+        following: 0,
+        isVerified: true,
+        coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000',
+        joinedDate: 'Joined June 2026',
+        reputationPoints: 1000,
+        reputationBreakdown: { contributions: 100, helpfulness: 100, missionsCompleted: 0, skillsVerified: 50 },
+        interestDNA: {},
+        skills: ['Page Identity'],
+        // custom properties
+        ...({
+          isPageIdentity: true,
+          personalUserId: currentUser.id
+        } as any)
+      };
+      setCurrentUser(pageUser);
+      localStorage.setItem('nexora_user', JSON.stringify(pageUser));
+    } else if (identity.originalUser) {
+      setCurrentUser(identity.originalUser);
+      localStorage.setItem('nexora_user', JSON.stringify(identity.originalUser));
+    }
   };
 
   // 9. Notifications actions
@@ -1711,6 +1769,26 @@ export default function App() {
   const unreadMessagesCount = chats.reduce((acc, c) => acc + c.unreadCount, 0);
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
+  const resolvedNotifications = React.useMemo(() => {
+    return notifications.map(n => {
+       const user = globalUsersMap[n.userId];
+       if (user) {
+         return { ...n, username: user.username, avatar: user.avatar };
+       }
+       return n;
+    });
+  }, [notifications, globalUsersMap]);
+
+  const resolvedChats = React.useMemo(() => {
+    return chats.map(c => {
+       const partner = globalUsersMap[c.partnerId];
+       if (partner) {
+         return { ...c, partnerName: partner.name, partnerAvatar: partner.avatar, partnerBio: partner.bio };
+       }
+       return c;
+    });
+  }, [chats, globalUsersMap]);
+
   // Render Core layout
   if (!isLoggedIn) {
     return (
@@ -1762,7 +1840,7 @@ export default function App() {
           {/* Col 2 & 3: Main Immersive View Area */}
           <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-2 h-full w-full relative min-h-0" : "lg:col-span-2 min-h-0"}>
             <div className={activeTab === 'feed' ? "block h-full w-full" : "hidden h-0 overflow-hidden pointer-events-none"}>
-              <FeedView
+              <FeedView creators={Object.values(globalUsersMap) as User[]}
                 currentUser={getRichUser(currentUser)}
                 posts={resolvedPosts}
                 followingIds={followingIds}
@@ -1778,6 +1856,7 @@ export default function App() {
                 onToggleFollow={handleToggleFollow}
                 theme={theme}
                 onSharePost={handleSharePost}
+                activeTab={activeTab}
               />
             </div>
             
@@ -1794,7 +1873,7 @@ export default function App() {
 
                   {activeTab === 'explore' && (
                     <ExploreView
-                      creators={MOCK_CREATORS}
+                      creators={Object.values(globalUsersMap) as User[]}
                       posts={resolvedPosts}
                       setSelectedTag={setSelectedTag}
                       setActiveTab={(t) => setActiveTab(t as any)}
@@ -1813,7 +1892,7 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       posts={resolvedPosts}
                       onAddPost={handleAddPost}
-                      chats={chats}
+                      chats={resolvedChats}
                       messages={messages}
                       onSendMessage={handleSendMessage}
                       onReceiveBotMessage={handleReceiveBotMessage}
@@ -1838,7 +1917,49 @@ export default function App() {
                       setTheme={setTheme}
                       onLogout={() => setIsLogoutConfirming(true)}
                       onTriggerPWAInstall={handleTriggerPWAInstall}
+                      onOpenVohAi={() => setIsAiCommandCenterOpen(true)}
                       showPWAInstallPrompt={showPWAInstallPrompt}
+                    />
+                  )}
+
+                  {activeTab === 'live' && (
+                    <LiveView
+                      currentUser={getRichUser(currentUser)}
+                      onClose={() => setActiveTab('feed')}
+                    />
+                  )}
+
+                  {activeTab === 'communities' && (
+                    <CommunitiesHubView
+                      currentUser={getRichUser(currentUser)}
+                      onSwitchIdentity={handleSwitchIdentity}
+                      posts={resolvedPosts}
+                      onAddPost={(content, imageUrl, tagsString, communityName) => {
+                        handleAddPost(
+                          content,
+                          imageUrl,
+                          tagsString,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          undefined,
+                          communityName
+                        );
+                      }}
+                      onLikePost={handleLikePost}
+                      onAddComment={handleAddComment}
+                      theme={theme}
+                      onViewProfile={handleViewProfile}
                     />
                   )}
 
@@ -1849,11 +1970,11 @@ export default function App() {
                   {(activeTab === 'inbox' || activeTab === 'activity') && (
                     <InboxView
                       currentUser={getRichUser(currentUser)}
-                      chats={chats}
+                      chats={resolvedChats}
                       messages={messages}
                       onSendMessage={handleSendMessage}
                       onReceiveBotMessage={handleReceiveBotMessage}
-                      notifications={notifications}
+                      notifications={resolvedNotifications}
                       onMarkAllAsRead={handleMarkAllNotificationsAsRead}
                       onClearNotifications={handleClearNotifications}
                       onViewProfile={handleViewProfile}
@@ -1884,7 +2005,7 @@ export default function App() {
           {/* Col 4: Right Discovery sidebar */}
           <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-1 h-full border-l border-white/5 bg-black/20 p-4 overflow-y-auto" : "hidden lg:block lg:col-span-1 lg:sticky lg:top-6"}>
             <RightSidebar
-              creators={MOCK_CREATORS}
+              creators={Object.values(globalUsersMap) as User[]}
               followingIds={followingIds}
               onToggleFollow={handleToggleFollow}
               onViewProfile={handleViewProfile}
@@ -2036,7 +2157,7 @@ export default function App() {
                             </>
                           ) : (
                             <>
-                              <Share2 className="w-3.5 h-3.5 text-current" />
+                              <Forward className="w-3.5 h-3.5 text-current" />
                               COPY LINK
                             </>
                           )}
@@ -2777,7 +2898,7 @@ export default function App() {
                           }}
                           className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 disabled:opacity-40 transition-all border border-violet-500/15 cursor-pointer uppercase"
                         >
-                          <Share2 className="w-3.5 h-3.5 hover:scale-110" />
+                          <Forward className="w-3.5 h-3.5 hover:scale-110" />
                           Share & Copy
                         </button>
 
@@ -2981,6 +3102,17 @@ export default function App() {
         >
           <Search className="w-5 h-5" />
           <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Search</span>
+        </button>
+        <button 
+          onClick={() => {
+            setActiveTab('live');
+            setViewedUser(null);
+          }}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-rose-950/20 hover:border-rose-500/30 hover:shadow-[0_0_15px_rgba(244,63,94,0.2)] ${activeTab === 'live' ? 'text-rose-400 scale-105 font-bold bg-rose-950/15 border-rose-500/10' : 'hover:text-current'}`}
+          id="mobile-nav-live"
+        >
+          <Radio className="w-5 h-5" />
+          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Live</span>
         </button>
         
         {/* Unified Plus/Create Button in Center with expanded high performance glow */}
@@ -3441,17 +3573,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* ⚡ NEXORA AI GLOBAL FLOATING ACTION BUBBLE */}
-      {activeTab !== 'matrix' && (
-        <button
-          onClick={() => setIsAiCommandCenterOpen(true)}
-          className="fixed top-24 right-4 md:top-auto md:bottom-10 md:right-10 z-45 p-4 rounded-full bg-gradient-to-tr from-violet-600 to-pink-500 hover:scale-105 active:scale-95 text-white transition-all shadow-xl shadow-violet-600/30 group cursor-pointer border border-violet-400/20"
-          title="Open Nexora AI Command Center"
-        >
-          <Sparkles className="w-5 h-5 animate-pulse text-white group-hover:rotate-12 transition-transform" />
-        </button>
-      )}
-
       {/* ⚡ NEXORA AI GLOBAL COMMAND CENTER MODAL */}
       <AnimatePresence>
         {isAiCommandCenterOpen && (
@@ -3635,6 +3756,13 @@ export default function App() {
             lazyLoadImages={lazyLoadImages}
             setLazyLoadImages={setLazyLoadImages}
           />
+        )}
+      </AnimatePresence>
+
+      {/* 🚀 FIRST-TIME USER ONBOARDING TOUR */}
+      <AnimatePresence>
+        {showOnboarding && (
+          <OnboardingTour onClose={() => setShowOnboarding(false)} />
         )}
       </AnimatePresence>
 

@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, ChevronLeft, ChevronRight, Zap, Trash, Send, MessageSquare 
-} from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Zap, Trash, Send, MessageSquare } from 'lucide-react';
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import RelativeTime from './RelativeTime';

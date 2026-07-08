@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Image, Play, Sparkles, Smile, MapPin, Contact, FileText, Send, Share2 } from 'lucide-react';
+import { Image, Play, Sparkles, Smile, MapPin, Contact, FileText, Send, Forward } from 'lucide-react';
 
 interface AttachmentGridProps {
   onSendAttachment: (type: 'gif' | 'sticker' | 'contact' | 'location' | 'post' | 'photo' | 'video', content: any) => void;

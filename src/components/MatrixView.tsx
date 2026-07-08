@@ -1,24 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sparkles, 
-  Paintbrush, 
-  Compass, 
-  Target, 
-  Terminal, 
-  Mic, 
-  MicOff, 
-  Search, 
-  Send, 
-  PlusCircle, 
-  User as UserIcon, 
-  Settings, 
-  Layers,
-  CheckCircle,
-  TrendingUp,
-  MessageSquare,
-  ArrowRight
-} from 'lucide-react';
+import { Sparkles, Paintbrush, Compass, Target, Terminal, Mic, MicOff, Search, Send, PlusCircle, User as UserIcon, Settings, Layers, CheckCircle, TrendingUp, MessageSquare, ArrowRight } from 'lucide-react';
 import { User, Post, Chat, Message } from '../types';
 import VohAiView from './VohAiView';
 import CirclesView from './CirclesView';
@@ -76,7 +58,6 @@ export default function MatrixView({
   };
 
   const menuItems = [
-    { id: 'ai' as MatrixSubTab, label: 'VOH AI', desc: 'Your personal AI assistant', icon: Sparkles, color: 'text-violet-400' },
     { id: 'studio' as MatrixSubTab, label: 'Post Studio', desc: 'Create community posts & stories', icon: Paintbrush, color: 'text-fuchsia-400' },
     { id: 'circles' as MatrixSubTab, label: 'Communities', desc: 'Connect around shared interests', icon: Compass, color: 'text-pink-400' },
     { id: 'missions' as MatrixSubTab, label: 'Missions', desc: 'Goals, challenges & helpers', icon: Target, color: 'text-yellow-400' },

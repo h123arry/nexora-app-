@@ -1,65 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Send, 
-  Search, 
-  Check, 
-  CheckCheck, 
-  Smile, 
-  Radio, 
-  Bot, 
-  ShieldAlert, 
-  Volume2, 
-  VolumeX, 
-  Paperclip, 
-  MoreVertical, 
-  Clock, 
-  EyeOff, 
-  Pin, 
-  Trash2, 
-  Mic, 
-  Video, 
-  AlertCircle,
-  FileText,
-  CornerUpLeft,
-  X,
-  Users,
-  Archive,
-  Phone,
-  Image as ImageIcon,
-  Camera,
-  Play,
-  Pause,
-  Download,
-  Lock,
-  Unlock,
-  Globe,
-  RefreshCw,
-  UserCheck,
-  SmilePlus,
-  Info,
-  Calendar,
-  Wifi,
-  WifiOff,
-  Trash,
-  Plus,
-  ChevronRight,
-  UserPlus,
-  Settings,
-  AlertTriangle,
-  ChevronDown,
-  ExternalLink,
-  MessageSquare,
-  Sparkles,
-  BarChart2,
-  Shield,
-  CheckCircle,
-  Heart,
-  Share2,
-  Star
-} from 'lucide-react';
+import { Send, Search, Check, CheckCheck, Smile, Radio, Bot, ShieldAlert, Volume2, VolumeX, Paperclip, MoreVertical, Clock, EyeOff, Pin, Trash2, Mic, Video, AlertCircle, FileText, CornerUpLeft, X, Users, Archive, Phone, Image as ImageIcon, Camera, Play, Pause, Download, Lock, Unlock, Globe, RefreshCw, UserCheck, SmilePlus, Info, Calendar, Wifi, WifiOff, Trash, Plus, ChevronRight, UserPlus, Settings, AlertTriangle, ChevronDown, ExternalLink, MessageSquare, Sparkles, BarChart2, Shield, CheckCircle, Heart, Star, Forward } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Chat, Message } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import { updateTypingState, subscribeToTypingState, updateOnlinePresence, subscribeToOnlinePresence, updateMessageReadReceipt } from '../services/dataService';
 import CallScreen from './CallScreen';
 import MediaGallery from './MediaGallery';
 import GroupDashboard from './GroupDashboard';
@@ -261,6 +205,73 @@ export default function MessagesView({
     localStorage.setItem(`nexora_calls_v3_${currentUser.id}`, JSON.stringify(callLogs));
     localStorage.setItem(`nexora_privacy_v3_${currentUser.id}`, JSON.stringify(privacySettings));
   }, [chatsList, localMessages, starredMessages, callLogs, privacySettings]);
+
+  // 1. Online presence sync
+  useEffect(() => {
+    updateOnlinePresence(currentUser.id, true);
+    
+    const unsubPresence = subscribeToOnlinePresence((presenceMap) => {
+      setChatsList(prev => 
+        prev.map(c => {
+          const isOnline = presenceMap[c.partnerId] !== undefined ? presenceMap[c.partnerId] : c.isPartnerOnline;
+          return {
+            ...c,
+            isPartnerOnline: isOnline
+          };
+        })
+      );
+    });
+
+    const handleBeforeUnload = () => {
+      updateOnlinePresence(currentUser.id, false);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      updateOnlinePresence(currentUser.id, false);
+      unsubPresence();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentUser.id]);
+
+  // 2. Active chat typing & recording indicators sync
+  useEffect(() => {
+    if (!activeChatId) return;
+
+    const unsubTyping = subscribeToTypingState(activeChatId, (states) => {
+      // Find any typing state that is active from a user other than the currentUser
+      const activePartnerState = Object.entries(states).find(([uid, state]) => uid !== currentUser.id && state !== null);
+      if (activePartnerState) {
+        setPartnerPresenceAction(activePartnerState[1]);
+      } else {
+        setPartnerPresenceAction(null);
+      }
+    });
+
+    return () => {
+      unsubTyping();
+    };
+  }, [activeChatId, currentUser.id]);
+
+  // 3. Local typing trigger
+  useEffect(() => {
+    if (!activeChatId || !typedMessage.trim()) {
+      if (activeChatId) {
+        updateTypingState(activeChatId, currentUser.id, null);
+      }
+      return;
+    }
+
+    updateTypingState(activeChatId, currentUser.id, 'typing');
+
+    const delayDebounceFn = setTimeout(() => {
+      updateTypingState(activeChatId, currentUser.id, null);
+    }, 2000);
+
+    return () => {
+      clearTimeout(delayDebounceFn);
+    };
+  }, [typedMessage, activeChatId, currentUser.id]);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeChat = chatsList.find(c => c.id === activeChatId);
@@ -942,7 +953,7 @@ export default function MessagesView({
                     }} 
                     className="p-1.5 hover:bg-white/5 rounded-lg flex items-center gap-2 cursor-pointer"
                   >
-                    <Share2 className="w-3 h-3" /> Copy Text
+                    <Forward className="w-3 h-3" /> Copy Text
                   </button>
                   <button 
                     onClick={() => handleTranslateMessage(msg.id)} 
@@ -1327,6 +1338,29 @@ export default function MessagesView({
             {/* Main messages scrolling canvas */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
               {renderMessageList()}
+
+              {partnerPresenceAction && activeChat && (
+                <div className="flex items-start gap-2.5 max-w-[70%] text-left mt-2 animate-pulse">
+                  <img 
+                    src={activeChat.partnerAvatar} 
+                    alt={activeChat.partnerName} 
+                    className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/10" 
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="rounded-2xl p-2.5 bg-[#09071c]/80 border border-violet-500/10 text-white/90">
+                    <div className="flex items-center gap-1.5 text-[9.5px] font-mono text-violet-400">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500"></span>
+                      </span>
+                      {partnerPresenceAction === 'typing' && 'Typing...'}
+                      {partnerPresenceAction === 'recording' && 'Recording audio note...'}
+                      {partnerPresenceAction === 'uploading' && 'Uploading media...'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div ref={messagesEndRef} />
             </div>
 

@@ -2,26 +2,127 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // 1. Global Safety Net
     match /{document=**} {
       allow read, write: if false;
     }
 
     // Helper functions
-    function isSignedIn() { return request.auth != null; }
-    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Users Collection ---
     match /users/{userId} {
-      allow read: if isSignedIn();
+      allow read, list: if isSignedIn();
       allow create: if isOwner(userId) && isValidId(userId);
       allow update: if isOwner(userId);
     }
 
+    // --- Posts Collection ---
     match /posts/{postId} {
-      allow read: if true;
-      allow create: if isSignedIn() && isValidId(postId);
-      allow update: if isSignedIn() && request.auth.uid == resource.data.userId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn();
+    }
+
+    // --- Drafts Collection ---
+    match /drafts/{draftId} {
+      allow read, list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow write: if isSignedIn() && (request.resource == null || request.resource.data.userId == request.auth.uid);
+    }
+
+    // --- Follows Collection ---
+    match /follows/{followId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.followerId == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.followerId == request.auth.uid;
+    }
+
+    // --- Activities Collection ---
+    match /activities/{activityId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+    }
+
+    // --- Notifications Collection ---
+    match /notifications/{notificationId} {
+      allow read, list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+    }
+
+    // --- Creator Analytics Collection ---
+    match /creatorAnalytics/{analyticsId} {
+      allow read, list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow write: if isSignedIn();
+    }
+
+    // --- Pages Collection ---
+    match /pages/{pageId} {
+      allow read, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource == null || resource.data.ownerId == request.auth.uid);
+    }
+
+    // --- Communities Collection ---
+    match /communities/{communityId} {
+      allow read, list: if true;
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource == null || resource.data.ownerId == request.auth.uid);
+    }
+
+    // --- Automation Logs Collection ---
+    match /automationLogs/{logId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn();
+    }
+
+    // --- Moderation Reports Collection ---
+    match /moderationReports/{reportId} {
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
+    }
+
+    // --- Privacy Settings Collection ---
+    match /privacySettings/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+
+    // --- Chats Collection ---
+    match /chats/{chatId} {
+      allow read, list: if isSignedIn();
+      allow write: if isSignedIn();
+      
+      match /typing/{typingId} {
+        allow read, list: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+      match /messages/{messageId} {
+        allow read, list: if isSignedIn();
+        allow write: if isSignedIn();
+      }
+    }
+
+    // --- Presence Collection ---
+    match /presence/{userId} {
+      allow read, list: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // --- Messages Sub-collection inside Chats or root Messages ---
+    match /messages/{messageId} {
+      allow read, list: if isSignedIn();
+      allow write: if isSignedIn();
     }
   }
 }

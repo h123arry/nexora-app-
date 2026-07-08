@@ -1,22 +1,5 @@
 import React, { useState } from 'react';
-import { 
-  X, 
-  Users, 
-  Shield, 
-  Plus, 
-  ChevronRight, 
-  Trash, 
-  Link as LinkIcon, 
-  BarChart2, 
-  VolumeX, 
-  Volume2, 
-  Pin,
-  CheckCircle,
-  Copy,
-  PlusCircle,
-  Send,
-  Sparkles
-} from 'lucide-react';
+import { X, Users, Shield, Plus, ChevronRight, Trash, Link as LinkIcon, BarChart2, VolumeX, Volume2, Pin, CheckCircle, Copy, PlusCircle, Send, Sparkles } from 'lucide-react';
 
 interface Member {
   id: string;

@@ -1,33 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sliders, 
-  Sparkles, 
-  Activity, 
-  Eye, 
-  Globe, 
-  Wifi, 
-  WifiOff, 
-  Trash2, 
-  Volume2, 
-  VolumeX, 
-  RotateCcw, 
-  Info, 
-  Check, 
-  Shield, 
-  MousePointer, 
-  Clock, 
-  AlertTriangle,
-  Flame,
-  ArrowRight,
-  Minimize2,
-  Cpu,
-  Bookmark,
-  Heart,
-  Send,
-  Plus,
-  Minus
-} from 'lucide-react';
+import { Sliders, Sparkles, Activity, Eye, Globe, Wifi, WifiOff, Trash2, Volume2, VolumeX, RotateCcw, Info, Check, Shield, MousePointer, Clock, AlertTriangle, Flame, ArrowRight, Minimize2, Cpu, Bookmark, Heart, Send, Plus, Minus } from 'lucide-react';
 import { ThemeMood } from '../types';
 
 interface SystemHubControlPanelProps {

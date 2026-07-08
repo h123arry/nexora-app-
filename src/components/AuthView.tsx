@@ -1,25 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  ArrowRight, 
-  ArrowLeft,
-  Smartphone,
-  Lock,
-  Mail,
-  User as UserIcon,
-  X,
-  ShieldCheck,
-  FileText,
-  Key,
-  Trash2,
-  Globe,
-  Sparkles,
-  Info,
-  Eye,
-  EyeOff,
-  Volume2,
-  Check
-} from 'lucide-react';
+import { ArrowRight, ArrowLeft, Smartphone, Lock, Mail, User as UserIcon, X, ShieldCheck, FileText, Key, Trash2, Globe, Sparkles, Info, Eye, EyeOff, Volume2, Check } from 'lucide-react';
 
 import { User } from '../types';
 import { INITIAL_USER, MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, INITIAL_CIRCLES } from '../data/database';

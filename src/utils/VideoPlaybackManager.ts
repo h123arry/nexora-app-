@@ -1,5 +1,5 @@
-// Reusable global VideoPlaybackManager for single active video orchestration
-// Supporting features: Picture-in-Picture, auto-next, casting, and playlists.
+// Nexora Premium Video Playback Engine
+// Orchestrates predictive preloading, memory-aware caching, adaptive quality emulation, and layout transitions.
 
 export type PlayerCallback = {
   pause: () => void;
@@ -14,6 +14,14 @@ class VideoPlaybackManager {
   private registeredPlayers = new Map<string, PlayerCallback>();
   private playbackPositions = new Map<string, number>();
   
+  // Predictive preloading cache sandbox
+  private preloadElements = new Map<string, HTMLVideoElement>();
+  private MAX_PRELOAD_COUNT = 3; // Keep a maximum of 3 preloaded videos to prevent memory leaks
+
+  // Adaptive Quality Selection
+  private networkRTT: number = 100; // Estimated RTT
+  private currentQuality: 'high' | 'medium' | 'low' = 'high';
+
   // Persistent mute state synced with localStorage
   private globalMuted: boolean = (() => {
     return localStorage.getItem('nexora_video_muted') !== 'false';
@@ -34,7 +42,43 @@ class VideoPlaybackManager {
       window.addEventListener('nexora-video-global-pause-all', () => {
         this.pauseAll();
       });
+
+      // Measure network speed if Network Information API is available
+      const conn = (navigator as any).connection;
+      if (conn) {
+        this.networkRTT = conn.rtt || 100;
+        this.adjustAdaptiveQuality(conn.downlink || 10);
+        conn.addEventListener('change', () => {
+          this.adjustAdaptiveQuality(conn.downlink || 10);
+        });
+      }
     }
+  }
+
+  /**
+   * Adjusts video quality dynamically based on network state
+   */
+  private adjustAdaptiveQuality(downlinkMbps: number) {
+    if (downlinkMbps < 1.5) {
+      this.currentQuality = 'low';
+    } else if (downlinkMbps < 5.0) {
+      this.currentQuality = 'medium';
+    } else {
+      this.currentQuality = 'high';
+    }
+    console.log(`[VideoPlaybackManager] Quality adapted to ${this.currentQuality} (downlink: ${downlinkMbps} Mbps)`);
+  }
+
+  /**
+   * Translates a raw video URL to its optimized adaptive resolution query
+   */
+  public getAdaptiveUrl(rawUrl: string): string {
+    if (!rawUrl) return '';
+    if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
+    
+    // Emulate server-side responsive video query
+    const suffix = rawUrl.includes('?') ? '&' : '?';
+    return `${rawUrl}${suffix}quality=${this.currentQuality}`;
   }
 
   /**
@@ -80,11 +124,57 @@ class VideoPlaybackManager {
   }
 
   /**
-   * Request play for a player instance
+   * Predictively preloads subsequent video files into a hidden element sandbox.
+   * This downloads the video segment ahead of time, ensuring instant playback startup.
+   */
+  public preloadVideo(url: string) {
+    if (!url || typeof document === 'undefined') return;
+    const resolvedUrl = this.getAdaptiveUrl(url);
+
+    if (this.preloadElements.has(resolvedUrl)) return; // Already cached/preloading
+
+    // Evict oldest if limit reached
+    if (this.preloadElements.size >= this.MAX_PRELOAD_COUNT) {
+      const firstKey = this.preloadElements.keys().next().value;
+      if (firstKey) {
+        const oldestEl = this.preloadElements.get(firstKey);
+        if (oldestEl) {
+          oldestEl.src = '';
+          oldestEl.load();
+        }
+        this.preloadElements.delete(firstKey);
+      }
+    }
+
+    try {
+      const hiddenVid = document.createElement('video');
+      hiddenVid.preload = 'auto';
+      hiddenVid.muted = true;
+      hiddenVid.src = resolvedUrl;
+      hiddenVid.style.display = 'none';
+      hiddenVid.load(); // Warm up the buffer
+
+      this.preloadElements.set(resolvedUrl, hiddenVid);
+      console.log(`[VideoPlaybackManager] Predictively preloading ${resolvedUrl}...`);
+    } catch (e) {
+      console.warn(`[VideoPlaybackManager] Preload failed for ${resolvedUrl}`, e);
+    }
+  }
+
+  /**
+   * Request play for a player instance with fast startup & intelligent buffering optimization
    */
   public async play(id: string, videoElement: HTMLVideoElement, url: string): Promise<boolean> {
-    // Guard: Prevent trying to play a video element with no source or unresolved source
-    if (!videoElement || !videoElement.src || videoElement.src === window.location.href || videoElement.src.trim() === '') {
+    if (!videoElement) return false;
+
+    // Use adaptive quality URL for play session
+    const adaptiveUrl = this.getAdaptiveUrl(url);
+    if (videoElement.src !== adaptiveUrl) {
+      videoElement.src = adaptiveUrl;
+    }
+
+    // Guard: Prevent trying to play a video element with no source
+    if (!videoElement.src || videoElement.src === window.location.href || videoElement.src.trim() === '') {
       return false;
     }
 
@@ -97,13 +187,17 @@ class VideoPlaybackManager {
     this.activeVideoElement = videoElement;
     this.activeVideoUrl = url;
 
+    // Fast Startup Buffering Configuration
+    videoElement.preload = 'auto';
+    videoElement.setAttribute('playsinline', 'true');
+    videoElement.setAttribute('webkit-playsinline', 'true');
+
     // Apply the current global mute setting to this element
     videoElement.muted = this.globalMuted;
 
     // Retrieve and restore saved position if any
     const savedPos = this.getPosition(url);
     if (savedPos > 0 && Math.abs(videoElement.currentTime - savedPos) > 1.0) {
-      // If position is far from current, restore it
       if (savedPos < videoElement.duration - 2) {
         videoElement.currentTime = savedPos;
       }
@@ -119,13 +213,13 @@ class VideoPlaybackManager {
       // Dispatch play event
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
-          new CustomEvent('nexora-video-play-sync', { detail: { id, url } })
+          new CustomEvent('nexora-video-play-sync', { detail: { id, url: adaptiveUrl } })
         );
       }
       return true;
     } catch (err) {
       console.warn(`[VideoPlaybackManager] Autoplay failed for player ${id}:`, err);
-      // Attempt muted fallback to bypass browser autoplay constraints without destroying user's sound preferences
+      // Attempt muted fallback to bypass browser autoplay constraints
       if (!videoElement.muted) {
         try {
           videoElement.muted = true;
@@ -185,7 +279,6 @@ class VideoPlaybackManager {
   public pauseAll() {
     this.savePositionOfActive();
     
-    // Pause any actual active element playing
     if (this.activeVideoElement) {
       this.activeVideoElement.pause();
     }
@@ -283,6 +376,19 @@ class VideoPlaybackManager {
   public getActiveId(): string | null {
     return this.activePlayerId;
   }
+
+  /**
+   * Cleans up all preload sandbox elements to free up browser memory
+   */
+  public clearMemory() {
+    this.preloadElements.forEach((el) => {
+      el.src = '';
+      el.load();
+    });
+    this.preloadElements.clear();
+    console.log('[VideoPlaybackManager] Preload memory cleared.');
+  }
 }
 
 export const globalVideoPlaybackManager = new VideoPlaybackManager();
+export { VideoPlaybackManager };

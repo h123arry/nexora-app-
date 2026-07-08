@@ -1,24 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  User as UserIcon, 
-  Shield, 
-  Search, 
-  Ban, 
-  CheckCircle, 
-  RotateCcw, 
-  Trash2, 
-  AlertTriangle, 
-  BarChart2, 
-  Activity, 
-  Globe, 
-  Users, 
-  FileText, 
-  Sparkles,
-  Zap,
-  RefreshCw,
-  TrendingUp,
-  Award
-} from 'lucide-react';
+import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award } from 'lucide-react';
 import { User, Post, Report, CrashLog } from '../types';
 
 interface AdminDashboardViewProps {

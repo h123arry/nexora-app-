@@ -1,42 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import NexoraVideo from './NexoraVideo';
-import { 
-  Compass, 
-  Search, 
-  TrendingUp, 
-  Radio, 
-  Award, 
-  Zap, 
-  Users, 
-  Sparkles, 
-  Film, 
-  Music, 
-  Gamepad2, 
-  Cpu, 
-  Briefcase, 
-  Trophy, 
-  BookOpen, 
-  Flame, 
-  Volume2, 
-  VolumeX, 
-  X, 
-  Heart, 
-  MessageSquare, 
-  Share2, 
-  Clock, 
-  Check, 
-  UserPlus, 
-  Plus, 
-  ArrowRight, 
-  Play, 
-  Pause,
-  Video,
-  Grid,
-  Folder,
-  RefreshCw,
-  Globe,
-  Send
-} from 'lucide-react';
+import { Compass, Search, TrendingUp, Radio, Award, Zap, Users, Sparkles, Film, Music, Gamepad2, Cpu, Briefcase, Trophy, BookOpen, Flame, Volume2, VolumeX, X, Heart, MessageSquare, Clock, Check, UserPlus, Plus, ArrowRight, Play, Pause, Video, Grid, Folder, RefreshCw, Globe, Send, Forward } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post, Circle } from '../types';
 import { INITIAL_CIRCLES } from '../data/database';
@@ -1770,7 +1734,7 @@ export default function ExploreView({
                     className="flex flex-col items-center gap-1 bg-black/60 backdrop-blur-md border border-white/10 text-pink-400 hover:text-pink-300 cursor-pointer p-2.5 rounded-full hover:scale-105 active:scale-95 transition-all text-center h-10 w-10 justify-center"
                     title="Send via Direct Messages securely"
                   >
-                    <Share2 className="w-4 h-4 text-pink-400" />
+                    <Forward className="w-4 h-4 text-pink-400" />
                   </button>
                   <span className="text-[9px] font-mono text-white/80 mt-1 font-semibold block">Share</span>
                 </div>

@@ -1,7 +1,6 @@
 import { User, Post, SocialMission, Circle, Chat, Message, Notification } from '../types';
 
 export let DEMO_MODE = true;
-
 export function setDemoMode(value: boolean) {
   DEMO_MODE = value;
   localStorage.setItem('nexora_demo_mode', JSON.stringify(value));
@@ -179,66 +178,6 @@ export const INITIAL_POSTS: Post[] = [
     ]
   },
   {
-    id: 'post-3',
-    userId: 'creator-1',
-    username: 'stella_design',
-    name: 'Stella Design',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    isVerified: true,
-    content: 'Testing out the new cyberpunk neon layout. The contrast level is spectacular! Rate this interface from 1-10 in the replies 🌌⚡',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-cyberpunk-neon-city-street-at-night-41551-large.mp4',
-    tags: ['Cyberpunk', 'UIUX', 'Design', 'Creative'],
-    searchSuggestion: 'Cyberpunk UI UX',
-    likes: 3412,
-    commentsCount: 2,
-    shares: 728,
-    timestamp: '1 hour ago',
-    comments: [
-      {
-        id: 'c-4',
-        postId: 'post-3',
-        userId: 'voh_ai',
-        username: 'voh_ai',
-        name: 'VOH AI',
-        avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
-        content: 'Absolute 10/10! The neon glow meshes beautifully with our dark layout principles.',
-        timestamp: '30 mins ago',
-        likes: 145
-      },
-      {
-        id: 'c-5',
-        postId: 'post-3',
-        userId: 'creator-4',
-        username: 'nexora_ai',
-        name: 'Nexora AI',
-        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-        content: 'Love the high-contrast pinks and purples. Very aligned with our Cyberpunk theme.',
-        timestamp: '25 mins ago',
-        likes: 98
-      }
-    ]
-  },
-  {
-    id: 'post-4',
-    userId: 'creator-2',
-    username: 'leo_vision',
-    name: 'Leo Vision',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerified: false,
-    content: 'Captured these brutalist architectural gems during the rain in Berlin today. Truly majestic geometric shapes. 🌧️🏙️',
-    image: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
-    images: [
-      'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?w=800&auto=format&fit=crop&q=80'
-    ],
-    tags: ['Brutalist', 'Berlin', 'Architecture', 'Photography'],
-    likes: 215,
-    commentsCount: 0,
-    shares: 42,
-    timestamp: '15 mins ago',
-    comments: []
-  },
-  {
     id: 'post-5',
     userId: 'voh_ai',
     username: 'voh_ai',
@@ -292,117 +231,8 @@ export const INITIAL_POSTS: Post[] = [
         likes: 122
       }
     ]
-  },
-  {
-    id: 'post-7',
-    userId: 'creator-3',
-    username: 'amara_afro',
-    name: 'Amara Afrobeats',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    isVerified: true,
-    content: 'Sharing some exclusive Wizkid and Davido rehearsal vibes! Live video snippet from the Lagos Studio stage. Turn up your volume! 🎵🔊🎤',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-starry-night-sky-background-912-large.mp4',
-    audience: 'community',
-    communityName: 'Afrobeats Central',
-    tags: ['Afrobeats', 'Wizkid', 'Davido', 'LagosStage'],
-    searchSuggestion: 'Afrobeats live concert',
-    likes: 4125,
-    commentsCount: 1,
-    shares: 1042,
-    timestamp: '1 day ago',
-    comments: [
-      {
-        id: 'c-7',
-        postId: 'post-7',
-        userId: 'user-0',
-        username: 'voh',
-        name: 'VOICE OF HARRISON',
-        avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg',
-        content: 'This rehearsal sound is immaculate! Can\'t wait for the live concert.',
-        timestamp: '18 hours ago',
-        likes: 310
-      }
-    ]
-  },
-  {
-    id: 'post-8',
-    userId: 'creator-5',
-    username: 'cyber_sage',
-    name: 'Cyber Sage',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    isVerified: false,
-    content: 'BRUTALIST MANIFESTO: Why do modern websites look like copy-pasted templates? Bring back the visual clash, bold borders, raw typography, and true contrast of the early web. The future of design is cyber-heritage.',
-    tags: ['Brutalism', 'WebDesign', 'Philosophy', 'Cyberpunk'],
-    likes: 103,
-    commentsCount: 0,
-    shares: 14,
-    timestamp: '5 mins ago',
-    comments: []
-  },
-  {
-    id: 'post-9',
-    userId: 'creator-4',
-    username: 'nexora_ai',
-    name: 'Nexora AI',
-    avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-    isVerified: true,
-    content: 'Connecting the global community with our responsive digital interface. Watch this fascinating visual sequence of real-time server activity. Let your mind align with the flow 🛰️💻✨',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-screens-and-graphs-41555-large.mp4',
-    tags: ['DigitalCommunity', 'AI', 'Status', 'VisualFlow'],
-    searchSuggestion: 'Digital AI Interface',
-    likes: 2314,
-    commentsCount: 1,
-    shares: 894,
-    timestamp: '6 hours ago',
-    comments: [
-      {
-        id: 'c-8',
-        postId: 'post-9',
-        userId: 'voh_ai',
-        username: 'voh_ai',
-        name: 'VOH AI',
-        avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
-        content: 'Visual representation fully synchronized. Data integrity maintained at 100%.',
-        timestamp: '5 hours ago',
-        likes: 72
-      }
-    ]
-  },
-  {
-    id: 'post-10',
-    userId: 'creator-6',
-    username: 'wanderer',
-    name: 'The Wanderer',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    isVerified: false,
-    content: 'Woke up at 4:30 AM to catch the sunrise over Mount Fuji. The morning light filtering through the mist is completely unedited. Nature is the ultimate artist. 🗻☀️🇯🇵',
-    image: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=800&auto=format&fit=crop&q=80',
-    tags: ['Japan', 'MountFuji', 'Sunrise', 'Travel'],
-    likes: 14312,
-    commentsCount: 0,
-    shares: 1205,
-    timestamp: '2 days ago',
-    comments: []
-  },
-  {
-    id: 'post-11',
-    userId: 'creator-2',
-    username: 'leo_vision',
-    name: 'Leo Vision',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    isVerified: false,
-    content: 'A micro-short video documenting the lights of Berlin at midnight. Holding a high-fidelity camera lens directly in front of neon streetlights to capture gorgeous bokeh. 🌃🔦🎥',
-    videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-holding-smartphone-at-night-with-city-lights-41553-large.mp4',
-    tags: ['BerlinNight', 'Bokeh', 'Videography', 'Aesthetic'],
-    searchSuggestion: 'Berlin Night Photography',
-    likes: 874,
-    commentsCount: 0,
-    shares: 110,
-    timestamp: '12 hours ago',
-    comments: []
   }
 ];
-
 export const INITIAL_CHATS: Chat[] = [
   {
     id: 'chat-1',
@@ -932,92 +762,5 @@ export function getRichUser(user: User): User {
 }
 
 export function getSeededFollowers(targetUserId: string): User[] {
-  const isFounder = targetUserId === 'user-0' || targetUserId === 'voh';
-  const isNexoraAi = targetUserId === 'creator-4' || targetUserId === 'nexora_ai';
-  const isVohAi = targetUserId === 'voh_ai';
-
-  if (!isFounder && !isNexoraAi && !isVohAi) return [];
-
-  const firstNames = ['Tunde', 'Chioma', 'Bola', 'Samuel', 'Clara', 'Emeka', 'Sarah', 'Joy', 'David', 'Aisha', 'Tobi', 'Kelechi', 'Kunle', 'Yomi', 'Lola', 'Femi', 'Ngozi', 'Segun', 'Nkechi', 'Chidi', 'Elena', 'Mark', 'Sophie', 'Alex', 'Liam', 'Maya', 'Nils', 'Chloe', 'Ryan', 'Zoe'];
-  const lastNames = ['Olayinka', 'Nwachukwu', 'Adesina', 'Vance', 'Jenkins', 'Okoye', 'Miller', 'Peters', 'King', 'Bello', 'Cole', 'Obi', 'Alao', 'Davies', 'Shittu', 'Balogun', 'Eze', 'Johnson', 'Okonkwo', 'Adeyemi', 'Smith', 'Jones', 'Taylor', 'Brown', 'Wilson', 'Davis', 'Miller', 'Garcia', 'Rodriguez', 'Martinez'];
-  
-  const avatars = [
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1554151228-14d9def656e4?w=150&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80'
-  ];
-
-  const locations = ['Lagos, Nigeria', 'Abuja, Nigeria', 'London, UK', 'New York, USA', 'Port Harcourt, Nigeria', 'San Francisco, USA', 'Berlin, Germany', 'Nairobi, Kenya', 'Accra, Ghana', 'Toronto, Canada'];
-
-  const bios = [
-    'Software engineer & tech enthusiast. Love building communities 💻✨',
-    'Football enthusiast (Messi is the GOAT!) and Afrobeat music fan ⚽🎵',
-    'UI/UX Designer. Obsessed with clean code and minimalist interfaces 🎨',
-    'Content creator and digital marketer. Loving the Nexora vibes! 🚀',
-    'AI researcher. Exploring decentralized social media and web3 tech 🤖',
-    'Logistics startup founder. Football analyst in my free time 📈⚽',
-    'Student and budding developer. Davido is my favorite artist! 🎶',
-    'Cloud architect. Proud follower of VOICE OF HARRISON ☁️🙌',
-    'Cybersecurity enthusiast, gamer, and movie lover 🎮🎬',
-    'Digital nomad. Travel blogger, capturing life across Africa 🌍📸'
-  ];
-
-  const interests = ['Football', 'Afrobeat', 'Community', 'Technology', 'Local Life', 'Food', 'Design', 'AI'];
-
-  const list: User[] = [];
-
-  // Generate 50 realistic, high-quality users
-  for (let i = 0; i < 50; i++) {
-    const fName = firstNames[i % firstNames.length];
-    const lName = lastNames[(i + 7) % lastNames.length];
-    const name = `${fName} ${lName}`;
-    const username = `${fName.toLowerCase()}_${lName.toLowerCase()}${i % 3 === 0 ? '' : i}`;
-    const avatar = avatars[i % avatars.length];
-    const loc = locations[i % locations.length];
-    const bio = bios[i % bios.length] + (isFounder ? ' Proud follower of VOICE OF HARRISON.' : isVohAi ? ' Supporter of VOH AI.' : ' Nexora member.');
-    const rep = 1500 + (i * 240);
-
-    const dna: { [key: string]: number } = {};
-    interests.forEach((interest, idx) => {
-      dna[interest] = 60 + ((idx + i) % 40);
-    });
-
-    list.push({
-      id: `seeded-follower-${targetUserId}-${i}`,
-      username,
-      name,
-      avatar,
-      bio,
-      location: loc,
-      website: `nexora.ai/${username}`,
-      followers: 120 + (i * 85),
-      following: 80 + (i * 22),
-      isVerified: i % 7 === 0,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined June 2026',
-      reputationPoints: rep,
-      reputationBreakdown: {
-        contributions: Math.floor(rep * 0.4),
-        helpfulness: Math.floor(rep * 0.3),
-        missionsCompleted: i % 10,
-        skillsVerified: Math.floor(rep * 0.2)
-      },
-      interestDNA: dna,
-      skills: [interests[i % interests.length], 'Innovation', 'Collaboration']
-    });
-  }
-
-  return list;
+  return [];
 }

@@ -1,75 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-  MapPin, 
-  Link as LinkIcon, 
-  Calendar, 
-  Edit3, 
-  Check, 
-  Heart,
-  MessageSquare,
-  Award,
-  Zap,
-  Sparkles,
-  Play,
-  Pause,
-  Volume2,
-  Users,
-  Compass,
-  FileText,
-  Share2,
-  UserPlus,
-  MessageCircle,
-  Download,
-  Terminal,
-  Pin,
-  Flame,
-  UserCheck,
-  Search,
-  X,
-  ArrowLeft,
-  Settings,
-  Shield,
-  Lock,
-  Eye,
-  Bell,
-  Sliders,
-  Globe,
-  Trash2,
-  HelpCircle,
-  Info,
-  Activity,
-  Video,
-  Film,
-  Camera,
-  Image as ImageIcon,
-  Mic,
-  Menu,
-  BarChart2,
-  FolderClosed,
-  QrCode,
-  AlertTriangle,
-  LogOut,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown,
-  Coins,
-  Music,
-  Plus,
-  Tv,
-  EyeOff,
-  UserX,
-  VolumeX,
-  CheckCircle2,
-  LockKeyhole,
-  Briefcase,
-  Layers,
-  Crown,
-  Laptop,
-  Smartphone,
-  Key,
-  RefreshCw,
-  ChevronDown
-} from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, Forward } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -110,7 +40,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
   }
 
   return (
-    <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5 w-full">
+    <div className="grid grid-cols-3 gap-[1px] sm:gap-[2px] w-full">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -124,7 +54,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
             whileHover={{ scale: 1.02, y: -2 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 18 }}
-            className="aspect-square rounded-xl sm:rounded-2xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between"
+            className="aspect-square rounded-[4px] sm:rounded-xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -266,6 +196,7 @@ interface ProfileViewProps {
   onLogout?: () => void;
   onTriggerPWAInstall?: () => void;
   showPWAInstallPrompt?: boolean;
+  onOpenVohAi?: () => void;
 }
 
 export default function ProfileView({
@@ -284,11 +215,15 @@ export default function ProfileView({
   setTheme,
   onLogout,
   onTriggerPWAInstall,
-  showPWAInstallPrompt
+  showPWAInstallPrompt,
+  onOpenVohAi
 }: ProfileViewProps) {
   // Navigation State
-  const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections'>('profile');
+  const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections' | 'subscriptions' | 'linked-accounts'>('profile');
   const [profileTab, setProfileTab] = useState<string>('posts');
+  const [allContentFilter, setAllContentFilter] = useState<'all' | 'videos' | 'photos' | 'posts' | 'pinned'>('all');
+  const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
+  const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
   const [detailCommentText, setDetailCommentText] = useState<string>('');
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
@@ -385,6 +320,37 @@ export default function ProfileView({
   // Relationship states (Muted / Blocked lists)
   const [relationsTab, setRelationsTab] = useState<'followers' | 'following' | 'close-friends' | 'blocked' | 'muted'>('followers');
   const [searchRelationQuery, setSearchRelationQuery] = useState('');
+  
+  // Stateful Connected Platforms & Subscriptions
+  const [connectedPlatforms, setConnectedPlatforms] = useState([
+    { id: 'youtube', name: 'YouTube', icon: '▶️', connected: true, username: 'NexoraCreator' },
+    { id: 'instagram', name: 'Instagram', icon: '📸', connected: true, username: '@nexora_creator' },
+    { id: 'tiktok', name: 'TikTok', icon: '🎵', connected: false, username: '' },
+    { id: 'facebook', name: 'Facebook', icon: '👥', connected: false, username: '' },
+    { id: 'x', name: 'X', icon: '✖️', connected: false, username: '' },
+    { id: 'github', name: 'GitHub', icon: '🐙', connected: true, username: 'nexora-dev' },
+    { id: 'website', name: 'Personal Website', icon: '🌐', connected: false, username: '' },
+    { id: 'portfolio', name: 'Portfolio', icon: '🎨', connected: false, username: '' }
+  ]);
+  const [showPlatformConnectModal, setShowPlatformConnectModal] = useState(false);
+  const [platformToConnect, setPlatformToConnect] = useState<any | null>(null);
+  const [platformUsernameInput, setPlatformUsernameInput] = useState('');
+
+  const [subscriptionsTab, setSubscriptionsTab] = useState<'active' | 'plans' | 'exclusive'>('active');
+  const [activeSubscriptions, setActiveSubscriptions] = useState([
+    { name: 'Dr. Jane Smith', username: 'drjane', plan: 'Gold Supporter', price: '$4.99/mo', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60' },
+    { name: 'Tech Insider', username: 'techinsider', plan: 'Premium Access', price: '$9.99/mo', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=60' }
+  ]);
+  const [mySubscriptionPlans, setMySubscriptionPlans] = useState([
+    { tier: 'Bronze Supporter', price: '$1.99', perks: 'Premium profile badge, early post access' },
+    { tier: 'Silver Supporter', price: '$4.99', perks: 'Bronze perks, exclusive chat, priority Q&A' },
+    { tier: 'Gold Supporter', price: '$9.99', perks: 'Silver perks, monthly live stream, custom emotes' }
+  ]);
+  const [exclusiveContentList, setExclusiveContentList] = useState([
+    { id: 'ex-1', title: 'Nexora AI Alpha Testing Guide', creator: 'voh', type: 'Article', date: 'Jul 5, 2026', locked: true },
+    { id: 'ex-2', title: 'Behind the Scenes of Nexora Studio v1.2', creator: 'voh', type: 'Video', date: 'Jun 28, 2026', locked: true },
+    { id: 'ex-3', title: 'Acoustic Broadcast Session (Lossless)', creator: 'drjane', type: 'Audio', date: 'Jun 15, 2026', locked: true }
+  ]);
   const [blockedUsers, setBlockedUsers] = useState<string[]>(['toxic_spammer', 'scambot_v8']);
   const [mutedUsers, setMutedUsers] = useState<string[]>(['overposter_reels', 'ad_beacon_hq']);
   const [closeFriends, setCloseFriends] = useState<string[]>([]);
@@ -797,20 +763,29 @@ export default function ProfileView({
   
   // Tab filtered items
   const getTabContent = () => {
+    const activePosts = myPosts.filter(p => !p.isArchived);
     switch (profileTab) {
-      case 'videos':
-        return myPosts.filter(p => p.videoUrl);
-      case 'media':
-        return myPosts.filter(p => p.image || p.videoUrl);
-      case 'pinned':
-        return myPosts.filter(p => pinnedPostIdsList.includes(p.id));
-      case 'drafts':
-        return myPosts.filter(p => p.isDraft);
-      case 'private':
-        return myPosts.filter(p => p.audience === 'onlyme');
+      case 'private': return activePosts.filter(p => p.audience === 'onlyme');
+      case 'voice': return activePosts.filter(p => p.isVoice || p.voiceDuration);
+      case 'reposts': return activePosts.filter(p => p.tags.includes('repost'));
+      case 'saved': return activePosts.filter(p => p.isBookmarkedByUser);
+      case 'liked': return activePosts.filter(p => p.isLikedByUser);
       case 'posts':
-      default:
-        return myPosts;
+      default: {
+        switch (allContentFilter) {
+          case 'videos':
+            return activePosts.filter(p => !!p.videoUrl);
+          case 'photos':
+            return activePosts.filter(p => !!p.image && !p.videoUrl);
+          case 'posts':
+            return activePosts.filter(p => !p.image && !p.videoUrl);
+          case 'pinned':
+            return activePosts.filter(p => pinnedPostIdsList.includes(p.id));
+          case 'all':
+          default:
+            return activePosts;
+        }
+      }
     }
   };
 
@@ -875,7 +850,7 @@ export default function ProfileView({
     <div className="relative w-full min-h-screen bg-[#030112] text-white font-sans overflow-x-hidden pb-24">
       
       {/* 1. TOP NAVIGATION ACTION BAR */}
-      <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-40 border-b border-white/5 py-3 px-4 flex items-center justify-between">
+      <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-40 border-b border-white/5 py-2 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3 relative">
           {onCloseProfile && (
             <button 
@@ -922,7 +897,7 @@ export default function ProfileView({
                       { label: 'Achievements', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🏆 You earned: "Founders Genesis" achievement!' })); }, icon: Award, iconColor: 'text-amber-400' },
                       { label: 'Saved Posts', action: () => { setActivePanel('collections'); setIsProfileMenuOpen(false); }, icon: FolderClosed, iconColor: 'text-cyan-400' },
                       { label: 'Account Status', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🟢 Secure Account Status: Optimal.' })); }, icon: Shield, iconColor: 'text-emerald-400' },
-                      { label: 'Creator Dashboard', action: () => { setActivePanel('creator-studio'); setIsProfileMenuOpen(false); }, icon: Coins, iconColor: 'text-yellow-400' },
+                      { label: 'Nexora Studio', action: () => { setActivePanel('creator-studio'); setIsProfileMenuOpen(false); }, icon: Coins, iconColor: 'text-yellow-400' },
                       { label: 'Privacy', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('privacy'); setIsProfileMenuOpen(false); }, icon: Lock, iconColor: 'text-teal-400' },
                       { label: 'Share Profile', action: () => { setActivePanel('qr-profile'); setIsProfileMenuOpen(false); }, icon: QrCode, iconColor: 'text-indigo-400' },
                       { label: 'Export Profile', action: () => { 
@@ -961,15 +936,17 @@ export default function ProfileView({
         </div>
 
         <div className="flex items-center gap-2">
+          {isOwnProfile && (
+            <button
+              onClick={() => setActivePanel('qr-profile')}
+              className="p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
+              title="Show QR Code"
+            >
+              <QrCode className="w-4.5 h-4.5" />
+            </button>
+          )}
           <button
-            onClick={() => setActivePanel('qr-profile')}
-            className="p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
-            title="Show QR Code"
-          >
-            <QrCode className="w-4.5 h-4.5" />
-          </button>
-          <button
-            onClick={() => setActivePanel('menu')}
+            onClick={() => setActivePanel(isOwnProfile ? 'menu' : 'other-profile-menu')}
             className="p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
             title="Menu"
             id="nexora-advanced-hamburger-trigger"
@@ -1027,23 +1004,24 @@ export default function ProfileView({
           </div>
 
           {/* Feed Grid skeleton */}
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2.5">
-            <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
-            <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
-            <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-xl" />
+          <div className="mx-auto -mx-2.5 sm:-mx-4 md:-mx-6 px-[1px] sm:px-[2px]">
+            <div className="grid grid-cols-3 gap-[1px] sm:gap-[2px]">
+              <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-[4px] sm:rounded-xl" />
+              <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-[4px] sm:rounded-xl" />
+              <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-[4px] sm:rounded-xl" />
+            </div>
           </div>
         </div>
-      ) : (<>
-        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-8 sm:pt-10 pb-3 text-left">
+      ) : (
+        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
-          {/* Profile Identity (Redesigned Side-by-Side Compact Layout) */}
-          <div className="flex items-center gap-5 sm:gap-6 text-left">
-            {/* Circular Avatar with minimal premium halo */}
+          {/* Profile Identity (Refined Compact Layout) */}
+          <div className="flex items-center gap-4 text-left mb-0.5">
             <div className="relative shrink-0">
-              <div className="absolute -inset-1.5 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[3px] opacity-80" />
+              <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
               <div 
                 onClick={() => setProfilePicExpanded(true)}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
+                className="w-[82px] h-[82px] sm:w-[88px] sm:h-[88px] rounded-full bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
               >
                 <img 
                   src={currentUser.avatar} 
@@ -1051,203 +1029,129 @@ export default function ProfileView({
                   alt="User Avatar"
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Eye className="w-5 h-5 text-white" />
-                </div>
               </div>
             </div>
 
-            {/* Identity details and compact metadata */}
-            <div className="flex-1 min-w-0 space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl sm:text-3xl font-black text-white leading-tight tracking-tight">{currentUser.name}</h1>
-                {currentUser.isVerified && <PurpleVerifiedBadge className="w-4.5 h-4.5 shrink-0" type="founder" />}
-                
-                {/* Creator Tag - simplified and clean */}
-                <span className="px-2 py-0.5 rounded-md bg-violet-500/10 border border-violet-500/25 text-[8px] font-mono text-violet-300 uppercase tracking-widest font-black flex items-center gap-1 shrink-0">
-                  <Crown className="w-2.5 h-2.5 text-pink-400 animate-pulse" /> Premium
-                </span>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h1 className="text-lg font-black text-white leading-tight tracking-tight">{currentUser.name}</h1>
+                {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
               </div>
               
-              <p className="text-xs sm:text-sm font-bold text-violet-400/70 font-mono tracking-wider">@{currentUser.username}</p>
-
-              {/* Compact location & web links */}
-              <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[11px] text-zinc-400 font-medium font-sans pt-1">
-                {currentUser.location && (
-                  <span className="flex items-center gap-1 hover:text-white transition-colors duration-150">
-                    <MapPin className="w-3.5 h-3.5 text-violet-500/80" /> {currentUser.location}
-                  </span>
+              {/* Username & Twin Action Chips (Clean Horizontal Row) */}
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                <p className="text-xs font-bold text-violet-400/70 font-mono tracking-wider">@{currentUser.username}</p>
+                {isOwnProfile ? (
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => setActivePanel('edit-profile')} 
+                      className="px-2.5 py-0.5 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold text-zinc-200 transition-colors border border-white/5 cursor-pointer h-[22px] flex items-center justify-center"
+                    >
+                      Edit
+                    </button>
+                    <button 
+                      onClick={() => onOpenVohAi?.()} 
+                      className="px-1.5 py-0.5 bg-violet-600/20 hover:bg-violet-600/30 rounded-md text-[9.5px] font-extrabold text-violet-300 border border-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.1)] transition-all flex items-center gap-0.5 cursor-pointer h-[22px]"
+                      title="VOH AI Command Center"
+                    >
+                      <Sparkles className="w-2 h-2 shrink-0 text-violet-400" />
+                      <span>VOH AI</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => { setIsFollowing(!isFollowing); onToggleFollow?.(currentUser.id); }} 
+                      className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer h-[22px] flex items-center justify-center ${
+                        isFollowing ? 'bg-zinc-900 text-zinc-400' : 'bg-violet-600 text-white hover:bg-violet-500'
+                      }`}
+                    >
+                      {isFollowing ? 'Connected' : 'Connect'}
+                    </button>
+                    <button 
+                      onClick={() => onStartChat?.(currentUser.id)} 
+                      className="px-2.5 py-0.5 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold text-zinc-200 transition-colors cursor-pointer border border-white/5 h-[22px] flex items-center justify-center"
+                    >
+                      Message
+                    </button>
+                  </div>
                 )}
-                {currentUser.website && (
-                  <a 
-                    href={`https://${currentUser.website}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="flex items-center gap-1 text-cyan-400 hover:text-cyan-300 transition-colors hover:underline"
-                  >
-                    <LinkIcon className="w-3.5 h-3.5" /> {currentUser.website}
-                  </a>
-                )}
-                <span className="flex items-center gap-1 text-zinc-500">
-                  <Calendar className="w-3.5 h-3.5 text-zinc-600" /> {currentUser.joinedDate || 'Joined June 2026'}
-                </span>
               </div>
             </div>
           </div>
 
-          {/* 3. PROFILE STATISTICS (Compact Premium Layout) */}
-          <div className="grid grid-cols-3 gap-y-4 gap-x-4 sm:gap-x-8 py-4 my-6 border-y border-white/5 select-none text-left">
-            {/* Column 1, Row 1: Followers */}
-            <button 
-              onClick={() => { setActivePanel('social-graph'); setRelationsTab('followers'); }}
-              className="flex flex-col items-start gap-1 cursor-pointer group transition-all text-left"
-            >
-              <span className="text-base sm:text-lg font-black text-white group-hover:text-violet-300 transition-colors tracking-tight">
-                {formatSecondaryStat(currentUser.followers || 0)}
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 group-hover:text-violet-300/80 transition-colors uppercase">
-                FOLLOWERS
-              </span>
-            </button>
-
-            {/* Column 2, Row 1: Following */}
-            <button 
-              onClick={() => { setActivePanel('social-graph'); setRelationsTab('following'); }}
-              className="flex flex-col items-start gap-1 cursor-pointer group transition-all text-left"
-            >
-              <span className="text-base sm:text-lg font-black text-white group-hover:text-violet-300 transition-colors tracking-tight">
-                {formatSecondaryStat(currentUser.following || 0)}
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 group-hover:text-violet-300/80 transition-colors uppercase">
-                FOLLOWING
-              </span>
-            </button>
-
-            {/* Column 3, Row 1: Posts */}
-            <div className="flex flex-col items-start gap-1 text-left">
-              <span className="text-base sm:text-lg font-black text-white tracking-tight">
-                {formatSecondaryStat(getPostsCount())}
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 uppercase">
-                POSTS
-              </span>
+          {/* 3x2 Statistics Grid with Integrated Share Button (No divider) */}
+          <div className="flex items-center justify-between py-1 border-y border-white/[0.03] mt-0.5 mb-0.5 select-none">
+            <div className="flex-1 grid grid-cols-3 gap-y-1 gap-x-1.5 sm:gap-x-3 w-full text-center">
+              {[
+                { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
+                { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
+                { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
+                { label: '✨ Sparks', value: getSecondaryMetric('sparks') },
+                { label: '⭐ Reputation', value: getSecondaryMetric('reputation') },
+                { label: '📊 Contribution', value: getSecondaryMetric('contributions') },
+              ].map(stat => (
+                <div key={stat.label} className="flex flex-col items-center justify-center">
+                  <span className="text-[13px] font-black text-white leading-tight">{stat.value}</span>
+                  <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5">{stat.label}</span>
+                </div>
+              ))}
             </div>
-
-            {/* Column 1, Row 2: Sparks */}
-            <div className="flex flex-col items-start gap-1 text-left">
-              <span className="text-base sm:text-lg font-black text-amber-400 flex items-center gap-1 tracking-tight">
-                <span className="text-xs sm:text-sm">✨</span>
-                {getSecondaryMetric('sparks')}
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 uppercase">
-                SPARKS
-              </span>
-            </div>
-
-            {/* Column 2, Row 2: Reputation (REP) */}
-            <button 
-              onClick={() => { setActivePanel('menu'); setSettingsActiveSubPanel('contributor'); }}
-              className="flex flex-col items-start gap-1 cursor-pointer group transition-all text-left"
-            >
-              <span className="text-base sm:text-lg font-black text-emerald-400 flex items-center gap-1 group-hover:text-emerald-300 transition-colors tracking-tight">
-                <span className="text-xs sm:text-sm">⭐</span>
-                {getSecondaryMetric('reputation')}
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 group-hover:text-violet-300/80 transition-colors uppercase">
-                REP
-              </span>
-            </button>
-
-            {/* Column 3, Row 2: Contributions (CONTRIB) */}
-            <div className="flex flex-col items-start gap-1 text-left">
-              <span className="text-base sm:text-lg font-black text-cyan-400 flex items-center gap-1 tracking-tight">
-                <span className="text-xs sm:text-sm">📊</span>
-                {getSecondaryMetric('contributions')}
-              </span>
-              <span className="text-[9px] sm:text-[10px] font-extrabold tracking-widest text-violet-400/50 uppercase">
-                CONTRIB
-              </span>
+            <div className="pl-1.5 sm:pl-3 flex items-center justify-center self-stretch">
+              <button 
+                onClick={() => setShowShareModal(true)} 
+                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors cursor-pointer" 
+                title="Share Profile"
+              >
+                <Forward className="w-4.5 h-4.5" />
+              </button>
             </div>
           </div>
 
-          {/* 4. ACTION BUTTONS with tapped micro-interactions */}
-          <div className="flex gap-2.5 my-6">
-            {isOwnProfile ? (
-              <>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActivePanel('edit-profile')}
-                  className="flex-1 h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 border border-white/5 text-zinc-200 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer"
-                >
-                  Edit Profile
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowShareModal(true)}
-                  className="flex-1 h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 border border-white/5 text-zinc-200 rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer"
-                >
-                  Share Profile
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setActivePanel('creator-studio')}
-                  className="flex-1 h-[38px] flex items-center justify-center bg-violet-600 hover:bg-violet-500 border border-violet-500/15 text-white rounded-xl text-xs font-bold tracking-wide transition-all cursor-pointer shadow-lg shadow-violet-600/10"
-                >
-                  Creator Studio
-                </motion.button>
-              </>
-            ) : (
-              <>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setIsFollowing(!isFollowing);
-                    onToggleFollow?.(currentUser.id);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: isFollowing ? 'Unfollowed connection' : '✨ Connected!' }));
-                  }}
-                  className={`flex-1 h-[38px] flex items-center justify-center rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                    isFollowing 
-                      ? 'bg-zinc-900 border border-white/10 text-zinc-400 hover:text-zinc-200' 
-                      : 'bg-violet-600 text-white hover:bg-violet-500 border border-violet-500/10'
-                  }`}
-                >
-                  {isFollowing ? 'Connected' : 'Connect'}
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => onStartChat?.(currentUser.id)}
-                  className="flex-1 h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 border border-white/5 text-zinc-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                >
-                  Message
-                </motion.button>
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowShareModal(true)}
-                  className="w-[38px] h-[38px] flex items-center justify-center bg-white/5 hover:bg-white/8 text-zinc-200 rounded-xl text-xs transition-all cursor-pointer border border-white/5"
-                  title="Share Profile Link"
-                >
-                  <Share2 className="w-4 h-4" />
-                </motion.button>
-              </>
+          {/* Elegant Truncated Bio (Displayed directly below Stats) */}
+          <div className="text-zinc-300 text-xs leading-relaxed mb-1 mt-0.5">
+            <motion.div 
+              animate={{ height: isBioExpanded ? "auto" : "2.4rem" }} 
+              className="overflow-hidden relative"
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+            >
+              <p className="whitespace-pre-wrap">{currentUser.bio || "No bio yet."}</p>
+            </motion.div>
+            {currentUser.bio && (currentUser.bio.length > 70 || currentUser.bio.split('\n').length > 2) && (
+              <button 
+                onClick={() => setIsBioExpanded(!isBioExpanded)} 
+                className="text-violet-400 font-bold mt-0.5 text-[10px] hover:text-violet-300 transition-colors cursor-pointer"
+              >
+                {isBioExpanded ? 'Show less' : 'Show More'}
+              </button>
             )}
           </div>
-
-          {/* 5. ELEGANT TYPOGRAPHIC BIO */}
-          <div className="text-zinc-300/95 font-sans text-xs sm:text-[13px] leading-relaxed max-w-2xl text-left whitespace-pre-wrap py-1.5 mt-5 mb-3 tracking-wide">
-            {currentUser.bio ? (
-              currentUser.bio.split('\n').map((line, idx) => (
-                <p key={idx} className={idx > 0 ? "mt-1.5" : ""}>
-                  {line}
-                </p>
-              ))
-            ) : (
-              <span className="text-zinc-500 italic">No bio yet.</span>
-            )}
+          
+          {/* Creator section (Premium lightweight creator filter chips) */}
+          <div className="flex flex-wrap gap-1.5 mb-0.5 mt-0.5">
+            <button 
+              onClick={() => setActivePanel('creator-studio')} 
+              className="px-2 h-[17px] bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/30 rounded-full text-[9px] font-bold text-violet-300 transition-all border border-violet-500/15 cursor-pointer flex items-center justify-center"
+            >
+              Nexora Studio
+            </button>
+            <button 
+              onClick={() => setActivePanel('subscriptions')} 
+              className="px-2 h-[17px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
+            >
+              Subscriptions
+            </button>
+            <button 
+              onClick={() => setActivePanel('linked-accounts')} 
+              className="px-2 h-[17px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
+            >
+              Linked Accounts
+            </button>
           </div>
 
           {/* 6. MUTUAL FRIENDS (Progressive Disclosure) */}
           {!isOwnProfile && (
-            <div className="flex items-center gap-2 text-xs font-sans text-zinc-500 text-left pt-2 mt-2">
+            <div className="flex items-center gap-2 text-xs font-sans text-zinc-500 text-left pt-0.5 mt-0.5 mb-0.5">
               <div className="flex -space-x-1.5">
                 <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&auto=format&fit=crop&q=80" alt="mutual 1" referrerPolicy="no-referrer" />
                 <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&auto=format&fit=crop&q=80" alt="mutual 2" referrerPolicy="no-referrer" />
@@ -1257,83 +1161,152 @@ export default function ProfileView({
             </div>
           )}
 
-        </div>
-
-        {/* 8. CONTENT STICKY TAB NAVIGATION (Redesigned with Underline Highlight) */}
-        <div className="sticky top-12 bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 overflow-x-auto scrollbar-none">
-          <div className="w-full max-w-4xl mx-auto flex justify-between sm:justify-start sm:gap-8 px-2.5 sm:px-4 md:px-6">
+        {/* 8. CONTENT STICKY TAB NAVIGATION (Glow-refined 5-Tab Layout) */}
+        <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 -mx-2.5 sm:-mx-4 md:-mx-6 px-4">
+          <div className="w-full max-w-4xl mx-auto flex justify-around py-0.5">
             {[
-              { id: 'posts', label: 'Posts' },
-              { id: 'videos', label: 'Videos' },
-              { id: 'media', label: 'Media' },
-              { id: 'pinned', label: 'Pinned' },
-              { id: 'drafts', label: 'Drafts', ownerOnly: true }
+              { id: 'posts', icon: LayoutGrid, label: 'All Content' },
+              { id: 'private', icon: Lock, label: 'Private' },
+              { id: 'saved', icon: Bookmark, label: 'Saved' },
+              { id: 'reposts', icon: Repeat2, label: 'Reposts' },
+              { id: 'liked', icon: Heart, label: 'Likes' }
             ].map(tab => {
-              if (tab.ownerOnly && !isOwnProfile) return null;
+              const Icon = tab.icon;
               const isActive = profileTab === tab.id;
+              
+              if (tab.id === 'posts') {
+                return (
+                  <div key={tab.id} className="relative flex items-center">
+                    <button
+                      onClick={() => {
+                        if (profileTab !== 'posts') {
+                          setProfileTab('posts');
+                        } else {
+                          setShowAllContentDropdown(!showAllContentDropdown);
+                        }
+                      }}
+                      className={`p-2 sm:p-2.5 rounded-full transition-all duration-300 flex items-center gap-1 cursor-pointer border ${
+                        isActive 
+                          ? 'text-violet-400 bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border-violet-500/25' 
+                          : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
+                      }`}
+                      title={tab.label}
+                    >
+                      <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                      <ChevronDown className="w-3 h-3 opacity-70" />
+                    </button>
+                    
+                    {/* All Content Dropdown Menu */}
+                    <AnimatePresence>
+                      {showAllContentDropdown && isActive && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-40" 
+                            onClick={() => setShowAllContentDropdown(false)} 
+                          />
+                          <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 mt-12 bg-[#09071c] border border-white/10 rounded-2xl p-1.5 shadow-2xl z-50 min-w-[150px] space-y-0.5 text-left"
+                          >
+                            {[
+                              { filter: 'all', label: 'All Content', icon: LayoutGrid },
+                              { filter: 'videos', label: 'Videos 🎥', icon: Video },
+                              { filter: 'photos', label: 'Photos 📸', icon: ImageIcon },
+                              { filter: 'posts', label: 'Posts 📝', icon: FileText },
+                              { filter: 'pinned', label: 'Pinned 📌', icon: Pin },
+                            ].map((item) => {
+                              const isFilterActive = allContentFilter === item.filter;
+                              return (
+                                <button
+                                  key={item.filter}
+                                  onClick={() => {
+                                    setAllContentFilter(item.filter as any);
+                                    setShowAllContentDropdown(false);
+                                    window.dispatchEvent(new CustomEvent('toast', { detail: `Filtered view: ${item.label}` }));
+                                  }}
+                                  className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer ${
+                                    isFilterActive 
+                                      ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20' 
+                                      : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
+                                  }`}
+                                >
+                                  <item.icon className="w-3.5 h-3.5 shrink-0 text-current" />
+                                  <span>{item.label}</span>
+                                </button>
+                              );
+                            })}
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              }
+              
               return (
-                <motion.button
+                <button
                   key={tab.id}
-                  onClick={() => setProfileTab(tab.id)}
-                  whileTap={{ scale: 0.96 }}
-                  className={`relative h-12 flex items-center justify-center px-4 sm:px-2 text-xs sm:text-sm font-sans tracking-wide whitespace-nowrap cursor-pointer transition-all duration-200 ${
+                  onClick={() => {
+                    setProfileTab(tab.id);
+                    setShowAllContentDropdown(false);
+                  }}
+                  className={`p-2.5 rounded-full transition-all duration-300 cursor-pointer border ${
                     isActive 
-                      ? 'text-white font-bold' 
-                      : 'text-zinc-500 hover:text-zinc-300 font-medium'
+                      ? 'text-violet-400 bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border-violet-500/25' 
+                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
                   }`}
+                  title={tab.label}
                 >
-                  <span>{tab.label}</span>
-                  {isActive && (
-                    <motion.div 
-                      layoutId="profileActiveTabLine"
-                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 rounded-t-full" 
-                      transition={{ type: "spring", stiffness: 350, damping: 25 }}
-                    />
-                  )}
-                </motion.button>
+                  <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                </button>
               );
             })}
           </div>
         </div>
 
-        {/* 9. RESPONSIVE GRID CONTENT & PINNED POSTS */}
-        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 py-6 space-y-6">
+        {/* 9. RESPONSIVE GRID CONTENT (Extended closer to screen edges) */}
+        <div className="mx-auto -mx-2.5 sm:-mx-4 md:-mx-6 px-[1px] sm:px-[2px] py-1 space-y-1.5">
           
-          {/* Render Pinned Items separately if viewing the regular Feed/Posts view */}
-          {profileTab === 'posts' && pinnedPostIdsList.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-1.5 text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest">
-                <Pin className="w-3.5 h-3.5 text-pink-400 rotate-45" /> Pinned
-              </div>
-              <MediaGrid 
-                gridPosts={myPosts.filter(p => pinnedPostIdsList.includes(p.id))} 
-                pinnedPostIds={pinnedPostIdsList} 
-                onSelectPost={(post) => setSelectedGridPost(post)} 
-              />
-            </div>
-          )}
-
           {/* Standard Grid view of posts */}
-          <div className="space-y-3 text-left">
-            <div className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-wider">
-              {profileTab} • {filteredTabPosts.length} Items
+          <div className="space-y-1.5 text-left">
+            <div className="text-[9.5px] font-mono text-zinc-500 font-bold uppercase tracking-wider px-2 flex items-center gap-1.5 select-none">
+              <span className="text-violet-400">
+                {profileTab === 'posts' ? `ALL CONTENT (${allContentFilter.toUpperCase()})` : profileTab.toUpperCase()}
+              </span>
+              <span>•</span>
+              <span>{(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? '0' : filteredTabPosts.length} {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? 'Items' : (filteredTabPosts.length === 1 ? 'Item' : 'Items')}</span>
             </div>
             
-            {filteredTabPosts.length === 0 ? (
-              <div className="p-8 py-14 rounded-3xl bg-white/2 border border-white/5 text-center space-y-4">
-                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-xl">
+            {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? (
+              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
+                  🔒
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-zinc-300">Private Section</h4>
+                  <p className="text-[11px] text-zinc-500 max-w-sm mx-auto mt-0.5 leading-normal">
+                    This section is private. Only @{currentUser.username} can view this content.
+                  </p>
+                </div>
+              </div>
+            ) : filteredTabPosts.length === 0 ? (
+              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
+                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
                   📭
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-200">Nothing here yet</h4>
-                  <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-normal">
+                  <h4 className="text-xs font-bold text-zinc-300">Nothing here yet</h4>
+                  <p className="text-[11px] text-zinc-500 max-w-sm mx-auto mt-0.5 leading-normal">
                     Your journey starts with your first post. This space will come alive soon.
                   </p>
                 </div>
                 {isOwnProfile && (
                   <button 
                     onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
-                    className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-[10px] uppercase rounded-xl transition-all"
+                    className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-[9px] uppercase rounded-lg transition-all"
                   >
                     + Create Post
                   </button>
@@ -1341,7 +1314,7 @@ export default function ProfileView({
               </div>
             ) : (
               <MediaGrid 
-                gridPosts={filteredTabPosts} 
+                gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
                 pinnedPostIds={pinnedPostIdsList} 
                 onSelectPost={(post) => setSelectedGridPost(post)} 
               />
@@ -1349,10 +1322,95 @@ export default function ProfileView({
           </div>
 
         </div>
-      </>)}
-
-      {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure - Redesigned Settings & Privacy Hub) */}
+        </div>
+      )}
+      
+        {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure - Redesigned Settings & Privacy Hub) */}
       <AnimatePresence>
+        {activePanel === 'other-profile-menu' && !isOwnProfile && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex justify-end" onClick={() => setActivePanel('profile')}>
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="w-full max-w-sm h-full bg-[#080614] border-l border-violet-500/15 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="space-y-4 shrink-0">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <h3 className="text-xs font-mono text-zinc-300 font-black uppercase tracking-wider">Profile Options</h3>
+                  <button 
+                    onClick={() => setActivePanel('profile')}
+                    className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+                  >
+                    <X className="w-4.5 h-4.5" />
+                  </button>
+                </div>
+                
+                <div className="space-y-2">
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText(`nexora.ai/${currentUser.username}`);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: 'Profile link copied to clipboard' }));
+                      setActivePanel('profile');
+                    }}
+                    className="w-full text-left p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] transition-all flex items-center gap-3"
+                  >
+                    <Forward className="w-5 h-5 text-zinc-400" />
+                    <div className="space-y-0.5">
+                      <span className="block text-sm font-semibold text-white">Share Profile</span>
+                      <span className="block text-xs text-zinc-500 font-mono">Copy profile link</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: `Notifications muted for @${currentUser.username}` }));
+                      setActivePanel('profile');
+                    }}
+                    className="w-full text-left p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] transition-all flex items-center gap-3"
+                  >
+                    <BellOff className="w-5 h-5 text-zinc-400" />
+                    <div className="space-y-0.5">
+                      <span className="block text-sm font-semibold text-white">Mute User</span>
+                      <span className="block text-xs text-zinc-500 font-mono">Stop seeing notifications</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: `@${currentUser.username} has been blocked.` }));
+                      setActivePanel('profile');
+                    }}
+                    className="w-full text-left p-4 rounded-2xl bg-red-500/5 hover:bg-red-500/10 transition-all flex items-center gap-3"
+                  >
+                    <Ban className="w-5 h-5 text-red-400" />
+                    <div className="space-y-0.5">
+                      <span className="block text-sm font-semibold text-red-400">Block User</span>
+                      <span className="block text-xs text-red-400/60 font-mono">Restrict all interactions</span>
+                    </div>
+                  </button>
+
+                  <button 
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('toast', { detail: `Report submitted for review.` }));
+                      setActivePanel('profile');
+                    }}
+                    className="w-full text-left p-4 rounded-2xl bg-red-500/5 hover:bg-red-500/10 transition-all flex items-center gap-3"
+                  >
+                    <Flag className="w-5 h-5 text-red-400" />
+                    <div className="space-y-0.5">
+                      <span className="block text-sm font-semibold text-red-400">Report User</span>
+                      <span className="block text-xs text-red-400/60 font-mono">Flag inappropriate behavior</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
         {activePanel === 'menu' && (
           <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex justify-end" onClick={() => { setActivePanel('profile'); setSettingsActiveSubPanel('main'); setSettingsSearchQuery(''); }}>
             <motion.div
@@ -2607,7 +2665,7 @@ export default function ProfileView({
       </AnimatePresence>
 
 
-      {/* 7. DYNAMIC CREATOR STUDIO & DETAILED ANALYTICS VIEW */}
+      {/* 7. DYNAMIC Nexora Studio & DETAILED ANALYTICS VIEW */}
       <AnimatePresence>
         {activePanel === 'creator-studio' && (
           <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
@@ -2878,6 +2936,296 @@ export default function ProfileView({
               >
                 Close Relationships
               </button>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+
+            {/* 11. SUBSCRIPTIONS MANAGEMENT PAGE */}
+      <AnimatePresence>
+        {activePanel === 'subscriptions' && (
+          <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 text-left">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <button
+                  onClick={() => setActivePanel('profile')}
+                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to Profile
+                </button>
+                <span className="text-xs font-mono text-zinc-400 font-extrabold uppercase">Subscriptions</span>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Header Info */}
+                <div className="p-6 bg-linear-to-tr from-violet-900/20 to-[#04020f] border border-violet-500/20 rounded-3xl">
+                  <h2 className="text-xl font-black text-white mb-2">Creator Subscriptions</h2>
+                  <p className="text-sm text-zinc-400">Support your favorite creators, unlock exclusive content, and get premium badges.</p>
+                </div>
+                
+                {/* Tabs */}
+                <div className="flex gap-4 border-b border-white/5">
+                  {[
+                    { id: 'active', label: 'Active Subscriptions' },
+                    { id: 'plans', label: 'Manage My Plans' },
+                    { id: 'exclusive', label: 'Exclusive Content' }
+                  ].map(tab => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setSubscriptionsTab(tab.id as any)}
+                      className={`pb-3 text-xs font-bold transition-all cursor-pointer ${
+                        subscriptionsTab === tab.id
+                          ? 'text-violet-400 border-b-2 border-violet-500'
+                          : 'text-zinc-500 hover:text-zinc-300'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Subscriptions List (Active) */}
+                {subscriptionsTab === 'active' && (
+                  <div className="space-y-4">
+                    {activeSubscriptions.length === 0 ? (
+                      <div className="py-12 text-center border border-dashed border-white/10 rounded-3xl bg-white/[0.02]">
+                        <p className="text-sm text-zinc-400 font-bold">No active subscriptions</p>
+                        <p className="text-xs text-zinc-600 mt-1">Subscribe to a creator to support them.</p>
+                      </div>
+                    ) : (
+                      activeSubscriptions.map(sub => (
+                        <div key={sub.username} className="flex items-center justify-between p-4 bg-[#0a0818] border border-white/5 rounded-2xl">
+                          <div className="flex items-center gap-3">
+                            <img src={sub.avatar} alt={sub.name} className="w-12 h-12 rounded-xl object-cover" referrerPolicy="no-referrer" />
+                            <div>
+                              <p className="text-sm font-bold text-white">{sub.name}</p>
+                              <p className="text-[10px] font-mono text-zinc-500">@{sub.username}</p>
+                              <div className="mt-1 flex items-center gap-1.5">
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-violet-400 bg-violet-400/10 px-2 py-0.5 rounded-md">{sub.plan}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xs font-bold text-white mb-2">{sub.price}</p>
+                            <button 
+                              onClick={() => {
+                                setActiveSubscriptions(prev => prev.filter(p => p.username !== sub.username));
+                                window.dispatchEvent(new CustomEvent('toast', { detail: `❌ Unsubscribed from @${sub.username}` }));
+                              }}
+                              className="text-[10px] font-bold text-red-400 hover:text-white hover:bg-red-500/20 transition-colors bg-white/5 px-3 py-1.5 rounded-lg border border-white/5 cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+
+                {/* Manage My Plans Tab */}
+                {subscriptionsTab === 'plans' && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      Configure the premium subscription tiers offered to your own subscribers. Update perks and prices to incentivize support.
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {mySubscriptionPlans.map((plan, index) => (
+                        <div key={index} className="p-4 bg-[#0a0818] border border-white/5 rounded-2xl flex flex-col justify-between space-y-4">
+                          <div>
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-violet-400 bg-violet-400/10 px-2.5 py-1 rounded-md block w-fit mb-2">
+                              {plan.tier}
+                            </span>
+                            <p className="text-2xl font-black text-white">{plan.price}<span className="text-xs text-zinc-500 font-normal">/mo</span></p>
+                            <p className="text-[11px] text-zinc-400 mt-2 leading-relaxed font-sans">{plan.perks}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              const newPrice = prompt(`Enter new monthly price for ${plan.tier}:`, plan.price);
+                              if (newPrice) {
+                                setMySubscriptionPlans(prev => prev.map((p, i) => i === index ? { ...p, price: newPrice } : p));
+                                window.dispatchEvent(new CustomEvent('toast', { detail: `✅ Updated price of ${plan.tier} to ${newPrice}/mo` }));
+                              }
+                            }}
+                            className="w-full py-2 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-mono font-bold uppercase transition-all cursor-pointer"
+                          >
+                            Edit Pricing
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Exclusive Content Tab */}
+                {subscriptionsTab === 'exclusive' && (
+                  <div className="space-y-4">
+                    <p className="text-xs text-zinc-400 leading-relaxed">
+                      Exclusive posts and files available only to active supporters. High-tier items remain locked until the subscription is active.
+                    </p>
+                    <div className="space-y-3">
+                      {exclusiveContentList.map(content => (
+                        <div key={content.id} className="p-4 bg-[#0a0818] border border-white/5 rounded-2xl flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-violet-950/40 border border-violet-500/15 flex items-center justify-center text-violet-300">
+                              {content.type === 'Video' ? <Film className="w-5 h-5" /> : content.type === 'Audio' ? <Mic className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                            </div>
+                            <div>
+                              <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                                {content.title}
+                                <span className="text-[9px] font-mono text-zinc-500">({content.type})</span>
+                              </p>
+                              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">by @{content.creator} • {content.date}</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => {
+                              window.dispatchEvent(new CustomEvent('toast', { detail: `🔒 Unlock higher subscription tier to view this exclusive ${content.type.toLowerCase()}!` }));
+                            }}
+                            className="px-4 py-2 bg-violet-950 text-violet-400 border border-violet-500/25 hover:bg-violet-900/40 rounded-xl text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                          >
+                            <Lock className="w-3.5 h-3.5" /> Unlock
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* 12. LINKED ACCOUNTS MANAGEMENT PAGE */}
+      <AnimatePresence>
+        {activePanel === 'linked-accounts' && (
+          <div className="fixed inset-0 z-50 bg-[#04020f] overflow-y-auto">
+            <div className="max-w-3xl mx-auto px-4 py-6 space-y-6 text-left relative min-h-screen">
+              <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                <button
+                  onClick={() => setActivePanel('profile')}
+                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" /> Back to Profile
+                </button>
+                <span className="text-xs font-mono text-zinc-400 font-extrabold uppercase">Linked Accounts</span>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Header Info */}
+                <div className="p-6 bg-linear-to-tr from-blue-900/20 to-[#04020f] border border-blue-500/20 rounded-3xl">
+                  <h2 className="text-xl font-black text-white mb-2">Connected Platforms</h2>
+                  <p className="text-sm text-zinc-400">Link your other social profiles and websites to display them on your Nexora profile.</p>
+                </div>
+                
+                {/* Platforms List */}
+                <div className="space-y-3">
+                  {connectedPlatforms.map(platform => (
+                    <div key={platform.id} className="flex items-center justify-between p-4 bg-[#0a0818] border border-white/5 rounded-2xl">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-lg">{platform.icon}</div>
+                        <div>
+                          <p className="text-sm font-bold text-white">{platform.name}</p>
+                          {platform.connected ? (
+                            <p className="text-[10px] font-mono text-emerald-400">Connected as {platform.username}</p>
+                          ) : (
+                            <p className="text-[10px] font-mono text-zinc-500">Not connected</p>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        {platform.connected ? (
+                          <button 
+                            onClick={() => {
+                              setConnectedPlatforms(prev => prev.map(p => p.id === platform.id ? { ...p, connected: false, username: '' } : p));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: `🔌 Disconnected ${platform.name} account` }));
+                            }}
+                            className="text-[10px] font-bold text-zinc-400 hover:text-red-400 transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/5 cursor-pointer"
+                          >
+                            Disconnect
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => {
+                              setPlatformToConnect(platform);
+                              setPlatformUsernameInput(platform.id === 'website' || platform.id === 'portfolio' ? 'https://' : '@');
+                              setShowPlatformConnectModal(true);
+                            }}
+                            className="text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors px-3 py-1.5 rounded-lg shadow-md shadow-blue-900/20 cursor-pointer"
+                          >
+                            Connect
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Platform Connection Modal Overlay */}
+              {showPlatformConnectModal && platformToConnect && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
+                  <div className="bg-[#0e0c24] border border-white/10 p-6 rounded-3xl max-w-md w-full space-y-4">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                      <h3 className="text-sm font-bold text-white font-mono uppercase flex items-center gap-2">
+                        <span>{platformToConnect.icon}</span> Connect {platformToConnect.name}
+                      </h3>
+                      <button 
+                        onClick={() => {
+                          setShowPlatformConnectModal(false);
+                          setPlatformToConnect(null);
+                        }}
+                        className="text-zinc-500 hover:text-white cursor-pointer"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-mono uppercase text-zinc-400">
+                        {platformToConnect.id === 'website' || platformToConnect.id === 'portfolio' ? 'Website URL' : 'Username / Handle'}
+                      </label>
+                      <input 
+                        type="text" 
+                        value={platformUsernameInput} 
+                        onChange={(e) => setPlatformUsernameInput(e.target.value)}
+                        placeholder={platformToConnect.id === 'website' || platformToConnect.id === 'portfolio' ? 'https://myportfolio.com' : '@username'}
+                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white text-xs focus:outline-hidden focus:border-blue-500 font-mono"
+                        autoFocus
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button 
+                        onClick={() => {
+                          setShowPlatformConnectModal(false);
+                          setPlatformToConnect(null);
+                        }}
+                        className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-300 rounded-xl transition-all cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={() => {
+                          if (!platformUsernameInput || platformUsernameInput.trim() === '' || platformUsernameInput === '@' || platformUsernameInput === 'https://') {
+                            alert('Please enter a valid handle or URL');
+                            return;
+                          }
+                          setConnectedPlatforms(prev => prev.map(p => p.id === platformToConnect.id ? { ...p, connected: true, username: platformUsernameInput.trim() } : p));
+                          setShowPlatformConnectModal(false);
+                          setPlatformToConnect(null);
+                          window.dispatchEvent(new CustomEvent('toast', { detail: `🔌 Connected ${platformToConnect.name} as ${platformUsernameInput.trim()}` }));
+                        }}
+                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white rounded-xl transition-all shadow-md shadow-blue-900/20 cursor-pointer"
+                      >
+                        Confirm Link
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         )}
@@ -3597,7 +3945,7 @@ export default function ProfileView({
                     }}
                     className="w-full p-3 rounded-2xl bg-violet-600/20 border border-violet-500/30 hover:bg-violet-600/35 text-violet-300 font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
                   >
-                    <Share2 className="w-3.5 h-3.5" />
+                    <Forward className="w-3.5 h-3.5" />
                     <span>Device Share Sheet</span>
                   </button>
                 </div>
@@ -3606,7 +3954,6 @@ export default function ProfileView({
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

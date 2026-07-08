@@ -1,11 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sparkles, TrendingUp, BarChart2, Activity, CheckCircle, AlertTriangle, 
-  RefreshCw, Play, Sliders, Shield, Search, Zap, Award, Info, Users, 
-  Target, Check, X, ChevronRight, Cpu, Eye, Heart, Share2, 
-  MessageSquare, Bookmark, ThumbsDown, Trash2, ArrowUpRight, Ban, EyeOff
-} from 'lucide-react';
+import { Sparkles, TrendingUp, BarChart2, Activity, CheckCircle, AlertTriangle, RefreshCw, Play, Sliders, Shield, Search, Zap, Award, Info, Users, Target, Check, X, ChevronRight, Cpu, Eye, Heart, MessageSquare, Bookmark, ThumbsDown, Trash2, ArrowUpRight, Ban, EyeOff, Forward } from 'lucide-react';
 import { User, Post } from '../types';
 import { getRecommendationProfile, saveRecommendationProfile } from '../utils/recommendations';
 

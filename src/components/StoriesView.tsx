@@ -1,24 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Plus, 
-  CheckCircle, 
-  X, 
-  Volume2, 
-  VolumeX, 
-  SkipForward, 
-  Play, 
-  Pause, 
-  Sparkles, 
-  Pin, 
-  Heart, 
-  Trash2, 
-  Camera, 
-  Video, 
-  Mic, 
-  Check,
-  AlertCircle
-} from 'lucide-react';
+import { Plus, CheckCircle, X, Volume2, VolumeX, SkipForward, Play, Pause, Sparkles, Pin, Heart, Trash2, Camera, Video, Mic, Check, AlertCircle } from 'lucide-react';
 import { User } from '../types';
 
 // Human-friendly relatable seed stories

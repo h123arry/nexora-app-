@@ -1,20 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Target, 
-  Sparkles, 
-  Users, 
-  TrendingUp, 
-  Calendar, 
-  Plus, 
-  ListRestart, 
-  Flame, 
-  Check, 
-  Gift, 
-  UsersRound, 
-  Dribbble,
-  Award
-} from 'lucide-react';
+import { Target, Sparkles, Users, TrendingUp, Calendar, Plus, ListRestart, Flame, Check, Gift, UsersRound, Dribbble, Award } from 'lucide-react';
 import { SocialMission, User } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
 import { INITIAL_MISSIONS } from '../data/database';

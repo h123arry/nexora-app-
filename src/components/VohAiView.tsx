@@ -1,54 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Sparkles, 
-  Mic, 
-  MicOff, 
-  Volume2, 
-  VolumeX, 
-  FileText, 
-  Send, 
-  BrainCircuit,
-  ClipboardCopy,
-  Info,
-  CheckCircle,
-  TrendingUp,
-  Award,
-  Compass,
-  Search,
-  Plus,
-  Trash2,
-  Pin,
-  Archive,
-  FolderPlus,
-  Folder,
-  RefreshCw,
-  HelpCircle,
-  ShieldCheck,
-  AlertTriangle,
-  FileCheck,
-  ThumbsUp,
-  MessageSquare,
-  Sparkle,
-  PenSquare,
-  Users,
-  Settings,
-  X,
-  Play,
-  Square,
-  BookOpen,
-  DollarSign,
-  Cpu,
-  Database,
-  HardDrive,
-  Bell,
-  Layers,
-  Lock,
-  UserCheck,
-  Activity,
-  Eye,
-  Share2
-} from 'lucide-react';
+import { Sparkles, Mic, MicOff, Volume2, VolumeX, FileText, Send, BrainCircuit, ClipboardCopy, Info, CheckCircle, TrendingUp, Award, Compass, Search, Plus, Trash2, Pin, Archive, FolderPlus, Folder, RefreshCw, HelpCircle, ShieldCheck, AlertTriangle, FileCheck, ThumbsUp, MessageSquare, Sparkle, PenSquare, Users, Settings, X, Play, Square, BookOpen, DollarSign, Cpu, Database, HardDrive, Bell, Layers, Lock, UserCheck, Activity, Eye, Forward } from 'lucide-react';
 import { User, Post, Circle, Notification } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
 import { 
@@ -1592,7 +1544,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               case 'BrainCircuit': return BrainCircuit;
               case 'Award': return Award;
               case 'Activity': return Activity;
-              case 'Share2': return Share2;
+              case 'Share': return Forward;
               case 'Lock': return Lock;
               case 'Folder': return Folder;
               case 'RefreshCw': return RefreshCw;
@@ -1631,7 +1583,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         name: '🎬 Content & Media',
                         engines: [
                           { id: 'stream', name: 'Media Streaming', desc: 'Adaptive quality & memory preloading', iconName: 'HardDrive', badge: 'Optimized' },
-                          { id: 'distribution', name: 'Content Distribution', desc: 'Balances freshness with follower spread', iconName: 'Share2', badge: 'Active' },
+                          { id: 'distribution', name: 'Content Distribution', desc: 'Balances freshness with follower spread', iconName: 'Forward', badge: 'Active' },
                           { id: 'media_processing', name: 'Media Processing', desc: 'Transcodes videos & compresses images', iconName: 'HardDrive', badge: 'Automated' }
                         ]
                       },
@@ -1651,7 +1603,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           { id: 'engagement', name: 'Engagement Engine', desc: 'Aggregates Sparks, views and retention', iconName: 'Activity', badge: 'Live' },
                           { id: 'trend', name: 'Trend Intelligence', desc: 'Calculates real viral topics & hashtags', iconName: 'TrendingUp', badge: 'Dynamic' },
                           { id: 'achievement', name: 'Achievement Engine', desc: 'Awards milestones based on progress', iconName: 'Award', badge: 'Active' },
-                          { id: 'studio', name: 'Creator Studio', desc: 'Provides advanced audience analytics', iconName: 'PenSquare', badge: 'Studio' }
+                          { id: 'studio', name: 'Nexora Studio', desc: 'Provides advanced audience analytics', iconName: 'PenSquare', badge: 'Studio' }
                         ]
                       },
                       {

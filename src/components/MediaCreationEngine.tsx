@@ -1,12 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, 
-  MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, 
-  Volume2, RotateCw, Crop, Sliders, VolumeX, Save, 
-  ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo,
-  Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag
-} from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
 import { User } from '../types';
 import { saveMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 

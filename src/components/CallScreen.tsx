@@ -1,18 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Phone, 
-  Video, 
-  PhoneOff, 
-  VolumeX, 
-  Volume2, 
-  Mic, 
-  MicOff, 
-  Camera, 
-  Sparkles, 
-  UserPlus, 
-  Grid
-} from 'lucide-react';
+import { Phone, Video, PhoneOff, VolumeX, Volume2, Mic, MicOff, Camera, Sparkles, UserPlus, Grid } from 'lucide-react';
 
 interface CallScreenProps {
   isOpen: boolean;

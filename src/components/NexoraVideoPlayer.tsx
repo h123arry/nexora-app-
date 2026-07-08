@@ -4,34 +4,7 @@ import ShareSheet from './ShareSheet';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
-import { 
-  Play, 
-  Pause, 
-  Volume2, 
-  VolumeX, 
-  Maximize2, 
-  Bookmark, 
-  Check, 
-  Plus, 
-  FolderHeart, 
-  Download, 
-  Settings,
-  MoreVertical,
-  Radio,
-  Zap,
-  RotateCcw,
-  Heart,
-  MessageSquare,
-  Share2,
-  Forward,
-  Music,
-  X,
-  AlertTriangle,
-  EyeOff,
-  Search,
-  CheckCircle,
-  Sun
-} from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Forward, Music, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Post {
@@ -52,6 +25,8 @@ interface Post {
   searchSuggestion?: string;
   isLikedByUser?: boolean;
   isVerified?: boolean;
+  isArchived?: boolean;
+  isDraft?: boolean;
 }
 
 interface NexoraVideoPlayerProps {
@@ -104,6 +79,16 @@ export default function NexoraVideoPlayer({
   const playerId = useRef(`player-${post.id}-${Math.random().toString(36).substring(2, 11)}`).current;
   const [isNearby, setIsNearby] = useState(false);
 
+  const currentUser = (() => {
+    try {
+      const u = localStorage.getItem('nexora_user');
+      return u ? JSON.parse(u) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
+
   const resolvedUrl = useResolvedUrl(videoUrl);
   const finalVideoUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
 
@@ -122,6 +107,7 @@ export default function NexoraVideoPlayer({
   const [showLongPressMenu, setShowLongPressMenu] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<'1080p' | '720p' | '480p' | 'Auto'>('Auto');
   const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
@@ -505,12 +491,10 @@ export default function NexoraVideoPlayer({
   const handleStartHold = (e: React.MouseEvent) => {
     if (e.button !== 0) return;
     touchStartRef.current = { x: e.clientX, y: e.clientY };
-    setIsLongPressing(false);
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
       if (!videoRef.current) return;
-      setIsLongPressing(true);
-      setShowQuickActions(true);
+      setShowLongPressMenu(true);
       videoRef.current.pause();
       setIsPlaying(false);
       setShowControls(false);
@@ -521,17 +505,6 @@ export default function NexoraVideoPlayer({
     if (longPressTimerRef.current) {
       clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = null;
-    }
-    const wasLongPressing = isLongPressing;
-    setIsLongPressing(false);
-    if (wasLongPressing && !showQuickActions) {
-      if (videoRef.current) {
-        videoRef.current.play().catch(() => {});
-        setIsPlaying(true);
-      }
-      setShowControls(true);
-    } else if (!wasLongPressing && touchStartRef.current) {
-      handleTapOrGesture(touchStartRef.current.x, touchStartRef.current.y);
     }
     touchStartRef.current = null;
   };
@@ -636,24 +609,6 @@ export default function NexoraVideoPlayer({
       isDraggingVerticalRef.current = false;
       initialVolumeRef.current = videoRef.current ? videoRef.current.volume * 100 : volumeLevel;
       initialBrightnessRef.current = brightnessLevel;
-
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-      }
-
-      const startXPercent = (touch.clientX / window.innerWidth) * 100;
-      
-      // Reserve left 25% and right 25% for HUD drags. Only start long-press hold-to-pause in center 50%
-      if (startXPercent >= 25 && startXPercent <= 75) {
-        longPressTimerRef.current = setTimeout(() => {
-          if (!videoRef.current) return;
-          setIsLongPressing(true);
-          setShowQuickActions(true);
-          videoRef.current.pause();
-          setIsPlaying(false);
-          setShowControls(false);
-        }, 500); // Quick, responsive long press
-      }
     };
 
     const onTouchMove = (e: TouchEvent) => {
@@ -671,24 +626,12 @@ export default function NexoraVideoPlayer({
         if (absY > 12 && absY > absX) {
           if (startXPercent < 25 || startXPercent > 75) {
             isDraggingVerticalRef.current = true;
-            if (longPressTimerRef.current) {
-              clearTimeout(longPressTimerRef.current);
-              longPressTimerRef.current = null;
-            }
           } else {
             // Center vertical movement means scrolling feed - cancel hold timer
-            if (longPressTimerRef.current) {
-              clearTimeout(longPressTimerRef.current);
-              longPressTimerRef.current = null;
-            }
             touchStartRef.current = null;
           }
         } else if (absX > 10) {
           // Horizontal movement - cancel hold timer
-          if (longPressTimerRef.current) {
-            clearTimeout(longPressTimerRef.current);
-            longPressTimerRef.current = null;
-          }
           touchStartRef.current = null;
         }
       }
@@ -999,6 +942,106 @@ export default function NexoraVideoPlayer({
                 </div>
                 <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.shares || 0}</span>
               </button>
+
+              {/* ⚙️ Options Menu */}
+              <div className="relative flex flex-col items-center">
+                <button 
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    setShowMoreMenu(!showMoreMenu);
+                  }}
+                  className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+                  title="More post options"
+                >
+                  <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${showMoreMenu ? 'border-violet-500/50 bg-violet-550/20' : ''}`}>
+                    <MoreVertical className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">Options</span>
+                </button>
+
+                <AnimatePresence>
+                  {showMoreMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9, x: 10, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.9, x: 10, y: 10 }}
+                      className="absolute right-12 bottom-0 mb-2 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1 text-left"
+                    >
+                      {isOwnPost ? (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newCaption = prompt('Edit caption:', post.content);
+                              if (newCaption !== null && newCaption.trim() !== '') {
+                                window.dispatchEvent(new CustomEvent('nexora-edit-caption', { detail: { postId: post.id, newCaption } }));
+                              }
+                              setShowMoreMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                            Edit Caption
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const archiveState = !post.isArchived;
+                              window.dispatchEvent(new CustomEvent('nexora-archive-post', { detail: { postId: post.id, archiveState } }));
+                              setShowMoreMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                          >
+                            <Archive className="w-3.5 h-3.5 shrink-0 text-fuchsia-400" />
+                            {post.isArchived ? 'Restore Post' : 'Archive Post'}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+                                window.dispatchEvent(new CustomEvent('nexora-delete-post', { detail: { postId: post.id } }));
+                              }
+                              setShowMoreMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
+                          >
+                            <Trash className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                            Delete Post
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {onToggleFollow && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onToggleFollow();
+                                setShowMoreMenu(false);
+                              }}
+                              className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                            >
+                              <UserPlus className="w-3.5 h-3.5 shrink-0 text-violet-400" />
+                              {isFollowing ? 'Unfollow Creator' : 'Follow Creator'}
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onNotInterested?.();
+                              setShowMoreMenu(false);
+                              window.dispatchEvent(new CustomEvent('toast', { detail: '🙈 Marked as not interested' }));
+                            }}
+                            className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
+                          >
+                            <EyeOff className="w-3.5 h-3.5 shrink-0 text-zinc-400" />
+                            Not Interested
+                          </button>
+                        </>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
                           <div 
@@ -1252,15 +1295,6 @@ export default function NexoraVideoPlayer({
         )}
       </AnimatePresence>
 
-      {/* Nexora Quick Actions Sheet */}
-      <QuickActionsSheet 
-        isOpen={showQuickActions} 
-        onClose={() => setShowQuickActions(false)} 
-        onAction={(action) => {
-          if (action === 'save') setShowSaveModal(true);
-          else if (action === 'report') recordRecommendationEvent('skip_quick', { creatorId: post.userId });
-        }}
-      />
 
       {/* Nexora Share Sheet */}
       <ShareSheet 
@@ -1338,7 +1372,7 @@ export default function NexoraVideoPlayer({
                   }}
                   className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
                 >
-                  <Share2 className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
+                  <Forward className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
                   <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Share</span>
                 </button>
 
