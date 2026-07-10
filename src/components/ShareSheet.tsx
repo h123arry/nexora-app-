@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Copy, MessageSquare, Send, Check, ShieldAlert, EyeOff, HelpCircle, Users, Rocket, Link2, Download, RefreshCw, Bookmark, AlertCircle, Info, Forward } from 'lucide-react';
+import { X, Copy, MessageSquare, Send, Check, ShieldAlert, EyeOff, HelpCircle, Users, Rocket, Link2, Download, RefreshCw, Bookmark, AlertCircle, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ShareSheetProps {
@@ -100,7 +100,7 @@ export default function ShareSheet({
 
         <div className="mb-6 flex items-center justify-between">
           <h3 className="font-sans font-bold text-base text-white tracking-tight flex items-center gap-2">
-            <Forward className="w-4 h-4 text-violet-400" /> Share Experience
+            <span className="text-violet-400 font-bold text-base">➥</span> Share Experience
           </h3>
           <button 
             onClick={onClose}

@@ -4,7 +4,7 @@ import ShareSheet from './ShareSheet';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
-import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Forward, Music, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3 } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Music, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Post {
@@ -938,7 +938,7 @@ export default function NexoraVideoPlayer({
                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
               >
                 <div className="w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg">
-                  <Forward className="w-5 h-5 text-white transition-transform duration-300 group-hover/btn:scale-110" />
+                  <span className="text-white font-bold text-lg transition-transform duration-300 group-hover/btn:scale-110">➥</span>
                 </div>
                 <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.shares || 0}</span>
               </button>
@@ -1372,7 +1372,7 @@ export default function NexoraVideoPlayer({
                   }}
                   className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
                 >
-                  <Forward className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
+                  <span className="text-zinc-300 group-hover:text-violet-400 font-bold text-lg transition-colors mb-1.5">➥</span>
                   <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Share</span>
                 </button>
 

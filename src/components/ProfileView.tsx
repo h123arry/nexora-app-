@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, Forward } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -9,6 +9,7 @@ import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
+import StorageDataCenterModal from './StorageDataCenterModal';
 import { 
   MOCK_CREATORS, 
   ADDITIONAL_TEST_ACCOUNTS, 
@@ -40,7 +41,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
   }
 
   return (
-    <div className="grid grid-cols-3 gap-[1px] sm:gap-[2px] w-full">
+    <div className="grid grid-cols-3 gap-[1px] w-full">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -51,10 +52,10 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
             layout
             key={post.id}
             onClick={() => onSelectPost(post)}
-            whileHover={{ scale: 1.02, y: -2 }}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 18 }}
-            className="aspect-square rounded-[4px] sm:rounded-xl overflow-hidden relative border border-violet-500/10 hover:border-[#8B5CF6]/50 group cursor-pointer bg-[#050314]/90 flex flex-col justify-between"
+            className="aspect-[4/5] overflow-hidden relative cursor-pointer bg-[#050314]/90 flex flex-col justify-between"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -245,6 +246,7 @@ export default function ProfileView({
   const [dataSaver, setDataSaver] = useState(false);
   const [autoplayVideos, setAutoplayVideos] = useState(true);
   const [mediaQuality, setMediaQuality] = useState('high'); // 'standard' | 'high' | 'lossless'
+  const [isStorageCenterOpen, setIsStorageCenterOpen] = useState(false);
 
   // Security toggles/inputs
   const [currentPassword, setCurrentPassword] = useState('');
@@ -850,7 +852,7 @@ export default function ProfileView({
     <div className="relative w-full min-h-screen bg-[#030112] text-white font-sans overflow-x-hidden pb-24">
       
       {/* 1. TOP NAVIGATION ACTION BAR */}
-      <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-40 border-b border-white/5 py-2 px-4 flex items-center justify-between">
+      <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-40 py-1.5 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3 relative">
           {onCloseProfile && (
             <button 
@@ -1016,12 +1018,14 @@ export default function ProfileView({
         <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Identity (Refined Compact Layout) */}
-          <div className="flex items-center gap-4 text-left mb-0.5">
+          <div className="flex items-center gap-3 text-left mb-0">
             <div className="relative shrink-0">
-              <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
+              {currentUser.hasStory && (
+                <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
+              )}
               <div 
                 onClick={() => setProfilePicExpanded(true)}
-                className="w-[82px] h-[82px] sm:w-[88px] sm:h-[88px] rounded-full bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
+                className="w-[90px] h-[90px] sm:w-[96px] sm:h-[96px] rounded-full bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
               >
                 <img 
                   src={currentUser.avatar} 
@@ -1039,7 +1043,7 @@ export default function ProfileView({
               </div>
               
               {/* Username & Twin Action Chips (Clean Horizontal Row) */}
-              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+              <div className="flex items-center gap-2 -mt-0.5 flex-wrap">
                 <p className="text-xs font-bold text-violet-400/70 font-mono tracking-wider">@{currentUser.username}</p>
                 {isOwnProfile ? (
                   <div className="flex items-center gap-1.5">
@@ -1081,8 +1085,8 @@ export default function ProfileView({
           </div>
 
           {/* 3x2 Statistics Grid with Integrated Share Button (No divider) */}
-          <div className="flex items-center justify-between py-1 border-y border-white/[0.03] mt-0.5 mb-0.5 select-none">
-            <div className="flex-1 grid grid-cols-3 gap-y-1 gap-x-1.5 sm:gap-x-3 w-full text-center">
+          <div className="flex items-center justify-between py-0.5 border-y border-white/[0.015] mt-0 mb-0.5 select-none">
+            <div className="flex-1 grid grid-cols-3 gap-y-1 gap-x-2 sm:gap-x-4 w-full text-center">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
@@ -1103,7 +1107,7 @@ export default function ProfileView({
                 className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors cursor-pointer" 
                 title="Share Profile"
               >
-                <Forward className="w-4.5 h-4.5" />
+                <span className="font-bold">➥</span>
               </button>
             </div>
           </div>
@@ -1131,19 +1135,19 @@ export default function ProfileView({
           <div className="flex flex-wrap gap-1.5 mb-0.5 mt-0.5">
             <button 
               onClick={() => setActivePanel('creator-studio')} 
-              className="px-2 h-[17px] bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/30 rounded-full text-[9px] font-bold text-violet-300 transition-all border border-violet-500/15 cursor-pointer flex items-center justify-center"
+              className="px-2 h-[14px] bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/30 rounded-full text-[9px] font-bold text-violet-300 transition-all border border-violet-500/15 cursor-pointer flex items-center justify-center"
             >
               Nexora Studio
             </button>
             <button 
               onClick={() => setActivePanel('subscriptions')} 
-              className="px-2 h-[17px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
+              className="px-2 h-[14px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
             >
               Subscriptions
             </button>
             <button 
               onClick={() => setActivePanel('linked-accounts')} 
-              className="px-2 h-[17px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
+              className="px-2 h-[14px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
             >
               Linked Accounts
             </button>
@@ -1268,16 +1272,16 @@ export default function ProfileView({
         </div>
 
         {/* 9. RESPONSIVE GRID CONTENT (Extended closer to screen edges) */}
-        <div className="mx-auto -mx-2.5 sm:-mx-4 md:-mx-6 px-[1px] sm:px-[2px] py-1 space-y-1.5">
+        <div className="mx-auto -mx-2.5 sm:-mx-4 md:-mx-6 px-0 sm:px-0 py-0.5 space-y-1">
           
           {/* Standard Grid view of posts */}
           <div className="space-y-1.5 text-left">
-            <div className="text-[9.5px] font-mono text-zinc-500 font-bold uppercase tracking-wider px-2 flex items-center gap-1.5 select-none">
+            <div className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-wider px-2 flex items-center gap-1.5 select-none">
               <span className="text-violet-400">
-                {profileTab === 'posts' ? `ALL CONTENT (${allContentFilter.toUpperCase()})` : profileTab.toUpperCase()}
+                {profileTab === 'posts' ? 'Posts' : profileTab.charAt(0).toUpperCase() + profileTab.slice(1)}
               </span>
               <span>•</span>
-              <span>{(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? '0' : filteredTabPosts.length} {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? 'Items' : (filteredTabPosts.length === 1 ? 'Item' : 'Items')}</span>
+              <span>{(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? '0' : filteredTabPosts.length} {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? 'Posts' : (filteredTabPosts.length === 1 ? 'Post' : 'Posts')}</span>
             </div>
             
             {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? (
@@ -1357,7 +1361,7 @@ export default function ProfileView({
                     }}
                     className="w-full text-left p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] transition-all flex items-center gap-3"
                   >
-                    <Forward className="w-5 h-5 text-zinc-400" />
+                    <span className="text-zinc-400 font-bold">➥</span>
                     <div className="space-y-0.5">
                       <span className="block text-sm font-semibold text-white">Share Profile</span>
                       <span className="block text-xs text-zinc-500 font-mono">Copy profile link</span>
@@ -2329,6 +2333,25 @@ export default function ProfileView({
                     {/* Drill down Panel 6: Storage and Performance */}
                     {settingsActiveSubPanel === 'storage' && (
                       <div className="space-y-4 text-left">
+                        {/* Premium Storage and Data Center Launcher */}
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#12082b] to-[#04010a] border border-violet-500/25 space-y-3 relative overflow-hidden group">
+                          <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-2xl group-hover:bg-violet-600/20 transition-all duration-500" />
+                          <div className="flex items-center gap-2.5">
+                            <Sparkles className="w-5 h-5 text-violet-400 shrink-0" />
+                            <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">NEXORA PLATFORM UTILITY</span>
+                          </div>
+                          <div className="space-y-1">
+                            <h4 className="text-xs font-black font-sans uppercase text-white tracking-wider">Advanced Storage & Data Center</h4>
+                            <p className="text-[10px] text-zinc-400 leading-relaxed">Access visual storage rings, duplicate media analyzers, custom bandwidth managers, encrypted backups and restore managers.</p>
+                          </div>
+                          <button
+                            onClick={() => setIsStorageCenterOpen(true)}
+                            className="w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-mono text-[10px] uppercase font-black tracking-wider rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-violet-600/10 cursor-pointer"
+                          >
+                            <HardDrive className="w-4 h-4" /> Launch Interactive Storage Center
+                          </button>
+                        </div>
+
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3.5">
                           <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">💾 LOCAL CACHE RE-CALIBRATION</span>
                           
@@ -3945,7 +3968,7 @@ export default function ProfileView({
                     }}
                     className="w-full p-3 rounded-2xl bg-violet-600/20 border border-violet-500/30 hover:bg-violet-600/35 text-violet-300 font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
                   >
-                    <Forward className="w-3.5 h-3.5" />
+                    <span className="font-bold">➥</span>
                     <span>Device Share Sheet</span>
                   </button>
                 </div>
@@ -3954,6 +3977,7 @@ export default function ProfileView({
           </div>
         )}
       </AnimatePresence>
+      <StorageDataCenterModal isOpen={isStorageCenterOpen} onClose={() => setIsStorageCenterOpen(false)} />
     </div>
   );
 }

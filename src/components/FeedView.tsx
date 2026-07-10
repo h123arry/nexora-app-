@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Repeat, MessageSquare, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreVertical, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Forward } from 'lucide-react';
+import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -56,7 +56,7 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
   };
 
   return (
-    <div className="relative overflow-hidden rounded-none md:rounded-2xl border-y md:border border-white/5 mb-4 aspect-square max-h-[500px] bg-black group select-none -mx-4 md:mx-0">
+    <div className="relative overflow-hidden border-b border-white/5 mb-4 aspect-square max-h-[500px] bg-black group select-none">
       <div 
         className="flex h-full transition-transform duration-300 ease-out"
         style={{ transform: `translateX(-${index * (100 / images.length)}%)`, width: `${images.length * 100}%` }}
@@ -126,14 +126,14 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
 // Active moments structure
 const MOCK_MOMENTS = [
   { id: 'm-0', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', active: true, quotes: ["Building the future of social networks with clean designs.", "Great seeing our community grow so rapidly!", "Continuous listening and iterating with you guys."] },
-  { id: 'm-1', name: 'Nexora Official', username: 'nexora_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Official NEXORA platform account 🌟 Keeping you posted with community updates!", "Super excited to share our latest developments today.", "Always working to bring you the best experience!"] },
-  { id: 'm-2', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["The Intelligent AI assistant by VOICE OF HARRISON.", "Connected and ready to assist you anytime.", "Analyzing daily premier league matches."] }
+  { id: 'm-1', name: 'Official', username: 'official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Official platform account 🌟 Keeping you posted with community updates!", "Super excited to share our latest developments today.", "Always working to bring you the best experience!"] },
+  { id: 'm-2', name: 'AI Assistant', username: 'ai_assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["The Intelligent AI assistant.", "Connected and ready to assist you anytime.", "Analyzing daily trends."] }
 ];
 
 const SEARCHABLE_SYSTEM_USERS = [
-  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 15300000, bio: 'Nexora Founder & System Architect. Building social systems with absolute visual rhythm.' },
-  { id: 'nexora_official', name: 'Nexora Official', username: 'nexora_official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 6400000, bio: 'Official NEXORA platform account 🌟 Keeping you posted with community updates, feature releases, and everyday stories.' },
-  { id: 'voh_ai', name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 8700000, bio: 'The Intelligent AI assistant by VOICE OF HARRISON. Syncing daily matches (Messi vs Ronaldo!), movie trends, and helper scripts.' }
+  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 15300000, bio: 'Founder & System Architect. Building social systems with absolute visual rhythm.' },
+  { id: 'official', name: 'Official', username: 'official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 6400000, bio: 'Official platform account 🌟 Keeping you posted with community updates, feature releases, and everyday stories.' },
+  { id: 'ai_assistant', name: 'AI Assistant', username: 'ai_assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 8700000, bio: 'The Intelligent AI assistant. Syncing daily trends, movie reviews, and helper scripts.' }
 ];
 
 interface FeedViewProps {
@@ -1844,7 +1844,7 @@ export default function FeedView({
             className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-violet-300 hover:text-white transition-all border border-white/5 cursor-pointer flex items-center justify-center"
             title="Messages"
           >
-            <MessageSquare className="w-3.5 h-3.5" />
+            <MessageCircle className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
@@ -2617,7 +2617,7 @@ export default function FeedView({
                           className="p-1 px-1.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-all cursor-pointer flex items-center gap-1"
                           title="More options"
                         >
-                          <MoreVertical className="w-3.5 h-3.5" />
+                          <MoreHorizontal className="w-3.5 h-3.5" />
                           <span className="text-[9px] font-mono uppercase font-black tracking-wider leading-none">More</span>
                         </button>
 
@@ -2856,7 +2856,7 @@ export default function FeedView({
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-white/5 text-emerald-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
                               >
-                                <Forward className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                                <span className="text-emerald-400 font-bold text-xs">➥</span>
                                 Copy Link
                               </button>
 
@@ -2869,7 +2869,7 @@ export default function FeedView({
                                 }}
                                 className="w-full text-left px-3 py-2 hover:bg-white/5 text-sky-400 flex items-center gap-2 text-xs transition-colors cursor-pointer"
                               >
-                                <Forward className="w-3.5 h-3.5 shrink-0 text-sky-400" />
+                                <span className="text-sky-400 font-bold text-xs">➥</span>
                                 Share
                               </button>
 
@@ -3248,7 +3248,7 @@ export default function FeedView({
                             : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
                         }`}
                       >
-                        <MessageSquare className="w-3.5 h-3.5 text-violet-400" />
+                        <span className="text-violet-400 font-bold text-sm">💬</span>
                         <span>{post.comments.length}</span>
                       </motion.button>
 
@@ -3268,7 +3268,7 @@ export default function FeedView({
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 cursor-pointer text-[11px] text-violet-300/90"
                       >
-                        <Repeat className="w-3.5 h-3.5 text-emerald-400" />
+                        <span className="text-emerald-400 font-bold text-sm">➥</span>
                         <span>{post.shares}</span>
                       </motion.button>
                     </div>
@@ -3286,6 +3286,7 @@ export default function FeedView({
                         }`}
                       >
                         <Bookmark className={`w-3.5 h-3.5 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-cyan-400/80'}`} />
+                        <span>{post.saves || 0}</span>
                         <span className="hidden sm:inline">Save</span>
                       </motion.button>
 
@@ -3297,11 +3298,16 @@ export default function FeedView({
                           try {
                             navigator.clipboard.writeText(`https://nexora.ai/post/${post.id}`);
                             window.dispatchEvent(new CustomEvent('toast', { detail: "📋 Post link copied to clipboard!" }));
+                            setLocalPosts(prev => prev.map(p => {
+                              if (p.id === post.id) return { ...p, shares: (p.shares || 0) + 1 };
+                              return p;
+                            }));
                           } catch(e){}
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 cursor-pointer text-[11px] text-violet-300/90"
                       >
-                        <Forward className="w-3.5 h-3.5 text-pink-400" />
+                        <span className="text-pink-400 font-bold text-sm">➥</span>
+                        <span>{post.shares || 0}</span>
                         <span className="hidden sm:inline">Share</span>
                       </motion.button>
                     </div>
@@ -4156,7 +4162,7 @@ export default function FeedView({
                     }}
                     className="flex-1 flex flex-col items-center p-3 rounded-2xl bg-slate-950/60 border border-white/5 hover:border-violet-500/25 text-violet-300 cursor-pointer"
                   >
-                    <MessageSquare className="w-5 h-5 mb-1" />
+                    <MessageCircle className="w-5 h-5 mb-1" />
                     <span className="text-xs font-mono font-bold">{activeVideoFullscreen.comments.length} Reply</span>
                   </button>
                 </div>
@@ -4721,7 +4727,7 @@ export default function FeedView({
                   onClick={() => setShowTransparencyExplanation(false)}
                   className="p-1 px-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs font-mono"
                 >
-                  Close ×
+                  Close X
                 </button>
               </div>
 

@@ -10,6 +10,7 @@ export interface User {
   following: number;
   sparks?: number;
   isVerified: boolean;
+  hasStory?: boolean;
   coverImage: string;
   joinedDate: string;
   email?: string;
@@ -202,6 +203,22 @@ export interface Message {
   status: 'sent' | 'delivered' | 'read';
 }
 
+export interface ExtendedMessage extends Message {
+  voiceDuration?: string;
+  isVoicePlaying?: boolean;
+  videoUrl?: string;
+  fileName?: string;
+  fileSize?: string;
+  replyToQuote?: string;
+  reactions?: { emoji: string, userIds: string[] }[];
+  isEdited?: boolean;
+  translation?: string;
+  isTranslating?: boolean;
+  isOfflineUnsent?: boolean;
+  customMediaType?: string;
+  customMediaData?: any;
+}
+
 export interface Chat {
   id: string;
   partnerId: string;
@@ -212,6 +229,38 @@ export interface Chat {
   lastMessage?: string;
   lastTimestamp?: string;
   unreadCount: number;
+  // Upgraded Groups System properties
+  isGroup?: boolean;
+  groupBanner?: string;
+  groupCategory?: string;
+  groupPrivacy?: 'public' | 'private' | 'invite';
+  groupTheme?: string; // Hex or tailwind class
+  groupRules?: string[];
+  welcomeMessage?: string;
+  creatorId?: string;
+  creationDate?: string;
+  membersCount?: number;
+  adminsCount?: number;
+  onlineCount?: number;
+  username?: string;
+  inviteLink?: string;
+  isVerified?: boolean;
+  // Upgraded Broadcast System properties
+  isBroadcast?: boolean;
+  broadcastMode?: 'standard' | 'announcement' | 'creator';
+  broadcastRecipients?: string[];
+  broadcastDeliveryStats?: {
+    delivered: number;
+    read: number;
+    failed: number;
+    pending: number;
+    reactionCount: { [emoji: string]: number };
+    repliesCount: number;
+    averageReadTime: string;
+    linkClicks: number;
+    pollParticipation: number;
+    mediaDownloads: number;
+  };
 }
 
 export interface Notification {

@@ -242,6 +242,7 @@ export default function MatrixView({
                 messages={messages}
                 onSendMessage={onSendMessage}
                 onReceiveBotMessage={onReceiveBotMessage}
+                onViewProfile={() => {}}
               />
             )}
           </motion.div>

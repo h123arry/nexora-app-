@@ -52,7 +52,7 @@ export default function Sidebar({
             NEXORA
           </h1>
           <p className="text-[9px] font-sans font-semibold text-purple-400 leading-tight">
-            Discover people. Build communities. Shape what's happening.
+            Connect. Share. Discover.
           </p>
         </div>
       </div>
@@ -74,7 +74,6 @@ export default function Sidebar({
               {currentUser.name}
             </h3>
             {currentUser.username === 'voh' && <PurpleVerifiedBadge className="w-3.5 h-3.5" type="founder" />}
-            <span className="text-[#8B5CF6] text-[9px]" title="Founder Account">⭐</span>
           </div>
           <p className="text-[9px] text-current/50 font-mono truncate">
             @{currentUser.username}
@@ -85,13 +84,13 @@ export default function Sidebar({
       {/* 🟣 Simplified Social Media Navigation Menu */}
       <div className="flex flex-col gap-2.5 mb-5 p-1">
         {[
-          { id: 'feed', label: 'Home', desc: 'Sleek social feed', icon: Home, count: 0 },
-          { id: 'explore', label: 'Search', desc: 'Find trends & tags', icon: Search, count: 0 },
-          { id: 'communities', label: 'Hub', desc: 'Communities & Pages', icon: Compass, count: 0 },
-          { id: 'nida', label: 'NIDA AI', desc: 'Discovery Algorithm', icon: Sparkles, count: 0 },
-          { id: 'create_btn', label: 'Create Post', desc: 'Share photos, video, voice, poll', icon: PlusCircle, isCreate: true, count: 0 },
-          { id: 'inbox', label: 'Inbox', desc: 'Messages & Alerts', icon: MessageSquare, count: unreadMessagesCount + unreadNotificationsCount },
-          { id: 'profile', label: 'Profile', desc: 'Your personal views', icon: UserIcon, count: 0 }
+          { id: 'feed', label: 'Home', desc: 'Feed', icon: Home, count: 0 },
+          { id: 'explore', label: 'Search', desc: 'Explore', icon: Search, count: 0 },
+          { id: 'communities', label: 'Hub', desc: 'Communities', icon: Compass, count: 0 },
+          { id: 'nida', label: 'AI', desc: 'Assistant', icon: Sparkles, count: 0 },
+          { id: 'create_btn', label: 'Create', desc: 'Post', icon: PlusCircle, isCreate: true, count: 0 },
+          { id: 'inbox', label: 'Inbox', desc: 'Messages', icon: MessageSquare, count: unreadMessagesCount + unreadNotificationsCount },
+          { id: 'profile', label: 'Profile', desc: 'Account', icon: UserIcon, count: 0 }
         ].map((item) => {
           const isActive = activeTab === item.id;
           const Icon = item.icon;
@@ -145,10 +144,10 @@ export default function Sidebar({
           </div>
           <div className="flex-1 overflow-hidden">
             <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-violet-400 group-hover:text-violet-300">
-              Nexora Studio 📈
+              Studio
             </span>
             <span className="block text-[9px] text-current/40 font-mono truncate">
-              Professional Publishing
+              Publishing
             </span>
           </div>
         </button>
@@ -168,10 +167,10 @@ export default function Sidebar({
             </div>
             <div className="flex-1 overflow-hidden">
               <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-rose-400 group-hover:text-rose-300">
-                Admin Panel ⚔️
+                Admin
               </span>
               <span className="block text-[9px] text-current/40 font-mono truncate">
-                Founder Governance Deck
+                Governance
               </span>
             </div>
           </button>
