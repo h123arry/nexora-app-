@@ -148,7 +148,13 @@ export default function ImmersiveVideoViewer({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.15, ease: "easeOut" }}
+      className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center"
+    >
       {/* Absolute Close button */}
       <button 
         onClick={onClose}
@@ -180,7 +186,11 @@ export default function ImmersiveVideoViewer({
       )}
 
       {/* Interactive Unified Player Stage */}
-      <div 
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.18, ease: "easeOut" }}
         className="w-full h-full max-w-[480px] bg-black relative flex flex-col justify-center overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.85)]"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -381,7 +391,7 @@ export default function ImmersiveVideoViewer({
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

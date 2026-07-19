@@ -1914,7 +1914,7 @@ export default function App() {
             </div>
             
             {activeTab !== 'feed' && (
-              <div className={`${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
+              <div className={activeTab === 'profile' ? "w-full min-h-[620px]" : `${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}

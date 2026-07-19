@@ -66,7 +66,7 @@ class VideoPlaybackManager {
     } else {
       this.currentQuality = 'high';
     }
-    console.log(`[VideoPlaybackManager] Quality adapted to ${this.currentQuality} (downlink: ${downlinkMbps} Mbps)`);
+    // Quality management logic
   }
 
   /**
@@ -157,7 +157,7 @@ class VideoPlaybackManager {
       this.preloadElements.set(resolvedUrl, hiddenVid);
       console.log(`[VideoPlaybackManager] Predictively preloading ${resolvedUrl}...`);
     } catch (e) {
-      console.warn(`[VideoPlaybackManager] Preload failed for ${resolvedUrl}`, e);
+      // Preload failed
     }
   }
 
@@ -218,7 +218,7 @@ class VideoPlaybackManager {
       }
       return true;
     } catch (err) {
-      console.warn(`[VideoPlaybackManager] Autoplay failed for player ${id}:`, err);
+      // Autoplay failed
       // Attempt muted fallback to bypass browser autoplay constraints
       if (!videoElement.muted) {
         try {
@@ -226,7 +226,7 @@ class VideoPlaybackManager {
           await videoElement.play();
           return true;
         } catch (e) {
-          console.warn(`[VideoPlaybackManager] Muted playback also failed:`, e);
+          // Muted playback also failed
         }
       }
       return false;
@@ -287,7 +287,7 @@ class VideoPlaybackManager {
       try {
         callbacks.pause();
       } catch (e) {
-        console.warn(`[VideoPlaybackManager] Error pausing player ${id}:`, e);
+        // Error pausing player
       }
     });
 
@@ -350,7 +350,7 @@ class VideoPlaybackManager {
         try {
           callbacks.setVolumeMuted(this.globalMuted);
         } catch (e) {
-          console.warn('[VideoPlaybackManager] Error syncing mute to player', e);
+          // Error syncing mute
         }
       }
     });
@@ -386,7 +386,6 @@ class VideoPlaybackManager {
       el.load();
     });
     this.preloadElements.clear();
-    console.log('[VideoPlaybackManager] Preload memory cleared.');
   }
 }
 

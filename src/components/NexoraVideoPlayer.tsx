@@ -1252,10 +1252,10 @@ export default function NexoraVideoPlayer({
 
              {/* Right-Side Action Rail */}
             <div 
-              className="absolute flex flex-col items-center gap-3.5 z-20"
+              className="absolute flex flex-col items-center gap-4 z-20"
               style={{
                 bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
-                right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
+                right: 'calc(env(safe-area-inset-right, 0px) + 12px)'
               }}
             >
               {/* Profile & Follow */}
@@ -1279,10 +1279,10 @@ export default function NexoraVideoPlayer({
                 disabled={isProcessing}
                 className={`flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${post.isLikedByUser ? 'border-pink-500/30' : ''}`}>
-                  <Zap className={`w-5 h-5 transition-transform duration-300 group-hover/btn:scale-110 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_8px_rgba(236,72,153,0.6)]' : 'text-white'}`} />
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg`}>
+                  <Zap className={`w-6 h-6 transition-transform duration-300 group-hover/btn:scale-110 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
                 </div>
-                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.likes}</span>
+                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.likes}</span>
               </button>
 
               {/* 💬 Comment */}
@@ -1290,10 +1290,10 @@ export default function NexoraVideoPlayer({
                 onClick={(e) => { e.stopPropagation(); onCommentToggle?.(); }}
                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
               >
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${isCommentsOpen ? 'border-violet-500/30 bg-violet-650/20' : ''}`}>
-                  <MessageSquare className={`w-5 h-5 transition-transform duration-300 group-hover/btn:scale-110 text-white ${isCommentsOpen ? 'text-violet-400 fill-violet-500/20' : 'text-white'}`} />
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg`}>
+                  <MessageSquare className={`w-6 h-6 transition-transform duration-300 group-hover/btn:scale-110 text-white`} />
                 </div>
-                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.comments?.length || 0}</span>
+                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.comments?.length || 0}</span>
               </button>
 
               {/* 🔖 Save */}
@@ -1301,10 +1301,10 @@ export default function NexoraVideoPlayer({
                 onClick={(e) => { e.stopPropagation(); setShowSaveModal(true); }}
                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
               >
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${savedCollectionForThis ? 'border-yellow-500/30 bg-yellow-500/10' : ''}`}>
-                  <Bookmark className={`w-5 h-5 transition-transform duration-300 group-hover/btn:scale-110 ${savedCollectionForThis ? 'fill-yellow-500 text-yellow-400' : 'text-white'}`} />
+                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg`}>
+                  <Bookmark className={`w-6 h-6 transition-transform duration-300 group-hover/btn:scale-110 ${savedCollectionForThis ? 'fill-yellow-400 text-yellow-400' : 'text-white'}`} />
                 </div>
-                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.bookmarksCount || 0}</span>
+                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.bookmarksCount || 0}</span>
               </button>
 
               {/* ↗ Share */}
@@ -1316,10 +1316,10 @@ export default function NexoraVideoPlayer({
                 }}
                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
               >
-                <div className="w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg">
-                  <span className="text-white font-bold text-lg transition-transform duration-300 group-hover/btn:scale-110">➥</span>
+                <div className="w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
+                  <svg className="w-6 h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                 </div>
-                <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.shares || 0}</span>
+                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.shares || 0}</span>
               </button>
 
               <VideoBottomSheet
@@ -1545,14 +1545,14 @@ export default function NexoraVideoPlayer({
       {isSwitchingQuality && (
         <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center gap-2 z-20">
           <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent animate-spin rounded-full" />
-          <span className="text-[10px] font-mono text-purple-300 tracking-widest uppercase">STABILIZING {selectedQuality} CHANNEL...</span>
+          <span className="text-[10px] font-sans text-purple-300 tracking-widest uppercase">Loading...</span>
         </div>
       )}
 
       {/* Hold to Pause Overlay Indicator */}
       {isLongPressing && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-mono text-zinc-300 font-extrabold flex items-center gap-1.5 z-20 shadow-lg pointer-events-none tracking-widest uppercase">
-          <span>PAUSED (VIEW MODE)</span>
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/80 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-sans text-zinc-300 font-bold flex items-center gap-1.5 z-20 shadow-lg pointer-events-none tracking-widest uppercase">
+          <span>Paused</span>
         </div>
       )}
 
@@ -1573,7 +1573,6 @@ export default function NexoraVideoPlayer({
             className="flex flex-col items-center justify-center leading-none pointer-events-none bg-purple-600/40 backdrop-blur-md p-3.5 rounded-full border border-purple-400/50"
           >
             <Zap className="w-8 h-8 text-pink-400 fill-current drop-shadow-[0_0_15px_rgba(236,72,153,0.8)]" />
-            <span className="text-[8px] font-mono text-white font-black mt-1 uppercase tracking-wider">SPARKED</span>
           </motion.div>
         )}
       </AnimatePresence>

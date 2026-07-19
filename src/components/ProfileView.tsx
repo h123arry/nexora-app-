@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2 } from 'lucide-react';
+import ShareSheet from './ShareSheet';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -11,8 +12,6 @@ import CreatorDashboardView from './CreatorDashboardView';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StorageDataCenterModal from './StorageDataCenterModal';
 import { 
-  MOCK_CREATORS, 
-  ADDITIONAL_TEST_ACCOUNTS, 
   getFollowersCount, 
   getFollowingCount, 
   getReputationPoints, 
@@ -29,19 +28,23 @@ interface MediaGridProps {
   onSelectPost: (post: Post) => void;
 }
 
-const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) => {
+const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) => {
   if (gridPosts.length === 0) {
     return (
-      <div className="text-center py-16 border border-dashed border-violet-500/10 rounded-3xl bg-[#09071c]/40 font-mono text-xs text-violet-400/80 w-full col-span-3">
-        <div className="text-3xl mb-2">📸</div>
-        <p className="font-bold">No gallery items here yet</p>
-        <p className="text-[10px] text-zinc-500 mt-1">Ready for custom clips, snapshots or audio broadcasts!</p>
+      <div className="flex flex-col items-center justify-center text-center py-20 px-6 w-full col-span-3">
+        <div className="w-20 h-20 bg-linear-to-br from-violet-600/20 to-pink-500/20 rounded-full flex items-center justify-center mb-6 border border-white/5">
+          <Camera className="w-8 h-8 text-violet-400" />
+        </div>
+        <p className="text-sm font-black text-white mb-1">No posts yet.</p>
+        <p className="text-[11px] text-zinc-500 font-sans max-w-[200px] leading-relaxed">
+          When you share your first post, it will appear here.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-3 gap-0 w-full px-0">
+    <div className="grid grid-cols-3 gap-[1px] w-full bg-black">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -52,10 +55,10 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
             layout
             key={post.id}
             onClick={() => onSelectPost(post)}
-            whileHover={{ scale: 1.02 }}
+            whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
-            transition={{ type: "spring", stiffness: 400, damping: 18 }}
-            className="aspect-[4/5] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between"
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="group aspect-[2/3] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -178,7 +181,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
       })}
     </div>
   );
-};
+});
 
 interface ProfileViewProps {
   currentUser: User;
@@ -310,11 +313,6 @@ export default function ProfileView({
   const [showReputationModal, setShowReputationModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
 
-  // QR Customizer State
-  const [qrColorPalette, setQrColorPalette] = useState<'neon-cyber' | 'solar-flare' | 'holographic'>('neon-cyber');
-  const [qrScanningActive, setQrScanningActive] = useState(false);
-  const [qrScanSuccessText, setQrScanSuccessText] = useState('');
-  
   // Realistic Saving UX states
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [showSavedFeedback, setShowSavedFeedback] = useState(false);
@@ -700,30 +698,6 @@ export default function ProfileView({
     window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Re-calibration cancelled. No changes saved.' }));
   };
 
-  // QR Color theme options
-  const getQrGradients = () => {
-    switch (qrColorPalette) {
-      case 'solar-flare':
-        return 'from-pink-500 via-amber-400 to-rose-600';
-      case 'holographic':
-        return 'from-cyan-400 via-teal-300 to-emerald-500';
-      case 'neon-cyber':
-      default:
-        return 'from-violet-600 via-purple-500 to-fuchsia-600';
-    }
-  };
-
-  // QR Simulator scan action
-  const simulateScan = () => {
-    setQrScanningActive(true);
-    setQrScanSuccessText('');
-    setTimeout(() => {
-      setQrScanningActive(false);
-      setQrScanSuccessText(`Success! Decoded Creator identity: @${currentUser.username}. Mutual network link synched.`);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📲 QR Decoded! Profile sync complete.' }));
-    }, 1800);
-  };
-
   // Switch accounts action
   const handleSwitchAccount = (acc: any) => {
     window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Switching account to @${acc.username}...` }));
@@ -901,7 +875,7 @@ export default function ProfileView({
                       { label: 'Account Status', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🟢 Secure Account Status: Optimal.' })); }, icon: Shield, iconColor: 'text-emerald-400' },
                       { label: 'Nexora Studio', action: () => { setActivePanel('creator-studio'); setIsProfileMenuOpen(false); }, icon: Coins, iconColor: 'text-yellow-400' },
                       { label: 'Privacy', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('privacy'); setIsProfileMenuOpen(false); }, icon: Lock, iconColor: 'text-teal-400' },
-                      { label: 'Share Profile', action: () => { setActivePanel('qr-profile'); setIsProfileMenuOpen(false); }, icon: QrCode, iconColor: 'text-indigo-400' },
+                      { label: 'Share Profile', action: () => { setShowShareModal(true); setIsProfileMenuOpen(false); }, icon: QrCode, iconColor: 'text-indigo-400' },
                       { label: 'Export Profile', action: () => { 
                           setIsProfileMenuOpen(false);
                           const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentUser, null, 2));
@@ -940,9 +914,9 @@ export default function ProfileView({
         <div className="flex items-center gap-2">
           {isOwnProfile && (
             <button
-              onClick={() => setActivePanel('qr-profile')}
+              onClick={() => setShowShareModal(true)}
               className="p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
-              title="Show QR Code"
+              title="Share Profile"
             >
               <QrCode className="w-4.5 h-4.5" />
             </button>
@@ -1008,11 +982,11 @@ export default function ProfileView({
         </div>
 
         {/* Feed Grid skeleton - Full Width */}
-        <div className="w-full mt-1 animate-pulse px-[1px]">
-          <div className="grid grid-cols-3 gap-0 w-full">
-            <div className="aspect-[3/4] bg-violet-950/20 border border-violet-500/10 rounded-none" />
-            <div className="aspect-[3/4] bg-violet-950/20 border border-violet-500/10 rounded-none" />
-            <div className="aspect-[3/4] bg-violet-950/20 border border-violet-500/10 rounded-none" />
+        <div className="w-full mt-1 animate-pulse">
+          <div className="grid grid-cols-3 gap-[1px] w-full bg-black">
+            <div className="aspect-[2/3] bg-violet-950/20 border-0 rounded-none" />
+            <div className="aspect-[2/3] bg-violet-950/20 border-0 rounded-none" />
+            <div className="aspect-[2/3] bg-violet-950/20 border-0 rounded-none" />
           </div>
         </div>
         </>
@@ -1021,14 +995,14 @@ export default function ProfileView({
         <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Identity (Refined Compact Layout) */}
-          <div className="flex items-center gap-3 text-left mb-0">
+          <div className="flex items-center gap-4 text-left mb-2">
             <div className="relative shrink-0">
               {currentUser.hasStory && (
                 <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
               )}
               <div 
                 onClick={() => setProfilePicExpanded(true)}
-                className="w-[90px] h-[90px] sm:w-[96px] sm:h-[96px] rounded-full bg-black overflow-hidden relative border-2 border-black z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
+                className="w-[88px] h-[88px] rounded-full bg-black overflow-hidden relative border border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
               >
                 <img 
                   src={currentUser.avatar} 
@@ -1041,84 +1015,94 @@ export default function ProfileView({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-lg font-black text-white leading-tight tracking-tight">{currentUser.name}</h1>
+                <h1 className="text-xl font-black text-white leading-tight tracking-tight">{currentUser.name}</h1>
                 {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
               </div>
               
-              {/* Username & Twin Action Chips (Clean Horizontal Row) */}
-              <div className="flex items-center gap-2 -mt-0.5 flex-wrap">
-                <p className="text-xs font-bold text-violet-400/70 font-mono tracking-wider">@{currentUser.username}</p>
+              {/* Username & Twin Action Chips */}
+              <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <p className="text-sm font-bold text-violet-400/80 font-mono tracking-wider">@{currentUser.username}</p>
                 {isOwnProfile ? (
-                  <div className="flex items-center gap-1.5">
-                    <button 
+                  <div className="flex items-center gap-2">
+                    <motion.button 
+                      whileHover={{ scale: 1.02, y: -0.5 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => setActivePanel('edit-profile')} 
-                      className="px-2.5 py-0.5 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold text-zinc-200 transition-colors border border-white/5 cursor-pointer h-[22px] flex items-center justify-center"
+                      className="px-4 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-[11px] font-bold text-zinc-200 transition-all border border-white/5 cursor-pointer h-8 flex items-center justify-center"
                     >
-                      Edit
-                    </button>
-                    <button 
+                      Edit Profile
+                    </motion.button>
+                    <motion.button 
+                      whileHover={{ scale: 1.02, y: -0.5, boxShadow: "0 0 15px rgba(139, 92, 246, 0.25)" }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => onOpenVohAi?.()} 
-                      className="px-1.5 py-0.5 bg-violet-600/20 hover:bg-violet-600/30 rounded-md text-[9.5px] font-extrabold text-violet-300 border border-violet-500/20 shadow-[0_0_8px_rgba(139,92,246,0.1)] transition-all flex items-center gap-0.5 cursor-pointer h-[22px]"
+                      className="px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 rounded-xl text-[11px] font-bold text-violet-200 border border-violet-500/30 transition-all flex items-center gap-1.5 cursor-pointer h-8"
                       title="VOH AI Command Center"
                     >
-                      <Sparkles className="w-2 h-2 shrink-0 text-violet-400" />
-                      <span>VOH AI</span>
-                    </button>
+                      <Sparkles className="w-3.5 h-3.5 shrink-0 text-violet-400 animate-pulse" />
+                      <span>AI Node</span>
+                    </motion.button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-1.5">
-                    <button 
+                  <div className="flex items-center gap-2">
+                    <motion.button 
+                      whileHover={{ scale: 1.02, y: -0.5 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => { setIsFollowing(!isFollowing); onToggleFollow?.(currentUser.id); }} 
-                      className={`px-2.5 py-0.5 rounded-md text-[10px] font-bold transition-colors cursor-pointer h-[22px] flex items-center justify-center ${
-                        isFollowing ? 'bg-zinc-900 text-zinc-400' : 'bg-violet-600 text-white hover:bg-violet-500'
+                      className={`px-4 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer h-8 flex items-center justify-center ${
+                        isFollowing ? 'bg-zinc-900 text-zinc-400 border border-white/5' : 'bg-violet-600 text-white hover:bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.35)]'
                       }`}
                     >
                       {isFollowing ? 'Connected' : 'Connect'}
-                    </button>
-                    <button 
+                    </motion.button>
+                    <motion.button 
+                      whileHover={{ scale: 1.02, y: -0.5 }}
+                      whileTap={{ scale: 0.98 }}
                       onClick={() => onStartChat?.(currentUser.id)} 
-                      className="px-2.5 py-0.5 bg-white/5 hover:bg-white/10 rounded-md text-[10px] font-bold text-zinc-200 transition-colors cursor-pointer border border-white/5 h-[22px] flex items-center justify-center"
+                      className="px-4 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-[11px] font-bold text-zinc-200 transition-all cursor-pointer border border-white/5 h-8 flex items-center justify-center"
                     >
                       Message
-                    </button>
+                    </motion.button>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* 3x2 Statistics Grid with Integrated Share Button (No divider) */}
-          <div className="flex items-center justify-between py-0.5 border-y border-white/[0.015] mt-0 mb-0.5 select-none">
-            <div className="flex-1 grid grid-cols-3 gap-y-1 gap-x-2 sm:gap-x-4 w-full text-center">
+          {/* 3x2 Statistics Grid (No divider) */}
+          <div className="flex items-center justify-between py-2 mb-2 select-none">
+            <div className="flex-1 grid grid-cols-3 gap-y-2 gap-x-2 w-full text-center">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
                 { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
-                { label: '✨ Sparks', value: getSecondaryMetric('sparks') },
-                { label: '⭐ Reputation', value: getSecondaryMetric('reputation') },
-                { label: '📊 Contribution', value: getSecondaryMetric('contributions') },
+                { label: 'Sparks', value: getSecondaryMetric('sparks') },
+                { label: 'Reputation', value: getSecondaryMetric('reputation') },
+                { label: 'Contribution', value: getSecondaryMetric('contributions') },
               ].map(stat => (
-                <div key={stat.label} className="flex flex-col items-center justify-center">
-                  <span className="text-[13px] font-black text-white leading-tight">{stat.value}</span>
-                  <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-wider mt-0.5">{stat.label}</span>
+                <div key={stat.label} className="flex flex-col">
+                  <span className="text-lg font-black text-white leading-tight">{stat.value}</span>
+                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{stat.label}</span>
                 </div>
               ))}
             </div>
-            <div className="pl-1.5 sm:pl-3 flex items-center justify-center self-stretch">
-              <button 
+            <div className="pl-3 flex items-center justify-center self-stretch">
+              <motion.button 
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
                 onClick={() => setShowShareModal(true)} 
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-full transition-colors cursor-pointer" 
+                className="p-2.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer border border-white/5" 
                 title="Share Profile"
               >
-                <span className="font-bold">➥</span>
-              </button>
+                <Share2 className="w-4 h-4" />
+              </motion.button>
             </div>
           </div>
 
-          {/* Elegant Truncated Bio (Displayed directly below Stats) */}
-          <div className="text-zinc-300 text-xs leading-relaxed mb-1 mt-0.5">
+          {/* Elegant Truncated Bio */}
+          <div className="text-zinc-300 text-xs leading-relaxed mb-3">
             <motion.div 
-              animate={{ height: isBioExpanded ? "auto" : "2.4rem" }} 
+              animate={{ height: isBioExpanded ? "auto" : "3rem" }} 
               className="overflow-hidden relative"
               transition={{ duration: 0.25, ease: "easeInOut" }}
             >
@@ -1127,7 +1111,7 @@ export default function ProfileView({
             {currentUser.bio && (currentUser.bio.length > 70 || currentUser.bio.split('\n').length > 2) && (
               <button 
                 onClick={() => setIsBioExpanded(!isBioExpanded)} 
-                className="text-violet-400 font-bold mt-0.5 text-[10px] hover:text-violet-300 transition-colors cursor-pointer"
+                className="text-violet-400 font-bold mt-1 text-[11px] hover:text-violet-300 transition-colors cursor-pointer"
               >
                 {isBioExpanded ? 'Show less' : 'Show More'}
               </button>
@@ -1135,22 +1119,22 @@ export default function ProfileView({
           </div>
           
           {/* Creator section (Premium lightweight creator filter chips) */}
-          <div className="flex flex-wrap gap-1.5 mb-0.5 mt-0.5">
+          <div className="flex flex-wrap gap-2 mb-4">
             <button 
               onClick={() => setActivePanel('creator-studio')} 
-              className="px-2 h-[14px] bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/30 rounded-full text-[9px] font-bold text-violet-300 transition-all border border-violet-500/15 cursor-pointer flex items-center justify-center"
+              className="px-3 h-7 bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/30 rounded-lg text-[10px] font-bold text-violet-200 transition-all border border-violet-500/20 cursor-pointer flex items-center justify-center"
             >
               Nexora Studio
             </button>
             <button 
               onClick={() => setActivePanel('subscriptions')} 
-              className="px-2 h-[14px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
+              className="px-3 h-7 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg text-[10px] font-bold text-zinc-300 transition-all border border-white/10 cursor-pointer flex items-center justify-center"
             >
               Subscriptions
             </button>
             <button 
               onClick={() => setActivePanel('linked-accounts')} 
-              className="px-2 h-[14px] bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-full text-[9px] font-bold text-zinc-300 transition-all border border-white/5 cursor-pointer flex items-center justify-center"
+              className="px-3 h-7 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg text-[10px] font-bold text-zinc-300 transition-all border border-white/10 cursor-pointer flex items-center justify-center"
             >
               Linked Accounts
             </button>
@@ -1167,9 +1151,10 @@ export default function ProfileView({
               <span>3 mutual friends in common</span>
             </div>
           )}
+        </div>
 
         {/* 8. CONTENT STICKY TAB NAVIGATION (Glow-refined 5-Tab Layout) */}
-        <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 -mx-[30px] sm:-mx-[36px] md:-mx-[48px] px-4">
+        <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 px-0 w-full">
           <div className="w-full max-w-4xl mx-auto flex justify-around py-0.5">
             {[
               { id: 'posts', icon: LayoutGrid, label: 'All Content' },
@@ -1183,7 +1168,7 @@ export default function ProfileView({
               
               if (tab.id === 'posts') {
                 return (
-                  <div key={tab.id} className="relative flex items-center">
+                  <div key={tab.id} className="relative flex items-center justify-center">
                     <button
                       onClick={() => {
                         if (profileTab !== 'posts') {
@@ -1192,15 +1177,22 @@ export default function ProfileView({
                           setShowAllContentDropdown(!showAllContentDropdown);
                         }
                       }}
-                      className={`p-2 sm:p-2.5 rounded-full transition-all duration-300 flex items-center gap-1 cursor-pointer border ${
+                      className={`p-2 sm:p-2.5 rounded-full transition-all duration-300 flex items-center gap-1 cursor-pointer relative border ${
                         isActive 
-                          ? 'text-violet-400 bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border-violet-500/25' 
+                          ? 'text-violet-400 border-violet-500/25' 
                           : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
                       }`}
                       title={tab.label}
                     >
-                      <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
-                      <ChevronDown className="w-3 h-3 opacity-70" />
+                      {isActive && (
+                        <motion.div
+                          layoutId="activeProfileTabGlow"
+                          className="absolute inset-0 rounded-full bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border border-violet-500/25 -z-10"
+                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                        />
+                      )}
+                      <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5 relative z-10" />
+                      <ChevronDown className="w-3 h-3 opacity-70 relative z-10" />
                     </button>
                     
                     {/* All Content Dropdown Menu */}
@@ -1260,28 +1252,34 @@ export default function ProfileView({
                     setProfileTab(tab.id);
                     setShowAllContentDropdown(false);
                   }}
-                  className={`p-2.5 rounded-full transition-all duration-300 cursor-pointer border ${
+                  className={`p-2.5 rounded-full transition-all duration-300 cursor-pointer relative border ${
                     isActive 
-                      ? 'text-violet-400 bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border-violet-500/25' 
+                      ? 'text-violet-400 border-violet-500/25' 
                       : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
                   }`}
                   title={tab.label}
                 >
-                  <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeProfileTabGlow"
+                      className="absolute inset-0 rounded-full bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border border-violet-500/25 -z-10"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5 relative z-10" />
                 </button>
               );
             })}
           </div>
         </div>
-        </div>
 
         {/* 9. RESPONSIVE GRID CONTENT (Full Width TikTok Style) */}
-        <div className="w-full pt-0.5 space-y-0">
+        <div className="w-full pt-[1px] space-y-0 bg-black">
           
           {/* Standard Grid view of posts */}
-          <div className="text-left">
+          <div className="text-left w-full">
             {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? (
-              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 w-full mt-4">
+              <div className="mx-4 my-8 p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
                   🔒
                 </div>
@@ -1293,7 +1291,7 @@ export default function ProfileView({
                 </div>
               </div>
             ) : filteredTabPosts.length === 0 ? (
-              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 w-full mt-4">
+              <div className="mx-4 my-8 p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
                   📭
                 </div>
@@ -1485,7 +1483,7 @@ export default function ProfileView({
                         { id: 'clear-cache', title: 'Clear Cache Tool', desc: 'Free temporary mesh asset store and logs', panel: 'storage' },
                         { id: 'data-saver', title: 'Data Saver Mode', desc: 'Compress high-resolution multimedia files', panel: 'storage' },
                         { id: 'support-ticket', title: 'Send Feedback & Support', desc: 'Connect to our technical help support lines', panel: 'support' },
-                        { id: 'about-matrix', title: 'About Nexora Version', description: 'Review system status parameters and terms', panel: 'about' }
+                        { id: 'about-matrix', title: 'About Nexora', description: 'Review system status and terms', panel: 'about' }
                       ];
 
                       const filtered = items.filter(item => 
@@ -1722,8 +1720,8 @@ export default function ProfileView({
                             <span className="flex items-center gap-2.5">
                               <Info className="w-4 h-4 text-indigo-400" />
                               <div className="text-left">
-                                <p className="leading-tight text-xs font-bold">About Nexora Matrix</p>
-                                <p className="text-[9px] text-zinc-500 font-normal">System version, active network telemetry logs</p>
+                                <p className="leading-tight text-xs font-bold">About Nexora</p>
+                                <p className="text-[9px] text-zinc-500 font-normal">App version and system information</p>
                               </div>
                             </span>
                             <ChevronRight className="w-4 h-4 text-zinc-600" />
@@ -2169,16 +2167,16 @@ export default function ProfileView({
                       <div className="space-y-4 text-left">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3.5">
                           <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">🔔 PUSH PREFERENCES</span>
-                          <p className="text-[10px] text-zinc-400 leading-normal font-sans">Sieve incoming telemetry signals on this device container.</p>
+                          <p className="text-[10px] text-zinc-400 leading-normal font-sans">Manage how you receive notifications on this device.</p>
                           
                           <div className="space-y-3">
                             {[
-                              { key: 'likes', title: 'Sparks & Likes', desc: 'Get notified when a node sparks your content' },
-                              { key: 'comments', title: 'Replies & Comments', desc: 'Alerts for comments on your live grids' },
-                              { key: 'mentions', title: 'Mentions & Tags', desc: 'Alerts when someone references your handle' },
-                              { key: 'reposts', title: 'Reposts & Shares', desc: 'Notifications for shared updates' },
-                              { key: 'directMessages', title: 'Direct Messages', desc: 'Instant alerts for incoming chat packets' },
-                              { key: 'systemAlerts', title: 'System Grid Alerts', desc: 'Matrix network warnings and security pings' }
+                              { key: 'likes', title: 'Likes', desc: 'Get notified when someone likes your content' },
+                              { key: 'comments', title: 'Comments', desc: 'Alerts for comments on your posts' },
+                              { key: 'mentions', title: 'Mentions & Tags', desc: 'Alerts when someone mentions you' },
+                              { key: 'reposts', title: 'Reposts', desc: 'Notifications when someone shares your posts' },
+                              { key: 'directMessages', title: 'Direct Messages', desc: 'Alerts for new messages' },
+                              { key: 'systemAlerts', title: 'System Alerts', desc: 'Important app updates and security alerts' }
                             ].map(item => (
                               <div key={item.key} className="flex items-center justify-between p-2 rounded-xl bg-black/20">
                                 <div className="space-y-0.5 text-left max-w-[80%]">
@@ -2465,7 +2463,7 @@ export default function ProfileView({
                                   className="w-full px-2.5 py-1.5 bg-black/40 border border-white/10 rounded-lg text-white"
                                 >
                                   <option value="feedback">Product Feedback Idea</option>
-                                  <option value="bug">Report Matrix Software Bug</option>
+                                  <option value="bug">Report a Bug</option>
                                   <option value="auth">ID Verification Help</option>
                                   <option value="billing">NEX Coin Monetization</option>
                                 </select>
@@ -2501,18 +2499,16 @@ export default function ProfileView({
                       </div>
                     )}
 
-                    {/* Drill down Panel 8: About Nexora Matrix */}
+                    {/* Drill down Panel 8: About Nexora */}
                     {settingsActiveSubPanel === 'about' && (
                       <div className="space-y-4 text-left">
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3 font-mono">
-                          <span className="text-[9px] text-violet-400 font-extrabold uppercase tracking-widest block">ℹ️ TELEMETRY SYSTEM VERSION</span>
+
                           
                           <div className="space-y-2 text-[10px] leading-relaxed text-zinc-300">
-                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">SYSTEM:</span> <span>Nexora Premium Mesh</span></p>
-                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">BUILD INDEX:</span> <span>v1.8.4_Lagos_live</span></p>
-                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">LOCALE NODE:</span> <span>Lekki Grid Grid-04</span></p>
-                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">COMPILER:</span> <span>TypeScript ESM esbuild</span></p>
-                            <p className="flex justify-between pb-1"><span className="text-zinc-500">PORT MAPPING:</span> <span>Container Ingress 3000</span></p>
+                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">APP:</span> <span>Nexora</span></p>
+                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">VERSION:</span> <span>1.8.4</span></p>
+                            <p className="flex justify-between pb-1"><span className="text-zinc-500">REGION:</span> <span>Global</span></p>
                           </div>
                           
                           <div className="p-3 bg-black/30 rounded-xl border border-white/5 space-y-1.5 text-[9px] text-zinc-400 font-sans leading-relaxed">
@@ -2700,113 +2696,7 @@ export default function ProfileView({
         )}
       </AnimatePresence>
 
-      {/* 8. QR PROFILE CUSTOMIZER & MOCK SCANNER VIEW */}
-      <AnimatePresence>
-        {activePanel === 'qr-profile' && (
-          <div className="fixed inset-0 z-50 bg-[#04020f]/95 backdrop-blur-md flex items-center justify-center p-4">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0c0926] border border-violet-500/25 rounded-[36px] p-6 max-w-sm w-full text-center space-y-6 shadow-2xl relative"
-            >
-              <button 
-                onClick={() => setActivePanel('profile')}
-                className="absolute top-4 right-4 p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
 
-              <div className="space-y-1 text-left">
-                <span className="text-[10px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">ACCOUNT QR CODE</span>
-                <h3 className="text-sm font-sans font-black text-white uppercase">Your Nexora QR Code</h3>
-                <p className="text-[10px] text-zinc-400 font-mono">Scan on any device to instantly view this profile</p>
-              </div>
-
-              {/* Generates a custom gradient themed QR code component */}
-              <div className="relative p-6 rounded-3xl bg-black border border-white/5 flex flex-col items-center justify-center space-y-4">
-                
-                {/* QR Canvas frame */}
-                <div className={`p-4 bg-gradient-to-tr ${getQrGradients()} rounded-2xl relative group overflow-hidden`}>
-                  <div className="absolute inset-0.5 bg-black rounded-xl z-0" />
-                  
-                  {/* Generated SVG QR Code representation */}
-                  <svg className="w-44 h-44 relative z-10 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zm1 1h2v2H5V5zm9-3h8v8h-8V2zm2 2v4h4V4h-4zm1 1h2v2h-2V5zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm1 1h2v2H5v-2zm14-3h3v3h-3v-3zm-2 2h2v2h-2v-2zm2 2h3v3h-3v-3zm-4-4h2v2h-2v-2zm2 2h2v2h-2v-2zm-2 2h2v2h-2v-2zm-2-4h2v2h-2v-2zm0 4h2v2h-2v-2zm2-2h2v2h-2v-2z" />
-                    <rect x="9.5" y="9.5" width="5" height="5" rx="1.5" className="text-violet-500 fill-current" />
-                  </svg>
-                </div>
-
-                <div className="leading-tight space-y-1">
-                  <p className="text-xs font-bold text-white flex items-center justify-center gap-1">
-                    {currentUser.name} {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4" />}
-                  </p>
-                  <p className="text-[10px] text-violet-400 font-mono">@{currentUser.username}</p>
-                  <p className="text-[9px] text-zinc-500 font-mono mt-1 select-all hover:text-cyan-400 transition-colors">
-                    https://nexora.ai/@{currentUser.username}
-                  </p>
-                </div>
-              </div>
-
-              {/* Customize palette colors */}
-              <div className="space-y-2 text-left">
-                <label className="text-[9px] font-mono text-zinc-400 uppercase tracking-widest block">Palette Themes</label>
-                <div className="flex gap-2">
-                  {[
-                    { id: 'neon-cyber', label: 'Cyber Violet', color: 'bg-violet-600' },
-                    { id: 'solar-flare', label: 'Solar Pink', color: 'bg-pink-500' },
-                    { id: 'holographic', label: 'Holo Green', color: 'bg-cyan-500' }
-                  ].map(pal => (
-                    <button
-                      key={pal.id}
-                      onClick={() => setQrColorPalette(pal.id as any)}
-                      className={`flex-1 p-2 rounded-xl text-[9px] font-mono uppercase font-black flex items-center justify-center gap-1 border transition-all cursor-pointer ${
-                        qrColorPalette === pal.id 
-                          ? 'bg-white/10 border-violet-500 text-white' 
-                          : 'bg-black/40 border-transparent text-zinc-500 hover:text-zinc-300'
-                      }`}
-                    >
-                      <span className={`w-2.5 h-2.5 rounded-full ${pal.color}`} />
-                      {pal.label.split(' ')[0]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Action commands */}
-              <div className="grid grid-cols-2 gap-2 pt-2">
-                <button
-                  onClick={simulateScan}
-                  className="p-3 bg-linear-to-r from-violet-600 to-pink-500 text-white rounded-2xl text-[10px] font-mono font-black uppercase tracking-wider cursor-pointer"
-                >
-                  Simulate Scanner Scan
-                </button>
-                <button
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 QR Code file exported to disk.' }));
-                  }}
-                  className="p-3 bg-[#130f3a] border border-violet-500/25 text-violet-300 rounded-2xl text-[10px] font-mono font-black uppercase tracking-wider cursor-pointer hover:bg-violet-950/20"
-                >
-                  Download QR png
-                </button>
-              </div>
-
-              {qrScanningActive && (
-                <div className="p-3 rounded-xl bg-violet-600/10 border border-violet-500/20 text-xs font-mono text-violet-300 animate-pulse">
-                  📷 Initializing device camera framework on port 3000...
-                </div>
-              )}
-
-              {qrScanSuccessText && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-sans text-emerald-300">
-                  {qrScanSuccessText}
-                </div>
-              )}
-
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
       {/* 9. SOCIAL GRAPH & RELATIONSHIP MANAGER VIEW */}
       <AnimatePresence>
@@ -2866,7 +2756,7 @@ export default function ProfileView({
                   if (relationsTab === 'followers') {
                     list = getSeededFollowers(currentUser.id);
                   } else if (relationsTab === 'following') {
-                    list = MOCK_CREATORS;
+                    list = [];
                   } else if (relationsTab === 'close-friends') {
                     list = getSeededFollowers(currentUser.id).filter(f => closeFriends.includes(f.id));
                   } else if (relationsTab === 'blocked') {
@@ -3680,7 +3570,7 @@ export default function ProfileView({
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <span className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                  <Award className="w-4 h-4 text-pink-400 animate-pulse" /> REPUTATION TELEMETRY ARCHIVE
+
                 </span>
                 <button 
                   onClick={() => setShowReputationModal(false)}
@@ -3829,150 +3719,20 @@ export default function ProfileView({
       </AnimatePresence>
 
       {/* 📥 NEXORA SOCIAL SHARE SHEET MODAL */}
-      <AnimatePresence>
-        {showShareModal && (
-          <div className="fixed inset-0 z-50 bg-[#04020f]/80 backdrop-blur-md flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowShareModal(false)}
-              className="absolute inset-0 bg-slate-950/70"
-            />
-
-            {/* Modal Content Card */}
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className="relative w-full max-w-sm rounded-[32px] bg-linear-to-b from-[#110931] to-[#04010b] border border-violet-500/25 p-6 text-center shadow-2xl overflow-hidden z-10"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={() => setShowShareModal(false)}
-                className="absolute top-4 right-4 p-2 text-violet-400/60 hover:text-white rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer z-20"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-
-              <div className="space-y-4 pt-1 text-left">
-                <div className="space-y-1">
-                  <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">SHARE PROFILE</span>
-                  <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider leading-tight">
-                    Share Profile
-                  </h3>
-                  <p className="text-[10px] text-violet-300/60">
-                    Invite others to view your professional feed, projects, and stream on Nexora.
-                  </p>
-                </div>
-
-                {/* Display Link */}
-                <div className="relative flex items-center gap-2 p-2.5 rounded-2xl bg-black border border-violet-500/10">
-                  <span className="text-[10.5px] font-mono text-violet-400 truncate flex-1 select-all">
-                    https://nexora.ai/@{currentUser.username}
-                  </span>
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Profile link copied to clipboard!' }));
-                    }}
-                    className="p-1.5 rounded-lg bg-violet-600/15 border border-violet-500/30 text-violet-300 hover:text-white hover:bg-violet-600/30 transition-all cursor-pointer shrink-0"
-                    title="Copy Profile URL"
-                  >
-                    <Check className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Social Share Grid */}
-                <div className="space-y-2 pt-1">
-                  {/* Copy Link */}
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Profile link copied to clipboard!' }));
-                    }}
-                    className="w-full p-3 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 text-white font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
-                  >
-                    <span className="text-base">🔗</span>
-                    <span className="flex-1 text-left">Copy Link</span>
-                    <span className="text-[9px] text-zinc-500 font-mono font-bold uppercase">CLIPBOARD</span>
-                  </button>
-
-                  {/* Share to X */}
-                  <a
-                    href={`https://x.com/intent/tweet?url=${encodeURIComponent(`https://nexora.ai/@${currentUser.username}`)}&text=${encodeURIComponent(`Connect with me on Nexora: @${currentUser.username}!`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full p-3 rounded-2xl bg-[#000000] border border-white/5 hover:bg-[#111] text-white font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
-                  >
-                    <span className="text-base font-black">𝕏</span>
-                    <span className="flex-1 text-left font-semibold">Share on X</span>
-                    <span className="text-[9px] text-zinc-500 font-mono font-bold uppercase">POST</span>
-                  </a>
-
-                  {/* Share to WhatsApp */}
-                  <a
-                    href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`Connect with me on Nexora: https://nexora.ai/@${currentUser.username}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full p-3 rounded-2xl bg-[#128C7E]/10 border border-[#128C7E]/20 hover:bg-[#128C7E]/20 text-[#25D366] font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
-                  >
-                    <span className="text-base">💬</span>
-                    <span className="flex-1 text-left font-semibold">Share to WhatsApp</span>
-                    <span className="text-[9px] text-emerald-500/70 font-mono font-bold uppercase">CHAT</span>
-                  </a>
-
-                  {/* Share to Instagram */}
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copied! Paste on Instagram Bio or Stories.' }));
-                    }}
-                    className="w-full p-3 rounded-2xl bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-400 font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
-                  >
-                    <span className="text-base">📸</span>
-                    <span className="flex-1 text-left font-semibold">Share to Instagram</span>
-                    <span className="text-[9px] text-pink-500/70 font-mono font-bold uppercase">BIO LINK</span>
-                  </button>
-
-                  {/* Share to Facebook */}
-                  <a
-                    href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(`https://nexora.ai/@${currentUser.username}`)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full p-3 rounded-2xl bg-[#3b5998]/10 border border-[#3b5998]/20 hover:bg-[#3b5998]/20 text-[#8b9dc3] font-sans text-xs font-semibold flex items-center gap-3 transition-all cursor-pointer"
-                  >
-                    <span className="text-base">👥</span>
-                    <span className="flex-1 text-left font-semibold">Share on Facebook</span>
-                    <span className="text-[9px] text-[#8b9dc3]/70 font-mono font-bold uppercase">FEED</span>
-                  </a>
-
-                  {/* System Share sheet */}
-                  <button
-                    onClick={() => {
-                      if (navigator.share) {
-                        navigator.share({
-                          title: `${currentUser.name} on Nexora`,
-                          text: `Connect with me on Nexora: @${currentUser.username}`,
-                          url: `https://nexora.ai/@${currentUser.username}`
-                        }).catch(() => {});
-                      } else {
-                        navigator.clipboard.writeText(`https://nexora.ai/@${currentUser.username}`);
-                        window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 System share unsupported. Profile link copied!' }));
-                      }
-                    }}
-                    className="w-full p-3 rounded-2xl bg-violet-600/20 border border-violet-500/30 hover:bg-violet-600/35 text-violet-300 font-sans text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all cursor-pointer mt-2"
-                  >
-                    <span className="font-bold">➥</span>
-                    <span>Device Share Sheet</span>
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ShareSheet
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        onShare={(recipientId) => {
+          window.dispatchEvent(new CustomEvent('toast', { detail: '🚀 Profile shared successfully!' }));
+        }}
+        post={{
+          id: currentUser.id,
+          username: currentUser.username,
+          name: currentUser.name,
+          tags: [],
+          likes: currentUser.followers || 0,
+        }}
+      />
       <StorageDataCenterModal isOpen={isStorageCenterOpen} onClose={() => setIsStorageCenterOpen(false)} />
     </div>
   );
