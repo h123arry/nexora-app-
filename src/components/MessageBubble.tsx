@@ -84,14 +84,14 @@ export default function MessageBubble({
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
-      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-0.5' : 'mt-3.5'} relative group/bubble`}
+      className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${isGrouped ? 'mt-0.25' : 'mt-2'} relative group/bubble`}
       onDoubleClick={() => onReact(message.id, '❤️')}
       onContextMenu={(e) => {
         e.preventDefault();
         onLongPress(message.id, e);
       }}
     >
-      <div className={`flex items-start gap-2.5 max-w-[75%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
+      <div className={`flex items-start gap-2 max-w-[85%] ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
         
         {/* Avatar for incoming */}
         {!isMe && !isGrouped ? (

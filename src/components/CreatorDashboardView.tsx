@@ -1604,9 +1604,9 @@ export default function CreatorDashboardView({
                   </div>
                 </div>
 
-                {/* Publishing Pipeline Mode */}
+                {/* Publishing Mode */}
                 <div className="space-y-2 pt-2 border-t border-white/5">
-                  <label className="text-zinc-400 font-bold block">Publishing Pipeline Mode</label>
+                  <label className="text-zinc-400 font-bold block">Publishing Mode</label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"

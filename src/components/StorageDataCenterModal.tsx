@@ -442,7 +442,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       const query = currentInput.toLowerCase();
       
       if (query.includes('battery') || query.includes('power') || query.includes('drain')) {
-        replyText = "🔋 Battery Management Protocol: Nexora is currently running at normal frequency. Activating 'Battery Saver Mode' will throttle non-critical database sync cycles and pause floating canvas particles, reducing battery consumption by 35%.";
+        replyText = "🔋 Power Management: Nexora is currently running at normal frequency. Activating 'Battery Saver Mode' will throttle non-critical database sync cycles and pause floating canvas particles, reducing battery consumption by 35%.";
       } else if (query.includes('cache') || query.includes('clean') || query.includes('purge')) {
         replyText = "🧹 Cache Engine Scan: Found 12 MB of stale thumbnail assets. Click the 'Rebuild' button next to the Tiny Blur Thumbnails cache block to reclaim memory leakage.";
       } else if (query.includes('slow') || query.includes('lag') || query.includes('speed')) {
@@ -526,7 +526,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       sizeBytes: 2840000000,
       breakdown: { photos: '812 MB', videos: '1.45 GB', voiceNotes: '142 MB', gifs: '95 MB', stickers: '34 MB', documents: '310 MB', links: '12 MB', messages: '5 MB' },
       mediaItems: [
-        { id: 'm-4-1', type: 'video', url: '', name: 'Docker_Build_Pipeline.mov', size: '345.0 MB', date: 'Jul 09, 2026' },
+        { id: 'm-4-1', type: 'video', url: '', name: 'Build_Process_Recording.mov', size: '345.0 MB', date: 'Jul 09, 2026' },
         { id: 'm-4-2', type: 'photo', url: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=300', name: 'Workstation_Photo.png', size: '6.4 MB', date: 'Jul 08, 2026' },
         { id: 'm-4-3', type: 'document', url: '', name: 'Docker-Compose.yml', size: '12 KB', date: 'Jul 07, 2026', isPinned: true },
         { id: 'm-4-4', type: 'document', url: '', name: 'Kubernetes_Configuration.yaml', size: '84 KB', date: 'Jul 06, 2026' }
@@ -579,7 +579,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const handleOneTapCleanup = () => {
     setRecommendations([]);
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🚀 Intelligent Protocol: Cleared duplicates & temp files. Safely recovered 2.84 GB!` 
+      detail: `🚀 Intelligent Cleanup: Cleared duplicates & temp files. Safely recovered 2.84 GB!` 
     }));
   };
 
@@ -747,7 +747,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
       setIsRestoring(false);
       setSelectedRestoreBackupId(null);
       window.dispatchEvent(new CustomEvent('toast', { 
-        detail: "✨ Recovery Protocol Succeeded: All messages and media verified & restored!" 
+        detail: "✨ Recovery Succeeded: All messages and media verified & restored!" 
       }));
     }, 2000);
   };
@@ -1852,7 +1852,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           <div className="text-left">
                             <span className="text-[9px] font-mono uppercase text-cyan-500 font-bold block">Engine Rating</span>
                             <h4 className="text-sm font-black text-white mt-0.5">Absolute Peak</h4>
-                            <span className="text-[8.5px] font-mono text-zinc-500 block">Pipeline calibers: 100% stable</span>
+                            <span className="text-[8.5px] font-mono text-zinc-500 block">System performance: 100% stable</span>
                           </div>
                         </div>
 

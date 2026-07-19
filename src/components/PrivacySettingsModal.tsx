@@ -346,7 +346,7 @@ export default function PrivacySettingsModal({
   // Bulk unblock
   const handleBulkUnblock = () => {
     setBlockedUsers([]);
-    window.dispatchEvent(new CustomEvent('toast', { detail: "🟢 Bulk Protocol: Unblocked all connections!" }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: "🟢 All connections unblocked!" }));
   };
 
   const handleUnblockUser = (id: string) => {
@@ -387,7 +387,7 @@ export default function PrivacySettingsModal({
                 onClick={() => setDiscoverability(prev => ({ ...prev, hiddenAccountMode: false }))}
                 className="hover:underline hover:text-white cursor-pointer"
               >
-                Deactivate Protocol
+                Deactivate Settings
               </button>
             </div>
           )}
@@ -435,7 +435,7 @@ export default function PrivacySettingsModal({
               {[
                 { id: 'presence', label: 'Presence & Activity', icon: Eye, count: Object.keys(presence).length },
                 { id: 'profile', label: 'Profile Visibility & Preview', icon: User, badge: 'Live Simulator' },
-                { id: 'messaging', label: 'Messaging Protocols', icon: Radio, count: Object.keys(messaging).length },
+                { id: 'messaging', label: 'Messaging Settings', icon: Radio, count: Object.keys(messaging).length },
                 { id: 'calls', label: 'Call Controls & Silence', icon: Phone, count: Object.keys(calls).length },
                 { id: 'groups', label: 'Group Ledger Rights', icon: Lock, count: Object.keys(groups).length },
                 { id: 'discover', label: 'Discoverability Grid', icon: Ghost, badge: discoverability.hiddenAccountMode ? 'Ghost' : '' },
@@ -791,7 +791,7 @@ export default function PrivacySettingsModal({
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <Phone className="w-4 h-4 text-violet-400" /> Decentralized Voice & Video Call Protocols
+                      <Phone className="w-4 h-4 text-violet-400" /> Decentralized Voice & Video Call Settings
                     </h4>
                     <p className="text-[11px] text-zinc-400 mt-1">Configure filters on direct routing requests and shield your node from unsolicited peer-to-peer stream invitations.</p>
                   </div>
@@ -839,7 +839,7 @@ export default function PrivacySettingsModal({
                   {/* Unknown Callers Shield */}
                   <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-3">
                     <div>
-                      <span className="text-xs font-bold text-zinc-200 block">Unknown Caller Mitigation Protocol</span>
+                      <span className="text-xs font-bold text-zinc-200 block">Unknown Caller Filtering</span>
                       <p className="text-[10px] text-zinc-500 leading-normal mt-1">Select the action your device performs when a non-follower node sends a routing/connection request.</p>
                     </div>
 
@@ -958,7 +958,7 @@ export default function PrivacySettingsModal({
 
                     <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                       <div className="max-w-xl text-left">
-                        <span className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-mono uppercase tracking-wider text-emerald-400 rounded-md font-black">Concealment Protocol</span>
+                        <span className="px-2 py-0.5 bg-emerald-500/20 border border-emerald-500/30 text-[9px] font-mono uppercase tracking-wider text-emerald-400 rounded-md font-black">Concealment Mode</span>
                         <h5 className="text-sm font-bold text-white mt-1.5 flex items-center gap-2">
                           Master Ghost Mode (Complete Disappearance)
                         </h5>
@@ -1270,14 +1270,14 @@ export default function PrivacySettingsModal({
                 onClick={onClose}
                 className="px-5 py-2.5 bg-zinc-900 hover:bg-zinc-800 border border-white/5 rounded-xl text-xs font-mono uppercase tracking-wider text-zinc-400 hover:text-white transition-all cursor-pointer"
               >
-                Cancel Protocol
+                Cancel Settings
               </button>
               <button
                 onClick={handleApplyChanges}
                 className="px-6 py-2.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-pink-500 hover:brightness-110 active:scale-98 rounded-xl text-xs font-mono uppercase tracking-widest font-black text-white shadow-lg shadow-violet-950/40 transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>Apply Guard Protocol</span>
+                <span>Apply Settings</span>
               </button>
             </div>
           </div>

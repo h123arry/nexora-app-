@@ -24,7 +24,7 @@ function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
     apiKey: apiKey,
     httpOptions: {
       headers: {
-        'User-Agent': 'aistudio-build',
+        'User-Agent': 'nexora-backend',
       },
     },
   });
@@ -81,8 +81,8 @@ USER MESSAGE:
 `;
 
     if (!clientInfo) {
-      // Graceful fallback response when API key is missing
-      console.log('Gemini API Key is missing. Using premium mock response.');
+      // Fallback response when API key is missing
+      console.warn('Gemini API Key is missing.');
       
       let replyText = '';
       const msgLower = message.toLowerCase();
@@ -95,7 +95,7 @@ Based on your active feed, here is the pulse:
 - **Top Contributor**: **@voh** (Voice of Harrison) is discussing design rules and platform scaling.
 - **Opportunities**: Collab requests for creative writers and frontend designers are trending in Port Harcourt.
 
-*💡 Connect your real **Gemini API Key** in the **Settings > Secrets** panel to generate real-time AI summaries!*`;
+*💡 Please ensure GEMINI_API_KEY is configured in your environment to generate real-time AI summaries!*`;
       } else if (msgLower.includes('pulse') || msgLower.includes('trend')) {
         replyText = `### 🌌 World Pulse Matrix (Demo Mode)
 
@@ -104,7 +104,7 @@ The current Nexora Pulse Score is at **87/100**:
 - **Hub Activity**: High volume in Port Harcourt (soccer cup preparation) and Lagos (founder meetups).
 - **AI Growth Forecast**: VOH AI predicts a **+14%** rise in UI/UX discussions tonight.
 
-*💡 Connect your real **Gemini API Key** in the **Settings > Secrets** panel to generate real-time predictive indices!*`;
+*💡 Please ensure GEMINI_API_KEY is configured in your environment to generate real-time predictive indices!*`;
       } else if (msgLower.includes('opportunity') || msgLower.includes('opportunities') || msgLower.includes('job')) {
         replyText = `### 💼 Opportunity Match (Demo Mode)
 
@@ -113,14 +113,14 @@ I matched your profile with **1 active request**:
 - **Compensation**: Design royalty splits & project bonuses.
 - **Skills Required**: Adobe Illustrator, Figma, Brand Design.
 
-*💡 Connect your real **Gemini API Key** in the **Settings > Secrets** panel for deep semantic matching!*`;
+*💡 Please ensure GEMINI_API_KEY is configured in your environment for deep semantic matching!*`;
       } else {
         replyText = `🤖 **VOH AI Status Indicator**:
 I am currently operating in **Standby Demo Mode**.
 
 **You asked**: "${message}"
 
-To unlock my full cognitive intelligence, on-chain analytics, and real-time feed digestion, please configure your **GEMINI_API_KEY** in the **Settings > Secrets** panel of the AI Studio. 
+To unlock my full cognitive intelligence, on-chain analytics, and real-time feed digestion, please configure your **GEMINI_API_KEY** in your environment. 
 
 In the meantime, you can ask me to:
 - **Summarize my feed**
@@ -221,7 +221,7 @@ app.post('/api/voh-ai/voice-transcribe', async (req, res) => {
     if (!clientInfo) {
       return res.json({
         transcription: "Beautiful sunny day in Nigeria, enjoying the vibes on Nexora!",
-        replyText: "Voice post transcribed successfully! (Demo Mode - Connect your Gemini API Key in Settings > Secrets to enable real-time speech processing!)",
+        replyText: "Voice post transcribed successfully!",
         isDemo: true
       });
     }
@@ -262,6 +262,44 @@ app.post('/api/voh-ai/voice-transcribe', async (req, res) => {
   }
 });
 
+// 4. Summarize Post Endpoint
+app.post('/api/voh-ai/summarize-post', async (req, res) => {
+  try {
+    const { content } = req.body;
+    if (!content) {
+      return res.status(400).json({ error: 'Post content is required.' });
+    }
+
+    const clientInfo = getGeminiClient();
+    if (!clientInfo) {
+      // Fallback
+      return res.json({ 
+        text: `TL;DR: ${content.substring(0, 50)}...`,
+        isDemo: true 
+      });
+    }
+
+    const { ai, model } = clientInfo;
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: `Provide a 1-sentence TL;DR summary of this post content:
+      
+      "${content}"`,
+      config: {
+        systemInstruction: "You are an intelligent summarizer. Provide concise, 1-sentence summaries.",
+        temperature: 0.5,
+      }
+    });
+
+    res.json({ text: response.text?.trim() || 'No summary generated.', isDemo: false });
+
+  } catch (error: any) {
+    console.error('VOH AI Summarize Error:', error);
+    res.status(500).json({ error: 'Failed to summarize post.', details: error.message });
+  }
+});
+
+
 
 // ----------------- VITE DEVELOPMENT / PRODUCTION MIDDLEWARE -----------------
 
@@ -273,7 +311,7 @@ async function startServer() {
       appType: 'spa',
     });
     app.use(vite.middlewares);
-    console.log('Vite development middleware mounted.');
+    // Vite middleware mounted (logging removed)
   } else {
     // Serve static files in production
     const distPath = path.join(process.cwd(), 'dist');
@@ -281,14 +319,11 @@ async function startServer() {
     app.get('*', (req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
-    console.log('Serving static files in production mode.');
+    // Serving static files in production mode (logging removed)
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`=======================================================`);
-    console.log(`🌌 NEXORA PULSE CO-BUILDER RUNNING`);
-    console.log(`🔗 Local Dev Server: http://localhost:${PORT}`);
-    console.log(`=======================================================`);
+    console.log(`Server running on port ${PORT}`);
   });
 }
 

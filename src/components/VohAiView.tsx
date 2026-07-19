@@ -745,7 +745,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-2 text-xs text-amber-200">
           <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
           <p className="font-medium leading-relaxed text-[11px]">
-            <strong>Standby Demo Mode Active:</strong> Some AI results are utilizing local templates. Insert your real <strong>GEMINI_API_KEY</strong> in the Secrets panel to activate direct live LLM compilation.
           </p>
         </div>
       )}

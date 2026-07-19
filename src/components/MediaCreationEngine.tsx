@@ -569,7 +569,7 @@ export default function MediaCreationEngine({
   };
 
   // Stage progress triggers
-  const triggerPublishPipeline = async () => {
+  const triggerPublishMedia = async () => {
     setPostingStatus('compressing');
     setUploadProgress(5);
 
@@ -1705,7 +1705,7 @@ export default function MediaCreationEngine({
                 </button>
               ) : (
                 <button 
-                  onClick={triggerPublishPipeline}
+                  onClick={triggerPublishMedia}
                   disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
                   className="px-6 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
                 >

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { Send, Ghost, Search, Check, CheckCheck, Smile, Radio, Bot, ShieldAlert, Volume2, VolumeX, Paperclip, MoreVertical, Clock, EyeOff, Pin, Trash2, Mic, Video, AlertCircle, FileText, CornerUpLeft, X, Users, Archive, Phone, Image as ImageIcon, Camera, Play, Pause, Download, Lock, Unlock, Globe, RefreshCw, UserCheck, SmilePlus, Info, Calendar, Wifi, WifiOff, Trash, Plus, ChevronRight, UserPlus, Settings, AlertTriangle, ChevronDown, ExternalLink, MessageSquare, Sparkles, BarChart2, Shield, CheckCircle, Heart, Star, Forward, ArrowLeft, HardDrive } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Chat, Message, ExtendedMessage } from '../types';
@@ -67,103 +67,19 @@ export default function MessagesView({
     }, 25);
   };
 
-  const [chatsList, setChatsList] = useState<Chat[]>(() => {
-    // Collect existing chats and enrich with group and broadcasts if missing
-    let base = [...initialChats];
-    if (!base.some(c => c.id === 'group-main')) {
-      base.push({
-        id: 'group-main',
-        partnerId: 'group-id',
-        partnerName: 'NEXORA Global Core 🌐',
-        partnerAvatar: 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=150',
-        partnerBio: 'Encrypted group for global developer and designer collaboration.',
-        isPartnerOnline: true,
-        lastMessage: 'Sophia: Real-time latency optimized!',
-        lastTimestamp: '10:42 AM',
-        unreadCount: 0
-      });
-    }
+  const [chatsList, setChatsList] = useState<Chat[]>(initialChats);
 
-    if (!base.some(c => c.id === 'broadcast-alpha')) {
-      base.push({
-        id: 'broadcast-alpha',
-        partnerId: 'broadcast-channel-alpha',
-        partnerName: 'Nexora Core Announcements ⚡',
-        partnerAvatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150',
-        partnerBio: 'The official high-fidelity communication ledger of the Nexora developer team. Real-time updates, logs, and spec releases.',
-        isPartnerOnline: true,
-        unreadCount: 0,
-        isBroadcast: true,
-        groupCategory: 'Announcements',
-        groupTheme: '#8B5CF6',
-        groupBanner: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800',
-        broadcastMode: 'announcement',
-        broadcastRecipients: ['user-1', 'user-2', 'user-3', 'user-4'],
-        welcomeMessage: 'Welcome to the official Nexora Core Announcements channel!',
-        broadcastDeliveryStats: {
-          delivered: 1250,
-          read: 1198,
-          failed: 2,
-          pending: 5,
-          reactionCount: {'🔥': 312, '❤️': 148, '👏': 96},
-          repliesCount: 12,
-          averageReadTime: '1.4s',
-          linkClicks: 148,
-          pollParticipation: 489,
-          mediaDownloads: 230
-        },
-        lastMessage: 'Ledger delivery metrics have reached a stunning 99.8% stability rate.',
-        lastTimestamp: '10:15 AM'
-      });
-    }
-
-    if (!base.some(c => c.id === 'broadcast-vip')) {
-      base.push({
-        id: 'broadcast-vip',
-        partnerId: 'broadcast-channel-vip',
-        partnerName: 'Harrison VOH VIP Feed 🎙️',
-        partnerAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        partnerBio: 'Exclusive early-access updates, lifestyle broadcasts, and design feedback from @voiceofharrison.',
-        isPartnerOnline: true,
-        unreadCount: 0,
-        isBroadcast: true,
-        groupCategory: 'VIP',
-        groupTheme: '#EC4899',
-        groupBanner: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=800',
-        broadcastMode: 'creator',
-        broadcastRecipients: ['user-2', 'user-3', 'user-5'],
-        welcomeMessage: "Harrison's private studio transmission line initialized.",
-        broadcastDeliveryStats: {
-          delivered: 8520,
-          read: 8140,
-          failed: 12,
-          pending: 45,
-          reactionCount: {'❤️': 1240, '🔥': 980},
-          repliesCount: 84,
-          averageReadTime: '2.8s',
-          linkClicks: 1210,
-          pollParticipation: 3842,
-          mediaDownloads: 1980
-        },
-        lastMessage: 'Are we ready for the major Broadcast release?',
-        lastTimestamp: '11:20 AM'
-      });
-    }
-
-    return base;
-  });
-
-  const availableUsers = React.useMemo(() => {
-    // Extract unique user objects from chatsList that are not groups or broadcasts
+  const availableUsers = useMemo(() => {
+    // Extract unique user objects from chatsList
     const users: any[] = [];
     chatsList.forEach(chat => {
-      if (!chat.isGroup && chat.id !== 'group-main' && !chat.isBroadcast && chat.id.startsWith('chat-')) {
+      if (!chat.isGroup && !chat.isBroadcast && chat.id.startsWith('chat-')) {
         users.push({
           id: chat.partnerId || chat.id,
           username: chat.username || `@${chat.partnerName.toLowerCase().replace(/\s+/g, '_')}`,
           name: chat.partnerName,
           avatar: chat.partnerAvatar,
-          bio: chat.partnerBio || 'Active Nexora Connection Ledger node.',
+          bio: chat.partnerBio || 'Active Connection.',
           isVerified: chat.isVerified || false,
           followers: 120,
           following: 80,
@@ -171,45 +87,10 @@ export default function MessagesView({
         });
       }
     });
-
-    // Add standard defaults if empty
-    if (users.length === 0) {
-      users.push(
-        { id: 'user-1', name: 'Sophia Sterling', username: '@sophia_sterling', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', bio: 'AI Researcher & Digital Ethicist.', isVerified: true, followers: 1500, following: 800, reputationPoints: 9800 },
-        { id: 'user-2', name: 'Lucas Cyber', username: '@lucas_cyber', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150', bio: 'Decentralized systems architect.', isVerified: true, followers: 920, following: 400, reputationPoints: 5400 },
-        { id: 'user-3', name: 'Luna Stellar', username: '@luna_stellar', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150', bio: 'Immersive interface designer.', isVerified: true, followers: 2300, following: 1100, reputationPoints: 12000 }
-      );
-    }
     return users;
   }, [chatsList]);
 
-  const [localMessages, setLocalMessages] = useState<{ [chatId: string]: ExtendedMessage[] }>(() => {
-    const next: { [chatId: string]: ExtendedMessage[] } = {};
-    Object.keys(initialMessages).forEach(id => {
-      next[id] = initialMessages[id].map(m => ({ ...m }));
-    });
-    // Add default group chat messages if missing
-    if (!next['group-main']) {
-      next['group-main'] = [
-        { id: 'gm-1', chatId: 'group-main', senderId: 'creator-4', content: "Welcome to the premium Nexora Global Core. We are currently tracking system performance.", timestamp: "10:35 AM", status: "read" },
-        { id: 'gm-2', chatId: 'group-main', senderId: 'voh_ai', content: "VOH AI node initialized at peak memory speed. Let's coordinate.", timestamp: "10:39 AM", status: "read" },
-        { id: 'gm-3', chatId: 'group-main', senderId: 'creator-2', content: "Optimizing the main timeline interface. Backdrops are looking gorgeous.", timestamp: "10:41 AM", status: "read" }
-      ];
-    }
-    if (!next['broadcast-alpha']) {
-      next['broadcast-alpha'] = [
-        { id: 'msg-alpha-1', chatId: 'broadcast-alpha', senderId: currentUser.id, content: "Welcome to the Nexora Core announcements space! Secure private ledger nodes are now live.", timestamp: "Yesterday", status: "read" },
-        { id: 'msg-alpha-2', chatId: 'broadcast-alpha', senderId: currentUser.id, content: "Ledger delivery metrics have reached a stunning 99.8% stability rate. Speed remains unmatched.", timestamp: "10:15 AM", status: "read" }
-      ];
-    }
-    if (!next['broadcast-vip']) {
-      next['broadcast-vip'] = [
-        { id: 'msg-vip-1', chatId: 'broadcast-vip', senderId: currentUser.id, content: "Transmitting live from the Nexora Sound Studio! Tuning the premium custom equalizers.", timestamp: "Yesterday", status: "read" },
-        { id: 'msg-vip-2', chatId: 'broadcast-vip', senderId: currentUser.id, content: "Are we ready for the major Broadcast release? It includes a custom Fan-Out Engine! 🎙️", timestamp: "11:20 AM", status: "read" }
-      ];
-    }
-    return next;
-  });
+  const [localMessages, setLocalMessages] = useState<{ [chatId: string]: ExtendedMessage[] }>(initialMessages);
 
   const [activeChatId, setActiveChatId] = useState<string>(chatsList[0]?.id || 'chat-1');
   const [typedMessage, setTypedMessage] = useState('');
@@ -314,159 +195,15 @@ export default function MessagesView({
   const [isSyncingLedger, setIsSyncingLedger] = useState(false);
   const [syncProgress, setSyncProgress] = useState(0);
 
-  // Instagram Notes States
-  interface InstagramNote {
-    id: string;
-    userId: string;
-    userName: string;
-    userAvatar: string;
-    text: string;
-    createdAt: string; // ISO String
-    type: 'text' | 'audio' | 'video';
-    audioDuration?: number;
-    videoEmoji?: string;
-    privacy: 'followers' | 'close_friends';
-  }
-
-  const [notes, setNotes] = useState<InstagramNote[]>(() => {
-    const saved = localStorage.getItem(`nexora_notes_v3_${currentUser.id}`);
-    if (saved) return JSON.parse(saved);
-    return [
-      {
-        id: 'n1',
-        userId: 'chat-1', // Sophia
-        userName: 'Sophia',
-        userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
-        text: 'Refactoring Nexora nodes... 🧠💻',
-        createdAt: new Date(Date.now() - 3600000).toISOString(),
-        type: 'text',
-        privacy: 'followers'
-      },
-      {
-        id: 'n2',
-        userId: 'chat-2', // Lucas
-        userName: 'Lucas',
-        userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-        text: '🎤 Latency soundscape optimization check',
-        createdAt: new Date(Date.now() - 7200000).toISOString(),
-        type: 'audio',
-        audioDuration: 8,
-        privacy: 'followers'
-      },
-      {
-        id: 'n3',
-        userId: 'chat-3', // Luna
-        userName: 'Luna',
-        userAvatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100',
-        text: 'Crafting glassmorphism overlays 🎨🔮',
-        createdAt: new Date(Date.now() - 14400000).toISOString(),
-        type: 'text',
-        privacy: 'close_friends'
-      },
-      {
-        id: 'n4',
-        userId: 'chat-4', // Harrison
-        userName: 'Harrison',
-        userAvatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100',
-        text: '📹 Studio vlog live test',
-        createdAt: new Date(Date.now() - 18000000).toISOString(),
-        type: 'video',
-        videoEmoji: '🎬🎥',
-        privacy: 'followers'
-      }
-    ];
-  });
-
-  const [activeNoteComposer, setActiveNoteComposer] = useState(false);
-  const [activeNoteViewer, setActiveNoteViewer] = useState<InstagramNote | null>(null);
-  
-  // Note creation forms
-  const [newNoteText, setNewNoteText] = useState('');
-  const [newNoteType, setNewNoteType] = useState<'text' | 'audio' | 'video'>('text');
-  const [newNotePrivacy, setNewNotePrivacy] = useState<'followers' | 'close_friends'>('followers');
-  const [newNoteVideoEmoji, setNewNoteVideoEmoji] = useState('💬');
-  const [newNoteAudioRecordTime, setNewNoteAudioRecordTime] = useState(0);
-  const [isRecordingNoteAudio, setIsRecordingNoteAudio] = useState(false);
-  
-  // Note viewing states
-  const [noteReplyText, setNoteReplyText] = useState('');
-  const [isNoteAudioPlaying, setIsNoteAudioPlaying] = useState(false);
-  const [noteAudioPlaybackProgress, setNoteAudioPlaybackProgress] = useState(0);
-
   // Primary vs General categorization
   const [chatsSubTab, setChatsSubTab] = useState<'primary' | 'general'>('primary');
-  const [generalChatIds, setGeneralChatIds] = useState<string[]>(['chat-2', 'chat-4']); // chat-2 is Lucas, chat-4 is Harrison
+  const [generalChatIds, setGeneralChatIds] = useState<string[]>([]);
 
   const toggleChatCategory = (chatId: string) => {
     setGeneralChatIds(prev => 
       prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]
     );
     window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Chat category updated' }));
-  };
-
-  const handleShareNote = () => {
-    if (newNoteText.trim() === '' && newNoteType === 'text') return;
-    
-    let textContent = newNoteText;
-    let audioDur = undefined;
-    let vidEmoji = undefined;
-
-    if (newNoteType === 'audio') {
-      textContent = '🎙️ Shared an Audio Note';
-      audioDur = 6;
-    } else if (newNoteType === 'video') {
-      textContent = `📹 Video Note status: ${newNoteVideoEmoji}`;
-      vidEmoji = newNoteVideoEmoji;
-    }
-
-    const myNewNote: InstagramNote = {
-      id: `note-me-${Date.now()}`,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userAvatar: currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
-      text: textContent,
-      createdAt: new Date().toISOString(),
-      type: newNoteType,
-      audioDuration: audioDur,
-      videoEmoji: vidEmoji,
-      privacy: newNotePrivacy
-    };
-
-    setNotes(prev => {
-      const next = prev.filter(n => n.userId !== currentUser.id);
-      const updated = [myNewNote, ...next];
-      localStorage.setItem(`nexora_notes_v3_${currentUser.id}`, JSON.stringify(updated));
-      return updated;
-    });
-
-    setNewNoteText('');
-    setNewNoteType('text');
-    setActiveNoteComposer(false);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '📝 Shared your status note with friends!' }));
-  };
-
-  const handleDeleteMyNote = () => {
-    setNotes(prev => {
-      const updated = prev.filter(n => n.userId !== currentUser.id);
-      localStorage.setItem(`nexora_notes_v3_${currentUser.id}`, JSON.stringify(updated));
-      return updated;
-    });
-    setActiveNoteViewer(null);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🧹 Your note has been deleted.' }));
-  };
-
-  const handleSendNoteReply = () => {
-    if (!activeNoteViewer || noteReplyText.trim() === '') return;
-    
-    const targetChatId = activeNoteViewer.userId;
-    const msgContent = noteReplyText;
-    
-    onSendMessage(targetChatId, msgContent);
-    
-    setActiveChatId(targetChatId);
-    setNoteReplyText('');
-    setActiveNoteViewer(null);
-    window.dispatchEvent(new CustomEvent('toast', { detail: `💬 Replied to ${activeNoteViewer.userName}'s note as a DM!` }));
   };
 
   const handleToggleVanishMode = () => {
@@ -768,7 +505,7 @@ export default function MessagesView({
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const activeChat = chatsList.find(c => c.id === activeChatId);
-  const activeChatMessages = React.useMemo(() => {
+  const activeChatMessages = useMemo(() => {
     if (!activeChatId) return [];
     let msgs = localMessages[activeChatId] || [];
     if (localSearchQuery.trim()) {
@@ -1564,119 +1301,19 @@ export default function MessagesView({
           )}
         </div>
 
-        {/* Instagram Notes Carousel */}
-        {activeTab === 'chats' && !searchQuery && (
-          <div className="px-3 py-2 border-b border-violet-500/5 bg-[#03010c]/20 flex flex-col gap-1 shrink-0 select-none">
-            <div className="flex items-center justify-between px-1 mb-1">
-              <span className="text-[9px] font-mono tracking-wider text-violet-400 font-extrabold uppercase">Instagram Notes</span>
-              <span className="text-[7.5px] font-mono text-zinc-500 uppercase tracking-wider">24h Lifecycle</span>
-            </div>
-            
-            <div className="flex gap-4 overflow-x-auto no-scrollbar pb-1">
-              {/* Current User Note Slot */}
-              {(() => {
-                const myNote = notes.find(n => n.userId === currentUser.id);
-                return (
-                  <div className="flex flex-col items-center shrink-0 relative group cursor-pointer w-14">
-                    <div 
-                      onClick={() => {
-                        if (myNote) {
-                          setActiveNoteViewer(myNote);
-                        } else {
-                          setActiveNoteComposer(true);
-                        }
-                      }}
-                      className="relative w-12 h-12 rounded-full flex items-center justify-center border-2 border-violet-600/30 hover:border-violet-500 transition-all duration-300"
-                    >
-                      <img 
-                        src={currentUser.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'} 
-                        alt="Your avatar" 
-                        className="w-10 h-10 rounded-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      {myNote ? (
-                        <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-violet-600 border border-violet-400 text-white text-[8px] px-1.5 py-0.5 rounded-lg max-w-[56px] truncate shadow-lg font-bold leading-tight z-10">
-                          {myNote.type === 'audio' ? '🎙️ Audio' : myNote.type === 'video' ? myNote.videoEmoji : myNote.text}
-                        </div>
-                      ) : (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-violet-600 border border-[#080516] flex items-center justify-center text-white font-bold text-[10px]">
-                          +
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[9px] text-zinc-400 mt-1 truncate max-w-full font-medium text-center">Your Note</span>
-                  </div>
-                );
-              })()}
-
-              {/* Friends Notes Slots */}
-              {notes.filter(n => n.userId !== currentUser.id).map(note => {
-                return (
-                  <div 
-                    key={note.id} 
-                    onClick={() => setActiveNoteViewer(note)}
-                    className="flex flex-col items-center shrink-0 relative group cursor-pointer w-14"
-                  >
-                    {/* Floating Speech Bubble */}
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900/95 border border-violet-500/30 hover:border-violet-400/60 text-violet-100 text-[8px] px-2 py-0.5 rounded-full max-w-[64px] truncate shadow-lg font-sans font-bold leading-tight transition-all duration-300 z-10 group-hover:scale-105">
-                      {note.type === 'audio' ? '🎙️ Audio' : note.type === 'video' ? note.videoEmoji : note.text}
-                    </div>
-
-                    <div className="relative w-12 h-12 rounded-full flex items-center justify-center border-2 border-pink-500/20 hover:border-pink-500 transition-all duration-300">
-                      <img 
-                        src={note.userAvatar} 
-                        alt={note.userName} 
-                        className="w-10 h-10 rounded-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-[#080516]" title="Active Now" />
-                    </div>
-                    <span className="text-[9px] text-zinc-400 mt-1 truncate max-w-full font-medium text-center">{note.userName}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Primary vs General Tab Selector for Chats */}
-        {activeTab === 'chats' && !searchQuery && (
-          <div className="px-3 py-1 flex gap-1 bg-[#050311]/40 border-b border-violet-500/5 shrink-0 justify-start select-none">
-            {[
-              { id: 'primary', label: 'Primary' },
-              { id: 'general', label: 'General' }
-            ].map(sub => (
-              <button
-                key={sub.id}
-                onClick={() => setChatsSubTab(sub.id as any)}
-                className={`px-3 py-1 text-[8px] font-mono uppercase font-black tracking-widest rounded-md border transition-all cursor-pointer ${
-                  chatsSubTab === sub.id 
-                    ? 'bg-violet-600/20 text-violet-400 border-violet-500/30 shadow-inner' 
-                    : 'bg-transparent text-zinc-500 border-transparent hover:text-zinc-300'
-                }`}
-              >
-                {sub.label}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Scrolling pill category selector */}
         <div className="px-3 py-2 flex gap-1 overflow-x-auto no-scrollbar shrink-0 border-b border-violet-500/5 bg-[#03010c]/10">
           {[
-            { id: 'chats', label: 'Chats' },
-            { id: 'requests', label: 'Requests' },
-            { id: 'broadcasts', label: 'Broadcasts' },
-            { id: 'calls', label: 'Calls' },
-            { id: 'archived', label: 'Archived' }
+            { id: 'chats', label: 'Messages' },
+            { id: 'requests', label: 'Activity' },
           ].map(tab => (
             <button
               key={tab.id}
               onClick={() => handleTabChange(tab.id as any)}
-              className={`px-2.5 py-1 rounded-lg text-[8.5px] font-mono uppercase tracking-wider font-black shrink-0 transition-all cursor-pointer ${
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-sans uppercase font-bold shrink-0 transition-all cursor-pointer ${
                 activeTab === tab.id 
-                  ? 'bg-violet-600 text-white shadow-sm ring-1 ring-violet-400/20' 
-                  : 'bg-white/5 text-zinc-400 hover:text-white hover:bg-white/10'
+                  ? 'bg-violet-600/20 text-violet-400 border border-violet-500/30' 
+                  : 'text-zinc-500 hover:text-white'
               }`}
             >
               {tab.label}
@@ -1707,68 +1344,55 @@ export default function MessagesView({
               }}
             />
           ) : (
+            filteredChats.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-64 p-4 text-center">
+              <MessageSquare className="w-8 h-8 text-zinc-700 mb-2" />
+              <p className="text-zinc-400 text-sm font-bold">No conversations yet.</p>
+              <p className="text-zinc-600 text-xs mt-1">Start a conversation by following someone or sending your first message.</p>
+              <button className="mt-4 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors">New Message</button>
+            </div>
+          ) : (
             filteredChats.map(chat => {
               const isSelected = chat.id === activeChatId;
-              const isPinned = pinnedChats.includes(chat.id);
-              const isMuted = mutedChats.includes(chat.id);
-
+              
               return (
                 <div
                   key={chat.id}
-                  className={`w-full p-3 flex items-center justify-between transition-colors relative group/item cursor-pointer ${
-                    isSelected ? 'bg-violet-600/10 border-l-2 border-[#8B5CF6]' : 'hover:bg-violet-500/5'
+                  className={`w-full p-2 flex items-center justify-between transition-colors relative group/item cursor-pointer ${
+                    isSelected ? 'bg-violet-600/10' : 'hover:bg-white/5'
                   }`}
                   onClick={() => {
                     setActiveChatId(chat.id);
-                    chat.unreadCount = 0;
                     setIsLocalSearchOpen(false);
                     setLocalSearchQuery('');
                   }}
                 >
-                  <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="relative shrink-0">
                       <img 
                         src={chat.partnerAvatar} 
                         alt={chat.partnerName} 
-                        className="w-9 h-9 rounded-xl object-cover border border-violet-500/10" 
+                        className="w-10 h-10 rounded-full object-cover" 
                         referrerPolicy="no-referrer"
                       />
-                      {chat.isBroadcast ? (
-                        <span className="absolute bottom-[-1px] right-[-1px] p-0.5 bg-emerald-500 text-slate-950 rounded-full border border-[#09071c]">
-                          <Radio className="w-2 h-2" />
-                        </span>
-                      ) : chat.isPartnerOnline ? (
-                        <span className="absolute bottom-[-1px] right-[-1px] w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#09071c]" />
-                      ) : (
-                        <span className="absolute bottom-[-1px] right-[-1px] w-2.5 h-2.5 bg-zinc-600 rounded-full border-2 border-[#09071c]" />
+                      {chat.isPartnerOnline && (
+                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-[#09071c]" />
                       )}
                     </div>
 
                     <div className="overflow-hidden flex-1 text-left leading-none">
                       <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-1 min-w-0">
-                          <p className="text-xs font-sans font-black text-white truncate max-w-[130px]">
-                            {chat.partnerName}
-                          </p>
-                          {chat.isBroadcast ? (
-                            <span className="text-[7px] font-mono px-1 rounded-sm bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-extrabold shrink-0 uppercase">
-                              {chat.broadcastMode || 'LIST'}
-                            </span>
-                          ) : chat.id === 'group-main' || chat.isGroup || chat.id.startsWith('group-') ? (
-                            <Users className="w-3 h-3 text-violet-400 shrink-0" />
-                          ) : (
-                            <PurpleVerifiedBadge type="figure" className="w-3 h-3" />
-                          )}
-                        </div>
-                        <span className="text-[8px] font-mono text-zinc-500 shrink-0">{chat.lastTimestamp}</span>
+                        <p className="text-xs font-bold text-white truncate max-w-[130px]">
+                          {chat.partnerName}
+                        </p>
+                        <span className="text-[10px] text-zinc-500 font-sans">{chat.lastTimestamp}</span>
                       </div>
-
-                      <p className="text-[10px] font-sans text-violet-300/40 truncate leading-tight mt-1">
+                      <p className="text-[11px] text-zinc-400 truncate leading-tight">
                         {chat.lastMessage}
                       </p>
                     </div>
                   </div>
-
+                  
                   {/* Quick actions indicator */}
                   <div className="flex items-center gap-1.5 pl-1 shrink-0">
                     <button
@@ -1781,8 +1405,8 @@ export default function MessagesView({
                     >
                       <RefreshCw className="w-2.5 h-2.5 text-violet-400" />
                     </button>
-                    {isPinned && <Pin className="w-2.5 h-2.5 text-violet-400 shrink-0" />}
-                    {isMuted && <VolumeX className="w-2.5 h-2.5 text-zinc-500 shrink-0" />}
+                    {pinnedChats.includes(chat.id) && <Pin className="w-2.5 h-2.5 text-violet-400 shrink-0" />}
+                    {mutedChats.includes(chat.id) && <VolumeX className="w-2.5 h-2.5 text-zinc-500 shrink-0" />}
                     {chat.unreadCount > 0 && (
                       <span className="h-4 min-w-4 px-1 flex items-center justify-center text-[8px] font-bold font-mono bg-pink-500 text-white rounded-full shrink-0">
                         {chat.unreadCount}
@@ -1792,19 +1416,7 @@ export default function MessagesView({
                 </div>
               );
             })
-          )}
-
-          {activeTab !== 'calls' && filteredChats.length === 0 && (
-            <div className="p-8 text-center flex flex-col items-center justify-center gap-3 select-none h-48 py-20">
-              <div className="w-12 h-12 rounded-full bg-violet-600/5 border border-violet-500/15 flex items-center justify-center mx-auto text-violet-400/40">
-                <MessageSquare className="w-5 h-5 text-violet-500/30" />
-              </div>
-              <p className="text-[11px] font-black uppercase tracking-wider text-white">No nodes in this register</p>
-              <p className="text-[10px] text-zinc-500 leading-normal max-w-[200px]">
-                Create a new chat or broadcast channel, and watch your secure ledger populate.
-              </p>
-            </div>
-          )}
+          ))}
         </div>
       </div>
 
@@ -2451,294 +2063,8 @@ export default function MessagesView({
         )}
       </AnimatePresence>
 
-      {/* Instagram Notes Composer Modal */}
-      <AnimatePresence>
-        {activeNoteComposer && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setActiveNoteComposer(false)}
-              className="absolute inset-0 bg-slate-950/80"
-            />
-            <motion.div 
-              initial={{ scale: 0.95, y: 15, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.95, y: 15, opacity: 0 }}
-              className="relative w-full max-w-sm bg-[#09071d] border border-violet-500/20 rounded-2xl p-5 z-10 flex flex-col gap-4 shadow-2xl overflow-hidden text-left"
-            >
-              <div className="absolute top-0 right-0 p-3">
-                <button 
-                  onClick={() => setActiveNoteComposer(false)}
-                  className="p-1.5 hover:bg-white/5 rounded-full text-zinc-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-violet-600/20 flex items-center justify-center text-violet-400 shrink-0">
-                  <Sparkles className="w-5 h-5 text-violet-400" />
-                </div>
-                <div className="text-left">
-                  <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest">Share a Note</h3>
-                  <p className="text-[9px] text-zinc-500 uppercase">Visible for 24 hours</p>
-                </div>
-              </div>
 
-              {/* Note Content Input */}
-              <div className="space-y-3">
-                {newNoteType === 'text' && (
-                  <div className="relative">
-                    <textarea
-                      maxLength={60}
-                      value={newNoteText}
-                      onChange={(e) => setNewNoteText(e.target.value)}
-                      placeholder="What's on your mind? (60 char limit)"
-                      className="w-full h-24 p-3 bg-slate-950 border border-violet-500/15 focus:border-[#8B5CF6] rounded-xl text-xs text-white focus:outline-none placeholder-zinc-600 font-sans resize-none"
-                    />
-                    <div className="absolute bottom-2 right-2 text-[8px] font-mono text-zinc-500 uppercase">
-                      {60 - newNoteText.length} left
-                    </div>
-                  </div>
-                )}
-
-                {newNoteType === 'audio' && (
-                  <div className="bg-slate-950 border border-violet-500/15 rounded-xl p-4 flex flex-col items-center justify-center gap-3 text-center">
-                    <div className="w-12 h-12 rounded-full bg-pink-500/10 border border-pink-500/20 flex items-center justify-center text-pink-400">
-                      <Mic className={`w-5 h-5 ${isRecordingNoteAudio ? 'animate-pulse' : ''}`} />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-white uppercase tracking-wider">Audio Note Status Creator</p>
-                      <p className="text-[9px] text-zinc-500 mt-0.5">Share your voice waves</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRecordingNoteAudio(prev => !prev);
-                        window.dispatchEvent(new CustomEvent('toast', { detail: isRecordingNoteAudio ? "🎙️ Audio Note recorded." : "🎤 Recording audio note status..." }));
-                      }}
-                      className={`px-3 py-1 text-[8px] font-mono font-black uppercase tracking-wider rounded-lg border ${
-                        isRecordingNoteAudio 
-                          ? 'bg-pink-600/30 text-pink-400 border-pink-500/40 animate-pulse' 
-                          : 'bg-violet-600/20 text-violet-400 border-violet-500/30'
-                      }`}
-                    >
-                      {isRecordingNoteAudio ? 'Recording... Tap to stop' : 'Start Soundwave Stream'}
-                    </button>
-                  </div>
-                )}
-
-                {newNoteType === 'video' && (
-                  <div className="bg-slate-950 border border-violet-500/15 rounded-xl p-4 flex flex-col items-center justify-center gap-3 text-center">
-                    <div className="text-4xl filter drop-shadow-[0_0_8px_rgba(139,92,246,0.3)] animate-bounce select-none">
-                      {newNoteVideoEmoji}
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-white uppercase tracking-wider">Video Loop Status</p>
-                      <p className="text-[9px] text-zinc-500 mt-0.5">Choose an emoji overlay for your bubble</p>
-                    </div>
-                    <div className="flex gap-2 justify-center">
-                      {['🎬', '🧠', '🔮', '🎧', '⚡', '☕'].map(em => (
-                        <button
-                          key={em}
-                          type="button"
-                          onClick={() => setNewNoteVideoEmoji(em)}
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center text-base hover:bg-violet-500/20 border transition-all ${
-                            newNoteVideoEmoji === em ? 'bg-violet-600/20 border-violet-500' : 'bg-transparent border-violet-500/10'
-                          }`}
-                        >
-                          {em}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Status Type Selector */}
-                <div className="flex gap-1 bg-slate-950 p-1 rounded-lg border border-violet-500/5">
-                  {[
-                    { id: 'text', label: '💭 Thought' },
-                    { id: 'audio', label: '🎙️ Audio' },
-                    { id: 'video', label: '📹 Video' }
-                  ].map(t => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setNewNoteType(t.id as any)}
-                      className={`flex-1 py-1 rounded-md text-[8px] font-mono uppercase font-black transition-all ${
-                        newNoteType === t.id 
-                          ? 'bg-violet-600/20 text-violet-400 shadow-inner' 
-                          : 'text-zinc-500 hover:text-white'
-                      }`}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Audience Selection */}
-                <div className="flex items-center justify-between text-left px-1 mt-2">
-                  <span className="text-[9px] font-mono uppercase text-zinc-500 font-extrabold">Who can see this:</span>
-                  <div className="flex gap-1.5">
-                    {[
-                      { id: 'followers', label: 'Followers back', color: 'border-violet-500/20 text-violet-400' },
-                      { id: 'close_friends', label: 'Close friends 🟢', color: 'border-emerald-500/20 text-emerald-400 bg-emerald-500/5' }
-                    ].map(aud => (
-                      <button
-                        key={aud.id}
-                        type="button"
-                        onClick={() => setNewNotePrivacy(aud.id as any)}
-                        className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase border transition-all ${
-                          newNotePrivacy === aud.id 
-                            ? aud.color + ' ring-2 ring-violet-500/5' 
-                            : 'border-transparent text-zinc-600'
-                        }`}
-                      >
-                        {aud.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action buttons */}
-              <button
-                type="button"
-                onClick={handleShareNote}
-                className="w-full py-2.5 bg-gradient-to-r from-violet-600 to-pink-600 hover:brightness-110 rounded-xl text-[10px] font-mono uppercase font-black text-white transition-all cursor-pointer hover:shadow-[0_0_15px_rgba(139,92,246,0.25)]"
-              >
-                Share Status Note
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Instagram Note Viewer Modal */}
-      <AnimatePresence>
-        {activeNoteViewer && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.6 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setActiveNoteViewer(null)}
-              className="absolute inset-0 bg-slate-950/80"
-            />
-            <motion.div 
-              initial={{ scale: 0.95, y: 15, opacity: 0 }}
-              animate={{ scale: 1, y: 0, opacity: 1 }}
-              exit={{ scale: 0.95, y: 15, opacity: 0 }}
-              className="relative w-full max-w-sm bg-[#09071d] border border-violet-500/20 rounded-2xl p-5 z-10 flex flex-col gap-4 shadow-2xl overflow-hidden text-left"
-            >
-              <div className="absolute top-0 right-0 p-3">
-                <button 
-                  onClick={() => setActiveNoteViewer(null)}
-                  className="p-1.5 hover:bg-white/5 rounded-full text-zinc-400 hover:text-white"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Creator Card */}
-              <div className="flex items-center gap-3">
-                <img 
-                  src={activeNoteViewer.userAvatar} 
-                  alt={activeNoteViewer.userName} 
-                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-violet-500/20"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="text-left">
-                  <h3 className="text-xs font-bold text-white leading-none">{activeNoteViewer.userName}</h3>
-                  <p className="text-[8px] font-mono text-zinc-500 uppercase mt-1 leading-none">
-                    {activeNoteViewer.privacy === 'close_friends' ? '🟢 Close Friends' : '👥 Followers you follow back'}
-                  </p>
-                </div>
-              </div>
-
-              {/* Content Bubble */}
-              <div className="bg-slate-950 p-4 border border-violet-500/10 rounded-2xl text-left relative overflow-hidden">
-                {activeNoteViewer.type === 'audio' ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsNoteAudioPlaying(prev => !prev);
-                          if (!isNoteAudioPlaying) {
-                            setNoteAudioPlaybackProgress(0);
-                            const t = setInterval(() => {
-                              setNoteAudioPlaybackProgress(p => {
-                                if (p >= 100) {
-                                  clearInterval(t);
-                                  setIsNoteAudioPlaying(false);
-                                  return 0;
-                                }
-                                return p + 10;
-                              });
-                            }, 300);
-                          }
-                        }}
-                        className="w-7 h-7 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400 hover:bg-violet-600/30 transition-all cursor-pointer"
-                      >
-                        {isNoteAudioPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 pl-0.5" />}
-                      </button>
-                      <div className="flex-1">
-                        <div className="h-1 bg-violet-950 rounded-full overflow-hidden">
-                          <div className="h-full bg-violet-500 transition-all duration-300" style={{ width: `${noteAudioPlaybackProgress}%` }} />
-                        </div>
-                        <span className="text-[7.5px] font-mono text-zinc-500 uppercase mt-1 block">Audio Status Wave</span>
-                      </div>
-                    </div>
-                  </div>
-                ) : activeNoteViewer.type === 'video' ? (
-                  <div className="flex items-center gap-3">
-                    <div className="text-3xl filter drop-shadow-[0_0_5px_rgba(139,92,246,0.3)] select-none">
-                      {activeNoteViewer.videoEmoji}
-                    </div>
-                    <p className="text-xs text-white leading-relaxed font-sans">{activeNoteViewer.text}</p>
-                  </div>
-                ) : (
-                  <p className="text-xs text-white leading-relaxed font-sans font-medium">"{activeNoteViewer.text}"</p>
-                )}
-              </div>
-
-              {/* Interactive Reply Field */}
-              {activeNoteViewer.userId !== currentUser.id ? (
-                <div className="space-y-2.5">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={noteReplyText}
-                      onChange={(e) => setNoteReplyText(e.target.value)}
-                      placeholder={`Send a DM reply to ${activeNoteViewer.userName}...`}
-                      className="w-full pl-3 pr-10 py-2 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-[#8B5CF6] focus:outline-hidden text-xs text-white placeholder-zinc-600 font-sans"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleSendNoteReply}
-                      className="absolute right-2 top-1.5 p-1 text-violet-400 hover:text-white"
-                      title="Send DM reply"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleDeleteMyNote}
-                  className="w-full py-2 bg-red-600/15 hover:bg-red-600/25 border border-red-500/30 text-red-400 font-mono text-[9px] font-black uppercase tracking-wider rounded-xl transition-colors cursor-pointer"
-                >
-                  Delete My Note
-                </button>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

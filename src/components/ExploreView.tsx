@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import NexoraVideo from './NexoraVideo';
 import { Compass, Search, TrendingUp, Radio, Award, Zap, Users, Sparkles, Film, Music, Gamepad2, Cpu, Briefcase, Trophy, BookOpen, Flame, Volume2, VolumeX, X, Heart, MessageSquare, Clock, Check, UserPlus, Plus, ArrowRight, Play, Pause, Video, Grid, Folder, RefreshCw, Globe, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -261,7 +261,7 @@ export default function ExploreView({
     }
   ];
 
-  const activeReelsList = React.useMemo(() => {
+  const activeReelsList = useMemo(() => {
     const dynamicReels = posts
       .filter(p => p.videoUrl)
       .map(p => ({

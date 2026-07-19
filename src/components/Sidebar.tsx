@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { User, ThemeMood } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import NexoraPremiumLogo from './NexoraPremiumLogo';
+import NexoraBranding from './NexoraBranding';
 
 interface SidebarProps {
   currentUser: User;
@@ -42,19 +43,8 @@ export default function Sidebar({
   return (
     <div id="nexora-sidebar-panel" className="flex flex-col h-full py-6 pr-4 border-r border-current/10">
       {/* Brand & Identity */}
-      <div id="nexora-brand-header" className="flex items-center gap-3 px-4 mb-6">
-        <div className="relative flex items-center justify-center w-11 h-11 rounded-xl bg-[#03010a] border border-violet-500/25 shadow-lg shadow-cyan-500/5 overflow-hidden group">
-          <span className="absolute inset-0 bg-gradient-to-tr from-cyan-500/10 via-transparent to-fuchsia-500/10 opacity-60" />
-          <NexoraPremiumLogo className="w-8 h-8" glow={true} />
-        </div>
-        <div>
-          <h1 className="text-2xl font-black tracking-wider bg-clip-text text-transparent bg-linear-to-r from-violet-400 via-pink-400 to-cyan-400 font-sans">
-            NEXORA
-          </h1>
-          <p className="text-[9px] font-sans font-semibold text-purple-400 leading-tight">
-            Connect. Share. Discover.
-          </p>
-        </div>
+      <div id="nexora-brand-header" className="px-4 mb-6">
+        <NexoraBranding size="md" showSubtitle={true} />
       </div>
 
       {/* Compact User block replacing basic follower metrics or stats dashboards */}
@@ -196,14 +186,6 @@ export default function Sidebar({
       </button>
 
       {/* Quick Action Post Button */}
-      <button 
-        id="sidebar-create-post-cta"
-        onClick={onOpenCreatePost}
-        className="w-full py-2.5 px-4 mb-4 flex items-center justify-center gap-2 rounded-xl bg-linear-to-r from-violet-600 via-pink-600 to-cyan-500 text-white font-sans text-xs font-black shadow-md hover:shadow-lg hover:brightness-110 active:scale-98 transition-all cursor-pointer"
-      >
-        <PlusCircle className="w-4 h-4" />
-        <span>➕ Create Post</span>
-      </button>
 
       {/* Premium Footnotes */}
       <div className="mt-auto pt-4 border-t border-current/5 text-[9px] font-mono text-current/40 text-center uppercase tracking-widest">

@@ -320,7 +320,7 @@ export default function BroadcastAnalyticsView({
 
         {/* Modal Footer */}
         <div className="p-4 border-t border-violet-500/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm shrink-0">
-          <span className="text-[8px] font-mono text-zinc-500 uppercase">Nexora Metrics Protocol V2</span>
+          <span className="text-[8px] font-mono text-zinc-500 uppercase">Broadcast Analytics</span>
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-300 font-sans text-[10px] uppercase font-bold tracking-wider transition-all cursor-pointer"

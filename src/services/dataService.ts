@@ -1,4 +1,5 @@
-import { db, auth } from '../lib/firebase';
+import { db, auth } from './firebase/config';
+import { handleFirestoreError, OperationType } from './firebase/errors';
 import { 
   doc, 
   addDoc, 
@@ -16,46 +17,7 @@ import {
 } from 'firebase/firestore';
 import { PrivacySettings, User, Post, Circle as Community, Page, Notification, Message, Chat } from '../types';
 
-// ==========================================
-// 1. OPERATION TYPES & ERROR HANDLING
-// ==========================================
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
-}
-
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-  };
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errorObj = error as any;
-  if (errorObj?.code === 'permission-denied') {
-    console.warn(`Firestore permission denied for ${operationType} on ${path}. Falling back to offline mode.`);
-    return;
-  }
-  
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-    },
-    operationType,
-    path
-  };
-  console.warn('Firestore Error: ', JSON.stringify(errInfo));
-}
+// ... (rest of the file content)
 
 // ==========================================
 // 2. MULTI-LEVEL CACHE ENGINE
@@ -264,7 +226,7 @@ async function saveUserToDbDirect(user: any) {
        return await setDoc(doc(db, path, user.id), cleanUser);
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    handleFirestoreError(error, OperationType.WRITE, path, auth);
   }
 }
 
@@ -276,7 +238,7 @@ async function savePostToDbDirect(post: any) {
     const { setDoc } = await import('firebase/firestore');
     return await setDoc(doc(db, path, post.id), sanitizedPost);
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    handleFirestoreError(error, OperationType.WRITE, path, auth);
   }
 }
 
@@ -289,7 +251,7 @@ async function addFollowDirect(followerId: string, followingId: string) {
       createdAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -304,7 +266,7 @@ async function addNotificationDirect(userId: string, type: string, content: stri
       createdAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -319,7 +281,7 @@ async function createPageDirect(ownerId: string, name: string, username: string,
       createdAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -333,7 +295,7 @@ async function createCommunityDirect(name: string, description: string, ownerId:
       createdAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -349,7 +311,7 @@ async function reportContentDirect(reporterId: string, targetType: string, targe
       createdAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -363,7 +325,7 @@ async function saveDraftDirect(userId: string, caption: string, videoUrl: string
       updatedAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -377,7 +339,7 @@ async function logActivityDirect(userId: string, type: string, targetId: string)
       createdAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -387,7 +349,7 @@ async function updatePrivacySettingsDirect(userId: string, settings: Partial<Pri
     const docRef = doc(db, path, userId);
     return await updateDoc(docRef, { ...settings });
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
+    handleFirestoreError(error, OperationType.UPDATE, path, auth);
   }
 }
 
@@ -447,7 +409,7 @@ export async function updateContent(contentId: string, updates: Partial<any>) {
       updatedAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.UPDATE, path);
+    handleFirestoreError(error, OperationType.UPDATE, path, auth);
   }
 }
 
@@ -460,7 +422,7 @@ export async function logAutomationTask(taskName: string, status: string) {
       createdAt: serverTimestamp()
     });
   } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path);
+    handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
 }
 
@@ -475,7 +437,7 @@ export async function getFollowers(userId: string) {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -486,7 +448,7 @@ export async function getFollowing(userId: string) {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -497,7 +459,7 @@ export async function getActivities(userId: string) {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -510,7 +472,7 @@ export async function getGlobalPosts() {
     posts.forEach(p => cacheManager.setPost(p.id, p));
     return posts;
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -521,7 +483,7 @@ export async function getDrafts(userId: string) {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -532,7 +494,7 @@ export async function getCreatorAnalyticsDetailed(userId: string) {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -543,7 +505,7 @@ export async function getUserContent(userId: string) {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -554,7 +516,7 @@ export async function getNotifications(userId: string) {
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -567,7 +529,7 @@ export async function getPages() {
     pages.forEach(p => cacheManager.setPage(p.id, p));
     return pages;
   } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
@@ -582,7 +544,7 @@ export function subscribeToPosts(callback: (posts: Post[]) => void) {
     posts.forEach(p => cacheManager.setPost(p.id, p));
     callback(posts);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'posts');
+    handleFirestoreError(error, OperationType.LIST, 'posts', auth);
   });
 }
 
@@ -592,7 +554,7 @@ export function subscribeToNotifications(userId: string, callback: (notification
     const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
     callback(notifications);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'notifications');
+    handleFirestoreError(error, OperationType.LIST, 'notifications', auth);
   });
 }
 
@@ -603,7 +565,7 @@ export function subscribeToUsers(callback: (users: User[]) => void) {
     users.forEach(u => cacheManager.setUser(u.id, u));
     callback(users);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'users');
+    handleFirestoreError(error, OperationType.LIST, 'users', auth);
   });
 }
 
@@ -614,7 +576,7 @@ export function subscribeToCommunities(callback: (communities: Community[]) => v
     communities.forEach(c => cacheManager.setCommunity(c.id, c));
     callback(communities);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'communities');
+    handleFirestoreError(error, OperationType.LIST, 'communities', auth);
   });
 }
 
@@ -625,7 +587,7 @@ export function subscribeToPages(callback: (pages: Page[]) => void) {
     pages.forEach(p => cacheManager.setPage(p.id, p));
     callback(pages);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'pages');
+    handleFirestoreError(error, OperationType.LIST, 'pages', auth);
   });
 }
 
@@ -635,7 +597,7 @@ export function subscribeToFollows(callback: (follows: any[]) => void) {
     const follows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(follows);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'follows');
+    handleFirestoreError(error, OperationType.LIST, 'follows', auth);
   });
 }
 
@@ -645,7 +607,7 @@ export function subscribeToChats(userId: string, callback: (chats: Chat[]) => vo
     const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Chat[];
     callback(chats);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'chats');
+    handleFirestoreError(error, OperationType.LIST, 'chats', auth);
   });
 }
 
@@ -655,7 +617,7 @@ export function subscribeToMessages(chatId: string, callback: (messages: Message
     const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Message[];
     callback(messages);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'messages');
+    handleFirestoreError(error, OperationType.LIST, 'messages', auth);
   });
 }
 

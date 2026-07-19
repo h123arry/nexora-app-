@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward } from 'lucide-react';
 
@@ -43,8 +43,11 @@ import NotificationsView from './components/NotificationsView';
 import WorldPulseView from './components/WorldPulseView';
 import MatrixView from './components/MatrixView';
 import AuthView from './components/AuthView';
+import NexoraPremiumLogo from './components/NexoraPremiumLogo';
+import NexoraBranding from './components/NexoraBranding';
 import AdminDashboardView from './components/AdminDashboardView';
 import CreatorDashboardView from './components/CreatorDashboardView';
+import ActivityView from './components/ActivityView';
 import OnboardingTour from './components/OnboardingTour';
 import MediaCreationEngine from './components/MediaCreationEngine';
 import ExploreView from './components/ExploreView';
@@ -64,7 +67,7 @@ export default function App() {
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
     const map: Record<string, User> = {};
     const accounts = JSON.parse(localStorage.getItem('nexora_registered_accounts') || '[]');
-    [INITIAL_USER, ...MOCK_CREATORS.filter(u => ['user-0', 'creator-4', 'voh_ai'].includes(u.id))].forEach(u => map[u.id] = u);
+    [INITIAL_USER, ...MOCK_CREATORS.filter(u => ['user-0', 'creator-4', 'voh_ai'].includes(u.id))].filter(Boolean).forEach(u => map[u.id] = u);
     accounts.forEach((a: any) => map[a.user.id] = a.user);
     return map;
   });
@@ -1819,7 +1822,7 @@ export default function App() {
   const unreadMessagesCount = chats.reduce((acc, c) => acc + c.unreadCount, 0);
   const unreadNotificationsCount = notifications.filter(n => !n.isRead).length;
 
-  const resolvedNotifications = React.useMemo(() => {
+  const resolvedNotifications = useMemo(() => {
     return notifications.map(n => {
        const user = globalUsersMap[n.userId];
        if (user) {
@@ -1829,7 +1832,7 @@ export default function App() {
     });
   }, [notifications, globalUsersMap]);
 
-  const resolvedChats = React.useMemo(() => {
+  const resolvedChats = useMemo(() => {
     return chats.map(c => {
        const partner = globalUsersMap[c.partnerId];
        if (partner) {
@@ -2017,11 +2020,17 @@ export default function App() {
                     <NidaView currentUser={getRichUser(currentUser)} />
                   )}
 
-                  {(activeTab === 'inbox' || activeTab === 'activity') && (
+                  {activeTab === 'inbox' && (
                     <NewInboxView
                       currentUser={getRichUser(currentUser)}
                       chats={resolvedChats}
                       messages={messages}
+                    />
+                  )}
+
+                  {activeTab === 'activity' && (
+                    <ActivityView
+                      currentUser={getRichUser(currentUser)}
                     />
                   )}
 
@@ -3041,17 +3050,8 @@ export default function App() {
               <div className="relative z-10 space-y-4 animate-fade-in">
                 
                 {/* Luminous Pulsing Logo Preview Container */}
-                <div className="relative w-20 h-20 mx-auto rounded-3xl overflow-hidden border border-violet-500/40 group shadow-[0_0_20px_rgba(139,92,246,0.35)] hover:shadow-[0_0_35px_rgba(139,92,246,0.6)] transition-all">
-                  <img
-                    src="/logo.png"
-                    alt="Nexora PWA Logo"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                    onError={(e) => {
-                      // Custom high contrast vector fallback
-                      e.currentTarget.src = "data:image/svg+xml,%3Csvg viewBox='0 0 240 240' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='240' height='240' rx='54' fill='%230a071d'/%3E%3Cpath d='M80 60 L160 180 M160 60 L80 180' stroke='%238B5CF6' strokeWidth='24' strokeLinecap='round'/%3E%3C/svg%3E";
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-violet-600/20 to-transparent mix-blend-overlay" />
+                <div className="flex flex-col items-center justify-center mx-auto transition-all duration-700 hover:scale-105">
+                  <NexoraBranding size="xl" showSubtitle={true} />
                 </div>
 
                 <div className="space-y-1">

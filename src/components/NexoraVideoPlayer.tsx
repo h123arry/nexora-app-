@@ -4,7 +4,9 @@ import ShareSheet from './ShareSheet';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
-import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Music, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3 } from 'lucide-react';
+import VideoBottomSheet from './VideoBottomSheet';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
+
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Post {
@@ -111,6 +113,7 @@ export default function NexoraVideoPlayer({
   const [showControls, setShowControls] = useState(true);
   const [selectedQuality, setSelectedQuality] = useState<'1080p' | '720p' | '480p' | 'Auto'>('Auto');
   const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
   
   // Premium Player Adjustments & HUD Telemetry
   const [brightnessLevel, setBrightnessLevel] = useState(100);
@@ -149,6 +152,11 @@ export default function NexoraVideoPlayer({
   const [commentsOn, setCommentsOn] = useState(true);
   const [downloadsOn, setDownloadsOn] = useState(true);
   const [showCreatorToggles, setShowCreatorToggles] = useState(false);
+  const [exportState, setExportState] = useState<{
+    isExporting: boolean;
+    progress: number;
+    statusText: string;
+  } | null>(null);
 
   // Watch duration log trigger state
   const viewLoggedRef = useRef(false);
@@ -494,7 +502,7 @@ export default function NexoraVideoPlayer({
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
       if (!videoRef.current) return;
-      setShowLongPressMenu(true);
+      setShowShareSheet(true);
       videoRef.current.pause();
       setIsPlaying(false);
       setShowControls(false);
@@ -782,21 +790,394 @@ export default function NexoraVideoPlayer({
   };
 
   // Download simulation
-  const handleSimulateDownload = () => {
+  const handleSimulateDownload = async () => {
     if (!downloadsOn) {
       window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Downloads are restricted of this video by creator settings!' }));
       return;
     }
-    window.dispatchEvent(new CustomEvent('toast', { detail: '📥 Initializing metadata download packet... Saved offline!' }));
-    // Simulate simple client cache download anchor
-    const link = document.createElement('a');
-    link.href = videoUrl;
-    link.setAttribute('download', `nexora_video_${post.id}.mp4`);
-    document.body.appendChild(link);
-    // Suppress open errors because of iframe environments and resolve cleanly
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video stream downloaded successfully.' }));
-    }, 1500);
+
+    setExportState({
+      isExporting: true,
+      progress: 0,
+      statusText: 'Preparing secure media pipeline...'
+    });
+
+    const videoSrc = finalVideoUrl || videoUrl;
+    const uploader = post.username;
+
+    // Standard high-fidelity Nexora logo drawer on canvas
+    const drawNexoraN = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, strokeWidth: number, glow = false) => {
+      const s = size / 240;
+      
+      const grad = ctx.createLinearGradient(x, y, x + size, y + size);
+      grad.addColorStop(0, '#8B5CF6');
+      grad.addColorStop(0.5, '#D946EF');
+      grad.addColorStop(1, '#3B82F6');
+
+      const path = () => {
+        ctx.beginPath();
+        ctx.moveTo(x + 50 * s, y + 190 * s);
+        ctx.lineTo(x + 50 * s, y + 80 * s);
+        ctx.quadraticCurveTo(x + 50 * s, y + 50 * s, x + 80 * s, y + 80 * s);
+        ctx.lineTo(x + 160 * s, y + 160 * s);
+        ctx.quadraticCurveTo(x + 190 * s, y + 190 * s, x + 190 * s, y + 160 * s);
+        ctx.lineTo(x + 190 * s, y + 50 * s);
+      };
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      if (glow) {
+        ctx.shadowColor = '#8B5CF6';
+        ctx.shadowBlur = 14 * s;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        path();
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = (36 / 240) * size;
+        ctx.globalAlpha = 0.5;
+        ctx.stroke();
+        ctx.globalAlpha = 1.0;
+        ctx.shadowBlur = 0; // reset shadow
+      }
+
+      path();
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = (32 / 240) * size;
+      ctx.stroke();
+
+      const glass = ctx.createLinearGradient(x, y, x + size, y + size);
+      glass.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
+      glass.addColorStop(0.2, 'rgba(255, 255, 255, 0.1)');
+      glass.addColorStop(0.8, 'rgba(0, 0, 0, 0.1)');
+      glass.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
+
+      path();
+      ctx.strokeStyle = glass;
+      ctx.lineWidth = (32 / 240) * size;
+      ctx.stroke();
+
+      // Inner Core Tube Reflection (Soft specular glint)
+      path();
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = (6 / 240) * size;
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.globalAlpha = 0.3;
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    // Helper to run fallback
+    const runFallback = (errorMsg: string) => {
+      console.warn("Export error, falling back to direct stream:", errorMsg);
+      setExportState(prev => prev ? { ...prev, progress: 90, statusText: 'CORS/Environment limit detected. Downloading standard copy...' } : null);
+      
+      // Delay slightly so the user sees what's happening
+      setTimeout(() => {
+        const link = document.createElement('a');
+        link.href = videoSrc;
+        link.setAttribute('download', `nexora_video_${post.id}.mp4`);
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video stream downloaded successfully.' }));
+        setExportState(null);
+      }, 1500);
+    };
+
+    try {
+      // Create offscreen video element
+      const video = document.createElement('video');
+      video.src = videoSrc;
+      video.crossOrigin = 'anonymous';
+      video.muted = true;
+      video.playsInline = true;
+
+      // Force video to load
+      video.load();
+
+      // Set a safety timeout of 10 seconds to load metadata
+      const loadTimeout = setTimeout(() => {
+        runFallback('Video metadata load timed out.');
+      }, 10000);
+
+      video.addEventListener('loadedmetadata', async () => {
+        clearTimeout(loadTimeout);
+        
+        try {
+          setExportState(prev => prev ? { ...prev, progress: 15, statusText: 'Configuring canvas rasterizer (720p aspect)...' } : null);
+          
+          const canvas = document.createElement('canvas');
+          const width = video.videoWidth || 720;
+          const height = video.videoHeight || 1280;
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            throw new Error('Could not get 2D context');
+          }
+
+          setExportState(prev => prev ? { ...prev, progress: 25, statusText: 'Multiplexing audio streams...' } : null);
+
+          // Prepare Web Audio if supported
+          let audioDest: MediaStreamAudioDestinationNode | null = null;
+          let audioCtx: AudioContext | null = null;
+          try {
+            audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const sourceNode = audioCtx.createMediaElementSource(video);
+            audioDest = audioCtx.createMediaStreamDestination();
+            sourceNode.connect(audioDest);
+          } catch (ae) {
+            console.warn("Audio Context capture failed, exporting video-only track", ae);
+          }
+
+          // Capture canvas stream at 30fps
+          const canvasStream = canvas.captureStream(30);
+          
+          // Assemble combined stream
+          const tracks = [...canvasStream.getVideoTracks()];
+          if (audioDest) {
+            tracks.push(...audioDest.stream.getAudioTracks());
+          }
+          const combinedStream = new MediaStream(tracks);
+
+          // Setup MediaRecorder
+          let options = { mimeType: 'video/webm;codecs=vp9,opus' };
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: 'video/webm;codecs=vp8,opus' };
+          }
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: 'video/mp4' };
+          }
+          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+            options = { mimeType: '' }; // let browser decide
+          }
+
+          const recorder = new MediaRecorder(combinedStream, options);
+          const chunks: Blob[] = [];
+
+          recorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              chunks.push(e.data);
+            }
+          };
+
+          recorder.onstop = () => {
+            setExportState(prev => prev ? { ...prev, progress: 98, statusText: 'Packaging media container...' } : null);
+            const blob = new Blob(chunks, { type: recorder.mimeType || 'video/mp4' });
+            const url = URL.createObjectURL(blob);
+            
+            // Download the final watermarked video
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `nexora_watermarked_${post.username}_${post.id}.mp4`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('toast', { detail: '🔥 Premium watermarked video downloaded successfully!' }));
+              setExportState(null);
+            }, 1000);
+          };
+
+          // Start playback and recording
+          video.currentTime = 0;
+          await video.play();
+          recorder.start();
+
+          // Rendering / Animation loop variables
+          const baseFontSize = Math.max(16, Math.round(width * 0.035));
+          const duration = video.duration || 10; // Fallback to 10s if duration is NaN/Infinity
+          const outroDuration = 1.8; // seconds
+
+          // Keep track of animation frames
+          let animFrameId: number;
+          let isOutroStarted = false;
+          let outroStartTime = 0;
+
+          const renderFrame = () => {
+            const now = video.currentTime;
+            
+            if (video.ended || now >= duration) {
+              // Video finished, start or continue outro
+              if (!isOutroStarted) {
+                isOutroStarted = true;
+                outroStartTime = performance.now();
+                setExportState(prev => prev ? { ...prev, progress: 95, statusText: 'Baking branded outro and signature...' } : null);
+              }
+
+              const elapsedOutro = (performance.now() - outroStartTime) / 1000;
+              if (elapsedOutro >= outroDuration) {
+                // Outro finished! Stop recording
+                recorder.stop();
+                video.pause();
+                cancelAnimationFrame(animFrameId);
+                return;
+              }
+
+              // Draw beautiful branded outro
+              // Deep Nexora purple/indigo radial gradient background
+              const grad = ctx.createRadialGradient(width / 2, height / 2, 10, width / 2, height / 2, width);
+              grad.addColorStop(0, '#15103c');
+              grad.addColorStop(1, '#030112');
+              ctx.fillStyle = grad;
+              ctx.fillRect(0, 0, width, height);
+
+              // Calculate outro text fade-in and fade-out opacity
+              let outroOpacity = 1;
+              if (elapsedOutro < 0.4) {
+                outroOpacity = elapsedOutro / 0.4;
+              } else if (elapsedOutro > outroDuration - 0.4) {
+                outroOpacity = Math.max(0, (outroDuration - elapsedOutro) / 0.4);
+              }
+
+              ctx.save();
+              ctx.globalAlpha = outroOpacity;
+              ctx.textAlign = 'center';
+              ctx.textBaseline = 'middle';
+
+              // Violet glow shadow
+              ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
+              ctx.shadowBlur = 20;
+              ctx.shadowOffsetX = 0;
+              ctx.shadowOffsetY = 0;
+
+              // Draw Centerpiece Glowing official N logo mark
+              const logoL = baseFontSize * 3.5;
+              const logoX = width / 2 - logoL / 2;
+              const logoY = height / 2 - baseFontSize * 4.0;
+              drawNexoraN(ctx, logoX, logoY, logoL, logoL * 0.12, true);
+
+              // Draw title
+              ctx.fillStyle = '#FFFFFF';
+              ctx.font = `bold ${baseFontSize * 2.0}px "Space Grotesk", "Inter", sans-serif`;
+              ctx.fillText('NEXORA', width / 2, height / 2 + baseFontSize * 0.4);
+
+              // Draw uploader info
+              ctx.shadowBlur = 5;
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+              ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
+              ctx.font = `500 ${baseFontSize * 1.1}px "JetBrains Mono", sans-serif`;
+              ctx.fillText(`@${uploader}`, width / 2, height / 2 + baseFontSize * 2.0);
+
+              ctx.restore();
+
+            } else {
+              // Draw active video frame
+              ctx.drawImage(video, 0, 0, width, height);
+
+              // Update progress bar status
+              const currentProgress = Math.min(90, Math.round(30 + (now / duration) * 60));
+              setExportState(prev => prev ? { ...prev, progress: currentProgress, statusText: `Applying NEXORA watermark... ${Math.round((now/duration)*100)}%` } : null);
+
+              // Watermark motion formula
+              const interval = 4.0; // change position every 4 seconds
+              const segment = Math.floor(now / interval);
+              const segmentTime = now % interval;
+
+              // Define watermark position calculator
+              const getPosition = (isLeft: boolean, seg: number) => {
+                const seedVal = seg + (isLeft ? 0 : 77);
+                const seed1 = Math.sin(seedVal * 12.9898) * 43758.5453;
+                const seed2 = Math.cos(seedVal * 78.233) * 43758.5453;
+                const rand1 = seed1 - Math.floor(seed1);
+                const rand2 = seed2 - Math.floor(seed2);
+
+                const y = 0.35 * height + rand2 * (0.30 * height); // centered vertically 35% - 65%
+                
+                let x = 0;
+                if (isLeft) {
+                  x = 0.05 * width + rand1 * (0.12 * width); // Left side
+                } else {
+                  x = 0.62 * width + rand1 * (0.14 * width); // Right side
+                }
+                return { x, y };
+              };
+
+              const leftPos = getPosition(true, segment);
+              const rightPos = getPosition(false, segment);
+
+              // Smooth Transitions: slide and fade
+              let opacity = 0.75;
+              let leftX = leftPos.x;
+              let rightX = rightPos.x;
+
+              if (segmentTime < 0.5) {
+                // Fade-in phase
+                const slidePct = segmentTime / 0.5;
+                opacity = slidePct * 0.75;
+                // Slide from 20px off
+                leftX = leftPos.x - 20 * (1 - slidePct);
+                rightX = rightPos.x + 20 * (1 - slidePct);
+              } else if (segmentTime > interval - 0.5) {
+                // Fade-out phase
+                const fadeOutPct = (interval - segmentTime) / 0.5;
+                opacity = fadeOutPct * 0.75;
+                leftX = leftPos.x + 20 * (1 - fadeOutPct);
+                rightX = rightPos.x - 20 * (1 - fadeOutPct);
+              } else {
+                // Stable float phase
+                opacity = 0.75;
+                const floatAmt = Math.sin(segmentTime * 2.5) * 4;
+                leftX = leftPos.x + floatAmt;
+                rightX = rightPos.x - floatAmt;
+              }
+
+              // Draw left watermark
+              const drawWatermark = (x: number, y: number) => {
+                ctx.save();
+                ctx.globalAlpha = opacity;
+
+                const logoSize = baseFontSize * 1.25;
+                // Draw official brand standard N logo mark on canvas!
+                drawNexoraN(ctx, x, y - logoSize * 0.65, logoSize, logoSize * 0.12, true);
+
+                // Title shifted right for standard alignment
+                ctx.fillStyle = '#FFFFFF';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
+                ctx.shadowBlur = 8;
+                ctx.shadowOffsetX = 1.5;
+                ctx.shadowOffsetY = 1.5;
+                ctx.font = `bold ${baseFontSize}px "Space Grotesk", "Inter", sans-serif`;
+                ctx.fillText('NEXORA', x + logoSize * 1.1, y + logoSize * 0.1);
+
+                // Handle shifted below the text
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+                ctx.font = `500 ${baseFontSize * 0.78}px "JetBrains Mono", sans-serif`;
+                ctx.fillText(`@${uploader}`, x, y + baseFontSize * 1.3);
+
+                ctx.restore();
+              };
+
+              drawWatermark(leftX, leftPos.y);
+              drawWatermark(rightX, rightPos.y);
+            }
+
+            animFrameId = requestAnimationFrame(renderFrame);
+          };
+
+          // Begin the render loop
+          animFrameId = requestAnimationFrame(renderFrame);
+
+        } catch (innerErr) {
+          runFallback('Failed to initialize recording nodes: ' + String(innerErr));
+        }
+      });
+
+      video.addEventListener('error', (e) => {
+        runFallback('CORS or playback pipeline failure.');
+      });
+
+    } catch (e) {
+      runFallback('Export context initiation error: ' + String(e));
+    }
   };
 
   const handleOpenFullscreenWithSync = () => {
@@ -871,9 +1252,9 @@ export default function NexoraVideoPlayer({
 
              {/* Right-Side Action Rail */}
             <div 
-              className="absolute flex flex-col items-center gap-4.5 z-20"
+              className="absolute flex flex-col items-center gap-3.5 z-20"
               style={{
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 110px)',
+                bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
                 right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
               }}
             >
@@ -930,9 +1311,7 @@ export default function NexoraVideoPlayer({
               <button 
                 onClick={(e) => { 
                   e.stopPropagation(); 
-                  const text = `${window.location.origin}/post/${post.id}`;
-                  navigator.clipboard.writeText(text);
-                  window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
+                  setShowShareSheet(true);
                   recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
                 }}
                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
@@ -942,6 +1321,20 @@ export default function NexoraVideoPlayer({
                 </div>
                 <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">{post.shares || 0}</span>
               </button>
+
+              <VideoBottomSheet
+                isOpen={showShareSheet}
+                onClose={() => setShowShareSheet(false)}
+                post={post}
+                onDownload={() => {}}
+                onSave={() => {}}
+                onShare={() => {}}
+                onReport={() => {}}
+                onNotInterested={() => {}}
+                onViewProfile={() => onViewProfile?.(post.userId || '')}
+                onFollowToggle={() => onToggleFollow?.()}
+                isFollowing={isFollowing}
+              />
 
               {/* ⚙️ Options Menu */}
               <div className="relative flex flex-col items-center">
@@ -1047,7 +1440,7 @@ export default function NexoraVideoPlayer({
                           <div 
               className="absolute flex flex-col items-start gap-1 z-20 pointer-events-none text-left"
               style={{
-                bottom: 'calc(env(safe-area-inset-bottom, 0px) + 90px)',
+                bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
                 left: 'calc(env(safe-area-inset-left, 0px) + 14px)',
                 right: 'calc(env(safe-area-inset-right, 0px) + 64px)'
               }}
@@ -1067,19 +1460,31 @@ export default function NexoraVideoPlayer({
               )}
 
               {/* Creator Info */}
-              <div className="flex flex-col items-start gap-0.5 pointer-events-auto text-left" onClick={() => onViewProfile?.(post.userId || '')}>
+              <div className="pointer-events-auto text-left" onClick={() => onViewProfile?.(post.userId || '')}>
                 <div className="flex items-center gap-1">
                   <span className="font-sans font-extrabold text-lg text-white drop-shadow-md truncate max-w-[200px]">{post.name}</span>
                   {post.isVerified && <VerificationBadge />}
                 </div>
                 <span className="text-xs font-mono text-zinc-300 drop-shadow-md font-medium">@{post.username}</span>
+                {/* Audio Sound */}
+                <div className="flex items-center gap-1 text-[10px] text-zinc-300 mt-1 cursor-pointer" onClick={(e) => {e.stopPropagation(); onViewSound?.('123')}}>
+                  <Music className="w-3 h-3"/>
+                  <span>♫ Original Sound - {post.name}</span>
+                </div>
               </div>
 
               {/* Caption */}
               {post.content && (
-                <p className="text-xs text-zinc-100 font-sans leading-relaxed drop-shadow-md select-text pointer-events-auto max-w-xs line-clamp-2 mt-1">
-                  {post.content}
-                </p>
+                <div className="text-xs text-zinc-100 font-sans leading-relaxed drop-shadow-md pointer-events-auto max-w-xs mt-1">
+                  <p className={isExpanded ? "" : "line-clamp-2"}>
+                    {post.content}
+                  </p>
+                  {post.content.length > 50 && (
+                    <button onClick={() => setIsExpanded(!isExpanded)} className="text-[10px] font-bold text-violet-300">
+                      {isExpanded ? "Show less" : "Show more"}
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* Hashtags */}
@@ -1318,137 +1723,8 @@ export default function NexoraVideoPlayer({
         }}
       />
 
-      {/* Polished Bottom Sheet for Long Press Menu */}
-      <AnimatePresence>
-        {showLongPressMenu && (
-          <>
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowLongPressMenu(false);
-                if (videoRef.current && isPlaying) {
-                  videoRef.current.play().catch(() => {});
-                }
-              }}
-              className="absolute inset-0 bg-black/65 z-40 cursor-pointer backdrop-blur-xs"
-            />
-            {/* Sheet */}
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              onClick={(e) => e.stopPropagation()}
-              className="absolute bottom-0 inset-x-0 bg-[#0c0a21]/95 border-t border-violet-500/20 rounded-t-3xl p-5 z-50 text-left shadow-2xl backdrop-blur-xl"
-            >
-              {/* Drag Handle */}
-              <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-5" />
-              
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-[10px] font-mono font-bold tracking-widest text-violet-400 uppercase">Video Actions</h4>
-                <button
-                  onClick={() => {
-                    setShowLongPressMenu(false);
-                    if (videoRef.current && isPlaying) {
-                      videoRef.current.play().catch(() => {});
-                    }
-                  }}
-                  className="p-1 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="grid grid-cols-3 gap-3">
-                {/* Share */}
-                <button
-                  onClick={() => {
-                    setShowShareSheet(true);
-                  }}
-                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
-                >
-                  <span className="text-zinc-300 group-hover:text-violet-400 font-bold text-lg transition-colors mb-1.5">➥</span>
-                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Share</span>
-                </button>
-
-                {/* Save */}
-                <button
-                  onClick={() => {
-                    setShowLongPressMenu(false);
-                    setShowSaveModal(true);
-                  }}
-                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
-                >
-                  <Bookmark className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
-                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Save</span>
-                </button>
-
-                {/* Copy Link */}
-                <button
-                  onClick={() => {
-                    setShowLongPressMenu(false);
-                    const text = `${window.location.origin}/post/${post.id}`;
-                    navigator.clipboard.writeText(text);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Copy successful! Link stored in buffer.' }));
-                  }}
-                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
-                >
-                  <Check className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
-                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Copy Link</span>
-                </button>
-
-                {/* Download */}
-                <button
-                  onClick={() => {
-                    setShowLongPressMenu(false);
-                    handleSimulateDownload();
-                  }}
-                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-white/10 border border-white/5 hover:border-violet-500/30 rounded-2xl transition-all cursor-pointer group"
-                >
-                  <Download className="w-5 h-5 text-zinc-300 group-hover:text-violet-400 transition-colors mb-1.5" />
-                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Download</span>
-                </button>
-
-                {/* Report */}
-                <button
-                  onClick={() => {
-                    setShowLongPressMenu(false);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Report received! Our moderation team is investigating.' }));
-                  }}
-                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-red-950/20 border border-white/5 hover:border-red-500/30 rounded-2xl transition-all cursor-pointer group"
-                >
-                  <AlertTriangle className="w-5 h-5 text-zinc-300 group-hover:text-red-400 transition-colors mb-1.5" />
-                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-red-200">Report</span>
-                </button>
-
-                {/* Not Interested */}
-                <button
-                  onClick={() => {
-                    setShowLongPressMenu(false);
-                    if (onNotInterested) {
-                      onNotInterested();
-                    } else {
-                      window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Tailoring your feed.' }));
-                    }
-                  }}
-                  className="flex flex-col items-center justify-center p-3 bg-white/5 hover:bg-zinc-900 border border-white/5 hover:border-zinc-500/30 rounded-2xl transition-all cursor-pointer group"
-                >
-                  <EyeOff className="w-5 h-5 text-zinc-300 group-hover:text-zinc-400 transition-colors mb-1.5" />
-                  <span className="text-[10px] font-sans font-medium text-zinc-400 group-hover:text-zinc-200">Not Interested</span>
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
       {/* Floating Bottom custom simplified controls block */}
-      <div className="absolute bottom-3 right-3 flex items-center gap-2 z-10">
+      <div className="absolute top-4 right-4 flex items-center gap-2 z-10">
         {/* Maximize / Fullscreen Button */}
         <button
           onClick={(e) => {
@@ -1469,6 +1745,60 @@ export default function NexoraVideoPlayer({
           style={{ width: `${(currentTime / (duration || 1)) * 100}%` }}
         />
       </div>
+
+      {/* EXPORTING WATERMARKED VIDEO MODAL OVERLAY */}
+      <AnimatePresence>
+        {exportState && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center bg-[#030112]/95 backdrop-blur-xl p-4"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              className="w-full max-w-sm bg-[#09071d] border border-violet-500/20 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col items-center text-center"
+            >
+              {/* Decorative ambient background glow */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
+              
+              {/* Premium animated logo indicator */}
+              <div className="relative mb-5">
+                <div className="w-16 h-16 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
+                  <Download className="w-7 h-7 animate-bounce" />
+                </div>
+                <div className="absolute inset-0 rounded-full border border-dashed border-violet-500/40 animate-spin" style={{ animationDuration: '8s' }} />
+              </div>
+
+              <h3 className="text-xs font-mono font-black text-white uppercase tracking-widest mb-1">
+                NEXORA STUDIO EXPORT
+              </h3>
+              <p className="text-[10px] font-sans text-zinc-400 mb-6">
+                Burning creator watermark for <span className="text-violet-400 font-semibold">@{post.username}</span>
+              </p>
+
+              {/* Modern progress track */}
+              <div className="w-full bg-slate-950/60 border border-white/5 rounded-full h-2.5 overflow-hidden mb-3 p-[2px]">
+                <div 
+                  className="h-full bg-gradient-to-r from-violet-600 to-pink-500 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(139,92,246,0.4)] animate-pulse"
+                  style={{ width: `${exportState.progress}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between w-full text-[9px] font-mono uppercase tracking-wider text-zinc-500 mb-5 px-1">
+                <span className="truncate max-w-[240px]">{exportState.statusText}</span>
+                <span className="text-zinc-300 font-extrabold text-xs">{exportState.progress}%</span>
+              </div>
+
+              <p className="text-[8px] font-mono text-zinc-600 max-w-[260px] leading-relaxed uppercase tracking-wider">
+                Please do not close this window during the watermark rendering phase.
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

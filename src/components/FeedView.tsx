@@ -4,6 +4,9 @@ import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, S
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
+import NexoraPremiumLogo from './NexoraPremiumLogo';
+import NexoraBranding from './NexoraBranding';
+import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -43,7 +46,7 @@ interface RefactoredPost extends Post {
 }
 
 function PostCarousel({ images, filters }: { images: string[], filters?: string[] }) {
-  const [index, setIndex] = React.useState(0);
+  const [index, setIndex] = useState(0);
 
   const handleNext = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -1787,17 +1790,7 @@ export default function FeedView({
         }}
       >
         {/* Left: Brand logo */}
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 flex items-center justify-center shadow-md shadow-violet-500/20">
-            <Star className="w-4 h-4 text-white animate-pulse" />
-          </div>
-          <div>
-            <span className="font-sans font-black text-base tracking-wider bg-linear-to-r from-violet-200 via-pink-300 to-cyan-200 bg-clip-text text-transparent">
-              NEXORA
-            </span>
-            <span className="text-[9px] font-mono block text-violet-400 leading-none font-extrabold">SOCIAL NETWORK</span>
-          </div>
-        </div>
+        <NexoraBranding size="sm" />
 
         {/* Center: For You / Following / Friends / Trending / Local */}
         <div className="flex items-center gap-6 p-1 bg-transparent border-none mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
@@ -2502,7 +2495,7 @@ export default function FeedView({
                 ))}
 
                 {/* Scrollable Container with Top Padding for Navigation */}
-                <div className="w-full h-full overflow-y-auto custom-scrollbar px-6 md:px-12 pt-28 md:pt-24 pb-12 flex flex-col justify-between gap-6">
+                <div className="w-full h-full overflow-y-auto custom-scrollbar px-2 md:px-4 pt-28 md:pt-24 pb-12 flex flex-col justify-between gap-6">
                   <div>
                     {/* Future scheduled posts warning banner (Only visible to the creator) */}
                 {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (
@@ -2563,6 +2556,7 @@ export default function FeedView({
                             <span>📣</span> BROADCASTS CHN
                           </span>
                         )}
+                        {post.content.length > 100 && <VohSummaryButton content={post.content} />}
                       </div>
                       <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-violet-400/80 leading-tight">
                         <span>@{post.username}</span>
@@ -2606,20 +2600,6 @@ export default function FeedView({
                       )}
                       {/* Three-dots menu button */}
                       <div className="relative">
-                        <button
-                          onClick={() => {
-                            if (activeDotsMenuPostId === post.id) {
-                              setActiveDotsMenuPostId(null);
-                            } else {
-                              setActiveDotsMenuPostId(post.id);
-                            }
-                          }}
-                          className="p-1 px-1.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-lg transition-all cursor-pointer flex items-center gap-1"
-                          title="More options"
-                        >
-                          <MoreHorizontal className="w-3.5 h-3.5" />
-                          <span className="text-[9px] font-mono uppercase font-black tracking-wider leading-none">More</span>
-                        </button>
 
                         <AnimatePresence>
                           {activeDotsMenuPostId === post.id && (
@@ -3467,15 +3447,6 @@ export default function FeedView({
         {/* Clean spacing at the bottom of the feed for uninterrupted scrolling */}
         <div className="h-32 pointer-events-none" />
       </div>
-
-      {/* 6. FLOATING QUICK CREATE POST "+" BUTTON */}
-      <button
-        onClick={() => setComposerOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-linear-to-tr from-violet-600 via-purple-600 to-pink-500 hover:brightness-110 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-violet-600/30 border border-violet-400/20 z-40 cursor-pointer animate-pulse"
-        title="Create Post"
-      >
-        <Plus className="w-7 h-7 text-white stroke-[2.5px]" />
-      </button>
 
       {/* COMPOSER OVERLAY DIALOG */}
       <AnimatePresence>

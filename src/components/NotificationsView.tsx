@@ -984,10 +984,8 @@ export default function NotificationsView({
             return (
               <div key={timeSection} className="space-y-3.5 text-left">
                 {/* Time Section Label */}
-                <h3 className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest border-b border-white/5 pb-1 flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 text-violet-500" />
-                  <span>{sectionHeaders[timeSection]}</span>
-                  <span className="text-[8.5px] px-1 py-0.2 rounded bg-violet-950/40 font-normal">({list.length})</span>
+                <h3 className="text-[10px] font-mono font-black text-violet-300 uppercase tracking-widest pl-2 mb-3 mt-6 sticky top-0 bg-[#030112]/95 backdrop-blur-sm py-2 border-b border-violet-500/10">
+                  {sectionHeaders[timeSection]}
                 </h3>
 
                 <div className="space-y-3">

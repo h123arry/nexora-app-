@@ -313,7 +313,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       {/* Circles/Communities Grid */}
       <div id="circles-grid-wrapper" className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {filteredCircles.map((circle) => {
-          const creator = [INITIAL_USER, ...MOCK_CREATORS].find(mc => mc.id === circle.creatorId) || INITIAL_USER;
+          const creator = [INITIAL_USER, ...MOCK_CREATORS].filter(Boolean).find(mc => mc && mc.id === circle.creatorId) || INITIAL_USER;
 
           return (
             <div 

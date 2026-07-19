@@ -6,6 +6,7 @@ import { User } from '../types';
 import { INITIAL_USER, MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, INITIAL_CIRCLES } from '../data/database';
 import { followUserDb, unfollowUserDb, joinCircleDb, leaveCircleDb, getRichUser } from '../data/database';
 import NexoraPremiumLogo from './NexoraPremiumLogo';
+import NexoraBranding from './NexoraBranding';
 import { validateUsername } from '../utils/username';
 
 // Policy Content Panels
@@ -81,7 +82,7 @@ const GUIDELINES_TEXT = (
   <div className="space-y-5 text-xs text-purple-200/80 leading-relaxed font-sans">
     <div className="border-b border-purple-500/10 pb-3">
       <h3 className="text-base font-extrabold text-white">NEXORA Community Guidelines</h3>
-      <p className="text-[10px] text-purple-300/50 mt-1">Compliance: VOH AI Content Moderation Protocol • Level 1 Core Rules</p>
+      <p className="text-[10px] text-purple-300/50 mt-1">Content Guidelines</p>
     </div>
 
     <p>
@@ -113,7 +114,7 @@ interface AuthViewProps {
 interface RegisteredAccount {
   email: string;
   passwordHash: string;
-  user: User;
+  user: User | null;
 }
 
 const loadAccounts = (): RegisteredAccount[] => {
@@ -152,10 +153,7 @@ const loadAccounts = (): RegisteredAccount[] => {
         interestDNA: { 'sports': 99, 'music': 99, 'tech': 99 },
         skills: ['Content Creation', 'UI Design', 'Music Curation']
       }
-    },
-    { email: 'voh@nexora.com', passwordHash: 'password123', user: INITIAL_USER },
-    { email: 'ai@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[0] },
-    { email: 'voh_ai@nexora.com', passwordHash: 'password123', user: MOCK_CREATORS[1] }
+    }
   ];
   localStorage.setItem('nexora_registered_accounts', JSON.stringify(defaults));
   return defaults;
@@ -635,8 +633,9 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
   if (onboardingUser) {
     const getRecommendations = () => {
       const recs: typeof MOCK_CREATORS = [];
-      const vohUser = INITIAL_USER;
-      recs.push(vohUser);
+      if (INITIAL_USER) {
+        recs.push(INITIAL_USER);
+      }
 
       MOCK_CREATORS.forEach(cr => {
         if (!recs.some(r => r.id === cr.id)) {
@@ -761,13 +760,10 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         >
           {/* Branding */}
           <div className="flex flex-col items-center text-center mb-6">
-            <div className="relative flex items-center justify-center w-14 h-14 rounded-2xl bg-[#03010a]/80 border border-violet-500/15 mb-3 overflow-hidden">
-              <NexoraPremiumLogo className="w-8 h-8" glow={true} />
-            </div>
+            <NexoraBranding size="lg" showSubtitle={false} className="mb-4" />
             <h1 className="text-xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-300 to-white font-sans select-none uppercase">
               Onboarding Setup
             </h1>
-            <p className="text-xs text-purple-200/50 font-mono mt-1">NEXORA WELCOME SETUP</p>
           </div>
 
           <div className="bg-[#0b091c]/65 border border-purple-500/10 backdrop-blur-2xl rounded-[28px] p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
@@ -998,23 +994,8 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         className="max-w-md w-full mx-auto z-10"
       >
         {/* Branding Area */}
-        <div className="flex flex-col items-center text-center mb-8 px-4">
-          <div 
-            onClick={handleLogoClick}
-            className="relative flex items-center justify-center w-20 h-20 rounded-3xl bg-[#03010a]/80 shadow-2xl shadow-cyan-500/10 border border-violet-500/15 mb-5 overflow-hidden group cursor-pointer transition-transform hover:scale-105 active:scale-95"
-          >
-            <span className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-cyan-500/10 to-transparent blur-md" />
-            <span className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-fuchsia-500/10 to-transparent blur-md" />
-            <NexoraPremiumLogo className="w-14 h-14" glow={true} />
-          </div>
-
-          <h1 className="text-4xl font-extrabold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-300 to-white font-sans select-none">
-            NEXORA
-          </h1>
-          
-          <h2 className="text-sm font-medium text-purple-200/90 mt-3 italic tracking-wide max-w-sm">
-            “Discover people. Build communities. Shape what’s happening.”
-          </h2>
+        <div className="flex flex-col items-center text-center mb-10 px-4">
+          <NexoraBranding size="xl" showSubtitle={true} onClick={handleLogoClick} />
         </div>
 
         {/* Form Panel Box */}

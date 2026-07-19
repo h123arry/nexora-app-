@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Paintbrush, Compass, Target, Terminal, Mic, MicOff, Search, Send, PlusCircle, User as UserIcon, Settings, Layers, CheckCircle, TrendingUp, MessageSquare, ArrowRight } from 'lucide-react';
 import { User, Post, Chat, Message } from '../types';
@@ -32,7 +32,7 @@ export default function MatrixView({
 }: MatrixViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<MatrixSubTab>(initialSubTab || 'ai');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (initialSubTab) {
       setActiveSubTab(initialSubTab);
     }

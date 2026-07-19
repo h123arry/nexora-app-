@@ -41,7 +41,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
   }
 
   return (
-    <div className="grid grid-cols-3 gap-[1px] w-full">
+    <div className="grid grid-cols-3 gap-0 w-full px-0">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -55,7 +55,7 @@ const MediaGrid = ({ gridPosts, pinnedPostIds, onSelectPost }: MediaGridProps) =
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 18 }}
-            className="aspect-[4/5] overflow-hidden relative cursor-pointer bg-[#050314]/90 flex flex-col justify-between"
+            className="aspect-[4/5] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -960,6 +960,7 @@ export default function ProfileView({
 
       {/* 2. PUBLIC PROFILE CARD & INFORMATION ARCHITECTURE */}
       {isLoadingProfile ? (
+        <>
         <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-8 pb-2 space-y-6 text-left animate-pulse">
           {/* Header Banner Skeleton */}
           <div className="h-28 w-full rounded-2xl bg-violet-950/20 border border-violet-500/10" />
@@ -1004,17 +1005,19 @@ export default function ProfileView({
             <div className="h-5 w-16 bg-violet-900/20 rounded-md" />
             <div className="h-5 w-16 bg-violet-900/20 rounded-md" />
           </div>
+        </div>
 
-          {/* Feed Grid skeleton */}
-          <div className="mx-auto -mx-2.5 sm:-mx-4 md:-mx-6 px-[1px] sm:px-[2px]">
-            <div className="grid grid-cols-3 gap-[1px] sm:gap-[2px]">
-              <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-[4px] sm:rounded-xl" />
-              <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-[4px] sm:rounded-xl" />
-              <div className="aspect-square bg-violet-950/20 border border-violet-500/10 rounded-[4px] sm:rounded-xl" />
-            </div>
+        {/* Feed Grid skeleton - Full Width */}
+        <div className="w-full mt-1 animate-pulse px-[1px]">
+          <div className="grid grid-cols-3 gap-0 w-full">
+            <div className="aspect-[3/4] bg-violet-950/20 border border-violet-500/10 rounded-none" />
+            <div className="aspect-[3/4] bg-violet-950/20 border border-violet-500/10 rounded-none" />
+            <div className="aspect-[3/4] bg-violet-950/20 border border-violet-500/10 rounded-none" />
           </div>
         </div>
+        </>
       ) : (
+        <>
         <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Identity (Refined Compact Layout) */}
@@ -1166,7 +1169,7 @@ export default function ProfileView({
           )}
 
         {/* 8. CONTENT STICKY TAB NAVIGATION (Glow-refined 5-Tab Layout) */}
-        <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 -mx-2.5 sm:-mx-4 md:-mx-6 px-4">
+        <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 -mx-[30px] sm:-mx-[36px] md:-mx-[48px] px-4">
           <div className="w-full max-w-4xl mx-auto flex justify-around py-0.5">
             {[
               { id: 'posts', icon: LayoutGrid, label: 'All Content' },
@@ -1270,22 +1273,15 @@ export default function ProfileView({
             })}
           </div>
         </div>
+        </div>
 
-        {/* 9. RESPONSIVE GRID CONTENT (Extended closer to screen edges) */}
-        <div className="mx-auto -mx-2.5 sm:-mx-4 md:-mx-6 px-0 sm:px-0 py-0.5 space-y-1">
+        {/* 9. RESPONSIVE GRID CONTENT (Full Width TikTok Style) */}
+        <div className="w-full pt-0.5 space-y-0">
           
           {/* Standard Grid view of posts */}
-          <div className="space-y-1.5 text-left">
-            <div className="text-[10px] font-mono text-zinc-500 font-bold uppercase tracking-wider px-2 flex items-center gap-1.5 select-none">
-              <span className="text-violet-400">
-                {profileTab === 'posts' ? 'Posts' : profileTab.charAt(0).toUpperCase() + profileTab.slice(1)}
-              </span>
-              <span>•</span>
-              <span>{(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? '0' : filteredTabPosts.length} {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? 'Posts' : (filteredTabPosts.length === 1 ? 'Post' : 'Posts')}</span>
-            </div>
-            
+          <div className="text-left">
             {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? (
-              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
+              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 w-full mt-4">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
                   🔒
                 </div>
@@ -1297,7 +1293,7 @@ export default function ProfileView({
                 </div>
               </div>
             ) : filteredTabPosts.length === 0 ? (
-              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
+              <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 w-full mt-4">
                 <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
                   📭
                 </div>
@@ -1326,7 +1322,7 @@ export default function ProfileView({
           </div>
 
         </div>
-        </div>
+        </>
       )}
       
         {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure - Redesigned Settings & Privacy Hub) */}

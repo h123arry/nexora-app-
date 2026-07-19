@@ -1,6 +1,6 @@
 {
-  "name": "Nexora Pulse",
-  "description": "A premium, ultra-modern social media dashboard with immersive feed navigation, interactive posts, direct messaging, creators showcase, and robust client-side storage.",
+  "name": "Nexora",
+  "description": "The world's living social network.",
   "requestFramePermissions": ["camera", "microphone", "geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
