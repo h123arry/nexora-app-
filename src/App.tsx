@@ -158,24 +158,14 @@ useEffect(() => {
     return () => cancelAnimationFrame(animationId);
   }, [showDiagnosticsOverlay]);
 
-<<<<<<< HEAD
   useEffect(() => {
-    if (!currentUser || !currentUser.id) return;
+    if (!currentUser?.id) return;
+
     setGlobalUsersMap(prev => ({
       ...prev,
       [currentUser.id]: currentUser
     }));
   }, [currentUser]);
-=======
-useEffect(() => {
-  if (!currentUser?.id) return;
-
-  setGlobalUsersMap(prev => ({
-    ...prev,
-    [currentUser.id]: currentUser
-  }));
-}, [currentUser]);
->>>>>>> 688eb68 (Finalize profile polish and global content persistence)
 
   useEffect(() => {
     signInAnonymously(auth).catch((err) => {
@@ -224,22 +214,14 @@ useEffect(() => {
           console.log('[App] Received follows:', dbFollows?.length || 0);
           if (dbFollows && dbFollows.length > 0) {
             localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
-<<<<<<< HEAD
             const currentUserId = auth.currentUser?.uid || currentUser?.id;
-            if (currentUserId) {
-              const updatedFollowing = dbFollows.filter((f: any) => f.followerId === currentUserId).map((f: any) => f.followingId);
-              setFollowingIds(updatedFollowing);
-            }
-=======
-const currentUserId = auth.currentUser?.uid || currentUser?.id;
-if (!currentUserId) return;
+            if (!currentUserId) return;
 
-const updatedFollowing = dbFollows
-  .filter((f: any) => f.followerId === currentUserId)
-  .map((f: any) => f.followingId);
+            const updatedFollowing = dbFollows
+              .filter((f: any) => f.followerId === currentUserId)
+              .map((f: any) => f.followingId);
 
-setFollowingIds(updatedFollowing);
->>>>>>> 688eb68 (Finalize profile polish and global content persistence)
+            setFollowingIds(updatedFollowing);
           }
         });
       } else {
@@ -758,11 +740,7 @@ setFollowingIds(updatedFollowing);
         setFollowingIds(userFollowing);
       }
     }
-<<<<<<< HEAD
-  }, [currentUser]);
-=======
-}, [currentUser?.id]);
->>>>>>> 688eb68 (Finalize profile polish and global content persistence)
+  }, [currentUser?.id]);
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {

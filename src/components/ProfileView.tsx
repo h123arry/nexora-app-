@@ -1082,28 +1082,6 @@ export default function ProfileView({
           )}
         </div>
 
-<<<<<<< HEAD
-        {/* 8. CONTENT STICKY TAB NAVIGATION (Posts, Pulse, Media, About) */}
-        <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 px-0 w-full">
-          <div className="w-full max-w-4xl mx-auto flex justify-around py-2">
-            {[
-              { id: 'posts', icon: FileText, label: 'Posts' },
-              { id: 'pulse', icon: Activity, label: 'Pulse' },
-              { id: 'media', icon: Camera, label: 'Media' },
-              { id: 'about', icon: Info, label: 'About' }
-            ].map(tab => {
-              const Icon = tab.icon;
-              const isActive = profileTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setProfileTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase transition-all cursor-pointer relative border ${
-                    isActive 
-                      ? 'bg-violet-600/20 text-violet-300 border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.25)]' 
-                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
-                  }`}
-=======
         {/* 8. CONTENT STICKY TAB NAVIGATION (Glow-refined 5-Tab Layout) */}
 <div className="sticky top-[3.5rem] bg-[#030112]/90 backdrop-blur-xl z-35 border-b border-white/5 w-full">
 <div className="w-full max-w-4xl mx-auto flex justify-around items-center py-0.5">
@@ -1208,7 +1186,6 @@ className={`p-2.5 rounded-full transition-all duration-200 flex items-center jus
     : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'
 }`}
                   title={tab.label}
->>>>>>> 688eb68 (Finalize profile polish and global content persistence)
                 >
                   <Icon className="w-4 h-4" />
                   <span>{tab.label}</span>
