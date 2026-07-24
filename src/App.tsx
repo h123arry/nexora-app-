@@ -60,6 +60,7 @@ import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User>(() => {
+    console.log("🔥 Initializing currentUser...");
     const saved = localStorage.getItem('nexora_user');
     return saved ? JSON.parse(saved) : INITIAL_USER;
   });
@@ -133,6 +134,7 @@ export default function App() {
   }, [showDiagnosticsOverlay]);
 
   useEffect(() => {
+    if (!currentUser || !currentUser.id) return;
     setGlobalUsersMap(prev => ({
       ...prev,
       [currentUser.id]: currentUser
@@ -152,20 +154,27 @@ export default function App() {
     let unsubUsers: () => void;
     let unsubFollows: () => void;
 
+    console.log('[App] Setting up onAuthStateChanged listener...');
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      console.log('[App] Auth state changed, user:', user ? user.uid : 'null');
       if (user) {
+        console.log('[App] Subscribing to posts, users, follows...');
         unsubPosts = subscribeToPosts((dbPosts) => {
+          console.log('[App] Received posts:', dbPosts?.length || 0);
           if (dbPosts && dbPosts.length > 0) {
             setPosts(normalizePosts(dbPosts));
           } else {
             console.log('[App] Firestore is empty, seeding INITIAL_POSTS and users...');
             INITIAL_POSTS.forEach(post => savePostToDb(post));
-            saveUserToDb(INITIAL_USER);
+            if (INITIAL_USER) {
+              saveUserToDb(INITIAL_USER);
+            }
             MOCK_CREATORS.forEach(creator => saveUserToDb(creator));
           }
         });
         
         unsubUsers = subscribeToUsers((dbUsers) => {
+          console.log('[App] Received users:', dbUsers?.length || 0);
           if (dbUsers && dbUsers.length > 0) {
             setGlobalUsersMap(prev => {
               const newMap = { ...prev };
@@ -176,17 +185,23 @@ export default function App() {
         });
 
         unsubFollows = subscribeToFollows((dbFollows) => {
+          console.log('[App] Received follows:', dbFollows?.length || 0);
           if (dbFollows && dbFollows.length > 0) {
             localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
-            const currentUserId = auth.currentUser?.uid || currentUser.id;
-            const updatedFollowing = dbFollows.filter((f: any) => f.followerId === currentUserId).map((f: any) => f.followingId);
-            setFollowingIds(updatedFollowing);
+            const currentUserId = auth.currentUser?.uid || currentUser?.id;
+            if (currentUserId) {
+              const updatedFollowing = dbFollows.filter((f: any) => f.followerId === currentUserId).map((f: any) => f.followingId);
+              setFollowingIds(updatedFollowing);
+            }
           }
         });
+      } else {
+        console.log('[App] User is logged out.');
       }
     });
 
     return () => {
+      console.log('[App] Cleaning up auth and data subscriptions...');
       unsubscribeAuth();
       if (unsubPosts) unsubPosts();
       if (unsubUsers) unsubUsers();
@@ -218,6 +233,7 @@ export default function App() {
   }, []);
 
   const normalizePosts = (rawPosts: any[]): Post[] => {
+    if (!Array.isArray(rawPosts)) return [];
     return rawPosts.filter((post: any) => {
       return !!post.userId;
     }).map((post: any) => {
@@ -609,6 +625,7 @@ export default function App() {
 
   // 2. Local Storage Persistence Synchronization sync
   useEffect(() => {
+    if (!currentUser || !currentUser.id) return;
     localStorage.setItem('nexora_user', JSON.stringify(currentUser));
     
     // Also sync updates back to the registered accounts registry so profile updates survive logout/login
@@ -694,7 +711,7 @@ export default function App() {
         setFollowingIds(userFollowing);
       }
     }
-  }, [currentUser.id]);
+  }, [currentUser]);
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {

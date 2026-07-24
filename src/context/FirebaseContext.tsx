@@ -15,7 +15,9 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    console.log("🔥 FirebaseProvider: Setting up onAuthStateChanged...");
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("🔥 FirebaseProvider: Auth state changed:", user ? "User logged in" : "No user");
       setUser(user);
       setLoading(false);
     });

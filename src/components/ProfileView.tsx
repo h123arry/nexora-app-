@@ -223,7 +223,7 @@ export default function ProfileView({
   onOpenVohAi
 }: ProfileViewProps) {
   // Navigation State
-  const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections' | 'subscriptions' | 'linked-accounts'>('profile');
+  const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections' | 'subscriptions' | 'linked-accounts' | 'other-profile-menu'>('profile');
   const [profileTab, setProfileTab] = useState<string>('posts');
   const [allContentFilter, setAllContentFilter] = useState<'all' | 'videos' | 'photos' | 'posts' | 'pinned'>('all');
   const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
@@ -737,31 +737,19 @@ export default function ProfileView({
   const pinnedPostIdsList = currentUser.pinnedPosts || [];
   const myPosts = posts.filter(p => p.username === currentUser.username);
   
-  // Tab filtered items
+  // Tab filtered items (Posts, Pulse, Media, About)
   const getTabContent = () => {
     const activePosts = myPosts.filter(p => !p.isArchived);
     switch (profileTab) {
-      case 'private': return activePosts.filter(p => p.audience === 'onlyme');
-      case 'voice': return activePosts.filter(p => p.isVoice || p.voiceDuration);
-      case 'reposts': return activePosts.filter(p => p.tags.includes('repost'));
-      case 'saved': return activePosts.filter(p => p.isBookmarkedByUser);
-      case 'liked': return activePosts.filter(p => p.isLikedByUser);
+      case 'pulse':
+        return activePosts.filter(p => p.isVoice || p.voiceDuration || p.content.length < 150);
+      case 'media':
+        return activePosts.filter(p => !!p.image || !!p.videoUrl);
+      case 'about':
+        return [];
       case 'posts':
-      default: {
-        switch (allContentFilter) {
-          case 'videos':
-            return activePosts.filter(p => !!p.videoUrl);
-          case 'photos':
-            return activePosts.filter(p => !!p.image && !p.videoUrl);
-          case 'posts':
-            return activePosts.filter(p => !p.image && !p.videoUrl);
-          case 'pinned':
-            return activePosts.filter(p => pinnedPostIdsList.includes(p.id));
-          case 'all':
-          default:
-            return activePosts;
-        }
-      }
+      default:
+        return activePosts;
     }
   };
 
@@ -1153,172 +1141,121 @@ export default function ProfileView({
           )}
         </div>
 
-        {/* 8. CONTENT STICKY TAB NAVIGATION (Glow-refined 5-Tab Layout) */}
+        {/* 8. CONTENT STICKY TAB NAVIGATION (Posts, Pulse, Media, About) */}
         <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 px-0 w-full">
-          <div className="w-full max-w-4xl mx-auto flex justify-around py-0.5">
+          <div className="w-full max-w-4xl mx-auto flex justify-around py-2">
             {[
-              { id: 'posts', icon: LayoutGrid, label: 'All Content' },
-              { id: 'private', icon: Lock, label: 'Private' },
-              { id: 'saved', icon: Bookmark, label: 'Saved' },
-              { id: 'reposts', icon: Repeat2, label: 'Reposts' },
-              { id: 'liked', icon: Heart, label: 'Likes' }
+              { id: 'posts', icon: FileText, label: 'Posts' },
+              { id: 'pulse', icon: Activity, label: 'Pulse' },
+              { id: 'media', icon: Camera, label: 'Media' },
+              { id: 'about', icon: Info, label: 'About' }
             ].map(tab => {
               const Icon = tab.icon;
               const isActive = profileTab === tab.id;
-              
-              if (tab.id === 'posts') {
-                return (
-                  <div key={tab.id} className="relative flex items-center justify-center">
-                    <button
-                      onClick={() => {
-                        if (profileTab !== 'posts') {
-                          setProfileTab('posts');
-                        } else {
-                          setShowAllContentDropdown(!showAllContentDropdown);
-                        }
-                      }}
-                      className={`p-2 sm:p-2.5 rounded-full transition-all duration-300 flex items-center gap-1 cursor-pointer relative border ${
-                        isActive 
-                          ? 'text-violet-400 border-violet-500/25' 
-                          : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
-                      }`}
-                      title={tab.label}
-                    >
-                      {isActive && (
-                        <motion.div
-                          layoutId="activeProfileTabGlow"
-                          className="absolute inset-0 rounded-full bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border border-violet-500/25 -z-10"
-                          transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                        />
-                      )}
-                      <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5 relative z-10" />
-                      <ChevronDown className="w-3 h-3 opacity-70 relative z-10" />
-                    </button>
-                    
-                    {/* All Content Dropdown Menu */}
-                    <AnimatePresence>
-                      {showAllContentDropdown && isActive && (
-                        <>
-                          <div 
-                            className="fixed inset-0 z-40" 
-                            onClick={() => setShowAllContentDropdown(false)} 
-                          />
-                          <motion.div
-                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute left-0 mt-12 bg-[#09071c] border border-white/10 rounded-2xl p-1.5 shadow-2xl z-50 min-w-[150px] space-y-0.5 text-left"
-                          >
-                            {[
-                              { filter: 'all', label: 'All Content', icon: LayoutGrid },
-                              { filter: 'videos', label: 'Videos 🎥', icon: Video },
-                              { filter: 'photos', label: 'Photos 📸', icon: ImageIcon },
-                              { filter: 'posts', label: 'Posts 📝', icon: FileText },
-                              { filter: 'pinned', label: 'Pinned 📌', icon: Pin },
-                            ].map((item) => {
-                              const isFilterActive = allContentFilter === item.filter;
-                              return (
-                                <button
-                                  key={item.filter}
-                                  onClick={() => {
-                                    setAllContentFilter(item.filter as any);
-                                    setShowAllContentDropdown(false);
-                                    window.dispatchEvent(new CustomEvent('toast', { detail: `Filtered view: ${item.label}` }));
-                                  }}
-                                  className={`w-full flex items-center gap-2 px-3 py-2 text-[11px] font-bold rounded-xl transition-all cursor-pointer ${
-                                    isFilterActive 
-                                      ? 'bg-violet-600/20 text-violet-300 border border-violet-500/20' 
-                                      : 'text-zinc-400 hover:text-white hover:bg-white/5 border border-transparent'
-                                  }`}
-                                >
-                                  <item.icon className="w-3.5 h-3.5 shrink-0 text-current" />
-                                  <span>{item.label}</span>
-                                </button>
-                              );
-                            })}
-                          </motion.div>
-                        </>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              }
-              
               return (
                 <button
                   key={tab.id}
-                  onClick={() => {
-                    setProfileTab(tab.id);
-                    setShowAllContentDropdown(false);
-                  }}
-                  className={`p-2.5 rounded-full transition-all duration-300 cursor-pointer relative border ${
+                  onClick={() => setProfileTab(tab.id)}
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase transition-all cursor-pointer relative border ${
                     isActive 
-                      ? 'text-violet-400 border-violet-500/25' 
+                      ? 'bg-violet-600/20 text-violet-300 border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.25)]' 
                       : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
                   }`}
-                  title={tab.label}
                 >
-                  {isActive && (
-                    <motion.div
-                      layoutId="activeProfileTabGlow"
-                      className="absolute inset-0 rounded-full bg-violet-600/10 shadow-[0_0_15px_rgba(139,92,246,0.35)] border border-violet-500/25 -z-10"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    />
-                  )}
-                  <Icon className="w-4.5 h-4.5 sm:w-5 sm:h-5 relative z-10" />
+                  <Icon className="w-4 h-4" />
+                  <span>{tab.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* 9. RESPONSIVE GRID CONTENT (Full Width TikTok Style) */}
-        <div className="w-full pt-[1px] space-y-0 bg-black">
-          
-          {/* Standard Grid view of posts */}
-          <div className="text-left w-full">
-            {(!isOwnProfile && (profileTab === 'private' || profileTab === 'saved')) ? (
-              <div className="mx-4 my-8 p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
-                  🔒
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-300">Private Section</h4>
-                  <p className="text-[11px] text-zinc-500 max-w-sm mx-auto mt-0.5 leading-normal">
-                    This section is private. Only @{currentUser.username} can view this content.
-                  </p>
+        {/* 9. RESPONSIVE PROFILE CONTENT SECTION */}
+        <div className="w-full pt-[1px] space-y-0 bg-black min-h-[300px]">
+          {profileTab === 'about' ? (
+            <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 space-y-6 text-left">
+              <div className="bg-[#0b081c] border border-white/10 rounded-3xl p-6 space-y-5 shadow-xl">
+                <h3 className="text-xs font-mono text-violet-400 font-extrabold uppercase tracking-widest border-b border-white/5 pb-3 flex items-center gap-2">
+                  <Info className="w-4 h-4" /> Digital Identity & Bio
+                </h3>
+                <div className="space-y-4 text-xs text-zinc-300">
+                  <div>
+                    <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Bio Summary</span>
+                    <p className="leading-relaxed whitespace-pre-wrap">{currentUser.bio || "No bio configured."}</p>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-white/5">
+                    <div>
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Location</span>
+                      <p className="font-semibold text-white">{currentUser.location || 'Nexora Core Node'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Website</span>
+                      <p className="font-semibold text-cyan-400">{currentUser.website || 'https://nexora.ai'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Joined Date</span>
+                      <p className="font-semibold text-white">{currentUser.joinedDate ? new Date(currentUser.joinedDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'July 2026'}</p>
+                    </div>
+                    <div>
+                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Node Type</span>
+                      <p className="font-semibold text-violet-300">Verified Founder Node</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ) : filteredTabPosts.length === 0 ? (
-              <div className="mx-4 my-8 p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
-                  📭
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-zinc-300">Nothing here yet</h4>
-                  <p className="text-[11px] text-zinc-500 max-w-sm mx-auto mt-0.5 leading-normal">
-                    Your journey starts with your first post. This space will come alive soon.
-                  </p>
-                </div>
-                {isOwnProfile && (
-                  <button 
-                    onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
-                    className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-[9px] uppercase rounded-lg transition-all"
-                  >
-                    + Create Post
-                  </button>
-                )}
-              </div>
-            ) : (
-              <MediaGrid 
-                gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
-                pinnedPostIds={pinnedPostIdsList} 
-                onSelectPost={(post) => setSelectedGridPost(post)} 
-              />
-            )}
-          </div>
 
+              {/* Reputation & Stats Card */}
+              <div className="bg-[#0b081c] border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl">
+                <h3 className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest border-b border-white/5 pb-3 flex items-center gap-2">
+                  <Award className="w-4 h-4" /> Reputation & Contributions
+                </h3>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 0)}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Reputation</span>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.sparks || 0)}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Sparks</span>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Contributions</span>
+                  </div>
+                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.followers || 0)}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Followers</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : filteredTabPosts.length === 0 ? (
+            <div className="mx-4 my-8 p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
+              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
+                📭
+              </div>
+              <div>
+                <h4 className="text-xs font-bold text-zinc-300">Nothing here yet</h4>
+                <p className="text-[11px] text-zinc-500 max-w-sm mx-auto mt-0.5 leading-normal">
+                  Your journey starts with your first post. This space will come alive soon.
+                </p>
+              </div>
+              {isOwnProfile && (
+                <button 
+                  onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
+                  className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-[9px] uppercase rounded-lg transition-all"
+                >
+                  + Create Post
+                </button>
+              )}
+            </div>
+          ) : (
+            <MediaGrid 
+              gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
+              pinnedPostIds={pinnedPostIdsList} 
+              onSelectPost={(post) => setSelectedGridPost(post)} 
+            />
+          )}
         </div>
         </>
       )}

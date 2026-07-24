@@ -17,7 +17,25 @@ if (typeof localStorage !== 'undefined') {
   }
 }
 
-export const INITIAL_USER: User | null = null;
+export const INITIAL_USER: User = {
+  id: 'guest',
+  username: 'guest',
+  name: 'Guest User',
+  avatar: '/logo.svg',
+  bio: 'Welcome to Nexora',
+  location: 'Nexora Core',
+  website: '',
+  followers: 0,
+  following: 0,
+  sparks: 0,
+  isVerified: false,
+  coverImage: '',
+  joinedDate: new Date().toISOString(),
+  reputationPoints: 0,
+  reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+  interestDNA: {},
+  skills: [],
+};
 export const MOCK_CREATORS: User[] = [];
 
 export const INITIAL_POSTS: Post[] = [];

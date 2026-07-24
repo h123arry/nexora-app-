@@ -69,7 +69,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   // Calculate total cache dynamically
   const totalCacheMB = useMemo(() => {
-    return Object.values(cacheLevels).reduce((acc: number, curr: any) => acc + Number(curr), 0);
+    const values = Object.values(cacheLevels || {});
+    return values.reduce((acc: number, curr: any) => acc + Number(curr || 0), 0) as number;
   }, [cacheLevels]);
 
   // Download settings
@@ -562,7 +563,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   const totalNexoraSpaceGB = useMemo(() => {
     const mediaGB = totalMediaBytes / 1000000000;
-    const cacheGB = totalCacheMB / 1000;
+    const cacheGB = Number(totalCacheMB) / 1000;
     const dbSizeGB = 0.25; // Constant base db size
     return (mediaGB + cacheGB + dbSizeGB).toFixed(2);
   }, [totalMediaBytes, totalCacheMB]);
@@ -918,11 +919,13 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-black text-zinc-400 uppercase font-mono">System Cache</span>
-                        <Trash2 className="w-3.5 h-3.5 text-zinc-500 hover:text-white cursor-pointer" onClick={handleClearAllCache} title="Clear cache log" />
+                        <span title="Clear cache log" className="cursor-pointer text-zinc-500 hover:text-white" onClick={handleClearAllCache}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </span>
                       </div>
                       <p className="text-lg font-black text-white mt-2">{totalCacheMB} MB</p>
                       <div className="w-full bg-white/5 h-1.5 rounded-full mt-2 overflow-hidden">
-                        <div className="bg-pink-500 h-full rounded-full" style={{ width: `${Math.min(100, (totalCacheMB/1000)*100)}%` }} />
+                        <div className="bg-pink-500 h-full rounded-full" style={{ width: `${Math.min(100, (Number(totalCacheMB)/1000)*100)}%` }} />
                       </div>
                       <span className="text-[9px] text-zinc-500 mt-1.5 block leading-none">Temporary imagery, database journals and indices.</span>
                     </div>

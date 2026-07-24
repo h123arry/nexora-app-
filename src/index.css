@@ -6,6 +6,10 @@
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 }
 
+body {
+  background-color: #070514;
+}
+
 /* Custom gorgeous scrollbar aesthetics */
 .custom-scrollbar {
   scroll-behavior: smooth;
