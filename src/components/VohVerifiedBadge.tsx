@@ -5,116 +5,52 @@ interface PurpleVerifiedBadgeProps {
   type?: 'founder' | 'organization' | 'figure' | 'creator' | 'leader' | 'default';
 }
 
-export default function PurpleVerifiedBadge({
-  className = 'w-4 h-4 ml-1 inline-block',
-  type = 'default',
+export default function PurpleVerifiedBadge({ 
+  className = "w-4 h-4 ml-1 inline-block", 
+  type = 'default' 
 }: PurpleVerifiedBadgeProps) {
   const getBadgeTooltip = () => {
     switch (type) {
       case 'founder':
-        return '🟣✓ Creator/Founder Verified';
+        return "🟣✓ Creator/Founder Verified";
       case 'organization':
-        return '🟣✓ Verified Organization';
+        return "🟣✓ Verified Organization";
       case 'figure':
-        return '🟣✓ Verified Public Figure';
+        return "🟣✓ Verified Public Figure";
       case 'creator':
-        return '🟣✓ Verified Creator';
+        return "🟣✓ Verified Creator";
       case 'leader':
-        return '🟣✓ Verified Community Leader';
+        return "🟣✓ Verified Community Leader";
+      case 'default':
       default:
-        return '🟣✓ Verified on NEXORA';
+        return "🟣✓ Verified on NEXORA";
     }
   };
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-
-    window.dispatchEvent(
-      new CustomEvent('show-voh-verification-modal', {
-        detail: {
-          type,
-          tooltip: getBadgeTooltip(),
-        },
-      })
-    );
+    window.dispatchEvent(new CustomEvent('show-voh-verification-modal', { 
+      detail: { type, tooltip: getBadgeTooltip() } 
+    }));
   };
 
   return (
-    <span
-      className={`${className} inline-flex items-center justify-center shrink-0 cursor-pointer select-none transition-all duration-300 hover:scale-110 active:scale-95`}
+    <span 
+      className={`${className} inline-flex items-center justify-center select-none shrink-0 group relative cursor-pointer hover:scale-110 active:scale-95 transition-transform`} 
       title={`${getBadgeTooltip()} (Click to verify details)`}
       id="voh-verified-badge-element"
       onClick={handleClick}
     >
-      <svg
-        viewBox="0 0 24 24"
+      <svg 
+        viewBox="0 0 24 24" 
         className="w-full h-full"
+        fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        style={{
-          filter:
-            'drop-shadow(0 0 6px rgba(139,92,246,.30)) drop-shadow(0 2px 8px rgba(0,0,0,.25))',
-        }}
+        style={{ filter: 'drop-shadow(0px 1px 1.5px rgba(139, 92, 246, 0.4))' }}
       >
-        <defs>
-          <radialGradient id="nexoraBadgeGradient" cx="35%" cy="30%">
-            <stop offset="0%" stopColor="#C4B5FD" />
-            <stop offset="45%" stopColor="#A78BFA" />
-            <stop offset="78%" stopColor="#8B5CF6" />
-            <stop offset="100%" stopColor="#6D28D9" />
-          </radialGradient>
-
-          <linearGradient id="nexoraBadgeGloss" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.65" />
-            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* Outer Glow Ring */}
-        <circle
-          cx="12"
-          cy="12"
-          r="10.3"
-          fill="rgba(139,92,246,.14)"
-        />
-
-        {/* Main Circle */}
-        <circle
-          cx="12"
-          cy="12"
-          r="10"
-          fill="url(#nexoraBadgeGradient)"
-        />
-
-        {/* Inner Ring */}
-        <circle
-          cx="12"
-          cy="12"
-          r="9.15"
-          fill="none"
-          stroke="rgba(255,255,255,.18)"
-          strokeWidth="0.8"
-        />
-
-        {/* Gloss */}
-        <ellipse
-          cx="9"
-          cy="7"
-          rx="5"
-          ry="2.1"
-          fill="url(#nexoraBadgeGloss)"
-          opacity="0.5"
-        />
-
-        {/* Check */}
-        <path
-          d="M9.6 12.4L11.4 14.2L15.9 9.7"
-          fill="none"
-          stroke="#FFFFFF"
-          strokeWidth="2.2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#8B5CF6"/>
+        <path d="M10.5 16.2l-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7z" fill="white"/>
       </svg>
     </span>
   );

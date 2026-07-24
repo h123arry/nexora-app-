@@ -153,6 +153,9 @@ export interface Post {
   shares: number;
   views?: number;
   saves?: number;
+  bookmarksCount?: number;
+  likeCount?: number;
+  commentsDisabled?: boolean;
   searchSuggestion?: string;
   timestamp: string;
   isLikedByUser?: boolean;
@@ -247,7 +250,7 @@ export interface Chat {
   isVerified?: boolean;
   // Upgraded Broadcast System properties
   isBroadcast?: boolean;
-  broadcastMode?: 'standard' | 'announcement' | 'creator';
+  broadcastMode?: 'standard' | 'announcement' | 'creator' | 'community' | 'business';
   broadcastRecipients?: string[];
   broadcastDeliveryStats?: {
     delivered: number;

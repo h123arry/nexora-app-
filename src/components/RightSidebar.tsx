@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Flame, TrendingUp, Users } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 
@@ -123,16 +124,28 @@ export default function RightSidebar({
                   </div>
                 </div>
 
-                <button
+                <motion.button
+                  whileTap={{ scale: 0.9 }}
                   onClick={() => onToggleFollow(creator.id)}
-                  className={`text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-lg border transition-all ${
+                  className={`text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-lg border transition-all duration-300 overflow-hidden relative ${
                     isFollowing
                       ? 'bg-current/10 border-current/20 text-current/60 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-400/30'
-                      : 'bg-violet-600 border-transparent text-white hover:brightness-110'
+                      : 'bg-violet-600 border-transparent text-white hover:brightness-110 shadow-md shadow-violet-500/20'
                   }`}
                 >
-                  {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
-                </button>
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={isFollowing ? 'following' : 'follow'}
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 5 }}
+                      transition={{ duration: 0.15 }}
+                      className="block"
+                    >
+                      {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
+                    </motion.span>
+                  </AnimatePresence>
+                </motion.button>
               </div>
             );
           })}

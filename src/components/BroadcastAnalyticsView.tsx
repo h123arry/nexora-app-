@@ -4,6 +4,7 @@ import {
   Smile, MessageSquare, ExternalLink, Download, Share2, Sparkles, Zap
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import VohIcon from './VohIcon';
 import { Chat } from '../types';
 
 interface BroadcastAnalyticsViewProps {
@@ -198,7 +199,7 @@ export default function BroadcastAnalyticsView({
 
               {/* Optimization report */}
               <div className="p-3 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center gap-2.5 text-left">
-                <Sparkles className="w-5 h-5 text-emerald-400 shrink-0" />
+                <VohIcon size={18} animated variant="cyan" />
                 <div className="leading-tight">
                   <p className="text-[10px] font-sans font-bold text-emerald-300">Intelligent Fan-Out Engine Active</p>
                   <p className="text-[9px] text-zinc-400 mt-0.5">Packet dispatch finalized in 0.08ms with full horizontal scalability and memory caching enabled.</p>

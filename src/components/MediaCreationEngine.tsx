@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
+import VohIcon from './VohIcon';
 import { User } from '../types';
 import { saveMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
+import NexoraLoader from './NexoraLoader';
 
 interface MediaCreationEngineProps {
   currentUser: User;
@@ -87,7 +89,7 @@ export default function MediaCreationEngine({
 }: MediaCreationEngineProps) {
   // Navigation & Wizard Core
   const [activeTab, setActiveTab] = useState<'feed' | 'story' | 'drafts'>(initialTab || (isStoryModeInitially ? 'story' : 'feed'));
-  const [activeMode, setActiveMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(initialMode);
+  const [activeMode, setActiveMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | 'carousel' | null>(initialMode);
   const [currentStep, setCurrentStep] = useState<number>(1);
 
   // Form Fields
@@ -824,7 +826,7 @@ export default function MediaCreationEngine({
           <div>
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-violet-600/10 border border-violet-500/20 rounded-lg text-violet-400">
-                <Sparkles className="w-4.5 h-4.5 animate-spin-slow" />
+                <VohIcon size={18} animated glow variant="brand" />
               </div>
               <div>
                 <h2 className="text-[11px] font-mono font-bold tracking-widest uppercase text-violet-400">Nexora Content Studio</h2>
@@ -1367,7 +1369,10 @@ export default function MediaCreationEngine({
 
                   {/* AI Writing Assistant chips */}
                   <div className="bg-zinc-950/40 p-3.5 border border-zinc-900 rounded-2xl space-y-2">
-                    <span className="text-[9px] font-mono text-violet-400 uppercase tracking-widest block">🪄 Nexora AI Caption Assistant</span>
+                    <div className="flex items-center gap-1.5 text-violet-400 font-mono text-[9px] uppercase tracking-widest">
+                      <VohIcon size={14} animated variant="brand" />
+                      <span>VOH AI Caption Assistant</span>
+                    </div>
                     <div className="flex flex-wrap gap-1.5">
                       {[
                         { prompt: 'rewrite', label: 'Rewrite Punchy' },
@@ -1630,9 +1635,9 @@ export default function MediaCreationEngine({
                           <X className="w-9 h-9" />
                         </div>
                       ) : (
-                        <div className="relative w-16 h-16 flex items-center justify-center">
-                          <div className="absolute inset-0 rounded-full border-4 border-violet-600/10 border-t-violet-500 animate-spin" />
-                          <span className="text-xs font-mono text-violet-400">{uploadProgress}%</span>
+                        <div className="relative w-16 h-16 flex items-center justify-center flex-col">
+                          <NexoraLoader size="md" />
+                          <span className="text-[10px] font-mono text-violet-400 mt-4 font-black">{uploadProgress}%</span>
                         </div>
                       )}
 

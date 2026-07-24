@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward } from 'lucide-react';
+import VohIcon from './components/VohIcon';
 
 import { Camera, Video as VideoIcon, Mic, BarChart2, FileText, Award, Users as UsersIcon, MapPin, Smile, ChevronRight, Play, Pause, Trash2, RefreshCw, Eye, WifiOff, FolderOpen } from 'lucide-react';
 
@@ -12,6 +13,8 @@ import {
   Notification, 
   ThemeMood 
 } from './types';
+
+import { PushNotificationService } from './services/firebase/pushNotificationService';
 
 import { 
   getRichUser, 
@@ -56,6 +59,7 @@ import LiveView from './components/LiveView';
 import SystemHubControlPanel from './components/SystemHubControlPanel';
 import NidaView from './components/NidaView';
 import CommunitiesHubView from './components/CommunitiesHubView';
+import NexoraLoader from './components/NexoraLoader';
 import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
@@ -91,38 +95,13 @@ export default function App() {
   const [isDiagnosticsCollapsed, setIsDiagnosticsCollapsed] = useState(false);
   const [overlayQueueCount, setOverlayQueueCount] = useState(0);
 
-      useEffect(() => {
-  const handleDiagnosticsToggle = (e: any) => {
-    setShowDiagnosticsOverlay(e.detail);
-  };
-
-  window.addEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
-
-  return () => {
-    window.removeEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
-  };
-}, []);
-
-useEffect(() => {
-  if (!currentUser?.id) return;
-
-  setGlobalUsersMap(prev => ({
-    ...prev,
-    [currentUser.id]: currentUser
-  }));
-}, [currentUser]);
-
-useEffect(() => {
-  const handleDiagnosticsToggle = (e: any) => {
-    setShowDiagnosticsOverlay(e.detail);
-  };
-
-  window.addEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
-
-  return () => {
-    window.removeEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
-  };
-}, []);
+  useEffect(() => {
+    const handleDiagnosticsToggle = (e: any) => {
+      setShowDiagnosticsOverlay(e.detail);
+    };
+    window.addEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
+    return () => window.removeEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
+  }, []);
 
   useEffect(() => {
     if (!showDiagnosticsOverlay) return;
@@ -159,8 +138,7 @@ useEffect(() => {
   }, [showDiagnosticsOverlay]);
 
   useEffect(() => {
-    if (!currentUser?.id) return;
-
+    if (!currentUser || !currentUser.id) return;
     setGlobalUsersMap(prev => ({
       ...prev,
       [currentUser.id]: currentUser
@@ -215,13 +193,10 @@ useEffect(() => {
           if (dbFollows && dbFollows.length > 0) {
             localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
             const currentUserId = auth.currentUser?.uid || currentUser?.id;
-            if (!currentUserId) return;
-
-            const updatedFollowing = dbFollows
-              .filter((f: any) => f.followerId === currentUserId)
-              .map((f: any) => f.followingId);
-
-            setFollowingIds(updatedFollowing);
+            if (currentUserId) {
+              const updatedFollowing = dbFollows.filter((f: any) => f.followerId === currentUserId).map((f: any) => f.followingId);
+              setFollowingIds(updatedFollowing);
+            }
           }
         });
       } else {
@@ -610,6 +585,12 @@ useEffect(() => {
     return () => window.removeEventListener('open-system-hub', handleOpenSystemHub);
   }, []);
 
+  useEffect(() => {
+    if (currentUser && currentUser.id) {
+      PushNotificationService.init().catch(err => console.warn('Push notification init:', err));
+    }
+  }, [currentUser]);
+
   // Global VOH AI Command Center overlay state variables
   const [isAiCommandCenterOpen, setIsAiCommandCenterOpen] = useState(false);
   const [quickAiQuery, setQuickAiQuery] = useState('');
@@ -740,7 +721,7 @@ useEffect(() => {
         setFollowingIds(userFollowing);
       }
     }
-  }, [currentUser?.id]);
+  }, [currentUser]);
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {
@@ -1242,75 +1223,6 @@ useEffect(() => {
     // Log post in database to grant reputation and increment contribution records
     createPostDb(currentUser.id);
 
-    // Simulate real, action-driven triggers from official seeded platform accounts
-    setTimeout(() => {
-      setPosts(prevPosts =>
-        prevPosts.map(p => {
-          if (p.id === postId) {
-            return {
-              ...p,
-              likes: p.likes + 1
-            };
-          }
-          return p;
-        })
-      );
-      
-      const likeNotif: Notification = {
-        id: `notif-${Date.now()}-like`,
-        type: 'like',
-        userId: 'voh_ai',
-        username: 'voh_ai',
-        avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80',
-        targetId: postId,
-        content: `liked your post: "${content.slice(0, 30)}..."`,
-        timestamp: new Date().toISOString(),
-        isRead: false
-      };
-      setNotifications(prev => [likeNotif, ...prev]);
-    }, 4000);
-
-    setTimeout(() => {
-      const commentId = `comment-${Date.now()}-reply`;
-      const botComment = {
-        id: commentId,
-        postId: postId,
-        userId: 'nexora_ai',
-        username: 'nexora_ai',
-        name: 'NEXORA AI',
-        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-        content: `Outstanding share! The metadata integration on this is fantastic. Let us boost this node in the feed index! 🚀`,
-        timestamp: new Date().toISOString(),
-        likes: 0
-      };
-
-      setPosts(prevPosts =>
-        prevPosts.map(p => {
-          if (p.id === postId) {
-            return {
-              ...p,
-              commentsCount: p.commentsCount + 1,
-              comments: [...p.comments, botComment]
-            };
-          }
-          return p;
-        })
-      );
-
-      const commentNotif: Notification = {
-        id: `notif-${Date.now()}-comment`,
-        type: 'comment',
-        userId: 'nexora_ai',
-        username: 'nexora_ai',
-        avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-        targetId: postId,
-        content: `commented on your post: "Outstanding share! The metadata integration on this..."`,
-        timestamp: new Date().toISOString(),
-        isRead: false
-      };
-      setNotifications(prev => [commentNotif, ...prev]);
-    }, 8000);
-    
     if (isOffline) {
       setIsSyncPending(true);
       window.dispatchEvent(new CustomEvent('toast', { detail: '📝 Offline Mode: Post saved locally and queued for updates!' }));
@@ -1467,7 +1379,7 @@ useEffect(() => {
     setChats(prevChats =>
       prevChats.map(c => {
         if (c.id === chatId) {
-          const isStillCurrentActive = activeTab === 'messages' && chatId === c.id;
+          const isStillCurrentActive = activeTab === 'inbox' && chatId === c.id;
           return {
             ...c,
             lastMessage: content,
@@ -1938,7 +1850,16 @@ useEffect(() => {
 
           {/* Col 2 & 3: Main Immersive View Area */}
           <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-2 h-full w-full relative min-h-0" : "lg:col-span-2 min-h-0"}>
-            <div className={activeTab === 'feed' ? "block h-full w-full" : "hidden h-0 overflow-hidden pointer-events-none"}>
+            <motion.div 
+              initial={false}
+              animate={{ 
+                opacity: activeTab === 'feed' ? 1 : 0,
+                y: activeTab === 'feed' ? 0 : -8
+              }}
+              transition={{ duration: 0.15, ease: "easeOut" }}
+              className={activeTab === 'feed' ? "h-full w-full block" : "h-0 overflow-hidden pointer-events-none hidden"}
+              style={{ display: activeTab === 'feed' ? 'block' : 'none' }}
+            >
               <FeedView creators={Object.values(globalUsersMap) as User[]}
                 currentUser={getRichUser(currentUser)}
                 posts={resolvedPosts}
@@ -1957,17 +1878,17 @@ useEffect(() => {
                 onSharePost={handleSharePost}
                 activeTab={activeTab}
               />
-            </div>
+            </motion.div>
             
             {activeTab !== 'feed' && (
               <div className={activeTab === 'profile' ? "w-full min-h-[620px]" : `${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
-                    initial={{ opacity: 0, y: 4 }}
+                    initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -4 }}
-                    transition={{ duration: 0.08, ease: "easeOut" }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.15, ease: "easeOut" }}
                   >
 
                   {activeTab === 'explore' && (
@@ -2071,6 +1992,7 @@ useEffect(() => {
                       currentUser={getRichUser(currentUser)}
                       chats={resolvedChats}
                       messages={messages}
+                      creators={Object.values(globalUsersMap) as User[]}
                     />
                   )}
 
@@ -2504,9 +2426,12 @@ useEffect(() => {
                               🧠 VOH AI VOICE EXTRACTION PIPELINE
                             </span>
                             {loadingAi ? (
-                              <p className="text-[10px] text-current/50 italic font-mono animate-pulse">
-                                VOH AI is thinking...
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <NexoraLoader size="sm" />
+                                <p className="text-[10px] text-current/50 italic font-mono">
+                                  VOH AI is extracting context...
+                                </p>
+                              </div>
                             ) : (
                               <div className="space-y-2">
                                 <div className="space-y-0.5">
@@ -2830,7 +2755,10 @@ useEffect(() => {
 
                         {/* Simulated VOH AI intelligence enhancement loader / button */}
                         <div className="pt-1.5 flex justify-between items-center bg-violet-600/5 border border-[#8B5CF6]/15 rounded-2xl px-3.5 py-2">
-                          <span className="text-[10px] font-mono text-violet-300 font-extrabold uppercase">🚀 Intelligent VOH AI Enhancer</span>
+                          <div className="flex items-center gap-2">
+                            <VohIcon size={15} animated variant="brand" />
+                            <span className="text-[10px] font-mono text-violet-300 font-extrabold uppercase">Intelligent VOH AI Enhancer</span>
+                          </div>
                           <button
                             type="button"
                             onClick={async () => {
@@ -3193,17 +3121,7 @@ useEffect(() => {
           <Search className="w-5 h-5" />
           <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Search</span>
         </button>
-        <button 
-          onClick={() => {
-            setActiveTab('live');
-            setViewedUser(null);
-          }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-rose-950/20 hover:border-rose-500/30 hover:shadow-[0_0_15px_rgba(244,63,94,0.2)] ${activeTab === 'live' ? 'text-rose-400 scale-105 font-bold bg-rose-950/15 border-rose-500/10' : 'hover:text-current'}`}
-          id="mobile-nav-live"
-        >
-          <Radio className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Live</span>
-        </button>
+
         
         {/* Unified Plus/Create Button in Center with expanded high performance glow */}
         <motion.button 
@@ -3351,7 +3269,7 @@ useEffect(() => {
               <div className="flex items-center justify-between border-b border-violet-500/10 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-violet-600/20 flex items-center justify-center border border-violet-500/30">
-                    <Sparkles className="w-4 h-4 text-violet-400" />
+                    <VohIcon size={18} animated glow variant="brand" />
                   </div>
                   <div>
                     <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider">
@@ -3692,7 +3610,7 @@ useEffect(() => {
               <div className="flex justify-between items-start border-b border-white/5 pb-3.5 mb-4 relative z-10">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-violet-400">
-                    <Sparkles className="w-4.5 h-4.5 animate-pulse" />
+                    <VohIcon size={20} animated glow variant="brand" />
                   </div>
                   <div>
                     <h3 className="text-xs font-mono font-bold text-violet-400 tracking-wider uppercase">NEXORA AI HUB</h3>

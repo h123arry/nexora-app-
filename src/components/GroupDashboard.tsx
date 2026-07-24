@@ -521,7 +521,6 @@ export default function GroupDashboard({
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden"
-                      style={{ focusBorderColor: themeAccent }}
                     />
                   </div>
                   <div className="space-y-1">

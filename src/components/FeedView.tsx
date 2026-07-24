@@ -6,6 +6,7 @@ import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraPremiumLogo from './NexoraPremiumLogo';
 import NexoraBranding from './NexoraBranding';
+import NexoraLoader from './NexoraLoader';
 import VohSummaryButton from './VohSummaryButton';
 import RelativeTime from './RelativeTime';
 import NexoraVideo from './NexoraVideo';
@@ -247,7 +248,7 @@ export default function FeedView({
 
   // Context menu (long press / right-click)
   const [contextualMenuPost, setContextualMenuPost] = useState<RefactoredPost | null>(null);
-  const [showTransparencyExplanation, setShowTransparencyExplanation] = useState<RefactoredPost | null>(null);
+  const [showTransparencyExplanation, setShowTransparencyExplanation] = useState<boolean>(false);
   const [nidaDiagnosticPost, setNidaDiagnosticPost] = useState<RefactoredPost | null>(null);
   const [lastAction, setLastAction] = useState<{ type: 'not_interested' | 'mute_creator' | 'hide_post'; postId: string; data: any } | null>(null);
   
@@ -1260,7 +1261,7 @@ export default function FeedView({
     }
 
     // 3. Handle Broadcast Posts routing
-    if (feedTab === 'broadcast') {
+    if ((feedTab as string) === 'broadcast') {
       if (!post.isBroadcastPost) return false;
     } else {
       if (post.isBroadcastPost) return false;
@@ -1781,67 +1782,6 @@ export default function FeedView({
   return (
     <div className="flex flex-col h-full w-full relative overflow-hidden bg-transparent min-h-0">
       
-      {/* 1. TOP OVERLAYED GLASSY HEADER */}
-      <div 
-        className="absolute top-0 inset-x-0 z-30 flex flex-col md:flex-row md:items-center justify-between gap-3 px-6 select-none bg-gradient-to-b from-black/85 via-black/45 to-transparent text-white border-none pointer-events-auto"
-        style={{
-          paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)',
-          paddingBottom: '24px'
-        }}
-      >
-        {/* Left: Brand logo */}
-        <NexoraBranding size="sm" />
-
-        {/* Center: For You / Following / Friends / Trending / Local */}
-        <div className="flex items-center gap-6 p-1 bg-transparent border-none mx-auto md:mx-0 overflow-x-auto scrollbar-none max-w-full relative [mask-image:linear-gradient(to_right,transparent,black_10%,black_90%,transparent)]">
-          {(['for_you', 'following', 'friends', 'trending', 'local'] as const).map(tab => {
-            const isActive = feedTab === tab;
-            return (
-              <button
-                key={tab}
-                onClick={() => {
-                  setFeedTab(tab);
-                  setVisibleCount(8);
-                }}
-                className={`relative text-center pb-2 px-1 font-sans text-xs font-extrabold uppercase tracking-wider transition-all duration-250 cursor-pointer whitespace-nowrap ${
-                  isActive ? 'text-white text-shadow-sm scale-105' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="activeFeedTab"
-                    className="absolute bottom-0 left-0 right-0 h-[3px] bg-linear-to-r from-violet-500 via-pink-500 to-violet-500 rounded-full"
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                  />
-                )}
-                <span className="relative z-10">
-                  {tab === 'for_you' && 'For You'}
-                  {tab === 'following' && 'Following'}
-                  {tab === 'friends' && 'Friends'}
-                  {tab === 'trending' && 'Trending'}
-                  {tab === 'local' && 'Local'}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Right: Messages and AI Oracle */}
-        <div className="flex items-center gap-2">
-          {/* Message Inbox button */}
-          <button 
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('toast', { detail: '📬 Opening your Direct Messages inbox...' }));
-              window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'matrix', subTab: 'messages' } }));
-            }}
-            className="p-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-violet-300 hover:text-white transition-all border border-white/5 cursor-pointer flex items-center justify-center"
-            title="Messages"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
       {/* Floating Pill for Pending background posts */}
       <AnimatePresence>
         {pendingPosts.length > 0 && (
@@ -1903,8 +1843,61 @@ export default function FeedView({
           }
         }}
         onTouchEnd={handlePullEnd}
-        className="w-full h-full overflow-y-auto scrollbar-none scroll-smooth overscroll-contain snap-y snap-mandatory relative bg-black"
+        className="w-full h-full overflow-y-auto scrollbar-none scroll-smooth overscroll-contain snap-y snap-mandatory relative bg-black touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
+        {/* HERO HEADER: NEXORA & Tagline (Scrolls away naturally) */}
+        <div className="px-6 pt-6 pb-5 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+          <NexoraBranding size="md" showSubtitle={true} />
+          <button 
+            onClick={() => {
+              window.dispatchEvent(new CustomEvent('toast', { detail: '📬 Opening your Direct Messages inbox...' }));
+              window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'matrix', subTab: 'messages' } }));
+            }}
+            className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl text-violet-300 hover:text-white transition-all border border-white/10 cursor-pointer flex items-center gap-2 text-xs font-mono shadow-md"
+            title="Messages"
+          >
+            <MessageCircle className="w-4 h-4 text-violet-400" />
+            <span className="hidden sm:inline font-bold">Inbox</span>
+          </button>
+        </div>
+
+        {/* STICKY FEED TABS BAR (Pins to top when scrolled past hero header) */}
+        <div className="sticky top-0 z-30 bg-[#06040f]/95 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
+          <div className="flex items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none max-w-full">
+            {(['for_you', 'following', 'friends', 'trending', 'local'] as const).map(tab => {
+              const isActive = feedTab === tab;
+              return (
+                <button
+                  key={tab}
+                  onClick={() => {
+                    setFeedTab(tab);
+                    setVisibleCount(8);
+                  }}
+                  className={`relative text-center pb-1.5 px-1 font-sans text-xs font-extrabold uppercase tracking-wider transition-all duration-250 cursor-pointer whitespace-nowrap ${
+                    isActive ? 'text-white text-shadow-sm scale-105' : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeFeedTab"
+                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-linear-to-r from-violet-500 via-pink-500 to-violet-500 rounded-full"
+                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                    />
+                  )}
+                  <span className="relative z-10">
+                    {tab === 'for_you' && 'For You'}
+                    {tab === 'following' && 'Following'}
+                    {tab === 'friends' && 'Friends'}
+                    {tab === 'trending' && 'Trending'}
+                    {tab === 'local' && 'Local'}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Animated Pull-To-Refresh indicators */}
         <AnimatePresence>
           {pullY > 0 && (
@@ -1990,16 +1983,28 @@ export default function FeedView({
                         <p className="text-[9.5px] font-mono text-violet-400/80 truncate">@{u.username}</p>
                       </div>
                     </div>
-                    <button 
+                    <motion.button 
+                      whileTap={{ scale: 0.9 }}
                       onClick={() => onToggleFollow?.(u.id)}
-                      className={`p-1 px-2.5 rounded-lg text-[9px] font-mono uppercase font-extrabold cursor-pointer transition-all shrink-0 ${
+                      className={`p-1 px-2.5 rounded-lg text-[9px] font-mono uppercase font-extrabold cursor-pointer transition-all duration-300 shrink-0 ${
                         followingIds.includes(u.id) 
                           ? 'bg-violet-950 text-violet-300 border border-violet-500/20' 
-                          : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow'
+                          : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow-md shadow-violet-500/20 hover:shadow-violet-500/40'
                       }`}
                     >
-                      {followingIds.includes(u.id) ? 'Followed' : '+ Follow'}
-                    </button>
+                      <AnimatePresence mode="wait">
+                        <motion.span
+                          key={followingIds.includes(u.id) ? 'followed' : 'follow'}
+                          initial={{ opacity: 0, y: -5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 5 }}
+                          transition={{ duration: 0.15 }}
+                          className="block"
+                        >
+                          {followingIds.includes(u.id) ? 'Followed' : '+ Follow'}
+                        </motion.span>
+                      </AnimatePresence>
+                    </motion.button>
                   </div>
                 ))}
               </div>
@@ -2124,6 +2129,9 @@ export default function FeedView({
         {/* SKELETON FEED CARDS ON REFRESH */}
         {isRefreshing && (
           <div className="space-y-4 text-left">
+            <div className="flex justify-center pt-2 pb-4">
+              <NexoraLoader size="md" center={true} />
+            </div>
             {[1, 2, 3].map((n) => (
               <div key={n} className="p-5 rounded-3xl bg-[#0b091e]/60 border border-violet-500/10 space-y-4 animate-pulse">
                 <div className="flex gap-3">
@@ -2305,7 +2313,10 @@ export default function FeedView({
                         </div>
 
                         {/* Comments stream scroll */}
-                        <div className="space-y-3.5 flex-1 overflow-y-auto pr-1 mb-4 custom-scrollbar">
+                        <div 
+                          className="space-y-3.5 flex-1 overflow-y-auto pr-1 mb-4 custom-scrollbar touch-pan-y"
+                          style={{ WebkitOverflowScrolling: 'touch' }}
+                        >
                           {post.comments.length === 0 && (
                             <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
                               No comments yet. Start the conversation!
@@ -2495,7 +2506,10 @@ export default function FeedView({
                 ))}
 
                 {/* Scrollable Container with Top Padding for Navigation */}
-                <div className="w-full h-full overflow-y-auto custom-scrollbar px-2 md:px-4 pt-28 md:pt-24 pb-12 flex flex-col justify-between gap-6">
+                <div 
+                  className="w-full h-full overflow-y-auto custom-scrollbar px-2 md:px-4 pt-28 md:pt-24 pb-12 flex flex-col justify-between gap-6 touch-pan-y"
+                  style={{ WebkitOverflowScrolling: 'touch' }}
+                >
                   <div>
                     {/* Future scheduled posts warning banner (Only visible to the creator) */}
                 {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (
@@ -3202,19 +3216,34 @@ export default function FeedView({
                     <div className="flex items-center gap-2 flex-wrap">
                       {/* Sparks action instead of likes */}
                       <motion.button
-                        whileTap={{ scale: 0.92, y: 0.5 }}
-                        whileHover={{ scale: 1.04 }}
+                        whileTap={{ scale: 0.85 }}
+                        whileHover={{ scale: 1.05 }}
                         onClick={() => handleSpark(post.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-[11px] ${
+                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-300 cursor-pointer border text-[11px] overflow-hidden ${
                           post.isLikedByUser 
-                            ? 'bg-pink-500/15 border-pink-500/30 text-pink-400 shadow-[0_0_12px_rgba(244,63,94,0.15)] font-bold' 
+                            ? 'bg-pink-500/15 border-pink-500/40 text-pink-400 shadow-[0_0_15px_rgba(244,63,94,0.2)] font-bold' 
                             : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
                         }`}
                       >
-                        <Zap className={`w-3.5 h-3.5 transition-transform ${
-                          post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_6px_#f43f5e]' : 'text-pink-400/80'
-                        }`} />
-                        <span className="font-mono">{post.likes}</span>
+                        <AnimatePresence>
+                          {post.isLikedByUser && (
+                            <motion.div 
+                              initial={{ scale: 0, opacity: 0 }}
+                              animate={{ scale: [0, 1.5, 1], opacity: [0, 1, 0] }}
+                              transition={{ duration: 0.5 }}
+                              className="absolute inset-0 bg-pink-400/20 rounded-full"
+                            />
+                          )}
+                        </AnimatePresence>
+                        <motion.div
+                          animate={post.isLikedByUser ? { scale: [1, 1.4, 1], rotate: [0, 15, -10, 0] } : {}}
+                          transition={{ type: 'spring', stiffness: 400, damping: 10 }}
+                        >
+                          <Zap className={`w-3.5 h-3.5 transition-colors duration-300 ${
+                            post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_8px_#f43f5e]' : 'text-pink-400/80'
+                          }`} />
+                        </motion.div>
+                        <span className="font-mono relative z-10">{post.likes}</span>
                       </motion.button>
 
                       {/* Comments expand button */}

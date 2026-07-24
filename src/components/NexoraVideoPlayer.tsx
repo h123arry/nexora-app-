@@ -5,6 +5,7 @@ import { recordRecommendationEvent } from '../utils/recommendations';
 import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import VideoBottomSheet from './VideoBottomSheet';
+import NexoraLoader from './NexoraLoader';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -1077,87 +1078,58 @@ export default function NexoraVideoPlayer({
               const currentProgress = Math.min(90, Math.round(30 + (now / duration) * 60));
               setExportState(prev => prev ? { ...prev, progress: currentProgress, statusText: `Applying NEXORA watermark... ${Math.round((now/duration)*100)}%` } : null);
 
-              // Watermark motion formula
-              const interval = 4.0; // change position every 4 seconds
-              const segment = Math.floor(now / interval);
-              const segmentTime = now % interval;
-
-              // Define watermark position calculator
-              const getPosition = (isLeft: boolean, seg: number) => {
-                const seedVal = seg + (isLeft ? 0 : 77);
-                const seed1 = Math.sin(seedVal * 12.9898) * 43758.5453;
-                const seed2 = Math.cos(seedVal * 78.233) * 43758.5453;
-                const rand1 = seed1 - Math.floor(seed1);
-                const rand2 = seed2 - Math.floor(seed2);
-
-                const y = 0.35 * height + rand2 * (0.30 * height); // centered vertically 35% - 65%
-                
-                let x = 0;
-                if (isLeft) {
-                  x = 0.05 * width + rand1 * (0.12 * width); // Left side
-                } else {
-                  x = 0.62 * width + rand1 * (0.14 * width); // Right side
-                }
-                return { x, y };
-              };
-
-              const leftPos = getPosition(true, segment);
-              const rightPos = getPosition(false, segment);
-
-              // Smooth Transitions: slide and fade
-              let opacity = 0.75;
-              let leftX = leftPos.x;
-              let rightX = rightPos.x;
-
-              if (segmentTime < 0.5) {
-                // Fade-in phase
-                const slidePct = segmentTime / 0.5;
-                opacity = slidePct * 0.75;
-                // Slide from 20px off
-                leftX = leftPos.x - 20 * (1 - slidePct);
-                rightX = rightPos.x + 20 * (1 - slidePct);
-              } else if (segmentTime > interval - 0.5) {
-                // Fade-out phase
-                const fadeOutPct = (interval - segmentTime) / 0.5;
-                opacity = fadeOutPct * 0.75;
-                leftX = leftPos.x + 20 * (1 - fadeOutPct);
-                rightX = rightPos.x - 20 * (1 - fadeOutPct);
-              } else {
-                // Stable float phase
-                opacity = 0.75;
-                const floatAmt = Math.sin(segmentTime * 2.5) * 4;
-                leftX = leftPos.x + floatAmt;
-                rightX = rightPos.x - floatAmt;
-              }
-
-              // Draw left watermark
-              const drawWatermark = (x: number, y: number) => {
+              // Draw permanent bottom-right corner export watermark
+              const drawExportWatermark = () => {
                 ctx.save();
-                ctx.globalAlpha = opacity;
+                const padding = Math.max(16, Math.round(width * 0.03));
+                const boxWidth = Math.max(180, Math.round(width * 0.28));
+                const boxHeight = Math.max(50, Math.round(height * 0.09));
+                const x = width - boxWidth - padding;
+                const y = height - boxHeight - padding;
 
-                const logoSize = baseFontSize * 1.25;
-                // Draw official brand standard N logo mark on canvas!
-                drawNexoraN(ctx, x, y - logoSize * 0.65, logoSize, logoSize * 0.12, true);
+                // Semi-transparent rounded pill background with soft dark backdrop
+                ctx.fillStyle = 'rgba(12, 10, 33, 0.72)';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+                ctx.shadowBlur = 14;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 4;
 
-                // Title shifted right for standard alignment
+                const radius = 12;
+                ctx.beginPath();
+                ctx.roundRect(x, y, boxWidth, boxHeight, radius);
+                ctx.fill();
+
+                // Subtle glowing border
+                ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+
+                // Draw Nexora N logo inside the box
+                const logoSize = boxHeight * 0.55;
+                const logoX = x + padding * 0.75;
+                const logoY = y + (boxHeight - logoSize) / 2;
+                drawNexoraN(ctx, logoX, logoY, logoSize, logoSize * 0.12, false);
+
+                // Text positioning
+                const textX = logoX + logoSize + 10;
+                
+                // Nexora branding
                 ctx.fillStyle = '#FFFFFF';
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.7)';
-                ctx.shadowBlur = 8;
-                ctx.shadowOffsetX = 1.5;
-                ctx.shadowOffsetY = 1.5;
-                ctx.font = `bold ${baseFontSize}px "Space Grotesk", "Inter", sans-serif`;
-                ctx.fillText('NEXORA', x + logoSize * 1.1, y + logoSize * 0.1);
+                ctx.font = `bold ${Math.max(12, Math.round(boxHeight * 0.32))}px "Space Grotesk", "Inter", sans-serif`;
+                ctx.shadowBlur = 4;
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                ctx.fillText('NEXORA', textX, y + boxHeight * 0.38);
 
-                // Handle shifted below the text
+                // Creator username + verified badge
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-                ctx.font = `500 ${baseFontSize * 0.78}px "JetBrains Mono", sans-serif`;
-                ctx.fillText(`@${uploader}`, x, y + baseFontSize * 1.3);
+                ctx.font = `500 ${Math.max(10, Math.round(boxHeight * 0.28))}px "JetBrains Mono", sans-serif`;
+                const usernameText = `@${uploader}${post.isVerified ? ' ✓' : ''}`;
+                ctx.fillText(usernameText, textX, y + boxHeight * 0.75);
 
                 ctx.restore();
               };
 
-              drawWatermark(leftX, leftPos.y);
-              drawWatermark(rightX, rightPos.y);
+              drawExportWatermark();
             }
 
             animFrameId = requestAnimationFrame(renderFrame);
@@ -1244,9 +1216,7 @@ export default function NexoraVideoPlayer({
             />
             {isBuffering && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-xs pointer-events-none z-10 animate-fade-in">
-                <div className="flex flex-col items-center gap-2 bg-slate-950/80 border border-violet-500/25 px-4 py-3 rounded-2xl shadow-xl">
-                  <div className="w-7 h-7 border-3 border-violet-500 border-t-transparent animate-spin rounded-full" />
-                </div>
+                <NexoraLoader size="md" center={true} />
               </div>
             )}
 
@@ -1508,10 +1478,9 @@ export default function NexoraVideoPlayer({
               </div>
             </div>
           </>
-        ) : (
+         ) : (
          <div className="w-full h-full bg-black/90 flex flex-col items-center justify-center gap-2">
-           <div className="w-6 h-6 border-2 border-violet-500 border-t-transparent animate-spin rounded-full" />
-           <span className="text-[10px] font-mono text-violet-400">LOADING ENCRYPTED VIDEO FEED...</span>
+           <NexoraLoader size="md" center={true} />
          </div>
        )}
 
@@ -1543,9 +1512,8 @@ export default function NexoraVideoPlayer({
 
       {/* Switching Quality overlay indicator */}
       {isSwitchingQuality && (
-        <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center gap-2 z-20">
-          <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent animate-spin rounded-full" />
-          <span className="text-[10px] font-sans text-purple-300 tracking-widest uppercase">Loading...</span>
+        <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center z-20">
+          <NexoraLoader size="md" />
         </div>
       )}
 
@@ -1708,15 +1676,6 @@ export default function NexoraVideoPlayer({
         onShare={(recipientId) => {
           recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
         }}
-        onReport={() => {
-          recordRecommendationEvent('skip_quick', { creatorId: post.userId, creatorUsername: post.username });
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Video report filed. Moderation team is auditing this stream!' }));
-        }}
-        onNotInterested={() => {
-          recordRecommendationEvent('skip_quick', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
-          window.dispatchEvent(new CustomEvent('toast', { detail: '🙈 Tuned: We will show you fewer videos like this.' }));
-          onNotInterested?.();
-        }}
         onSave={() => {
           setShowSaveModal(true);
         }}
@@ -1764,11 +1723,8 @@ export default function NexoraVideoPlayer({
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
               
               {/* Premium animated logo indicator */}
-              <div className="relative mb-5">
-                <div className="w-16 h-16 rounded-full bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400">
-                  <Download className="w-7 h-7 animate-bounce" />
-                </div>
-                <div className="absolute inset-0 rounded-full border border-dashed border-violet-500/40 animate-spin" style={{ animationDuration: '8s' }} />
+              <div className="relative mb-5 flex justify-center">
+                <NexoraLoader size="lg" center={true} />
               </div>
 
               <h3 className="text-xs font-mono font-black text-white uppercase tracking-widest mb-1">

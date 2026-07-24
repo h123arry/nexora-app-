@@ -202,8 +202,10 @@ export function isMissionCompletedDb(userId: string, missionId: string): boolean
 
 export function getSparksReceived(userId: string): number {
   initDb();
-  const sparks: SparkRecord[] = JSON.parse(localStorage.getItem(KEYS.SPARKS) || '[]');
-  return sparks.filter(s => s.toUserId === userId).length;
+  const posts: Post[] = JSON.parse(localStorage.getItem(KEYS.POSTS) || '[]');
+  return posts
+    .filter(p => p.userId === userId)
+    .reduce((sum, p) => sum + (p.likes || 0), 0);
 }
 
 export function getSparksGiven(userId: string): number {

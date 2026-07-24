@@ -4,11 +4,12 @@ import { User, ThemeMood } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import NexoraPremiumLogo from './NexoraPremiumLogo';
 import NexoraBranding from './NexoraBranding';
+import VohIcon from './VohIcon';
 
 interface SidebarProps {
   currentUser: User;
-  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities';
-  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities') => void;
+  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live';
+  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live') => void;
   unreadMessagesCount: number;
   unreadNotificationsCount: number;
   theme: ThemeMood;
@@ -85,7 +86,8 @@ export default function Sidebar({
           const isActive = activeTab === item.id;
           const Icon = item.icon;
           return (
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               key={item.id}
               onClick={() => {
                 if (item.isCreate) {
@@ -94,34 +96,43 @@ export default function Sidebar({
                   setActiveTab(item.id as any);
                 }
               }}
-              className={`flex items-center gap-3.5 w-full p-2.5 rounded-xl border transition-all text-left relative group cursor-pointer ${
+              className={`flex items-center gap-3.5 w-full p-2.5 rounded-xl border transition-all text-left relative group cursor-pointer overflow-hidden ${
                 isActive
                   ? 'bg-linear-to-r from-violet-600/25 to-pink-500/10 border-violet-500/40 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5 font-bold'
                   : 'bg-black/35 border-current/5 hover:border-violet-500/20 text-current/70 hover:bg-violet-950/10'
               }`}
             >
-              <div className={`p-1.5 rounded-lg ${isActive ? 'bg-violet-600/10 text-violet-400' : 'bg-current/5 text-current/60 group-hover:scale-105 transition-all'}`}>
-                <Icon className="w-4.5 h-4.5" />
+              <div className={`p-1.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-violet-600/20 text-violet-400 scale-105' : 'bg-current/5 text-current/60 group-hover:scale-105 group-hover:text-violet-300'}`}>
+                {item.id === 'nida' ? (
+                  <VohIcon size={18} animated={isActive} variant={isActive ? "brand" : "white"} />
+                ) : (
+                  <Icon className="w-4.5 h-4.5" />
+                )}
               </div>
               <div className="flex-1 overflow-hidden">
-                <span className="block text-[11px] font-sans tracking-wide font-black uppercase">
+                <span className="block text-[11px] font-sans tracking-wide font-black uppercase transition-colors duration-300 group-hover:text-violet-300">
                   {item.label}
                 </span>
-                <span className="block text-[9px] text-current/40 font-mono truncate">
+                <span className="block text-[9px] text-current/40 font-mono truncate transition-colors duration-300 group-hover:text-violet-400/50">
                   {item.desc}
                 </span>
               </div>
               {item.count > 0 && (
-                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-pink-500 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full">
+                <motion.span 
+                  initial={{ scale: 0 }} 
+                  animate={{ scale: 1 }} 
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 bg-pink-500 text-white text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-full"
+                >
                   {item.count}
-                </span>
+                </motion.span>
               )}
-            </button>
+            </motion.button>
           );
         })}
 
         {/* Conditional Creator panel link */}
-        <button
+        <motion.button
+          whileTap={{ scale: 0.95 }}
           onClick={() => setActiveTab('creator')}
           className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl border transition-all text-left group cursor-pointer mt-1 ${
             activeTab === 'creator'
@@ -129,22 +140,23 @@ export default function Sidebar({
               : 'bg-black/35 border-violet-500/10 hover:border-violet-500/20 text-violet-400/80 hover:bg-violet-950/10'
           }`}
         >
-          <div className="p-1.5 rounded-lg bg-violet-600/10 text-violet-400 group-hover:scale-105 transition-all">
+          <div className="p-1.5 rounded-lg bg-violet-600/10 text-violet-400 transition-transform duration-300 group-hover:scale-105">
             <BarChart2 className="w-3.5 h-3.5 text-violet-500" />
           </div>
           <div className="flex-1 overflow-hidden">
-            <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-violet-400 group-hover:text-violet-300">
+            <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-violet-400 transition-colors duration-300 group-hover:text-violet-300">
               Studio
             </span>
-            <span className="block text-[9px] text-current/40 font-mono truncate">
+            <span className="block text-[9px] text-current/40 font-mono truncate transition-colors duration-300 group-hover:text-violet-400/60">
               Publishing
             </span>
           </div>
-        </button>
+        </motion.button>
 
         {/* Conditional Admin panel link */}
         {(currentUser.role === 'admin' || currentUser.role === 'founder' || currentUser.username === 'voh') && (
-          <button
+          <motion.button
+            whileTap={{ scale: 0.95 }}
             onClick={() => setActiveTab('admin')}
             className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl border transition-all text-left group cursor-pointer mt-1 ${
               activeTab === 'admin'
@@ -152,27 +164,28 @@ export default function Sidebar({
                 : 'bg-black/35 border-[#e11d48]/10 hover:border-rose-500/20 text-rose-400/80 hover:bg-rose-950/10'
             }`}
           >
-            <div className="p-1.5 rounded-lg bg-rose-600/10 text-rose-400 group-hover:scale-105 transition-all">
+            <div className="p-1.5 rounded-lg bg-rose-600/10 text-rose-400 transition-transform duration-300 group-hover:scale-105">
               <Sliders className="w-3.5 h-3.5 text-rose-500" />
             </div>
             <div className="flex-1 overflow-hidden">
-              <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-rose-400 group-hover:text-rose-300">
+              <span className="block text-[10px] font-sans font-black tracking-widest uppercase text-rose-400 transition-colors duration-300 group-hover:text-rose-300">
                 Admin
               </span>
-              <span className="block text-[9px] text-current/40 font-mono truncate">
+              <span className="block text-[9px] text-current/40 font-mono truncate transition-colors duration-300 group-hover:text-rose-400/60">
                 Governance
               </span>
             </div>
-          </button>
+          </motion.button>
         )}
       </div>
 
       {/* System Control Deck Button */}
-      <button
+      <motion.button
+        whileTap={{ scale: 0.95 }}
         onClick={() => window.dispatchEvent(new CustomEvent('open-system-hub'))}
         className="flex items-center gap-2.5 w-full p-2.5 rounded-xl border bg-black/35 border-current/5 hover:border-cyan-500/30 text-cyan-400 hover:bg-cyan-950/10 transition-all text-left group cursor-pointer mb-3"
       >
-        <div className="p-1.5 rounded-lg bg-cyan-600/10 text-cyan-400 group-hover:scale-105 transition-all">
+        <div className="p-1.5 rounded-lg bg-cyan-600/10 text-cyan-400 transition-transform duration-300 group-hover:scale-105">
           <Sliders className="w-3.5 h-3.5 text-cyan-400" />
         </div>
         <div className="flex-1 overflow-hidden">
@@ -183,7 +196,7 @@ export default function Sidebar({
             Settings & Accessibility
           </span>
         </div>
-      </button>
+      </motion.button>
 
       {/* Quick Action Post Button */}
 

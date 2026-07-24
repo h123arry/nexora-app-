@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
 import StoriesView from './StoriesView';
 import RelativeTime from './RelativeTime';
+import NexoraLoader from './NexoraLoader';
 
 interface NotificationsViewProps {
   notifications: Notification[];
@@ -1366,7 +1367,7 @@ export default function NotificationsView({
           >
             {loadingMore ? (
               <>
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-violet-400" />
+                <NexoraLoader size="sm" />
                 <span>Synchronizing older index layers...</span>
               </>
             ) : (

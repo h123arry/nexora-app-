@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import VohIcon from './VohIcon';
 import { 
   X, HardDrive, ShieldCheck, Cpu, Battery, Activity, Info, AlertTriangle, 
   Trash2, RefreshCw, Sparkles, Search, Sliders, Check, Download, ChevronRight, 
@@ -1043,7 +1044,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-violet-400" /> AI-Powered Storage Analyzer & Optimizer
+                        <VohIcon size={16} animated variant="brand" /> AI-Powered Storage Analyzer & Optimizer
                       </h4>
                       <p className="text-[11px] text-zinc-400 mt-1">Smart algorithms index your node database to identify heavy, duplicate, or stale media blocks safely.</p>
                     </div>

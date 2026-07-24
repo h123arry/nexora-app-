@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Compass, Plus, Inbox, User, X, ChevronRight, Check } from 'lucide-react';
+import { Globe, Share2, Users, Flame, HeartHandshake, X, ChevronRight, Check } from 'lucide-react';
+import VohIcon from './VohIcon';
 
 interface OnboardingTourProps {
   onClose: () => void;
@@ -11,40 +12,39 @@ export default function OnboardingTour({ onClose }: OnboardingTourProps) {
 
   const steps = [
     {
-      title: "Welcome to Nexora V1.2",
-      description: "Welcome to the next evolution of digital connection. Let's take a quick 30-second tour to discover your creative studio.",
-      icon: <Sparkles className="w-12 h-12 text-violet-400 animate-pulse" />,
-      color: "from-violet-500 to-purple-500"
+      title: "Welcome to Nexora",
+      description: "Discover what's happening around the world in real time with high-fidelity media, live feeds, and intelligent recommendations.",
+      icon: <VohIcon size={44} animated glow variant="brand" />,
+      tag: "GLOBAL LIVING FEED",
+      color: "from-violet-500 to-purple-600"
     },
     {
-      title: "Seamless Home Feed",
-      description: "Swipe up or down to explore immersive high-fidelity videos. Double-tap to Spark (❤️) content, engage in threaded discussions, or mark posts as not interested.",
-      icon: <Sparkles className="w-12 h-12 text-pink-400" />,
-      color: "from-pink-500 to-rose-500"
+      title: "Share & Create",
+      description: "Share photos, videos, ideas, and moments effortlessly using Nexora's built-in creation studio and AI tools.",
+      icon: <Share2 className="w-10 h-10 text-cyan-400" />,
+      tag: "CREATION STUDIO",
+      color: "from-cyan-500 to-blue-600"
     },
     {
-      title: "Advanced Search & Discovery",
-      description: "Discover trending hashtags, explore specialized content categories, and connect with official creators or community pages.",
-      icon: <Compass className="w-12 h-12 text-cyan-400" />,
-      color: "from-cyan-500 to-blue-500"
+      title: "Connect & Inspire",
+      description: "Connect with people who inspire you. Join vibrant circles, exchange direct messages, and collaborate across topics.",
+      icon: <Users className="w-10 h-10 text-pink-400" />,
+      tag: "CIRCLES & MESSAGING",
+      color: "from-pink-500 to-rose-600"
     },
     {
-      title: "Media Creation Suite",
-      description: "Publish instant video shorts or static posts, schedule broadcasts, or archive your work to your private studio archives.",
-      icon: <Plus className="w-12 h-12 text-amber-400" />,
-      color: "from-amber-500 to-orange-500"
+      title: "Earn Sparks",
+      description: "Earn Sparks by creating engaging content and building your reputation within the global Nexora community.",
+      icon: <Flame className="w-10 h-10 text-amber-400" />,
+      tag: "REPUTATION & SPARKS",
+      color: "from-amber-500 to-orange-600"
     },
     {
-      title: "Centralized Inbox",
-      description: "Stay in touch through simplified direct messages, system notifications, and brand collaboration requests.",
-      icon: <Inbox className="w-12 h-12 text-teal-400" />,
-      color: "from-teal-500 to-emerald-500"
-    },
-    {
-      title: "Creator Profile & Archives",
-      description: "Manage your published posts, view pinned items, access your private archives, and customize your system settings.",
-      icon: <User className="w-12 h-12 text-fuchsia-400" />,
-      color: "from-fuchsia-500 to-purple-500"
+      title: "Build Your Community",
+      description: "Build your community one connection at a time. Customize your profile, select your interests, and shape your network.",
+      icon: <HeartHandshake className="w-10 h-10 text-emerald-400" />,
+      tag: "COMMUNITY BUILDER",
+      color: "from-emerald-500 to-teal-600"
     }
   ];
 
@@ -70,54 +70,59 @@ export default function OnboardingTour({ onClose }: OnboardingTourProps) {
   const current = steps[step];
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="relative w-full max-w-lg bg-[#0a071d]/90 border border-white/10 rounded-3xl overflow-hidden shadow-[0_0_50px_rgba(139,92,246,0.15)] flex flex-col"
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        className="relative w-full max-w-lg bg-[#080616] border border-violet-500/20 rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col"
       >
         {/* Background ambient glow */}
-        <div className={`absolute -top-24 -left-24 w-48 h-48 bg-gradient-to-br ${current.color} opacity-20 blur-[60px] pointer-events-none transition-all duration-500`} />
-        <div className={`absolute -bottom-24 -right-24 w-48 h-48 bg-gradient-to-br ${current.color} opacity-10 blur-[60px] pointer-events-none transition-all duration-500`} />
+        <div className={`absolute -top-20 -left-20 w-44 h-44 bg-gradient-to-br ${current.color} opacity-20 blur-[50px] pointer-events-none transition-all duration-500`} />
+        <div className={`absolute -bottom-20 -right-20 w-44 h-44 bg-gradient-to-br ${current.color} opacity-15 blur-[50px] pointer-events-none transition-all duration-500`} />
 
         {/* Header Close/Skip */}
         <div className="flex items-center justify-between p-6 pb-2 z-10">
-          <span className="text-[10px] font-mono uppercase tracking-widest text-violet-400 font-bold">
-            Onboarding • Step {step + 1} of {steps.length}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-violet-400 font-bold bg-violet-950/60 border border-violet-500/20 px-2.5 py-1 rounded-full">
+              {current.tag}
+            </span>
+            <span className="text-[10px] font-mono text-zinc-500">
+              {step + 1} / {steps.length}
+            </span>
+          </div>
           <button 
             onClick={handleComplete}
             className="p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-            title="Skip tour"
+            title="Skip guide"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Box */}
-        <div className="p-8 flex flex-col items-center text-center z-10 flex-1 min-h-[280px]">
-          <div className="mb-6 p-4 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
+        <div className="p-8 flex flex-col items-center text-center z-10 flex-1 min-h-[260px] justify-center">
+          <div className="mb-5 p-4 bg-violet-950/30 border border-violet-500/20 rounded-2xl flex items-center justify-center shadow-inner">
             {current.icon}
           </div>
 
-          <h3 className="text-xl font-sans font-extrabold text-white mb-3 tracking-tight">
+          <h3 className="text-2xl font-sans font-black text-white mb-2.5 tracking-tight">
             {current.title}
           </h3>
           
-          <p className="text-sm text-zinc-300 leading-relaxed max-w-sm">
+          <p className="text-sm text-zinc-300 leading-relaxed max-w-md font-sans">
             {current.description}
           </p>
         </div>
 
         {/* Progress Dots */}
-        <div className="flex justify-center gap-1.5 px-8 z-10">
+        <div className="flex justify-center gap-2 px-8 z-10 mb-2">
           {steps.map((_, i) => (
-            <div 
+            <button 
               key={i}
               onClick={() => setStep(i)}
               className={`h-1.5 rounded-full cursor-pointer transition-all duration-300 ${
-                i === step ? 'w-6 bg-gradient-to-r from-violet-500 to-fuchsia-500' : 'w-1.5 bg-white/20 hover:bg-white/40'
+                i === step ? 'w-7 bg-gradient-to-r from-violet-500 to-fuchsia-500' : 'w-2 bg-white/20 hover:bg-white/40'
               }`}
             />
           ))}
@@ -140,7 +145,7 @@ export default function OnboardingTour({ onClose }: OnboardingTourProps) {
           >
             {step === steps.length - 1 ? (
               <>
-                <span>Get Started</span>
+                <span>Enter Nexora</span>
                 <Check className="w-3.5 h-3.5" />
               </>
             ) : (

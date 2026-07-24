@@ -637,8 +637,8 @@ export default function CallScreen({
                             onDragEnd={(e, info) => {
                               setIsDraggingLocalCamera(false);
                               // Calculate snap corner based on relative window coordinate
-                              const x = e.clientX;
-                              const y = e.clientY;
+                              const x = info.point.x;
+                              const y = info.point.y;
                               const width = window.innerWidth;
                               const height = window.innerHeight;
                               

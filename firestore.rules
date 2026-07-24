@@ -20,11 +20,28 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
+    // --- Mail Queue Collection (for Transactional Emails) ---
+    match /mail/{mailId} {
+      allow create: if isSignedIn();
+      allow read, update, delete: if false; // Only background trigger / extension processes these
+    }
+
     // --- Users Collection ---
     match /users/{userId} {
       allow read, list: if isSignedIn();
       allow create: if isOwner(userId) && isValidId(userId);
       allow update: if isOwner(userId);
+
+      match /securityLogs/{logId} {
+        allow read: if isOwner(userId);
+        allow create: if isSignedIn();
+      }
+
+      match /notifications/{notifId} {
+        allow read, list: if isOwner(userId);
+        allow create: if isSignedIn();
+        allow update, delete: if isOwner(userId);
+      }
     }
 
     // --- Posts Collection ---

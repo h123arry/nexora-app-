@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import NexoraLoader from './NexoraLoader';
 import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
@@ -586,8 +587,8 @@ export default function CreatorDashboardView({
       {/* Shimmer loading layout placeholder */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="col-span-1 md:col-span-3 h-96 bg-zinc-950/40 border border-white/5 rounded-3xl animate-pulse flex items-center justify-center">
-            <RefreshCw className="w-8 h-8 text-violet-500 animate-spin" />
+          <div className="col-span-1 md:col-span-3 h-96 bg-zinc-950/40 border border-white/5 rounded-3xl flex items-center justify-center">
+            <NexoraLoader size="lg" center={true} />
           </div>
           <div className="h-96 bg-zinc-950/40 border border-white/5 rounded-3xl animate-pulse" />
         </div>

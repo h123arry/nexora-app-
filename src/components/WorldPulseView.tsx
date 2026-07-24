@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Globe, Map, Flame, Check, Briefcase, Compass, Cpu, Music, Search, Plus, Users, Radio, Sparkles, Award, BookOpen, MapPin, TrendingUp, Brain, MessageSquare, Bell, X, Target, Clock, ArrowRight, User, Zap, Info, Calendar, Forward } from 'lucide-react';
+import VohIcon from './VohIcon';
 
 export interface WorldPulseViewProps {
   theme: string;
@@ -411,7 +412,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
-              <Brain className="w-4 h-4 text-violet-400 animate-pulse" />
+              <VohIcon size={18} animated glow variant="brand" />
             </div>
             <div>
               <span className="text-xs font-mono uppercase tracking-widest font-black text-violet-300">VOH AI Pulse Agent</span>

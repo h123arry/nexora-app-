@@ -190,9 +190,49 @@
         "ownerId": { "type": "string" }
       },
       "required": ["name", "ownerId"]
+    },
+    "mail": {
+      "title": "Mail",
+      "description": "Transactional email queue for Firebase Mail Extension / SendGrid",
+      "type": "object",
+      "properties": {
+        "to": { "type": "array", "items": { "type": "string" } },
+        "message": {
+          "type": "object",
+          "properties": {
+            "subject": { "type": "string" },
+            "text": { "type": "string" },
+            "html": { "type": "string" }
+          }
+        },
+        "templateType": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["to", "message"]
+    },
+    "securityLog": {
+      "title": "Security Log",
+      "description": "Audit security logs for user actions",
+      "type": "object",
+      "properties": {
+        "eventType": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "ip": { "type": "string" },
+        "browser": { "type": "string" }
+      },
+      "required": ["eventType", "title"]
     }
   },
   "firestore": {
+    "/mail/{mailId}": {
+      "schema": { "$ref": "mail" },
+      "description": "Transactional email queue"
+    },
+    "/users/{userId}/securityLogs/{logId}": {
+      "schema": { "$ref": "securityLog" },
+      "description": "User security audit logs"
+    },
     "/users/{userId}": {
       "schema": { "$ref": "user" },
       "description": "User profiles"

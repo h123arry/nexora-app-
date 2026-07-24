@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Paintbrush, Compass, Target, Terminal, Mic, MicOff, Search, Send, PlusCircle, User as UserIcon, Settings, Layers, CheckCircle, TrendingUp, MessageSquare, ArrowRight } from 'lucide-react';
+import VohIcon from './VohIcon';
 import { User, Post, Chat, Message } from '../types';
 import VohAiView from './VohAiView';
 import CirclesView from './CirclesView';
@@ -71,8 +72,8 @@ export default function MatrixView({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 px-1.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-violet-400 animate-pulse">
-              <Sparkles className="w-4 h-4" />
+            <div className="p-1 px-1.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-violet-400">
+              <VohIcon size={18} animated glow variant="brand" />
             </div>
             <h2 className="text-xl font-black font-sans tracking-tight text-current">
               VOH AI Hub

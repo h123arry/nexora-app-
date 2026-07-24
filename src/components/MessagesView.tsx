@@ -10,6 +10,7 @@ import GroupDashboard from './GroupDashboard';
 import RelativeTime from './RelativeTime';
 import ChatHeader from './ChatHeader';
 import MessageBubble from './MessageBubble';
+import NexoraLoader from './NexoraLoader';
 
 // Custom sub-components
 import NewGroupModal from './NewGroupModal';
@@ -957,7 +958,13 @@ export default function MessagesView({
       const updated = stream.map(m => {
         if (m.id === msgId) {
           const reacts = m.reactions || [];
-          const nextReacts = reacts.includes(emoji) ? reacts.filter(e => e !== emoji) : [...reacts, emoji];
+          const existing = reacts.find(r => r.emoji === emoji);
+          let nextReacts: { emoji: string; userIds: string[] }[] = [];
+          if (existing) {
+            nextReacts = reacts.filter(r => r.emoji !== emoji);
+          } else {
+            nextReacts = [...reacts, { emoji, userIds: [currentUser.id] }];
+          }
           return { ...m, reactions: nextReacts };
         }
         return m;
@@ -1154,7 +1161,19 @@ export default function MessagesView({
                     key={emoji}
                     onClick={() => {
                       // Click to simulate adding reactions in real-time
-                      const currentStats = activeChat.broadcastDeliveryStats || {};
+                      const defaultStats = {
+                        delivered: 1,
+                        read: 1,
+                        failed: 0,
+                        pending: 0,
+                        reactionCount: {},
+                        repliesCount: 0,
+                        averageReadTime: "12s",
+                        linkClicks: 0,
+                        pollParticipation: 0,
+                        mediaDownloads: 0
+                      };
+                      const currentStats = activeChat.broadcastDeliveryStats || defaultStats;
                       const rx = currentStats.reactionCount || {};
                       const updatedRx = {
                         ...rx,
@@ -1164,6 +1183,7 @@ export default function MessagesView({
                       setChatsList(prev => prev.map(c => c.id === activeChat.id ? {
                         ...c,
                         broadcastDeliveryStats: {
+                          ...defaultStats,
                           ...currentStats,
                           reactionCount: updatedRx
                         }
@@ -1424,9 +1444,17 @@ export default function MessagesView({
       {/* RIGHT COLUMN: CHAT WINDOW PANEL */}
       {/* ======================================================== */}
       <div className="md:col-span-2 flex flex-col h-full bg-[#05030d] relative overflow-hidden">
-        {activeChat ? (
-          <>
-            {activeChat.isBroadcast ? (
+        <AnimatePresence mode="wait">
+          {activeChat ? (
+            <motion.div 
+              key={`chat-${activeChat.id}`}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+              className="flex flex-col h-full w-full absolute inset-0"
+            >
+              {activeChat.isBroadcast ? (
               <div className="flex items-center justify-between p-3.5 border-b border-violet-500/10 bg-[#080516] shrink-0 sticky top-0 z-10 h-16 select-none">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <button onClick={() => setActiveChatId('')} className="p-1 text-zinc-400 hover:text-white rounded-full cursor-pointer">
@@ -1602,10 +1630,7 @@ export default function MessagesView({
                   />
                   <div className="rounded-2xl p-2.5 bg-[#09071c]/80 border border-violet-500/10 text-white/90">
                     <div className="flex items-center gap-1.5 text-[9.5px] font-mono text-violet-400">
-                      <span className="relative flex h-1.5 w-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-violet-500"></span>
-                      </span>
+                      <NexoraLoader size="sm" />
                       {partnerPresenceAction === 'typing' && 'Typing...'}
                       {partnerPresenceAction === 'recording' && 'Recording audio note...'}
                       {partnerPresenceAction === 'uploading' && 'Uploading media...'}
@@ -1816,9 +1841,16 @@ export default function MessagesView({
                 </form>
               </div>
             )}
-          </>
+          </motion.div>
         ) : (
-          <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#05030d]">
+          <motion.div 
+            key="empty-state"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            className="flex-1 flex flex-col items-center justify-center p-8 bg-[#05030d] h-full w-full absolute inset-0"
+          >
             <div className="w-16 h-16 rounded-full bg-violet-600/5 border border-violet-500/15 flex items-center justify-center mx-auto text-violet-400/40 mb-4">
               <MessageSquare className="w-8 h-8 text-violet-500/30" />
             </div>
@@ -1829,8 +1861,9 @@ export default function MessagesView({
             <button className="mt-6 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer">
               Start a Conversation
             </button>
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
 
         {/* New Group Creation Modal */}
         <NewGroupModal
