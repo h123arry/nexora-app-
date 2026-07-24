@@ -91,13 +91,38 @@ export default function App() {
   const [isDiagnosticsCollapsed, setIsDiagnosticsCollapsed] = useState(false);
   const [overlayQueueCount, setOverlayQueueCount] = useState(0);
 
-  useEffect(() => {
-    const handleDiagnosticsToggle = (e: any) => {
-      setShowDiagnosticsOverlay(e.detail);
-    };
-    window.addEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
-    return () => window.removeEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
-  }, []);
+      useEffect(() => {
+  const handleDiagnosticsToggle = (e: any) => {
+    setShowDiagnosticsOverlay(e.detail);
+  };
+
+  window.addEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
+
+  return () => {
+    window.removeEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
+  };
+}, []);
+
+useEffect(() => {
+  if (!currentUser?.id) return;
+
+  setGlobalUsersMap(prev => ({
+    ...prev,
+    [currentUser.id]: currentUser
+  }));
+}, [currentUser]);
+
+useEffect(() => {
+  const handleDiagnosticsToggle = (e: any) => {
+    setShowDiagnosticsOverlay(e.detail);
+  };
+
+  window.addEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
+
+  return () => {
+    window.removeEventListener('nx-diagnostics-toggle', handleDiagnosticsToggle);
+  };
+}, []);
 
   useEffect(() => {
     if (!showDiagnosticsOverlay) return;
@@ -133,6 +158,7 @@ export default function App() {
     return () => cancelAnimationFrame(animationId);
   }, [showDiagnosticsOverlay]);
 
+<<<<<<< HEAD
   useEffect(() => {
     if (!currentUser || !currentUser.id) return;
     setGlobalUsersMap(prev => ({
@@ -140,6 +166,16 @@ export default function App() {
       [currentUser.id]: currentUser
     }));
   }, [currentUser]);
+=======
+useEffect(() => {
+  if (!currentUser?.id) return;
+
+  setGlobalUsersMap(prev => ({
+    ...prev,
+    [currentUser.id]: currentUser
+  }));
+}, [currentUser]);
+>>>>>>> 688eb68 (Finalize profile polish and global content persistence)
 
   useEffect(() => {
     signInAnonymously(auth).catch((err) => {
@@ -188,11 +224,22 @@ export default function App() {
           console.log('[App] Received follows:', dbFollows?.length || 0);
           if (dbFollows && dbFollows.length > 0) {
             localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
+<<<<<<< HEAD
             const currentUserId = auth.currentUser?.uid || currentUser?.id;
             if (currentUserId) {
               const updatedFollowing = dbFollows.filter((f: any) => f.followerId === currentUserId).map((f: any) => f.followingId);
               setFollowingIds(updatedFollowing);
             }
+=======
+const currentUserId = auth.currentUser?.uid || currentUser?.id;
+if (!currentUserId) return;
+
+const updatedFollowing = dbFollows
+  .filter((f: any) => f.followerId === currentUserId)
+  .map((f: any) => f.followingId);
+
+setFollowingIds(updatedFollowing);
+>>>>>>> 688eb68 (Finalize profile polish and global content persistence)
           }
         });
       } else {
@@ -711,7 +758,11 @@ export default function App() {
         setFollowingIds(userFollowing);
       }
     }
+<<<<<<< HEAD
   }, [currentUser]);
+=======
+}, [currentUser?.id]);
+>>>>>>> 688eb68 (Finalize profile polish and global content persistence)
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {

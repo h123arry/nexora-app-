@@ -5,75 +5,98 @@ interface LogoProps {
   glow?: boolean;
 }
 
-export default function NexoraPremiumLogo({ className = "w-10 h-10", glow = true }: LogoProps) {
+export default function NexoraPremiumLogo({
+  className = "w-10 h-10",
+  glow = true,
+}: LogoProps) {
   return (
-    <div className={`relative flex items-center justify-center ${className}`}>
-      <svg 
-        viewBox="0 0 240 240" 
-        fill="none" 
-        xmlns="http://www.w3.org/2000/svg" 
-        className="w-full h-full select-none"
-        aria-hidden="true"
+    <div className={`relative ${className}`}>
+      {glow && (
+        <div
+          className="absolute inset-0 rounded-full blur-xl opacity-50"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(139,92,246,.45) 0%, rgba(59,130,246,.25) 45%, rgba(34,211,238,0) 75%)",
+          }}
+        />
+      )}
+
+      <svg
+        viewBox="0 0 256 256"
+        xmlns="http://www.w3.org/2000/svg"
+        className="relative w-full h-full"
+        fill="none"
       >
         <defs>
-          {/* Official Premium Gradient Flow: Purple -> Pink -> Blue */}
-          <linearGradient id="nexoraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#8B5CF6" />
-            <stop offset="50%" stopColor="#D946EF" />
-            <stop offset="100%" stopColor="#3B82F6" />
+          <linearGradient
+            id="nxGradient"
+            x1="32"
+            y1="32"
+            x2="224"
+            y2="224"
+            gradientUnits="userSpaceOnUse"
+          >
+            <stop offset="0%" stopColor="#D946EF" />
+            <stop offset="35%" stopColor="#8B5CF6" />
+            <stop offset="70%" stopColor="#3B82F6" />
+            <stop offset="100%" stopColor="#22D3EE" />
           </linearGradient>
 
-          {/* 3D Glass-like volumetric reflection */}
-          <linearGradient id="glassReflection" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.7" />
-            <stop offset="20%" stopColor="#FFFFFF" stopOpacity="0.1" />
-            <stop offset="80%" stopColor="#000000" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#000000" stopOpacity="0.5" />
+          <linearGradient
+            id="nxHighlight"
+            x1="0"
+            y1="0"
+            x2="1"
+            y2="1"
+          >
+            <stop offset="0%" stopColor="white" stopOpacity=".45" />
+            <stop offset="100%" stopColor="white" stopOpacity="0" />
           </linearGradient>
         </defs>
 
-        {/* Ambient Neon Glow */}
-        {glow && (
-          <path
-            d="M 50 190 L 50 80 Q 50 50 80 80 L 160 160 Q 190 190 190 160 L 190 50"
-            fill="none"
-            stroke="url(#nexoraGrad)"
-            strokeWidth="44"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="opacity-50 blur-[14px]"
-          />
-        )}
-
-        {/* Base Gradient Ribbon */}
         <path
-          d="M 50 190 L 50 80 Q 50 50 80 80 L 160 160 Q 190 190 190 160 L 190 50"
-          fill="none"
-          stroke="url(#nexoraGrad)"
-          strokeWidth="60"
-          strokeLinecap="round"
-          strokeLinejoin="round"
+          d="
+          M52 214
+          L52 58
+          Q52 36 74 36
+          Q90 36 104 52
+
+          L168 122
+
+          Q182 138 182 156
+
+          L182 52
+
+          Q182 36 198 36
+
+          Q214 36 214 52
+
+          L214 198
+
+          Q214 220 192 220
+
+          Q174 220 160 204
+
+          L96 134
+
+          Q84 120 84 104
+
+          L84 214
+          Z
+          "
+          fill="url(#nxGradient)"
         />
 
-        {/* 3D Glass Highlight Overlay */}
         <path
-          d="M 50 190 L 50 80 Q 50 50 80 80 L 160 160 Q 190 190 190 160 L 190 50"
-          fill="none"
-          stroke="url(#glassReflection)"
-          strokeWidth="60"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Inner Core Tube Reflection (Soft specular glint) */}
-        <path
-          d="M 50 190 L 50 80 Q 50 50 80 80 L 160 160 Q 190 190 190 160 L 190 50"
-          fill="none"
-          stroke="#FFFFFF"
+          d="
+          M66 50
+          Q84 40 100 56
+          L165 126
+          "
+          stroke="url(#nxHighlight)"
           strokeWidth="10"
           strokeLinecap="round"
-          strokeLinejoin="round"
-          className="opacity-30 mix-blend-overlay"
+          opacity=".7"
         />
       </svg>
     </div>
