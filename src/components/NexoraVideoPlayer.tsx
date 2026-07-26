@@ -371,12 +371,25 @@ export default function NexoraVideoPlayer({
     }
   };
 
+  const lastSavedPosTimeRef = useRef<number>(0);
+  const lastStateTimeRef = useRef<number>(0);
+
   // periodic update to record position
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
     const time = videoRef.current.currentTime;
-    setCurrentTime(time);
-    localStorage.setItem(`nexora_vid_pos_${videoUrl}`, String(time));
+
+    // Throttle React state update to ~250ms interval to prevent 60fps re-renders
+    if (Math.abs(time - lastStateTimeRef.current) >= 0.25) {
+      lastStateTimeRef.current = time;
+      setCurrentTime(time);
+    }
+
+    // Throttle localStorage write to at most once every 4 seconds to eliminate main-thread storage locks
+    if (Math.abs(time - lastSavedPosTimeRef.current) >= 4.0) {
+      lastSavedPosTimeRef.current = time;
+      localStorage.setItem(`nexora_vid_pos_${videoUrl}`, String(time));
+    }
 
     // Reset watchCompletedRef if wrapped/replayed
     if (time < 0.5 && lastTimeRef.current > duration - 1.5 && duration > 0) {

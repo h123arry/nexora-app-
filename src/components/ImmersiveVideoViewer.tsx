@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronLeft, ChevronRight, Zap, Trash, Send, MessageSquare } from 'lucide-react';
 import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
+import NexoraImagePlayer from './NexoraImagePlayer';
 import RelativeTime from './RelativeTime';
 
 interface ImmersiveVideoViewerProps {
@@ -259,19 +260,26 @@ export default function ImmersiveVideoViewer({
           );
         })}
         
-        {!currentPost.videoUrl && (
+        {!currentPost.videoUrl && (currentPost.image || (currentPost.images && currentPost.images.length > 0)) ? (
+          <div className="w-full h-full">
+            <NexoraImagePlayer
+              post={currentPost}
+              image={currentPost.image}
+              images={currentPost.images}
+              onSpark={handleLike}
+              isProcessing={isProcessing}
+              isFollowing={isFollowing}
+              onToggleFollow={onToggleFollow ? () => onToggleFollow(currentPost.userId || currentPost.id) : undefined}
+              onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
+              isCommentsOpen={isCommentsOpen}
+              onNotInterested={handleNext}
+            />
+          </div>
+        ) : !currentPost.videoUrl ? (
           <div className="w-full p-6 text-center select-none flex flex-col items-center justify-center h-full">
-            {currentPost.image && (
-              <img 
-                src={currentPost.image} 
-                className="w-full max-h-[60vh] rounded-3xl object-cover mb-6 border border-white/10 shadow-2xl" 
-                alt="post content" 
-                referrerPolicy="no-referrer"
-              />
-            )}
             <p className="text-white text-base font-sans leading-relaxed font-bold px-4">{currentPost.content}</p>
           </div>
-        )}
+        ) : null}
 
         {/* THREADED COMMENTS DRAWER ACCORDION OVERLAY */}
         <AnimatePresence>
