@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity } from 'lucide-react';
+import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -253,6 +253,10 @@ export default function FeedView({
   const [lastAction, setLastAction] = useState<{ type: 'not_interested' | 'mute_creator' | 'hide_post'; postId: string; data: any } | null>(null);
   
   const longPressTimerRef = useRef<Record<string, any>>({});
+
+  // Header collapse / restore on scroll state
+  const [isHeaderExpanded, setIsHeaderExpanded] = useState(true);
+  const lastScrollTopRef = useRef<number>(0);
 
   const [qualityFilter, setQualityFilter] = useState(false);
   const [visibleCount, setVisibleCount] = useState(8);
@@ -804,6 +808,19 @@ export default function FeedView({
         // threshold reached! Automatically load more
         setVisibleCount(prev => Math.min(prev + 6, localPosts.length));
       }
+
+      // Scroll direction detection for header collapse/restore
+      const diff = scrollTop - lastScrollTopRef.current;
+      if (scrollTop <= 15) {
+        setIsHeaderExpanded(true);
+      } else if (diff > 8 && scrollTop > 50) {
+        // Scrolling down -> collapse top header
+        setIsHeaderExpanded(false);
+      } else if (diff < -8) {
+        // Scrolling up -> restore top header
+        setIsHeaderExpanded(true);
+      }
+      lastScrollTopRef.current = Math.max(0, scrollTop);
     };
     
     const container = scrollContainerRef.current;
@@ -1119,7 +1136,7 @@ export default function FeedView({
     const topics = ['tech', 'afrobeats', 'creative', 'football', 'web3', 'design'];
     const randomTopic = topics[Math.floor(Math.random() * topics.length)];
     const contentTemplates = [
-      `🚀 Matrix compilation level 9 reached! Seamless H.265 video rendering now fully operational in Nexora's streaming engine. Check out the beautiful custom shaders! #${randomTopic} #matrix #voh`,
+      `🚀 High-speed streaming engine update! Seamless video playback is now live on Nexora. Experience lightning-fast post discovery and interactive sparks! #${randomTopic} #nexora #tech`,
       `⚽ What a spectacular performance in today's match! Fully analyzing player telemetry data and heatmaps. Unbelievable energy from the fans tonight! #${randomTopic} #football #match`,
       `🎨 Aesthetic minimalism is the ultimate sophistication. Designing this network to support absolute layout rhythm, negative space, and custom color accents. #${randomTopic} #craft #design`,
       `🎙️ Broadcast channels are live! Streaming premium audio and video traces directly to all active subscribers. The future of decentralized social is here. #${randomTopic} #voice #streaming`,
@@ -1843,58 +1860,130 @@ export default function FeedView({
           }
         }}
         onTouchEnd={handlePullEnd}
-        className="w-full h-full overflow-y-auto scrollbar-none scroll-smooth overscroll-contain snap-y snap-mandatory relative bg-black touch-pan-y"
+        className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative bg-[#04020a] touch-pan-y"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        {/* HERO HEADER: NEXORA & Tagline (Scrolls away naturally) */}
-        <div className="px-6 pt-6 pb-5 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
-          <NexoraBranding size="md" showSubtitle={true} />
-          <button 
-            onClick={() => {
-              window.dispatchEvent(new CustomEvent('toast', { detail: '📬 Opening your Direct Messages inbox...' }));
-              window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'matrix', subTab: 'messages' } }));
-            }}
-            className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl text-violet-300 hover:text-white transition-all border border-white/10 cursor-pointer flex items-center gap-2 text-xs font-mono shadow-md"
-            title="Messages"
-          >
-            <MessageCircle className="w-4 h-4 text-violet-400" />
-            <span className="hidden sm:inline font-bold">Inbox</span>
-          </button>
-        </div>
-
-        {/* STICKY FEED TABS BAR (Pins to top when scrolled past hero header) */}
-        <div className="sticky top-0 z-30 bg-[#06040f]/95 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between shadow-[0_4px_20px_rgba(0,0,0,0.8)]">
-          <div className="flex items-center gap-4 md:gap-6 overflow-x-auto scrollbar-none max-w-full">
-            {(['for_you', 'following', 'friends', 'trending', 'local'] as const).map(tab => {
-              const isActive = feedTab === tab;
+        {/* STAGE 1 — LIGHTWEIGHT FLOATING HEADER */}
+        <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
+          {/* Left: Feed Categories (Horizontally scrollable) */}
+          <div className="flex items-center gap-6 overflow-x-auto scrollbar-none pr-2">
+            {([
+              { id: 'following', label: 'Following' },
+              { id: 'friends', label: 'Friends' },
+              { id: 'for_you', label: 'For You' },
+              { id: 'trending', label: 'Trending' },
+              { id: 'local', label: 'Local' }
+            ] as const).map(cat => {
+              const isActive = feedTab === cat.id;
               return (
                 <button
-                  key={tab}
+                  key={cat.id}
                   onClick={() => {
-                    setFeedTab(tab);
+                    setFeedTab(cat.id as any);
                     setVisibleCount(8);
                   }}
-                  className={`relative text-center pb-1.5 px-1 font-sans text-xs font-extrabold uppercase tracking-wider transition-all duration-250 cursor-pointer whitespace-nowrap ${
-                    isActive ? 'text-white text-shadow-sm scale-105' : 'text-zinc-400 hover:text-zinc-200'
+                  className={`relative pb-1 text-sm font-sans transition-all duration-200 cursor-pointer whitespace-nowrap ${
+                    isActive ? 'text-white font-bold' : 'text-zinc-400 hover:text-zinc-200 font-normal'
                   }`}
                 >
+                  <span>{cat.label}</span>
                   {isActive && (
                     <motion.div
                       layoutId="activeFeedTab"
-                      className="absolute bottom-0 left-0 right-0 h-[3px] bg-linear-to-r from-violet-500 via-pink-500 to-violet-500 rounded-full"
-                      transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                      className="absolute bottom-0 inset-x-0 h-[2px] bg-white rounded-full"
+                      transition={{ type: "spring", stiffness: 400, damping: 32 }}
                     />
                   )}
-                  <span className="relative z-10">
-                    {tab === 'for_you' && 'For You'}
-                    {tab === 'following' && 'Following'}
-                    {tab === 'friends' && 'Friends'}
-                    {tab === 'trending' && 'Trending'}
-                    {tab === 'local' && 'Local'}
-                  </span>
                 </button>
               );
             })}
+          </div>
+
+          {/* Right: Exactly two icons (Bell -> Heart) without background circles or boxed containers */}
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'activity' } }));
+              }}
+              className="relative p-2 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none"
+              title="Notifications"
+            >
+              <Bell className="w-5 h-5 stroke-[1.5] text-zinc-300" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-violet-500 rounded-full" />
+            </button>
+
+            <button
+              onClick={() => {
+                window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'activity' } }));
+              }}
+              className="relative p-2 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none"
+              title="Activity & Likes"
+            >
+              <Heart className="w-5 h-5 stroke-[1.5] text-zinc-300 fill-none" />
+              <span className="absolute top-1 right-1 w-2 h-2 bg-violet-500 rounded-full" />
+            </button>
+          </div>
+        </div>
+
+        {/* INLINE CREATE POST COMPOSER */}
+        <div className="mx-3 sm:mx-6 my-3.5 p-3.5 sm:p-4 rounded-2xl bg-[#0b0821]/90 border border-white/10 hover:border-violet-500/30 transition-all shadow-md">
+          <div className="flex items-center gap-3">
+            <img
+              src={currentUser.avatar}
+              alt={currentUser.name}
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/20 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+              onClick={() => onViewProfile?.(currentUser.id)}
+            />
+            <button
+              onClick={() => setComposerOpen(true)}
+              className="flex-1 text-left py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-400 hover:text-zinc-200 text-xs font-sans transition-all cursor-pointer flex items-center justify-between group"
+            >
+              <span>What's on your mind? Share updates, pulse news, or opportunities...</span>
+              <Sparkles className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform shrink-0 ml-2" />
+            </button>
+          </div>
+          <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/5 text-xs text-zinc-400">
+            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+              <button
+                onClick={() => {
+                  setComposerCategory('general');
+                  setComposerOpen(true);
+                }}
+                className="flex items-center gap-1.5 text-zinc-300 hover:text-violet-300 transition-colors text-[11px] font-medium cursor-pointer"
+              >
+                <span className="text-violet-400 font-bold">🖼️</span>
+                <span>Media / Photo</span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  setComposerCategory('pulse');
+                  setComposerOpen(true);
+                }}
+                className="flex items-center gap-1.5 text-zinc-300 hover:text-cyan-300 transition-colors text-[11px] font-medium cursor-pointer"
+              >
+                <span className="text-cyan-400 font-bold">🌍</span>
+                <span>Pulse</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setComposerCategory('opportunity');
+                  setComposerOpen(true);
+                }}
+                className="flex items-center gap-1.5 text-zinc-300 hover:text-pink-300 transition-colors text-[11px] font-medium cursor-pointer"
+              >
+                <span className="text-pink-400 font-bold">🚀</span>
+                <span>Opportunity</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setComposerOpen(true)}
+              className="px-3.5 py-1.5 bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-lg text-[11px] font-sans font-bold cursor-pointer transition-all shadow-sm"
+            >
+              Post ⚡
+            </button>
           </div>
         </div>
 
@@ -1908,15 +1997,13 @@ export default function FeedView({
               className="w-full overflow-hidden flex flex-col items-center justify-center bg-violet-950/20 border-b border-violet-500/10 shrink-0 select-none"
             >
               <div className="flex items-center gap-2 text-violet-300 font-mono text-[10px] uppercase tracking-widest font-extrabold py-2">
-                <div className="w-5 h-5 rounded-full bg-linear-to-tr from-violet-600 to-pink-500 flex items-center justify-center animate-spin">
-                  <Star className="w-3 h-3 text-white" />
-                </div>
+                <NexoraLoader size="xs" />
                 <span>
                   {pullState === 'refreshing' 
-                    ? 'Synergizing Feed Matrix...' 
+                    ? 'Updating Nexora Feed...' 
                     : pullY > 50 
-                      ? 'Release to Sync Telemetry' 
-                      : 'Pull to Recalibrate'}
+                      ? 'Release to Refresh' 
+                      : 'Pull to Refresh'}
                 </span>
               </div>
               <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden mb-2">
@@ -2027,12 +2114,12 @@ export default function FeedView({
                     setIsRefreshing(false);
                     setPullState('idle');
                     setPullY(0);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed recalibrated and filled with fresh telemetry!' }));
+                    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed refreshed with fresh updates!' }));
                   }, 1200);
                 }}
                 className="px-4 py-2.5 bg-[#0c0823] hover:bg-violet-950 text-violet-300 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all"
               >
-                Recalibrate Feed 🔄
+                Refresh Feed 🔄
               </button>
               <button 
                 onClick={() => {
@@ -2065,7 +2152,7 @@ export default function FeedView({
                 <span className="text-3xl select-none">👥</span>
                 <h4 className="text-sm font-sans font-bold text-violet-100">No members matched your search query.</h4>
                 <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-                  You're just getting started. Follow people and grow your network. Try searching for "voh", "sarah" or "alex" to follow top creators.
+                  You're just getting started. Follow people and grow your network. Try searching for "sarah", "alex" or "nexora" to follow top creators.
                 </p>
               </div>
             );
@@ -2126,33 +2213,10 @@ export default function FeedView({
           return null;
         })()}
 
-        {/* SKELETON FEED CARDS ON REFRESH */}
+        {/* UNIFIED FEED REFRESH LOADING STATE */}
         {isRefreshing && (
-          <div className="space-y-4 text-left">
-            <div className="flex justify-center pt-2 pb-4">
-              <NexoraLoader size="md" center={true} />
-            </div>
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="p-5 rounded-3xl bg-[#0b091e]/60 border border-violet-500/10 space-y-4 animate-pulse">
-                <div className="flex gap-3">
-                  <div className="w-10 h-10 rounded-full bg-violet-950/40 shrink-0" />
-                  <div className="space-y-2 flex-1 pt-1">
-                    <div className="h-3 w-1/3 bg-violet-900/30 rounded-lg" />
-                    <div className="h-2.5 w-1/4 bg-violet-900/25 rounded-md" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="h-3 w-full bg-violet-900/25 rounded-md" />
-                  <div className="h-3 w-5/6 bg-violet-900/25 rounded-md" />
-                  <div className="h-3 w-2/3 bg-violet-900/20 rounded-md" />
-                </div>
-                <div className="flex justify-between items-center pt-3 border-t border-white/5">
-                  <div className="h-3.5 w-10 bg-violet-900/35 rounded-md" />
-                  <div className="h-3.5 w-12 bg-violet-900/35 rounded-md" />
-                  <div className="h-3.5 w-8 bg-violet-900/35 rounded-md" />
-                </div>
-              </div>
-            ))}
+          <div className="py-20 flex flex-col items-center justify-center text-center space-y-3">
+            <NexoraLoader size="lg" center={true} label="Refreshing feed updates..." />
           </div>
         )}
 
@@ -2250,7 +2314,7 @@ export default function FeedView({
                       navigator.vibrate(20);
                     }
                   }}
-                  className="snap-start snap-always w-full h-full bg-black overflow-hidden text-left relative flex flex-col justify-between shrink-0"
+                  className="mx-3 sm:mx-6 my-4 rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl relative min-h-[520px] max-h-[660px] flex flex-col justify-between shrink-0"
                 >
                   {/* Floating hearts overlay */}
                   {floatingHearts.map(heart => (
@@ -2483,12 +2547,12 @@ export default function FeedView({
                     navigator.vibrate(20);
                   }
                 }}
-                className={`snap-start snap-always w-full h-full relative overflow-hidden group text-left flex flex-col justify-between shrink-0 bg-linear-to-b ${
+                className={`mx-3 sm:mx-6 my-3.5 p-4 sm:p-5 rounded-2xl border transition-all duration-200 shadow-xl group text-left relative overflow-hidden space-y-3.5 ${
                   post.isBroadcastPost 
-                    ? 'from-[#171008] via-[#0b0704] to-black' 
+                    ? 'bg-gradient-to-b from-[#181108] via-[#0c0804] to-[#060402] border-amber-500/25 hover:border-amber-500/40' 
                     : post.userId === 'user-0' 
-                      ? 'from-[#0d0926] via-[#050414] to-black' 
-                      : 'from-[#0b091e] via-[#04030d] to-black'
+                      ? 'bg-gradient-to-b from-[#0e0a29] via-[#060417] to-[#03020c] border-violet-500/30 hover:border-violet-500/50' 
+                      : 'bg-[#09061a]/95 border-white/10 hover:border-violet-500/25'
                 }`}
               >
                 {/* Floating hearts overlay */}
@@ -2504,13 +2568,6 @@ export default function FeedView({
                     ❤️
                   </motion.div>
                 ))}
-
-                {/* Scrollable Container with Top Padding for Navigation */}
-                <div 
-                  className="w-full h-full overflow-y-auto custom-scrollbar px-2 md:px-4 pt-28 md:pt-24 pb-12 flex flex-col justify-between gap-6 touch-pan-y"
-                  style={{ WebkitOverflowScrolling: 'touch' }}
-                >
-                  <div>
                     {/* Future scheduled posts warning banner (Only visible to the creator) */}
                 {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (
                   <div className="mb-4 p-3 bg-violet-600/15 border border-violet-500/30 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-violet-300">
@@ -2534,7 +2591,7 @@ export default function FeedView({
                   <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"></span>
                   {(() => {
                     if (post.userId === 'user-0') return '⭐ Highlight: Recommended by Founder';
-                    if (post.username === 'voh_ai') return '🧠 Intelligence: Recommended by VOH AI';
+                    if (post.username === 'voh_ai' || post.username === 'nexora_ai') return '🧠 Intelligence: Recommended by Nexora AI';
                     if (post.username === 'nexora_official') return '🌌 System: Nexora Official Update';
                     if (post.isBroadcastPost) return '📣 Broadcast channel propagation';
                     if (followingIds.includes(post.userId)) return '👥 Followed Creator';
@@ -3122,7 +3179,7 @@ export default function FeedView({
                         className="p-3 rounded-xl bg-violet-950/40 border border-violet-500/20 text-[10.5px] leading-relaxed text-violet-200/90 font-sans"
                       >
                         <p className="font-mono text-[9px] uppercase text-pink-400 font-black tracking-wider flex items-center gap-1 mb-1">
-                          🧠 VOH AI Interactive Insight
+                          🧠 Nexora AI Interactive Insight
                         </p>
                         "Your vote has been counted successfully! Supporting community-driven discussions and participating in polls helps make Nexora a better, more interactive environment. Your reputation is updated (+10)."
                       </motion.div>
@@ -3155,10 +3212,10 @@ export default function FeedView({
                     )}
 
                     <button 
-                      onClick={() => alert(`Sent connection request to ${post.name} via VOH AI!`)}
+                      onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: `🤝 Connection request sent to ${post.name} via Nexora AI!` }))}
                       className="w-full py-2 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white font-mono font-black text-xs uppercase rounded-xl transition-all tracking-wider shadow-lg shadow-violet-600/20 cursor-pointer"
                     >
-                      Connect via VOH AI 🤝
+                      Connect via Nexora AI 🤝
                     </button>
                   </div>
                 )}
@@ -3192,7 +3249,7 @@ export default function FeedView({
                     <div className="flex flex-wrap items-center gap-2.5">
                       {[
                         { emoji: '🔥', label: 'Inspirational' },
-                        { emoji: '🙌', label: 'Praise VOH' },
+                        { emoji: '🙌', label: 'Applaud' },
                         { emoji: '⚡', label: 'High Power' },
                         { emoji: '🏆', label: 'Milestone' }
                       ].map((reactOption) => {
@@ -3322,8 +3379,6 @@ export default function FeedView({
                     </div>
                   </div>
                 )}
-                  </div>
-                </div>
 
                 {/* 5. THREADED COMMENTS DRAWER ACCORDION (Floating bottom sheet drawer style) */}
                 <AnimatePresence>
@@ -3473,6 +3528,28 @@ export default function FeedView({
           );
         })}
 
+        {/* Infinite Scroll / Pagination Loading State */}
+        {visibleCount < orderedPosts.length && (
+          <div className="py-8 flex flex-col items-center justify-center space-y-2">
+            <NexoraLoader size="md" center={true} />
+            <span className="text-[10px] font-mono font-bold text-violet-400/80 uppercase tracking-widest">
+              Loading more Nexora posts...
+            </span>
+          </div>
+        )}
+
+        {visibleCount >= orderedPosts.length && orderedPosts.length > 0 && (
+          <div className="py-8 text-center space-y-1.5 opacity-80">
+            <div className="w-2 h-2 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full mx-auto animate-pulse" />
+            <p className="text-[11px] font-mono font-extrabold text-violet-300 uppercase tracking-widest">
+              You're all caught up on Nexora
+            </p>
+            <p className="text-[10px] font-sans text-zinc-500">
+              Check back soon for new updates or share your own post.
+            </p>
+          </div>
+        )}
+
         {/* Clean spacing at the bottom of the feed for uninterrupted scrolling */}
         <div className="h-32 pointer-events-none" />
       </div>
@@ -3521,7 +3598,7 @@ export default function FeedView({
               <div className="space-y-1">
                 <textarea
                   rows={4}
-                  placeholder={`Cast your diagnostic updates... Type #tags as reference loops...`}
+                  placeholder="What's on your mind? Share an update, media, or opportunity..."
                   value={composerText}
                   onChange={(e) => setComposerText(e.target.value)}
                   className="w-full bg-slate-950/50 border border-white/5 focus:border-violet-500/20 text-xs text-white rounded-xl p-3 focus:outline-hidden placeholder:text-violet-400/30 resize-none font-sans"

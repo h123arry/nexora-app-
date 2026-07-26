@@ -1769,9 +1769,9 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   <div className="border-t border-white/5 pt-3 mt-4 flex items-center justify-between text-[10px] font-mono text-violet-400/80">
                     <span className="flex items-center gap-1.5">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span>NEXORA CORE ENGINES ON-CHAIN HEALTH: READY (100%)</span>
+                      <span>NEXORA PLATFORM HEALTH: READY (100%)</span>
                     </span>
-                    <span>VERSION 1.0.0</span>
+                    <span>VOH AI ACTIVE</span>
                   </div>
 
                 </div>

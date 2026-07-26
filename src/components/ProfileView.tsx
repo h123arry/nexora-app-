@@ -1073,11 +1073,11 @@ export default function ProfileView({
                       whileHover={{ scale: 1.02, y: -0.5, boxShadow: "0 0 15px rgba(139, 92, 246, 0.25)" }}
                       whileTap={{ scale: 0.98 }}
                       onClick={() => onOpenVohAi?.()} 
-                      className="px-3 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 rounded-xl text-[11px] font-bold text-violet-200 border border-violet-500/30 transition-all flex items-center gap-1.5 cursor-pointer h-8"
+                      className="px-3.5 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 rounded-xl text-[11px] font-bold text-violet-200 border border-violet-500/30 transition-all flex items-center gap-1.5 cursor-pointer h-8"
                       title="VOH AI Command Center"
                     >
                       <VohIcon size={15} animated variant="brand" />
-                      <span>AI Node</span>
+                      <span>VOH AI</span>
                     </motion.button>
                   </div>
                 ) : (
@@ -2489,13 +2489,13 @@ export default function ProfileView({
                           <NexoraBranding size="sm" showSubtitle={true} className="mb-2" />
                           <div className="space-y-2 text-[10px] leading-relaxed text-zinc-300">
                             <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">APP:</span> <span>Nexora</span></p>
-                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">VERSION:</span> <span>1.8.4</span></p>
+                            <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">PLATFORM:</span> <span>Live Production</span></p>
                             <p className="flex justify-between pb-1"><span className="text-zinc-500">REGION:</span> <span>Global</span></p>
                           </div>
                           
                           <div className="p-3 bg-black/30 rounded-xl border border-white/5 space-y-1.5 text-[9px] text-zinc-400 font-sans leading-relaxed">
-                            <p className="font-bold text-zinc-300">Terms of Service Calibration</p>
-                            <p>By connecting a digital node, you consent to cryptographically secure and sandboxed content distribution policies throughout the Nigerian mesh network nodes.</p>
+                            <p className="font-bold text-zinc-300">Terms of Service</p>
+                            <p>By connecting to Nexora, you agree to our secure content distribution guidelines and community standards designed to protect creators and members worldwide.</p>
                           </div>
                         </div>
                       </div>

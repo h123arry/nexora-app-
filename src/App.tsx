@@ -3031,7 +3031,7 @@ export default function App() {
                 <div className="space-y-1">
                   <div className="flex items-center justify-center gap-1.5 text-[9px] text-[#8B5CF6] font-mono tracking-widest uppercase font-extrabold">
                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
-                    <span>Fast Web Version Ready</span>
+                    <span>Fast Web App Ready</span>
                   </div>
                   <h3 className="text-base font-black font-sans text-white uppercase tracking-wider leading-tight">
                     Install Nexora
