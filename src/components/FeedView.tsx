@@ -178,9 +178,9 @@ export default function FeedView({
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
-  const [feedTab, setFeedTab] = useState<'posts' | 'reels' | 'following' | 'friends' | 'trending'>(() => {
+  const [feedTab, setFeedTab] = useState<'posts' | 'following' | 'friends' | 'trending' | 'reels'>(() => {
     const saved = localStorage.getItem('nexora_feed_tab');
-    if (saved === 'communities' || saved === 'polls' || saved === 'contributions' || saved === 'broadcast' || saved === 'pulse' || saved === 'for_you' || saved === 'local') return 'posts';
+    if (!saved || ['communities', 'polls', 'contributions', 'broadcast', 'pulse', 'for_you', 'forYou', 'local'].includes(saved)) return 'posts';
     return (saved as any) || 'posts';
   });
 
@@ -1840,16 +1840,16 @@ export default function FeedView({
         className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative bg-[#04020a] touch-pan-y"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        {/* STAGE 1 — LIGHTWEIGHT FLOATING HEADER */}
-        <div className="sticky top-0 z-30 bg-black/90 backdrop-blur-md border-b border-white/10 px-4 py-3 flex items-center justify-between">
-          {/* Left: Feed Categories (Horizontally scrollable) */}
-          <div className="flex items-center gap-6 overflow-x-auto scrollbar-none pr-2">
+        {/* STAGE 1 — HOME FEED NAVIGATION HEADER */}
+        <div className="sticky top-0 z-30 bg-[#04020a]/95 backdrop-blur-xl border-b border-white/10 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between min-h-[64px]">
+          {/* Left: Feed Categories (Exact Order: Posts, Following, Friends, Trending, Reels) */}
+          <div className="flex items-center gap-6 sm:gap-8 overflow-x-auto scrollbar-none pr-3 py-1">
             {([
               { id: 'posts', label: 'Posts' },
-              { id: 'reels', label: 'Reels' },
               { id: 'following', label: 'Following' },
               { id: 'friends', label: 'Friends' },
-              { id: 'trending', label: 'Trending' }
+              { id: 'trending', label: 'Trending' },
+              { id: 'reels', label: 'Reels' }
             ] as const).map(cat => {
               const isActive = feedTab === cat.id;
               return (
@@ -1859,15 +1859,15 @@ export default function FeedView({
                     setFeedTab(cat.id as any);
                     setVisibleCount(8);
                   }}
-                  className={`relative pb-1 text-sm font-sans transition-all duration-200 cursor-pointer whitespace-nowrap ${
-                    isActive ? 'text-white font-bold' : 'text-zinc-400 hover:text-zinc-200 font-normal'
+                  className={`relative py-2.5 px-1 text-sm sm:text-base font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
+                    isActive ? 'text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200 font-medium'
                   }`}
                 >
                   <span>{cat.label}</span>
                   {isActive && (
                     <motion.div
                       layoutId="activeFeedTab"
-                      className="absolute bottom-0 inset-x-0 h-[2px] bg-white rounded-full"
+                      className="absolute bottom-0 inset-x-0 h-[2.5px] bg-linear-to-r from-violet-500 to-pink-500 rounded-full"
                       transition={{ type: "spring", stiffness: 400, damping: 32 }}
                     />
                   )}
@@ -1876,28 +1876,28 @@ export default function FeedView({
             })}
           </div>
 
-          {/* Right: Exactly two icons (Bell -> Heart) without background circles or boxed containers */}
-          <div className="flex items-center gap-3 shrink-0">
+          {/* Right: Exactly two icons (Bell -> Heart) */}
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'activity' } }));
               }}
-              className="relative p-2 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none"
+              className="relative p-2.5 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none min-h-[44px] min-w-[44px]"
               title="Notifications"
             >
-              <Bell className="w-5 h-5 stroke-[1.5] text-zinc-300" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-violet-500 rounded-full" />
+              <Bell className="w-5 h-5 stroke-[1.75] text-zinc-300" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full" />
             </button>
 
             <button
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'activity' } }));
               }}
-              className="relative p-2 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none"
+              className="relative p-2.5 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none min-h-[44px] min-w-[44px]"
               title="Activity & Likes"
             >
-              <Heart className="w-5 h-5 stroke-[1.5] text-zinc-300 fill-none" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-violet-500 rounded-full" />
+              <Heart className="w-5 h-5 stroke-[1.75] text-zinc-300 fill-none" />
+              <span className="absolute top-2 right-2 w-2 h-2 bg-violet-500 rounded-full" />
             </button>
           </div>
         </div>
@@ -2232,240 +2232,7 @@ export default function FeedView({
             preloadMode = 'none'; // Unneeded videos have zero preload to conserve data
           }
 
-          if (post.videoUrl) {
-            return (
-              <React.Fragment key={post.id}>
-                {/* 🟣 IMMERSIVE VIDEO CARD */}
-                <motion.div
-                  id={`post-${post.id}`}
-                  data-post-id={post.id}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.3 }}
-                  onContextMenu={(e) => {
-                    e.preventDefault();
-                    setContextualMenuPost(post);
-                  }}
-                  onTouchStart={() => {
-                    longPressTimerRef.current[post.id] = setTimeout(() => {
-                      setContextualMenuPost(post);
-                      if (navigator.vibrate) navigator.vibrate(40);
-                    }, 600);
-                  }}
-                  onTouchEnd={() => {
-                    if (longPressTimerRef.current[post.id]) {
-                      clearTimeout(longPressTimerRef.current[post.id]);
-                      delete longPressTimerRef.current[post.id];
-                    }
-                  }}
-                  onDoubleClick={(e) => {
-                    e.preventDefault();
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    
-                    // Add heart animation
-                    const heartId = `${Date.now()}-${Math.random()}`;
-                    setFloatingHearts(prev => [...prev, { id: heartId, x, y }]);
-                    setTimeout(() => {
-                      setFloatingHearts(prev => prev.filter(h => h.id !== heartId));
-                    }, 1000);
-                    
-                    // Trigger Spark like
-                    if (!post.isLikedByUser) {
-                      handleSpark(post.id);
-                    } else if (navigator.vibrate) {
-                      navigator.vibrate(20);
-                    }
-                  }}
-                  className="mx-3 sm:mx-6 my-4 rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl relative min-h-[520px] max-h-[660px] flex flex-col justify-between shrink-0"
-                >
-                  {/* Floating hearts overlay */}
-                  {floatingHearts.map(heart => (
-                    <motion.div
-                      key={heart.id}
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: [0, 1.5, 1.2, 1], opacity: [0, 1, 1, 0], y: -90, rotate: (Math.random() - 0.5) * 30 }}
-                      transition={{ duration: 0.8, ease: "easeOut" }}
-                      style={{ left: heart.x, top: heart.y }}
-                      className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50 text-pink-500 text-5xl filter drop-shadow-[0_0_15px_rgba(244,63,94,0.6)]"
-                    >
-                      ❤️
-                    </motion.div>
-                  ))}
 
-                  {/* Outer edge-to-edge Video Container */}
-                  <div className="relative w-full h-full overflow-hidden bg-black flex-1 min-h-0">
-                    <NexoraVideoPlayer
-                      post={post}
-                      videoUrl={post.videoUrl}
-                      onOpenFullscreen={() => setActiveVideoFullscreen(post)}
-                      onSpark={() => handleSpark(post.id)}
-                      isActive={activePostId === post.id}
-                      preloadMode={preloadMode}
-                      isReleased={isReleased}
-                      shouldPreload={shouldPreload}
-                      isFollowing={followingIds.includes(post.userId || '')}
-                      onToggleFollow={() => onToggleFollow?.(post.userId || '')}
-                      onCommentToggle={() => setActiveCommentsPostId(activeCommentsPostId === post.id ? null : post.id)}
-                      isCommentsOpen={activeCommentsPostId === post.id}
-                      onNotInterested={() => {
-                        setMutedUserIds(prev => [...prev, post.userId || '']);
-                        window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Not interested. Creator muted.' }));
-                      }}
-                      onViewProfile={(userId) => onViewProfile?.(userId)}
-                    />
-                  </div>
-
-                  {/* Floating Comments Bottom Sheet Overlay */}
-                  <AnimatePresence>
-                    {isCommentsOpen && (
-                      <motion.div
-                        initial={{ y: "100%", opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        exit={{ y: "100%", opacity: 0 }}
-                        transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                        className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-xl border-t border-violet-500/20 z-40 flex flex-col p-5 shadow-2xl overflow-hidden"
-                      >
-                        {/* Header of Comments drawer */}
-                        <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
-                          <span className="text-[10px] font-mono tracking-widest text-violet-400 font-extrabold uppercase flex items-center gap-1.5">
-                            💬 Comments ({post.comments.length})
-                          </span>
-                          <button
-                            onClick={() => setActiveCommentsPostId(null)}
-                            className="p-1 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {/* Comments stream scroll */}
-                        <div 
-                          className="space-y-3.5 flex-1 overflow-y-auto pr-1 mb-4 custom-scrollbar touch-pan-y"
-                          style={{ WebkitOverflowScrolling: 'touch' }}
-                        >
-                          {post.comments.length === 0 && (
-                            <p className="text-[11px] font-mono text-violet-300/40 italic py-2 text-center">
-                              No comments yet. Start the conversation!
-                            </p>
-                          )}
-                          {post.comments.map((c, commentIndex) => (
-                            <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
-                              <div className="flex items-start justify-between gap-2 text-xs">
-                                <div className="flex gap-2">
-                                  <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
-                                  <div>
-                                    <span className="font-sans font-bold text-violet-200">{c.name}</span>
-                                    <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                  <button 
-                                    onClick={() => handleSparkComment(post.id, c.id)}
-                                    className={`flex items-center gap-1 font-mono text-[10px] hover:text-pink-400 ${c.isLikedByUser ? 'text-pink-400' : 'text-violet-400/50'}`}
-                                  >
-                                    <Zap className="w-3 h-3 fill-current" />
-                                    <span>{c.likes}</span>
-                                  </button>
-                                  {(c.username === currentUser.username || post.userId === currentUser.id) && (
-                                    <button
-                                      onClick={() => {
-                                        if (confirm('Delete this comment?')) {
-                                          window.dispatchEvent(new CustomEvent('nexora-delete-comment', { detail: { postId: post.id, commentIndex } }));
-                                        }
-                                      }}
-                                      className="p-1 text-red-400 hover:text-red-300 transition-colors rounded-md hover:bg-white/5 cursor-pointer animate-fade-in"
-                                      title="Delete comment"
-                                    >
-                                      <Trash className="w-3 h-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                              
-                              <p className="text-xs text-slate-200 pl-9 font-sans">{c.content}</p>
-
-                              {/* Standard Threaded/Nested Replies */}
-                              {c.replies && c.replies.length > 0 && (
-                                <div className="pl-9 space-y-2.5 pt-1.5 border-l border-violet-500/10 ml-3.5">
-                                  {c.replies.map(rep => (
-                                    <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
-                                      <div className="flex items-center gap-2 mb-1">
-                                        <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
-                                        <div>
-                                          <span className="font-sans font-black text-violet-200 text-[11px]">{rep.name}</span>
-                                          <span className="text-[9px] font-mono text-violet-400/50 block">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
-                                        </div>
-                                      </div>
-                                      <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Reply compose activator */}
-                              <div className="pl-9">
-                                {activeReplyFieldId === c.id ? (
-                                  <div className="flex gap-2 mt-2">
-                                    <input 
-                                      type="text"
-                                      placeholder="Write nested thread reply..."
-                                      value={replyInputs[c.id] || ''}
-                                      onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
-                                      onKeyDown={(e) => { if(e.key === 'Enter') handleAddReplySubmit(post.id, c.id); }}
-                                      className="flex-1 bg-slate-900 border border-violet-500/15 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
-                                    />
-                                    <button 
-                                      onClick={() => handleAddReplySubmit(post.id, c.id)}
-                                      className="bg-violet-600 hover:bg-violet-500 p-1.5 rounded-xl text-white cursor-pointer"
-                                    >
-                                      <Send className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button 
-                                      onClick={() => setActiveReplyFieldId(null)}
-                                      className="text-violet-400 text-xs hover:text-white"
-                                    >
-                                      Cancel
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button 
-                                    onClick={() => setActiveReplyFieldId(c.id)}
-                                    className="text-xs font-mono text-violet-400 hover:text-white flex items-center gap-1 mt-1 cursor-pointer"
-                                  >
-                                    Reply to Thread 💬
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Main comment form */}
-                        <div className="flex items-center gap-2 pt-2 border-t border-white/5 shrink-0">
-                          <input 
-                            type="text" 
-                            placeholder="Write your comment..."
-                            value={commentInputs[post.id] || ''}
-                            onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                            onKeyDown={(e) => { if(e.key==='Enter') handleAddCommentSubmit(post.id); }}
-                            className="flex-1 bg-slate-950/60 border border-white/5 focus:border-violet-500/20 text-xs text-white placeholder:text-violet-400/40 py-2.5 px-4 rounded-xl focus:outline-hidden"
-                          />
-                          <button 
-                            onClick={() => handleAddCommentSubmit(post.id)}
-                            className="p-3 bg-violet-600 hover:bg-violet-550 rounded-xl text-white transition-colors cursor-pointer"
-                          >
-                            <Send className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              </React.Fragment>
-            );
-          }
 
           return (
             <React.Fragment key={post.id}>
@@ -3233,114 +3000,104 @@ export default function FeedView({
                     </div>
                   </div>
                 ) : (
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-white/5 pt-3 text-violet-300/70 text-xs text-left">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      {/* Sparks action instead of likes */}
-                      <motion.button
-                        whileTap={{ scale: 0.85 }}
-                        whileHover={{ scale: 1.05 }}
-                        onClick={() => handleSpark(post.id)}
-                        className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-300 cursor-pointer border text-[11px] overflow-hidden ${
-                          post.isLikedByUser 
-                            ? 'bg-pink-500/15 border-pink-500/40 text-pink-400 shadow-[0_0_15px_rgba(244,63,94,0.2)] font-bold' 
-                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
-                        }`}
-                      >
-                        <AnimatePresence>
-                          {post.isLikedByUser && (
-                            <motion.div 
-                              initial={{ scale: 0, opacity: 0 }}
-                              animate={{ scale: [0, 1.5, 1], opacity: [0, 1, 0] }}
-                              transition={{ duration: 0.5 }}
-                              className="absolute inset-0 bg-pink-400/20 rounded-full"
-                            />
-                          )}
-                        </AnimatePresence>
-                        <motion.div
-                          animate={post.isLikedByUser ? { scale: [1, 1.4, 1], rotate: [0, 15, -10, 0] } : {}}
-                          transition={{ type: 'spring', stiffness: 400, damping: 10 }}
-                        >
-                          <Zap className={`w-3.5 h-3.5 transition-colors duration-300 ${
-                            post.isLikedByUser ? 'fill-pink-500 text-pink-400 drop-shadow-[0_0_8px_#f43f5e]' : 'text-pink-400/80'
-                          }`} />
-                        </motion.div>
-                        <span className="font-mono relative z-10">{post.likes}</span>
-                      </motion.button>
+                  <div className="flex items-center justify-between gap-1 sm:gap-2 border-t border-white/5 pt-3.5 mt-2 text-violet-300/80 text-xs">
+                    {/* 1. Spark (Zap) */}
+                    <motion.button
+                      whileTap={{ scale: 0.85 }}
+                      whileHover={{ scale: 1.05 }}
+                      onClick={() => handleSpark(post.id)}
+                      className={`relative flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-300 cursor-pointer border text-xs overflow-hidden ${
+                        post.isLikedByUser 
+                          ? 'bg-pink-500/15 border-pink-500/40 text-pink-400 font-bold' 
+                          : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
+                      }`}
+                      title="Spark"
+                    >
+                      <AnimatePresence>
+                        {post.isLikedByUser && (
+                          <motion.div 
+                            initial={{ scale: 0, opacity: 0 }}
+                            animate={{ scale: [0, 1.5, 1], opacity: [0, 1, 0] }}
+                            transition={{ duration: 0.5 }}
+                            className="absolute inset-0 bg-pink-400/20 rounded-full"
+                          />
+                        )}
+                      </AnimatePresence>
+                      <Zap className={`w-3.5 h-3.5 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400' : 'text-pink-400/80'}`} />
+                      <span className="font-mono text-[11px] relative z-10">{post.likes}</span>
+                    </motion.button>
 
-                      {/* Comments expand button */}
-                      <motion.button
-                        whileTap={{ scale: 0.92, y: 0.5 }}
-                        whileHover={{ scale: 1.04 }}
-                        onClick={() => setActiveCommentsPostId(isCommentsOpen ? null : post.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-[11px] ${
-                          isCommentsOpen 
-                            ? 'bg-violet-500/20 border-violet-500/30 text-violet-300 font-bold' 
-                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
-                        }`}
-                      >
-                        <span className="text-violet-400 font-bold text-sm">💬</span>
-                        <span>{post.comments.length}</span>
-                      </motion.button>
+                    {/* 2. Comment */}
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.04 }}
+                      onClick={() => setActiveCommentsPostId(isCommentsOpen ? null : post.id)}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-xs ${
+                        isCommentsOpen 
+                          ? 'bg-violet-500/20 border-violet-500/30 text-violet-300 font-bold' 
+                          : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
+                      }`}
+                      title="Comment"
+                    >
+                      <MessageCircle className="w-3.5 h-3.5 text-violet-400" />
+                      <span className="font-mono text-[11px]">{post.comments.length}</span>
+                    </motion.button>
 
-                      {/* Repost button */}
-                      <motion.button
-                        whileTap={{ scale: 0.92, y: 0.5 }}
-                        whileHover={{ scale: 1.04 }}
-                        onClick={() => {
+                    {/* 3. Repost */}
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.04 }}
+                      onClick={() => {
+                        setLocalPosts(prev => prev.map(p => {
+                          if (p.id === post.id) return { ...p, shares: p.shares + 1 };
+                          return p;
+                        }));
+                        if (onSharePost) onSharePost(post.id);
+                        window.dispatchEvent(new CustomEvent('toast', { detail: "🔁 Post reposted! (+5 Reputation Points)" }));
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-200 cursor-pointer text-xs text-violet-300/90"
+                      title="Repost"
+                    >
+                      <Repeat className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="font-mono text-[11px]">{post.shares}</span>
+                    </motion.button>
+
+                    {/* 4. Share */}
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.04 }}
+                      onClick={() => {
+                        try {
+                          navigator.clipboard.writeText(`https://nexora.ai/post/${post.id}`);
+                          window.dispatchEvent(new CustomEvent('toast', { detail: "📋 Post link copied to clipboard!" }));
                           setLocalPosts(prev => prev.map(p => {
-                            if (p.id === post.id) return { ...p, shares: p.shares + 1 };
+                            if (p.id === post.id) return { ...p, shares: (p.shares || 0) + 1 };
                             return p;
                           }));
-                          if (onSharePost) {
-                            onSharePost(post.id);
-                          }
-                          window.dispatchEvent(new CustomEvent('toast', { detail: "🔁 Post reposted! (+5 Reputation Points)" }));
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 cursor-pointer text-[11px] text-violet-300/90"
-                      >
-                        <span className="text-emerald-400 font-bold text-sm">➥</span>
-                        <span>{post.shares}</span>
-                      </motion.button>
-                    </div>
+                        } catch(e){}
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-200 cursor-pointer text-xs text-violet-300/90"
+                      title="Share"
+                    >
+                      <Send className="w-3.5 h-3.5 text-pink-400" />
+                      <span className="font-mono text-[11px] hidden sm:inline">Share</span>
+                    </motion.button>
 
-                    <div className="flex items-center gap-2">
-                      {/* Save/Bookmark button */}
-                      <motion.button
-                        whileTap={{ scale: 0.92, y: 0.5 }}
-                        whileHover={{ scale: 1.04 }}
-                        onClick={() => handleSave(post.id)}
-                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-[11px] ${
-                          post.isBookmarkedByUser 
-                            ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400 font-bold shadow-[0_0_12px_rgba(34,211,238,0.15)]' 
-                            : 'bg-white/5 border-white/5 hover:bg-white/10 hover:border-white/10 text-violet-300/90'
-                        }`}
-                      >
-                        <Bookmark className={`w-3.5 h-3.5 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-cyan-400/80'}`} />
-                        <span>{post.saves || 0}</span>
-                        <span className="hidden sm:inline">Save</span>
-                      </motion.button>
-
-                      {/* Clipboard Share button */}
-                      <motion.button
-                        whileTap={{ scale: 0.92, y: 0.5 }}
-                        whileHover={{ scale: 1.04 }}
-                        onClick={() => {
-                          try {
-                            navigator.clipboard.writeText(`https://nexora.ai/post/${post.id}`);
-                            window.dispatchEvent(new CustomEvent('toast', { detail: "📋 Post link copied to clipboard!" }));
-                            setLocalPosts(prev => prev.map(p => {
-                              if (p.id === post.id) return { ...p, shares: (p.shares || 0) + 1 };
-                              return p;
-                            }));
-                          } catch(e){}
-                        }}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 hover:border-white/10 transition-all duration-200 cursor-pointer text-[11px] text-violet-300/90"
-                      >
-                        <span className="text-pink-400 font-bold text-sm">➥</span>
-                        <span>{post.shares || 0}</span>
-                        <span className="hidden sm:inline">Share</span>
-                      </motion.button>
-                    </div>
+                    {/* 5. Bookmark */}
+                    <motion.button
+                      whileTap={{ scale: 0.92 }}
+                      whileHover={{ scale: 1.04 }}
+                      onClick={() => handleSave(post.id)}
+                      className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-xs ${
+                        post.isBookmarkedByUser 
+                          ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400 font-bold' 
+                          : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
+                      }`}
+                      title="Bookmark"
+                    >
+                      <Bookmark className={`w-3.5 h-3.5 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-cyan-400/80'}`} />
+                      <span className="font-mono text-[11px] hidden sm:inline">Bookmark</span>
+                    </motion.button>
                   </div>
                 )}
 

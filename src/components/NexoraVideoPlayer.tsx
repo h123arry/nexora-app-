@@ -6,7 +6,7 @@ import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import VideoBottomSheet from './VideoBottomSheet';
 import NexoraLoader from './NexoraLoader';
-import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -30,6 +30,8 @@ interface Post {
   isVerified?: boolean;
   isArchived?: boolean;
   isDraft?: boolean;
+  location?: string;
+  soundTitle?: string;
 }
 
 interface NexoraVideoPlayerProps {
@@ -503,11 +505,11 @@ export default function NexoraVideoPlayer({
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
       if (!videoRef.current) return;
-      setShowShareSheet(true);
       videoRef.current.pause();
+      setIsLongPressing(true);
       setIsPlaying(false);
       setShowControls(false);
-    }, 500);
+    }, 450);
   };
 
   const handleReleaseHold = () => {
@@ -516,6 +518,12 @@ export default function NexoraVideoPlayer({
       longPressTimerRef.current = null;
     }
     touchStartRef.current = null;
+    if (isLongPressing) {
+      setIsLongPressing(false);
+      if (videoRef.current) {
+        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+      }
+    }
   };
 
   // Variables to hold swipe state
@@ -1220,263 +1228,295 @@ export default function NexoraVideoPlayer({
               </div>
             )}
 
-             {/* Right-Side Action Rail */}
-            <div 
-              className="absolute flex flex-col items-center gap-4 z-20"
-              style={{
-                bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
-                right: 'calc(env(safe-area-inset-right, 0px) + 12px)'
-              }}
-            >
-              {/* Profile & Follow */}
-              <div className="relative group/avatar mb-2">
-                <div className="w-12 h-12 rounded-full border-2 border-white/20 overflow-hidden shadow-lg cursor-pointer" onClick={(e) => { e.stopPropagation(); onViewProfile?.(post.userId || ''); }}>
-                  <img src={post.avatar} alt={post.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" loading="lazy" />
-                </div>
-                {onToggleFollow && !isFollowing && post.userId !== 'user-0' && (
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onToggleFollow(); }}
-                    className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-5 bg-pink-500 rounded-full flex items-center justify-center text-white border border-black shadow-md hover:scale-110 active:scale-90 transition-transform"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[3px]" />
-                  </button>
-                )}
-              </div>
+             {/* 1. TOP-LEFT CREATOR INFORMATION OVERLAY */}
+             <div 
+               className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex flex-col items-start gap-1 text-left pointer-events-auto max-w-[calc(100%-140px)] cursor-pointer group/creator"
+               onClick={(e) => { e.stopPropagation(); onViewProfile?.(post.userId || ''); }}
+             >
+               <div className="flex items-center gap-1.5 flex-wrap">
+                 <span className="font-sans font-extrabold text-white text-base sm:text-lg tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] group-hover/creator:underline">
+                   {post.name}
+                 </span>
+                 <span className="font-mono text-xs sm:text-sm text-zinc-300 font-medium drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] group-hover/creator:text-white">
+                   @{post.username}
+                 </span>
+                 {post.isVerified && <VerificationBadge />}
+               </div>
 
-              {/* ❤️ Spark */}
-              <button 
-                onClick={(e) => { e.stopPropagation(); onSpark(); }}
-                disabled={isProcessing}
-                className={`flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg`}>
-                  <Zap className={`w-6 h-6 transition-transform duration-300 group-hover/btn:scale-110 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
-                </div>
-                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.likes}</span>
-              </button>
+               {/* Sound / Music Info */}
+               <div 
+                 onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}
+                 className="flex items-center gap-1.5 mt-0.5 text-xs font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] cursor-pointer hover:text-violet-300 transition-colors"
+               >
+                 <Music className="w-3.5 h-3.5 text-violet-400 shrink-0" />
+                 <span className="truncate max-w-[220px]">
+                   {post.soundTitle || `Original Sound - ${post.name}`}
+                 </span>
+               </div>
+             </div>
 
-              {/* 💬 Comment */}
-              <button 
-                onClick={(e) => { e.stopPropagation(); onCommentToggle?.(); }}
-                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
-              >
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg`}>
-                  <MessageSquare className={`w-6 h-6 transition-transform duration-300 group-hover/btn:scale-110 text-white`} />
-                </div>
-                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.comments?.length || 0}</span>
-              </button>
+             {/* 2. TOP-RIGHT MUTE / UNMUTE BUTTON */}
+             <div className="absolute top-4 right-16 sm:top-6 sm:right-20 z-20">
+               <button 
+                 onClick={(e) => { e.stopPropagation(); handleVolumeToggle(); }}
+                 className="p-2.5 bg-black/40 hover:bg-black/70 backdrop-blur-md rounded-full text-white border border-white/10 transition-all cursor-pointer shadow-lg active:scale-95"
+                 title={isMuted ? "Unmute sound" : "Mute sound"}
+               >
+                 {isMuted ? <VolumeX className="w-4 h-4 text-pink-400" /> : <Volume2 className="w-4 h-4 text-white" />}
+               </button>
+             </div>
 
-              {/* 🔖 Save */}
-              <button 
-                onClick={(e) => { e.stopPropagation(); setShowSaveModal(true); }}
-                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
-              >
-                <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg`}>
-                  <Bookmark className={`w-6 h-6 transition-transform duration-300 group-hover/btn:scale-110 ${savedCollectionForThis ? 'fill-yellow-400 text-yellow-400' : 'text-white'}`} />
-                </div>
-                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.bookmarksCount || 0}</span>
-              </button>
+             {/* 3. RIGHT-SIDE ACTION RAIL */}
+             <div 
+               className="absolute z-20 flex flex-col items-center gap-5 sm:gap-6"
+               style={{
+                 bottom: "calc(env(safe-area-inset-bottom, 0px) + 70px)",
+                 right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
+               }}
+             >
+               {/* ❤️ Spark Button */}
+               <button 
+                 onClick={(e) => { e.stopPropagation(); onSpark(); }}
+                 disabled={isProcessing}
+                 className={`flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                 title="Spark"
+               >
+                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
+                   <Zap className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover/btn:scale-110 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
+                 </div>
+                 <span className="font-mono text-[11px] sm:text-xs font-bold text-white drop-shadow-md select-none">{post.likes}</span>
+               </button>
 
-              {/* ↗ Share */}
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  setShowShareSheet(true);
-                  recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
-                }}
-                className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
-              >
-                <div className="w-11 h-11 rounded-full flex items-center justify-center bg-black/20 hover:bg-black/40 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
-                  <svg className="w-6 h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                </div>
-                <span className="font-sans text-[11px] font-bold text-white drop-shadow-md select-none">{post.shares || 0}</span>
-              </button>
+               {/* 💬 Comment Button */}
+               <button 
+                 onClick={(e) => { e.stopPropagation(); onCommentToggle?.(); }}
+                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+                 title="Comments"
+               >
+                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
+                   <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" />
+                 </div>
+                 <span className="font-mono text-[11px] sm:text-xs font-bold text-white drop-shadow-md select-none">{post.comments?.length || 0}</span>
+               </button>
 
-              <VideoBottomSheet
-                isOpen={showShareSheet}
-                onClose={() => setShowShareSheet(false)}
-                post={post}
-                onDownload={() => {}}
-                onSave={() => {}}
-                onShare={() => {}}
-                onReport={() => {}}
-                onNotInterested={() => {}}
-                onViewProfile={() => onViewProfile?.(post.userId || '')}
-                onFollowToggle={() => onToggleFollow?.()}
-                isFollowing={isFollowing}
-              />
+               {/* ↗ Share Button */}
+               <button 
+                 onClick={(e) => { 
+                   e.stopPropagation(); 
+                   setShowShareSheet(true);
+                   recordRecommendationEvent('share', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+                 }}
+                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+                 title="Share"
+               >
+                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
+                   <Send className="w-5 h-5 sm:w-6 sm:h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" />
+                 </div>
+                 <span className="font-mono text-[11px] sm:text-xs font-bold text-white drop-shadow-md select-none">{post.shares || 0}</span>
+               </button>
 
-              {/* ⚙️ Options Menu */}
-              <div className="relative flex flex-col items-center">
-                <button 
-                  onClick={(e) => { 
-                    e.stopPropagation(); 
-                    setShowMoreMenu(!showMoreMenu);
-                  }}
-                  className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
-                  title="More post options"
-                >
-                  <div className={`w-11 h-11 rounded-full flex items-center justify-center bg-black/40 hover:bg-black/60 backdrop-blur-md border border-white/5 transition-all duration-300 scale-100 active:scale-90 shadow-lg ${showMoreMenu ? 'border-violet-500/50 bg-violet-550/20' : ''}`}>
-                    <MoreVertical className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="font-mono text-[10px] font-bold text-zinc-300 drop-shadow-md select-none">Options</span>
-                </button>
+               {/* 🔖 Save Button */}
+               <button 
+                 onClick={(e) => { e.stopPropagation(); setShowSaveModal(true); }}
+                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
+                 title="Save"
+               >
+                 <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
+                   <Bookmark className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-300 group-hover/btn:scale-110 ${savedCollectionForThis ? 'fill-yellow-400 text-yellow-400' : 'text-white'}`} />
+                 </div>
+                 <span className="font-mono text-[11px] sm:text-xs font-bold text-white drop-shadow-md select-none">{post.bookmarksCount || post.saves || 0}</span>
+               </button>
 
-                <AnimatePresence>
-                  {showMoreMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.9, x: 10, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.9, x: 10, y: 10 }}
-                      className="absolute right-12 bottom-0 mb-2 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1 text-left"
-                    >
-                      {isOwnPost ? (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const newCaption = prompt('Edit caption:', post.content);
-                              if (newCaption !== null && newCaption.trim() !== '') {
-                                window.dispatchEvent(new CustomEvent('nexora-edit-caption', { detail: { postId: post.id, newCaption } }));
-                              }
-                              setShowMoreMenu(false);
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
-                          >
-                            <Edit3 className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                            Edit Caption
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const archiveState = !post.isArchived;
-                              window.dispatchEvent(new CustomEvent('nexora-archive-post', { detail: { postId: post.id, archiveState } }));
-                              setShowMoreMenu(false);
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
-                          >
-                            <Archive className="w-3.5 h-3.5 shrink-0 text-fuchsia-400" />
-                            {post.isArchived ? 'Restore Post' : 'Archive Post'}
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-                                window.dispatchEvent(new CustomEvent('nexora-delete-post', { detail: { postId: post.id } }));
-                              }
-                              setShowMoreMenu(false);
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
-                          >
-                            <Trash className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                            Delete Post
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          {onToggleFollow && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onToggleFollow();
-                                setShowMoreMenu(false);
-                              }}
-                              className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
-                            >
-                              <UserPlus className="w-3.5 h-3.5 shrink-0 text-violet-400" />
-                              {isFollowing ? 'Unfollow Creator' : 'Follow Creator'}
-                            </button>
-                          )}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onNotInterested?.();
-                              setShowMoreMenu(false);
-                              window.dispatchEvent(new CustomEvent('toast', { detail: '🙈 Marked as not interested' }));
-                            }}
-                            className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
-                          >
-                            <EyeOff className="w-3.5 h-3.5 shrink-0 text-zinc-400" />
-                            Not Interested
-                          </button>
-                        </>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+               {/* ⚙️ More Options Button */}
+               <div className="relative flex flex-col items-center">
+                 <button 
+                   onClick={(e) => { 
+                     e.stopPropagation(); 
+                     setShowMoreMenu(!showMoreMenu);
+                   }}
+                   className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg"
+                   title="More options"
+                 >
+                   <MoreVertical className="w-5 h-5 text-white" />
+                 </button>
 
-                          <div 
-              className="absolute flex flex-col items-start gap-1 z-20 pointer-events-none text-left"
-              style={{
-                bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
-                left: 'calc(env(safe-area-inset-left, 0px) + 14px)',
-                right: 'calc(env(safe-area-inset-right, 0px) + 64px)'
-              }}
-            >
-              {/* Search Suggestion */}
-              {post.searchSuggestion && (
-                <button 
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Searching: ${post.searchSuggestion}` }));
-                  }}
-                  className="flex items-center gap-1.5 px-2.5 py-1 mb-1 rounded-sm bg-black/30 backdrop-blur-md border border-white/10 hover:bg-black/50 transition-colors pointer-events-auto"
-                >
-                  <Search className="w-3 h-3 text-white" />
-                  <span className="text-[10px] font-mono text-white tracking-wider">Search • {post.searchSuggestion}</span>
-                </button>
-              )}
+                 <AnimatePresence>
+                   {showMoreMenu && (
+                     <motion.div
+                       initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                       animate={{ opacity: 1, scale: 1, x: 0 }}
+                       exit={{ opacity: 0, scale: 0.9, x: 10 }}
+                       className="absolute right-14 bottom-0 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1 text-left"
+                     >
+                       {isOwnPost ? (
+                         <>
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               const newCaption = prompt('Edit caption:', post.content);
+                               if (newCaption !== null && newCaption.trim() !== '') {
+                                 window.dispatchEvent(new CustomEvent('nexora-edit-caption', { detail: { postId: post.id, newCaption } }));
+                               }
+                               setShowMoreMenu(false);
+                             }}
+                             className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                           >
+                             <Edit3 className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                             Edit Caption
+                           </button>
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               const archiveState = !post.isArchived;
+                               window.dispatchEvent(new CustomEvent('nexora-archive-post', { detail: { postId: post.id, archiveState } }));
+                               setShowMoreMenu(false);
+                             }}
+                             className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                           >
+                             <Archive className="w-3.5 h-3.5 shrink-0 text-fuchsia-400" />
+                             {post.isArchived ? 'Restore Post' : 'Archive Post'}
+                           </button>
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+                                 window.dispatchEvent(new CustomEvent('nexora-delete-post', { detail: { postId: post.id } }));
+                               }
+                               setShowMoreMenu(false);
+                             }}
+                             className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
+                           >
+                             <Trash className="w-3.5 h-3.5 shrink-0 text-red-500" />
+                             Delete Post
+                           </button>
+                         </>
+                       ) : (
+                         <>
+                           {onToggleFollow && (
+                             <button
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 onToggleFollow();
+                                 setShowMoreMenu(false);
+                               }}
+                               className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                             >
+                               <UserPlus className="w-3.5 h-3.5 shrink-0 text-violet-400" />
+                               {isFollowing ? 'Unfollow Creator' : 'Follow Creator'}
+                             </button>
+                           )}
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               onNotInterested?.();
+                               setShowMoreMenu(false);
+                               window.dispatchEvent(new CustomEvent('toast', { detail: '🙈 Marked as not interested' }));
+                             }}
+                             className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
+                           >
+                             <EyeOff className="w-3.5 h-3.5 shrink-0 text-zinc-400" />
+                             Not Interested
+                           </button>
+                         </>
+                       )}
+                     </motion.div>
+                   )}
+                 </AnimatePresence>
+               </div>
+             </div>
 
-              {/* Creator Info */}
-              <div className="pointer-events-auto text-left" onClick={() => onViewProfile?.(post.userId || '')}>
-                <div className="flex items-center gap-1">
-                  <span className="font-sans font-extrabold text-lg text-white drop-shadow-md truncate max-w-[200px]">{post.name}</span>
-                  {post.isVerified && <VerificationBadge />}
-                </div>
-                <span className="text-xs font-mono text-zinc-300 drop-shadow-md font-medium">@{post.username}</span>
-                {/* Audio Sound */}
-                <div className="flex items-center gap-1 text-[10px] text-zinc-300 mt-1 cursor-pointer" onClick={(e) => {e.stopPropagation(); onViewSound?.('123')}}>
-                  <Music className="w-3 h-3"/>
-                  <span>♫ Original Sound - {post.name}</span>
-                </div>
-              </div>
+             {/* 4. BOTTOM-LEFT INFORMATION OVERLAY */}
+             <div 
+               className="absolute z-20 flex flex-col items-start gap-1.5 text-left pointer-events-auto max-w-[70%] sm:max-w-[75%]"
+               style={{
+                 bottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)",
+                 left: 'calc(env(safe-area-inset-left, 0px) + 16px)'
+               }}
+             >
+               {/* Search Suggestion if available */}
+               {post.searchSuggestion && (
+                 <button 
+                   onClick={(e) => {
+                     e.stopPropagation();
+                     window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Searching: ${post.searchSuggestion}` }));
+                   }}
+                   className="flex items-center gap-1.5 px-2.5 py-1 mb-0.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 hover:bg-black/60 transition-colors pointer-events-auto cursor-pointer"
+                 >
+                   <Search className="w-3 h-3 text-violet-300" />
+                   <span className="text-[10px] font-mono text-white tracking-wider">Search • {post.searchSuggestion}</span>
+                 </button>
+               )}
 
-              {/* Caption */}
-              {post.content && (
-                <div className="text-xs text-zinc-100 font-sans leading-relaxed drop-shadow-md pointer-events-auto max-w-xs mt-1">
-                  <p className={isExpanded ? "" : "line-clamp-2"}>
-                    {post.content}
-                  </p>
-                  {post.content.length > 50 && (
-                    <button onClick={() => setIsExpanded(!isExpanded)} className="text-[10px] font-bold text-violet-300">
-                      {isExpanded ? "Show less" : "Show more"}
-                    </button>
-                  )}
-                </div>
-              )}
+               {/* Caption & Read More Toggle */}
+               {post.content && (
+                 <div className="text-xs sm:text-sm text-zinc-100 font-sans leading-relaxed drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] pointer-events-auto">
+                   <p className={isExpanded ? "" : "line-clamp-2"}>
+                     {post.content}
+                   </p>
+                   {post.content.length > 50 && (
+                     <button 
+                       onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} 
+                       className="text-[11px] font-mono font-bold text-violet-300 hover:text-white mt-0.5 cursor-pointer"
+                     >
+                       {isExpanded ? "Show less" : "More"}
+                     </button>
+                   )}
+                 </div>
+               )}
 
-              {/* Hashtags */}
-              {post.tags && post.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1 pointer-events-auto mt-0.5">
-                  {post.tags.slice(0, 3).map(tag => (
-                    <span
-                      key={tag}
-                      className="text-[10px] font-mono text-violet-300 hover:text-white drop-shadow-md font-semibold"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+               {/* Hashtags */}
+               {post.tags && post.tags.length > 0 && (
+                 <div className="flex flex-wrap gap-1.5 pointer-events-auto mt-0.5">
+                   {post.tags.slice(0, 4).map(tag => (
+                     <span
+                       key={tag}
+                       className="text-[11px] font-mono text-violet-300 hover:text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] font-semibold cursor-pointer"
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         window.dispatchEvent(new CustomEvent('toast', { detail: `🏷️ Filter: #${tag}` }));
+                       }}
+                     >
+                       #{tag}
+                     </span>
+                   ))}
+                 </div>
+               )}
 
-              {/* Music Info - Interactive */}
-              <div className="flex items-center gap-1.5 text-[11px] font-mono text-white drop-shadow-md mt-1 cursor-pointer hover:text-violet-300 transition-colors pointer-events-auto" onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}>
-                <Music className="w-3 h-3 text-white shrink-0" />
-                <span className="truncate max-w-[150px]">Original Sound • {post.name.toUpperCase()}</span>
-              </div>
-            </div>
+               {/* Location if present */}
+               {post.location && (
+                 <div className="flex items-center gap-1 text-[11px] font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">
+                   <span className="text-pink-400">📍</span>
+                   <span>{post.location}</span>
+                 </div>
+               )}
+
+               {/* Bottom Music Info Indicator */}
+               <div 
+                 className="flex items-center gap-2 text-xs font-mono text-white/90 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] mt-1 cursor-pointer hover:text-violet-300 transition-colors pointer-events-auto" 
+                 onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}
+               >
+                 <div className="w-5 h-5 rounded-full bg-black/40 border border-white/20 flex items-center justify-center shrink-0">
+                   <Music className="w-3 h-3 text-violet-400 animate-spin-slow" />
+                 </div>
+                 <span className="truncate max-w-[200px]">
+                   {post.soundTitle || `Original Sound - ${post.name}`}
+                 </span>
+               </div>
+             </div>
+
+             <VideoBottomSheet
+               isOpen={showShareSheet}
+               onClose={() => setShowShareSheet(false)}
+               post={post}
+               onDownload={() => {}}
+               onSave={() => {}}
+               onShare={() => {}}
+               onReport={() => {}}
+               onNotInterested={() => {}}
+               onViewProfile={() => onViewProfile?.(post.userId || '')}
+               onFollowToggle={() => onToggleFollow?.()}
+               isFollowing={isFollowing}
+             />
           </>
          ) : (
          <div className="w-full h-full bg-black/90 flex flex-col items-center justify-center gap-2">

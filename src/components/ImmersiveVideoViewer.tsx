@@ -29,20 +29,35 @@ export default function ImmersiveVideoViewer({
   // Only include posts that have videoUrl for the swipeable list
   const videoPosts = creatorPosts.filter(p => p.videoUrl);
   
-  // Find initial index
-  const startIndex = videoPosts.findIndex(p => p.id === initialPost.id);
-  const [currentIndex, setCurrentIndex] = useState(startIndex >= 0 ? startIndex : 0);
-  
-  // If the initial post wasn't a video, we just show it alone as a fallback, 
-  // but this component is intended primarily for videos.
-  const postsToShow = videoPosts.length > 0 && startIndex >= 0 ? videoPosts : [initialPost];
-  const currentPost = postsToShow[currentIndex];
+  // Determine initial posts list
+  const postsToShow = videoPosts.length > 0 ? videoPosts : [initialPost];
+
+  // Remember last watched position in REELS tab
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const savedPostId = localStorage.getItem('nexora_last_reels_post_id');
+    if (savedPostId) {
+      const foundIdx = postsToShow.findIndex(p => p.id === savedPostId);
+      if (foundIdx >= 0) return foundIdx;
+    }
+    const startIdx = postsToShow.findIndex(p => p.id === initialPost.id);
+    return startIdx >= 0 ? startIdx : 0;
+  });
+
+  const currentPost = postsToShow[currentIndex] || postsToShow[0];
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
   const [commentInput, setCommentInput] = useState('');
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
+
+  // Save last watched position to localStorage whenever currentIndex changes
+  useEffect(() => {
+    if (currentPost?.id) {
+      localStorage.setItem('nexora_last_reels_post_id', currentPost.id);
+      localStorage.setItem('nexora_last_reels_index', String(currentIndex));
+    }
+  }, [currentIndex, currentPost?.id]);
 
   // Prevent background scrolling
   useEffect(() => {
@@ -51,6 +66,23 @@ export default function ImmersiveVideoViewer({
       document.body.style.overflow = '';
     };
   }, []);
+
+  // Handle wheel scrolling on desktop
+  const wheelTimerRef = useRef<any>(null);
+  const handleWheel = (e: React.WheelEvent) => {
+    if (isCommentsOpen) return;
+    if (wheelTimerRef.current) return;
+    if (Math.abs(e.deltaY) > 25) {
+      wheelTimerRef.current = setTimeout(() => {
+        wheelTimerRef.current = null;
+      }, 350);
+      if (e.deltaY > 0 && currentIndex < postsToShow.length - 1) {
+        handleNext();
+      } else if (e.deltaY < 0 && currentIndex > 0) {
+        handlePrev();
+      }
+    }
+  };
 
   // Keyboard navigation
   useEffect(() => {
@@ -153,22 +185,22 @@ export default function ImmersiveVideoViewer({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.15, ease: "easeOut" }}
-      className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center"
+      className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center overflow-hidden h-[100dvh] w-full select-none"
     >
-      {/* Absolute Close button */}
+      {/* Absolute Exit / Close button in top-right */}
       <button 
         onClick={onClose}
-        className="absolute top-6 left-6 z-50 p-3 bg-black/60 hover:bg-black/90 text-white rounded-full border border-white/10 backdrop-blur-md transition-all shadow-xl active:scale-95 cursor-pointer"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 p-2.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all shadow-xl active:scale-95 cursor-pointer"
         title="Exit player"
       >
         <X className="w-5 h-5" />
       </button>
 
-      {/* Desktop Navigation Arrows */}
+      {/* Desktop Floating Navigation Arrows on edges */}
       {currentIndex > 0 && (
         <button 
           onClick={handlePrev}
-          className="absolute left-6 z-40 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer"
+          className="absolute left-6 z-40 p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer shadow-2xl"
           title="Previous video"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -178,22 +210,23 @@ export default function ImmersiveVideoViewer({
       {currentIndex < postsToShow.length - 1 && (
         <button 
           onClick={handleNext}
-          className="absolute right-6 z-40 p-4 bg-black/60 hover:bg-black/90 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer"
+          className="absolute right-6 z-40 p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer shadow-2xl"
           title="Next video"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
       )}
 
-      {/* Interactive Unified Player Stage */}
+      {/* Interactive Edge-to-Edge Fullscreen Player Stage */}
       <motion.div 
-        initial={{ opacity: 0, scale: 0.96 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.96 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         transition={{ duration: 0.18, ease: "easeOut" }}
-        className="w-full h-full max-w-[480px] bg-black relative flex flex-col justify-center overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.85)]"
+        className="w-full h-full bg-black relative flex flex-col justify-center overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
       >
         {postsToShow.map((post, idx) => {
           if (!post.videoUrl) return null;
