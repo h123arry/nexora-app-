@@ -594,7 +594,7 @@ export default function AdminDashboardView({
                   {[
                     { name: 'VOICE OF HARRISON', handle: '@voh', rank: 'Founder', rep: '5.45M PR', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' },
                     { name: 'Nexora AI', handle: '@nexora_ai', rank: 'Central Cognitive Co-Pilot', rep: '4.50M PR', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80' },
-                    { name: 'VOH AI', handle: '@voh_ai', rank: 'Intelligent AI Node', rep: '4.20M PR', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' }
+                    { name: 'VOH AI', handle: '@voh_ai', rank: 'Intelligent VOH AI', rep: '4.20M PR', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' }
                   ].map((creator, idx) => (
                     <div key={idx} className="flex items-center justify-between p-2.5 bg-black/20 rounded-xl border border-white/3">
                       <div className="flex items-center gap-2.5">

@@ -56,30 +56,36 @@ export default function RightSidebar({
             </button>
           )}
 
-          {trendingTags.map(({ tag, count }) => {
-            const isSelected = selectedTag === tag;
-            return (
-              <button
-                key={tag}
-                onClick={() => setSelectedTag(isSelected ? null : tag)}
-                className={`flex items-center justify-between w-full p-2.5 rounded-xl text-left transition-all ${
-                  isSelected 
-                    ? 'bg-violet-500/20 border border-violet-500/30 text-violet-400' 
-                    : 'hover:bg-current/5 text-current/80 hover:text-current'
-                }`}
-              >
-                <div className="overflow-hidden pr-3">
-                  <p className="text-xs font-bold font-sans truncate">
-                    #{tag}
-                  </p>
-                  <p className="text-[10px] font-sans text-current/50 leading-none mt-0.5">
-                    {count} posts
-                  </p>
-                </div>
-                <TrendingUp className="w-3.5 h-3.5 text-current/40 group-hover:text-current shrink-0" />
-              </button>
-            );
-          })}
+          {trendingTags.length === 0 ? (
+            <p className="text-[11px] font-sans text-current/50 p-2 text-center leading-relaxed">
+              No trending sparks yet. Post with #hashtags to start a trend!
+            </p>
+          ) : (
+            trendingTags.map(({ tag, count }) => {
+              const isSelected = selectedTag === tag;
+              return (
+                <button
+                  key={tag}
+                  onClick={() => setSelectedTag(isSelected ? null : tag)}
+                  className={`flex items-center justify-between w-full p-2.5 rounded-xl text-left transition-all ${
+                    isSelected 
+                      ? 'bg-violet-500/20 border border-violet-500/30 text-violet-400' 
+                      : 'hover:bg-current/5 text-current/80 hover:text-current'
+                  }`}
+                >
+                  <div className="overflow-hidden pr-3">
+                    <p className="text-xs font-bold font-sans truncate">
+                      #{tag}
+                    </p>
+                    <p className="text-[10px] font-sans text-current/50 leading-none mt-0.5">
+                      {count} posts
+                    </p>
+                  </div>
+                  <TrendingUp className="w-3.5 h-3.5 text-current/40 group-hover:text-current shrink-0" />
+                </button>
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -93,9 +99,14 @@ export default function RightSidebar({
         </div>
 
         <div className="p-3 bg-current/3 border border-current/5 rounded-2xl space-y-3">
-          {creators.map((creator) => {
-            if (!creator) return null;
-            const isFollowing = followingIds.includes(creator.id);
+          {creators.length === 0 ? (
+            <p className="text-[11px] font-sans text-current/50 p-2 text-center leading-relaxed">
+              No other creators registered yet.
+            </p>
+          ) : (
+            creators.map((creator) => {
+              if (!creator) return null;
+              const isFollowing = followingIds.includes(creator.id);
             return (
               <div key={creator.id} className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 overflow-hidden">
@@ -148,7 +159,8 @@ export default function RightSidebar({
                 </motion.button>
               </div>
             );
-          })}
+          })
+          )}
         </div>
       </div>
 

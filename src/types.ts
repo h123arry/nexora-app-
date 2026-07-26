@@ -20,13 +20,28 @@ export interface User {
   isSuspended?: boolean;
   preferredLanguage?: string;
   savedCollections?: { [folderName: string]: string[] };
-  // Innovative Living Reputation
+  // Innovative Living Reputation & Nexora Contributions Algorithm System
   reputationPoints: number;
   reputationBreakdown: {
     contributions: number;
     helpfulness: number;
     missionsCompleted: number;
     skillsVerified: number;
+    categories?: {
+      contentCreation: number;
+      communityEngagement: number;
+      helpfulResponses: number;
+      discoveryImpact: number;
+      trustBuilding: number;
+      platformParticipation: number;
+    };
+    trustMultiplier?: number;
+    antiGamingStatus?: {
+      isFarmingShieldActive: boolean;
+      diminishingFactor: number;
+      uniqueEngagerRatio: number;
+      qualityBonus: number;
+    };
   };
   // Interest DNA matrix
   interestDNA: {

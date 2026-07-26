@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Download, Award, Search, PlusCircle, Eye, Settings, Heart, MessageSquare, Bookmark, ThumbsUp, Trash2, AlertTriangle, UserPlus, ChevronRight, Phone, Link as LinkIcon, CheckCircle, HelpCircle, Info, Layers, ArrowRight, Forward } from 'lucide-react';
 import { Circle, User, Page, Post, Comment } from '../types';
-import { INITIAL_CIRCLES, MOCK_CREATORS, INITIAL_USER } from '../data/database';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { createCommunity, createPage, subscribeToCommunities, subscribeToPages } from '../services/dataService';
 
@@ -50,32 +49,7 @@ export default function CommunitiesHubView({
         console.error(e);
       }
     }
-    // Pre-populate original circles with enhanced parameters
-    return INITIAL_CIRCLES.map(c => ({
-      ...c,
-      avatarImage: c.id === 'circle-1' 
-        ? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=150&auto=format&fit=crop&q=80' 
-        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
-      onlineCount: Math.floor(c.membersCount * 0.12),
-      moderators: ['voh', 'nexora_official'],
-      admins: ['voh'],
-      ownerId: c.creatorId || 'user-0',
-      type: 'public',
-      bannedUsers: [],
-      mutedUsers: [],
-      pendingMembers: [],
-      pinnedPosts: [],
-      reports: [],
-      activityLog: ['Community initialized.', 'Voice of Harrison set community rules.', 'Nexora Official verified community.'],
-      events: [
-        { id: 'evt-1', title: 'Weekend Local Meetup & Sports Match', date: '2026-07-12', time: '4:00 PM', location: 'Port Harcourt Hub Center', rsvpedUsers: ['user-0'] },
-        { id: 'evt-2', title: 'Open Q&A Core Development Hack', date: '2026-07-15', time: '8:00 PM', location: 'Nexora Audio Voice Lounge', rsvpedUsers: [] }
-      ],
-      mediaLibrary: [
-        { id: 'm-1', name: 'Community Guidelines.pdf', type: 'doc', url: '#', size: '1.2 MB', uploadedBy: 'voh', timestamp: new Date().toISOString() },
-        { id: 'm-2', name: 'Tournament_Bracket.png', type: 'photo', url: 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=500', size: '2.4 MB', uploadedBy: 'voh', timestamp: new Date().toISOString() }
-      ]
-    }));
+    return [];
   });
 
   const [pages, setPages] = useState<Page[]>(() => {

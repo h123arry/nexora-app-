@@ -15,6 +15,7 @@ import StoriesView from './StoriesView';
 import { getRecommendationScore, recordRecommendationEvent } from '../utils/recommendations';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
+import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -134,11 +135,7 @@ const MOCK_MOMENTS = [
   { id: 'm-2', name: 'AI Assistant', username: 'ai_assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["The Intelligent AI assistant.", "Connected and ready to assist you anytime.", "Analyzing daily trends."] }
 ];
 
-const SEARCHABLE_SYSTEM_USERS = [
-  { id: 'voh', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', isVerified: true, followers: 15300000, bio: 'Founder & System Architect. Building social systems with absolute visual rhythm.' },
-  { id: 'official', name: 'Official', username: 'official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 6400000, bio: 'Official platform account 🌟 Keeping you posted with community updates, feature releases, and everyday stories.' },
-  { id: 'ai_assistant', name: 'AI Assistant', username: 'ai_assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', isVerified: true, followers: 8700000, bio: 'The Intelligent AI assistant. Syncing daily trends, movie reviews, and helper scripts.' }
-];
+const SEARCHABLE_SYSTEM_USERS: any[] = [];
 
 interface FeedViewProps {
   currentUser: User;
@@ -181,15 +178,15 @@ export default function FeedView({
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
-  const [feedTab, setFeedTab] = useState<'for_you' | 'following' | 'friends' | 'trending' | 'local'>(() => {
+  const [feedTab, setFeedTab] = useState<'posts' | 'reels' | 'following' | 'friends' | 'trending'>(() => {
     const saved = localStorage.getItem('nexora_feed_tab');
-    if (saved === 'communities' || saved === 'polls' || saved === 'contributions' || saved === 'broadcast' || saved === 'pulse') return 'for_you';
-    return (saved as any) || 'for_you';
+    if (saved === 'communities' || saved === 'polls' || saved === 'contributions' || saved === 'broadcast' || saved === 'pulse' || saved === 'for_you' || saved === 'local') return 'posts';
+    return (saved as any) || 'posts';
   });
 
   // Scroll positions memory for each category tab
   const scrollPositionsRef = useRef<Record<string, number>>({});
-  const prevTabRef = useRef<string>('for_you');
+  const prevTabRef = useRef<string>('posts');
 
   // Pause previous feed's active video immediately on tab switch and restore position
   useEffect(() => {
@@ -1131,40 +1128,10 @@ export default function FeedView({
     setComposerOpen(false);
   };
 
-  // Prepend a beautiful simulated post on pull-to-refresh
+  // Re-sync posts on pull-to-refresh
   const addNewFreshSimulatedPost = () => {
-    const topics = ['tech', 'afrobeats', 'creative', 'football', 'web3', 'design'];
-    const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-    const contentTemplates = [
-      `🚀 High-speed streaming engine update! Seamless video playback is now live on Nexora. Experience lightning-fast post discovery and interactive sparks! #${randomTopic} #nexora #tech`,
-      `⚽ What a spectacular performance in today's match! Fully analyzing player telemetry data and heatmaps. Unbelievable energy from the fans tonight! #${randomTopic} #football #match`,
-      `🎨 Aesthetic minimalism is the ultimate sophistication. Designing this network to support absolute layout rhythm, negative space, and custom color accents. #${randomTopic} #craft #design`,
-      `🎙️ Broadcast channels are live! Streaming premium audio and video traces directly to all active subscribers. The future of decentralized social is here. #${randomTopic} #voice #streaming`,
-    ];
-    const imageTemplates = [
-      'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=600&auto=format&fit=crop&q=80',
-      'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=600&auto=format&fit=crop&q=80'
-    ];
-    
-    const newPost: RefactoredPost = {
-      id: `simulated-${Date.now()}`,
-      userId: 'user-0',
-      username: 'voh',
-      name: 'VOICE OF HARRISON',
-      avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg',
-      isVerified: true,
-      content: contentTemplates[Math.floor(Math.random() * contentTemplates.length)],
-      image: Math.random() > 0.4 ? imageTemplates[Math.floor(Math.random() * imageTemplates.length)] : undefined,
-      tags: [randomTopic, 'nexora'],
-      likes: Math.floor(Math.random() * 45) + 12,
-      commentsCount: Math.floor(Math.random() * 8),
-      shares: Math.floor(Math.random() * 5),
-      timestamp: 'Just now',
-      comments: [],
-    };
-    
-    setLocalPosts(prev => [newPost, ...prev]);
+    // Re-sync posts from actual parent posts
+    setLocalPosts(posts.map(p => ({ ...p, isVerified: p.isVerified || false, tags: p.tags || [], likes: p.likes || 0, commentsCount: p.commentsCount || (p.comments ? p.comments.length : 0), shares: p.shares || 0, comments: p.comments || [] })));
   };
 
   // Recommendation Explanation
@@ -1308,9 +1275,6 @@ export default function FeedView({
       const engagement = (post.likes || 0) + (post.commentsCount || 0) * 3 + (post.shares || 0) * 5;
       const isHot = engagement > 15 || post.isVerified || post.isBroadcastPost;
       if (!isHot) return false;
-    } else if (feedTab === 'local') {
-      const inSearchRegion = post.location?.toLowerCase().includes("nigeria") || post.location?.toLowerCase().includes("harcourt") || post.location?.toLowerCase().includes("lagos") || post.location;
-      if (!post.location && !inSearchRegion) return false;
     }
 
     // Query text match
@@ -1368,9 +1332,9 @@ export default function FeedView({
   const getRankedPosts = () => {
     let list = [...filteredPosts];
 
-    // Empty Feed Protection: If the For You feed is empty but there are posts on the platform,
+    // Empty Feed Protection: If the Posts feed is empty but there are posts on the platform,
     // fallback to public posts that are not blocked or hidden, ensuring the feed is never blank.
-    if (feedTab === 'for_you' && list.length === 0 && localPosts.length > 0) {
+    if (feedTab === 'posts' && list.length === 0 && localPosts.length > 0) {
       const fallbackList = localPosts.filter(post => {
         if (hiddenPostIds.includes(post.id)) return false;
         if (blockedUserIds.includes(post.userId)) return false;
@@ -1400,10 +1364,10 @@ export default function FeedView({
       });
     }
 
-    // Apply For You Engagement boost only if not strictly sorted or in specialized feeds
+    // Apply Posts Engagement boost only if not strictly sorted or in specialized feeds
     const sorted = (() => {
       let sortedList = [...list];
-      if (feedTab === 'for_you') {
+      if (feedTab === 'posts') {
         sortedList.sort((a, b) => {
           let scoreA = 0;
           let scoreB = 0;
@@ -1433,7 +1397,7 @@ export default function FeedView({
         });
       }
 
-      if (feedTab === 'for_you') {
+      if (feedTab === 'posts') {
         // Dynamic Interleaving Pass with Creator Diversity to mix content types and avoid grouping creators
         const mixed: RefactoredPost[] = [];
         const remaining = [...sortedList];
@@ -1801,6 +1765,19 @@ export default function FeedView({
       
       {/* Floating Pill for Pending background posts */}
       <AnimatePresence>
+        {feedTab === 'reels' && (
+          <ImmersiveVideoViewer
+            initialPost={localPosts.find(p => p.videoUrl) || localPosts[0]}
+            creatorPosts={localPosts}
+            currentUser={currentUser}
+            onClose={() => setFeedTab('posts')}
+            onLikePost={onLikePost}
+            onToggleFollow={onToggleFollow}
+            isFollowing={false}
+            onAddComment={onAddComment}
+          />
+        )}
+
         {pendingPosts.length > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -20, x: "-50%" }}
@@ -1868,11 +1845,11 @@ export default function FeedView({
           {/* Left: Feed Categories (Horizontally scrollable) */}
           <div className="flex items-center gap-6 overflow-x-auto scrollbar-none pr-2">
             {([
+              { id: 'posts', label: 'Posts' },
+              { id: 'reels', label: 'Reels' },
               { id: 'following', label: 'Following' },
               { id: 'friends', label: 'Friends' },
-              { id: 'for_you', label: 'For You' },
-              { id: 'trending', label: 'Trending' },
-              { id: 'local', label: 'Local' }
+              { id: 'trending', label: 'Trending' }
             ] as const).map(cat => {
               const isActive = feedTab === cat.id;
               return (
@@ -2051,86 +2028,72 @@ export default function FeedView({
               <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-violet-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/10">
                 <Globe className="w-6 h-6 text-white animate-pulse" />
               </div>
-              <h4 className="text-sm font-sans font-bold text-violet-100 uppercase tracking-wider">No Posts Yet</h4>
-              <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-                You haven't shared anything yet. Create your first post and start connecting with the world.
+              <h4 className="text-base font-sans font-extrabold text-white tracking-wide">Welcome to Nexora</h4>
+              <p className="text-xs text-violet-300/80 max-w-md mx-auto leading-relaxed">
+                Be one of the first creators on the platform.
               </p>
             </div>
 
-            {/* Suggested system users to follow */}
-            <div className="bg-[#0b0a24]/60 border border-violet-500/10 rounded-2xl p-4 text-left space-y-3 relative z-10">
-              <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⭐ Recommended Creators</span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {suggestedUsers.map(u => (
-                  <div key={u.id} className="flex items-center justify-between p-2.5 bg-black/30 border border-white/5 rounded-xl">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover border border-violet-500/20 shrink-0" />
-                      <div className="min-w-0 leading-tight">
-                        <p className="text-xs font-bold text-white truncate">{u.name}</p>
-                        <p className="text-[9.5px] font-mono text-violet-400/80 truncate">@{u.username}</p>
-                      </div>
-                    </div>
-                    <motion.button 
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => onToggleFollow?.(u.id)}
-                      className={`p-1 px-2.5 rounded-lg text-[9px] font-mono uppercase font-extrabold cursor-pointer transition-all duration-300 shrink-0 ${
-                        followingIds.includes(u.id) 
-                          ? 'bg-violet-950 text-violet-300 border border-violet-500/20' 
-                          : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow-md shadow-violet-500/20 hover:shadow-violet-500/40'
-                      }`}
-                    >
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={followingIds.includes(u.id) ? 'followed' : 'follow'}
-                          initial={{ opacity: 0, y: -5 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 5 }}
-                          transition={{ duration: 0.15 }}
-                          className="block"
-                        >
-                          {followingIds.includes(u.id) ? 'Followed' : '+ Follow'}
-                        </motion.span>
-                      </AnimatePresence>
-                    </motion.button>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex flex-wrap justify-center gap-2.5 relative z-10">
+            <div className="flex flex-wrap justify-center gap-3 relative z-10">
               <button 
                 onClick={() => setComposerOpen(true)}
-                className="px-4 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all hover:shadow-lg hover:shadow-violet-500/20"
+                className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all hover:shadow-lg hover:shadow-violet-500/20 active:scale-95"
               >
-                + Create Post
+                + Create your first post
               </button>
               <button 
                 onClick={() => {
-                  setPullY(50);
-                  setPullState('refreshing');
-                  setIsRefreshing(true);
-                  setTimeout(() => {
-                    addNewFreshSimulatedPost();
-                    setIsRefreshing(false);
-                    setPullState('idle');
-                    setPullY(0);
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed refreshed with fresh updates!' }));
-                  }, 1200);
+                  setSearchFilterType('users');
+                  const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
+                  if (searchInput) searchInput.focus();
                 }}
-                className="px-4 py-2.5 bg-[#0c0823] hover:bg-violet-950 text-violet-300 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all"
+                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-violet-200 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all active:scale-95"
               >
-                Refresh Feed 🔄
-              </button>
-              <button 
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'explore' } }));
-                  window.dispatchEvent(new CustomEvent('toast', { detail: '🌐 Redirecting to Explorer panel...' }));
-                }}
-                className="px-4 py-2.5 bg-[#0c0823] hover:bg-violet-950 text-violet-300 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all"
-              >
-                Explore Discover 🌐
+                🔍 Discover creators
               </button>
             </div>
+
+            {/* Registered creators on Nexora if any exist */}
+            {suggestedUsers.length > 0 && (
+              <div className="bg-[#0b0a24]/60 border border-violet-500/10 rounded-2xl p-4 text-left space-y-3 relative z-10 mt-4">
+                <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⭐ Registered Creators on Nexora</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {suggestedUsers.map(u => (
+                    <div key={u.id} className="flex items-center justify-between p-2.5 bg-black/30 border border-white/5 rounded-xl">
+                      <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => onViewProfile?.(u.id)}>
+                        <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover border border-violet-500/20 shrink-0" />
+                        <div className="min-w-0 leading-tight">
+                          <p className="text-xs font-bold text-white truncate hover:text-violet-400 transition-colors">{u.name}</p>
+                          <p className="text-[9.5px] font-mono text-violet-400/80 truncate">@{u.username}</p>
+                        </div>
+                      </div>
+                      <motion.button 
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => onToggleFollow?.(u.id)}
+                        className={`p-1 px-2.5 rounded-lg text-[9px] font-mono uppercase font-extrabold cursor-pointer transition-all duration-300 shrink-0 ${
+                          followingIds.includes(u.id) 
+                            ? 'bg-violet-950 text-violet-300 border border-violet-500/20' 
+                            : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow-md shadow-violet-500/20 hover:shadow-violet-500/40'
+                        }`}
+                      >
+                        <AnimatePresence mode="wait">
+                          <motion.span
+                            key={followingIds.includes(u.id) ? 'followed' : 'follow'}
+                            initial={{ opacity: 0, y: -5 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 5 }}
+                            transition={{ duration: 0.15 }}
+                            className="block"
+                          >
+                            {followingIds.includes(u.id) ? 'Followed' : '+ Follow'}
+                          </motion.span>
+                        </AnimatePresence>
+                      </motion.button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2138,13 +2101,14 @@ export default function FeedView({
         {(() => {
           const isSearchingUsers = searchFilterType === 'users';
           const query = searchQuery.trim().toLowerCase();
+          const realUsersList = (creators || []).filter(c => c && c.id && c.id !== currentUser.id);
           const matchingUsers = query
-            ? SEARCHABLE_SYSTEM_USERS.filter(u => 
-                u.name.toLowerCase().includes(query) || 
-                u.username.toLowerCase().includes(query) ||
-                u.bio.toLowerCase().includes(query)
+            ? realUsersList.filter(u => 
+                (u.name || '').toLowerCase().includes(query) || 
+                (u.username || '').toLowerCase().includes(query) ||
+                (u.bio || '').toLowerCase().includes(query)
               )
-            : (isSearchingUsers ? SEARCHABLE_SYSTEM_USERS : []);
+            : (isSearchingUsers ? realUsersList : []);
 
           if (isSearchingUsers && matchingUsers.length === 0) {
             return (
@@ -2152,7 +2116,7 @@ export default function FeedView({
                 <span className="text-3xl select-none">👥</span>
                 <h4 className="text-sm font-sans font-bold text-violet-100">No members matched your search query.</h4>
                 <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-                  You're just getting started. Follow people and grow your network. Try searching for "sarah", "alex" or "nexora" to follow top creators.
+                  Start connecting with real members on Nexora.
                 </p>
               </div>
             );
@@ -2162,7 +2126,7 @@ export default function FeedView({
             return (
               <div className="space-y-3.5 pt-2 pb-3.5 text-left">
                 <span className="text-[10px] uppercase font-mono tracking-widest text-[#8B5CF6] font-extrabold flex items-center gap-1.5 px-1">
-                  👥 Verified Nexora Accounts ({matchingUsers.length})
+                  👥 Registered Nexora Accounts ({matchingUsers.length})
                 </span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {matchingUsers.map(u => (
@@ -2194,7 +2158,7 @@ export default function FeedView({
                       </div>
                       <div className="flex items-center justify-between border-t border-white/5 pt-2 mt-3 gap-2">
                         <span className="text-[10px] font-mono text-zinc-400 select-none">
-                          👥 <strong>{u.followers.toLocaleString()}</strong> followers
+                          👥 <strong>{(u.followers || 0).toLocaleString()}</strong> followers
                         </span>
                         <button
                           type="button"

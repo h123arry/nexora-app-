@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Flame, Radio, Music, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
-import { INITIAL_CIRCLES } from '../data/database';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 
 interface ExploreViewProps {
@@ -33,9 +32,9 @@ export default function ExploreView({
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('nexora_recent_searches');
-      return saved ? JSON.parse(saved) : ['Harrison', '#BuildInPublic', 'AI Music', 'Lagos'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['Harrison', '#BuildInPublic'];
+      return [];
     }
   });
 
@@ -89,7 +88,7 @@ export default function ExploreView({
     });
     const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
     if (sorted.length === 0) {
-      return ['#BuildInPublic', '#NexoraBeta', '#CreatorEconomy', '#LagosTech'];
+      return [];
     }
     return sorted.slice(0, 6).map(([tag]) => tag);
   }, [posts]);
@@ -122,11 +121,20 @@ export default function ExploreView({
     return posts.filter(p => p.videoUrl && (p.content.toLowerCase().includes(q) || p.username.toLowerCase().includes(q) || (p.tags || []).some(t => t.toLowerCase().includes(q))));
   }, [posts, debouncedSearch]);
 
+  const userCommunities = useMemo(() => {
+    try {
+      const saved = localStorage.getItem('nexora_custom_communities');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
   const filteredCommunities = useMemo(() => {
-    if (!debouncedSearch.trim()) return INITIAL_CIRCLES;
+    if (!debouncedSearch.trim()) return userCommunities;
     const q = debouncedSearch.toLowerCase();
-    return INITIAL_CIRCLES.filter(c => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q));
-  }, [debouncedSearch]);
+    return userCommunities.filter((c: any) => (c.name || '').toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q));
+  }, [debouncedSearch, userCommunities]);
 
   const hasActiveSearch = debouncedSearch.trim().length > 0;
   const totalResultsCount = filteredCreators.length + filteredPosts.length + filteredVideos.length;
@@ -446,22 +454,24 @@ export default function ExploreView({
                   </button>
                 ))}
               </div>
-              <div className="space-y-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase block">🌐 Featured Communities</span>
-                {INITIAL_CIRCLES.slice(0, showAllPulse ? 4 : 3).map(comm => (
-                  <button
-                    key={comm.id}
-                    onClick={() => {
-                      setLocalSearch(comm.name);
-                      setSearchFilterType('communities');
-                    }}
-                    className="w-full text-left p-2.5 rounded-xl bg-white/5 hover:bg-cyan-600/15 border border-white/5 text-xs text-zinc-200 font-medium transition-all flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="truncate">{comm.name}</span>
-                    <span className="text-[10px] font-mono text-cyan-400">{comm.membersCount || '12K'}</span>
-                  </button>
-                ))}
-              </div>
+              {userCommunities.length > 0 && (
+                <div className="space-y-2">
+                  <span className="text-[10px] font-mono text-zinc-500 uppercase block">🌐 Featured Communities</span>
+                  {userCommunities.slice(0, showAllPulse ? 4 : 3).map((comm: any) => (
+                    <button
+                      key={comm.id}
+                      onClick={() => {
+                        setLocalSearch(comm.name);
+                        setSearchFilterType('communities');
+                      }}
+                      className="w-full text-left p-2.5 rounded-xl bg-white/5 hover:bg-cyan-600/15 border border-white/5 text-xs text-zinc-200 font-medium transition-all flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="truncate">{comm.name}</span>
+                      <span className="text-[10px] font-mono text-cyan-400">{comm.membersCount || 1} members</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

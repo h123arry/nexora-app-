@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Download, Award } from 'lucide-react';
 import { Circle, User } from '../types';
-import { INITIAL_CIRCLES, MOCK_CREATORS, INITIAL_USER } from '../data/database';
 import { recordRecommendationEvent } from '../utils/recommendations';
 
 interface CirclesViewProps {
@@ -10,7 +9,20 @@ interface CirclesViewProps {
 }
 
 export default function CirclesView({ currentUser }: CirclesViewProps) {
-  const [circles, setCircles] = useState<Circle[]>(INITIAL_CIRCLES);
+  const [circles, setCircles] = useState<Circle[]>(() => {
+    try {
+      const saved = localStorage.getItem('nexora_custom_communities');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('nexora_custom_communities', JSON.stringify(circles));
+    } catch {}
+  }, [circles]);
   
   // Community Points State
   const [currencyBalances, setCurrencyBalances] = useState<{ [key: string]: number }>({
@@ -311,9 +323,22 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       </div>
 
       {/* Circles/Communities Grid */}
-      <div id="circles-grid-wrapper" className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredCircles.map((circle) => {
-          const creator = [INITIAL_USER, ...MOCK_CREATORS].filter(Boolean).find(mc => mc && mc.id === circle.creatorId) || INITIAL_USER;
+      {filteredCircles.length === 0 ? (
+        <div className="p-8 rounded-3xl bg-[#0b0918] border border-violet-500/10 text-center py-12 space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center mx-auto text-violet-400">
+            <Users className="w-6 h-6" />
+          </div>
+          <h4 className="text-sm font-sans font-extrabold text-white">No Communities Found</h4>
+          <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
+            Use the AI Community Builder above to instantly launch your custom community space on Nexora.
+          </p>
+        </div>
+      ) : (
+        <div id="circles-grid-wrapper" className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {filteredCircles.map((circle) => {
+            const creator = circle.creatorId === currentUser.id 
+              ? currentUser 
+              : { id: circle.creatorId, name: (circle as any).creatorName || 'Nexora Member', username: (circle as any).creatorUsername || 'creator', avatar: (circle as any).avatar || (circle as any).avatarImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' };
 
           return (
             <div 
@@ -392,7 +417,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* FULL COMMUNITY PORTAL MODAL INTEGRATION WITH 12 TABS */}
       <AnimatePresence>

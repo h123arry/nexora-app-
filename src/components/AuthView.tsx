@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 
 import { User } from '../types';
-import { INITIAL_USER, MOCK_CREATORS, ADDITIONAL_TEST_ACCOUNTS, INITIAL_CIRCLES } from '../data/database';
 import { getRichUser } from '../data/database';
 import NexoraBranding from './NexoraBranding';
 import NexoraLoader from './NexoraLoader';
@@ -291,17 +290,17 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                 username: (fbUser.email?.split('@')[0] || accountEmail.split('@')[0] || 'google_user').toLowerCase().replace(/[^a-z0-9_]/g, ''),
                 name: fbUser.displayName || accountName || 'Google User',
                 avatar: fbUser.photoURL || accountAvatar,
-                bio: 'Member of the Nexora community.',
+                bio: '',
                 location: 'Global',
                 website: '',
                 followers: 0,
                 following: 0,
-                sparks: 50,
+                sparks: 0,
                 isVerified: false,
-                coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+                coverImage: '',
                 joinedDate: 'Joined July 2026',
-                reputationPoints: 100,
-                reputationBreakdown: { contributions: 50, helpfulness: 50, missionsCompleted: 1, skillsVerified: 0 },
+                reputationPoints: 0,
+                reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
                 interestDNA: {},
                 skills: []
               };
@@ -340,17 +339,17 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           username: cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, ''),
           name: accountName,
           avatar: accountAvatar,
-          bio: 'Member of the Nexora community.',
+          bio: '',
           location: 'Global',
           website: '',
           followers: 0,
           following: 0,
-          sparks: 50,
+          sparks: 0,
           isVerified: false,
-          coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+          coverImage: '',
           joinedDate: 'Joined July 2026',
-          reputationPoints: 100,
-          reputationBreakdown: { contributions: 50, helpfulness: 50, missionsCompleted: 1, skillsVerified: 0 },
+          reputationPoints: 0,
+          reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
           interestDNA: {},
           skills: []
         };
@@ -555,24 +554,23 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       if (existing) {
         onLoginSuccess(getRichUser(existing.user));
       } else {
-        // Create new account with Phone
-        const defaultUsername = `user_${phoneNumber.slice(-4) || 'nex'}`;
+        // Create new account with Phone (incomplete profile state until user configures)
         const newUser: User = {
           id: `user-phone-${Date.now()}`,
-          username: defaultUsername,
-          name: `Member (${selectedCountry.code} ${phoneNumber})`,
+          username: '',
+          name: '',
           avatar: PRESET_AVATARS[Math.floor(Math.random() * PRESET_AVATARS.length)],
-          bio: 'Member of the Nexora community.',
+          bio: '',
           location: selectedCountry.name,
           website: '',
           followers: 0,
           following: 0,
-          sparks: 50,
+          sparks: 0,
           isVerified: false,
-          coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+          coverImage: '',
           joinedDate: 'Joined July 2026',
-          reputationPoints: 100,
-          reputationBreakdown: { contributions: 50, helpfulness: 50, missionsCompleted: 1, skillsVerified: 0 },
+          reputationPoints: 0,
+          reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
           interestDNA: {},
           skills: []
         };
@@ -646,17 +644,17 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         username: defaultUsername,
         name: signupName.trim(),
         avatar: PRESET_AVATARS[0],
-        bio: 'Member of the Nexora community.',
+        bio: '',
         location: 'Global',
         website: '',
         followers: 0,
         following: 0,
-        sparks: 50,
+        sparks: 0,
         isVerified: false,
-        coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+        coverImage: '',
         joinedDate: 'Joined July 2026',
-        reputationPoints: 100,
-        reputationBreakdown: { contributions: 50, helpfulness: 50, missionsCompleted: 1, skillsVerified: 0 },
+        reputationPoints: 0,
+        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
         interestDNA: {},
         skills: []
       };

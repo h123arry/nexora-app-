@@ -23,12 +23,9 @@ import {
   createPostDb, 
   isFollowingDb,
   INITIAL_USER, 
-  MOCK_CREATORS, 
-  INITIAL_POSTS, 
   INITIAL_CHATS, 
   INITIAL_MESSAGES, 
-  INITIAL_NOTIFICATIONS,
-  ADDITIONAL_TEST_ACCOUNTS
+  INITIAL_NOTIFICATIONS
 } from './data/database';
 import { getGlobalPosts, subscribeToPosts, subscribeToUsers, saveUserToDb, savePostToDb, subscribeToNotifications, subscribeToFollows, syncEngine } from './services/dataService';
 import { db, auth, signInAnonymously } from './lib/firebase';
@@ -72,8 +69,18 @@ export default function App() {
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
     const map: Record<string, User> = {};
     const accounts = JSON.parse(localStorage.getItem('nexora_registered_accounts') || '[]');
-    [INITIAL_USER, ...MOCK_CREATORS.filter(u => ['user-0', 'creator-4', 'voh_ai'].includes(u.id))].filter(Boolean).forEach(u => map[u.id] = u);
-    accounts.forEach((a: any) => map[a.user.id] = a.user);
+    accounts.forEach((a: any) => {
+      if (a && a.user && a.user.id) {
+        map[a.user.id] = a.user;
+      }
+    });
+    const savedUser = localStorage.getItem('nexora_user');
+    if (savedUser) {
+      try {
+        const u = JSON.parse(savedUser);
+        if (u && u.id) map[u.id] = u;
+      } catch {}
+    }
     return map;
   });
 
@@ -165,15 +172,8 @@ export default function App() {
         console.log('[App] Subscribing to posts, users, follows...');
         unsubPosts = subscribeToPosts((dbPosts) => {
           console.log('[App] Received posts:', dbPosts?.length || 0);
-          if (dbPosts && dbPosts.length > 0) {
+          if (dbPosts) {
             setPosts(normalizePosts(dbPosts));
-          } else {
-            console.log('[App] Firestore is empty, seeding INITIAL_POSTS and users...');
-            INITIAL_POSTS.forEach(post => savePostToDb(post));
-            if (INITIAL_USER) {
-              saveUserToDb(INITIAL_USER);
-            }
-            MOCK_CREATORS.forEach(creator => saveUserToDb(creator));
           }
         });
         
@@ -312,10 +312,7 @@ export default function App() {
 
   const [posts, setPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('nexora_posts');
-    // Filter out fake seeded users
-
-    const OFFICIAL_IDS = ['user-0', 'creator-4', 'voh_ai'];
-    const loadedPosts = saved ? JSON.parse(saved).filter((p: any) => !p.id.startsWith('post-') || OFFICIAL_IDS.includes(p.userId) || p.userId.length > 20) : INITIAL_POSTS.filter(p => OFFICIAL_IDS.includes(p.userId));
+    const loadedPosts = saved ? JSON.parse(saved) : [];
     const normalized = normalizePosts(loadedPosts);
     localStorage.setItem('nexora_posts', JSON.stringify(normalized));
     return normalized;
@@ -492,7 +489,7 @@ export default function App() {
       } catch (e) {}
     }
     const saved = localStorage.getItem('nexora_following_ids');
-    return saved ? JSON.parse(saved) : ['creator-4', 'voh_ai'];
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live'>('feed');
@@ -1448,14 +1445,6 @@ export default function App() {
       finalUserToView = creator;
     }
 
-    // Try finding in Additional Test Accounts
-    if (!finalUserToView) {
-      const testAccount = ADDITIONAL_TEST_ACCOUNTS.find(a => a.id === userIdOrUsername || a.username.toLowerCase() === cleanIdOrUser);
-      if (testAccount) {
-        finalUserToView = testAccount;
-      }
-    }
-
     // Try finding in registered database accounts
     if (!finalUserToView) {
       try {
@@ -1800,6 +1789,29 @@ export default function App() {
     });
   }, [chats, globalUsersMap]);
 
+  const dynamicTrendingTags = useMemo(() => {
+    const counts: Record<string, number> = {};
+    posts.forEach(p => {
+      if (p.tags && Array.isArray(p.tags)) {
+        p.tags.forEach(t => {
+          const clean = t.replace(/^#/, '').trim();
+          if (clean) counts[clean] = (counts[clean] || 0) + 1;
+        });
+      }
+      const matches = p.content ? p.content.match(/#(\w+)/g) : null;
+      if (matches) {
+        matches.forEach(m => {
+          const clean = m.replace(/^#/, '').trim();
+          if (clean) counts[clean] = (counts[clean] || 0) + 1;
+        });
+      }
+    });
+    return Object.entries(counts)
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [posts]);
+
   // Render Core layout
   if (!isLoggedIn) {
     return (
@@ -2026,17 +2038,11 @@ export default function App() {
           {/* Col 4: Right Discovery sidebar */}
           <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-1 h-full border-l border-white/5 bg-black/20 p-4 overflow-y-auto" : "hidden lg:block lg:col-span-1 lg:sticky lg:top-6"}>
             <RightSidebar
-              creators={Object.values(globalUsersMap) as User[]}
+              creators={(Object.values(globalUsersMap) as User[]).filter(u => u.id !== currentUser.id)}
               followingIds={followingIds}
               onToggleFollow={handleToggleFollow}
               onViewProfile={handleViewProfile}
-              trendingTags={[
-                { tag: 'SpaceGlass', count: 42 },
-                { tag: 'Rust', count: 58 },
-                { tag: 'NeonAesthetics', count: 104 },
-                { tag: 'DesignTokens', count: 31 },
-                { tag: 'BuildInPublic', count: 47 }
-              ]}
+              trendingTags={dynamicTrendingTags}
               selectedTag={selectedTag}
               setSelectedTag={setSelectedTag}
               systemSpeed={systemSpeed}

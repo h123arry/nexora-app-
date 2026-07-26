@@ -1,4 +1,5 @@
 import { User, Post, SocialMission, Circle, Chat, Message, Notification } from '../types';
+import { calculateNexoraReputationSystem } from '../services/reputationEngine';
 
 export let DEMO_MODE = true;
 export function setDemoMode(value: boolean) {
@@ -100,14 +101,7 @@ export interface SparkRecord {
 // Ensure database tables exist in LocalStorage
 export function initDb() {
   if (!localStorage.getItem(KEYS.FOLLOWS)) {
-    const initialFollows = [
-      { followerId: 'user-0', followingId: 'creator-4' }, // VOH follows Nexora AI
-      { followerId: 'user-0', followingId: 'voh_ai' },    // VOH follows VOH AI
-      { followerId: 'creator-4', followingId: 'user-0' }, // Nexora AI follows VOH
-      { followerId: 'creator-4', followingId: 'voh_ai' }, // Nexora AI follows VOH AI
-      { followerId: 'voh_ai', followingId: 'user-0' }     // VOH AI follows VOH
-    ];
-    localStorage.setItem(KEYS.FOLLOWS, JSON.stringify(initialFollows));
+    localStorage.setItem(KEYS.FOLLOWS, JSON.stringify([]));
   }
 
   if (!localStorage.getItem(KEYS.REPUTATION)) {
@@ -331,96 +325,67 @@ export function getSafeAvatar(avatar: string | undefined, name: string): string 
   return avatar;
 }
 
-// Compute dynamically calculated profile with absolute integrity
+// Compute dynamically calculated profile with absolute integrity using the Nexora Reputation & Contributions Algorithm System
 export function getRichUser(user: User): User {
   if (!user) return user;
-  
-  const isFounder = user.id === 'user-0' || user.username.toLowerCase() === 'voh' || (user.email && user.email.toLowerCase() === 'ogoulu131@gmail.com');
-  const isNexoraAi = user.username === 'nexora_ai';
-  const isVohAi = user.username === 'voh_ai';
 
   const followersCount = getFollowersCount(user.id);
   const followingCount = getFollowingCount(user.id);
-  const reputationVal = getReputationPoints(user.id);
-  const breakdown = getReputationBreakdown(user.id);
-  const contributionsCount = getContributionsCount(user.id);
   const completedMissionsCount = getCompletedMissionsCount(user.id);
+
+  // Load records from local storage for multi-signal analysis
+  initDb();
+  let allPosts: Post[] = [];
+  try {
+    allPosts = JSON.parse(localStorage.getItem(KEYS.POSTS) || '[]');
+  } catch {}
+  const userPosts = allPosts.filter(p => p && p.userId === user.id);
+  
+  let sparksRecords: SparkRecord[] = [];
+  try {
+    sparksRecords = JSON.parse(localStorage.getItem(KEYS.SPARKS) || '[]');
+  } catch {}
+
+  let missionRecords: JoinedMissionRecord[] = [];
+  try {
+    missionRecords = JSON.parse(localStorage.getItem(KEYS.MISSIONS) || '[]');
+  } catch {}
+
+  let circleRecords: JoinedCircleRecord[] = [];
+  try {
+    circleRecords = JSON.parse(localStorage.getItem(KEYS.CIRCLES) || '[]');
+  } catch {}
+
+  // Run the Hidden Nexora Algorithm Calculation Engine
+  const algo = calculateNexoraReputationSystem(
+    user,
+    userPosts,
+    allPosts,
+    sparksRecords,
+    missionRecords,
+    circleRecords
+  );
 
   // Apply safe avatar transformation
   const resolvedAvatar = getSafeAvatar(user.avatar, user.name || user.username);
   const isVerified = isUserVerified(user.username);
 
-  if (isFounder) {
-    // Founder Exception: manually assigned metrics (25.5 Million Followers) + local changes
-    return {
-      ...user,
-      avatar: resolvedAvatar,
-      isVerified: true,
-      followers: 25500000 + followersCount,
-      following: 5 + followingCount,
-      reputationPoints: 20000000 + reputationVal,
-      sparks: 80000000 + getSparksReceived(user.id),
-      reputationBreakdown: {
-        contributions: 40000000 + contributionsCount,
-        helpfulness: 121000 + breakdown.helpfulness,
-        missionsCompleted: 350 + completedMissionsCount,
-        skillsVerified: 83650 + breakdown.skillsVerified,
-      },
-    };
-  }
-
-  if (isNexoraAi) {
-    // Nexora AI details: slightly lesser than VOH AI & different
-    return {
-      ...user,
-      avatar: resolvedAvatar,
-      isVerified: true,
-      followers: 12400000 + followersCount,
-      following: 3 + followingCount,
-      reputationPoints: 11000000 + reputationVal,
-      sparks: 45000000 + getSparksReceived(user.id),
-      reputationBreakdown: {
-        contributions: 22000000 + contributionsCount,
-        helpfulness: 1250000 + breakdown.helpfulness,
-        missionsCompleted: 800 + completedMissionsCount,
-        skillsVerified: 500000 + breakdown.skillsVerified,
-      }
-    };
-  }
-
-  if (isVohAi) {
-    // VOH AI details: slightly lesser than VOH & different
-    return {
-      ...user,
-      avatar: resolvedAvatar,
-      isVerified: true,
-      followers: 18500000 + followersCount,
-      following: 4 + followingCount,
-      reputationPoints: 15000000 + reputationVal,
-      sparks: 62000000 + getSparksReceived(user.id),
-      reputationBreakdown: {
-        contributions: 30000000 + contributionsCount,
-        helpfulness: 1120000 + breakdown.helpfulness,
-        missionsCompleted: 750 + completedMissionsCount,
-        skillsVerified: 510000 + breakdown.skillsVerified,
-      }
-    };
-  }
-
-  // Normal users
   return {
     ...user,
     avatar: resolvedAvatar,
     isVerified,
     followers: followersCount,
     following: followingCount,
-    reputationPoints: reputationVal,
+    reputationPoints: algo.reputation, // Absolute invariant: reputation <= contributions
     sparks: getSparksReceived(user.id),
     reputationBreakdown: {
-      contributions: contributionsCount,
-      helpfulness: breakdown.helpfulness,
+      contributions: algo.contributions,
+      helpfulness: Math.round(algo.categories.helpfulResponses * 10),
       missionsCompleted: completedMissionsCount,
-      skillsVerified: breakdown.skillsVerified,
+      skillsVerified: Math.round(algo.categories.trustBuilding),
+      categories: algo.categories,
+      trustMultiplier: algo.trustMultiplier,
+      antiGamingStatus: algo.antiGamingStatus,
     },
   };
 }

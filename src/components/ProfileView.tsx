@@ -1031,6 +1031,61 @@ export default function ProfileView({
         <>
         <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
+          {/* Profile Completion Prompts */}
+          {isOwnProfile && (!currentUser.name || currentUser.name === 'New User' || !currentUser.username || !currentUser.bio || !currentUser.avatar || currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')) && (
+            <div className="mb-4 p-4 bg-violet-950/40 border border-violet-500/30 rounded-2xl space-y-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider">✨ Profile Setup & Completion</span>
+                <span className="text-[10px] font-mono text-zinc-400">
+                  {[
+                    currentUser.name && currentUser.name !== 'New User',
+                    currentUser.username,
+                    currentUser.bio,
+                    currentUser.avatar && !currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')
+                  ].filter(Boolean).length}/4 completed
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                {(!currentUser.avatar || currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')) && (
+                  <button
+                    onClick={() => setActivePanel('edit-profile')}
+                    className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-left transition-all cursor-pointer flex items-center justify-between group"
+                  >
+                    <span className="text-xs text-zinc-200 font-medium">Add your profile photo</span>
+                    <span className="text-violet-400 font-mono text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+                  </button>
+                )}
+                {(!currentUser.name || currentUser.name === 'New User') && (
+                  <button
+                    onClick={() => setActivePanel('edit-profile')}
+                    className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-left transition-all cursor-pointer flex items-center justify-between group"
+                  >
+                    <span className="text-xs text-zinc-200 font-medium">Set your display name</span>
+                    <span className="text-violet-400 font-mono text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+                  </button>
+                )}
+                {!currentUser.username && (
+                  <button
+                    onClick={() => setActivePanel('edit-profile')}
+                    className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-left transition-all cursor-pointer flex items-center justify-between group"
+                  >
+                    <span className="text-xs text-zinc-200 font-medium">Choose your username</span>
+                    <span className="text-violet-400 font-mono text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+                  </button>
+                )}
+                {!currentUser.bio && (
+                  <button
+                    onClick={() => setActivePanel('edit-profile')}
+                    className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/10 rounded-xl text-left transition-all cursor-pointer flex items-center justify-between group"
+                  >
+                    <span className="text-xs text-zinc-200 font-medium">Write your bio</span>
+                    <span className="text-violet-400 font-mono text-xs group-hover:translate-x-0.5 transition-transform">→</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Profile Identity (Refined Compact Layout) */}
           <div className="flex items-center gap-4 text-left mb-2">
             <div className="relative shrink-0">
@@ -1052,13 +1107,17 @@ export default function ProfileView({
 
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-xl font-black text-white leading-tight tracking-tight">{currentUser.name}</h1>
+                <h1 className={`text-xl font-black leading-tight tracking-tight ${!currentUser.name ? 'text-violet-400/70 italic text-base' : 'text-white'}`}>
+                  {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
+                </h1>
                 {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
               </div>
               
               {/* Username & Twin Action Chips */}
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <p className="text-sm font-bold text-violet-400/80 font-mono tracking-wider">@{currentUser.username}</p>
+                <p className={`text-sm font-bold font-mono tracking-wider ${!currentUser.username ? 'text-violet-400/60 italic text-xs' : 'text-violet-400/80'}`}>
+                  @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
+                </p>
                 {isOwnProfile ? (
                   <div className="flex items-center gap-2">
                     <motion.button 
@@ -1154,7 +1213,9 @@ export default function ProfileView({
               className="overflow-hidden relative"
               transition={{ duration: 0.25, ease: "easeInOut" }}
             >
-              <p className="whitespace-pre-wrap">{currentUser.bio || "No bio yet."}</p>
+              <p className={`whitespace-pre-wrap ${!currentUser.bio ? 'text-zinc-500 italic' : 'text-zinc-300'}`}>
+                {currentUser.bio || (isOwnProfile ? 'Add a bio' : '')}
+              </p>
             </motion.div>
             {currentUser.bio && (currentUser.bio.length > 70 || currentUser.bio.split('\n').length > 2) && (
               <button 
@@ -1265,26 +1326,46 @@ export default function ProfileView({
               </div>
 
               {/* Reputation & Stats Card */}
-              <div className="bg-[#0b081c] border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl">
-                <h3 className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest border-b border-white/5 pb-3 flex items-center gap-2">
-                  <Award className="w-4 h-4" /> Reputation & Contributions
-                </h3>
+              <div className="bg-[#0b081c] border border-violet-500/20 rounded-3xl p-6 space-y-4 shadow-xl">
+                <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                  <h3 className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest flex items-center gap-2">
+                    <Award className="w-4 h-4 text-violet-400" /> Reputation & Contributions
+                  </h3>
+                  <button 
+                    onClick={() => setShowReputationModal(true)}
+                    className="text-[10px] font-mono text-violet-300 hover:text-white flex items-center gap-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 px-3 py-1.5 rounded-xl cursor-pointer transition-all shadow-sm"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-pink-400" /> Nexora Algorithm Matrix
+                  </button>
+                </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 0)}</span>
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Reputation</span>
+                  <div 
+                    onClick={() => setShowReputationModal(true)}
+                    className="bg-violet-950/20 hover:bg-violet-900/30 p-4 rounded-2xl border border-violet-500/20 cursor-pointer transition-all text-center relative group"
+                    title="The trust and impact you have built on Nexora."
+                  >
+                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 0)}</span>
+                    <span className="text-[10px] font-mono text-violet-300 uppercase block mt-1 font-bold">Reputation ℹ️</span>
+                    <p className="text-[9px] text-zinc-400 mt-1 line-clamp-1">Trust & impact built</p>
                   </div>
                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.sparks || 0)}</span>
+                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.sparks || 0)}</span>
                     <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Sparks</span>
+                    <p className="text-[9px] text-zinc-500 mt-1 line-clamp-1">Community appreciation</p>
+                  </div>
+                  <div 
+                    onClick={() => setShowReputationModal(true)}
+                    className="bg-pink-950/20 hover:bg-pink-900/30 p-4 rounded-2xl border border-pink-500/20 cursor-pointer transition-all text-center relative group"
+                    title="The value you have added to the Nexora community."
+                  >
+                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)}</span>
+                    <span className="text-[10px] font-mono text-pink-300 uppercase block mt-1 font-bold">Contributions ℹ️</span>
+                    <p className="text-[9px] text-zinc-400 mt-1 line-clamp-1">Value added to Nexora</p>
                   </div>
                   <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)}</span>
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Contributions</span>
-                  </div>
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <span className="text-lg font-black text-white">{formatSecondaryStat(currentUser.followers || 0)}</span>
+                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.followers || 0)}</span>
                     <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Followers</span>
+                    <p className="text-[9px] text-zinc-500 mt-1 line-clamp-1">Network connections</p>
                   </div>
                 </div>
               </div>
@@ -3539,7 +3620,7 @@ export default function ProfileView({
         className="hidden"
       />
 
-      {/* 11. REPUTATION POINTS D3 BREAKDOWN MODAL OVERLAY */}
+      {/* 11. REPUTATION & CONTRIBUTIONS ALGORITHM MATRIX MODAL */}
       <AnimatePresence>
         {showReputationModal && (
           <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4" onClick={() => setShowReputationModal(false)}>
@@ -3547,52 +3628,121 @@ export default function ProfileView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0c0926] border border-violet-500/35 rounded-3xl p-6 max-w-md w-full text-left space-y-4"
+              className="bg-[#0b081e] border border-violet-500/35 rounded-3xl p-6 max-w-lg w-full text-left space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                <span className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-
-                </span>
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                    <Shield className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-sans font-extrabold text-white">Nexora Algorithm Matrix</h3>
+                    <p className="text-[10px] font-mono text-zinc-400">Multi-Signal Trust & Value Engine</p>
+                  </div>
+                </div>
                 <button 
                   onClick={() => setShowReputationModal(false)}
-                  className="p-1 px-2 rounded-lg bg-white/5 text-zinc-400 hover:text-white text-xs font-mono"
+                  className="p-1.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white text-xs font-mono transition-all cursor-pointer"
                 >
                   Close ×
                 </button>
               </div>
 
-              <div className="space-y-4">
-                <p className="text-xs text-zinc-300 leading-relaxed font-sans">
-                  Reputation represents the summation of validated helper comments, verified technical skills, completed social missions, and positive sparks on Nexora.
-                </p>
+              {/* Core Definitions Banner */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-2xl bg-violet-950/30 border border-violet-500/20 space-y-1">
+                  <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase block">Reputation</span>
+                  <p className="text-xs font-sans text-zinc-200 font-medium">"The trust and impact you have built on Nexora."</p>
+                  <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationPoints || 0)} PR</span>
+                </div>
+                <div className="p-3.5 rounded-2xl bg-pink-950/30 border border-pink-500/20 space-y-1">
+                  <span className="text-[10px] font-mono text-pink-400 font-extrabold uppercase block">Contributions</span>
+                  <p className="text-xs font-sans text-zinc-200 font-medium">"The value you have added to the Nexora community."</p>
+                  <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)} Value</span>
+                </div>
+              </div>
 
-                {/* Progress bar metrics for progressive disclosure */}
-                <div className="space-y-3">
+              {/* Algorithm Invariants & Protection Status */}
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/5 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-mono">
+                  <span className="text-emerald-400 font-bold flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Invariant: Rep ≤ Contrib
+                  </span>
+                  <span className="text-cyan-400 font-bold flex items-center gap-1">
+                    <Lock className="w-3.5 h-3.5" /> Anti-Farming Shield Active
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
+                  Contributions grow organically with platform value, while Reputation requires verified trust signals, distinct community engagement, and sustained quality.
+                </p>
+              </div>
+
+              {/* 6 Internal Contribution Pillar Breakdown */}
+              <div className="space-y-3">
+                <h4 className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider font-extrabold flex items-center justify-between">
+                  <span>Internal Contribution Dimensions</span>
+                  <span className="text-violet-400 text-[10px]">6 Signals Evaluated</span>
+                </h4>
+
+                <div className="grid grid-cols-1 gap-2.5">
                   {[
-                    { label: 'Contributions Metric', val: currentUser.reputationBreakdown?.contributions || 1400, color: 'bg-violet-500' },
-                    { label: 'Helpfulness Index', val: currentUser.reputationBreakdown?.helpfulness || 82000, color: 'bg-pink-500' },
-                    { label: 'Social Missions Completed', val: currentUser.reputationBreakdown?.missionsCompleted || 12, color: 'bg-cyan-500' },
-                    { label: 'Verified Technical Skills', val: currentUser.reputationBreakdown?.skillsVerified || 4, color: 'bg-emerald-500' }
-                  ].map(metric => (
-                    <div key={metric.label} className="space-y-1">
-                      <div className="flex justify-between text-[10px] font-mono text-zinc-400 uppercase">
-                        <span>{metric.label}</span>
-                        <span className="font-bold text-white">{metric.val.toLocaleString()} pts</span>
+                    { key: 'contentCreation', name: 'Content Creation', icon: '🎨', val: currentUser.reputationBreakdown?.categories?.contentCreation ?? 18, desc: 'Original posts, rich media & video depth', color: 'bg-violet-500' },
+                    { key: 'communityEngagement', name: 'Community Engagement', icon: '💬', val: currentUser.reputationBreakdown?.categories?.communityEngagement ?? 24, desc: 'Thoughtful comments & creator sparks', color: 'bg-pink-500' },
+                    { key: 'helpfulResponses', name: 'Helpful Responses', icon: '💡', val: currentUser.reputationBreakdown?.categories?.helpfulResponses ?? 15, desc: 'Direct replies & community endorsements', color: 'bg-cyan-500' },
+                    { key: 'discoveryImpact', name: 'Discovery Impact', icon: '🚀', val: currentUser.reputationBreakdown?.categories?.discoveryImpact ?? 32, desc: 'Unique user sparks & viral shares', color: 'bg-emerald-500' },
+                    { key: 'trustBuilding', name: 'Trust Building', icon: '🔒', val: currentUser.reputationBreakdown?.categories?.trustBuilding ?? 45, desc: 'Profile completeness & account longevity', color: 'bg-amber-500' },
+                    { key: 'platformParticipation', name: 'Platform Participation', icon: '🌐', val: currentUser.reputationBreakdown?.categories?.platformParticipation ?? 20, desc: 'Missions completed & circle leadership', color: 'bg-indigo-500' },
+                  ].map(pillar => {
+                    const maxVal = Math.max(50, (currentUser.reputationBreakdown?.contributions || 100) * 0.4);
+                    const pct = Math.min(100, Math.round((pillar.val / maxVal) * 100));
+
+                    return (
+                      <div key={pillar.key} className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-zinc-200 flex items-center gap-1.5">
+                            <span>{pillar.icon}</span> {pillar.name}
+                          </span>
+                          <span className="font-mono text-white font-extrabold">{pillar.val} pts</span>
+                        </div>
+                        <p className="text-[10px] text-zinc-400 leading-tight">{pillar.desc}</p>
+                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                          <div className={`h-full ${pillar.color}`} style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
-                        <div className={`h-full ${metric.color}`} style={{ width: '65%' }} />
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Quality & Anti-Gaming Diagnostics */}
+              <div className="p-4 rounded-2xl bg-violet-950/20 border border-violet-500/20 space-y-2 text-center">
+                <span className="text-[10px] font-mono text-violet-300 uppercase block font-extrabold">Algorithm Quality Multipliers</span>
+                <div className="grid grid-cols-3 gap-2 text-center pt-1">
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-xs font-mono font-bold text-emerald-400 block">
+                      {Math.round((currentUser.reputationBreakdown?.trustMultiplier || 0.85) * 100)}%
+                    </span>
+                    <span className="text-[9px] text-zinc-400 block mt-0.5">Trust Multiplier</span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-xs font-mono font-bold text-cyan-400 block">
+                      {Math.round((currentUser.reputationBreakdown?.antiGamingStatus?.uniqueEngagerRatio || 0.92) * 100)}%
+                    </span>
+                    <span className="text-[9px] text-zinc-400 block mt-0.5">Unique Engagers</span>
+                  </div>
+                  <div className="bg-white/5 p-2 rounded-xl">
+                    <span className="text-xs font-mono font-bold text-pink-400 block">Active</span>
+                    <span className="text-[9px] text-zinc-400 block mt-0.5">Anti-Spam Shield</span>
+                  </div>
                 </div>
               </div>
 
               <button
                 onClick={() => setShowReputationModal(false)}
-                className="w-full py-2.5 bg-violet-950 hover:bg-violet-900 text-violet-300 font-mono font-bold text-xs uppercase rounded-xl"
+                className="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-xs uppercase tracking-wider rounded-2xl cursor-pointer transition-all shadow-lg shadow-violet-600/20"
               >
-                Dismiss Diagnostics
+                Close Algorithm Matrix
               </button>
             </motion.div>
           </div>
