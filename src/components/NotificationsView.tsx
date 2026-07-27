@@ -1048,7 +1048,10 @@ export default function NotificationsView({
 
                             {/* Profile Image with verification and Live Pulse Ring */}
                             {notif.userId !== 'system' && (
-                              <div className="relative shrink-0">
+                              <div 
+                                className="relative shrink-0 cursor-pointer hover:opacity-85 transition-opacity"
+                                onClick={() => (notif.userId || notif.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: notif.userId !== 'multiple' ? notif.userId : notif.username } }))}
+                              >
                                 <img 
                                   src={notif.avatar} 
                                   alt="" 
@@ -1078,7 +1081,10 @@ export default function NotificationsView({
                             <div className="flex-1 overflow-hidden pr-2">
                               <div className="text-xs text-violet-100 font-sans leading-relaxed">
                                 {notif.userId !== 'system' && notif.userId !== 'multiple' && (
-                                  <span className="font-extrabold text-white mr-1.5 hover:underline cursor-pointer">
+                                  <span 
+                                    className="font-extrabold text-white mr-1.5 hover:underline cursor-pointer"
+                                    onClick={() => (notif.userId || notif.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: notif.userId !== 'multiple' ? notif.userId : notif.username } }))}
+                                  >
                                     @{notif.username}
                                   </span>
                                 )}

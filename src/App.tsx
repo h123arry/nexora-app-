@@ -58,9 +58,11 @@ import SystemHubControlPanel from './components/SystemHubControlPanel';
 import NidaView from './components/NidaView';
 import CommunitiesHubView from './components/CommunitiesHubView';
 import SavedView from './components/SavedView';
+import UniversalSearchModal from './components/UniversalSearchModal';
 import WalletView from './components/WalletView';
 import SettingsView from './components/SettingsView';
 import NexoraLoader from './components/NexoraLoader';
+import OfflineBanner from './components/OfflineBanner';
 import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
@@ -498,6 +500,16 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'settings'>('feed');
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const [historyStack, setHistoryStack] = useState<{ tab: typeof activeTab; viewedUser: User | null }[]>([]);
+
+  const navigateTo = (tab: typeof activeTab, targetViewedUser: User | null = null) => {
+    pageScrollPositionsRef.current[activeTab] = window.scrollY || document.documentElement.scrollTop || 0;
+    if (tab !== activeTab || targetViewedUser?.id !== viewedUser?.id) {
+      setHistoryStack(prev => [...prev, { tab: activeTab, viewedUser }]);
+    }
+    setActiveTab(tab);
+    setViewedUser(targetViewedUser);
+  };
 
   // Global scroll position memory across all destination tabs
   const pageScrollPositionsRef = useRef<Record<string, number>>({});
@@ -515,26 +527,7 @@ export default function App() {
     return () => clearTimeout(timer);
   }, [activeTab]);
 
-  // Unified navigation custom event listeners
-  useEffect(() => {
-    const handleToggleNav = () => {
-      setIsNavMenuOpen(prev => !prev);
-    };
-    const handleChangeTab = (e: any) => {
-      if (e.detail?.tab) {
-        setActiveTab(e.detail.tab);
-        if (e.detail.subTab) {
-          setMatrixSubTabRedirect(e.detail.subTab);
-        }
-      }
-    };
-    window.addEventListener('toggleNavMenu', handleToggleNav);
-    window.addEventListener('changeTab', handleChangeTab);
-    return () => {
-      window.removeEventListener('toggleNavMenu', handleToggleNav);
-      window.removeEventListener('changeTab', handleChangeTab);
-    };
-  }, []);
+  const [isUniversalSearchOpen, setIsUniversalSearchOpen] = useState(false);
 
   // Pause any playing videos immediately when switching main tabs
   useEffect(() => {
@@ -586,6 +579,77 @@ export default function App() {
   const [lazyLoadImages, setLazyLoadImages] = useState<boolean>(() => {
     return localStorage.getItem('nexora_lazy_load_images') !== 'false';
   });
+
+  const handleBackNavigation = () => {
+    // Overlay Priority:
+    // 1. Dialogs & Modals
+    if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
+    if (isCreateMenuOpen) { setIsCreateMenuOpen(false); return true; }
+    if (isSystemHubOpen) { setIsSystemHubOpen(false); return true; }
+    // 2. Search Overlay
+    if (isUniversalSearchOpen) { setIsUniversalSearchOpen(false); return true; }
+    // 3. Slide-down Menu
+    if (isNavMenuOpen) { setIsNavMenuOpen(false); return true; }
+    // 4. Viewed User Profile
+    if (viewedUser !== null) {
+      setViewedUser(null);
+      return true;
+    }
+    // 5. Navigation Stack History
+    if (historyStack.length > 0) {
+      const lastState = historyStack[historyStack.length - 1];
+      setHistoryStack(prev => prev.slice(0, prev.length - 1));
+      setActiveTab(lastState.tab);
+      setViewedUser(lastState.viewedUser);
+      return true;
+    }
+    // 6. Home feed with no history & no overlays -> allow default (minimize)
+    return false;
+  };
+
+  // Unified navigation custom event listeners & PopState handler
+  useEffect(() => {
+    window.history.pushState({ nexora: true }, '', window.location.href);
+
+    const onPopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      const handled = handleBackNavigation();
+      if (handled) {
+        window.history.pushState({ nexora: true }, '', window.location.href);
+      } else {
+        window.history.back();
+      }
+    };
+
+    const handleToggleNav = () => {
+      setIsNavMenuOpen(prev => !prev);
+    };
+    const handleChangeTab = (e: any) => {
+      if (e.detail?.tab) {
+        navigateTo(e.detail.tab, null);
+        if (e.detail.subTab) {
+          setMatrixSubTabRedirect(e.detail.subTab);
+        }
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    window.addEventListener('toggleNavMenu', handleToggleNav);
+    window.addEventListener('changeTab', handleChangeTab);
+    const handleOpenUniversalSearch = () => setIsUniversalSearchOpen(true);
+    window.addEventListener('openUniversalSearch', handleOpenUniversalSearch);
+    const handleViewProfileEvent = (e: any) => {
+      const target = e.detail?.userIdOrUsername;
+      if (target) handleViewProfile(target);
+    };
+    window.addEventListener('nexora-view-profile', handleViewProfileEvent);
+    return () => {
+      window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('toggleNavMenu', handleToggleNav);
+      window.removeEventListener('changeTab', handleChangeTab);
+      window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
+      window.removeEventListener('nexora-view-profile', handleViewProfileEvent);
+    };
+  }, [isCreatePostModalOpen, isCreateMenuOpen, isSystemHubOpen, isUniversalSearchOpen, isNavMenuOpen, viewedUser, historyStack, activeTab]);
 
   // Sync System Hub options to local storage and browser document settings
   useEffect(() => {
@@ -1481,8 +1545,7 @@ export default function App() {
     recordRecommendationEvent('visit_profile', { creatorId: cleanIdOrUser, creatorUsername: cleanIdOrUser });
 
     if (userIdOrUsername === currentUser.id || currentUser.username.toLowerCase() === cleanIdOrUser) {
-      setViewedUser(null);
-      setActiveTab('profile');
+      navigateTo('profile', null);
       return;
     }
 
@@ -1563,8 +1626,7 @@ export default function App() {
     const instantUser = ProfileEngine.getProfileInstantly(finalUserToView, (freshUser) => {
       setViewedUser(freshUser);
     });
-    setViewedUser(instantUser);
-    setActiveTab('profile');
+    navigateTo('profile', instantUser);
   };
 
   const handleStartChat = (userId: string) => {
@@ -1884,6 +1946,7 @@ export default function App() {
 
   return (
     <div id="nexora-master-wrapper" className={`${getThemeWrapperClass(theme)} transition-colors duration-500`}>
+      <OfflineBanner />
       {/* 🧭 Unified Navigation Menu Drawer Overlay */}
       <SlideDownMenu
         isOpen={isNavMenuOpen}
@@ -4017,6 +4080,21 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <UniversalSearchModal
+        isOpen={isUniversalSearchOpen}
+        onClose={() => setIsUniversalSearchOpen(false)}
+        currentUser={getRichUser(currentUser)}
+        posts={resolvedPosts}
+        users={Object.values(globalUsersMap) as User[]}
+        chats={resolvedChats}
+        onSelectTab={(t) => setActiveTab(t as any)}
+        onOpenCreatePost={(mode) => {
+          setCreationInitialMode(mode as any);
+          setIsCreateMenuOpen(true);
+        }}
+        onViewProfile={(u) => handleViewProfile(u.username)}
+      />
 
     </div>
   );

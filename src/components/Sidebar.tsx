@@ -88,7 +88,9 @@ export default function Sidebar({
               whileTap={{ scale: 0.95 }}
               key={item.id}
               onClick={() => {
-                if (item.isCreate) {
+                if (item.id === 'explore') {
+                  window.dispatchEvent(new CustomEvent('openUniversalSearch'));
+                } else if (item.isCreate) {
                   onOpenCreatePost();
                 } else if (item.isMenu) {
                   window.dispatchEvent(new CustomEvent('toggleNavMenu'));

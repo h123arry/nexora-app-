@@ -1181,14 +1181,17 @@ export default function CommunitiesHubView({
                         return (
                           <div key={post.id} className="p-4 bg-zinc-900/60 border border-white/5 rounded-2xl space-y-3">
                             <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
+                              <div 
+                                className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-opacity"
+                                onClick={() => (post.userId || post.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: post.userId || post.username } }))}
+                              >
                                 <img src={post.avatar} className="w-8 h-8 rounded-xl object-cover" />
                                 <div>
                                   <div className="flex items-center gap-1">
-                                    <span className="text-xs font-bold text-white">{post.name}</span>
+                                    <span className="text-xs font-bold text-white hover:underline">{post.name}</span>
                                     {post.isVerified && <CheckCircle className="w-3 h-3 text-purple-400" />}
                                   </div>
-                                  <p className="text-[9px] text-current/40 font-mono">@{post.username} • {new Date(post.timestamp).toLocaleTimeString()}</p>
+                                  <p className="text-[9px] text-current/40 font-mono hover:underline">@{post.username} • {new Date(post.timestamp).toLocaleTimeString()}</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1.5">
@@ -1232,7 +1235,12 @@ export default function CommunitiesHubView({
                             <div className="space-y-1.5 pl-3 border-l border-white/5">
                               {post.comments?.map((comment) => (
                                 <div key={comment.id} className="text-[10px] text-current/80">
-                                  <span className="font-bold text-violet-300">@{comment.username}: </span>
+                                  <span 
+                                    className="font-bold text-violet-300 hover:underline cursor-pointer"
+                                    onClick={() => (comment.userId || comment.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: comment.userId || comment.username } }))}
+                                  >
+                                    @{comment.username}: 
+                                  </span>
                                   <span>{comment.content}</span>
                                 </div>
                               ))}

@@ -1872,7 +1872,7 @@ export default function FeedView({
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'explore' } }));
+                window.dispatchEvent(new CustomEvent('openUniversalSearch'));
               }}
               className="p-2.5 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[40px] min-w-[40px] active:scale-95"
               title="Search"
@@ -2312,11 +2312,11 @@ export default function FeedView({
                         {post.comments.map((c, commentIndex) => (
                           <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
                             <div className="flex items-start justify-between gap-2 text-xs">
-                              <div className="flex gap-2">
+                              <div className="flex gap-2 cursor-pointer items-center" onClick={() => onViewProfile?.(c.userId || c.username)}>
                                 <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
                                 <div>
-                                  <span className="font-sans font-bold text-violet-200">{c.name}</span>
-                                  <span className="text-[10px] font-mono text-violet-400/60 block">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
+                                  <span className="font-sans font-bold text-violet-200 hover:underline">{c.name}</span>
+                                  <span className="text-[10px] font-mono text-violet-400/60 block hover:underline">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
                                 </div>
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0">
@@ -2350,11 +2350,11 @@ export default function FeedView({
                               <div className="pl-9 space-y-2.5 pt-1.5 border-l border-violet-500/10 ml-3.5">
                                 {c.replies.map(rep => (
                                   <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
-                                    <div className="flex items-center gap-2 mb-1">
+                                    <div className="flex items-center gap-2 mb-1 cursor-pointer" onClick={() => onViewProfile?.(rep.userId || rep.username)}>
                                       <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
                                       <div>
-                                        <span className="font-sans font-black text-violet-200 text-[11px]">{rep.name}</span>
-                                        <span className="text-[9px] font-mono text-violet-400/50 block">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
+                                        <span className="font-sans font-black text-violet-200 text-[11px] hover:underline">{rep.name}</span>
+                                        <span className="text-[9px] font-mono text-violet-400/50 block hover:underline">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
                                       </div>
                                     </div>
                                     <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>

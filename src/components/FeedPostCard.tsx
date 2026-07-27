@@ -245,7 +245,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               {post.content.length > 100 && <VohSummaryButton content={post.content} />}
             </div>
             <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-violet-400/80 leading-tight">
-              <span>@{post.username}</span>
+              <span
+                onClick={() => (post.userId || post.username) && onViewProfile?.(post.userId || post.username)}
+                className="hover:underline cursor-pointer"
+              >
+                @{post.username}
+              </span>
               <span>•</span>
               <span><RelativeTime timestamp={post.timestamp} /></span>
               <span>•</span>
