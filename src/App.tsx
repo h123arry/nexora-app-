@@ -1875,7 +1875,7 @@ export default function App() {
     }
     switch (mood) {
       case 'neon-cyber':
-        return 'bg-[#0c0a15]/90 border border-violet-500/20 shadow-md shadow-violet-500/5';
+        return 'bg-[#0c0a15]/90 border border-white/10 shadow-md shadow-violet-500/5';
       case 'emerald-glass':
         return 'bg-[#040e09]/90 border border-emerald-950 shadow-md shadow-emerald-500/5';
       case 'platinum-light':
@@ -2464,7 +2464,7 @@ export default function App() {
                     {/* VOH VOICE RECORDING SECTION OR NORMAL TEXT COMPOSER */}
                     {activePostType === 'voice' ? (
                       /* VOICE POST CHANNEL COMPONENT */
-                      <div className="p-5 rounded-2xl bg-[#09071c] border border-violet-500/20 space-y-4 text-center">
+                      <div className="p-5 rounded-2xl bg-[#09071c] border border-white/10 space-y-4 text-center">
                         <div className="space-y-1">
                           <h4 className="text-xs font-mono font-black text-rose-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
                             <span className="relative flex h-2 w-2">
@@ -2505,7 +2505,7 @@ export default function App() {
                               <button 
                                 type="button"
                                 onClick={() => setVoiceRecordingState('finished')}
-                                className="w-12 h-12 rounded-full border border-violet-500/30 bg-violet-600/20 text-white flex items-center justify-center cursor-pointer hover:bg-violet-600/30 active:scale-95 transition-all text-xs font-black font-mono"
+                                className="w-12 h-12 rounded-full border border-white/10 bg-violet-600/20 text-white flex items-center justify-center cursor-pointer hover:bg-violet-600/30 active:scale-95 transition-all text-xs font-black font-mono"
                               >
                                 STOP
                               </button>
@@ -2737,7 +2737,7 @@ export default function App() {
 
                         {/* Interactive Poll choice inputs if setting up a poll */}
                         {activePostType === 'poll' && (
-                          <div className="p-3.5 rounded-2xl bg-[#09071c] border border-violet-500/15 space-y-2.5">
+                          <div className="p-3.5 rounded-2xl bg-[#09071c] border border-white/10 space-y-2.5">
                             <span className="text-[9px] font-mono text-[#8B5CF6] font-black uppercase tracking-wider block">
                               📊 ADD POLL RESPONSES
                             </span>
@@ -2992,7 +2992,7 @@ export default function App() {
                               {activePostType === 'poll' && (
                                 <div className="space-y-1.5 pl-3">
                                   {pollOptions.filter(o => o.trim()).map((o, idx) => (
-                                    <div key={idx} className="p-2 rounded-xl bg-violet-950/20 border border-violet-500/10 text-[11px] font-sans text-violet-200">
+                                    <div key={idx} className="p-2 rounded-xl bg-violet-950/20 border border-white/10 text-[11px] font-sans text-violet-200">
                                       {o}
                                     </div>
                                   ))}
@@ -3085,7 +3085,7 @@ export default function App() {
                               setTimeout(() => setIsCopied(false), 2000);
                             } catch(e){}
                           }}
-                          className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 disabled:opacity-40 transition-all border border-violet-500/15 cursor-pointer uppercase"
+                          className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 disabled:opacity-40 transition-all border border-white/10 cursor-pointer uppercase"
                         >
                           <Forward className="w-3.5 h-3.5 hover:scale-110" />
                           Share & Copy
@@ -3170,7 +3170,7 @@ export default function App() {
               initial={{ scale: 0.9, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.9, opacity: 0, y: 10 }}
-              className="relative w-full max-w-sm rounded-[32px] bg-linear-to-b from-[#110931] to-[#04010b] border border-violet-500/25 p-6 text-center shadow-2xl overflow-hidden z-10"
+              className="relative w-full max-w-sm rounded-[32px] bg-linear-to-b from-[#110931] to-[#04010b] border border-white/10 p-6 text-center shadow-md overflow-hidden z-10"
             >
               {/* Decorative background radial glows */}
               <div className="absolute right-0 top-0 w-32 h-32 bg-violet-600/15 rounded-full blur-2xl animate-pulse" />
@@ -3216,14 +3216,14 @@ export default function App() {
                   ) : (
                     <div className="space-y-2 text-left">
                       {/* Manual setup directions */}
-                      <div className="p-3 bg-black/45 rounded-2xl border border-violet-500/10 space-y-2 text-[10px] font-sans text-violet-300/80 leading-relaxed">
+                      <div className="p-3 bg-black/45 rounded-2xl border border-white/10 space-y-2 text-[10px] font-sans text-violet-300/80 leading-relaxed">
                         <div className="flex items-center gap-1 text-[9px] font-mono text-cyan-400 uppercase font-black tracking-wider">
                           <span>📲 How to install on your phone:</span>
                         </div>
-                        <p className="border-b border-violet-500/5 pb-1.5">
+                        <p className="border-b border-white/10 pb-1.5">
                           🍎 <strong>iPhone (Safari):</strong> Tap the <strong>Share</strong> button at the bottom of Safari, scroll down, and tap <strong>Add to Home Screen</strong>.
                         </p>
-                        <p className="border-b border-violet-500/5 pb-1.5">
+                        <p className="border-b border-white/10 pb-1.5">
                           🤖 <strong>Android (Chrome):</strong> Tap the three dots <strong>⋮</strong> at the top right, then tap <strong>Install app</strong> or <strong>Add to Home screen</strong>.
                         </p>
                         <p>
@@ -3235,7 +3235,7 @@ export default function App() {
                         onClick={() => {
                           window.dispatchEvent(new CustomEvent('toast', { detail: 'Nexora is ready to be installed! Follow the helper guide above.' }));
                         }}
-                        className="w-full py-2.5 rounded-xl bg-violet-600/10 hover:bg-violet-600/20 border border-violet-500/20 text-violet-300 font-sans text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer text-center"
+                        className="w-full py-2.5 rounded-xl bg-violet-600/10 hover:bg-violet-600/20 border border-white/10 text-violet-300 font-sans text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer text-center"
                       >
                         Activate Features ✓
                       </button>
@@ -3272,7 +3272,7 @@ export default function App() {
       {/* Sleek unified bottom navigation bar (primary app navigation for all sizes) */}
       <div 
         id="nexora-unified-bottom-nav"
-        className="fixed bottom-0 md:bottom-6 inset-x-0 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-[#06040f]/95 border-t md:border border-violet-500/15 md:rounded-2xl backdrop-blur-md z-40 py-2 px-5 flex justify-between items-center text-current/60 shadow-[0_-5px_25px_rgba(139,92,246,0.2)] md:shadow-[0_10px_35px_rgba(0,0,0,0.9)] pb-safe"
+        className="fixed bottom-0 md:bottom-6 inset-x-0 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-[#06040f]/95 border-t md:border border-white/10 md:rounded-2xl backdrop-blur-md z-40 py-2 px-5 flex justify-between items-center text-current/60 shadow-[0_-5px_25px_rgba(139,92,246,0.2)] md:shadow-[0_10px_35px_rgba(0,0,0,0.9)] pb-safe"
       >
         {/* 1. 🏠 Home */}
         <button 
@@ -3280,7 +3280,7 @@ export default function App() {
             setActiveTab('feed');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'feed' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-violet-500/10' : 'hover:text-current'}`}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-white/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'feed' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-white/10' : 'hover:text-current'}`}
           id="mobile-nav-home"
         >
           <Home className="w-5 h-5" />
@@ -3421,7 +3421,7 @@ export default function App() {
             setActiveTab('profile');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'profile' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-violet-500/10' : 'hover:text-current'}`}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-white/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'profile' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-white/10' : 'hover:text-current'}`}
           id="mobile-nav-profile"
         >
           <UserIcon className="w-5 h-5" />
@@ -3442,11 +3442,11 @@ export default function App() {
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="w-full max-w-md bg-[#0a071c] border border-violet-500/20 p-6 rounded-3xl space-y-4 shadow-2xl relative text-left"
+              className="w-full max-w-md bg-[#0a071c] border border-white/10 p-6 rounded-3xl space-y-4 shadow-md relative text-left"
             >
-              <div className="flex items-center justify-between border-b border-violet-500/10 pb-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-violet-600/20 flex items-center justify-center border border-violet-500/30">
+                  <div className="w-8 h-8 rounded-lg bg-violet-600/20 flex items-center justify-center border border-white/10">
                     <VohIcon size={18} animated glow variant="brand" />
                   </div>
                   <div>
@@ -3471,7 +3471,7 @@ export default function App() {
                   This account has been thoroughly audited and authenticated by the **Voice of Harrison (VOH AI)** core reputation indexer.
                 </p>
                 
-                <div className="p-3 bg-violet-950/20 border border-violet-500/10 rounded-xl space-y-1.5">
+                <div className="p-3 bg-violet-950/20 border border-white/10 rounded-xl space-y-1.5">
                   <span className="text-[9.5px] font-mono text-pink-400 uppercase font-black tracking-widest block">
                     Verification Criteria
                   </span>
@@ -3514,7 +3514,7 @@ export default function App() {
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 30 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="w-full max-w-sm bg-[#0e0b24] border border-violet-500/20 p-6 rounded-3xl space-y-5 shadow-2xl relative text-center"
+              className="w-full max-w-sm bg-[#0e0b24] border border-white/10 p-6 rounded-3xl space-y-5 shadow-md relative text-center"
             >
               {/* User Avatar Circle */}
               <div className="flex flex-col items-center space-y-3">
@@ -3587,7 +3587,7 @@ export default function App() {
               animate={{ y: 0 }}
               exit={{ y: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="relative w-full max-w-lg bg-[#070514] border-t border-violet-500/20 rounded-t-[2.5rem] p-6 pb-12 max-h-[85vh] overflow-y-auto shadow-2xl space-y-6 z-10 scrollbar-none text-left"
+              className="relative w-full max-w-lg bg-[#070514] border-t border-white/10 rounded-t-[2.5rem] p-6 pb-12 max-h-[85vh] overflow-y-auto shadow-md space-y-6 z-10 scrollbar-none text-left"
             >
               {/* Header with pull tab */}
               <div className="flex flex-col items-center">
@@ -3623,7 +3623,7 @@ export default function App() {
                     setCreationInitialTab(undefined);
                     setIsCreatePostModalOpen(true);
                   }}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-violet-950/20 border border-white/5 hover:border-violet-500/30 transition-all cursor-pointer text-left group"
+                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-violet-950/20 border border-white/5 hover:border-white/10 transition-all cursor-pointer text-left group"
                 >
                   <div className="p-2.5 rounded-xl bg-violet-600/10 text-violet-400 group-hover:scale-110 group-hover:bg-violet-600/20 transition-all shrink-0">
                     <FileText className="w-5 h-5" />
@@ -3778,7 +3778,7 @@ export default function App() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
               transition={{ type: "spring", duration: 0.3 }}
-              className="relative w-full max-w-lg bg-[#070514] border border-violet-500/20 rounded-3xl p-6 shadow-2xl z-10 text-left overflow-hidden"
+              className="relative w-full max-w-lg bg-[#070514] border border-white/10 rounded-3xl p-6 shadow-md z-10 text-left overflow-hidden"
             >
               {/* Decorative neon blur */}
               <div className="absolute top-[-20%] left-[-10%] w-64 h-64 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
@@ -3787,7 +3787,7 @@ export default function App() {
               {/* Header */}
               <div className="flex justify-between items-start border-b border-white/5 pb-3.5 mb-4 relative z-10">
                 <div className="flex items-center gap-2">
-                  <div className="p-2 bg-violet-600/10 border border-violet-500/20 rounded-xl text-violet-400">
+                  <div className="p-2 bg-violet-600/10 border border-white/10 rounded-xl text-violet-400">
                     <VohIcon size={20} animated glow variant="brand" />
                   </div>
                   <div>
@@ -3824,7 +3824,7 @@ export default function App() {
                         }));
                       }, 300);
                     }}
-                    className="p-2.5 rounded-xl bg-white/3 border border-white/5 hover:border-violet-500/30 text-left hover:bg-violet-950/20 transition-all group cursor-pointer"
+                    className="p-2.5 rounded-xl bg-white/3 border border-white/5 hover:border-white/10 text-left hover:bg-violet-950/20 transition-all group cursor-pointer"
                   >
                     <span className="block text-[10.5px] font-black text-white group-hover:text-violet-300 font-sans">#SummarizeFeed</span>
                     <span className="block text-[9px] text-zinc-400 font-sans mt-0.5">Parse active timeline posts</span>
@@ -3880,7 +3880,7 @@ export default function App() {
                       placeholder="e.g. Find startup opportunities in Nigeria..."
                       value={quickAiQuery}
                       onChange={(e) => setQuickAiQuery(e.target.value)}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-xs text-white focus:outline-none focus:border-violet-500/40"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/5 text-xs text-white focus:outline-none focus:border-white/10"
                     />
                     <button
                       type="submit"
@@ -3961,7 +3961,7 @@ export default function App() {
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -15, scale: 0.95, transition: { duration: 0.2 } }}
-              className="p-3.5 rounded-2xl bg-zinc-950/95 border border-violet-500/20 backdrop-blur-xl shadow-2xl flex items-center gap-2.5 pointer-events-auto text-left"
+              className="p-3.5 rounded-2xl bg-zinc-950/95 border border-white/10 backdrop-blur-xl shadow-md flex items-center gap-2.5 pointer-events-auto text-left"
             >
               <div className="w-2 h-2 rounded-full bg-violet-400 animate-pulse shrink-0" />
               <p className="text-xs font-sans font-medium text-white leading-relaxed">{toast.message}</p>
@@ -3977,7 +3977,7 @@ export default function App() {
             initial={{ opacity: 0, scale: 0.8, x: 20 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             exit={{ opacity: 0, scale: 0.8, x: 20 }}
-            className="fixed top-24 right-6 z-[120] w-72 bg-[#05030f]/90 border border-violet-500/30 rounded-2xl shadow-2xl backdrop-blur-md overflow-hidden text-left"
+            className="fixed top-24 right-6 z-[120] w-72 bg-[#05030f]/90 border border-white/10 rounded-2xl shadow-md backdrop-blur-md overflow-hidden text-left"
           >
             {/* Header */}
             <div className="px-3.5 py-2 bg-violet-950/40 border-b border-white/5 flex items-center justify-between">

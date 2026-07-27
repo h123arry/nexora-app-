@@ -294,12 +294,12 @@ export default function CallScreen({
         dragMomentum={false}
         initial={{ scale: 0.8, opacity: 0, y: 100 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        className="fixed bottom-20 right-4 w-60 bg-[#0c0926]/95 border-2 border-violet-500/40 rounded-2xl z-50 p-3 shadow-2xl flex flex-col justify-between cursor-move select-none"
+        className="fixed bottom-20 right-4 w-60 bg-[#0c0926]/95 border-2 border-white/10 rounded-2xl z-50 p-3 shadow-md flex flex-col justify-between cursor-move select-none"
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="relative">
-              <img src={partnerAvatar} alt={partnerName} className="w-9 h-9 rounded-xl object-cover border border-violet-500/20" />
+              <img src={partnerAvatar} alt={partnerName} className="w-9 h-9 rounded-xl object-cover border border-white/10" />
               <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-violet-600 rounded-full flex items-center justify-center">
                 {type === 'video' ? <Video className="w-2 h-2 text-white" /> : <Phone className="w-2 h-2 text-white" />}
               </div>
@@ -399,7 +399,7 @@ export default function CallScreen({
                 <Minimize2 className="w-4 h-4" />
               </button>
             )}
-            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl border border-violet-500/20 px-3.5 py-1.5 rounded-full">
+            <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl border border-white/10 px-3.5 py-1.5 rounded-full">
               <Shield className="w-3.5 h-3.5 text-violet-400 animate-pulse" />
               <span className="text-[9px] font-mono tracking-widest uppercase font-black text-violet-300">
                 E2EE Channel Active
@@ -461,13 +461,13 @@ export default function CallScreen({
             <div className="flex flex-col items-center gap-6">
               <div className="relative flex items-center justify-center">
                 {/* Ripples */}
-                <div className="absolute inset-0 w-32 h-32 rounded-full border border-violet-500/30 animate-ping opacity-75" />
+                <div className="absolute inset-0 w-32 h-32 rounded-full border border-white/10 animate-ping opacity-75" />
                 <div className="absolute inset-0 w-32 h-32 rounded-full border border-pink-500/20 animate-[ping_3s_infinite] opacity-40" />
                 
                 <img 
                   src={partnerAvatar} 
                   alt={partnerName} 
-                  className="w-32 h-32 rounded-full object-cover border-4 border-[#0c0926] shadow-2xl relative z-10" 
+                  className="w-32 h-32 rounded-full object-cover border-4 border-[#0c0926] shadow-md relative z-10" 
                   referrerPolicy="no-referrer"
                 />
               </div>
@@ -506,7 +506,7 @@ export default function CallScreen({
                   <img 
                     src={partnerAvatar} 
                     alt={partnerName} 
-                    className="w-36 h-36 rounded-full object-cover border-4 border-violet-500/30 shadow-2xl relative z-10" 
+                    className="w-36 h-36 rounded-full object-cover border-4 border-white/10 shadow-md relative z-10" 
                     referrerPolicy="no-referrer"
                   />
                   <div className="absolute bottom-1 right-1 bg-violet-600 p-3 rounded-full shadow-lg border border-violet-400/30 z-20">
@@ -515,7 +515,7 @@ export default function CallScreen({
                 </div>
 
                 <div className="text-center space-y-1.5">
-                  <span className="text-[9px] font-mono font-extrabold tracking-widest bg-violet-500/20 border border-violet-500/30 text-violet-300 px-3 py-1 rounded-full uppercase">
+                  <span className="text-[9px] font-mono font-extrabold tracking-widest bg-violet-500/20 border border-white/10 text-violet-300 px-3 py-1 rounded-full uppercase">
                     INCOMING {type.toUpperCase()} CALL
                   </span>
                   <h2 className="text-3xl font-black text-white tracking-tight leading-none mt-2">{partnerName}</h2>
@@ -600,7 +600,7 @@ export default function CallScreen({
               {/* VIDEO ACTIVE DISPLAY */}
               {type === 'video' ? (
                 <div 
-                  className="w-full flex-1 rounded-3xl bg-[#09071c] border border-violet-500/20 shadow-2xl relative overflow-hidden flex flex-col"
+                  className="w-full flex-1 rounded-3xl bg-[#09071c] border border-white/10 shadow-md relative overflow-hidden flex flex-col"
                   onClick={resetControlsTimer}
                 >
                   {/* MAIN VIDEO STREAM LAYOUT GRID (Solo vs Group) */}
@@ -612,7 +612,7 @@ export default function CallScreen({
                           <img 
                             src={partnerAvatar} 
                             alt={partnerName} 
-                            className="w-24 h-24 rounded-full object-cover border-2 border-violet-500/20 mb-3"
+                            className="w-24 h-24 rounded-full object-cover border-2 border-white/10 mb-3"
                           />
                           <p className="text-xs text-zinc-400">Camera Feed Paused</p>
                         </div>
@@ -631,7 +631,7 @@ export default function CallScreen({
                           <motion.div
                             drag
                             dragMomentum={false}
-                            className={`absolute ${getPipCornerClass()} w-28 aspect-[3/4] rounded-2xl border-2 border-violet-500/40 overflow-hidden shadow-2xl bg-black z-20 cursor-move`}
+                            className={`absolute ${getPipCornerClass()} w-28 aspect-[3/4] rounded-2xl border-2 border-white/10 overflow-hidden shadow-md bg-black z-20 cursor-move`}
                             whileHover={{ scale: 1.05 }}
                             onDragStart={() => setIsDraggingLocalCamera(true)}
                             onDragEnd={(e, info) => {
@@ -707,7 +707,7 @@ export default function CallScreen({
                             <img src={p.avatar} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                           ) : (
                             <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-950 p-2">
-                              <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-full object-cover border border-violet-500/20 mb-1" />
+                              <img src={p.avatar} alt={p.name} className="w-12 h-12 rounded-full object-cover border border-white/10 mb-1" />
                               <span className="text-[9px] text-zinc-500">Camera Off</span>
                             </div>
                           )}
@@ -773,7 +773,7 @@ export default function CallScreen({
                     <div className="w-full bg-black/40 border border-white/5 p-3 rounded-2xl flex flex-col gap-2">
                       <span className="text-[8.5px] font-mono text-zinc-500 uppercase tracking-wider text-left">Active Participants ({1 + participants.length})</span>
                       <div className="flex flex-wrap gap-2">
-                        <div className="flex items-center gap-1.5 bg-violet-600/20 border border-violet-500/20 px-2 py-1 rounded-xl">
+                        <div className="flex items-center gap-1.5 bg-violet-600/20 border border-white/10 px-2 py-1 rounded-xl">
                           <img src={partnerAvatar} className="w-4.5 h-4.5 rounded-full object-cover" />
                           <span className="text-[9px] text-zinc-300 font-bold">{partnerName}</span>
                         </div>
@@ -803,7 +803,7 @@ export default function CallScreen({
                   initial={{ y: 50, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   exit={{ y: 50, opacity: 0 }}
-                  className="w-full max-w-md bg-black/50 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-2xl flex flex-col gap-4"
+                  className="w-full max-w-md bg-black/50 backdrop-blur-2xl border border-white/10 rounded-3xl p-5 shadow-md flex flex-col gap-4"
                 >
                   <div className="flex items-center justify-around gap-2">
                     <button 
@@ -901,7 +901,7 @@ export default function CallScreen({
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                className="relative w-full max-w-md bg-[#09071c] border-t border-violet-500/30 rounded-t-3xl shadow-2xl p-6 z-10 flex flex-col gap-4"
+                className="relative w-full max-w-md bg-[#09071c] border-t border-white/10 rounded-t-3xl shadow-md p-6 z-10 flex flex-col gap-4"
               >
                 <div className="w-12 h-1 bg-violet-500/20 rounded-full mx-auto mb-2" />
                 <div className="flex items-center justify-between">
@@ -913,7 +913,7 @@ export default function CallScreen({
                     <button
                       key={i}
                       onClick={() => handleQuickReply(reply)}
-                      className="w-full p-3 bg-white/5 hover:bg-violet-600/20 border border-white/5 hover:border-violet-500/30 text-left text-zinc-300 hover:text-white text-xs font-medium rounded-xl transition-all cursor-pointer"
+                      className="w-full p-3 bg-white/5 hover:bg-violet-600/20 border border-white/5 hover:border-white/10 text-left text-zinc-300 hover:text-white text-xs font-medium rounded-xl transition-all cursor-pointer"
                     >
                       {reply}
                     </button>
@@ -941,11 +941,11 @@ export default function CallScreen({
                 initial={{ y: '100%' }}
                 animate={{ y: 0 }}
                 exit={{ y: '100%' }}
-                className="relative w-full max-w-md bg-[#09071c] border-t border-violet-500/30 rounded-t-3xl shadow-2xl p-6 z-10 flex flex-col gap-4"
+                className="relative w-full max-w-md bg-[#09071c] border-t border-white/10 rounded-t-3xl shadow-md p-6 z-10 flex flex-col gap-4"
               >
                 <div className="w-12 h-1 bg-violet-500/20 rounded-full mx-auto mb-2" />
                 <div className="flex items-center gap-3">
-                  <img src={selectedGroupParticipant.avatar} alt={selectedGroupParticipant.name} className="w-11 h-11 rounded-xl object-cover border border-violet-500/20" />
+                  <img src={selectedGroupParticipant.avatar} alt={selectedGroupParticipant.name} className="w-11 h-11 rounded-xl object-cover border border-white/10" />
                   <div className="text-left">
                     <h4 className="text-sm font-bold text-white">{selectedGroupParticipant.name}</h4>
                     <p className="text-xs font-mono text-violet-400">{selectedGroupParticipant.username}</p>

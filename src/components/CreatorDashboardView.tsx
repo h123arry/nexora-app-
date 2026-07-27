@@ -491,7 +491,7 @@ export default function CreatorDashboardView({
   return (
     <div className="text-white space-y-6 max-w-6xl mx-auto pb-16">
       {/* 1. Header Area with dynamic recovery bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 border border-violet-500/15 backdrop-blur-md">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 border border-white/10 backdrop-blur-md">
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-black text-white tracking-tight">Nexora Studio V1.2</h2>
@@ -613,7 +613,7 @@ export default function CreatorDashboardView({
                 ].map((card, i) => {
                   const Icon = card.icon;
                   return (
-                    <div key={i} className="p-5 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-2 relative overflow-hidden group hover:border-violet-500/20 transition-colors">
+                    <div key={i} className="p-5 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-2 relative overflow-hidden group hover:border-white/10 transition-colors">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-widest">{card.label}</span>
                         <Icon className={`w-4 h-4 ${card.color}`} />
@@ -862,7 +862,7 @@ export default function CreatorDashboardView({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Search posts or hashtags..."
-                    className="w-full bg-[#0a071f] border border-white/5 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/30 transition-colors"
+                    className="w-full bg-[#0a071f] border border-white/5 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10 transition-colors"
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -896,7 +896,7 @@ export default function CreatorDashboardView({
                   </div>
 
                   {bulkSelectedIds.length > 0 && (
-                    <div className="flex gap-1.5 bg-violet-600/20 border border-violet-500/30 px-2 py-0.5 rounded-xl text-xs font-bold items-center">
+                    <div className="flex gap-1.5 bg-violet-600/20 border border-white/10 px-2 py-0.5 rounded-xl text-xs font-bold items-center">
                       <span className="text-violet-200 font-mono">{bulkSelectedIds.length} Selected</span>
                       <button onClick={handleBulkArchive} className="text-white hover:text-pink-300 px-1 py-0.5 text-[10px]">Archive</button>
                       <button onClick={handleBulkDelete} className="text-pink-400 hover:text-pink-300 px-1 py-0.5 text-[10px]">Delete</button>
@@ -1029,7 +1029,7 @@ export default function CreatorDashboardView({
               <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Saved Drafts</h4>
-                  <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-violet-500/20 px-2 py-0.5 rounded-full">{drafts.length} total</span>
+                  <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-white/10 px-2 py-0.5 rounded-full">{drafts.length} total</span>
                 </div>
                 <div className="space-y-3">
                   {drafts.length === 0 ? (
@@ -1110,7 +1110,7 @@ export default function CreatorDashboardView({
                               // Publish immediately
                               handlePublishDraft({ id: post.id });
                             }}
-                            className="px-2.5 py-1 bg-violet-600/20 border border-violet-500/30 text-violet-300 text-[10px] font-bold rounded-lg hover:bg-violet-600/30 transition-colors"
+                            className="px-2.5 py-1 bg-violet-600/20 border border-white/10 text-violet-300 text-[10px] font-bold rounded-lg hover:bg-violet-600/30 transition-colors"
                           >
                             Publish Now
                           </button>
@@ -1135,7 +1135,7 @@ export default function CreatorDashboardView({
                     value={mediaSearch}
                     onChange={(e) => setMediaSearch(e.target.value)}
                     placeholder="Search uploaded media..."
-                    className="w-full bg-[#0a071f] border border-white/5 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white focus:outline-hidden focus:border-violet-500/30 transition-colors"
+                    className="w-full bg-[#0a071f] border border-white/5 rounded-xl pl-9 pr-4 py-1.5 text-xs text-white focus:outline-hidden focus:border-white/10 transition-colors"
                   />
                 </div>
                 <div className="flex items-center gap-1.5 text-xs bg-white/3 border border-white/5 px-2.5 py-1 rounded-xl">
@@ -1163,7 +1163,7 @@ export default function CreatorDashboardView({
                     <div 
                       key={media.id} 
                       onClick={() => setPreviewMediaUrl(media.url)}
-                      className="group rounded-2xl overflow-hidden bg-zinc-950/60 border border-white/5 aspect-square relative cursor-pointer hover:border-violet-500/20 transition-all shadow-lg"
+                      className="group rounded-2xl overflow-hidden bg-zinc-950/60 border border-white/5 aspect-square relative cursor-pointer hover:border-white/10 transition-all shadow-lg"
                     >
                       {media.type === 'video' ? (
                         <video src={media.url} className="w-full h-full object-cover" muted />
@@ -1200,7 +1200,7 @@ export default function CreatorDashboardView({
                     key={badge.id}
                     className={`p-5 rounded-2xl border relative overflow-hidden transition-all ${
                       badge.unlocked 
-                        ? 'bg-gradient-to-br from-[#120a3a]/80 to-[#2c0f4f]/40 border-violet-500/30' 
+                        ? 'bg-gradient-to-br from-[#120a3a]/80 to-[#2c0f4f]/40 border-white/10' 
                         : 'bg-zinc-950/40 border-white/5 opacity-50'
                     }`}
                   >
@@ -1301,7 +1301,7 @@ export default function CreatorDashboardView({
             <div className="space-y-6">
               {/* Financial Balance Summary */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-6 rounded-2xl bg-linear-to-br from-[#120a3a]/80 to-[#2c0f4f]/40 border border-violet-500/15 space-y-4">
+                <div className="p-6 rounded-2xl bg-linear-to-br from-[#120a3a]/80 to-[#2c0f4f]/40 border border-white/10 space-y-4">
                   <span className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-widest">NEX Balance Pool</span>
                   <div className="space-y-1">
                     <p className="text-3xl font-black text-white flex items-center gap-1">
@@ -1382,7 +1382,7 @@ export default function CreatorDashboardView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-2xl bg-[#0a071f] border border-violet-500/25 rounded-[32px] p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-2xl bg-[#0a071f] border border-white/10 rounded-[32px] p-6 space-y-6 shadow-md relative max-h-[90vh] overflow-y-auto"
             >
               <button 
                 onClick={() => setSelectedPostForAnalytics(null)}
@@ -1414,7 +1414,7 @@ export default function CreatorDashboardView({
 
               {/* Extra engagement analysis */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-[#120a3a]/30 border border-violet-500/10 space-y-2">
+                <div className="p-4 rounded-xl bg-[#120a3a]/30 border border-white/10 space-y-2">
                   <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">Engagement Efficiency</h5>
                   <div className="space-y-3 pt-1 text-xs">
                     <div className="flex justify-between">
@@ -1453,7 +1453,7 @@ export default function CreatorDashboardView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-[#0a071f] border border-violet-500/25 rounded-[32px] p-6 space-y-4 shadow-2xl relative"
+              className="w-full max-w-md bg-[#0a071f] border border-white/10 rounded-[32px] p-6 space-y-4 shadow-md relative"
             >
               <button 
                 onClick={() => setEditingPost(null)}
@@ -1472,7 +1472,7 @@ export default function CreatorDashboardView({
                     onChange={(e) => setEditCaption(e.target.value)}
                     rows={3}
                     placeholder="Write a custom caption..."
-                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/40 transition-colors"
+                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10 transition-colors"
                   />
                 </div>
 
@@ -1483,7 +1483,7 @@ export default function CreatorDashboardView({
                     value={editTags}
                     onChange={(e) => setEditTags(e.target.value)}
                     placeholder="tech, ai, coding"
-                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/40 transition-colors"
+                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10 transition-colors"
                   />
                 </div>
 
@@ -1519,9 +1519,9 @@ export default function CreatorDashboardView({
             </button>
             <div className="max-w-2xl w-full max-h-[80vh] flex flex-col items-center justify-center space-y-4">
               {previewMediaUrl.includes('.mp4') || previewMediaUrl.includes('assets.mixkit.co') ? (
-                <video src={previewMediaUrl} className="max-w-full max-h-[70vh] rounded-2xl border border-white/10 shadow-2xl" controls autoPlay loop />
+                <video src={previewMediaUrl} className="max-w-full max-h-[70vh] rounded-2xl border border-white/10 shadow-md" controls autoPlay loop />
               ) : (
-                <img src={previewMediaUrl} className="max-w-full max-h-[70vh] rounded-2xl border border-white/10 shadow-2xl object-contain" />
+                <img src={previewMediaUrl} className="max-w-full max-h-[70vh] rounded-2xl border border-white/10 shadow-md object-contain" />
               )}
               <div className="flex gap-4 text-xs font-mono text-zinc-500 bg-black/40 px-4 py-2 border border-white/5 rounded-full">
                 <span>Scan Check: <strong className="text-emerald-400 font-bold">Passed</strong></span>
@@ -1540,7 +1540,7 @@ export default function CreatorDashboardView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-[#0a071f] border border-violet-500/25 rounded-[32px] p-6 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-lg bg-[#0a071f] border border-white/10 rounded-[32px] p-6 space-y-4 shadow-md relative max-h-[90vh] overflow-y-auto"
             >
               <button 
                 onClick={() => { clearDraftForm(); setShowDraftModal(false); }}
@@ -1564,7 +1564,7 @@ export default function CreatorDashboardView({
                     onChange={(e) => setDraftCaption(e.target.value)}
                     rows={3}
                     placeholder="Write caption, insights, or story breakdown..."
-                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/40 transition-colors"
+                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10 transition-colors"
                   />
                 </div>
 
@@ -1575,7 +1575,7 @@ export default function CreatorDashboardView({
                     value={draftTags}
                     onChange={(e) => setDraftTags(e.target.value)}
                     placeholder="cooking, technology, daily"
-                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/40 transition-colors"
+                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10 transition-colors"
                   />
                 </div>
 
@@ -1600,7 +1600,7 @@ export default function CreatorDashboardView({
                       value={draftUrl}
                       onChange={(e) => setDraftUrl(e.target.value)}
                       placeholder="https://assets.mixkit.co/..."
-                      className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/40 transition-colors"
+                      className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10 transition-colors"
                     />
                   </div>
                 </div>
@@ -1614,7 +1614,7 @@ export default function CreatorDashboardView({
                       onClick={() => setPublishMode('immediate')}
                       className={`py-2 rounded-xl text-xs font-bold border transition-colors ${
                         publishMode === 'immediate' 
-                          ? 'bg-violet-600/10 border-violet-500/30 text-violet-300' 
+                          ? 'bg-violet-600/10 border-white/10 text-violet-300' 
                           : 'bg-transparent border-white/5 text-zinc-400 hover:text-white'
                       }`}
                     >
@@ -1701,7 +1701,7 @@ export default function CreatorDashboardView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-[#0a071f] border border-violet-500/25 rounded-[32px] p-6 space-y-4 shadow-2xl relative"
+              className="w-full max-w-md bg-[#0a071f] border border-white/10 rounded-[32px] p-6 space-y-4 shadow-md relative"
             >
               <button 
                 onClick={() => setAppealModalOpen(false)}
@@ -1721,7 +1721,7 @@ export default function CreatorDashboardView({
                     onChange={(e) => setAppealReason(e.target.value)}
                     rows={4}
                     placeholder="This media is my own original creation, filmed and compiled in my studio space..."
-                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/40 transition-colors"
+                    className="w-full bg-[#0a071f] border border-white/10 rounded-xl p-3 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10 transition-colors"
                   />
                 </div>
 

@@ -231,7 +231,7 @@ export default function ShareSheet({
     { 
       id: 'copy', 
       name: 'Copy Link', 
-      bg: 'bg-violet-600/15 hover:bg-violet-600/25 border-violet-500/30 text-violet-400',
+      bg: 'bg-violet-600/15 hover:bg-violet-600/25 border-white/10 text-violet-400',
       icon: <Link2 className="w-5 h-5" />,
       action: handleCopyLink
     },
@@ -266,7 +266,7 @@ export default function ShareSheet({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 28, stiffness: 260 }}
-        className="w-full max-w-[520px] rounded-t-[36px] bg-[#0d0b1f]/98 border-t border-violet-500/30 p-6 shadow-2xl overflow-y-auto max-h-[88vh] text-left" 
+        className="w-full max-w-[520px] rounded-t-[36px] bg-[#0d0b1f]/98 border-t border-white/10 p-6 shadow-md overflow-y-auto max-h-[88vh] text-left" 
         onClick={(e) => e.stopPropagation()}
       >
         {/* Drag handle */}
@@ -275,7 +275,7 @@ export default function ShareSheet({
         {/* Header */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+            <div className="w-9 h-9 rounded-xl bg-violet-600/20 border border-white/10 flex items-center justify-center text-violet-400">
               <Share2 className="w-4 h-4" />
             </div>
             <div>
@@ -391,7 +391,7 @@ export default function ShareSheet({
               className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-xs transition-all active:scale-95 cursor-pointer ${
                 isReposted 
                   ? 'bg-zinc-900 border-zinc-800 text-zinc-500' 
-                  : 'bg-violet-950/40 border-violet-500/20 hover:border-violet-500/40 text-white shadow-md'
+                  : 'bg-violet-950/40 border-white/10 hover:border-white/10 text-white shadow-md'
               }`}
             >
               <Rocket className="w-4 h-4 text-violet-400 mb-1.5" />

@@ -541,7 +541,7 @@ export default function CommunitiesHubView({
         </div>
 
         {/* 🏢 Account switcher HUD on the Hub Header */}
-        <div className="flex items-center gap-3 bg-black/40 border border-violet-500/20 p-2 rounded-2xl">
+        <div className="flex items-center gap-3 bg-black/40 border border-white/10 p-2 rounded-2xl">
           <div className="flex items-center gap-2">
             <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-xl object-cover ring-1 ring-violet-500" />
             <div className="text-left font-sans shrink-0">
@@ -619,7 +619,7 @@ export default function CommunitiesHubView({
             placeholder={activeTab === 'communities' ? "Search for communities, members, hashtags..." : "Search Creators, Brands, Businesses..."}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-zinc-900/60 border border-white/5 focus:outline-none focus:border-violet-500/30 rounded-xl text-xs text-white text-left font-sans"
+            className="w-full pl-9 pr-4 py-2 bg-zinc-900/60 border border-white/5 focus:outline-none focus:border-white/10 rounded-xl text-xs text-white text-left font-sans"
           />
         </div>
 
@@ -631,7 +631,7 @@ export default function CommunitiesHubView({
                 onClick={() => setActiveFilter(flt as any)}
                 className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase transition-all ${
                   activeFilter === flt 
-                    ? 'bg-violet-600/25 border border-violet-500/30 text-violet-300' 
+                    ? 'bg-violet-600/25 border border-white/10 text-violet-300' 
                     : 'bg-[#18181b]/50 border border-transparent text-current/65 hover:text-white'
                 }`}
               >
@@ -672,7 +672,7 @@ export default function CommunitiesHubView({
             {searchQuery === '' && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                 {/* 1. Recommended spaces */}
-                <div className="p-4 rounded-3xl bg-[#090515] border border-violet-500/10 space-y-3 relative overflow-hidden">
+                <div className="p-4 rounded-3xl bg-[#090515] border border-white/10 space-y-3 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/5 rounded-full blur-xl" />
                   <h3 className="text-xs font-black font-mono tracking-widest text-pink-400 uppercase flex items-center gap-1.5">
                     <Sparkles className="w-3.5 h-3.5" /> Featured Spaces
@@ -694,7 +694,7 @@ export default function CommunitiesHubView({
                 </div>
 
                 {/* 2. Fast growing & New spaces */}
-                <div className="p-4 rounded-3xl bg-[#090515] border border-violet-500/10 space-y-3 relative overflow-hidden">
+                <div className="p-4 rounded-3xl bg-[#090515] border border-white/10 space-y-3 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl" />
                   <h3 className="text-xs font-black font-mono tracking-widest text-cyan-400 uppercase flex items-center gap-1.5">
                     <Flame className="w-3.5 h-3.5" /> Trending Spaces
@@ -741,7 +741,7 @@ export default function CommunitiesHubView({
                         alert(`This is an invite-only / private community. Click "Join" to submit an onboarding request.`);
                       }
                     }}
-                    className="bg-black/45 border border-white/5 rounded-3xl overflow-hidden hover:border-violet-500/30 transition-all duration-300 group flex flex-col justify-between cursor-pointer relative"
+                    className="bg-black/45 border border-white/5 rounded-3xl overflow-hidden hover:border-white/10 transition-all duration-300 group flex flex-col justify-between cursor-pointer relative"
                   >
                     {/* Cover image banner */}
                     <div className="relative h-24 w-full bg-slate-900 border-b border-white/5 overflow-hidden">
@@ -840,7 +840,7 @@ export default function CommunitiesHubView({
                   <div 
                     key={pg.id}
                     onClick={() => setSelectedPage(pg)}
-                    className="bg-black/40 border border-white/5 rounded-3xl overflow-hidden hover:border-violet-500/30 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+                    className="bg-black/40 border border-white/5 rounded-3xl overflow-hidden hover:border-white/10 transition-all duration-300 flex flex-col justify-between cursor-pointer"
                   >
                     {/* Header Cover */}
                     <div className="relative h-24 bg-slate-800">
@@ -861,7 +861,7 @@ export default function CommunitiesHubView({
                     {/* Details content */}
                     <div className="p-4 pt-6 space-y-2 text-left">
                       <div className="flex items-center justify-between">
-                        <span className="text-[8px] font-mono uppercase bg-violet-600/20 text-violet-300 border border-violet-500/20 px-1.5 py-0.5 rounded">
+                        <span className="text-[8px] font-mono uppercase bg-violet-600/20 text-violet-300 border border-white/10 px-1.5 py-0.5 rounded">
                           {pg.category}
                         </span>
                         {isOwner && <span className="text-[8px] font-mono uppercase bg-pink-600/20 text-pink-300 border border-pink-500/20 px-1.5 py-0.5 rounded">Owner</span>}
@@ -913,7 +913,7 @@ export default function CommunitiesHubView({
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6 text-left"
           >
-            <div className="bg-[#090515] border border-violet-500/10 p-5 rounded-3xl space-y-4">
+            <div className="bg-[#090515] border border-white/10 p-5 rounded-3xl space-y-4">
               <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase flex items-center gap-1.5">
                 <Settings className="w-4 h-4" /> Your Managed Entity Hub
               </h3>
@@ -929,7 +929,7 @@ export default function CommunitiesHubView({
                       <div>
                         <div className="flex items-center gap-1.5">
                           <h4 className="text-xs sm:text-sm font-bold text-white">{p.name}</h4>
-                          <span className="text-[8px] font-mono uppercase bg-violet-600/20 text-violet-300 border border-violet-500/20 px-1 py-0.5 rounded">{p.category}</span>
+                          <span className="text-[8px] font-mono uppercase bg-violet-600/20 text-violet-300 border border-white/10 px-1 py-0.5 rounded">{p.category}</span>
                         </div>
                         <p className="text-[10px] font-mono text-current/40">@{p.username} • {p.followersCount} followers</p>
                       </div>
@@ -1064,10 +1064,10 @@ export default function CommunitiesHubView({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-4xl bg-[#09071b] border border-violet-500/20 rounded-3xl overflow-hidden flex flex-col h-[90vh] shadow-[0_0_60px_rgba(139,92,246,0.3)]"
+              className="relative w-full max-w-4xl bg-[#09071b] border border-white/10 rounded-3xl overflow-hidden flex flex-col h-[90vh] shadow-[0_0_60px_rgba(139,92,246,0.3)]"
             >
               {/* Cover Header */}
-              <div className="relative h-28 sm:h-36 bg-slate-900 overflow-hidden shrink-0 flex items-end p-4 border-b border-violet-500/20">
+              <div className="relative h-28 sm:h-36 bg-slate-900 overflow-hidden shrink-0 flex items-end p-4 border-b border-white/10">
                 <img 
                   src={selectedCircle.bannerImage} 
                   alt={selectedCircle.name} 
@@ -1103,7 +1103,7 @@ export default function CommunitiesHubView({
               </div>
 
               {/* Scrollable Sub-category tabs */}
-              <div className="bg-black/40 border-b border-violet-500/10 overflow-x-auto scrollbar-none flex-shrink-0">
+              <div className="bg-black/40 border-b border-white/10 overflow-x-auto scrollbar-none flex-shrink-0">
                 <div className="flex gap-1 px-3 py-2">
                   {[
                     { id: 'feed', label: '📢 Discussion Feed' },
@@ -1134,7 +1134,7 @@ export default function CommunitiesHubView({
                 {activePortalTab === 'feed' && (
                   <div className="space-y-4 text-left">
                     {/* Add Feed Composer inside Community */}
-                    <form onSubmit={handleCommunityPostSubmit} className="p-4 bg-black/50 border border-violet-500/10 rounded-2xl space-y-3">
+                    <form onSubmit={handleCommunityPostSubmit} className="p-4 bg-black/50 border border-white/10 rounded-2xl space-y-3">
                       <div className="flex items-center gap-2">
                         <img src={currentUser.avatar} className="w-8 h-8 rounded-xl object-cover ring-1 ring-violet-500" />
                         <span className="text-[10px] font-mono text-violet-400 font-bold">Acting as @{currentUser.username}</span>
@@ -1145,7 +1145,7 @@ export default function CommunitiesHubView({
                         value={communityPostInput}
                         onChange={(e) => setCommunityPostInput(e.target.value)}
                         rows={3}
-                        className="w-full bg-zinc-900 border border-white/5 rounded-xl p-3 text-xs focus:outline-none focus:border-violet-500/30 text-white text-left font-sans"
+                        className="w-full bg-zinc-900 border border-white/5 rounded-xl p-3 text-xs focus:outline-none focus:border-white/10 text-white text-left font-sans"
                       />
                       <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
                         <input
@@ -1304,7 +1304,7 @@ export default function CommunitiesHubView({
                           </div>
                           <button 
                             onClick={() => alert(`Beginning secure download of "${fl.name}"...`)}
-                            className="p-1.5 bg-violet-600/20 hover:bg-[#8b5cf6] text-white border border-violet-500/20 rounded-lg transition-colors cursor-pointer"
+                            className="p-1.5 bg-violet-600/20 hover:bg-[#8b5cf6] text-white border border-white/10 rounded-lg transition-colors cursor-pointer"
                           >
                             <Download className="w-3.5 h-3.5" />
                           </button>
@@ -1319,14 +1319,14 @@ export default function CommunitiesHubView({
                   <div className="space-y-4 text-left">
                     <div className="flex items-center justify-between">
                       <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Scheduled Gatherings Calendar</h3>
-                      <span className="text-[8px] font-mono bg-violet-600/20 border border-violet-500/20 px-1.5 py-0.5 rounded text-violet-300 uppercase">EVENTS ACTIVE</span>
+                      <span className="text-[8px] font-mono bg-violet-600/20 border border-white/10 px-1.5 py-0.5 rounded text-violet-300 uppercase">EVENTS ACTIVE</span>
                     </div>
 
                     <div className="space-y-3">
                       {selectedCircle.events?.map((evt) => {
                         const hasRsvped = rsvps[`${selectedCircle.id}-${evt.id}`];
                         return (
-                          <div key={evt.id} className="p-4 rounded-2xl bg-black/40 border border-violet-500/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div key={evt.id} className="p-4 rounded-2xl bg-black/40 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div className="space-y-1">
                               <h4 className="text-xs sm:text-sm font-bold text-white">{evt.title}</h4>
                               <p className="text-[10.5px] text-violet-300/80">{evt.date} • {evt.time}</p>
@@ -1364,7 +1364,7 @@ export default function CommunitiesHubView({
                     <div className="space-y-2">
                       {[
                         { username: 'voh', role: 'Owner', badge: 'bg-red-500/20 text-red-300 border-red-500/20' },
-                        { username: 'nexora_official', role: 'Administrator', badge: 'bg-violet-500/20 text-violet-300 border-violet-500/20' },
+                        { username: 'nexora_official', role: 'Administrator', badge: 'bg-violet-500/20 text-violet-300 border-white/10' },
                         { username: currentUser.username, role: selectedCircle.ownerId === currentUser.id ? 'Owner' : 'Member', badge: 'bg-zinc-800 text-zinc-300' }
                       ].map((mbr, i) => (
                         <div key={i} className="p-3 bg-black/40 border border-white/5 rounded-2xl flex items-center justify-between">
@@ -1473,7 +1473,7 @@ export default function CommunitiesHubView({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="relative w-full max-w-2xl bg-[#09071b] border border-violet-500/20 rounded-3xl overflow-hidden flex flex-col max-h-[85vh] shadow-[0_0_60px_rgba(139,92,246,0.3)]"
+              className="relative w-full max-w-2xl bg-[#09071b] border border-white/10 rounded-3xl overflow-hidden flex flex-col max-h-[85vh] shadow-[0_0_60px_rgba(139,92,246,0.3)]"
             >
               {/* Cover Header */}
               <div className="relative h-28 sm:h-36 bg-slate-900 shrink-0">
@@ -1565,7 +1565,7 @@ export default function CommunitiesHubView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-[#09071b] border border-violet-500/20 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-white"
+              className="w-full max-w-lg bg-[#09071b] border border-white/10 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-white"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase">Initialize Community Space</h3>
@@ -1581,7 +1581,7 @@ export default function CommunitiesHubView({
                     placeholder="e.g. Quantum Physics Lab"
                     value={newCommName}
                     onChange={(e) => setNewCommName(e.target.value)}
-                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                   />
                 </div>
 
@@ -1593,7 +1593,7 @@ export default function CommunitiesHubView({
                     value={newCommDesc}
                     onChange={(e) => setNewCommDesc(e.target.value)}
                     rows={2}
-                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                   />
                 </div>
 
@@ -1603,7 +1603,7 @@ export default function CommunitiesHubView({
                     <select
                       value={newCommType}
                       onChange={(e) => setNewCommType(e.target.value as any)}
-                      className="w-full bg-zinc-900 border border-white/5 p-2 rounded-xl text-xs text-violet-300 focus:outline-none focus:border-violet-500/30"
+                      className="w-full bg-zinc-900 border border-white/5 p-2 rounded-xl text-xs text-violet-300 focus:outline-none focus:border-white/10"
                     >
                       <option value="public">Public (Everyone can join)</option>
                       <option value="private">Private (Approval required)</option>
@@ -1618,7 +1618,7 @@ export default function CommunitiesHubView({
                       placeholder="Physics, Science, Research"
                       value={newCommTags}
                       onChange={(e) => setNewCommTags(e.target.value)}
-                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                     />
                   </div>
                 </div>
@@ -1629,7 +1629,7 @@ export default function CommunitiesHubView({
                     type="text"
                     value={newCommBanner}
                     onChange={(e) => setNewCommBanner(e.target.value)}
-                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                   />
                 </div>
 
@@ -1639,7 +1639,7 @@ export default function CommunitiesHubView({
                     type="text"
                     value={newCommAvatar}
                     onChange={(e) => setNewCommAvatar(e.target.value)}
-                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                   />
                 </div>
 
@@ -1649,7 +1649,7 @@ export default function CommunitiesHubView({
                     value={newCommRules}
                     onChange={(e) => setNewCommRules(e.target.value)}
                     rows={3}
-                    className="w-full bg-zinc-900 border border-white/5 p-2 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left font-mono"
+                    className="w-full bg-zinc-900 border border-white/5 p-2 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left font-mono"
                   />
                 </div>
 
@@ -1675,7 +1675,7 @@ export default function CommunitiesHubView({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-[#09071b] border border-violet-500/20 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-white"
+              className="w-full max-w-lg bg-[#09071b] border border-white/10 rounded-3xl p-6 space-y-4 max-h-[90vh] overflow-y-auto text-white"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <h3 className="text-sm font-black font-mono tracking-widest text-violet-400 uppercase">Initialize Managed Page</h3>
@@ -1692,7 +1692,7 @@ export default function CommunitiesHubView({
                       placeholder="e.g. Acme Corporation"
                       value={newPageName}
                       onChange={(e) => setNewPageName(e.target.value)}
-                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                     />
                   </div>
 
@@ -1704,7 +1704,7 @@ export default function CommunitiesHubView({
                       placeholder="e.g. acme_corp"
                       value={newPageUsername}
                       onChange={(e) => setNewPageUsername(e.target.value)}
-                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left font-mono"
+                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left font-mono"
                     />
                   </div>
                 </div>
@@ -1714,7 +1714,7 @@ export default function CommunitiesHubView({
                   <select
                     value={newPageCategory}
                     onChange={(e) => setNewPageCategory(e.target.value as any)}
-                    className="w-full bg-zinc-900 border border-white/5 p-2 rounded-xl text-xs text-violet-300 focus:outline-none focus:border-violet-500/30"
+                    className="w-full bg-zinc-900 border border-white/5 p-2 rounded-xl text-xs text-violet-300 focus:outline-none focus:border-white/10"
                   >
                     {['Creator', 'Business', 'Brand', 'Organization', 'School', 'Sports Club', 'Entertainment', 'Music Artist', 'Public Figure', 'Community', 'News & Media', 'Non-Profit'].map(c => (
                       <option key={c} value={c}>{c}</option>
@@ -1730,7 +1730,7 @@ export default function CommunitiesHubView({
                     value={newPageDesc}
                     onChange={(e) => setNewPageDesc(e.target.value)}
                     rows={2.5}
-                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                   />
                 </div>
 
@@ -1742,7 +1742,7 @@ export default function CommunitiesHubView({
                       placeholder="acme.com"
                       value={newPageWebsite}
                       onChange={(e) => setNewPageWebsite(e.target.value)}
-                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                     />
                   </div>
 
@@ -1753,7 +1753,7 @@ export default function CommunitiesHubView({
                       placeholder="contact@acme.com"
                       value={newPageContact}
                       onChange={(e) => setNewPageContact(e.target.value)}
-                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left font-mono"
+                      className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left font-mono"
                     />
                   </div>
                 </div>
@@ -1764,7 +1764,7 @@ export default function CommunitiesHubView({
                     type="text"
                     value={newPageAvatar}
                     onChange={(e) => setNewPageAvatar(e.target.value)}
-                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                   />
                 </div>
 
@@ -1774,7 +1774,7 @@ export default function CommunitiesHubView({
                     type="text"
                     value={newPageCover}
                     onChange={(e) => setNewPageCover(e.target.value)}
-                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-violet-500/30 text-left"
+                    className="w-full bg-zinc-900 border border-white/5 p-2.5 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
                   />
                 </div>
 

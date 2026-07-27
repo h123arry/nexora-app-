@@ -158,7 +158,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
   };
 
   return (
-    <div className="relative flex items-center gap-3 px-4 py-2 bg-slate-950/95 border border-violet-500/20 rounded-2xl shadow-2xl min-w-[280px] max-w-full z-30 select-none">
+    <div className="relative flex items-center gap-3 px-4 py-2 bg-slate-950/95 border border-white/10 rounded-2xl shadow-md min-w-[280px] max-w-full z-30 select-none">
       
       {/* Live Waveform or Trashing Visualizer */}
       <div className="flex-1 flex items-center gap-2 overflow-hidden">
@@ -203,7 +203,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
 
       {/* Drag Cancel/Lock overlay instructions */}
       {isRecording && !isLocked && !isTrashAnimating && (
-        <div className="absolute left-1/2 -top-12 transform -translate-x-1/2 flex gap-4 text-[9px] font-mono text-violet-400/80 bg-[#09071c] px-3 py-1 border border-violet-500/20 rounded-full shadow-lg pointer-events-none whitespace-nowrap">
+        <div className="absolute left-1/2 -top-12 transform -translate-x-1/2 flex gap-4 text-[9px] font-mono text-violet-400/80 bg-[#09071c] px-3 py-1 border border-white/10 rounded-full shadow-lg pointer-events-none whitespace-nowrap">
           <span className={dragOffset.x < -60 ? "text-red-400 font-bold" : ""}>← Drag Left to Cancel</span>
           <span className={dragOffset.y < -60 ? "text-emerald-400 font-bold" : ""}>↑ Drag Up to Lock</span>
         </div>
@@ -216,7 +216,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
           <button 
             type="button"
             onClick={isPaused ? resumeRecording : pauseRecording}
-            className="p-2 rounded-xl bg-violet-950/50 hover:bg-violet-600/30 text-violet-300 transition-colors border border-violet-500/10 cursor-pointer"
+            className="p-2 rounded-xl bg-violet-950/50 hover:bg-violet-600/30 text-violet-300 transition-colors border border-white/10 cursor-pointer"
           >
             {isPaused ? <Play className="w-3.5 h-3.5" /> : <Pause className="w-3.5 h-3.5" />}
           </button>

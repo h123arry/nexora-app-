@@ -31,13 +31,13 @@ export default function CallTestingConsole({
   return (
     <div className="flex flex-col h-full bg-[#03010b] text-white">
       {/* Simulation Sandbox Panel */}
-      <div className="p-4 bg-gradient-to-b from-[#0e0926]/90 to-[#04010d] border-b border-violet-500/10 text-left select-none space-y-3 shrink-0">
+      <div className="p-4 bg-gradient-to-b from-[#0e0926]/90 to-[#04010d] border-b border-white/10 text-left select-none space-y-3 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
             <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
             <h4 className="text-[10px] font-mono uppercase tracking-widest font-black text-amber-300">Nexora Calling Center</h4>
           </div>
-          <div className="flex items-center gap-1 bg-violet-600/10 px-2 py-0.5 rounded-full border border-violet-500/20 text-[8px] font-mono text-violet-300">
+          <div className="flex items-center gap-1 bg-violet-600/10 px-2 py-0.5 rounded-full border border-white/10 text-[8px] font-mono text-violet-300">
             <Shield className="w-2.5 h-2.5" /> E2EE Active
           </div>
         </div>
@@ -49,7 +49,7 @@ export default function CallTestingConsole({
         <div className="grid grid-cols-2 gap-2.5 pt-1">
           <button
             onClick={() => onTriggerSimulatedCall('Sophia', 'voice')}
-            className="flex items-center justify-center gap-2 py-2.5 px-3 bg-violet-600/10 hover:bg-violet-600/25 border border-violet-500/20 hover:border-violet-500/40 rounded-xl transition-all text-[9.5px] font-mono text-violet-300 font-extrabold uppercase cursor-pointer hover:shadow-[0_0_10px_rgba(139,92,246,0.15)]"
+            className="flex items-center justify-center gap-2 py-2.5 px-3 bg-violet-600/10 hover:bg-violet-600/25 border border-white/10 hover:border-white/10 rounded-xl transition-all text-[9.5px] font-mono text-violet-300 font-extrabold uppercase cursor-pointer hover:shadow-[0_0_10px_rgba(139,92,246,0.15)]"
           >
             <Phone className="w-3.5 h-3.5 text-violet-400" />
             <span>Voice Call Sim</span>
@@ -149,7 +149,7 @@ export default function CallTestingConsole({
                 <span className="text-[8.5px] font-mono text-zinc-500">{log.timestamp}</span>
                 <button
                   onClick={() => onTriggerSimulatedCall(log.name, log.type)}
-                  className="px-2.5 py-1.5 bg-white/5 hover:bg-violet-600/20 text-zinc-400 hover:text-violet-200 border border-white/5 hover:border-violet-500/20 rounded-lg text-[8.5px] font-mono uppercase font-black cursor-pointer transition-all flex items-center gap-1 active:scale-95 group-hover/call:bg-violet-600/10"
+                  className="px-2.5 py-1.5 bg-white/5 hover:bg-violet-600/20 text-zinc-400 hover:text-violet-200 border border-white/5 hover:border-white/10 rounded-lg text-[8.5px] font-mono uppercase font-black cursor-pointer transition-all flex items-center gap-1 active:scale-95 group-hover/call:bg-violet-600/10"
                 >
                   <RotateCcw className="w-2.5 h-2.5" />
                   <span>Recall</span>
@@ -161,7 +161,7 @@ export default function CallTestingConsole({
 
         {logs.length === 0 && (
           <div className="p-8 text-center flex flex-col items-center justify-center gap-3 py-16 select-none h-60">
-            <div className="w-12 h-12 rounded-full bg-violet-600/5 border border-violet-500/10 flex items-center justify-center text-violet-400/40">
+            <div className="w-12 h-12 rounded-full bg-violet-600/5 border border-white/10 flex items-center justify-center text-violet-400/40">
               <Phone className="w-5 h-5 text-violet-500/30" />
             </div>
             <span className="text-[10px] font-mono text-zinc-400 uppercase font-black tracking-wider">No Recent Call Logs</span>

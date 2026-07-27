@@ -89,7 +89,7 @@ export default function NexoraImagePlayer({
   if (displayImages.length === 0) return null;
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] shadow-2xl select-none group">
+    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] shadow-md select-none group">
       {/* Background Image Display */}
       <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
         <img
@@ -248,7 +248,7 @@ export default function NexoraImagePlayer({
                 initial={{ opacity: 0, scale: 0.9, x: 10 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                className="absolute right-14 bottom-0 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1 text-left"
+                className="absolute right-14 bottom-0 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-md z-50 overflow-hidden font-sans py-1 text-left"
               >
                 {isOwnPost ? (
                   <>

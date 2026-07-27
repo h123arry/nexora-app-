@@ -100,8 +100,8 @@ export default function Sidebar({
               }}
               className={`flex items-center gap-3.5 w-full p-2.5 rounded-xl border transition-all text-left relative group cursor-pointer overflow-hidden ${
                 isActive
-                  ? 'bg-linear-to-r from-violet-600/25 to-pink-500/10 border-violet-500/40 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5 font-bold'
-                  : 'bg-black/35 border-current/5 hover:border-violet-500/20 text-current/70 hover:bg-violet-950/10'
+                  ? 'bg-linear-to-r from-violet-600/25 to-pink-500/10 border-white/10 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5 font-bold'
+                  : 'bg-black/35 border-current/5 hover:border-white/10 text-current/70 hover:bg-violet-950/10'
               }`}
             >
               <div className={`p-1.5 rounded-lg transition-all duration-300 ${isActive || item.isMenu ? 'bg-violet-600/20 text-violet-400 scale-105' : 'bg-current/5 text-current/60 group-hover:scale-105 group-hover:text-violet-300'}`}>
@@ -134,8 +134,8 @@ export default function Sidebar({
           onClick={() => setActiveTab('creator')}
           className={`flex items-center gap-2.5 w-full p-2.5 rounded-xl border transition-all text-left group cursor-pointer mt-1 ${
             activeTab === 'creator'
-              ? 'bg-linear-to-r from-violet-600/25 to-indigo-500/10 border-violet-500/40 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5'
-              : 'bg-black/35 border-violet-500/10 hover:border-violet-500/20 text-violet-400/80 hover:bg-violet-950/10'
+              ? 'bg-linear-to-r from-violet-600/25 to-indigo-500/10 border-white/10 text-violet-300 ring-1 ring-violet-500/20 shadow-lg shadow-violet-500/5'
+              : 'bg-black/35 border-white/10 hover:border-white/10 text-violet-400/80 hover:bg-violet-950/10'
           }`}
         >
           <div className="p-1.5 rounded-lg bg-violet-600/10 text-violet-400 transition-transform duration-300 group-hover:scale-105">

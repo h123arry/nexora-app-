@@ -705,7 +705,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
         {/* Floating Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-1.5 bg-violet-950/40 border border-violet-500/20 rounded-xl px-3 py-1.5 text-[10px] font-mono">
+          <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
             <VohIcon size={15} animated variant="violet" />
             <span className="font-black text-violet-300 uppercase">CORE v3.5-FLASH</span>
           </div>
@@ -761,7 +761,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
           <>
             {/* Sessions Sidebar Column (Left 4 cols) */}
             <div className="lg:col-span-4 space-y-4">
-              <div className="bg-[#03010b] border border-violet-500/15 rounded-3xl p-4 space-y-4 min-h-[420px] max-h-[600px] flex flex-col justify-between">
+              <div className="bg-[#03010b] border border-white/10 rounded-3xl p-4 space-y-4 min-h-[420px] max-h-[600px] flex flex-col justify-between">
                 
                 <div className="space-y-4 overflow-y-auto flex-1">
                   {/* Search sessions */}
@@ -772,7 +772,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       placeholder="Search dialogues..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 bg-white/5 border border-white/5 rounded-xl text-xs focus:outline-none focus:border-violet-500/30"
+                      className="w-full pl-9 pr-3 py-1.5 bg-white/5 border border-white/5 rounded-xl text-xs focus:outline-none focus:border-white/10"
                     />
                   </div>
 
@@ -792,7 +792,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {folders.map(f => (
                         <button
                           key={f.id}
-                          className="px-2 py-1 bg-violet-950/30 border border-violet-500/10 rounded-lg text-[9.5px] font-sans font-medium flex items-center gap-1 text-violet-300"
+                          className="px-2 py-1 bg-violet-950/30 border border-white/10 rounded-lg text-[9.5px] font-sans font-medium flex items-center gap-1 text-violet-300"
                         >
                           <Folder className="w-3 h-3" style={{ color: f.color }} />
                           <span>{f.name.replace(/[^a-zA-Z ]/g, '')}</span>
@@ -814,7 +814,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                             onClick={() => setActiveSessionId(s.id)}
                             className={`group p-2.5 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
                               activeSessionId === s.id 
-                                ? 'bg-violet-900/20 border-violet-500/30 text-white' 
+                                ? 'bg-violet-900/20 border-white/10 text-white' 
                                 : 'bg-transparent border-transparent text-current/75 hover:bg-white/5'
                             }`}
                           >
@@ -919,7 +919,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                   >
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border ${
                       msg.sender === 'voh' 
-                        ? 'bg-violet-600/10 text-violet-400 border-violet-500/10' 
+                        ? 'bg-violet-600/10 text-violet-400 border-white/10' 
                         : 'bg-cyan-600/10 text-cyan-400 border-cyan-500/10'
                     }`}>
                       {msg.sender === 'voh' ? <VohIcon size={15} animated variant="brand" /> : <Volume2 className="w-3.5 h-3.5" />}
@@ -932,7 +932,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           <textarea
                             value={editMsgText}
                             onChange={(e) => setEditMsgText(e.target.value)}
-                            className="w-full p-2 bg-black border border-violet-500/30 text-xs rounded-lg text-white"
+                            className="w-full p-2 bg-black border border-white/10 text-xs rounded-lg text-white"
                           />
                           <div className="flex gap-1.5 justify-end">
                             <button onClick={() => setEditingMsgId(null)} className="px-2 py-1 bg-white/10 rounded-lg text-[10px]">Cancel</button>
@@ -942,7 +942,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       ) : (
                         <div className={`p-3 rounded-2xl text-xs leading-relaxed ${
                           msg.sender === 'voh' 
-                            ? 'bg-[#0a071c]/90 border border-violet-500/15 text-current' 
+                            ? 'bg-[#0a071c]/90 border border-white/10 text-current' 
                             : 'bg-[#0e2128]/90 border border-cyan-500/15 text-cyan-200'
                         }`}>
                           {renderMarkdown(msg.text)}
@@ -957,7 +957,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                                     key={emoji}
                                     onClick={() => handleReactToMessage(msg.id, emoji)}
                                     className={`px-1.5 py-0.5 rounded text-[10px] hover:bg-white/10 transition-colors ${
-                                      msg.reactions?.includes(emoji) ? 'bg-violet-600/30 border border-violet-500/30' : 'bg-transparent'
+                                      msg.reactions?.includes(emoji) ? 'bg-violet-600/30 border border-white/10' : 'bg-transparent'
                                     }`}
                                   >
                                     <span>{emoji}</span>
@@ -1022,7 +1022,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         <button
                           type="button"
                           onClick={() => handleSendPrompt(undefined, "Summarize my active feed and identify design trends.")}
-                          className="p-3 text-left bg-[#05030f] border border-violet-500/15 rounded-2xl hover:border-violet-500/40 hover:bg-violet-950/15 transition-all group cursor-pointer"
+                          className="p-3 text-left bg-[#05030f] border border-white/10 rounded-2xl hover:border-white/10 hover:bg-violet-950/15 transition-all group cursor-pointer"
                         >
                           <div className="flex items-center gap-2 mb-1">
                             <VohIcon size={16} variant="violet" />
@@ -1094,7 +1094,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       {memoryDNA.length > 0 ? (
                         <div className="flex flex-wrap gap-1.5">
                           {memoryDNA.map((pref, i) => (
-                            <span key={i} className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-500/10 border border-violet-500/20 text-violet-300 rounded-lg flex items-center gap-1">
+                            <span key={i} className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-500/10 border border-white/10 text-violet-300 rounded-lg flex items-center gap-1">
                               <span className="w-1 h-1 rounded-full bg-violet-400" />
                               {pref}
                             </span>
@@ -1128,10 +1128,10 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                 {typingIndicator && (
                   <div className="flex gap-3 max-w-[85%]">
-                    <div className="w-7 h-7 rounded-lg bg-violet-600/10 text-violet-400 flex items-center justify-center shrink-0 border border-violet-500/10">
+                    <div className="w-7 h-7 rounded-lg bg-violet-600/10 text-violet-400 flex items-center justify-center shrink-0 border border-white/10">
                       <VohIcon size={16} animated glow variant="brand" />
                     </div>
-                    <div className="p-3 rounded-2xl text-xs bg-[#0a071c] border border-violet-500/15 text-violet-400 italic font-mono flex items-center gap-2 animate-pulse">
+                    <div className="p-3 rounded-2xl text-xs bg-[#0a071c] border border-white/10 text-violet-400 italic font-mono flex items-center gap-2 animate-pulse">
                       <VohIcon size={15} animated variant="violet" />
                       <span>VOH AI is thinking...</span>
                     </div>
@@ -1143,7 +1143,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               <div className="p-2 border-t border-current/5 bg-current/2 flex flex-wrap gap-1">
                 <button
                   onClick={() => handleSendPrompt(undefined, "Summarize my active feed.")}
-                  className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-violet-500/30 text-current/70 hover:text-violet-400 transition-all bg-current/5"
+                  className="px-2.5 py-1 text-[9.5px] font-sans border border-current/10 rounded-lg hover:border-white/10 text-current/70 hover:text-violet-400 transition-all bg-current/5"
                 >
                   #SummarizeFeed
                 </button>
@@ -1165,7 +1165,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               <div className="border-t border-current/10 bg-[#06040f] p-3 space-y-2.5">
                 
                 {/* Context Attachment Bar & Quick Helper Badge Row */}
-                <div className="flex flex-wrap items-center justify-between gap-2 bg-[#0a071c] border border-violet-500/10 rounded-2xl p-2 px-3 select-none">
+                <div className="flex flex-wrap items-center justify-between gap-2 bg-[#0a071c] border border-white/10 rounded-2xl p-2 px-3 select-none">
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1179,7 +1179,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         setAttachedContextType(cycle[attachedContextType]);
                         showToast(`Switched context to ${cycle[attachedContextType].toUpperCase()}`);
                       }}
-                      className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-violet-500/20 text-[10px] font-sans font-extrabold text-violet-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      className="px-2.5 py-1 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 border border-white/10 text-[10px] font-sans font-extrabold text-violet-300 transition-colors flex items-center gap-1.5 cursor-pointer active:scale-95"
                     >
                       {attachedContextType === 'feed' && <Layers className="w-3 h-3 text-violet-400" />}
                       {attachedContextType === 'profile' && <UserCheck className="w-3 h-3 text-cyan-400" />}
@@ -1234,7 +1234,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     disabled={loadingAi}
-                    className="flex-1 px-4 py-2 bg-current/5 border border-current/5 rounded-xl font-sans text-xs text-current focus:outline-none focus:border-violet-500/30 disabled:opacity-40"
+                    className="flex-1 px-4 py-2 bg-current/5 border border-current/5 rounded-xl font-sans text-xs text-current focus:outline-none focus:border-white/10 disabled:opacity-40"
                   />
 
                   <button
@@ -1256,7 +1256,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {/* ======================================================== */}
         {activeSubView === 'voice' && (
           <div className="lg:col-span-12 space-y-4">
-            <div className="bg-[#03010b] border border-violet-500/15 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-12 gap-6 relative overflow-hidden">
+            <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 grid grid-cols-1 md:grid-cols-12 gap-6 relative overflow-hidden">
               
               {/* Left Column: Recording Controls */}
               <div className="md:col-span-5 flex flex-col justify-between border border-white/5 bg-white/2 p-5 rounded-2xl min-h-[350px]">
@@ -1410,7 +1410,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     setActiveSubView('chat');
                     showToast(`${card.name} loaded.`);
                   }}
-                  className="bg-[#03010b] border border-violet-500/15 rounded-2xl p-4 space-y-2 cursor-pointer hover:border-violet-500/40 transition-all hover:scale-[1.01] flex flex-col justify-between"
+                  className="bg-[#03010b] border border-white/10 rounded-2xl p-4 space-y-2 cursor-pointer hover:border-white/10 transition-all hover:scale-[1.01] flex flex-col justify-between"
                 >
                   <div className="space-y-1">
                     <span className="text-[10px] font-sans font-bold text-violet-400 uppercase tracking-wide block">
@@ -1435,7 +1435,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {/* ======================================================== */}
         {activeSubView === 'search' && (
           <div className="lg:col-span-12 space-y-4">
-            <div className="bg-[#03010b] border border-violet-500/15 rounded-3xl p-6 space-y-6">
+            <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               
               <div className="space-y-2">
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">INTUITIVE ENGINE SEARCH</span>
@@ -1448,7 +1448,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       value={aiSearchInput}
                       onChange={(e) => setAiSearchInput(e.target.value)}
                       onKeyDown={(e) => { if (e.key === 'Enter') runAIsuggestedSearch(); }}
-                      className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/5 rounded-2xl font-sans text-xs text-white focus:outline-none focus:border-violet-500/30"
+                      className="w-full pl-11 pr-4 py-3 bg-white/5 border border-white/5 rounded-2xl font-sans text-xs text-white focus:outline-none focus:border-white/10"
                     />
                   </div>
                   <button
@@ -1562,7 +1562,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left animate-fade-in">
                 
                 {/* Left Column: 25 Engines Grouped List */}
-                <div className="lg:col-span-4 bg-[#03010b]/85 border border-violet-500/15 rounded-3xl p-4 space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar">
+                <div className="lg:col-span-4 bg-[#03010b]/85 border border-white/10 rounded-3xl p-4 space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar">
                   <div className="pb-2 border-b border-white/5">
                     <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">NEXORA NEXT-GEN PLATFORM ENGINES</span>
                     <p className="text-[11px] text-current/50 leading-relaxed">25 Specialized Services & Core System Frameworks</p>
@@ -1631,7 +1631,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                               onClick={() => setSelectedEngineId(eng.id)}
                               className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-start gap-2.5 cursor-pointer ${
                                 isActive 
-                                  ? 'bg-violet-600/15 border-violet-500/50 shadow-md shadow-violet-500/5 text-white' 
+                                  ? 'bg-violet-600/15 border-white/10 shadow-md shadow-violet-500/5 text-white' 
                                   : 'bg-white/2 border-white/5 text-current/70 hover:bg-white/5 hover:text-white'
                               }`}
                             >
@@ -1642,7 +1642,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                                 <div className="flex items-center justify-between gap-1">
                                   <span className="text-[11px] font-bold truncate font-sans">{eng.name}</span>
                                   <span className={`text-[7px] font-mono font-black uppercase px-1 py-0.5 rounded ${
-                                    isActive ? 'bg-violet-500 text-white' : 'bg-violet-950 text-violet-300 border border-violet-500/10'
+                                    isActive ? 'bg-violet-500 text-white' : 'bg-violet-950 text-violet-300 border border-white/10'
                                   }`}>
                                     {eng.badge}
                                   </span>
@@ -1658,7 +1658,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                 </div>
 
                 {/* Right Column: Dynamic Engine Simulation Sandbox */}
-                <div className="lg:col-span-8 bg-[#03010b]/80 border border-violet-500/15 rounded-3xl p-6 flex flex-col justify-between min-h-[550px]">
+                <div className="lg:col-span-8 bg-[#03010b]/80 border border-white/10 rounded-3xl p-6 flex flex-col justify-between min-h-[550px]">
                   
                   {/* Header */}
                   <div className="border-b border-white/5 pb-4 mb-4 flex items-center gap-3">
@@ -1743,7 +1743,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     </div>
 
                     {/* Simulation Result (Right) */}
-                    <div className="bg-[#05030f]/60 border border-violet-500/10 p-4 rounded-2xl flex flex-col justify-between text-left">
+                    <div className="bg-[#05030f]/60 border border-white/10 p-4 rounded-2xl flex flex-col justify-between text-left">
                       <div className="space-y-3">
                         <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-wider block">Real-time Service Outputs</span>
                         
@@ -1789,7 +1789,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               
               {/* Left Column: Direct Metrics dashboard (NOT fake) */}
-              <div className="md:col-span-4 bg-[#03010b] border border-violet-500/15 rounded-3xl p-5 space-y-5">
+              <div className="md:col-span-4 bg-[#03010b] border border-white/10 rounded-3xl p-5 space-y-5">
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">ON-CHAIN MONETIZATION</span>
                 
                 <div className="space-y-4">
@@ -1819,7 +1819,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               </div>
 
               {/* Right Column: AI Earning Recommendations */}
-              <div className="md:col-span-8 bg-[#03010b] border border-violet-500/15 rounded-3xl p-5 space-y-4">
+              <div className="md:col-span-8 bg-[#03010b] border border-white/10 rounded-3xl p-5 space-y-4">
                 <div className="flex justify-between items-center border-b border-white/5 pb-2">
                   <span className="text-[10px] font-sans font-black text-violet-400 uppercase tracking-widest">NEX REWARDS INSIGHTS ENGINE</span>
                   <DollarSign className="w-4 h-4 text-violet-400" />
@@ -1840,7 +1840,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {/* ======================================================== */}
         {activeSubView === 'moderation' && (
           <div className="lg:col-span-12 space-y-4">
-            <div className="bg-[#03010b] border border-violet-500/15 rounded-3xl p-6 space-y-6">
+            <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               
               <div>
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">MODERATION & SECURITY INTELLIGENCE</span>
@@ -1922,7 +1922,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         {/* ======================================================== */}
         {activeSubView === 'settings' && (
           <div className="lg:col-span-12 space-y-4">
-            <div className="bg-[#03010b] border border-violet-500/15 rounded-3xl p-6 space-y-6">
+            <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               <div>
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">VOH AI PARAMETERS CONTROL</span>
                 <p className="text-xs text-current/60">Customize systemic instructions, temperature, rate limit thresholds and memory DNA preferences.</p>

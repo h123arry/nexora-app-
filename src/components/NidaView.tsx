@@ -449,14 +449,14 @@ export default function NidaView({ currentUser }: NidaViewProps) {
   return (
     <div id="nida-discovery-view" className="space-y-6 text-zinc-100 pb-12">
       {/* HEADER BANNER */}
-      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-violet-950/40 via-[#0c0a2a]/60 to-cyan-950/40 border border-violet-500/20 p-6 md:p-8 space-y-4">
+      <div className="relative overflow-hidden rounded-3xl bg-linear-to-r from-violet-950/40 via-[#0c0a2a]/60 to-cyan-950/40 border border-white/10 p-6 md:p-8 space-y-4">
         <div className="absolute top-0 right-0 w-80 h-80 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-80 h-80 bg-cyan-600/10 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <span className="px-3 py-1 rounded-full bg-violet-500/15 border border-violet-500/30 text-xs font-mono font-extrabold text-violet-300 uppercase tracking-widest flex items-center gap-1.5">
+              <span className="px-3 py-1 rounded-full bg-violet-500/15 border border-white/10 text-xs font-mono font-extrabold text-violet-300 uppercase tracking-widest flex items-center gap-1.5">
                 <Sparkles className="w-3.5 h-3.5 text-pink-400" />
                 NIDA Platform Core
               </span>
@@ -522,7 +522,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
             className="grid grid-cols-1 lg:grid-cols-12 gap-6"
           >
             {/* Input Parameters column */}
-            <div className="lg:col-span-5 space-y-5 bg-[#0b081e] border border-violet-500/15 p-5 md:p-6 rounded-3xl">
+            <div className="lg:col-span-5 space-y-5 bg-[#0b081e] border border-white/10 p-5 md:p-6 rounded-3xl">
               <h2 className="text-sm font-mono font-black text-violet-400 uppercase tracking-wider border-b border-white/5 pb-2 flex items-center gap-2">
                 <Sliders className="w-4 h-4 text-pink-400" />
                 Configure Post Blueprint
@@ -535,7 +535,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
                   <select
                     value={postTopic}
                     onChange={(e) => setPostTopic(e.target.value)}
-                    className="w-full bg-[#120f32] border border-violet-500/20 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-zinc-200 outline-none focus:border-violet-500"
+                    className="w-full bg-[#120f32] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-zinc-200 outline-none focus:border-violet-500"
                   >
                     {['Football', 'Comedy', 'AI', 'Gaming', 'Fashion', 'Cars', 'Music', 'Food', 'Education', 'Travel'].map(t => (
                       <option key={t} value={t}>{t}</option>
@@ -549,7 +549,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
                   <select
                     value={creatorProfile}
                     onChange={(e) => setCreatorProfile(e.target.value as any)}
-                    className="w-full bg-[#120f32] border border-violet-500/20 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-zinc-200 outline-none focus:border-violet-500"
+                    className="w-full bg-[#120f32] border border-white/10 rounded-xl px-3.5 py-2.5 text-xs font-mono font-bold text-zinc-200 outline-none focus:border-violet-500"
                   >
                     <option value="new">Brand New Creator (0 Followers, Pure Content chance)</option>
                     <option value="compliant">Compliant Creator (Consistent history, rule-abiding)</option>
@@ -564,7 +564,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
                     rows={3}
                     value={postContent}
                     onChange={(e) => setPostContent(e.target.value)}
-                    className="w-full bg-[#120f32] border border-violet-500/20 rounded-xl p-3 text-xs text-zinc-200 outline-none focus:border-violet-500 font-sans"
+                    className="w-full bg-[#120f32] border border-white/10 rounded-xl p-3 text-xs text-zinc-200 outline-none focus:border-violet-500 font-sans"
                     placeholder="What would you like to publish to the test sandbox?"
                   />
                 </div>
@@ -782,7 +782,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="bg-[#0b081e] border border-violet-500/15 p-6 rounded-3xl space-y-6">
+            <div className="bg-[#0b081e] border border-white/10 p-6 rounded-3xl space-y-6">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-white/5 pb-4">
                 <div className="space-y-1">
                   <h2 className="text-sm font-mono font-black text-pink-400 uppercase tracking-widest flex items-center gap-2">
@@ -853,7 +853,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
             className="grid grid-cols-1 lg:grid-cols-12 gap-6"
           >
             {/* Weight sliders panel */}
-            <div className="lg:col-span-5 space-y-6 bg-[#0b081e] border border-violet-500/15 p-5 md:p-6 rounded-3xl">
+            <div className="lg:col-span-5 space-y-6 bg-[#0b081e] border border-white/10 p-5 md:p-6 rounded-3xl">
               <div>
                 <h2 className="text-sm font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
                   <Cpu className="w-4 h-4 text-cyan-400" /> Pillar Weights Editor
@@ -914,9 +914,9 @@ export default function NidaView({ currentUser }: NidaViewProps) {
                 {rankedPosts.map((post, idx) => (
                   <div 
                     key={post.id}
-                    className="bg-zinc-950/40 border border-white/5 hover:border-violet-500/20 p-4 rounded-2xl flex items-start gap-4 transition-all"
+                    className="bg-zinc-950/40 border border-white/5 hover:border-white/10 p-4 rounded-2xl flex items-start gap-4 transition-all"
                   >
-                    <div className="w-8 h-8 rounded-full bg-violet-500/10 border border-violet-500/20 text-xs font-mono font-bold text-violet-400 flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-violet-500/10 border border-white/10 text-xs font-mono font-bold text-violet-400 flex items-center justify-center shrink-0">
                       #{idx + 1}
                     </div>
 
@@ -975,7 +975,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
             {/* Detailed visual checklist of the 12 stages */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { stage: 1, title: 'Stage 1 — Initial Test Audience', tag: 'A/B Seed Sandbox', color: 'border-violet-500/20 text-violet-400', desc: 'When you press submit, NIDA does not show it to millions instantly. Instead, it serves it strictly to 50–200 meticulously chosen users interested in that specific topic DNA to analyze baseline interaction parameters.' },
+                { stage: 1, title: 'Stage 1 — Initial Test Audience', tag: 'A/B Seed Sandbox', color: 'border-white/10 text-violet-400', desc: 'When you press submit, NIDA does not show it to millions instantly. Instead, it serves it strictly to 50–200 meticulously chosen users interested in that specific topic DNA to analyze baseline interaction parameters.' },
                 { stage: 2, title: 'Stage 2 — Engagement Quality', tag: 'Micro-Signals Matrix', color: 'border-pink-500/20 text-pink-400', desc: 'NIDA ignores trivial double-tap bot likes. It calculates a genuine Quality Score based on: Watch completion rate, replays, shares, saves, deep threaded comments, profile clicks, and brand new followers.' },
                 { stage: 3, title: 'Stage 3 — Satisfaction Score', tag: 'Organic Enjoyment', color: 'border-cyan-500/20 text-cyan-400', desc: 'Estimates true satisfaction. Positive signals (complete loops, saves, profile visits) boost ranking, while negative signals (instant swipe-aways, reports, selecting "Not Interested") trigger dampening to depress cheap clickbait.' },
                 { stage: 4, title: 'Stage 4 — AI Content Parser', tag: 'Computer Vision & NLP', color: 'border-emerald-500/20 text-emerald-400', desc: 'Automated ingestion pipeline extracts topic taxonomy, metadata language, overall mood (vibe), detected faces, music, objects, activities, and originality metrics to construct a comprehensive target indexing blueprint.' },
@@ -990,7 +990,7 @@ export default function NidaView({ currentUser }: NidaViewProps) {
               ].map(playbook => (
                 <div 
                   key={playbook.stage}
-                  className="bg-[#0b081e] border border-white/5 hover:border-violet-500/10 p-5 rounded-3xl space-y-2 transition-all"
+                  className="bg-[#0b081e] border border-white/5 hover:border-white/10 p-5 rounded-3xl space-y-2 transition-all"
                 >
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">

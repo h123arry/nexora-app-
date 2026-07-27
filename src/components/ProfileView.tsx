@@ -882,7 +882,7 @@ export default function ProfileView({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.2, ease: 'easeOut' }}
-                    className="absolute left-0 mt-2 w-56 rounded-2xl bg-[#0c0926] border border-violet-500/25 shadow-2xl p-2 z-50 overflow-hidden space-y-0.5"
+                    className="absolute left-0 mt-2 w-56 rounded-2xl bg-[#0c0926] border border-white/10 shadow-md p-2 z-50 overflow-hidden space-y-0.5"
                   >
                     {[
                       { label: 'Profile Settings', action: () => { setActivePanel('edit-profile'); setIsProfileMenuOpen(false); }, icon: Edit3, iconColor: 'text-violet-400' },
@@ -990,7 +990,7 @@ export default function ProfileView({
         <>
         <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-8 pb-2 space-y-6 text-left">
           {/* Header Banner Skeleton */}
-          <div className="h-28 w-full rounded-2xl bg-violet-950/20 border border-violet-500/10 flex items-center justify-center">
+          <div className="h-28 w-full rounded-2xl bg-violet-950/20 border border-white/10 flex items-center justify-center">
             <NexoraLoader size="md" center={true} />
           </div>
           
@@ -1051,7 +1051,7 @@ export default function ProfileView({
         
           {/* Profile Completion Prompts */}
           {isOwnProfile && (!currentUser.name || currentUser.name === 'New User' || !currentUser.username || !currentUser.bio || !currentUser.avatar || currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')) && (
-            <div className="mb-4 p-4 bg-violet-950/40 border border-violet-500/30 rounded-2xl space-y-2.5">
+            <div className="mb-4 p-4 bg-violet-950/40 border border-white/10 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider">✨ Profile Setup & Completion</span>
                 <span className="text-[10px] font-mono text-zinc-400">
@@ -1105,7 +1105,7 @@ export default function ProfileView({
           )}
 
           {/* Profile Identity Header (Stage 2 Redesign) */}
-          <div className="flex flex-col space-y-3 text-left mb-4">
+          <div className="flex flex-col space-y-2 text-left mb-1">
             {/* Identity & Action Bar */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -1115,7 +1115,7 @@ export default function ProfileView({
                   )}
                   <div 
                     onClick={() => setProfilePicExpanded(true)}
-                    className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-xl"
+                    className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md"
                   >
                     <img 
                       src={currentUser.avatar} 
@@ -1237,34 +1237,32 @@ export default function ProfileView({
           </div>
 
           {/* Nexora 6 Statistics Grid */}
-          <div className="py-3 px-3 bg-white/[0.02] border border-white/5 rounded-2xl mb-4 select-none">
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
-              {[
-                { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
-                { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
-                { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
-                { label: 'Sparks', value: getSecondaryMetric('sparks') },
-                { label: 'Reputation', value: getSecondaryMetric('reputation') },
-                { label: 'Contributions', value: getSecondaryMetric('contributions') },
-              ].map(stat => (
-                <div key={stat.label} className="flex flex-col py-1">
-                  <span className="text-base font-black text-white leading-tight">{stat.value}</span>
-                  <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{stat.label}</span>
-                </div>
-              ))}
-            </div>
+          <div className="grid grid-cols-3 gap-y-4 gap-x-2 text-center my-3 mb-2">
+            {[
+              { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
+              { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
+              { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
+              { label: 'Sparks', value: getSecondaryMetric('sparks') },
+              { label: 'Reputation', value: getSecondaryMetric('reputation') },
+              { label: 'Contributions', value: getSecondaryMetric('contributions') },
+            ].map(stat => (
+              <div key={stat.label} className="flex flex-col">
+                <span className="text-base font-black text-white leading-tight">{stat.value}</span>
+                <span className="text-[11px] font-medium text-zinc-500">{stat.label}</span>
+              </div>
+            ))}
           </div>
         </div>
 
           {/* Rebuilt Sticky Navigation Tabs (6 Nexora Tabs) */}
           <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-1 px-0 w-full">
-            <div className="w-full max-w-4xl mx-auto flex items-center justify-between sm:justify-center gap-1 sm:gap-2 py-2 overflow-x-auto no-scrollbar">
+            <div className="w-full max-w-4xl mx-auto flex items-center justify-around py-0">
               {[
-                { id: 'contributions', icon: Zap, label: 'Contributions' },
+                { id: 'contributions', icon: BarChart2, label: 'Contributions' },
                 { id: 'media', icon: Camera, label: 'Media' },
                 { id: 'voice', icon: Mic, label: 'Voice' },
                 { id: 'circles', icon: Users, label: 'Circles' },
-                { id: 'communities', icon: Compass, label: 'Communities' },
+                { id: 'communities', icon: Globe, label: 'Communities' },
                 { id: 'reputation', icon: Award, label: 'Reputation' }
               ].map(tab => {
                 const Icon = tab.icon;
@@ -1273,14 +1271,17 @@ export default function ProfileView({
                   <button
                     key={tab.id}
                     onClick={() => setProfileTab(tab.id)}
-                    className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-[11px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0 border ${
+                    className={`flex-1 flex justify-center items-center py-3.5 transition-all cursor-pointer relative ${
                       isActive 
-                        ? 'bg-violet-600/20 text-violet-300 border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.25)]' 
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
+                        ? 'text-white' 
+                        : 'text-zinc-500 hover:text-zinc-300'
                     }`}
+                    title={tab.label}
                   >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{tab.label}</span>
+                    <Icon className="w-6 h-6" />
+                    {isActive && (
+                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-violet-500" />
+                    )}
                   </button>
                 );
               })}
@@ -1293,7 +1294,7 @@ export default function ProfileView({
               <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4">
                 {filteredTabPosts.length === 0 ? (
                   <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center mx-auto text-violet-400">
+                    <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                       <Zap className="w-6 h-6" />
                     </div>
                     <div>
@@ -1313,7 +1314,7 @@ export default function ProfileView({
                   </div>
                 ) : (
                   filteredTabPosts.map(post => (
-                    <div key={post.id} className="p-4 sm:p-5 bg-[#08051a] border border-white/10 rounded-2xl space-y-3 shadow-lg hover:border-violet-500/30 transition-all text-left">
+                    <div key={post.id} className="py-5 border-b border-white/10 space-y-3 transition-all text-left">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <img src={currentUser.avatar} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="avatar" />
@@ -1325,7 +1326,7 @@ export default function ProfileView({
                             <span className="text-[10px] font-mono text-zinc-500">@{currentUser.username} • <RelativeTimestamp timestamp={post.timestamp} /></span>
                           </div>
                         </div>
-                        <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-violet-500/30 px-2.5 py-1 rounded-lg">
+                        <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-white/10 px-2.5 py-1 rounded-lg">
                           +8 Rep Impact
                         </span>
                       </div>
@@ -1388,7 +1389,7 @@ export default function ProfileView({
                   </div>
                 ) : (
                   filteredTabPosts.map(post => (
-                    <div key={post.id} className="p-4 bg-[#0a071d] border border-violet-500/20 rounded-2xl space-y-3">
+                    <div key={post.id} className="py-5 border-b border-white/10 space-y-3 transition-all text-left">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <Mic className="w-4 h-4 text-pink-400" />
@@ -1412,8 +1413,8 @@ export default function ProfileView({
               </div>
             ) : profileTab === 'circles' ? (
               <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
-                <div className="p-5 bg-[#08051a] border border-white/10 rounded-2xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="py-5 border-b border-white/10 space-y-4">
+                  <div className="flex items-center justify-between pb-3">
                     <div>
                       <h3 className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider flex items-center gap-2">
                         <Users className="w-4 h-4 text-violet-400" /> Network Circles
@@ -1443,8 +1444,8 @@ export default function ProfileView({
               </div>
             ) : profileTab === 'communities' ? (
               <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
-                <div className="p-5 bg-[#08051a] border border-white/10 rounded-2xl space-y-4">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                <div className="py-5 border-b border-white/10 space-y-4">
+                  <div className="flex items-center justify-between pb-3">
                     <div>
                       <h3 className="text-xs font-mono font-bold text-pink-300 uppercase tracking-wider flex items-center gap-2">
                         <Compass className="w-4 h-4 text-pink-400" /> Active Communities
@@ -1464,7 +1465,7 @@ export default function ProfileView({
                           <p className="text-[10px] text-zinc-400">1.2k Members • Founder & Creator Hub</p>
                         </div>
                       </div>
-                      <span className="text-[10px] font-mono text-violet-400 bg-violet-600/20 border border-violet-500/30 px-2.5 py-1 rounded-lg">Owner</span>
+                      <span className="text-[10px] font-mono text-violet-400 bg-violet-600/20 border border-white/10 px-2.5 py-1 rounded-lg">Owner</span>
                     </div>
 
                     <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between">
@@ -1484,18 +1485,18 @@ export default function ProfileView({
               </div>
             ) : profileTab === 'reputation' ? (
               <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
-                <div className="p-6 bg-[#08051a] border border-violet-500/30 rounded-2xl space-y-5 shadow-xl">
-                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div className="py-5 border-b border-white/10 space-y-5">
+                  <div className="flex items-center justify-between pb-4">
                     <div>
                       <h3 className="text-xs font-mono font-bold text-violet-300 uppercase tracking-widest flex items-center gap-2">
                         <Award className="w-4 h-4 text-violet-400" /> Nexora Reputation Matrix
                       </h3>
-                      <p className="text-xs text-zinc-400 mt-1">
+                      <p className="text-[11px] text-zinc-400 mt-1">
                         Reputation is organically built through trust signals, verified community contributions, and authentic engagement.
                       </p>
                     </div>
                     <div className="text-right">
-                      <span className="text-2xl font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 12500)}</span>
+                      <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 12500)}</span>
                       <span className="block text-[10px] font-mono text-violet-400 uppercase font-bold">Total Rep Score</span>
                     </div>
                   </div>
@@ -1515,7 +1516,7 @@ export default function ProfileView({
                     </div>
                   </div>
 
-                  <div className="p-4 bg-violet-950/20 border border-violet-500/20 rounded-xl space-y-2 text-xs text-zinc-300 leading-relaxed">
+                  <div className="p-4 bg-violet-950/20 border border-white/10 rounded-xl space-y-2 text-xs text-zinc-300 leading-relaxed">
                     <div className="flex items-center gap-2 text-violet-300 font-bold font-mono">
                       <ShieldCheck className="w-4 h-4 text-violet-400" /> Organic Unpredictable Growth
                     </div>
@@ -1539,7 +1540,7 @@ export default function ProfileView({
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="w-full max-w-sm h-full bg-[#080614] border-l border-violet-500/15 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
+              className="w-full max-w-sm h-full bg-[#080614] border-l border-white/10 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-4 shrink-0">
@@ -1609,7 +1610,7 @@ export default function ProfileView({
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="w-full max-w-md h-full bg-[#080614] border-l border-violet-500/15 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
+              className="w-full max-w-md h-full bg-[#080614] border-l border-white/10 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="space-y-4 shrink-0">
@@ -1638,7 +1639,7 @@ export default function ProfileView({
                     placeholder="Search settings, privacy, security..."
                     value={settingsSearchQuery}
                     onChange={(e) => setSettingsSearchQuery(e.target.value)}
-                    className="w-full pl-9 pr-8 py-2.5 bg-black/40 border border-violet-500/15 rounded-xl text-xs font-sans text-white focus:outline-hidden focus:border-violet-500 transition-all font-medium placeholder-zinc-500"
+                    className="w-full pl-9 pr-8 py-2.5 bg-black/40 border border-white/10 rounded-xl text-xs font-sans text-white focus:outline-hidden focus:border-violet-500 transition-all font-medium placeholder-zinc-500"
                   />
                   {settingsSearchQuery && (
                     <button 
@@ -1701,7 +1702,7 @@ export default function ProfileView({
                             setSettingsActiveSubPanel(item.panel as any);
                             setSettingsSearchQuery('');
                           }}
-                          className="w-full text-left p-3.5 rounded-2xl bg-[#0e0c24] border border-violet-500/10 hover:border-violet-500/30 transition-all flex items-start gap-3 group"
+                          className="w-full text-left p-3.5 rounded-2xl bg-[#0e0c24] border border-white/10 hover:border-white/10 transition-all flex items-start gap-3 group"
                         >
                           <div className="p-2 rounded-xl bg-violet-600/10 text-violet-400 group-hover:bg-violet-600/20">
                             <Sliders className="w-4 h-4" />
@@ -1721,9 +1722,9 @@ export default function ProfileView({
                   <div className="space-y-5">
                     
                     {/* User profile brief */}
-                    <div className="p-3.5 rounded-2xl bg-linear-to-tr from-[#130f3c]/90 to-[#0c0926]/90 border border-violet-500/20 flex items-center justify-between">
+                    <div className="p-3.5 rounded-2xl bg-linear-to-tr from-[#130f3c]/90 to-[#0c0926]/90 border border-white/10 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <img src={currentUser.avatar} className="w-10 h-10 rounded-xl object-cover border border-violet-500/30" alt="" />
+                        <img src={currentUser.avatar} className="w-10 h-10 rounded-xl object-cover border border-white/10" alt="" />
                         <div className="leading-tight">
                           <p className="text-xs font-bold text-white flex items-center gap-1">
                             {currentUser.name} {currentUser.isVerified && <PurpleVerifiedBadge className="w-3.5 h-3.5" />}
@@ -1737,7 +1738,7 @@ export default function ProfileView({
                     {/* Section 1: Identity & Switcher Vault */}
                     <div className="space-y-1.5">
                       <p className="text-[9px] font-mono uppercase text-zinc-500 tracking-widest pl-2">Account Identity Vault</p>
-                      <div className="p-3 rounded-2xl bg-[#0d0a20] border border-violet-500/10 space-y-3">
+                      <div className="p-3 rounded-2xl bg-[#0d0a20] border border-white/10 space-y-3">
                         <div className="space-y-2">
                           {savedAccounts.map(acc => {
                             const isActive = acc.id === currentUser.id || acc.username === currentUser.username;
@@ -1747,7 +1748,7 @@ export default function ProfileView({
                                 onClick={() => !isActive && handleSwitchAccount(acc)}
                                 className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
                                   isActive 
-                                    ? 'bg-violet-600/10 border-violet-500/30' 
+                                    ? 'bg-violet-600/10 border-white/10' 
                                     : 'bg-black/30 border-transparent hover:border-white/10'
                                 }`}
                               >
@@ -1965,7 +1966,7 @@ export default function ProfileView({
                     {/* Sub-panel Back Header */}
                     <button
                       onClick={() => { setSettingsActiveSubPanel('main'); setSupportSubmitted(false); }}
-                      className="flex items-center gap-1.5 text-xs font-mono text-violet-400 hover:text-violet-300 font-extrabold uppercase bg-violet-600/5 px-2.5 py-1.5 rounded-lg border border-violet-500/10"
+                      className="flex items-center gap-1.5 text-xs font-mono text-violet-400 hover:text-violet-300 font-extrabold uppercase bg-violet-600/5 px-2.5 py-1.5 rounded-lg border border-white/10"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> Back to Menu
                     </button>
@@ -1973,7 +1974,7 @@ export default function ProfileView({
                     {/* Drill down Panel 1: Account / Profile Details */}
                     {settingsActiveSubPanel === 'account' && (
                       <div className="space-y-4 text-left">
-                        <div className="bg-[#0e0c24] p-4 rounded-2xl border border-violet-500/10 space-y-3.5">
+                        <div className="bg-[#0e0c24] p-4 rounded-2xl border border-white/10 space-y-3.5">
                           <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-1.5">👤 PROFILE DETAILS</span>
                           
                           {/* Display name */}
@@ -2042,7 +2043,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Camera Setup block */}
-                        <div className="bg-[#0e0c24] p-4 rounded-2xl border border-violet-500/10 space-y-3">
+                        <div className="bg-[#0e0c24] p-4 rounded-2xl border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">📸 PROFILE PHOTO</span>
                           {isWebcamActive ? (
                             <div className="space-y-2 text-center">
@@ -2054,7 +2055,7 @@ export default function ProfileView({
                             </div>
                           ) : (
                             <div className="flex items-center gap-3">
-                              <img src={editAvatar} className="w-12 h-12 rounded-xl object-cover border border-violet-500/20" alt="" />
+                              <img src={editAvatar} className="w-12 h-12 rounded-xl object-cover border border-white/10" alt="" />
                               <div className="flex-1 space-y-1">
                                 <button onClick={startWebcam} className="w-full py-1.5 bg-pink-500/10 border border-pink-500/20 hover:bg-pink-500/20 text-pink-300 font-mono text-[9px] uppercase font-bold rounded-lg">Take Photo</button>
                                 <button onClick={() => {
@@ -2071,7 +2072,7 @@ export default function ProfileView({
                     {/* Drill down Panel 2: Privacy Dashboard */}
                     {settingsActiveSubPanel === 'privacy' && (
                       <div className="space-y-4">
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-4">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-4">
                           <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">🔒 PRIVACY SETTINGS</span>
                           
                           {/* Private Node account toggle */}
@@ -2127,7 +2128,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Blocks & Mutes Manager */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3 text-left">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3 text-left">
                           <span className="text-[9px] font-mono text-red-400 font-extrabold uppercase tracking-widest block">🚫 Restricted Accounts</span>
                           
                           <div className="space-y-2">
@@ -2182,7 +2183,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Rotate Password Form */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">🔑 Rotate Access Credentials</span>
                           
                           <div className="space-y-2 text-xs">
@@ -2244,7 +2245,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Passkeys and 2FA */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">🛡️ Advanced Security Locks</span>
                           
                           <div className="flex items-center justify-between p-2 rounded-xl bg-black/20">
@@ -2284,7 +2285,7 @@ export default function ProfileView({
                           </div>
 
                           {showTwoFactorSetup && (
-                            <div className="p-3 bg-black/50 rounded-xl border border-dashed border-violet-500/20 text-center space-y-2">
+                            <div className="p-3 bg-black/50 rounded-xl border border-dashed border-white/10 text-center space-y-2">
                               <p className="text-[10px] text-zinc-300 font-mono">Scan TOTP Secret Token:</p>
                               <div className="w-24 h-24 bg-white p-1 mx-auto rounded-lg">
                                 <svg className="w-full h-full text-black" viewBox="0 0 24 24" fill="currentColor">
@@ -2306,7 +2307,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Recent Login sessions */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-amber-400 font-extrabold uppercase tracking-widest block">💻 Recent Login sessions</span>
                           
                           <div className="space-y-2">
@@ -2358,7 +2359,7 @@ export default function ProfileView({
                     {/* Drill down Panel 4: Notification preferences */}
                     {settingsActiveSubPanel === 'notifications' && (
                       <div className="space-y-4 text-left">
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3.5">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
                           <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">🔔 PUSH PREFERENCES</span>
                           <p className="text-[10px] text-zinc-400 leading-normal font-sans">Manage how you receive notifications on this device.</p>
                           
@@ -2400,12 +2401,12 @@ export default function ProfileView({
                       <div className="space-y-4 text-left">
                         
                         {/* Themes Cards selection */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-amber-400 font-extrabold uppercase tracking-widest block">🎨 Live Canvas Theme Mood</span>
                           
                           <div className="grid grid-cols-2 gap-2">
                             {[
-                              { id: 'neon-cyber', label: 'Cyber Violet', bg: 'bg-[#050409]', border: 'border-violet-500/40 text-violet-300' },
+                              { id: 'neon-cyber', label: 'Cyber Violet', bg: 'bg-[#050409]', border: 'border-white/10 text-violet-300' },
                               { id: 'emerald-glass', label: 'Emerald Glass', bg: 'bg-[#010403]', border: 'border-emerald-600/40 text-emerald-400' },
                               { id: 'platinum-light', label: 'Platinum Light', bg: 'bg-[#f4f6fa]', border: 'border-slate-300 text-slate-800' },
                               { id: 'stealth-dark', label: 'Stealth Dark', bg: 'bg-zinc-950', border: 'border-zinc-800 text-zinc-400' }
@@ -2435,7 +2436,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Accent pickers */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⚡ Glow Accent Color</span>
                           <div className="flex gap-2">
                             {[
@@ -2461,7 +2462,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Typography customizer */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">✍️ TYPOGRAPHY SCALES</span>
                           
                           {/* Text size selector */}
@@ -2521,7 +2522,7 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'storage' && (
                       <div className="space-y-4 text-left">
                         {/* Premium Storage and Data Center Launcher */}
-                        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#12082b] to-[#04010a] border border-violet-500/25 space-y-3 relative overflow-hidden group">
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-[#12082b] to-[#04010a] border border-white/10 space-y-3 relative overflow-hidden group">
                           <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-2xl group-hover:bg-violet-600/20 transition-all duration-500" />
                           <div className="flex items-center gap-2.5">
                             <VohIcon size={18} animated glow variant="brand" />
@@ -2539,7 +2540,7 @@ export default function ProfileView({
                           </button>
                         </div>
 
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3.5">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
                           <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">💾 LOCAL CACHE RE-CALIBRATION</span>
                           
                           {/* Cache size meter */}
@@ -2575,7 +2576,7 @@ export default function ProfileView({
                         </div>
 
                         {/* Performance toggles */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3.5">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3.5">
                           <span className="text-[9px] font-mono text-amber-400 font-extrabold uppercase tracking-widest block">🏎️ Performance & Compression</span>
                           
                           {/* Data saver */}
@@ -2635,7 +2636,7 @@ export default function ProfileView({
                     {/* Drill down Panel 7: Technical support desk */}
                     {settingsActiveSubPanel === 'support' && (
                       <div className="space-y-4 text-left">
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">💬 Lagos Technical Grid Support</span>
                           
                           {supportSubmitted ? (
@@ -2695,7 +2696,7 @@ export default function ProfileView({
                     {/* Drill down Panel 8: About Nexora */}
                     {settingsActiveSubPanel === 'about' && (
                       <div className="space-y-4 text-left">
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-violet-500/10 space-y-3 font-mono">
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3 font-mono">
                           <NexoraBranding size="sm" showSubtitle={true} className="mb-2" />
                           <div className="space-y-2 text-[10px] leading-relaxed text-zinc-300">
                             <p className="flex justify-between border-b border-white/5 pb-1"><span className="text-zinc-500">APP:</span> <span>Nexora</span></p>
@@ -2737,7 +2738,7 @@ export default function ProfileView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0c0926] border border-red-500/25 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 shadow-2xl relative"
+              className="bg-[#0c0926] border border-red-500/25 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 shadow-md relative"
             >
               <div className="w-12 h-12 rounded-full bg-red-600/10 text-red-500 flex items-center justify-center mx-auto">
                 <LogOut className="w-6 h-6 animate-pulse" />
@@ -2782,7 +2783,7 @@ export default function ProfileView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0c0926] border border-red-500/40 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 shadow-2xl"
+              className="bg-[#0c0926] border border-red-500/40 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 shadow-md"
             >
               <div className="w-12 h-12 rounded-full bg-red-600/20 text-red-500 flex items-center justify-center mx-auto">
                 <AlertTriangle className="w-6 h-6 animate-bounce" />
@@ -2937,7 +2938,7 @@ export default function ProfileView({
                   placeholder="Search by username..."
                   value={searchRelationQuery}
                   onChange={(e) => setSearchRelationQuery(e.target.value)}
-                  className="w-full pl-9 pr-4 py-3 bg-[#0d0926]/60 border border-violet-500/15 rounded-2xl text-xs font-sans text-white focus:outline-hidden focus:border-violet-500 focus:bg-black/60 font-medium"
+                  className="w-full pl-9 pr-4 py-3 bg-[#0d0926]/60 border border-white/10 rounded-2xl text-xs font-sans text-white focus:outline-hidden focus:border-violet-500 focus:bg-black/60 font-medium"
                 />
               </div>
 
@@ -3059,7 +3060,7 @@ export default function ProfileView({
               
               <div className="space-y-6">
                 {/* Header Info */}
-                <div className="p-6 bg-linear-to-tr from-violet-900/20 to-[#04020f] border border-violet-500/20 rounded-3xl">
+                <div className="p-6 bg-linear-to-tr from-violet-900/20 to-[#04020f] border border-white/10 rounded-3xl">
                   <h2 className="text-xl font-black text-white mb-2">Creator Subscriptions</h2>
                   <p className="text-sm text-zinc-400">Support your favorite creators, unlock exclusive content, and get premium badges.</p>
                 </div>
@@ -3168,7 +3169,7 @@ export default function ProfileView({
                       {exclusiveContentList.map(content => (
                         <div key={content.id} className="p-4 bg-[#0a0818] border border-white/5 rounded-2xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-violet-950/40 border border-violet-500/15 flex items-center justify-center text-violet-300">
+                            <div className="w-10 h-10 rounded-xl bg-violet-950/40 border border-white/10 flex items-center justify-center text-violet-300">
                               {content.type === 'Video' ? <Film className="w-5 h-5" /> : content.type === 'Audio' ? <Mic className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
                             </div>
                             <div>
@@ -3183,7 +3184,7 @@ export default function ProfileView({
                             onClick={() => {
                               window.dispatchEvent(new CustomEvent('toast', { detail: `🔒 Unlock higher subscription tier to view this exclusive ${content.type.toLowerCase()}!` }));
                             }}
-                            className="px-4 py-2 bg-violet-950 text-violet-400 border border-violet-500/25 hover:bg-violet-900/40 rounded-xl text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                            className="px-4 py-2 bg-violet-950 text-violet-400 border border-white/10 hover:bg-violet-900/40 rounded-xl text-[10px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
                           >
                             <Lock className="w-3.5 h-3.5" /> Unlock
                           </button>
@@ -3353,7 +3354,7 @@ export default function ProfileView({
                 
                 {/* Left: Input Form */}
                 <div className="space-y-4">
-                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-violet-500/15 space-y-4">
+                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-white/10 space-y-4">
                     <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">✏️ PROFILE DETAILS</span>
                     
                     {/* Display name */}
@@ -3464,12 +3465,12 @@ export default function ProfileView({
                   </div>
 
                   {/* Avatar photo editor trigger */}
-                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-violet-500/15 space-y-4">
+                  <div className="bg-[#0b081c] p-6 rounded-3xl border border-white/10 space-y-4">
                     <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block border-b border-white/5 pb-2">📸 PROFILE PHOTO</span>
                     
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                       <div className="relative group cursor-pointer shrink-0" onClick={() => { if (!isSavingProfile && !showSavedFeedback) { setAvatarSourceType('select'); setIsAvatarModalOpen(true); } }}>
-                        <img src={editAvatar} className="w-16 h-16 rounded-xl object-cover border border-violet-500/30 group-hover:brightness-75 transition-all" alt="avatar editor" />
+                        <img src={editAvatar} className="w-16 h-16 rounded-xl object-cover border border-white/10 group-hover:brightness-75 transition-all" alt="avatar editor" />
                         <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 rounded-xl">
                           <Camera className="w-4 h-4 text-white" />
                         </div>
@@ -3494,8 +3495,8 @@ export default function ProfileView({
                     <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest pl-2">🔴 LIVE PREVIEW</span>
                     
                     {/* Simplified Profile Header simulation */}
-                    <div className="bg-[#0b0922] border border-violet-500/20 rounded-[32px] p-6 text-center space-y-4 shadow-xl">
-                      <div className="relative w-20 h-20 rounded-[18px] bg-black overflow-hidden mx-auto border-2 border-violet-500">
+                    <div className="bg-[#0b0922] border border-white/10 rounded-2xl p-6 text-center space-y-4">
+                      <div className="relative w-20 h-20 rounded-full bg-black overflow-hidden mx-auto border-2 border-white/10">
                         <img src={editAvatar} className="w-full h-full object-cover" alt="live preview avatar" />
                       </div>
                       <div className="leading-tight">
@@ -3564,7 +3565,7 @@ export default function ProfileView({
               initial={{ scale: 0.92, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.92, opacity: 0 }}
-              className="bg-[#0b0821] border border-violet-500/30 rounded-[28px] max-w-sm w-full overflow-hidden shadow-2xl p-6 space-y-5 text-left"
+              className="bg-[#0b0821] border border-white/10 rounded-2xl max-w-sm w-full overflow-hidden p-6 space-y-5 text-left"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-2">
                 <span className="text-[10px] font-mono text-pink-400 font-extrabold uppercase tracking-widest">
@@ -3628,7 +3629,7 @@ export default function ProfileView({
               {avatarSourceType === 'webcam' && (
                 <div className="space-y-4">
                   {isWebcamActive ? (
-                    <div className="relative aspect-square rounded-2xl bg-black overflow-hidden border border-violet-500/20 max-w-xs mx-auto">
+                    <div className="relative aspect-square rounded-2xl bg-black overflow-hidden border border-white/10 max-w-xs mx-auto">
                       <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" />
                       <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 rounded-full animate-pulse text-red-500 text-[10px] font-mono">
                         🔴 LIVE
@@ -3757,12 +3758,12 @@ export default function ProfileView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0b081e] border border-violet-500/35 rounded-3xl p-6 max-w-lg w-full text-left space-y-5 shadow-2xl overflow-y-auto max-h-[90vh]"
+              className="bg-[#0b081e] border border-white/10 rounded-2xl p-6 max-w-lg w-full text-left space-y-5 overflow-y-auto max-h-[90vh]"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-4">
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                  <div className="w-8 h-8 rounded-xl bg-violet-600/20 border border-white/10 flex items-center justify-center text-violet-400">
                     <Shield className="w-4 h-4" />
                   </div>
                   <div>
@@ -3780,7 +3781,7 @@ export default function ProfileView({
 
               {/* Core Definitions Banner */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="p-3.5 rounded-2xl bg-violet-950/30 border border-violet-500/20 space-y-1">
+                <div className="p-3.5 rounded-2xl bg-violet-950/30 border border-white/10 space-y-1">
                   <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase block">Reputation</span>
                   <p className="text-xs font-sans text-zinc-200 font-medium">"The trust and impact you have built on Nexora."</p>
                   <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationPoints || 0)} PR</span>
@@ -3845,7 +3846,7 @@ export default function ProfileView({
               </div>
 
               {/* Quality & Anti-Gaming Diagnostics */}
-              <div className="p-4 rounded-2xl bg-violet-950/20 border border-violet-500/20 space-y-2 text-center">
+              <div className="p-4 rounded-2xl bg-violet-950/20 border border-white/10 space-y-2 text-center">
                 <span className="text-[10px] font-mono text-violet-300 uppercase block font-extrabold">Algorithm Quality Multipliers</span>
                 <div className="grid grid-cols-3 gap-2 text-center pt-1">
                   <div className="bg-white/5 p-2 rounded-xl">
@@ -3909,7 +3910,7 @@ export default function ProfileView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0c0926] border border-violet-500/35 rounded-3xl p-6 max-w-sm w-full text-left space-y-4"
+              className="bg-[#0c0926] border border-white/10 rounded-2xl p-6 max-w-sm w-full text-left space-y-4"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3">

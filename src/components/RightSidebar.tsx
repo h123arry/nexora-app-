@@ -31,7 +31,7 @@ export default function RightSidebar({
     <div id="nexora-right-panel" className="flex flex-col h-full py-6 pl-4 border-l border-current/10 space-y-8 select-none">
       
       {/* Premium Spacious Brand Message */}
-      <div className="p-5 rounded-2xl bg-violet-600/5 border border-violet-500/10 text-center relative overflow-hidden">
+      <div className="p-5 rounded-2xl bg-violet-600/5 border border-white/10 text-center relative overflow-hidden">
         <p className="text-[11px] font-sans font-medium text-purple-200/85 relative z-10 leading-relaxed">
           ⚡ Shape what’s happening by exploring high-affinity creators and trending conversations.
         </p>
@@ -69,7 +69,7 @@ export default function RightSidebar({
                   onClick={() => setSelectedTag(isSelected ? null : tag)}
                   className={`flex items-center justify-between w-full p-2.5 rounded-xl text-left transition-all ${
                     isSelected 
-                      ? 'bg-violet-500/20 border border-violet-500/30 text-violet-400' 
+                      ? 'bg-violet-500/20 border border-white/10 text-violet-400' 
                       : 'hover:bg-current/5 text-current/80 hover:text-current'
                   }`}
                 >

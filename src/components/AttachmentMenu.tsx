@@ -45,7 +45,7 @@ export default function AttachmentMenu({ isOpen, onClose, onSelect }: Attachment
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-[#09071c] rounded-t-3xl p-6 border-t border-violet-500/20 shadow-2xl"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-[#09071c] rounded-t-3xl p-6 border-t border-white/10 shadow-md"
           >
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-white font-sans font-bold text-lg">Attachment</h3>

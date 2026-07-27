@@ -411,7 +411,7 @@ export default function NewInboxView({
         <div className="flex-1 overflow-y-auto divide-y divide-white/5 scrollbar-none">
           {filteredChats.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-4 shadow-md">
+              <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-4 shadow-md">
                 <MessageSquare className="w-7 h-7" />
               </div>
               <h3 className="text-sm font-bold text-white mb-1">Your inbox is empty</h3>
@@ -560,7 +560,7 @@ export default function NewInboxView({
             <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/15 via-black to-black">
               {activeMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                  <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-3 shadow-sm">
+                  <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-3 shadow-sm">
                     <Sparkles className="w-6 h-6" />
                   </div>
                   <h4 className="text-xs font-bold text-white mb-1 font-sans">Secure conversation started</h4>
@@ -611,7 +611,7 @@ export default function NewInboxView({
 
             {/* Reply Preview Bar */}
             {replyQuoteText && (
-              <div className="px-4 py-2 bg-violet-950/40 border-t border-violet-500/20 flex items-center justify-between">
+              <div className="px-4 py-2 bg-violet-950/40 border-t border-white/10 flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <Quote className="w-4 h-4 text-violet-400 shrink-0" />
                   <span className="text-xs text-zinc-300 truncate font-sans">
@@ -680,7 +680,7 @@ export default function NewInboxView({
           </>
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <div className="w-16 h-16 rounded-3xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-violet-400 mb-4 shadow-xl">
+            <div className="w-16 h-16 rounded-3xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-4 shadow-md">
               <MessageSquare className="w-8 h-8" />
             </div>
             <h3 className="text-base font-bold text-white mb-1 font-sans">Select a conversation</h3>
@@ -699,7 +699,7 @@ export default function NewInboxView({
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-md bg-[#0d0a1f] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+              className="w-full max-w-md bg-[#0d0a1f] border border-white/10 rounded-2xl shadow-md overflow-hidden flex flex-col max-h-[85vh]"
             >
               <div className="p-4 border-b border-white/10 flex items-center justify-between">
                 <h3 className="text-sm font-bold text-white font-sans">New Message</h3>

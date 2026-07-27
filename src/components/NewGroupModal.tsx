@@ -148,7 +148,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="w-full max-w-xl bg-[#09071c]/95 border border-violet-500/20 rounded-3xl text-white shadow-2xl relative overflow-hidden my-8"
+          className="w-full max-w-xl bg-[#09071c]/95 border border-white/10 rounded-3xl text-white shadow-md relative overflow-hidden my-8"
         >
           {/* Ambient header glow bar */}
           <div 
@@ -220,7 +220,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                       placeholder="e.g. Synthwave Hackers"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-violet-500/40 focus:outline-hidden"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-white/10 focus:outline-hidden"
                     />
                   </div>
 
@@ -234,7 +234,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                         placeholder="synth_hackers"
                         value={username}
                         onChange={(e) => setUsername(e.target.value.toLowerCase().trim().replace(/[^a-z0-9_]/g, ''))}
-                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-7 pr-3 py-2 text-xs text-white focus:border-violet-500/40 focus:outline-hidden font-mono"
+                        className="w-full bg-black/40 border border-white/10 rounded-xl pl-7 pr-3 py-2 text-xs text-white focus:border-white/10 focus:outline-hidden font-mono"
                       />
                     </div>
                   </div>
@@ -247,7 +247,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                     <select
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-violet-500/40 focus:outline-hidden cursor-pointer"
+                      className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-white/10 focus:outline-hidden cursor-pointer"
                     >
                       {CATEGORIES.map(c => (
                         <option key={c} value={c} className="bg-[#09071c]">{c}</option>
@@ -286,7 +286,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:border-violet-500/40 focus:outline-hidden resize-none leading-relaxed font-sans"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3.5 py-2 text-xs text-white focus:border-white/10 focus:outline-hidden resize-none leading-relaxed font-sans"
                   />
                 </div>
 
@@ -315,7 +315,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                         placeholder="Or paste external avatar image URL..."
                         value={customAvatar}
                         onChange={(e) => setCustomAvatar(e.target.value)}
-                        className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] text-zinc-300 focus:border-violet-500/40 focus:outline-hidden"
+                        className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] text-zinc-300 focus:border-white/10 focus:outline-hidden"
                       />
                     </div>
                   </div>
@@ -346,7 +346,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                         placeholder="Or paste banner image URL..."
                         value={customBanner}
                         onChange={(e) => setCustomBanner(e.target.value)}
-                        className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] text-zinc-300 focus:border-violet-500/40 focus:outline-hidden"
+                        className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] text-zinc-300 focus:border-white/10 focus:outline-hidden"
                       />
                     </div>
                   </div>
@@ -451,7 +451,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
                     placeholder="Instantiated welcome statement..."
                     value={welcomeMessage}
                     onChange={(e) => setWelcomeMessage(e.target.value)}
-                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-violet-500/40 focus:outline-hidden"
+                    className="w-full bg-black/40 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:border-white/10 focus:outline-hidden"
                   />
                 </div>
 

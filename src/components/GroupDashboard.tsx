@@ -356,7 +356,7 @@ export default function GroupDashboard({
   };
 
   return (
-    <div className="absolute inset-0 z-40 bg-[#06040f]/95 backdrop-blur-2xl flex flex-col md:flex-row h-full border-l border-violet-500/10 text-white font-sans overflow-hidden select-none">
+    <div className="absolute inset-0 z-40 bg-[#06040f]/95 backdrop-blur-2xl flex flex-col md:flex-row h-full border-l border-white/10 text-white font-sans overflow-hidden select-none">
       
       {/* ========================================== */}
       {/* LEFT COLUMN: CONTROL & NAVIGATION DECK */}
@@ -459,7 +459,7 @@ export default function GroupDashboard({
             <img 
               src={avatar} 
               alt={name} 
-              className="w-16 h-16 rounded-2xl object-cover border-2 border-[#05030d] bg-zinc-900 shadow-xl"
+              className="w-16 h-16 rounded-2xl object-cover border-2 border-[#05030d] bg-zinc-900 shadow-md"
             />
             <div className="flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -662,7 +662,7 @@ export default function GroupDashboard({
               </div>
 
               {/* Disappearing Messages Segment */}
-              <div className="bg-gradient-to-r from-violet-950/20 to-pink-950/10 p-5 rounded-3xl border border-violet-500/10 space-y-3">
+              <div className="bg-gradient-to-r from-violet-950/20 to-pink-950/10 p-5 rounded-3xl border border-white/10 space-y-3">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-violet-400" />
                   <h4 className="text-xs font-black font-mono uppercase tracking-widest text-violet-300">Vanish Ledger (Disappearing messages)</h4>
@@ -809,7 +809,7 @@ export default function GroupDashboard({
                                     : member.role === 'Admin'
                                       ? 'bg-rose-500/20 text-rose-300 border border-rose-500/20' 
                                       : member.role === 'Moderator' 
-                                        ? 'bg-violet-500/20 text-violet-300 border border-violet-500/20' 
+                                        ? 'bg-violet-500/20 text-violet-300 border border-white/10' 
                                         : 'bg-zinc-850 text-zinc-500 border border-white/5'
                                 }`}>
                                   {member.role}
@@ -926,7 +926,7 @@ export default function GroupDashboard({
               </div>
 
               {/* Call Control Dashboard */}
-              <div className="bg-[#0b0821] border border-violet-500/15 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
+              <div className="bg-[#0b0821] border border-white/10 p-6 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden">
                 <div className="absolute -top-12 -right-12 w-32 h-32 bg-violet-600/5 rounded-full blur-2xl" />
                 
                 <div className="space-y-2 relative z-10 text-left">
@@ -1114,7 +1114,7 @@ export default function GroupDashboard({
               {/* Media Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {filteredMediaList.map((asset) => (
-                  <div key={asset.id} className="bg-black/30 border border-white/5 p-3 rounded-2xl space-y-3 hover:border-violet-500/25 transition-all text-left flex flex-col justify-between">
+                  <div key={asset.id} className="bg-black/30 border border-white/5 p-3 rounded-2xl space-y-3 hover:border-white/10 transition-all text-left flex flex-col justify-between">
                     
                     <div className="space-y-2">
                       <div className="flex justify-between items-start gap-2">
@@ -1367,7 +1367,7 @@ export default function GroupDashboard({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-md bg-[#09071c]/95 border border-red-500/20 rounded-3xl p-6 text-white text-left shadow-2xl relative overflow-hidden"
+              className="w-full max-w-md bg-[#09071c]/95 border border-red-500/20 rounded-3xl p-6 text-white text-left shadow-md relative overflow-hidden"
             >
               <div className="absolute top-0 inset-x-0 h-[2px] bg-red-500" />
               

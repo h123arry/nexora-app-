@@ -1744,7 +1744,7 @@ export default function FeedView({
   // Theme-aware backdrop container style for the fixed/overlay top navigation
   const getHeaderOverlayClass = () => {
     switch (theme) {
-      case 'neon-cyber': return 'bg-[#050409]/80 border-b border-violet-500/15 text-purple-100';
+      case 'neon-cyber': return 'bg-[#050409]/80 border-b border-white/10 text-purple-100';
       case 'emerald-glass': return 'bg-[#010403]/80 border-b border-emerald-950/40 text-emerald-100';
       case 'platinum-light': return 'bg-white/80 border-b border-slate-200 text-slate-900';
       case 'stealth-dark':
@@ -1885,7 +1885,7 @@ export default function FeedView({
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('toggleNavMenu'));
               }}
-              className="relative flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border border-white/10 hover:border-violet-500/40 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer active:scale-95 text-xs font-sans font-medium group"
+              className="relative flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border border-white/10 hover:border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer active:scale-95 text-xs font-sans font-medium group"
               title="Open Navigation Menu"
               aria-label="Navigation Menu"
             >
@@ -1896,7 +1896,7 @@ export default function FeedView({
         </div>
 
         {/* INLINE CREATE POST COMPOSER */}
-        <div className="mx-3 sm:mx-6 my-3.5 p-3.5 sm:p-4 rounded-2xl bg-[#0b0821]/90 border border-white/10 hover:border-violet-500/30 transition-all shadow-md">
+        <div className="px-4 sm:px-6 py-4 border-b border-white/10 bg-[#04020a] transition-all">
           <div className="flex items-center gap-3">
             <img
               src={currentUser.avatar}
@@ -1964,7 +1964,7 @@ export default function FeedView({
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: pullY, opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="w-full overflow-hidden flex flex-col items-center justify-center bg-violet-950/20 border-b border-violet-500/10 shrink-0 select-none"
+              className="w-full overflow-hidden flex flex-col items-center justify-center bg-violet-950/20 border-b border-white/10 shrink-0 select-none"
             >
               <div className="flex items-center gap-2 text-violet-300 font-mono text-[10px] uppercase tracking-widest font-extrabold py-2">
                 <NexoraLoader size="xs" />
@@ -2002,7 +2002,7 @@ export default function FeedView({
         )}
         {/* Selected Tag Active Indicator (Moved inside scroll) */}
         {selectedTag && (
-          <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-violet-500/25 px-3 py-1.5 rounded-xl mx-4 md:mx-0">
+          <div className="shrink-0 flex items-center justify-between bg-violet-600/10 border border-white/10 px-3 py-1.5 rounded-xl mx-4 md:mx-0">
             <span className="text-xs font-mono text-violet-300">Filtering tags containing: <strong className="text-white">#{selectedTag}</strong></span>
             <button onClick={() => setSelectedTag(null)} className="text-violet-400 hover:text-white">
               <X className="w-4 h-4" />
@@ -2012,7 +2012,7 @@ export default function FeedView({
 
         {/* Empty feed state */}
         {filteredPosts.length === 0 && (
-          <div className="p-6 md:p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-10 space-y-6 mx-4 md:mx-0 relative overflow-hidden">
+          <div className="p-6 md:p-8 rounded-3xl bg-[#09071c]/50 border border-white/10 text-center py-10 space-y-6 mx-4 md:mx-0 relative overflow-hidden">
             {/* Glowing aesthetic backdrop lights */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-2xl" />
             <div className="absolute bottom-0 left-0 w-24 h-24 bg-pink-500/10 rounded-full blur-2xl" />
@@ -2040,7 +2040,7 @@ export default function FeedView({
                   const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
                   if (searchInput) searchInput.focus();
                 }}
-                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-violet-200 border border-violet-500/20 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all active:scale-95"
+                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-violet-200 border border-white/10 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all active:scale-95"
               >
                 🔍 Discover creators
               </button>
@@ -2048,13 +2048,13 @@ export default function FeedView({
 
             {/* Registered creators on Nexora if any exist */}
             {suggestedUsers.length > 0 && (
-              <div className="bg-[#0b0a24]/60 border border-violet-500/10 rounded-2xl p-4 text-left space-y-3 relative z-10 mt-4">
+              <div className="bg-[#0b0a24]/60 border border-white/10 rounded-2xl p-4 text-left space-y-3 relative z-10 mt-4">
                 <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⭐ Registered Creators on Nexora</span>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {suggestedUsers.map(u => (
                     <div key={u.id} className="flex items-center justify-between p-2.5 bg-black/30 border border-white/5 rounded-xl">
                       <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => onViewProfile?.(u.id)}>
-                        <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover border border-violet-500/20 shrink-0" />
+                        <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0" />
                         <div className="min-w-0 leading-tight">
                           <p className="text-xs font-bold text-white truncate hover:text-violet-400 transition-colors">{u.name}</p>
                           <p className="text-[9.5px] font-mono text-violet-400/80 truncate">@{u.username}</p>
@@ -2065,7 +2065,7 @@ export default function FeedView({
                         onClick={() => onToggleFollow?.(u.id)}
                         className={`p-1 px-2.5 rounded-lg text-[9px] font-mono uppercase font-extrabold cursor-pointer transition-all duration-300 shrink-0 ${
                           followingIds.includes(u.id) 
-                            ? 'bg-violet-950 text-violet-300 border border-violet-500/20' 
+                            ? 'bg-violet-950 text-violet-300 border border-white/10' 
                             : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow-md shadow-violet-500/20 hover:shadow-violet-500/40'
                         }`}
                       >
@@ -2105,7 +2105,7 @@ export default function FeedView({
 
           if (isSearchingUsers && matchingUsers.length === 0) {
             return (
-              <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-violet-500/10 text-center py-12 space-y-4">
+              <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-white/10 text-center py-12 space-y-4">
                 <span className="text-3xl select-none">👥</span>
                 <h4 className="text-sm font-sans font-bold text-violet-100">No members matched your search query.</h4>
                 <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
@@ -2125,13 +2125,13 @@ export default function FeedView({
                   {matchingUsers.map(u => (
                     <div 
                       key={u.id}
-                      className="p-4 rounded-3xl bg-[#0e0a2b]/95 border border-violet-500/20 hover:border-violet-500/40 shadow-xl flex flex-col justify-between transition-all hover:-translate-y-0.5"
+                      className="p-4 rounded-3xl bg-[#0e0a2b]/95 border border-white/10 hover:border-white/10 shadow-md flex flex-col justify-between transition-all hover:-translate-y-0.5"
                     >
                       <div className="flex gap-3">
                         <img 
                           src={u.avatar} 
                           alt={u.name}
-                          className="w-12 h-12 rounded-full object-cover border border-violet-500/15 cursor-pointer shrink-0"
+                          className="w-12 h-12 rounded-full object-cover border border-white/10 cursor-pointer shrink-0"
                           onClick={() => onViewProfile?.(u.id)}
                           referrerPolicy="no-referrer"
                         />
@@ -2287,7 +2287,7 @@ export default function FeedView({
                       animate={{ y: 0, opacity: 1 }}
                       exit={{ y: "100%", opacity: 0 }}
                       transition={{ type: "spring", damping: 25, stiffness: 220 }}
-                      className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-xl border-t border-violet-500/20 z-40 flex flex-col p-5 shadow-2xl overflow-hidden"
+                      className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-xl border-t border-white/10 z-40 flex flex-col p-5 shadow-md overflow-hidden"
                     >
                       {/* Header of Comments drawer */}
                       <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -2347,7 +2347,7 @@ export default function FeedView({
 
                             {/* Standard Threaded/Nested Replies */}
                             {c.replies && c.replies.length > 0 && (
-                              <div className="pl-9 space-y-2.5 pt-1.5 border-l border-violet-500/10 ml-3.5">
+                              <div className="pl-9 space-y-2.5 pt-1.5 border-l border-white/10 ml-3.5">
                                 {c.replies.map(rep => (
                                   <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
                                     <div className="flex items-center gap-2 mb-1 cursor-pointer" onClick={() => onViewProfile?.(rep.userId || rep.username)}>
@@ -2373,7 +2373,7 @@ export default function FeedView({
                                     value={replyInputs[c.id] || ''}
                                     onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
                                     onKeyDown={(e) => { if(e.key === 'Enter') handleAddReplySubmit(post.id, c.id); }}
-                                    className="flex-1 bg-slate-900 border border-violet-500/15 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
+                                    className="flex-1 bg-slate-900 border border-white/10 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
                                   />
                                   <button 
                                     onClick={() => handleAddReplySubmit(post.id, c.id)}
@@ -2409,7 +2409,7 @@ export default function FeedView({
                           value={commentInputs[post.id] || ''}
                           onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
                           onKeyDown={(e) => { if(e.key==='Enter') handleAddCommentSubmit(post.id); }}
-                          className="flex-1 bg-slate-950/60 border border-white/5 focus:border-violet-500/20 text-xs text-white placeholder:text-violet-400/40 py-2.5 px-4 rounded-xl focus:outline-hidden"
+                          className="flex-1 bg-slate-950/60 border border-white/5 focus:border-white/10 text-xs text-white placeholder:text-violet-400/40 py-2.5 px-4 rounded-xl focus:outline-hidden"
                         />
                         <button 
                           onClick={() => handleAddCommentSubmit(post.id)}
@@ -2464,7 +2464,7 @@ export default function FeedView({
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="bg-[#0b0821] border border-violet-500/25 p-5 md:p-6 rounded-3xl w-full max-w-lg space-y-4 shadow-2xl"
+              className="bg-[#0b0821] border border-white/10 p-5 md:p-6 rounded-3xl w-full max-w-lg space-y-4 shadow-md"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3">
                 <span className="text-xs font-mono font-extrabold text-[#A78BFA] uppercase tracking-widest flex items-center gap-1.5">
@@ -2498,7 +2498,7 @@ export default function FeedView({
                   placeholder="What's on your mind? Share an update, media, or opportunity..."
                   value={composerText}
                   onChange={(e) => setComposerText(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-white/5 focus:border-violet-500/20 text-xs text-white rounded-xl p-3 focus:outline-hidden placeholder:text-violet-400/30 resize-none font-sans"
+                  className="w-full bg-slate-950/50 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl p-3 focus:outline-hidden placeholder:text-violet-400/30 resize-none font-sans"
                 />
               </div>
 
@@ -2510,7 +2510,7 @@ export default function FeedView({
                   placeholder="https://images.unsplash.com/... (optional)"
                   value={composerImgUrl}
                   onChange={(e) => setComposerImgUrl(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-white/5 focus:border-violet-500/20 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
+                  className="w-full bg-slate-950/50 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
                 />
               </div>
 
@@ -2523,7 +2523,7 @@ export default function FeedView({
                     placeholder="e.g. Port Harcourt, Nigeria"
                     value={composerLocation}
                     onChange={(e) => setComposerLocation(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-white/5 focus:border-violet-500/20 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
+                    className="w-full bg-slate-950/50 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
                   />
                 </div>
               )}
@@ -2536,7 +2536,7 @@ export default function FeedView({
                     placeholder="e.g. Football Nigeria, Tech Labs"
                     value={composerCommunityName}
                     onChange={(e) => setComposerCommunityName(e.target.value)}
-                    className="w-full bg-slate-950/50 border border-white/5 focus:border-violet-500/20 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
+                    className="w-full bg-slate-950/50 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
                   />
                 </div>
               )}
@@ -2563,7 +2563,7 @@ export default function FeedView({
                       placeholder="e.g. Equity, $120,000 baseline"
                       value={composerReward}
                       onChange={(e) => setComposerReward(e.target.value)}
-                      className="w-full bg-slate-950/50 border border-white/5 focus:border-violet-500/20 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
+                      className="w-full bg-slate-950/50 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden"
                     />
                   </div>
                 </div>
@@ -2602,7 +2602,7 @@ export default function FeedView({
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="bg-linear-to-b from-[#110d2d] to-[#04030d] border border-violet-500/20 rounded-3xl p-6 max-w-md w-full shadow-2xl relative space-y-4 text-left font-sans"
+              className="bg-linear-to-b from-[#110d2d] to-[#04030d] border border-white/10 rounded-2xl p-6 max-w-md w-full relative space-y-4 text-left font-sans"
             >
               <button 
                 type="button"
@@ -2684,7 +2684,7 @@ export default function FeedView({
 
                 {/* Conditional Voice Recording simulator panel */}
                 {momentMediaType === 'voice' && (
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-violet-500/10 flex flex-col items-center justify-center space-y-3 animate-fade-in">
+                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center justify-center space-y-3 animate-fade-in">
                     <button
                       type="button"
                       onClick={() => setSimulatedVoiceRecording(!simulatedVoiceRecording)}
@@ -2721,7 +2721,7 @@ export default function FeedView({
                     value={momentCaption}
                     onChange={(e) => setMomentCaption(e.target.value)}
                     rows={3}
-                    className="w-full bg-slate-950/60 border border-white/5 focus:border-violet-500/20 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden resize-none placeholder:text-violet-400/20 text-left"
+                    className="w-full bg-slate-950/60 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden resize-none placeholder:text-violet-400/20 text-left"
                   />
                 </div>
 
@@ -2816,7 +2816,7 @@ export default function FeedView({
             {/* Title banner */}
             <div className="p-4 flex items-center justify-between shrink-0 z-10">
               <div className="flex items-center gap-3">
-                <img src={selectedMoment.avatar} alt={selectedMoment.name} className="w-10 h-10 rounded-xl object-cover border border-violet-500/20" />
+                <img src={selectedMoment.avatar} alt={selectedMoment.name} className="w-10 h-10 rounded-xl object-cover border border-white/10" />
                 <div>
                   <span className="font-sans font-black text-sm text-white flex items-center gap-1">
                     {selectedMoment.name}
@@ -2843,7 +2843,7 @@ export default function FeedView({
                 <div className="max-w-md w-full space-y-8 flex flex-col items-center">
                   <div className="relative flex items-center justify-center">
                     {/* Pulsing ring */}
-                    <div className={`absolute w-32 h-32 rounded-full border-2 border-violet-500/30 ${playingVoiceMoment ? 'animate-ping scale-110 opacity-70' : ''}`} style={{ animationDuration: '3s' }} />
+                    <div className={`absolute w-32 h-32 rounded-full border-2 border-white/10 ${playingVoiceMoment ? 'animate-ping scale-110 opacity-70' : ''}`} style={{ animationDuration: '3s' }} />
                     <div className="relative w-24 h-24 rounded-full bg-linear-to-r from-violet-600 to-pink-500 flex items-center justify-center shadow-lg border border-white/10 z-10">
                       <button 
                         onClick={() => setPlayingVoiceMoment(!playingVoiceMoment)}
@@ -2855,7 +2855,7 @@ export default function FeedView({
                   </div>
 
                   <div className="text-center space-y-2">
-                    <span className="text-[10px] font-mono bg-violet-500/10 border border-violet-500/20 px-3 py-1 rounded-full text-violet-300 font-extrabold uppercase tracking-widest">
+                    <span className="text-[10px] font-mono bg-violet-500/10 border border-white/10 px-3 py-1 rounded-full text-violet-300 font-extrabold uppercase tracking-widest">
                       {playingVoiceMoment ? '🎙️ Playing Voice Matrix...' : '🎙️ Click to Hear Broadcast'}
                     </span>
                     <p className="text-xs text-violet-300/60 font-mono">Duration: {selectedMoment.voiceDuration || 15} seconds</p>
@@ -2897,7 +2897,7 @@ export default function FeedView({
             </div>
 
             {/* Story Reactions and DM Quick replies */}
-            <div className="px-8 py-2.5 bg-[#09071c]/60 max-w-lg mx-auto w-full z-10 rounded-2xl border border-violet-500/10 space-y-3.5 mb-2">
+            <div className="px-8 py-2.5 bg-[#09071c]/60 max-w-lg mx-auto w-full z-10 rounded-2xl border border-white/10 space-y-3.5 mb-2">
               
               {/* Seen List Viewer (For own stories or when author looks!) */}
               {selectedMoment && selectedMoment.username === currentUser.username && (
@@ -2996,7 +2996,7 @@ export default function FeedView({
                 <input
                   type="text"
                   placeholder={`Send direct reply to @${selectedMoment.username}...`}
-                  className="flex-1 px-4 py-2 text-xs rounded-xl bg-slate-950/80 border border-violet-500/15 focus:border-[#8B5CF6] focus:outline-hidden text-white placeholder-violet-400/30 font-sans"
+                  className="flex-1 px-4 py-2 text-xs rounded-xl bg-slate-950/80 border border-white/10 focus:border-[#8B5CF6] focus:outline-hidden text-white placeholder-violet-400/30 font-sans"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       const input = e.currentTarget;
@@ -3116,7 +3116,7 @@ export default function FeedView({
             </div>
 
             {/* Right Column: Mini Interaction Control Panel (Visible on Desktop, hidden on tight layouts) */}
-            <div className="w-full md:w-80 bg-[#09071a] border-t md:border-t-0 md:border-l border-violet-500/15 p-5 flex flex-col justify-between shrink-0">
+            <div className="w-full md:w-80 bg-[#09071a] border-t md:border-t-0 md:border-l border-white/10 p-5 flex flex-col justify-between shrink-0">
               <div className="space-y-4">
                 <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block font-bold border-b border-white/5 pb-2">Narrative Matrix Controller</span>
                 
@@ -3134,14 +3134,14 @@ export default function FeedView({
                       setActiveCommentsPostId(activeVideoFullscreen.id);
                       handleCloseFullscreen();
                     }}
-                    className="flex-1 flex flex-col items-center p-3 rounded-2xl bg-slate-950/60 border border-white/5 hover:border-violet-500/25 text-violet-300 cursor-pointer"
+                    className="flex-1 flex flex-col items-center p-3 rounded-2xl bg-slate-950/60 border border-white/5 hover:border-white/10 text-violet-300 cursor-pointer"
                   >
                     <MessageCircle className="w-5 h-5 mb-1" />
                     <span className="text-xs font-mono font-bold">{activeVideoFullscreen.comments.length} Reply</span>
                   </button>
                 </div>
 
-                <div className="p-3.5 bg-violet-950/20 rounded-2xl border border-violet-500/10 space-y-1">
+                <div className="p-3.5 bg-violet-950/20 rounded-2xl border border-white/10 space-y-1">
                   <span className="text-[8.5px] font-mono text-violet-400 block uppercase font-bold tracking-widest">Active Hashtags</span>
                   <div className="flex flex-wrap gap-1">
                     {activeVideoFullscreen.tags.map(t => (
@@ -3181,7 +3181,7 @@ export default function FeedView({
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-2xl bg-[#0a071c]/98 border border-violet-500/30 rounded-[28px] overflow-hidden p-6 md:p-8 text-left relative shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto"
+              className="w-full max-w-2xl bg-[#0a071c]/98 border border-white/10 rounded-2xl overflow-hidden p-6 md:p-8 text-left relative space-y-6 max-h-[90vh] overflow-y-auto"
             >
               {/* Close Button */}
               <button 
@@ -3255,7 +3255,7 @@ export default function FeedView({
               {/* STAGES & SATISFACTION CHECKS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {/* Stages Waves & Reach */}
-                <div className="bg-[#120f32]/40 border border-violet-500/10 p-4.5 rounded-2xl space-y-3">
+                <div className="bg-[#120f32]/40 border border-white/10 p-4.5 rounded-2xl space-y-3">
                   <h4 className="text-xs font-mono font-black text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
                     <TrendingUp className="w-4 h-4" /> Wave Distribution Status
                   </h4>
@@ -3437,7 +3437,7 @@ export default function FeedView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0b091f] border border-violet-500/30 rounded-3xl p-5 md:p-6 w-full max-w-lg shadow-2xl relative overflow-hidden text-left"
+              className="bg-[#0b091f] border border-white/10 rounded-2xl p-5 md:p-6 w-full max-w-lg relative overflow-hidden text-left"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3.5 mb-4">
                 <span className="text-xs font-mono text-violet-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
@@ -3465,7 +3465,7 @@ export default function FeedView({
 
                 {/* Interactive progression logs */}
                 {viewHistoryPost.editHistory?.map((h: any, idx: number) => (
-                  <div key={idx} className="p-3 bg-violet-950/15 rounded-2xl border border-violet-500/10 space-y-1.5">
+                  <div key={idx} className="p-3 bg-violet-950/15 rounded-2xl border border-white/10 space-y-1.5">
                     <div className="flex justify-between items-center text-[10px] font-mono text-violet-400">
                       <span className="font-bold flex items-center gap-1">✏️ UPDATE ITERATION #{idx + 1}</span>
                       <span>{h.timestamp}</span>
@@ -3493,7 +3493,7 @@ export default function FeedView({
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className="bg-gradient-to-b from-[#110e2e]/95 to-[#070519]/95 border border-pink-500/30 rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl relative overflow-hidden text-left"
+              className="bg-gradient-to-b from-[#110e2e]/95 to-[#070519]/95 border border-pink-500/30 rounded-3xl p-5 md:p-6 w-full max-w-md shadow-md relative overflow-hidden text-left"
             >
               {/* Glowing background highlights */}
               <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
@@ -3563,7 +3563,7 @@ export default function FeedView({
               </div>
 
               {/* Progress and tips bar */}
-              <div className="mt-5 p-3.5 bg-violet-600/10 border border-violet-500/20 rounded-2xl space-y-2 relative z-10">
+              <div className="mt-5 p-3.5 bg-violet-600/10 border border-white/10 rounded-2xl space-y-2 relative z-10">
                 <span className="text-[9px] font-mono text-violet-300 font-black uppercase tracking-widest block">
                   💡 NEXORA AUDIENCE INSIGHT
                 </span>
@@ -3591,7 +3591,7 @@ export default function FeedView({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0.5 }}
               transition={{ type: "spring", damping: 30, stiffness: 300 }}
-              className="w-full max-w-lg bg-[#0e0c25] border-t border-violet-500/20 rounded-t-[32px] p-6 text-left relative space-y-4 pb-8"
+              className="w-full max-w-lg bg-[#0e0c25] border-t border-white/10 rounded-t-2xl p-6 text-left relative space-y-4 pb-8"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Drag indicator bar */}
@@ -3691,7 +3691,7 @@ export default function FeedView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-[#0b081c] border border-violet-500/30 rounded-3xl p-5 md:p-6 w-full max-w-md shadow-2xl relative text-left"
+              className="bg-[#0b081c] border border-white/10 rounded-2xl p-5 md:p-6 w-full max-w-md relative text-left"
             >
               <div className="flex items-center justify-between border-b border-white/5 pb-3 mb-4">
                 <span className="text-xs font-mono text-cyan-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
@@ -3747,7 +3747,7 @@ export default function FeedView({
               initial={{ y: 50, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 50, opacity: 0 }}
-              className="bg-[#0e0c25] border border-violet-500/40 px-4 py-3 rounded-2xl shadow-2xl flex items-center justify-between gap-4 text-xs font-sans text-white pointer-events-auto max-w-sm w-full"
+              className="bg-[#0e0c25] border border-white/10 px-4 py-3 rounded-2xl shadow-md flex items-center justify-between gap-4 text-xs font-sans text-white pointer-events-auto max-w-sm w-full"
             >
               <div className="flex items-center gap-2">
                 <Undo2 className="w-4 h-4 text-amber-400 animate-pulse" />

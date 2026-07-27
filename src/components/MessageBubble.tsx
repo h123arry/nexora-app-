@@ -98,7 +98,7 @@ export default function MessageBubble({
           <img
             src={partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
             alt="Partner avatar"
-            className="w-7 h-7 rounded-lg object-cover shrink-0 border border-violet-500/10 shadow-md"
+            className="w-7 h-7 rounded-lg object-cover shrink-0 border border-white/10 shadow-md"
             referrerPolicy="no-referrer"
           />
         ) : (
@@ -118,7 +118,7 @@ export default function MessageBubble({
             className={`relative rounded-2xl px-3.5 py-2.5 text-xs leading-relaxed ${
               isMe
                 ? 'bg-gradient-to-r from-violet-600 via-[#8B5CF6] to-pink-500 text-white rounded-tr-none'
-                : 'bg-[#0e0a29]/95 text-violet-100 border border-violet-500/10 rounded-tl-none'
+                : 'bg-[#0e0a29]/95 text-violet-100 border border-white/10 rounded-tl-none'
             } ${isLastInGroup ? (isMe ? 'rounded-br-sm' : 'rounded-bl-sm') : ''} shadow-lg relative group/item`}
           >
             {/* Top row with Pin Indicator */}
@@ -129,7 +129,7 @@ export default function MessageBubble({
               </div>
             )}
             {/* Context menu trigger on hover */}
-            <div className={`absolute top-1.5 ${isMe ? 'left-[-40px]' : 'right-[-40px]'} opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1 bg-[#09071c] border border-violet-500/20 p-1 rounded-lg shadow-xl z-10`}>
+            <div className={`absolute top-1.5 ${isMe ? 'left-[-40px]' : 'right-[-40px]'} opacity-0 group-hover/item:opacity-100 transition-opacity flex items-center gap-1 bg-[#09071c] border border-white/10 p-1 rounded-lg shadow-md z-10`}>
               <button 
                 onClick={() => onReply(message)} 
                 className="p-1 hover:bg-violet-600/30 text-violet-300 rounded cursor-pointer"
@@ -148,7 +148,7 @@ export default function MessageBubble({
 
             {/* Reply Quote Block */}
             {message.replyToQuote && (
-              <div className="mb-2 px-2.5 py-1.5 bg-black/25 border-l-2 border-violet-500/60 rounded text-[10px] text-zinc-300 italic truncate max-w-full flex items-center gap-1">
+              <div className="mb-2 px-2.5 py-1.5 bg-black/25 border-l-2 border-white/10 rounded text-[10px] text-zinc-300 italic truncate max-w-full flex items-center gap-1">
                 <span className="text-violet-400 font-bold not-italic">↳</span>
                 <span>{message.replyToQuote}</span>
               </div>
@@ -165,7 +165,7 @@ export default function MessageBubble({
                     } 
                   }));
                 }}
-                className="mb-2 p-2 rounded-xl bg-black/40 hover:bg-black/60 border border-violet-500/15 flex gap-2.5 items-center cursor-pointer transition-all select-none group/story-preview"
+                className="mb-2 p-2 rounded-xl bg-black/40 hover:bg-black/60 border border-white/10 flex gap-2.5 items-center cursor-pointer transition-all select-none group/story-preview"
                 title="Click to view story"
               >
                 {message.customMediaData.mediaUrl ? (
@@ -237,7 +237,7 @@ export default function MessageBubble({
                   {/* Playback Speed Control */}
                   <button 
                     onClick={() => onChangeSpeed?.(voicePlaybackSpeed)}
-                    className="px-1.5 py-0.5 text-[9px] font-mono font-black uppercase rounded bg-violet-950/50 hover:bg-violet-600/30 text-violet-300 border border-violet-500/20 active:scale-95 transition-all cursor-pointer shrink-0"
+                    className="px-1.5 py-0.5 text-[9px] font-mono font-black uppercase rounded bg-violet-950/50 hover:bg-violet-600/30 text-violet-300 border border-white/10 active:scale-95 transition-all cursor-pointer shrink-0"
                   >
                     {voicePlaybackSpeed}x
                   </button>
@@ -258,7 +258,7 @@ export default function MessageBubble({
               </div>
             ) : message.customMediaType === 'share_post' && message.customMediaData ? (
               <div 
-                className="mb-1 p-3 rounded-2xl bg-black/40 hover:bg-black/60 border border-violet-500/15 flex flex-col gap-2 cursor-pointer transition-all max-w-[280px]"
+                className="mb-1 p-3 rounded-2xl bg-black/40 hover:bg-black/60 border border-white/10 flex flex-col gap-2 cursor-pointer transition-all max-w-[280px]"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('toast', { detail: `🔍 Navigating to post by @${message.customMediaData?.creatorUsername}` }));
                 }}
@@ -280,14 +280,14 @@ export default function MessageBubble({
                     referrerPolicy="no-referrer"
                   />
                 ) : (
-                  <div className="w-full h-24 rounded-xl bg-gradient-to-tr from-violet-900/40 via-[#100b2b] to-pink-900/25 flex items-center justify-center border border-violet-500/10">
+                  <div className="w-full h-24 rounded-xl bg-gradient-to-tr from-violet-900/40 via-[#100b2b] to-pink-900/25 flex items-center justify-center border border-white/10">
                     <span className="text-[10px] font-mono text-violet-400">📝 No Image Preview</span>
                   </div>
                 )}
                 <p className="text-[10px] text-zinc-300 line-clamp-2 text-left italic">
                   "{message.customMediaData.caption || 'Shared post'}"
                 </p>
-                <button className="w-full py-1.5 rounded-lg bg-violet-600/30 hover:bg-violet-600/50 text-violet-200 border border-violet-500/20 text-[9px] font-mono font-bold uppercase transition-all">
+                <button className="w-full py-1.5 rounded-lg bg-violet-600/30 hover:bg-violet-600/50 text-violet-200 border border-white/10 text-[9px] font-mono font-bold uppercase transition-all">
                   View Shared Post
                 </button>
               </div>
@@ -327,7 +327,7 @@ export default function MessageBubble({
               </div>
             ) : message.customMediaType === 'share_profile' && message.customMediaData ? (
               <div 
-                className="mb-1 p-3 rounded-2xl bg-[#0b0825] hover:bg-[#130f3c] border border-violet-500/15 flex flex-col gap-3 items-center cursor-pointer transition-all max-w-[240px]"
+                className="mb-1 p-3 rounded-2xl bg-[#0b0825] hover:bg-[#130f3c] border border-white/10 flex flex-col gap-3 items-center cursor-pointer transition-all max-w-[240px]"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('toast', { detail: `👤 Viewing profile for @${message.customMediaData?.username}` }));
                 }}
@@ -336,7 +336,7 @@ export default function MessageBubble({
                   <img 
                     src={message.customMediaData.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'} 
                     alt={message.customMediaData.name} 
-                    className="w-12 h-12 rounded-full border-2 border-violet-500/30 object-cover mx-auto" 
+                    className="w-12 h-12 rounded-full border-2 border-white/10 object-cover mx-auto" 
                     referrerPolicy="no-referrer"
                   />
                   <h4 className="text-xs font-sans font-black text-white mt-2 leading-none">{message.customMediaData.name}</h4>
@@ -351,7 +351,7 @@ export default function MessageBubble({
               </div>
             ) : message.customMediaType === 'share_location' && message.customMediaData ? (
               <div 
-                className="mb-1 p-3 rounded-2xl bg-zinc-950 hover:bg-zinc-900 border border-violet-500/15 flex flex-col gap-2 cursor-pointer transition-all max-w-[240px]"
+                className="mb-1 p-3 rounded-2xl bg-zinc-950 hover:bg-zinc-900 border border-white/10 flex flex-col gap-2 cursor-pointer transition-all max-w-[240px]"
                 onClick={() => {
                   window.dispatchEvent(new CustomEvent('toast', { detail: `📍 Opening ${message.customMediaData?.locationName} in Maps` }));
                 }}
@@ -365,7 +365,7 @@ export default function MessageBubble({
                     <span className="text-[8px] text-zinc-500 font-mono mt-0.5 block">{message.customMediaData.address}</span>
                   </div>
                 </div>
-                <div className="w-full h-20 rounded-xl bg-violet-950/20 border border-violet-500/10 flex flex-col items-center justify-center relative overflow-hidden select-none">
+                <div className="w-full h-20 rounded-xl bg-violet-950/20 border border-white/10 flex flex-col items-center justify-center relative overflow-hidden select-none">
                   <div className="absolute inset-0 opacity-10 bg-[linear-gradient(to_right,#808080_1px,transparent_1px),linear-gradient(to_bottom,#808080_1px,transparent_1px)] bg-[size:10px_10px]" />
                   <div className="w-2.5 h-2.5 rounded-full bg-pink-500 animate-ping absolute" />
                   <div className="w-2 h-2 rounded-full bg-pink-500 absolute" />
@@ -408,8 +408,8 @@ export default function MessageBubble({
                       }}
                       className={`px-2 py-0.5 rounded-full text-[11px] font-sans flex items-center gap-1 border transition-all cursor-pointer select-none active:scale-90 ${
                         userReacted 
-                          ? 'bg-violet-600/30 border-violet-500/50 text-white shadow-inner font-bold' 
-                          : 'bg-slate-900/80 border-white/5 hover:border-violet-500/25 text-zinc-300'
+                          ? 'bg-violet-600/30 border-white/10 text-white shadow-inner font-bold' 
+                          : 'bg-slate-900/80 border-white/5 hover:border-white/10 text-zinc-300'
                       }`}
                     >
                       <span className="transform hover:scale-125 transition-transform">{r.emoji}</span> 

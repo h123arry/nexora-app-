@@ -44,7 +44,7 @@ export default function ReactionBar({ onSelect, onClose }: ReactionBarProps) {
       initial={{ opacity: 0, scale: 0.9, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.9, y: 10 }}
-      className="bg-[#09071c]/95 backdrop-blur-xl border border-violet-500/30 rounded-2xl p-2 shadow-2xl z-50 flex flex-col gap-2 w-[280px] md:w-[320px] select-none"
+      className="bg-[#09071c]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-md z-50 flex flex-col gap-2 w-[280px] md:w-[320px] select-none"
     >
       <div className="relative flex items-center w-full">
         {/* Horizontal Scroll Area for Reactions */}
@@ -73,7 +73,7 @@ export default function ReactionBar({ onSelect, onClose }: ReactionBarProps) {
           className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border transition-all cursor-pointer ${
             showExtended 
               ? 'bg-violet-600 text-white border-violet-400' 
-              : 'bg-violet-950/40 hover:bg-violet-600/30 text-violet-300 border-violet-500/20'
+              : 'bg-violet-950/40 hover:bg-violet-600/30 text-violet-300 border-white/10'
           }`}
           title="More reactions"
         >
@@ -94,7 +94,7 @@ export default function ReactionBar({ onSelect, onClose }: ReactionBarProps) {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden border-t border-violet-500/10 pt-2 flex flex-col gap-2"
+            className="overflow-hidden border-t border-white/10 pt-2 flex flex-col gap-2"
           >
             {/* Search Input */}
             <div className="relative flex items-center">
@@ -104,7 +104,7 @@ export default function ReactionBar({ onSelect, onClose }: ReactionBarProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search premium emoji..."
-                className="w-full bg-slate-950/80 border border-violet-500/20 rounded-lg pl-8 pr-3 py-1 text-[10px] text-white placeholder-violet-400/30 font-sans focus:outline-none focus:border-violet-500/50"
+                className="w-full bg-slate-950/80 border border-white/10 rounded-lg pl-8 pr-3 py-1 text-[10px] text-white placeholder-violet-400/30 font-sans focus:outline-none focus:border-white/10"
                 autoFocus
               />
             </div>

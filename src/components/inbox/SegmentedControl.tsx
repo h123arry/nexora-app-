@@ -7,7 +7,7 @@ interface SegmentedControlProps {
 
 export default function SegmentedControl({ activeTab, onTabChange }: SegmentedControlProps) {
   return (
-    <div className="flex bg-[#060417] p-1 rounded-xl border border-violet-500/10">
+    <div className="flex bg-[#060417] p-1 rounded-xl border border-white/10">
       <button
         onClick={() => onTabChange('messages')}
         className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${

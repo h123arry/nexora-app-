@@ -969,7 +969,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         <div className="w-full max-w-lg z-10">
           <div className="flex flex-col items-center mb-6 text-center">
             <NexoraBranding size="lg" showSubtitle={false} className="mb-3" />
-            <div className="flex items-center gap-1.5 bg-violet-950/60 border border-violet-500/20 px-3 py-1 rounded-full">
+            <div className="flex items-center gap-1.5 bg-violet-950/60 border border-white/10 px-3 py-1 rounded-full">
               <span className="text-[10px] font-mono uppercase tracking-widest text-violet-300 font-bold">
                 Account Setup • Step {onboardingStep} of 3
               </span>
@@ -981,7 +981,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className="bg-[#0a0718]/80 border border-violet-500/20 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
+            className="bg-[#0a0718]/80 border border-white/10 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
           >
             {/* Step 1: Choose Username */}
             {onboardingStep === 1 && (
@@ -1048,7 +1048,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
                   {/* Suggestions list */}
                   {usernameStatus.suggestions.length > 0 && (
-                    <div className="mt-3 p-3 bg-violet-950/30 border border-violet-500/15 rounded-2xl">
+                    <div className="mt-3 p-3 bg-violet-950/30 border border-white/10 rounded-2xl">
                       <span className="text-[10px] font-mono text-violet-300 uppercase font-bold block mb-2">
                         Suggested Handles:
                       </span>
@@ -1058,7 +1058,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                             key={sug}
                             type="button"
                             onClick={() => setOnboardingUsername(sug)}
-                            className="px-3 py-1 bg-violet-600/20 hover:bg-violet-600/40 border border-violet-500/30 text-violet-200 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer"
+                            className="px-3 py-1 bg-violet-600/20 hover:bg-violet-600/40 border border-white/10 text-violet-200 text-xs font-mono font-bold rounded-xl transition-all cursor-pointer"
                           >
                             @{sug}
                           </button>
@@ -1230,7 +1230,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -15 }}
-          className="bg-[#0a0718]/80 border border-violet-500/20 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
+          className="bg-[#0a0718]/80 border border-white/10 backdrop-blur-2xl rounded-3xl p-6 sm:p-8 shadow-[0_20px_50px_rgba(0,0,0,0.8)]"
         >
           {/* Error & Success Messages */}
           {errorMsg && (
@@ -1249,7 +1249,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
           {/* Pending Overlay */}
           {isPending && (
-            <div className="mb-5 p-4 bg-violet-950/60 border border-violet-500/30 rounded-2xl flex items-center gap-3 text-xs text-violet-200">
+            <div className="mb-5 p-4 bg-violet-950/60 border border-white/10 rounded-2xl flex items-center gap-3 text-xs text-violet-200">
               <RefreshCw className="w-4 h-4 text-violet-400 animate-spin shrink-0" />
               <span>{statusMessage}</span>
             </div>
@@ -1624,7 +1624,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                     </form>
                   ) : (
                     <form onSubmit={handlePhoneOtpVerify} className="space-y-4">
-                      <div className="p-3 bg-violet-950/40 border border-violet-500/20 rounded-2xl text-xs text-violet-200">
+                      <div className="p-3 bg-violet-950/40 border border-white/10 rounded-2xl text-xs text-violet-200">
                         We sent a 6-digit code to <span className="font-bold text-white">{selectedCountry.code} {phoneNumber}</span>.
                       </div>
 
@@ -1637,7 +1637,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                           onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                           placeholder="──────"
                           required
-                          className="w-full px-4 py-3.5 bg-black/40 border border-violet-500/30 rounded-2xl text-center text-xl font-mono tracking-widest text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all"
+                          className="w-full px-4 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-center text-xl font-mono tracking-widest text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all"
                         />
                       </div>
 
@@ -1712,7 +1712,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                     onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ''))}
                     placeholder="──────"
                     required
-                    className="w-full px-4 py-3.5 bg-black/40 border border-violet-500/30 rounded-2xl text-center text-xl font-mono tracking-widest text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all"
+                    className="w-full px-4 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-center text-xl font-mono tracking-widest text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all"
                   />
                 </div>
               )}
@@ -1783,7 +1783,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-sm bg-white text-zinc-900 rounded-3xl p-6 shadow-2xl relative font-sans"
+              className="w-full max-w-sm bg-white text-zinc-900 rounded-3xl p-6 shadow-md relative font-sans"
             >
               <button
                 onClick={() => setShowGooglePicker(false)}
@@ -1859,7 +1859,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-sm bg-[#0a0718] border border-violet-500/20 text-white rounded-3xl p-5 shadow-2xl flex flex-col max-h-[80vh]"
+              className="w-full max-w-sm bg-[#0a0718] border border-white/10 text-white rounded-3xl p-5 shadow-md flex flex-col max-h-[80vh]"
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <h3 className="text-sm font-bold text-white">Select Country Code</h3>
@@ -1917,7 +1917,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-lg bg-[#0a0718] border border-violet-500/20 text-white rounded-3xl p-6 shadow-2xl flex flex-col max-h-[85vh]"
+              className="w-full max-w-lg bg-[#0a0718] border border-white/10 text-white rounded-3xl p-6 shadow-md flex flex-col max-h-[85vh]"
             >
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
                 <div className="flex items-center gap-2">

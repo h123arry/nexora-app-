@@ -21,7 +21,7 @@ export default function QuickActionsSheet({ isOpen, onClose, onAction }: QuickAc
 
   return (
     <div className="fixed inset-0 z-[1000] flex items-end justify-center bg-black/50" onClick={onClose}>
-      <div className="w-full max-w-sm rounded-t-3xl bg-zinc-900 p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-sm rounded-t-3xl bg-zinc-900 p-6 shadow-md" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <h3 className="font-semibold text-white">Quick Actions</h3>
           <button onClick={onClose}><X className="text-zinc-400" /></button>

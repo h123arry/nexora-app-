@@ -75,7 +75,7 @@ export default function OnboardingTour({ onClose }: OnboardingTourProps) {
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="relative w-full max-w-lg bg-[#080616] border border-violet-500/20 rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col"
+        className="relative w-full max-w-lg bg-[#080616] border border-white/10 rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col"
       >
         {/* Background ambient glow */}
         <div className={`absolute -top-20 -left-20 w-44 h-44 bg-gradient-to-br ${current.color} opacity-20 blur-[50px] pointer-events-none transition-all duration-500`} />
@@ -84,7 +84,7 @@ export default function OnboardingTour({ onClose }: OnboardingTourProps) {
         {/* Header Close/Skip */}
         <div className="flex items-center justify-between p-6 pb-2 z-10">
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-violet-400 font-bold bg-violet-950/60 border border-violet-500/20 px-2.5 py-1 rounded-full">
+            <span className="text-[10px] font-mono uppercase tracking-widest text-violet-400 font-bold bg-violet-950/60 border border-white/10 px-2.5 py-1 rounded-full">
               {current.tag}
             </span>
             <span className="text-[10px] font-mono text-zinc-500">
@@ -102,7 +102,7 @@ export default function OnboardingTour({ onClose }: OnboardingTourProps) {
 
         {/* Content Box */}
         <div className="p-8 flex flex-col items-center text-center z-10 flex-1 min-h-[260px] justify-center">
-          <div className="mb-5 p-4 bg-violet-950/30 border border-violet-500/20 rounded-2xl flex items-center justify-center shadow-inner">
+          <div className="mb-5 p-4 bg-violet-950/30 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
             {current.icon}
           </div>
 

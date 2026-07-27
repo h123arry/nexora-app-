@@ -49,7 +49,7 @@ export default function VideoBottomSheet({ isOpen, onClose, post, onDownload, on
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="absolute bottom-0 inset-x-0 bg-zinc-900/90 border-t border-white/10 rounded-t-3xl z-50 shadow-2xl backdrop-blur-2xl max-h-[90vh] overflow-y-auto"
+            className="absolute bottom-0 inset-x-0 bg-zinc-900/90 border-t border-white/10 rounded-t-3xl z-50 shadow-md backdrop-blur-2xl max-h-[90vh] overflow-y-auto"
           >
             <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto my-3" />
             

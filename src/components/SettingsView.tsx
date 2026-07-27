@@ -38,7 +38,7 @@ export default function SettingsView({
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-zinc-900 via-purple-950/20 to-black border border-white/10 backdrop-blur-xl shadow-xl text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-zinc-900 via-purple-950/20 to-black border border-white/10 backdrop-blur-xl shadow-md text-left">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-2xl bg-zinc-800 text-violet-400 border border-white/10">
             <Sliders className="w-6 h-6" />
@@ -67,7 +67,7 @@ export default function SettingsView({
                 onClick={() => setActiveSection(section.id as any)}
                 className={`w-full p-3.5 rounded-2xl border transition-all text-left flex items-center justify-between cursor-pointer ${
                   isActive
-                    ? 'bg-violet-600/25 border-violet-500/50 text-white font-bold shadow-md shadow-violet-500/10'
+                    ? 'bg-violet-600/25 border-white/10 text-white font-bold shadow-md shadow-violet-500/10'
                     : 'bg-white/5 border-white/5 hover:bg-white/10 text-zinc-400 hover:text-white'
                 }`}
               >
@@ -86,7 +86,7 @@ export default function SettingsView({
         </div>
 
         {/* Section Content Panel */}
-        <div className="md:col-span-2 p-6 rounded-3xl bg-[#080614]/90 border border-white/10 shadow-xl space-y-6">
+        <div className="md:col-span-2 p-6 rounded-3xl bg-[#080614]/90 border border-white/10 shadow-md space-y-6">
           {activeSection === 'account' && (
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Account Overview</h3>

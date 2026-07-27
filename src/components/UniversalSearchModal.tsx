@@ -211,7 +211,7 @@ export default function UniversalSearchModal({
                 setQuery(tag);
                 handleSaveSearch(tag);
               }}
-              className="shrink-0 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/40 text-zinc-300 hover:text-white font-sans transition-all cursor-pointer flex items-center gap-1.5"
+              className="shrink-0 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-white/10 text-zinc-300 hover:text-white font-sans transition-all cursor-pointer flex items-center gap-1.5"
             >
               <Hash className="w-3.5 h-3.5 text-violet-400" />
               <span>{tag.replace('#', '')}</span>
@@ -249,7 +249,7 @@ export default function UniversalSearchModal({
                       <button
                         key={i}
                         onClick={act.action}
-                        className="group flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500/40 transition-all cursor-pointer active:scale-95 text-center gap-2"
+                        className="group flex flex-col items-center justify-center p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/10 transition-all cursor-pointer active:scale-95 text-center gap-2"
                       >
                         <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${act.color} flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform`}>
                           <Icon className="w-5 h-5" />
@@ -288,7 +288,7 @@ export default function UniversalSearchModal({
                           setQuery(term);
                           handleSaveSearch(term);
                         }}
-                        className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-violet-500/40 text-zinc-200 hover:text-white transition-all cursor-pointer text-sm font-sans"
+                        className="group flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-violet-500/20 border border-white/10 hover:border-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer text-sm font-sans"
                       >
                         <Clock className="w-4 h-4 text-zinc-400 group-hover:text-violet-400" />
                         <span>{term}</span>
@@ -305,7 +305,7 @@ export default function UniversalSearchModal({
               </div>
 
               {/* Platform Overview Info */}
-              <div className="p-6 rounded-3xl bg-gradient-to-br from-violet-900/20 via-purple-900/10 to-black border border-violet-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="p-6 rounded-3xl bg-gradient-to-br from-violet-900/20 via-purple-900/10 to-black border border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="space-y-1.5 text-left">
                   <h4 className="text-base font-sans font-bold text-white flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-violet-400" />
@@ -353,7 +353,7 @@ export default function UniversalSearchModal({
                               onViewProfile(u);
                               onClose();
                             }}
-                            className="group p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-violet-500/40 transition-all cursor-pointer flex items-center gap-3"
+                            className="group p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/10 transition-all cursor-pointer flex items-center gap-3"
                           >
                             <img src={u.avatar} alt={u.name} className="w-12 h-12 rounded-full object-cover border border-white/20 shrink-0" referrerPolicy="no-referrer" />
                             <div className="flex-1 min-w-0">

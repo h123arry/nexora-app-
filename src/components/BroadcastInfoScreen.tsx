@@ -114,7 +114,7 @@ export default function BroadcastInfoScreen({
           <img 
             src={broadcast.partnerAvatar} 
             alt={broadcast.partnerName} 
-            className="w-20 h-20 rounded-2xl object-cover ring-4 ring-[#060412] bg-[#0c0a1f] shadow-xl"
+            className="w-20 h-20 rounded-2xl object-cover ring-4 ring-[#060412] bg-[#0c0a1f] shadow-md"
           />
           <div className="mb-2 leading-tight">
             <span className="px-2 py-0.5 rounded-md text-[7.5px] font-mono uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 font-bold">
@@ -127,7 +127,7 @@ export default function BroadcastInfoScreen({
                     type="text" 
                     value={newName} 
                     onChange={e => setNewName(e.target.value)}
-                    className="bg-black/40 border border-violet-500/30 rounded-lg px-2 py-0.5 text-xs text-white font-sans focus:outline-hidden"
+                    className="bg-black/40 border border-white/10 rounded-lg px-2 py-0.5 text-xs text-white font-sans focus:outline-hidden"
                   />
                   <button onClick={handleSaveName} className="p-1 bg-emerald-500 text-slate-950 rounded-md">
                     <Check className="w-3 h-3" />
@@ -175,7 +175,7 @@ export default function BroadcastInfoScreen({
               <textarea 
                 value={newBio}
                 onChange={e => setNewBio(e.target.value)}
-                className="w-full bg-slate-950 border border-violet-500/20 rounded-xl p-2 text-[10.5px] text-white focus:outline-hidden resize-none"
+                className="w-full bg-slate-950 border border-white/10 rounded-xl p-2 text-[10.5px] text-white focus:outline-hidden resize-none"
                 rows={2}
               />
               <div className="flex justify-end gap-1.5">
@@ -266,7 +266,7 @@ export default function BroadcastInfoScreen({
                 onClick={() => setActiveMediaTab(tab.id as any)}
                 className={`px-3 py-1 rounded-lg text-[8.5px] font-mono uppercase tracking-wider shrink-0 transition-all cursor-pointer ${
                   activeMediaTab === tab.id 
-                    ? 'bg-violet-600/25 border border-violet-500/30 text-white' 
+                    ? 'bg-violet-600/25 border border-white/10 text-white' 
                     : 'bg-transparent text-zinc-500 hover:text-white'
                 }`}
               >
@@ -316,7 +316,7 @@ export default function BroadcastInfoScreen({
                 {sharedItems.files.map((file, i) => (
                   <div key={i} className="p-2 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between text-left">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="p-1.5 rounded-lg bg-violet-600/10 border border-violet-500/10 text-violet-400">
+                      <div className="p-1.5 rounded-lg bg-violet-600/10 border border-white/10 text-violet-400">
                         <Paperclip className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0">
@@ -340,7 +340,7 @@ export default function BroadcastInfoScreen({
                     className="p-2 rounded-xl bg-black/30 border border-white/5 flex items-center justify-between text-left hover:bg-white/5 transition-all block"
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="p-1.5 rounded-lg bg-violet-600/10 border border-violet-500/10 text-violet-400">
+                      <div className="p-1.5 rounded-lg bg-violet-600/10 border border-white/10 text-violet-400">
                         <LinkIcon className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0">

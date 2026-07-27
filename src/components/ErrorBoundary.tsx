@@ -30,7 +30,7 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <div id="error-boundary-screen" className="min-h-screen bg-[#070514] text-white flex flex-col items-center justify-center p-6 font-sans">
-          <div className="w-full max-w-2xl bg-zinc-900/60 backdrop-blur-md border border-red-500/20 rounded-2xl p-6 md:p-8 shadow-2xl space-y-4">
+          <div className="w-full max-w-2xl bg-zinc-900/60 backdrop-blur-md border border-red-500/20 rounded-2xl p-6 md:p-8 shadow-md space-y-4">
             <h2 className="text-xl font-bold text-red-400 flex items-center gap-2">
               ⚠️ Nexora Core Run-time Exception
             </h2>

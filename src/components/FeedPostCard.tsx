@@ -158,12 +158,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           navigator.vibrate(20);
         }
       }}
-      className={`mx-3 sm:mx-6 my-3.5 p-4 sm:p-5 rounded-2xl border transition-colors duration-150 shadow-xl group text-left relative overflow-hidden space-y-3.5 transform-gpu ${
+      className={`py-4 border-b transition-colors duration-150 group text-left relative overflow-hidden space-y-3 transform-gpu ${
         post.isBroadcastPost
-          ? 'bg-gradient-to-b from-[#181108] via-[#0c0804] to-[#060402] border-amber-500/25 hover:border-amber-500/40'
+          ? 'bg-gradient-to-b from-[#181108] via-[#0c0804] to-[#060402] border-amber-500/10'
           : post.userId === 'user-0'
-          ? 'bg-gradient-to-b from-[#0e0a29] via-[#060417] to-[#03020c] border-violet-500/30 hover:border-violet-500/50'
-          : 'bg-[#09061a]/95 border-white/10 hover:border-violet-500/25'
+          ? 'bg-gradient-to-b from-[#0e0a29] via-[#060417] to-[#03020c] border-white/10'
+          : 'bg-black border-white/5 hover:border-white/10'
       }`}
     >
       {/* Floating hearts double-tap animation */}
@@ -182,7 +182,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Scheduled Queue Warning */}
       {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (
-        <div className="mb-4 p-3 bg-violet-600/15 border border-violet-500/30 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-violet-300">
+        <div className="mx-4 sm:mx-6 mb-4 p-3 bg-violet-600/15 border border-white/10 rounded-2xl flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono text-violet-300">
           <span className="flex items-center gap-1.5">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
@@ -200,7 +200,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       )}
 
       {/* Dynamic Recommendation Badge */}
-      <div className="mb-3 text-[9px] font-mono font-bold tracking-wider text-violet-400/60 uppercase flex items-center gap-1.5 border-b border-white/5 pb-2">
+      <div className="px-4 sm:px-6 mb-3 text-[9px] font-mono font-bold tracking-wider text-violet-400/60 uppercase flex items-center gap-1.5 border-b border-white/5 pb-2">
         <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"></span>
         {(() => {
           if (post.userId === 'user-0') return '⭐ Highlight: Recommended by Founder';
@@ -216,14 +216,14 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       </div>
 
       {/* Card Header Row */}
-      <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="px-4 sm:px-6 flex items-start justify-between gap-3 mb-4">
         <div className="flex gap-3">
           <img
             src={post.avatar}
             alt={post.name}
             loading="lazy"
             decoding="async"
-            className="w-10 h-10 rounded-xl object-cover border border-violet-500/20 cursor-pointer"
+            className="w-10 h-10 rounded-xl object-cover border border-white/10 cursor-pointer"
             onClick={() => post.userId && onViewProfile?.(post.userId)}
           />
           <div>
@@ -280,7 +280,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               </span>
             )}
             {post.username === 'voh_ai' && (
-              <span className="text-[8px] font-black uppercase text-violet-400 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
+              <span className="text-[8px] font-black uppercase text-violet-400 bg-violet-500/10 border border-white/10 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
                 VOH AI 🧠
               </span>
             )}
@@ -306,7 +306,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: -5 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    className="absolute right-0 mt-1 w-48 bg-[#0c091f] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1"
+                    className="absolute right-0 mt-1 w-48 bg-[#0c091f] border border-white/10 rounded-xl shadow-md z-50 overflow-hidden font-sans py-1"
                   >
                     <button
                       onClick={() => {
@@ -451,9 +451,9 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       </div>
 
       {/* Content Section */}
-      <div className="space-y-3 mb-4 text-left">
+      <div className="px-4 sm:px-6 space-y-3 mb-4 text-left">
         {editingPostId === post.id ? (
-          <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-violet-500/25">
+          <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-white/10">
             <textarea
               value={editingPostContent}
               onChange={(e) => setEditingPostContent(e.target.value)}
@@ -503,7 +503,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             {post.editHistory && post.editHistory.length > 0 && (
               <button
                 onClick={() => setViewHistoryPost(post)}
-                className="mt-1.5 text-[9px] font-mono text-violet-400 hover:text-violet-300 flex items-center gap-1 cursor-pointer bg-violet-950/20 px-2 py-0.5 rounded-md border border-violet-500/10"
+                className="mt-1.5 text-[9px] font-mono text-violet-400 hover:text-violet-300 flex items-center gap-1 cursor-pointer bg-violet-950/20 px-2 py-0.5 rounded-md border border-white/10"
               >
                 ✏️ Edited ({post.editHistory.length}x) • View Change Log
               </button>
@@ -514,7 +514,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (
-        <div className="mb-3 -mx-4 sm:-mx-6 overflow-hidden border-y border-white/10 aspect-[9/16] max-h-[600px] bg-black">
+        <div className="mb-3 w-full overflow-hidden border-y border-white/10 aspect-[9/16] max-h-[600px] bg-black">
           <NexoraVideoPlayer
             post={post}
             videoUrl={post.videoUrl}
@@ -536,7 +536,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           />
         </div>
       ) : (post.image || (post.images && post.images.length > 0)) && !post.opportunityType ? (
-        <div className="mb-3 -mx-4 sm:-mx-6 overflow-hidden border-y border-white/10 bg-black">
+        <div className="mb-3 w-full overflow-hidden border-y border-white/10 bg-black">
           <NexoraImagePlayer
             post={post}
             image={post.image}
@@ -557,58 +557,61 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Voice Broadcast Player */}
       {post.isVoice && (
-        <div className="mb-4 p-4 rounded-2xl bg-[#070518] border border-violet-500/25 flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (isPlaying) {
-                setPlayingVoiceId(null);
-              } else {
-                setPlayingVoiceId(post.id);
-              }
-            }}
-            className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-90 cursor-pointer ${
-              isPlaying ? 'bg-gradient-to-r from-violet-600 to-pink-500 text-white' : 'bg-violet-500/20 text-violet-300'
-            }`}
-          >
-            {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-violet-300 ml-0.5" />}
-          </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex justify-between items-center text-[10px] font-mono mb-1.5">
-              <span className="text-pink-400 font-extrabold flex items-center gap-1">
-                <Volume2 className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
-                VOICE POST
-              </span>
-              <span className="text-violet-400">
-                {isPlaying ? `0:${voiceSeconds.toString().padStart(2, '0')}` : '0:00'} / {post.voiceDuration || '0:45'}
-              </span>
-            </div>
-            <div className="flex items-end gap-[2px] h-5.5">
-              {[...Array(20)].map((_, idx) => (
-                <div
-                  key={idx}
-                  className={`w-[2.5px] rounded-full transition-all duration-300 ${
-                    isPlaying ? 'bg-gradient-to-t from-violet-500 via-pink-400 to-cyan-300' : 'bg-violet-500/20'
-                  }`}
-                  style={{
-                    height: isPlaying ? `${Math.floor(20 + Math.sin(idx * 1.5 + voiceSeconds) * 60 + Math.random() * 20)}%` : '15%'
-                  }}
-                />
-              ))}
-            </div>
-            {post.voiceTranscript && (
-              <div className="mt-3 bg-violet-950/30 p-2.5 rounded-xl border border-violet-500/10">
-                <span className="text-[8.5px] font-mono text-violet-400 block uppercase font-bold tracking-widest mb-0.5">Captions Preview</span>
-                <p className="text-xs font-sans text-violet-300 italic">"{post.voiceTranscript}"</p>
+        <div className="px-4 sm:px-6 mb-4">
+          <div className="p-4 rounded-2xl bg-[#070518] border border-white/10 flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (isPlaying) {
+                  setPlayingVoiceId(null);
+                } else {
+                  setPlayingVoiceId(post.id);
+                }
+              }}
+              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-90 cursor-pointer ${
+                isPlaying ? 'bg-gradient-to-r from-violet-600 to-pink-500 text-white' : 'bg-violet-500/20 text-violet-300'
+              }`}
+            >
+              {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-violet-300 ml-0.5" />}
+            </button>
+            <div className="flex-1 min-w-0">
+              <div className="flex justify-between items-center text-[10px] font-mono mb-1.5">
+                <span className="text-pink-400 font-extrabold flex items-center gap-1">
+                  <Volume2 className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                  VOICE POST
+                </span>
+                <span className="text-violet-400">
+                  {isPlaying ? `0:${voiceSeconds.toString().padStart(2, '0')}` : '0:00'} / {post.voiceDuration || '0:45'}
+                </span>
               </div>
-            )}
+              <div className="flex items-end gap-[2px] h-5.5">
+                {[...Array(20)].map((_, idx) => (
+                  <div
+                    key={idx}
+                    className={`w-[2.5px] rounded-full transition-all duration-300 ${
+                      isPlaying ? 'bg-gradient-to-t from-violet-500 via-pink-400 to-cyan-300' : 'bg-violet-500/20'
+                    }`}
+                    style={{
+                      height: isPlaying ? `${Math.floor(20 + Math.sin(idx * 1.5 + voiceSeconds) * 60 + Math.random() * 20)}%` : '15%'
+                    }}
+                  />
+                ))}
+              </div>
+              {post.voiceTranscript && (
+                <div className="mt-3 bg-violet-950/30 p-2.5 rounded-xl border border-white/10">
+                  <span className="text-[8.5px] font-mono text-violet-400 block uppercase font-bold tracking-widest mb-0.5">Captions Preview</span>
+                  <p className="text-xs font-sans text-violet-300 italic">"{post.voiceTranscript}"</p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {/* Poll */}
       {post.interactivePoll && (
-        <div className="mb-4 p-4 rounded-2xl bg-slate-950/60 border border-violet-500/15 space-y-3">
-          <p className="text-xs font-sans text-violet-100 font-bold">{post.interactivePoll.question}</p>
+        <div className="px-4 sm:px-6 mb-4">
+          <div className="p-4 rounded-2xl bg-slate-950/60 border border-white/10 space-y-3">
+            <p className="text-xs font-sans text-violet-100 font-bold">{post.interactivePoll.question}</p>
           <div className="space-y-2">
             {post.interactivePoll.options.map((opt) => {
               const userVote = votedPolls[post.id];
@@ -624,7 +627,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                   className={`w-full text-left p-2.5 rounded-xl border relative overflow-hidden transition-all text-xs font-sans cursor-pointer ${
                     userVote === opt.id
                       ? 'border-violet-500 bg-violet-600/10 font-bold text-white'
-                      : 'border-white/5 bg-white/3 hover:border-violet-500/25 text-violet-200'
+                      : 'border-white/5 bg-white/3 hover:border-white/10 text-violet-200'
                   }`}
                 >
                   {userVote && (
@@ -642,11 +645,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             })}
           </div>
         </div>
+      </div>
       )}
 
       {/* Hashtags */}
       {post.tags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-4">
+        <div className="px-4 sm:px-6 flex flex-wrap gap-1.5 mb-4">
           {post.tags.map((tag) => (
             <button
               key={tag}
@@ -664,7 +668,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       {/* Action Row for text posts */}
       {!(post.videoUrl || (post.image && !post.opportunityType) || (post.images && post.images.length > 0)) && (
         post.isBroadcastPost ? (
-          <div className="flex flex-col gap-3 border-t border-white/5 pt-3.5 mb-1 text-left w-full">
+          <div className="px-4 sm:px-6 flex flex-col gap-3 border-t border-white/5 pt-3.5 mb-1 text-left w-full">
             <span className="text-[9.5px] font-mono text-amber-400 font-bold tracking-widest uppercase flex items-center gap-1">
               <span>🔒</span> COMMENTS LOCKED • REACTIONS ALLOWED
             </span>
@@ -691,7 +695,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             </div>
           </div>
         ) : (
-          <div className="flex items-center justify-between gap-1 sm:gap-2 border-t border-white/5 pt-3.5 mt-2 text-violet-300/80 text-xs">
+          <div className="px-4 sm:px-6 flex items-center justify-between gap-1 sm:gap-2 border-t border-white/5 pt-3.5 mt-2 text-violet-300/80 text-xs">
             {/* Spark (Zap) */}
             <button
               onClick={() => onSpark(post.id)}
@@ -710,7 +714,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             <button
               onClick={() => onCommentToggle(post.id)}
               className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-xs ${
-                isCommentsOpen ? 'bg-violet-500/20 border-violet-500/30 text-violet-300 font-bold' : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
+                isCommentsOpen ? 'bg-violet-500/20 border-white/10 text-violet-300 font-bold' : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
               }`}
               title="Comment"
             >

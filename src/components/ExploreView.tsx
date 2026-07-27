@@ -157,7 +157,7 @@ export default function ExploreView({
                   addRecentSearch(localSearch.trim());
                 }
               }}
-              className="w-full pl-11 pr-10 py-3 bg-[#0d0924] border border-violet-500/20 focus:border-violet-500 focus:outline-hidden rounded-2xl text-xs text-white placeholder-zinc-500 transition-all font-sans shadow-inner"
+              className="w-full pl-11 pr-10 py-3 bg-[#0d0924] border border-white/10 focus:border-violet-500 focus:outline-hidden rounded-2xl text-xs text-white placeholder-zinc-500 transition-all font-sans shadow-inner"
             />
             {localSearch && (
               <button 
@@ -184,7 +184,7 @@ export default function ExploreView({
               onClick={() => setSearchFilterType(f.id as any)}
               className={`px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer ${
                 searchFilterType === f.id
-                  ? 'bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-violet-500/30'
+                  ? 'bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-white/10'
                   : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
               }`}
             >
@@ -248,7 +248,7 @@ export default function ExploreView({
 
           {totalResultsCount === 0 ? (
             <div className="p-12 rounded-3xl bg-[#0b081c] border border-white/10 text-center space-y-3 my-8">
-              <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center mx-auto text-violet-400">
+              <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                 <Search className="w-6 h-6" />
               </div>
               <h3 className="text-sm font-bold text-white">No users or posts found</h3>
@@ -271,7 +271,7 @@ export default function ExploreView({
                           addRecentSearch(user.username);
                           onViewProfile?.(user.id);
                         }}
-                        className="p-4 rounded-2xl bg-[#0b081c] border border-white/10 hover:border-violet-500/40 flex items-center justify-between gap-3 cursor-pointer transition-all group shadow-sm"
+                        className="p-4 rounded-2xl bg-[#0b081c] border border-white/10 hover:border-white/10 flex items-center justify-between gap-3 cursor-pointer transition-all group shadow-sm"
                       >
                         <div className="flex items-center gap-3 overflow-hidden">
                           <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
@@ -321,7 +321,7 @@ export default function ExploreView({
                               <span className="text-[9px] font-mono text-zinc-400">@{post.username}</span>
                             </div>
                           </div>
-                          <span className="text-[9px] font-mono text-violet-400 bg-violet-600/10 px-2 py-0.5 rounded-full border border-violet-500/20">Post</span>
+                          <span className="text-[9px] font-mono text-violet-400 bg-violet-600/10 px-2 py-0.5 rounded-full border border-white/10">Post</span>
                         </div>
                         <p className="text-xs text-zinc-200 leading-relaxed font-sans">{post.content}</p>
                         {post.tags && post.tags.length > 0 && (
@@ -333,7 +333,7 @@ export default function ExploreView({
                                   setSelectedTag(t);
                                   setActiveTab('feed');
                                 }}
-                                className="text-[10px] font-mono text-violet-300 bg-violet-950/40 border border-violet-500/30 px-2 py-0.5 rounded-lg hover:bg-violet-900/40 transition-colors"
+                                className="text-[10px] font-mono text-violet-300 bg-violet-950/40 border border-white/10 px-2 py-0.5 rounded-lg hover:bg-violet-900/40 transition-colors"
                               >
                                 #{t}
                               </button>
@@ -485,7 +485,7 @@ export default function ExploreView({
                 <div
                   key={user.id}
                   onClick={() => onViewProfile?.(user.id)}
-                  className="w-[150px] shrink-0 p-4 bg-[#0b081c] border border-white/10 hover:border-violet-500/40 rounded-2xl flex flex-col items-center text-center gap-2.5 cursor-pointer transition-all group shadow-sm"
+                  className="w-[150px] shrink-0 p-4 bg-[#0b081c] border border-white/10 hover:border-white/10 rounded-2xl flex flex-col items-center text-center gap-2.5 cursor-pointer transition-all group shadow-sm"
                 >
                   <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-all" />
                   <div className="w-full overflow-hidden">

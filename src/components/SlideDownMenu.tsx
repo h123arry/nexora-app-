@@ -231,7 +231,7 @@ export default function SlideDownMenu({
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -25, opacity: 0, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="w-full max-w-xl bg-[#09061a]/95 border border-violet-500/30 rounded-3xl p-4 sm:p-6 shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-white backdrop-blur-2xl relative z-10 my-auto sm:my-0 touch-none"
+            className="w-full max-w-xl bg-[#09061a]/95 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-white backdrop-blur-2xl relative z-10 my-auto sm:my-0 touch-none"
           >
             {/* Top Drag Handle for Mobile */}
             <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-3 sm:hidden" />
@@ -243,7 +243,7 @@ export default function SlideDownMenu({
               </div>
               
               <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-violet-400/90 bg-violet-950/60 px-2.5 py-1 rounded-full border border-violet-500/30 shadow-xs">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-violet-400/90 bg-violet-950/60 px-2.5 py-1 rounded-full border border-white/10 shadow-xs">
                   Unified Navigation
                 </span>
                 <button
@@ -272,7 +272,7 @@ export default function SlideDownMenu({
                     className={`flex items-center justify-between p-3 rounded-2xl border transition-all text-left cursor-pointer group ${
                       active 
                         ? 'bg-linear-to-r from-violet-900/60 via-purple-900/40 to-pink-900/30 border-violet-500 text-white shadow-lg shadow-violet-500/20 ring-1 ring-violet-500/50' 
-                        : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-violet-500/30 text-zinc-300 hover:text-white'
+                        : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/10 text-zinc-300 hover:text-white'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">

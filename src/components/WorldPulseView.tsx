@@ -318,7 +318,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
             initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 30, scale: 0.95 }}
-            className="fixed bottom-24 left-1/4 right-1/4 md:left-auto md:right-10 bg-linear-to-r from-cyan-950/90 to-blue-900/90 border border-cyan-500/30 text-white font-sans text-xs px-4 py-3 rounded-2xl shadow-xl backdrop-blur-md z-50 text-center"
+            className="fixed bottom-24 left-1/4 right-1/4 md:left-auto md:right-10 bg-linear-to-r from-cyan-950/90 to-blue-900/90 border border-cyan-500/30 text-white font-sans text-xs px-4 py-3 rounded-2xl shadow-md backdrop-blur-md z-50 text-center"
           >
             {toastMessage}
           </motion.div>
@@ -326,7 +326,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       </AnimatePresence>
 
       {/* HEADER SECTION */}
-      <div className="border-b border-violet-500/10 pb-4">
+      <div className="border-b border-white/10 pb-4">
         <h2 className="text-xl font-black font-sans text-white flex items-center gap-2 tracking-tight">
           <span className="text-xl">🌍</span> World Pulse
         </h2>
@@ -344,7 +344,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
             placeholder="Search trends, places, events, communities..."
             value={pulseSearch}
             onChange={(e) => setPulseSearch(e.target.value)}
-            className="w-full pl-12 pr-5 py-3 rounded-2xl bg-black/40 border border-violet-500/10 focus:outline-none focus:border-cyan-500/35 focus:bg-[#070514] transition-all font-sans text-xs text-white placeholder:text-violet-400/30"
+            className="w-full pl-12 pr-5 py-3 rounded-2xl bg-black/40 border border-white/10 focus:outline-none focus:border-cyan-500/35 focus:bg-[#070514] transition-all font-sans text-xs text-white placeholder:text-violet-400/30"
           />
           {pulseSearch && (
             <button 
@@ -366,7 +366,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                 setPulseSearch(tag);
                 triggerToast(`Searching for active trend: ${tag}`);
               }}
-              className="px-2.5 py-1 rounded-xl bg-violet-500/5 hover:bg-violet-500/15 border border-violet-500/10 hover:border-violet-500/20 text-[10px] font-sans text-violet-300 transition-all cursor-pointer"
+              className="px-2.5 py-1 rounded-xl bg-violet-500/5 hover:bg-violet-500/15 border border-white/10 hover:border-white/10 text-[10px] font-sans text-violet-300 transition-all cursor-pointer"
             >
               #{tag}
             </button>
@@ -375,7 +375,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       </div>
 
       {/* TOP FILTERS - CATEGORY TABS */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-none border-b border-violet-500/5 items-center">
+      <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/10 items-center">
         {[
           { id: 'trending', label: '🔥 Trending' },
           { id: 'map', label: '🗺 Map' },
@@ -406,12 +406,12 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       </div>
 
       {/* VOH AI INSIDE PULSE MODULE */}
-      <div className="p-4 rounded-3xl bg-linear-to-tr from-[#09071c] to-[#04020a] border border-violet-500/15 space-y-3.5 relative overflow-hidden">
+      <div className="p-4 rounded-3xl bg-linear-to-tr from-[#09071c] to-[#04020a] border border-white/10 space-y-3.5 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-44 h-44 bg-violet-600/5 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-violet-500/10 border border-violet-500/20">
+            <div className="p-1.5 rounded-xl bg-violet-500/10 border border-white/10">
               <VohIcon size={18} animated glow variant="brand" />
             </div>
             <div>
@@ -419,7 +419,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               <p className="text-[10px] text-violet-300/40">Query community trends and upcoming topic analytics</p>
             </div>
           </div>
-          <span className="text-[9px] font-mono bg-violet-500/10 text-violet-300 border border-violet-500/15 px-2 py-0.5 rounded-md uppercase font-black tracking-tight">Active Core</span>
+          <span className="text-[9px] font-mono bg-violet-500/10 text-violet-300 border border-white/10 px-2 py-0.5 rounded-md uppercase font-black tracking-tight">Active Core</span>
         </div>
 
         {/* Dynamic input bar to Ask VOH */}
@@ -432,7 +432,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
             onKeyDown={(e) => {
               if (e.key === 'Enter') handleAskVoh(vohSearch);
             }}
-            className="flex-1 px-3.5 py-2.5 rounded-xl bg-black/40 border border-violet-500/10 hover:border-violet-500/20 focus:outline-none focus:border-violet-500/35 text-xs text-white placeholder:text-violet-400/30 text-left font-sans"
+            className="flex-1 px-3.5 py-2.5 rounded-xl bg-black/40 border border-white/10 hover:border-white/10 focus:outline-none focus:border-white/10 text-xs text-white placeholder:text-violet-400/30 text-left font-sans"
           />
           <button
             onClick={() => handleAskVoh(vohSearch)}
@@ -447,7 +447,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
           <button 
             onClick={() => handleAskVoh("What's trending in Nigeria?")}
-            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-violet-500/5 hover:border-violet-500/20 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
+            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-white/10 hover:border-white/10 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <ArrowRight className="w-3 h-3 text-violet-500 shrink-0" />
             <span className="truncate">"What's trending in Nigeria?"</span>
@@ -455,7 +455,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
           
           <button 
             onClick={() => handleAskVoh("Summarize today's Pulse.")}
-            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-violet-500/5 hover:border-violet-500/20 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
+            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-white/10 hover:border-white/10 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <ArrowRight className="w-3 h-3 text-violet-500 shrink-0" />
             <span className="truncate">"Summarize today's Pulse."</span>
@@ -463,7 +463,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
 
           <button 
             onClick={() => handleAskVoh("Show football discussions.")}
-            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-violet-500/5 hover:border-violet-500/20 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
+            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-white/10 hover:border-white/10 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <ArrowRight className="w-3 h-3 text-violet-400 shrink-0" />
             <span className="truncate">"Show football discussions."</span>
@@ -471,7 +471,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
 
           <button 
             onClick={() => handleAskVoh("What are startup founders discussing?")}
-            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-violet-500/5 hover:border-violet-500/20 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
+            className="p-2 rounded-xl bg-black/35 hover:bg-violet-500/5 border border-white/10 hover:border-white/10 text-[10px] text-violet-300/70 text-left font-sans transition-all flex items-center gap-1.5 cursor-pointer"
           >
             <ArrowRight className="w-3 h-3 text-violet-400 shrink-0" />
             <span className="truncate">"What are startup founders discussing?"</span>
@@ -485,7 +485,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="p-3.5 rounded-2xl bg-black/50 border border-violet-500/10 text-xs text-violet-400 font-mono flex items-center gap-2 animate-pulse"
+              className="p-3.5 rounded-2xl bg-black/50 border border-white/10 text-xs text-violet-400 font-mono flex items-center gap-2 animate-pulse"
             >
               <Brain className="w-4 h-4 text-violet-400 animate-spin" />
               <span>VOH AI is thinking...</span>
@@ -496,7 +496,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               key={idx}
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-3.5 rounded-2xl bg-black/50 border border-violet-500/10 text-xs text-violet-100 font-sans leading-relaxed space-y-1 text-left relative"
+              className="p-3.5 rounded-2xl bg-black/50 border border-white/10 text-xs text-violet-100 font-sans leading-relaxed space-y-1 text-left relative"
             >
               <div className="text-[9px] font-mono text-cyan-400 font-bold">Query: "{log.query}"</div>
               <div>{log.reply}</div>
@@ -521,12 +521,12 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
             className="space-y-4"
           >
             {/* Interactive map Zoom levels header buttons */}
-            <div className="flex items-center justify-between p-3 bg-black/40 border border-violet-500/10 rounded-2xl text-xs font-mono">
+            <div className="flex items-center justify-between p-3 bg-black/40 border border-white/10 rounded-2xl text-xs font-mono">
               <span className="text-violet-300 font-black uppercase tracking-wider flex items-center gap-1.5">
                 <Globe className="w-4 h-4 text-cyan-400 animate-spin" style={{ animationDuration: '6s' }} />
                 Interactive Global Map
               </span>
-              <div className="flex items-center gap-1 bg-black/50 p-1 rounded-xl border border-violet-500/5">
+              <div className="flex items-center gap-1 bg-black/50 p-1 rounded-xl border border-white/10">
                 {(['world', 'country', 'state', 'city'] as const).map((level) => (
                   <button
                     key={level}
@@ -547,7 +547,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
             </div>
 
             {/* Graphic Map Card Wrapper */}
-            <div className="relative aspect-video rounded-3xl overflow-hidden bg-black/60 border border-violet-500/15 p-4 flex flex-col justify-between shadow-2xl">
+            <div className="relative aspect-video rounded-3xl overflow-hidden bg-black/60 border border-white/10 p-4 flex flex-col justify-between shadow-md">
               <div className="absolute inset-0 z-0 opacity-40 overflow-hidden">
                 <motion.div 
                   animate={{ 
@@ -611,7 +611,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                       <motion.div 
                         initial={{ opacity: 0, y: 15 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-3.5 bg-black/90 border border-violet-500/20 rounded-2xl max-w-sm text-left shadow-2xl relative"
+                        className="p-3.5 bg-black/90 border border-white/10 rounded-2xl max-w-sm text-left shadow-md relative"
                       >
                         <button 
                           onClick={(e) => {
@@ -623,7 +623,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                           <X className="w-3.5 h-3.5" />
                         </button>
                         <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[9px] font-mono font-black px-1.5 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/10 uppercase rounded">
+                          <span className="text-[9px] font-mono font-black px-1.5 py-0.5 bg-violet-500/20 text-violet-300 border border-white/10 uppercase rounded">
                             {pin.category} Event
                           </span>
                           <span className="text-[10px] text-cyan-400 font-mono font-bold">Pulse Score: {pin.pulse}</span>
@@ -653,7 +653,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                     );
                   })()
                 ) : (
-                  <div className="p-3.5 bg-slate-950/80 border border-violet-500/5 backdrop-blur-md rounded-2xl max-w-xs text-left">
+                  <div className="p-3.5 bg-slate-950/80 border border-white/10 backdrop-blur-md rounded-2xl max-w-xs text-left">
                     <span className="text-[8px] font-mono text-cyan-300 font-extrabold tracking-widest uppercase block mb-1">
                       ● FEED ADVISORY
                     </span>
@@ -680,7 +680,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
 
           <div className="space-y-4">
             {filteredEvents.length === 0 ? (
-              <div className="p-12 text-center rounded-3xl border border-dashed border-violet-500/10 bg-black/20 space-y-3">
+              <div className="p-12 text-center rounded-3xl border border-dashed border-white/10 bg-black/20 space-y-3">
                 <Globe className="w-8 h-8 text-violet-400/20 mx-auto" />
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider">🌍 World Pulse is Quiet</h4>
                 <p className="text-[11px] text-violet-300/40 max-w-xs mx-auto font-sans leading-relaxed">
@@ -699,13 +699,13 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               filteredEvents.map((evt) => (
                 <div 
                   key={evt.id} 
-                  className="p-5 rounded-3xl bg-black/40 border border-violet-500/10 hover:border-violet-500/25 transition-all text-left space-y-4 relative overflow-hidden group hover:bg-[#070514]/70"
+                  className="p-5 rounded-3xl bg-black/40 border border-white/10 hover:border-white/10 transition-all text-left space-y-4 relative overflow-hidden group hover:bg-[#070514]/70"
                 >
                   {/* Pulse Score gauge design */}
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1.5">
                       <div className="flex items-center flex-wrap gap-2">
-                        <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-300 border border-violet-500/10 uppercase">
+                        <span className="text-[10px] font-mono font-black px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-300 border border-white/10 uppercase">
                           {evt.category} Event
                         </span>
                         <span className="text-[10.5px] font-mono text-cyan-400 font-bold flex items-center gap-1">
@@ -736,13 +736,13 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                   </p>
 
                   {/* Communities Involved Row */}
-                  <div className="p-3 bg-linear-to-r from-violet-950/15 to-[#05030d] border border-violet-500/5 rounded-2xl space-y-1.5">
+                  <div className="p-3 bg-linear-to-r from-violet-950/15 to-[#05030d] border border-white/10 rounded-2xl space-y-1.5">
                     <span className="text-[9px] font-mono text-violet-400/50 uppercase tracking-widest font-black block">🏟 Communities Involved ({evt.communitiesCount}+)</span>
                     <div className="flex flex-wrap gap-1.5">
                       {evt.communities.map((comm, idx) => (
                         <span 
                           key={idx}
-                          className="px-2.5 py-1 rounded-xl bg-violet-500/5 text-[10px] font-sans text-violet-300 font-bold border border-violet-500/5"
+                          className="px-2.5 py-1 rounded-xl bg-violet-500/5 text-[10px] font-sans text-violet-300 font-bold border border-white/10"
                         >
                           {comm}
                         </span>
@@ -751,7 +751,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                   </div>
 
                   {/* Contributors / Action bottom align */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-violet-500/5 mt-1 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-white/10 mt-1 text-xs">
                     
                     {/* Notable contributors list */}
                     <div className="flex items-center gap-2">
@@ -795,7 +795,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       )}
 
       {/* WORLD PULSE ALERTS CONFIG BOX */}
-      <div className="p-4 rounded-3xl bg-black/40 border border-violet-500/10 space-y-3">
+      <div className="p-4 rounded-3xl bg-black/40 border border-white/10 space-y-3">
         <div className="flex items-center gap-1.5">
           <Bell className="w-4 h-4 text-cyan-400" />
           <span className="text-xs font-mono uppercase tracking-widest font-black text-cyan-300">Trend Notifications</span>
@@ -814,7 +814,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                 className={`px-3 py-1.5 rounded-xl border text-[11px] font-sans font-bold transition-all cursor-pointer ${
                   isFollowed 
                     ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 font-extrabold' 
-                    : 'bg-transparent border-violet-500/5 text-violet-400/40 hover:text-white'
+                    : 'bg-transparent border-white/10 text-violet-400/40 hover:text-white'
                 }`}
               >
                 <span>{topic}</span>
@@ -829,7 +829,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
         
         {/* Trend Timeline explanation */}
-        <div className="p-4 rounded-3xl bg-linear-to-tr from-[#080616] to-[#04030a] border border-violet-500/10 flex flex-col justify-between text-left space-y-3 leading-relaxed">
+        <div className="p-4 rounded-3xl bg-linear-to-tr from-[#080616] to-[#04030a] border border-white/10 flex flex-col justify-between text-left space-y-3 leading-relaxed">
           <div className="space-y-1">
             <span className="text-xs font-mono font-black uppercase text-violet-400 tracking-wider flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-violet-400" />
@@ -839,13 +839,13 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               Visually trace chronological trending milestones from initial triggers up to maximum societal momentum spikes.
             </p>
           </div>
-          <div className="text-[9.5px] font-mono text-cyan-400/40 border-t border-violet-500/5 pt-2 uppercase">
+          <div className="text-[9.5px] font-mono text-cyan-400/40 border-t border-white/10 pt-2 uppercase">
             ⚡ Chrono-Tracing Active
           </div>
         </div>
 
         {/* Trend Prediction explanation */}
-        <div className="p-4 rounded-3xl bg-linear-to-tr from-[#080616] to-[#04030a] border border-violet-500/10 flex flex-col justify-between text-left space-y-3 leading-relaxed">
+        <div className="p-4 rounded-3xl bg-linear-to-tr from-[#080616] to-[#04030a] border border-white/10 flex flex-col justify-between text-left space-y-3 leading-relaxed">
           <div className="space-y-1">
             <span className="text-xs font-mono font-black uppercase text-pink-400 tracking-wider flex items-center gap-1.5">
               <TrendingUp className="w-3.5 h-3.5 text-pink-400" />
@@ -855,7 +855,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               VOH AI parses emerging regional data points to predict upcoming viral discussions days before aggregate social channels catch up.
             </p>
           </div>
-          <div className="text-[9.5px] font-mono text-pink-400/40 border-t border-violet-500/5 pt-2 uppercase">
+          <div className="text-[9.5px] font-mono text-pink-400/40 border-t border-white/10 pt-2 uppercase">
             ⚡ Predict Engine Loaded
           </div>
         </div>
@@ -870,7 +870,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="w-full max-w-2xl bg-[#09071c] border border-violet-500/25 rounded-3xl p-5 md:p-6 shadow-2xl relative max-h-[85vh] overflow-y-auto no-scrollbar space-y-5"
+              className="w-full max-w-2xl bg-[#09071c] border border-white/10 rounded-3xl p-5 md:p-6 shadow-md relative max-h-[85vh] overflow-y-auto no-scrollbar space-y-5"
             >
               <button 
                 onClick={() => setActiveDiscussion(null)}
@@ -880,7 +880,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               </button>
 
               {/* Title Header */}
-              <div className="space-y-1 text-left border-b border-violet-500/10 pb-3">
+              <div className="space-y-1 text-left border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-[9px] font-mono font-black bg-cyan-500/15 text-cyan-300 border border-cyan-500/20 px-2 py-0.5 rounded uppercase">
                     Active Trend Loop
@@ -900,13 +900,13 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                       key={idx}
                       className={`p-3 rounded-2xl font-sans text-xs flex flex-col justify-between ${
                         item.status === 'current' 
-                          ? 'bg-violet-950/30 border border-violet-500/25 text-white' 
-                          : 'bg-black/40 border border-violet-500/5 text-violet-100/50'
+                          ? 'bg-violet-950/30 border border-white/10 text-white' 
+                          : 'bg-black/40 border border-white/10 text-violet-100/50'
                       }`}
                     >
                       <span className="text-[9px] font-mono text-cyan-400/50 uppercase block mb-1">{item.time}</span>
                       <p className="font-sans leading-relaxed text-[10.5px]">{item.event}</p>
-                      <span className="text-[8px] font-mono mt-2 uppercase font-black tracking-widest text-violet-400 block border-t border-violet-500/5 pt-1">
+                      <span className="text-[8px] font-mono mt-2 uppercase font-black tracking-widest text-violet-400 block border-t border-white/10 pt-1">
                         ● {item.status.toUpperCase()}
                       </span>
                     </div>
@@ -915,13 +915,13 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               </div>
 
               {/* Top discussing communities */}
-              <div className="p-3 bg-black/40 border border-violet-500/5 rounded-2xl text-left space-y-1.5">
+              <div className="p-3 bg-black/40 border border-white/10 rounded-2xl text-left space-y-1.5">
                 <span className="text-[10px] font-mono text-violet-400/50 uppercase tracking-widest block">🎯 Primary Communities Channeling This</span>
                 <div className="flex flex-wrap gap-1.5">
                   {activeDiscussion.communities.map((c, idx) => (
                     <span 
                       key={idx}
-                      className="px-2.5 py-1 rounded-xl bg-violet-500/10 border border-violet-500/15 text-xs text-white"
+                      className="px-2.5 py-1 rounded-xl bg-violet-500/10 border border-white/10 text-xs text-white"
                     >
                       {c}
                     </span>
@@ -947,7 +947,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                 
                 <div className="space-y-2 max-h-[160px] overflow-y-auto no-scrollbar">
                   {discussionComments.map((com, cidx) => (
-                    <div key={cidx} className="p-3 bg-[#04020a]/80 border border-violet-500/5 rounded-2xl text-xs font-sans space-y-1">
+                    <div key={cidx} className="p-3 bg-[#04020a]/80 border border-white/10 rounded-2xl text-xs font-sans space-y-1">
                       <div className="flex justify-between items-center">
                         <span className="font-extrabold text-white">@{com.user}</span>
                         <span className="text-[8.5px] font-mono text-violet-400/40">{com.rep} PR</span>
@@ -967,7 +967,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleAddComment();
                     }}
-                    className="flex-1 px-3.5 py-2 rounded-xl bg-black/40 border border-violet-500/10 focus:outline-none focus:border-violet-500/35 text-xs text-white placeholder:text-violet-400/30 text-left font-sans"
+                    className="flex-1 px-3.5 py-2 rounded-xl bg-black/40 border border-white/10 focus:outline-none focus:border-white/10 text-xs text-white placeholder:text-violet-400/30 text-left font-sans"
                   />
                   <button
                     onClick={handleAddComment}
@@ -979,10 +979,10 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
               </div>
 
               {/* Close Button */}
-              <div className="pt-2 border-t border-violet-500/5 flex justify-end">
+              <div className="pt-2 border-t border-white/10 flex justify-end">
                 <button
                   onClick={() => setActiveDiscussion(null)}
-                  className="px-4 py-2 rounded-xl border border-violet-500/10 bg-black/40 hover:bg-violet-500/10 text-xs font-mono font-black text-violet-300 uppercase transition-all"
+                  className="px-4 py-2 rounded-xl border border-white/10 bg-black/40 hover:bg-violet-500/10 text-xs font-mono font-black text-violet-300 uppercase transition-all"
                 >
                   Close Discussion
                 </button>

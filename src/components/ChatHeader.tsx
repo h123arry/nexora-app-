@@ -27,7 +27,7 @@ export default function ChatHeader({
     <div className={`flex items-center justify-between p-3.5 border-b shrink-0 sticky top-0 z-10 h-16 transition-all duration-300 ${
       isVanishMode 
         ? 'border-pink-500/25 bg-[#120516] shadow-[0_0_15px_rgba(236,72,153,0.05)]' 
-        : 'border-violet-500/10 bg-[#080516]'
+        : 'border-white/10 bg-[#080516]'
     }`}>
       {/* Left Section: Back, Avatar, Identity */}
       <div className="flex items-center gap-3 overflow-hidden">
@@ -42,7 +42,7 @@ export default function ChatHeader({
             src={chat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80'} 
             alt={chat.partnerName} 
             className={`w-10 h-10 rounded-full object-cover border-2 transition-all duration-300 ${
-              isVanishMode ? 'border-pink-500 ring-2 ring-pink-500/10' : 'border-violet-500/30'
+              isVanishMode ? 'border-pink-500 ring-2 ring-pink-500/10' : 'border-white/10'
             }`} 
             referrerPolicy="no-referrer"
           />

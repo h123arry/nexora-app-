@@ -842,7 +842,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
   };
 
   return (
-    <div className="w-full relative py-2 select-none border-b border-violet-500/5 bg-[#03000f]/40 backdrop-blur-md rounded-2xl p-4">
+    <div className="w-full relative py-2 select-none border-b border-white/10 bg-[#03000f]/40 backdrop-blur-md rounded-2xl p-4">
       
       {/* 1. HORIZONTAL STORY LIST TRAY */}
       <div className="flex items-center gap-4 overflow-x-auto scrollbar-none py-1">
@@ -851,7 +851,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
         <div className="flex flex-col items-center shrink-0">
           <button
             onClick={() => setIsCreateOpen(true)}
-            className="w-16 h-16 rounded-full bg-violet-600/15 hover:bg-violet-600/25 border-2 border-dashed border-violet-500/40 hover:border-violet-400 transition-all flex items-center justify-center relative cursor-pointer group active:scale-95"
+            className="w-16 h-16 rounded-full bg-violet-600/15 hover:bg-violet-600/25 border-2 border-dashed border-white/10 hover:border-violet-400 transition-all flex items-center justify-center relative cursor-pointer group active:scale-95"
             title="Publish New Story"
           >
             <Plus className="w-6 h-6 text-violet-300 group-hover:text-white transition-colors" />
@@ -996,7 +996,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                     {/* Voice audio simulation wave rendering */}
                     {currentStoryItem.mediaType === 'voice' && (
                       <div className="space-y-6 w-full max-w-xs relative z-10">
-                        <div className="w-20 h-20 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/20">
+                        <div className="w-20 h-20 rounded-full bg-violet-600/20 border border-white/10 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/20">
                           <Mic className="w-10 h-10 text-pink-400 animate-pulse" />
                         </div>
                         <div className="space-y-2">
@@ -1036,7 +1036,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                               <button
                                 key={oIdx}
                                 onClick={() => handleVotePoll(oIdx)}
-                                className="w-full text-left p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-violet-500/30 text-xs font-sans font-bold relative overflow-hidden group transition-all"
+                                className="w-full text-left p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/10 text-xs font-sans font-bold relative overflow-hidden group transition-all"
                               >
                                 {/* Animated progress percentage backdrop */}
                                 <div 
@@ -1153,7 +1153,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                     <img 
                       src={selectedCreator.avatar} 
                       alt={selectedCreator.name} 
-                      className="w-9 h-9 rounded-full object-cover border border-violet-500/30"
+                      className="w-9 h-9 rounded-full object-cover border border-white/10"
                       referrerPolicy="no-referrer"
                     />
                     <div className="leading-tight text-left">
@@ -1210,7 +1210,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                     href={currentStoryItem.link.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600/35 hover:bg-violet-600/50 border border-violet-500/30 text-[10.5px] text-violet-200 hover:text-white font-bold tracking-wider select-none uppercase transition-all"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600/35 hover:bg-violet-600/50 border border-white/10 text-[10.5px] text-violet-200 hover:text-white font-bold tracking-wider select-none uppercase transition-all"
                   >
                     <span>🔗 {currentStoryItem.link.text}</span>
                   </a>
@@ -1306,7 +1306,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                           placeholder={`Reply to @${selectedCreator.username}...`}
                           value={storyReply}
                           onChange={(e) => setStoryReply(e.target.value)}
-                          className="flex-1 bg-zinc-900 border border-white/5 rounded-2xl p-2.5 px-4 text-xs text-white focus:outline-none focus:border-violet-500/50"
+                          className="flex-1 bg-zinc-900 border border-white/5 rounded-2xl p-2.5 px-4 text-xs text-white focus:outline-none focus:border-white/10"
                         />
                         
                         {storyReply.trim() ? (
@@ -1342,7 +1342,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                     animate={{ y: 0 }}
                     exit={{ y: "100%" }}
                     transition={{ type: "spring", stiffness: 300, damping: 28 }}
-                    className="absolute inset-x-0 bottom-0 top-[120px] bg-[#0c0a21]/95 border-t border-white/10 rounded-t-3xl z-40 flex flex-col text-left overflow-hidden shadow-2xl backdrop-blur-xl"
+                    className="absolute inset-x-0 bottom-0 top-[120px] bg-[#0c0a21]/95 border-t border-white/10 rounded-t-3xl z-40 flex flex-col text-left overflow-hidden shadow-md backdrop-blur-xl"
                   >
                     {/* Header bar */}
                     <div className="p-4 border-b border-white/5 flex items-center justify-between bg-black/20">
@@ -1422,7 +1422,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                             placeholder="Search viewers, reactions, replies..."
                             value={analyticsSearchQuery}
                             onChange={(e) => setAnalyticsSearchQuery(e.target.value)}
-                            className="w-full bg-black/40 border border-white/5 text-xs text-white p-2.5 pl-8 rounded-xl focus:outline-none focus:border-violet-500/50"
+                            className="w-full bg-black/40 border border-white/5 text-xs text-white p-2.5 pl-8 rounded-xl focus:outline-none focus:border-white/10"
                           />
                           <Search className="w-3.5 h-3.5 text-zinc-500 absolute top-3.5 left-2.5" />
                         </div>
@@ -1453,7 +1453,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
 
                                   {/* Viewer reply block */}
                                   {viewer.reply && (
-                                    <div className="mt-2 p-2 rounded-xl bg-violet-950/20 border border-violet-500/10 flex items-start gap-1.5">
+                                    <div className="mt-2 p-2 rounded-xl bg-violet-950/20 border border-white/10 flex items-start gap-1.5">
                                       <MessageSquare className="w-3 h-3 text-violet-400 shrink-0 mt-0.5" />
                                       <p className="text-[10.5px] text-violet-200 leading-normal italic">"{viewer.reply}"</p>
                                     </div>
@@ -1498,7 +1498,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
               initial={{ scale: 0.9, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 30 }}
-              className="relative bg-[#0c0a21] border border-violet-500/20 rounded-3xl p-5 max-w-lg w-full shadow-2xl space-y-4 text-left font-sans max-h-[92vh] overflow-y-auto scrollbar-none z-10"
+              className="relative bg-[#0c0a21] border border-white/10 rounded-3xl p-5 max-w-lg w-full shadow-md space-y-4 text-left font-sans max-h-[92vh] overflow-y-auto scrollbar-none z-10"
             >
               {/* Close Button */}
               <button 
@@ -1667,7 +1667,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                       placeholder="e.g. Messi vs Ronaldo 👑?"
                       value={pollQuestion}
                       onChange={(e) => setPollQuestion(e.target.value)}
-                      className="w-full bg-black/40 border border-white/5 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-violet-500/40"
+                      className="w-full bg-black/40 border border-white/5 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-white/10"
                     />
                     <div className="grid grid-cols-2 gap-2 mt-2">
                       {pollOptions.map((opt, oIdx) => (
@@ -1681,7 +1681,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                             updated[oIdx] = e.target.value;
                             setPollOptions(updated);
                           }}
-                          className="bg-black/40 border border-white/5 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-violet-500/40"
+                          className="bg-black/40 border border-white/5 rounded-xl p-2 text-xs text-white focus:outline-none focus:border-white/10"
                         />
                       ))}
                     </div>
@@ -1697,7 +1697,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                       placeholder="e.g. Nexora V4.0 Launch Event 🚀"
                       value={countdownTitle}
                       onChange={(e) => setCountdownTitle(e.target.value)}
-                      className="w-full bg-black/40 border border-white/5 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-violet-500/40 mb-2"
+                      className="w-full bg-black/40 border border-white/5 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-white/10 mb-2"
                     />
                     <input
                       type="datetime-local"
@@ -1716,7 +1716,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                     value={composerCaption}
                     onChange={(e) => setComposerCaption(e.target.value)}
                     rows={2}
-                    className="w-full bg-black/35 border border-white/5 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-violet-500/50 resize-none"
+                    className="w-full bg-black/35 border border-white/5 rounded-2xl p-3 text-xs text-white focus:outline-none focus:border-white/10 resize-none"
                   />
                 </div>
 
@@ -1810,7 +1810,7 @@ export default function StoriesView({ currentUser }: StoriesViewProps) {
                         onClick={() => setComposerPrivacy(prv.id as any)}
                         className={`p-2 rounded-xl text-left border transition-all cursor-pointer ${
                           composerPrivacy === prv.id 
-                            ? 'bg-violet-600/15 border-violet-500/50' 
+                            ? 'bg-violet-600/15 border-white/10' 
                             : 'bg-black/35 border-white/5 hover:border-white/10'
                         }`}
                       >

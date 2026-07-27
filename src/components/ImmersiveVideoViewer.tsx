@@ -213,7 +213,7 @@ export default function ImmersiveVideoViewer({
       {/* Absolute Exit / Close button in top-right */}
       <button 
         onClick={onClose}
-        className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 p-2.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all shadow-xl active:scale-95 cursor-pointer"
+        className="absolute top-4 right-4 sm:top-6 sm:right-6 z-50 p-2.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all shadow-md active:scale-95 cursor-pointer"
         title="Exit player"
       >
         <X className="w-5 h-5" />
@@ -223,7 +223,7 @@ export default function ImmersiveVideoViewer({
       {currentIndex > 0 && (
         <button 
           onClick={handlePrev}
-          className="absolute left-6 z-40 p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer shadow-2xl"
+          className="absolute left-6 z-40 p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer shadow-md"
           title="Previous video"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -233,7 +233,7 @@ export default function ImmersiveVideoViewer({
       {currentIndex < postsToShow.length - 1 && (
         <button 
           onClick={handleNext}
-          className="absolute right-6 z-40 p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer shadow-2xl"
+          className="absolute right-6 z-40 p-3.5 bg-black/40 hover:bg-black/80 text-white rounded-full border border-white/10 backdrop-blur-md transition-all hidden md:block active:scale-95 cursor-pointer shadow-md"
           title="Next video"
         >
           <ChevronRight className="w-6 h-6" />
@@ -311,7 +311,7 @@ export default function ImmersiveVideoViewer({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 220 }}
-              className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-2xl border-t border-violet-500/20 z-40 flex flex-col p-5 shadow-2xl overflow-hidden"
+              className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-2xl border-t border-white/10 z-40 flex flex-col p-5 shadow-md overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -377,7 +377,7 @@ export default function ImmersiveVideoViewer({
 
                     {/* Standard Threaded/Nested Replies */}
                     {c.replies && c.replies.length > 0 && (
-                      <div className="pl-9 space-y-2.5 pt-1.5 border-l border-violet-500/10 ml-3.5">
+                      <div className="pl-9 space-y-2.5 pt-1.5 border-l border-white/10 ml-3.5">
                         {c.replies.map(rep => (
                           <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
                             <div className="flex items-center gap-2 mb-1">
@@ -405,7 +405,7 @@ export default function ImmersiveVideoViewer({
                             value={replyInputs[c.id] || ''}
                             onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
                             onKeyDown={(e) => { if(e.key === 'Enter') handleSendReply(c.id); }}
-                            className="flex-1 bg-slate-900 border border-violet-500/15 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
+                            className="flex-1 bg-slate-900 border border-white/10 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
                           />
                           <button 
                             onClick={() => handleSendReply(c.id)}
@@ -441,7 +441,7 @@ export default function ImmersiveVideoViewer({
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   onKeyDown={(e) => { if(e.key === 'Enter') handleSendComment(); }}
-                  className="flex-1 bg-slate-950 border border-white/10 rounded-2xl py-2 px-4 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-violet-500/50"
+                  className="flex-1 bg-slate-950 border border-white/10 rounded-2xl py-2 px-4 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10"
                 />
                 <button 
                   onClick={handleSendComment}

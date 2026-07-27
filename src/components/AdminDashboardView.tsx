@@ -295,7 +295,7 @@ export default function AdminDashboardView({
 
         <button 
           onClick={() => setActiveSubTab('analytics')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'analytics' ? 'bg-violet-600 border border-violet-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'analytics' ? 'bg-violet-600 border border-white/10 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           <BarChart2 className="w-3.5 h-3.5" />
           Analytics & Geo Pulse
@@ -359,7 +359,7 @@ export default function AdminDashboardView({
                         <div className="flex items-center gap-2">
                           <button 
                             onClick={() => handleToggleVerify(user)}
-                            className={`p-1.5 rounded-lg border text-[9.5px] font-mono font-black flex items-center gap-1 transition-all uppercase cursor-pointer ${user.isVerified ? 'bg-violet-950/40 text-violet-400 border-violet-500/20' : 'bg-zinc-900 border-white/5 text-zinc-500 hover:text-white'}`}
+                            className={`p-1.5 rounded-lg border text-[9.5px] font-mono font-black flex items-center gap-1 transition-all uppercase cursor-pointer ${user.isVerified ? 'bg-violet-950/40 text-violet-400 border-white/10' : 'bg-zinc-900 border-white/5 text-zinc-500 hover:text-white'}`}
                           >
                             <CheckCircle className="w-3 h-3" />
                             {user.isVerified ? 'VERIFIED' : 'UNVERIFIED'}

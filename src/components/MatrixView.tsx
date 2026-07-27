@@ -72,7 +72,7 @@ export default function MatrixView({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1 px-1.5 rounded-md bg-violet-500/10 border border-violet-500/20 text-violet-400">
+            <div className="p-1 px-1.5 rounded-md bg-violet-500/10 border border-white/10 text-violet-400">
               <VohIcon size={18} animated glow variant="brand" />
             </div>
             <h2 className="text-xl font-black font-sans tracking-tight text-current">
@@ -101,7 +101,7 @@ export default function MatrixView({
               onClick={() => setActiveSubTab(item.id)}
               className={`flex flex-col items-start gap-1 p-3 rounded-2xl border text-left transition-all ${
                 isActive 
-                  ? 'bg-linear-to-b from-violet-600/15 to-violet-950/15 border-violet-500/30 text-violet-300 ring-1 ring-violet-500/10' 
+                  ? 'bg-linear-to-b from-violet-600/15 to-violet-950/15 border-white/10 text-violet-300 ring-1 ring-violet-500/10' 
                   : 'bg-current/3 border-current/5 text-current/70 hover:bg-current/6 hover:text-current'
               }`}
             >
@@ -138,7 +138,7 @@ export default function MatrixView({
 
             {activeSubTab === 'studio' && (
               <div className="space-y-6">
-                <div className="p-5 rounded-3xl bg-[#03010b] border border-violet-500/15 relative overflow-hidden">
+                <div className="p-5 rounded-3xl bg-[#03010b] border border-white/10 relative overflow-hidden">
                   <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
                   
                   <div className="mb-4">
@@ -165,7 +165,7 @@ export default function MatrixView({
                         value={customPostContent}
                         onChange={(e) => setCustomPostContent(e.target.value)}
                         placeholder="Write your update, design discovery, or question..."
-                        className="w-full h-28 p-3 rounded-2xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-violet-500/40 transition-colors resize-none leading-relaxed"
+                        className="w-full h-28 p-3 rounded-2xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-white/10 transition-colors resize-none leading-relaxed"
                         required
                       />
                     </div>
@@ -178,7 +178,7 @@ export default function MatrixView({
                           value={customPostTags}
                           onChange={(e) => setCustomPostTags(e.target.value)}
                           placeholder="e.g. Design, Coding, Sports, Business"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-violet-500/40 transition-colors"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-white/10 transition-colors"
                         />
                         <div className="flex flex-wrap gap-1 pt-1.5">
                           {popularTags.map((tag) => (
@@ -208,7 +208,7 @@ export default function MatrixView({
                           value={customPostImage}
                           onChange={(e) => setCustomPostImage(e.target.value)}
                           placeholder="https://images.unsplash.com/your-photo"
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-violet-500/40 transition-colors"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-current/5 border border-current/10 outline-hidden text-current text-xs font-sans placeholder-current/40 focus:border-white/10 transition-colors"
                         />
                         <p className="text-[9px] text-current/40 font-mono mt-1">Paste any direct link to a picture or graphic you want to show.</p>
                       </div>

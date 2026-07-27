@@ -1226,12 +1226,12 @@ export default function MessagesView({
   };
 
   return (
-    <div id="messages-panel-root" className="grid grid-cols-1 md:grid-cols-3 rounded-3xl border border-violet-500/10 bg-[#06040f] overflow-hidden h-[640px] relative shadow-2xl select-none">
+    <div id="messages-panel-root" className="grid grid-cols-1 md:grid-cols-3 rounded-3xl border border-white/10 bg-[#06040f] overflow-hidden h-[640px] relative shadow-md select-none">
       
       {/* ======================================================== */}
       {/* LEFT COLUMN: ACTIVE CHATS & SEARCH */}
       {/* ======================================================== */}
-      <div className="border-r border-violet-500/10 flex flex-col h-full bg-[#09071c]/45">
+      <div className="border-r border-white/10 flex flex-col h-full bg-[#09071c]/45">
         
         {/* Messages List Header */}
         <div className="p-3 bg-[#03010c] border-b border-white/5 flex items-center justify-between">
@@ -1287,7 +1287,7 @@ export default function MessagesView({
         </div>
 
         {/* Global Connection Search box */}
-        <div className="p-3 border-b border-violet-500/5 space-y-2 shrink-0">
+        <div className="p-3 border-b border-white/10 space-y-2 shrink-0">
           <div className="relative">
             <Search className="absolute left-3 top-2.5 w-3.5 h-3.5 text-violet-400/50" />
             <input
@@ -1295,7 +1295,7 @@ export default function MessagesView({
               placeholder="Search chat database..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-[#8B5CF6] focus:outline-hidden text-xs text-white placeholder-violet-400/20 font-sans"
+              className="w-full pl-8 pr-3 py-1.5 rounded-xl bg-slate-950 border border-white/10 focus:border-[#8B5CF6] focus:outline-hidden text-xs text-white placeholder-violet-400/20 font-sans"
             />
           </div>
 
@@ -1322,7 +1322,7 @@ export default function MessagesView({
         </div>
 
         {/* Scrolling pill category selector */}
-        <div className="px-3 py-2 flex gap-1 overflow-x-auto no-scrollbar shrink-0 border-b border-violet-500/5 bg-[#03010c]/10">
+        <div className="px-3 py-2 flex gap-1 overflow-x-auto no-scrollbar shrink-0 border-b border-white/10 bg-[#03010c]/10">
           {[
             { id: 'chats', label: 'Messages' },
             { id: 'requests', label: 'Activity' },
@@ -1332,7 +1332,7 @@ export default function MessagesView({
               onClick={() => handleTabChange(tab.id as any)}
               className={`px-3 py-1.5 rounded-lg text-[10px] font-sans uppercase font-bold shrink-0 transition-all cursor-pointer ${
                 activeTab === tab.id 
-                  ? 'bg-violet-600/20 text-violet-400 border border-violet-500/30' 
+                  ? 'bg-violet-600/20 text-violet-400 border border-white/10' 
                   : 'text-zinc-500 hover:text-white'
               }`}
             >
@@ -1455,7 +1455,7 @@ export default function MessagesView({
               className="flex flex-col h-full w-full absolute inset-0"
             >
               {activeChat.isBroadcast ? (
-              <div className="flex items-center justify-between p-3.5 border-b border-violet-500/10 bg-[#080516] shrink-0 sticky top-0 z-10 h-16 select-none">
+              <div className="flex items-center justify-between p-3.5 border-b border-white/10 bg-[#080516] shrink-0 sticky top-0 z-10 h-16 select-none">
                 <div className="flex items-center gap-3 overflow-hidden">
                   <button onClick={() => setActiveChatId('')} className="p-1 text-zinc-400 hover:text-white rounded-full cursor-pointer">
                     <ArrowLeft className="w-5 h-5" />
@@ -1489,7 +1489,7 @@ export default function MessagesView({
 
                 <div className="flex items-center gap-1.5">
                   {isLocalSearchOpen ? (
-                    <div className="flex items-center bg-slate-950 border border-violet-500/20 rounded-xl px-2.5 py-1 w-44 md:w-56 transition-all duration-300">
+                    <div className="flex items-center bg-slate-950 border border-white/10 rounded-xl px-2.5 py-1 w-44 md:w-56 transition-all duration-300">
                       <Search className="w-3.5 h-3.5 text-violet-400/40 mr-1.5 shrink-0" />
                       <input 
                         type="text"
@@ -1569,7 +1569,7 @@ export default function MessagesView({
 
             {/* Pinned Messages Banner */}
             {pinnedMessageInChat && (
-              <div className="bg-[#1b0a2c] p-2 px-4 border-b border-violet-500/15 flex items-center justify-between text-left select-none relative shrink-0">
+              <div className="bg-[#1b0a2c] p-2 px-4 border-b border-white/10 flex items-center justify-between text-left select-none relative shrink-0">
                 <div 
                   className="flex items-center gap-2 min-w-0 flex-1 cursor-pointer"
                   onClick={() => {
@@ -1628,7 +1628,7 @@ export default function MessagesView({
                     className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/10" 
                     referrerPolicy="no-referrer"
                   />
-                  <div className="rounded-2xl p-2.5 bg-[#09071c]/80 border border-violet-500/10 text-white/90">
+                  <div className="rounded-2xl p-2.5 bg-[#09071c]/80 border border-white/10 text-white/90">
                     <div className="flex items-center gap-1.5 text-[9.5px] font-mono text-violet-400">
                       <NexoraLoader size="sm" />
                       {partnerPresenceAction === 'typing' && 'Typing...'}
@@ -1652,7 +1652,7 @@ export default function MessagesView({
 
             {/* Thread quote row */}
             {replyQuoteText && (
-              <div className="bg-[#1b0a2c] p-2.5 px-4 border-t border-violet-500/10 flex items-center justify-between text-left select-none relative shrink-0">
+              <div className="bg-[#1b0a2c] p-2.5 px-4 border-t border-white/10 flex items-center justify-between text-left select-none relative shrink-0">
                 <div className="flex items-center gap-2 min-w-0">
                   <CornerUpLeft className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                   <p className="text-[11px] font-sans text-violet-200 truncate pr-4">
@@ -1670,7 +1670,7 @@ export default function MessagesView({
 
             {/* Voice record composer block */}
             {voiceRecordState !== 'idle' && (
-              <div className="p-3 bg-gradient-to-r from-pink-950/20 to-violet-950/25 border-t border-violet-500/15 flex items-center justify-between gap-3 shrink-0 text-left">
+              <div className="p-3 bg-gradient-to-r from-pink-950/20 to-violet-950/25 border-t border-white/10 flex items-center justify-between gap-3 shrink-0 text-left">
                 <div className="flex items-center gap-3">
                   <Mic className="w-4 h-4 text-pink-400 animate-pulse shrink-0" />
                   <span className="text-[10px] font-mono font-black uppercase text-pink-400">Secure Recording Stream</span>
@@ -1728,7 +1728,7 @@ export default function MessagesView({
 
             {/* Dialogue Input Row Composer or Message Request Consent Block */}
             {activeChat.unreadCount > 3 && !acceptedRequestIds.includes(activeChat.id) ? (
-              <div className="p-5 border-t border-violet-500/15 bg-gradient-to-b from-[#110a2a]/95 to-[#060410] shrink-0 flex flex-col items-center text-center gap-3.5 select-none animate-fade-in">
+              <div className="p-5 border-t border-white/10 bg-gradient-to-b from-[#110a2a]/95 to-[#060410] shrink-0 flex flex-col items-center text-center gap-3.5 select-none animate-fade-in">
                 <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/25 px-3 py-1 rounded-full">
                   <ShieldAlert className="w-3.5 h-3.5 text-amber-400" />
                   <span className="text-[9px] font-mono tracking-wider text-amber-300 font-extrabold uppercase">Unverified trust ledger request</span>
@@ -1763,7 +1763,7 @@ export default function MessagesView({
                 </div>
               </div>
             ) : (
-              <div className="p-3 border-t border-violet-500/10 bg-[#09071c] shrink-0">
+              <div className="p-3 border-t border-white/10 bg-[#09071c] shrink-0">
                 <form 
                   onSubmit={handleSendMessage} 
                   className="flex items-center gap-2 relative"
@@ -1772,7 +1772,7 @@ export default function MessagesView({
                   <button
                     type="button"
                     onClick={() => setShowAttachmentSheet(!showAttachmentSheet)}
-                    className="p-2.5 bg-violet-600/5 hover:bg-violet-600/20 border border-violet-500/10 hover:border-violet-500/20 rounded-xl text-violet-300 cursor-pointer"
+                    className="p-2.5 bg-violet-600/5 hover:bg-violet-600/20 border border-white/10 hover:border-white/10 rounded-xl text-violet-300 cursor-pointer"
                     title="Send Documents & Wireframes"
                   >
                     <Paperclip className="w-4 h-4" />
@@ -1781,7 +1781,7 @@ export default function MessagesView({
                   <button
                     type="button"
                     onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="p-2.5 bg-violet-600/5 hover:bg-violet-600/20 border border-violet-500/10 hover:border-violet-500/20 rounded-xl text-violet-300 cursor-pointer"
+                    className="p-2.5 bg-violet-600/5 hover:bg-violet-600/20 border border-white/10 hover:border-white/10 rounded-xl text-violet-300 cursor-pointer"
                     title="Emoji"
                   >
                     <Smile className="w-4 h-4" />
@@ -1798,7 +1798,7 @@ export default function MessagesView({
                     }
                     value={typedMessage}
                     onChange={(e) => setTypedMessage(e.target.value)}
-                    className="flex-1 px-4 py-2.5 text-xs rounded-xl bg-slate-950 border border-violet-500/10 focus:border-[#8B5CF6] focus:outline-hidden text-white placeholder-violet-400/20 font-sans"
+                    className="flex-1 px-4 py-2.5 text-xs rounded-xl bg-slate-950 border border-white/10 focus:border-[#8B5CF6] focus:outline-hidden text-white placeholder-violet-400/20 font-sans"
                   />
 
                   {/* Voice recording start button */}
@@ -1806,7 +1806,7 @@ export default function MessagesView({
                     <button
                       type="button"
                       onClick={() => setVoiceRecordState('recording')}
-                      className="p-2.5 bg-violet-600/5 hover:bg-violet-600/20 border border-violet-500/10 rounded-xl text-violet-300 hover:text-white cursor-pointer"
+                      className="p-2.5 bg-violet-600/5 hover:bg-violet-600/20 border border-white/10 rounded-xl text-violet-300 hover:text-white cursor-pointer"
                       title="Start Voice Memo"
                     >
                       <Mic className="w-4 h-4" />
@@ -1851,7 +1851,7 @@ export default function MessagesView({
             transition={{ duration: 0.15 }}
             className="flex-1 flex flex-col items-center justify-center p-8 bg-[#05030d] h-full w-full absolute inset-0"
           >
-            <div className="w-16 h-16 rounded-full bg-violet-600/5 border border-violet-500/15 flex items-center justify-center mx-auto text-violet-400/40 mb-4">
+            <div className="w-16 h-16 rounded-full bg-violet-600/5 border border-white/10 flex items-center justify-center mx-auto text-violet-400/40 mb-4">
               <MessageSquare className="w-8 h-8 text-violet-500/30" />
             </div>
             <p className="font-sans font-black text-white text-base">No messages yet</p>
@@ -2058,7 +2058,7 @@ export default function MessagesView({
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-sm bg-[#0a071d] border-2 border-amber-500/30 rounded-2xl p-6 z-10 flex flex-col items-center text-center gap-4 shadow-2xl"
+              className="relative w-full max-w-sm bg-[#0a071d] border-2 border-amber-500/30 rounded-2xl p-6 z-10 flex flex-col items-center text-center gap-4 shadow-md"
             >
               <div className="w-12 h-12 rounded-full bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
                 <AlertTriangle className="w-6 h-6" />

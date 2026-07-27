@@ -23,7 +23,7 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
     <div className={`inline-flex flex-col items-center justify-center gap-2 ${className}`}>
       <div className={`relative flex items-center justify-center ${box}`}>
         {/* Outer glowing track ring */}
-        <div className="absolute inset-0 rounded-full border border-violet-500/20 shadow-[0_0_12px_rgba(139,92,246,0.15)]" />
+        <div className="absolute inset-0 rounded-full border border-white/10 shadow-[0_0_12px_rgba(139,92,246,0.15)]" />
         
         {/* Rotating gradient arc */}
         <motion.div

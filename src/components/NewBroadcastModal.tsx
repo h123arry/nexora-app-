@@ -197,15 +197,15 @@ export default function NewBroadcastModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ type: "spring", duration: 0.4 }}
-        className="relative w-full max-w-2xl bg-[#09071a]/95 border border-violet-500/20 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[580px]"
+        className="relative w-full max-w-2xl bg-[#09071a]/95 border border-white/10 rounded-3xl overflow-hidden shadow-md flex flex-col h-[580px]"
       >
         {/* Header background glow */}
         <div className="absolute top-0 inset-x-0 h-40 bg-radial-at-t from-violet-600/15 via-transparent to-transparent pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="p-4 border-b border-violet-500/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-xl bg-violet-500/10 text-violet-400 border border-violet-500/20">
+            <div className="p-1.5 rounded-xl bg-violet-500/10 text-violet-400 border border-white/10">
               <Radio className="w-4 h-4 animate-pulse" />
             </div>
             <div className="text-left">
@@ -233,7 +233,7 @@ export default function NewBroadcastModal({
                 className="space-y-4 flex flex-col h-full"
               >
                 {/* Info Tip */}
-                <div className="p-2.5 rounded-xl bg-violet-600/10 border border-violet-500/20 text-left flex gap-2">
+                <div className="p-2.5 rounded-xl bg-violet-600/10 border border-white/10 text-left flex gap-2">
                   <Info className="w-4 h-4 text-violet-400 shrink-0 mt-0.5" />
                   <p className="text-[10px] text-violet-200/80 leading-normal font-sans">
                     Broadcasts distribute messages to many recipients individually. Recipients receive them as a normal DM and do not see other members.
@@ -247,7 +247,7 @@ export default function NewBroadcastModal({
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: 'auto', opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="bg-black/30 border border-violet-500/10 rounded-2xl p-2.5 flex flex-col gap-1 text-left overflow-hidden shrink-0"
+                      className="bg-black/30 border border-white/10 rounded-2xl p-2.5 flex flex-col gap-1 text-left overflow-hidden shrink-0"
                     >
                       <div className="flex justify-between items-center px-1">
                         <span className="text-[9px] font-mono uppercase tracking-wider text-violet-400 font-bold">
@@ -300,12 +300,12 @@ export default function NewBroadcastModal({
                       placeholder="Search users..." 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-violet-500 focus:outline-hidden text-xs text-white placeholder-violet-400/20 font-sans"
+                      className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-white/10 focus:border-violet-500 focus:outline-hidden text-xs text-white placeholder-violet-400/20 font-sans"
                     />
                   </div>
 
                   {/* Horizontal Tabs inside Modal */}
-                  <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5 border-b border-violet-500/5">
+                  <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5 border-b border-white/10">
                     {[
                       { id: 'all', label: 'All Recipients' },
                       { id: 'recent', label: 'Recent DMs' },
@@ -351,7 +351,7 @@ export default function NewBroadcastModal({
                         onClick={() => handleToggleSelect(user.id)}
                         className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer flex items-center justify-between ${
                           isSelected 
-                            ? 'bg-violet-600/10 border-violet-500/30' 
+                            ? 'bg-violet-600/10 border-white/10' 
                             : 'bg-black/20 border-white/5 hover:bg-white/5'
                         }`}
                       >
@@ -431,7 +431,7 @@ export default function NewBroadcastModal({
                         placeholder="e.g. VIP Club Weekly Updates" 
                         value={broadcastName}
                         onChange={(e) => setBroadcastName(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-violet-500 focus:outline-hidden text-xs text-white placeholder-zinc-700 font-sans"
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-white/10 focus:border-violet-500 focus:outline-hidden text-xs text-white placeholder-zinc-700 font-sans"
                       />
                     </div>
 
@@ -440,7 +440,7 @@ export default function NewBroadcastModal({
                       <select 
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-violet-500 focus:outline-hidden text-xs text-zinc-300 font-sans"
+                        className="w-full px-2.5 py-1.5 rounded-xl bg-slate-950 border border-white/10 focus:border-violet-500 focus:outline-hidden text-xs text-zinc-300 font-sans"
                       >
                         {presets.categories.map(cat => (
                           <option key={cat} value={cat}>{cat}</option>
@@ -463,7 +463,7 @@ export default function NewBroadcastModal({
                             onClick={() => setBroadcastMode(mode.id as any)}
                             className={`p-2 rounded-xl border cursor-pointer text-left transition-all ${
                               broadcastMode === mode.id 
-                                ? 'bg-violet-600/15 border-violet-500/40' 
+                                ? 'bg-violet-600/15 border-white/10' 
                                 : 'bg-black/20 border-white/5 hover:bg-white/5'
                             }`}
                           >
@@ -487,7 +487,7 @@ export default function NewBroadcastModal({
                         placeholder="Provide details on the broadcast mission..." 
                         value={broadcastDescription}
                         onChange={(e) => setBroadcastDescription(e.target.value)}
-                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-violet-500/10 focus:border-violet-500 focus:outline-hidden text-xs text-white placeholder-zinc-700 font-sans resize-none"
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-white/10 focus:border-violet-500 focus:outline-hidden text-xs text-white placeholder-zinc-700 font-sans resize-none"
                       />
                     </div>
 
@@ -569,7 +569,7 @@ export default function NewBroadcastModal({
                 </div>
 
                 {/* Selected Recipients Overview */}
-                <div className="p-2.5 rounded-xl bg-black/40 border border-violet-500/5 text-left flex items-center justify-between">
+                <div className="p-2.5 rounded-xl bg-black/40 border border-white/10 text-left flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Users className="w-4 h-4 text-violet-400" />
                     <span className="text-[10px] font-sans text-zinc-300">
@@ -589,7 +589,7 @@ export default function NewBroadcastModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-violet-500/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm shrink-0">
+        <div className="p-4 border-t border-white/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm shrink-0">
           <div>
             {step === 1 ? (
               <span className="text-[10px] font-mono text-zinc-500">

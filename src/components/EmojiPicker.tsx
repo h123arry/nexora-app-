@@ -33,7 +33,7 @@ export default function EmojiPicker({ isOpen, onClose, onSelect }: EmojiPickerPr
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="fixed bottom-0 left-0 right-0 z-50 bg-[#09071c] rounded-t-3xl border-t border-violet-500/20 shadow-2xl p-4 h-[40vh] flex flex-col"
+            className="fixed bottom-0 left-0 right-0 z-50 bg-[#09071c] rounded-t-3xl border-t border-white/10 shadow-md p-4 h-[40vh] flex flex-col"
           >
             <div className="flex items-center gap-2 mb-4 bg-violet-950/20 p-2 rounded-xl">
               <Search className="w-4 h-4 text-zinc-400" />

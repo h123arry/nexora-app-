@@ -44,7 +44,7 @@ export default function VohSummaryButton({ content }: VohSummaryButtonProps) {
       </button>
       
       {showTooltip && summary && (
-        <div className="absolute z-50 bottom-full left-0 mb-2 w-64 p-3 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white shadow-xl animate-in fade-in zoom-in">
+        <div className="absolute z-50 bottom-full left-0 mb-2 w-64 p-3 bg-zinc-900 border border-zinc-700 rounded-xl text-xs text-white shadow-md animate-in fade-in zoom-in">
           <div className="flex items-center gap-1.5 mb-1 text-violet-400 font-bold text-[11px]">
             <VohIcon size={13} animated variant="brand" />
             <span>Nexora AI Summary</span>

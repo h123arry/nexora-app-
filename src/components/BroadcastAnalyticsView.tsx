@@ -82,13 +82,13 @@ export default function BroadcastAnalyticsView({
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="relative w-full max-w-xl bg-[#09071a]/95 border border-violet-500/20 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[520px]"
+        className="relative w-full max-w-xl bg-[#09071a]/95 border border-white/10 rounded-3xl overflow-hidden shadow-md flex flex-col h-[520px]"
       >
         {/* Neon light beams */}
         <div className="absolute top-0 inset-x-0 h-40 bg-radial-at-t from-emerald-500/15 via-transparent to-transparent pointer-events-none" />
 
         {/* Modal Header */}
-        <div className="p-4 border-b border-violet-500/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm">
+        <div className="p-4 border-b border-white/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <div className="p-1.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
               <BarChart2 className="w-4 h-4" />
@@ -146,7 +146,7 @@ export default function BroadcastAnalyticsView({
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
                 {[
                   { label: 'Delivered', value: liveStats.delivered, icon: CheckCircle2, color: 'text-emerald-400', bg: 'bg-emerald-500/5 border-emerald-500/15' },
-                  { label: 'Read / Viewed', value: liveStats.read, icon: Smile, color: 'text-violet-400', bg: 'bg-violet-500/5 border-violet-500/15' },
+                  { label: 'Read / Viewed', value: liveStats.read, icon: Smile, color: 'text-violet-400', bg: 'bg-violet-500/5 border-white/10' },
                   { label: 'Pending', value: liveStats.pending, icon: Clock, color: 'text-amber-400', bg: 'bg-amber-500/5 border-amber-500/15' },
                   { label: 'Failed', value: liveStats.failed, icon: AlertCircle, color: 'text-pink-400', bg: 'bg-pink-500/5 border-pink-500/15' }
                 ].map((stat, idx) => (
@@ -295,7 +295,7 @@ export default function BroadcastAnalyticsView({
               </div>
 
               {/* Server metrics latency block */}
-              <div className="p-3 rounded-2xl bg-[#03010d] border border-violet-500/10 space-y-2">
+              <div className="p-3 rounded-2xl bg-[#03010d] border border-white/10 space-y-2">
                 <div className="flex justify-between items-center">
                   <span className="text-[8px] font-mono uppercase tracking-wider text-violet-400">Node Cluster Status</span>
                   <span className="text-[8px] font-mono text-emerald-400 px-1.5 py-0.5 rounded-full bg-emerald-500/5 border border-emerald-500/15 uppercase">OPTIMAL</span>
@@ -320,7 +320,7 @@ export default function BroadcastAnalyticsView({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-violet-500/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm shrink-0">
+        <div className="p-4 border-t border-white/10 flex items-center justify-between relative z-10 bg-[#060412]/80 backdrop-blur-sm shrink-0">
           <span className="text-[8px] font-mono text-zinc-500 uppercase">Broadcast Analytics</span>
           <button
             onClick={onClose}

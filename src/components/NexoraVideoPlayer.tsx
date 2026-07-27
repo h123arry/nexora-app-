@@ -1241,34 +1241,7 @@ export default function NexoraVideoPlayer({
               </div>
             )}
 
-             {/* 1. TOP-LEFT CREATOR INFORMATION OVERLAY */}
-             <div 
-               className="absolute top-4 left-4 sm:top-6 sm:left-6 z-20 flex flex-col items-start gap-1 text-left pointer-events-auto max-w-[calc(100%-140px)] cursor-pointer group/creator"
-               onClick={(e) => { e.stopPropagation(); onViewProfile?.(post.userId || ''); }}
-             >
-               <div className="flex items-center gap-1.5 flex-wrap">
-                 <span className="font-sans font-extrabold text-white text-base sm:text-lg tracking-tight drop-shadow-[0_2px_8px_rgba(0,0,0,0.85)] group-hover/creator:underline">
-                   {post.name}
-                 </span>
-                 <span className="font-mono text-xs sm:text-sm text-zinc-300 font-medium drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] group-hover/creator:text-white">
-                   @{post.username}
-                 </span>
-                 {post.isVerified && <VerificationBadge />}
-               </div>
-
-               {/* Sound / Music Info */}
-               <div 
-                 onClick={(e) => { e.stopPropagation(); onViewSound?.(post.id); }}
-                 className="flex items-center gap-1.5 mt-0.5 text-xs font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)] cursor-pointer hover:text-violet-300 transition-colors"
-               >
-                 <Music className="w-3.5 h-3.5 text-violet-400 shrink-0" />
-                 <span className="truncate max-w-[220px]">
-                   {post.soundTitle || `Original Sound - ${post.name}`}
-                 </span>
-               </div>
-             </div>
-
-             {/* 2. TOP-RIGHT MUTE / UNMUTE BUTTON */}
+             {/* TOP-RIGHT MUTE / UNMUTE BUTTON (Removed duplicate creator info overlay) */}
              <div className="absolute top-4 right-16 sm:top-6 sm:right-20 z-20">
                <button 
                  onClick={(e) => { e.stopPropagation(); handleVolumeToggle(); }}
@@ -1359,7 +1332,7 @@ export default function NexoraVideoPlayer({
                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
                        animate={{ opacity: 1, scale: 1, x: 0 }}
                        exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                       className="absolute right-14 bottom-0 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden font-sans py-1 text-left"
+                       className="absolute right-14 bottom-0 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-md z-50 overflow-hidden font-sans py-1 text-left"
                      >
                        {isOwnPost ? (
                          <>
@@ -1608,7 +1581,7 @@ export default function NexoraVideoPlayer({
             transition={{ duration: 0.4 }}
             className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
           >
-            <div className="p-4 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white shadow-xl">
+            <div className="p-4 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white shadow-md">
               {showPlayStateIndicator === 'play' ? (
                 <Play className="w-6 h-6 fill-current text-white ml-0.5" />
               ) : (
@@ -1626,7 +1599,7 @@ export default function NexoraVideoPlayer({
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.85 }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-3.5 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex flex-col items-center gap-2.5 z-50 shadow-2xl min-w-[120px]"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 px-4 py-3.5 rounded-2xl bg-black/85 backdrop-blur-md border border-white/10 flex flex-col items-center gap-2.5 z-50 shadow-md min-w-[120px]"
           >
             {hud.type === 'brightness' ? (
               <Sun className="w-5 h-5 text-amber-400" />
@@ -1661,7 +1634,7 @@ export default function NexoraVideoPlayer({
                 animate={{ scale: 1, y: 0 }}
                 exit={{ scale: 0.95, y: 15 }}
                 onClick={(e) => e.stopPropagation()}
-                className="w-full max-w-sm bg-[#0a071d]/95 border border-violet-500/25 p-5 rounded-3xl text-left shadow-2xl backdrop-blur-xl cursor-default"
+                className="w-full max-w-sm bg-[#0a071d]/95 border border-white/10 p-5 rounded-3xl text-left shadow-md backdrop-blur-xl cursor-default"
               >
                 <div className="flex items-center justify-between mb-4">
                   <span className="text-[10px] font-mono tracking-widest text-[#8B5CF6] font-extrabold uppercase flex items-center gap-1.5">
@@ -1683,8 +1656,8 @@ export default function NexoraVideoPlayer({
                       onClick={() => handleSaveToCollection(col)}
                       className={`w-full p-3 rounded-2xl text-left text-xs font-sans font-semibold flex items-center justify-between transition-all border cursor-pointer ${
                         savedCollectionForThis === col
-                          ? 'bg-violet-600/25 border-violet-500/40 text-violet-200'
-                          : 'bg-white/5 border-white/5 hover:border-violet-500/20 text-zinc-300 hover:text-white'
+                          ? 'bg-violet-600/25 border-white/10 text-violet-200'
+                          : 'bg-white/5 border-white/5 hover:border-white/10 text-zinc-300 hover:text-white'
                       }`}
                     >
                       <div className="flex items-center gap-2">
@@ -1705,7 +1678,7 @@ export default function NexoraVideoPlayer({
                     placeholder="New folder name..."
                     value={newCollectionName}
                     onChange={(e) => setNewCollectionName(e.target.value)}
-                    className="flex-1 bg-white/5 hover:bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-violet-500/40 font-sans"
+                    className="flex-1 bg-white/5 hover:bg-white/8 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-hidden focus:border-white/10 font-sans"
                   />
                   <button
                     onClick={handleCreateNewCollection}
@@ -1770,7 +1743,7 @@ export default function NexoraVideoPlayer({
               initial={{ scale: 0.95, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 15 }}
-              className="w-full max-w-sm bg-[#09071d] border border-violet-500/20 rounded-3xl p-6 shadow-2xl relative overflow-hidden flex flex-col items-center text-center"
+              className="w-full max-w-sm bg-[#09071d] border border-white/10 rounded-3xl p-6 shadow-md relative overflow-hidden flex flex-col items-center text-center"
             >
               {/* Decorative ambient background glow */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />

@@ -20,7 +20,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-emerald-950/40 via-teal-950/20 to-black border border-emerald-500/20 backdrop-blur-xl shadow-xl text-left">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-emerald-950/40 via-teal-950/20 to-black border border-emerald-500/20 backdrop-blur-xl shadow-md text-left">
         <div className="flex items-center gap-3">
           <div className="p-3 rounded-2xl bg-emerald-600/20 text-emerald-400 border border-emerald-500/30">
             <Wallet className="w-6 h-6" />
@@ -63,7 +63,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
       {/* Balance Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Card 1: NEX Tokens */}
-        <div className="p-6 rounded-3xl bg-linear-to-br from-emerald-950/60 to-black border border-emerald-500/30 shadow-xl relative overflow-hidden text-left space-y-4">
+        <div className="p-6 rounded-3xl bg-linear-to-br from-emerald-950/60 to-black border border-emerald-500/30 shadow-md relative overflow-hidden text-left space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
               <Coins className="w-4 h-4" /> NEX Tokens Balance
@@ -93,7 +93,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         </div>
 
         {/* Card 2: Creator Sparks */}
-        <div className="p-6 rounded-3xl bg-linear-to-br from-purple-950/60 to-black border border-purple-500/30 shadow-xl relative overflow-hidden text-left space-y-4">
+        <div className="p-6 rounded-3xl bg-linear-to-br from-purple-950/60 to-black border border-purple-500/30 shadow-md relative overflow-hidden text-left space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-xs font-mono font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="w-4 h-4" /> Creator Sparks
@@ -124,7 +124,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
       </div>
 
       {/* Transaction History Ledger */}
-      <div className="p-6 rounded-3xl bg-[#080614]/90 border border-white/10 shadow-xl text-left space-y-4">
+      <div className="p-6 rounded-3xl bg-[#080614]/90 border border-white/10 shadow-md text-left space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-white/5">
           <h3 className="text-sm font-sans font-bold text-white flex items-center gap-2">
             <History className="w-4 h-4 text-emerald-400" /> Recent Transactions

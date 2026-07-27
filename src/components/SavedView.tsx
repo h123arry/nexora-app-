@@ -49,15 +49,15 @@ export default function SavedView({
   return (
     <div className="w-full max-w-4xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/20 to-black border border-violet-500/20 backdrop-blur-xl shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/20 to-black border border-white/10 backdrop-blur-xl shadow-md">
         <div className="flex items-center gap-3">
-          <div className="p-3 rounded-2xl bg-violet-600/20 text-violet-400 border border-violet-500/30">
+          <div className="p-3 rounded-2xl bg-violet-600/20 text-violet-400 border border-white/10">
             <Bookmark className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-xl font-sans font-black tracking-tight text-white flex items-center gap-2">
               Saved Collection
-              <span className="text-xs font-mono font-bold text-violet-400 bg-violet-950/60 border border-violet-500/30 px-2.5 py-0.5 rounded-full">
+              <span className="text-xs font-mono font-bold text-violet-400 bg-violet-950/60 border border-white/10 px-2.5 py-0.5 rounded-full">
                 {displayPosts.length} Items
               </span>
             </h1>
@@ -112,7 +112,7 @@ export default function SavedView({
       <div className="space-y-4">
         {filteredItems.length === 0 ? (
           <div className="p-12 text-center rounded-3xl bg-white/5 border border-white/5 space-y-3">
-            <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-violet-500/20 text-violet-400 flex items-center justify-center mx-auto">
+            <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 text-violet-400 flex items-center justify-center mx-auto">
               <Bookmark className="w-6 h-6" />
             </div>
             <h3 className="text-sm font-bold text-white">No saved items found</h3>
@@ -126,7 +126,7 @@ export default function SavedView({
               key={post.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-3xl bg-[#0a0718]/80 border border-white/10 hover:border-violet-500/30 transition-all shadow-lg text-left relative group"
+              className="p-5 rounded-3xl bg-[#0a0718]/80 border border-white/10 hover:border-white/10 transition-all shadow-lg text-left relative group"
             >
               {/* Post author header */}
               <div className="flex items-center justify-between mb-3">
@@ -174,7 +174,7 @@ export default function SavedView({
 
               {/* Voice clip if present */}
               {post.voiceAudioUrl && (
-                <div className="mb-3 p-3 rounded-2xl bg-violet-950/30 border border-violet-500/20 flex items-center gap-3">
+                <div className="mb-3 p-3 rounded-2xl bg-violet-950/30 border border-white/10 flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-violet-600 text-white">
                     <Volume2 className="w-4 h-4" />
                   </div>
@@ -189,7 +189,7 @@ export default function SavedView({
               {post.tags && post.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-2 border-t border-white/5">
                   {post.tags.map(t => (
-                    <span key={t} className="text-[10px] font-mono text-violet-400 bg-violet-950/40 border border-violet-500/20 px-2 py-0.5 rounded-lg">
+                    <span key={t} className="text-[10px] font-mono text-violet-400 bg-violet-950/40 border border-white/10 px-2 py-0.5 rounded-lg">
                       #{t}
                     </span>
                   ))}

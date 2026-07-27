@@ -772,12 +772,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
           initial={{ opacity: 0, scale: 0.97, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 20 }}
-          className="w-full max-w-6xl h-[88vh] bg-[#05030f] border border-violet-500/25 rounded-3xl text-white shadow-2xl relative flex flex-col overflow-hidden"
+          className="w-full max-w-6xl h-[88vh] bg-[#05030f] border border-white/10 rounded-3xl text-white shadow-md relative flex flex-col overflow-hidden"
         >
           {/* Header Bar */}
           <div className="p-5 border-b border-white/5 flex items-center justify-between bg-black/40">
             <div className="flex items-center gap-3 text-left">
-              <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/25 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-white/10 flex items-center justify-center">
                 <HardDrive className="w-5 h-5 text-violet-400" />
               </div>
               <div>
@@ -836,7 +836,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     }}
                     className={`w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all text-xs cursor-pointer ${
                       isSelected 
-                        ? 'bg-violet-600/15 border border-violet-500/25 text-violet-200 font-bold' 
+                        ? 'bg-violet-600/15 border border-white/10 text-violet-200 font-bold' 
                         : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'
                     }`}
                   >
@@ -1168,7 +1168,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       {/* Conversations listing */}
                       <div className="space-y-3">
                         {filteredConversations.map(chat => (
-                          <div key={chat.id} className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-violet-500/20 transition-all">
+                          <div key={chat.id} className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-white/10 transition-all">
                             
                             {/* Avatar / details */}
                             <div className="flex items-center gap-3">
@@ -1554,7 +1554,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           }}
                           className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
                             downloads.compressionMode === opt.id 
-                              ? 'bg-violet-600/15 border-violet-500/40 text-white' 
+                              ? 'bg-violet-600/15 border-white/10 text-white' 
                               : 'bg-black/40 border-transparent text-zinc-500 hover:text-zinc-300'
                           }`}
                         >
@@ -1641,7 +1641,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                   destinations: { ...prev.destinations, [dest.key]: !val }
                                 }))}
                                 className={`p-2 rounded-xl text-left border text-[10.5px] transition-all cursor-pointer ${
-                                  val ? 'bg-violet-600/10 border-violet-500/30 text-white' : 'bg-black/30 border-transparent text-zinc-500 hover:text-zinc-400'
+                                  val ? 'bg-violet-600/10 border-white/10 text-white' : 'bg-black/30 border-transparent text-zinc-500 hover:text-zinc-400'
                                 }`}
                               >
                                 {dest.label}
@@ -1861,8 +1861,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                         </div>
 
                         {/* Startup Speed Card */}
-                        <div className="p-5 bg-gradient-to-br from-violet-950/20 to-black border border-violet-500/10 rounded-2xl flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-violet-600/10 border border-violet-500/25 flex items-center justify-center shrink-0">
+                        <div className="p-5 bg-gradient-to-br from-violet-950/20 to-black border border-white/10 rounded-2xl flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-violet-600/10 border border-white/10 flex items-center justify-center shrink-0">
                             <Activity className="w-5 h-5 text-violet-400 animate-pulse" />
                           </div>
                           <div className="text-left">
@@ -2144,7 +2144,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                   onClick={() => setPreloadConditions(prev => ({ ...prev, [cond.key]: !prev[cond.key as keyof typeof preloadConditions] }))}
                                   className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
                                     preloadConditions[cond.key as keyof typeof preloadConditions]
-                                      ? 'bg-violet-500/10 border-violet-500/20 text-violet-200 font-bold'
+                                      ? 'bg-violet-500/10 border-white/10 text-violet-200 font-bold'
                                       : 'bg-black/40 border-transparent text-zinc-500'
                                   }`}
                                 >
@@ -2282,7 +2282,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                           <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                             {cacheTable.slice(0, 5).map(cacheItem => (
-                              <div key={cacheItem.id} className="p-2.5 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between text-xs hover:border-violet-500/25 transition-all">
+                              <div key={cacheItem.id} className="p-2.5 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between text-xs hover:border-white/10 transition-all">
                                 <div>
                                   <span className="font-bold text-zinc-300 block">{cacheItem.name}</span>
                                   <div className="flex gap-2 text-[8px] font-mono text-zinc-500 mt-0.5">

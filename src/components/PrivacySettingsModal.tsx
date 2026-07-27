@@ -283,7 +283,7 @@ export default function PrivacySettingsModal({
     switch (val) {
       case 'everyone': return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
       case 'followers': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
-      case 'following': return 'bg-violet-500/10 text-violet-400 border-violet-500/20';
+      case 'following': return 'bg-violet-500/10 text-violet-400 border-white/10';
       case 'nobody': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
       case 'custom': return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
       default: return 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
@@ -374,7 +374,7 @@ export default function PrivacySettingsModal({
           initial={{ opacity: 0, scale: 0.97, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 20 }}
-          className="w-full max-w-6xl h-[88vh] bg-[#070514] border border-violet-500/25 rounded-3xl text-white shadow-2xl relative flex flex-col overflow-hidden"
+          className="w-full max-w-6xl h-[88vh] bg-[#070514] border border-white/10 rounded-3xl text-white shadow-md relative flex flex-col overflow-hidden"
         >
           {/* Main GHOST GLOW Header bar if active */}
           {discoverability.hiddenAccountMode && (
@@ -395,7 +395,7 @@ export default function PrivacySettingsModal({
           {/* Core Applet Titlebar */}
           <div className="p-5 border-b border-white/5 flex items-center justify-between bg-black/40">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-violet-500/25 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-xl bg-violet-600/10 border border-white/10 flex items-center justify-center">
                 <ShieldCheck className="w-5 h-5 text-violet-400" />
               </div>
               <div className="text-left">
@@ -451,7 +451,7 @@ export default function PrivacySettingsModal({
                     onClick={() => setActiveTab(cat.id as any)}
                     className={`w-full p-2.5 rounded-xl flex items-center justify-between text-left transition-all text-xs cursor-pointer ${
                       isSelected 
-                        ? 'bg-violet-600/15 border border-violet-500/25 text-violet-200 font-bold' 
+                        ? 'bg-violet-600/15 border border-white/10 text-violet-200 font-bold' 
                         : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent'
                     }`}
                   >
@@ -517,7 +517,7 @@ export default function PrivacySettingsModal({
                                 onClick={() => setPresence((prev: any) => ({ ...prev, [item.key]: aud }))}
                                 className={`px-2 py-1 rounded-lg text-[9px] font-mono capitalize transition-all cursor-pointer ${
                                   val === aud 
-                                    ? 'bg-violet-600/35 text-white font-bold border border-violet-500/30' 
+                                    ? 'bg-violet-600/35 text-white font-bold border border-white/10' 
                                     : 'text-zinc-500 hover:text-zinc-300'
                                 }`}
                               >
@@ -738,7 +738,7 @@ export default function PrivacySettingsModal({
                                 onClick={() => setMessaging((prev: any) => ({ ...prev, [item.key]: aud }))}
                                 className={`px-2 py-1 rounded-lg text-[9px] font-mono capitalize transition-all cursor-pointer ${
                                   val === aud 
-                                    ? 'bg-violet-600/35 text-white font-bold border border-violet-500/30' 
+                                    ? 'bg-violet-600/35 text-white font-bold border border-white/10' 
                                     : 'text-zinc-500 hover:text-zinc-300'
                                 }`}
                               >
@@ -823,7 +823,7 @@ export default function PrivacySettingsModal({
                                 onClick={() => setCalls((prev: any) => ({ ...prev, [item.key]: aud }))}
                                 className={`px-2 py-1 rounded-lg text-[9px] font-mono capitalize transition-all cursor-pointer ${
                                   val === aud 
-                                    ? 'bg-violet-600/35 text-white font-bold border border-violet-500/30' 
+                                    ? 'bg-violet-600/35 text-white font-bold border border-white/10' 
                                     : 'text-zinc-500 hover:text-zinc-300'
                                 }`}
                               >
@@ -855,7 +855,7 @@ export default function PrivacySettingsModal({
                           onClick={() => setCalls((prev: any) => ({ ...prev, unknownCallers: opt.id }))}
                           className={`p-2.5 rounded-xl text-left border transition-all cursor-pointer ${
                             calls.unknownCallers === opt.id 
-                              ? 'bg-violet-600/10 border-violet-500/40 text-white' 
+                              ? 'bg-violet-600/10 border-white/10 text-white' 
                               : 'bg-black/30 border-transparent text-zinc-500 hover:text-zinc-300'
                           }`}
                         >
@@ -1074,7 +1074,7 @@ export default function PrivacySettingsModal({
                           <div className="relative">
                             <button
                               onClick={() => handleUnblockUser(user.id)}
-                              className="px-2.5 py-1.5 bg-zinc-900 border border-white/10 hover:bg-violet-600/25 hover:border-violet-500/30 text-[10px] text-zinc-300 font-mono rounded-lg transition-all cursor-pointer"
+                              className="px-2.5 py-1.5 bg-zinc-900 border border-white/10 hover:bg-violet-600/25 hover:border-white/10 text-[10px] text-zinc-300 font-mono rounded-lg transition-all cursor-pointer"
                             >
                               Unblock
                             </button>
@@ -1149,7 +1149,7 @@ export default function PrivacySettingsModal({
                             onClick={() => setHiddenChats((prev: any) => ({ ...prev, protectionType: type.id }))}
                             className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer ${
                               hiddenChats.protectionType === type.id 
-                                ? 'bg-violet-600/10 border-violet-500/40 text-white' 
+                                ? 'bg-violet-600/10 border-white/10 text-white' 
                                 : 'bg-black/30 border-transparent text-zinc-500 hover:text-zinc-300'
                             }`}
                           >
@@ -1231,7 +1231,7 @@ export default function PrivacySettingsModal({
                                 <span className="text-[9.5px] text-zinc-500 font-mono">Location: {session.location} • IP: {session.ip} • Date: {session.date}</span>
                               </div>
                             </div>
-                            <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20">{session.status}</span>
+                            <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-white/10">{session.status}</span>
                           </div>
                         ))}
                       </div>

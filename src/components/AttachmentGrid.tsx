@@ -39,7 +39,7 @@ export default function AttachmentGrid({ onSendAttachment, onClose }: Attachment
   };
 
   return (
-    <div className="w-full bg-[#060410] border-t border-violet-500/15 p-4 rounded-t-3xl relative select-none">
+    <div className="w-full bg-[#060410] border-t border-white/10 p-4 rounded-t-3xl relative select-none">
       {/* Category selector row */}
       <div className="flex gap-1 overflow-x-auto no-scrollbar pb-3 border-b border-white/5">
         {[
@@ -70,7 +70,7 @@ export default function AttachmentGrid({ onSendAttachment, onClose }: Attachment
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => triggerSend('photo', { url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600', name: 'Cyberpunk Neon.png' })}
-              className="group relative h-20 rounded-xl overflow-hidden border border-white/5 hover:border-violet-500/30 cursor-pointer"
+              className="group relative h-20 rounded-xl overflow-hidden border border-white/5 hover:border-white/10 cursor-pointer"
             >
               <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150" alt="Cyberpunk" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
               <span className="absolute bottom-1 left-2 text-[9px] font-mono text-white/80 bg-black/40 px-1 rounded">Camera Roll</span>
@@ -94,7 +94,7 @@ export default function AttachmentGrid({ onSendAttachment, onClose }: Attachment
               <button
                 key={idx}
                 onClick={() => triggerSend('gif', { url: gif.url, name: gif.name })}
-                className="h-24 rounded-xl overflow-hidden border border-white/5 hover:border-violet-500/30 relative text-left group cursor-pointer"
+                className="h-24 rounded-xl overflow-hidden border border-white/5 hover:border-white/10 relative text-left group cursor-pointer"
               >
                 <img src={gif.url} alt={gif.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                 <span className="absolute bottom-0 inset-x-0 bg-black/70 p-1 text-[8px] font-mono text-white text-center truncate">{gif.name}</span>
@@ -109,7 +109,7 @@ export default function AttachmentGrid({ onSendAttachment, onClose }: Attachment
               <button
                 key={idx}
                 onClick={() => triggerSend('sticker', { url: sticker.url, name: sticker.name })}
-                className="flex flex-col items-center justify-center p-2 bg-[#09071c] hover:bg-violet-950/20 border border-white/5 hover:border-violet-500/30 rounded-xl cursor-pointer"
+                className="flex flex-col items-center justify-center p-2 bg-[#09071c] hover:bg-violet-950/20 border border-white/5 hover:border-white/10 rounded-xl cursor-pointer"
               >
                 <img src={sticker.url} alt={sticker.name} className="w-10 h-10 rounded-lg object-cover mb-1" />
                 <span className="text-[7.5px] font-sans text-zinc-400 text-center truncate w-full">{sticker.name}</span>
@@ -171,7 +171,7 @@ export default function AttachmentGrid({ onSendAttachment, onClose }: Attachment
               <button
                 key={loc.id}
                 onClick={() => triggerSend('location', loc)}
-                className="p-3 bg-[#09071c] hover:bg-violet-950/20 border border-white/5 hover:border-violet-500/20 rounded-xl text-left cursor-pointer"
+                className="p-3 bg-[#09071c] hover:bg-violet-950/20 border border-white/5 hover:border-white/10 rounded-xl text-left cursor-pointer"
               >
                 <div className="flex items-center gap-1 mb-1 text-cyan-400">
                   <MapPin className="w-3.5 h-3.5 shrink-0" />

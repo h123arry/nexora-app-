@@ -731,7 +731,7 @@ export default function MediaCreationEngine({
                 </button>
                 <button 
                   onClick={() => { saveAsDraftLocally(); onClose(); }}
-                  className="px-3 py-2 bg-violet-600/10 border border-violet-500/20 text-violet-300 hover:bg-violet-600/20 rounded-xl text-[10px] font-mono font-bold cursor-pointer transition-all"
+                  className="px-3 py-2 bg-violet-600/10 border border-white/10 text-violet-300 hover:bg-violet-600/20 rounded-xl text-[10px] font-mono font-bold cursor-pointer transition-all"
                 >
                   Save Draft
                 </button>
@@ -756,7 +756,7 @@ export default function MediaCreationEngine({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-52 flex items-center justify-center bg-black/90 p-4"
           >
-            <div className="bg-zinc-950 border border-violet-500/30 max-w-sm w-full rounded-2xl p-6 text-center space-y-4">
+            <div className="bg-zinc-950 border border-white/10 max-w-sm w-full rounded-2xl p-6 text-center space-y-4">
               <div className="w-12 h-12 bg-violet-500/10 text-violet-400 rounded-full flex items-center justify-center mx-auto">
                 <Camera className="w-6 h-6 animate-pulse" />
               </div>
@@ -785,7 +785,7 @@ export default function MediaCreationEngine({
 
       {/* 📦 Minimized State Overlay */}
       {isMinimized && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-violet-500/20 bg-zinc-950/95 backdrop-blur-md p-4 shadow-2xl space-y-3 animate-slideIn">
+        <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-md p-4 shadow-md space-y-3 animate-slideIn">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
@@ -818,14 +818,14 @@ export default function MediaCreationEngine({
         initial={{ scale: 0.98, opacity: 0, y: 10 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.98, opacity: 0, y: 10 }}
-        className={`relative w-full max-w-2xl rounded-3xl p-5 md:p-6 border shadow-2xl flex flex-col max-h-[92vh] ${getModalBg()}`}
+        className={`relative w-full max-w-2xl rounded-3xl p-5 md:p-6 border shadow-md flex flex-col max-h-[92vh] ${getModalBg()}`}
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
         <div className="flex justify-between items-start border-b border-zinc-800/60 pb-3 mb-4 shrink-0">
           <div>
             <div className="flex items-center gap-2">
-              <div className="p-1.5 bg-violet-600/10 border border-violet-500/20 rounded-lg text-violet-400">
+              <div className="p-1.5 bg-violet-600/10 border border-white/10 rounded-lg text-violet-400">
                 <VohIcon size={18} animated glow variant="brand" />
               </div>
               <div>
@@ -911,7 +911,7 @@ export default function MediaCreationEngine({
                     <div 
                       key={d.id}
                       onClick={() => handleSelectDraft(d)}
-                      className="p-3 bg-[#0a0a0f] border border-zinc-800 hover:border-violet-500/20 rounded-xl cursor-pointer transition-all group relative overflow-hidden"
+                      className="p-3 bg-[#0a0a0f] border border-zinc-800 hover:border-white/10 rounded-xl cursor-pointer transition-all group relative overflow-hidden"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[9px] font-mono text-violet-400 uppercase bg-violet-950/25 px-2 py-0.5 rounded border border-violet-800/20">{d.type}</span>
@@ -947,7 +947,7 @@ export default function MediaCreationEngine({
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
                       { id: 'text', icon: FileText, label: 'Text Post', color: 'border-blue-500/10 hover:border-blue-500/30 text-blue-400', desc: 'Symmetric layout micro-blog' },
-                      { id: 'photo', icon: Camera, label: 'Photo snapshot', color: 'border-violet-500/10 hover:border-violet-500/30 text-violet-400', desc: 'Capture or Import images' },
+                      { id: 'photo', icon: Camera, label: 'Photo snapshot', color: 'border-white/10 hover:border-white/10 text-violet-400', desc: 'Capture or Import images' },
                       { id: 'carousel', icon: FileImage, label: 'Carousel (Multiple)', color: 'border-fuchsia-500/10 hover:border-fuchsia-500/30 text-fuchsia-400', desc: 'Multiple images layout' },
                       { id: 'video', icon: Video, label: 'Interactive Video', color: 'border-cyan-500/10 hover:border-cyan-500/30 text-cyan-400', desc: 'Publish full standard video' },
                       { id: 'reel', icon: Sparkle, label: 'Reel (Short Video)', color: 'border-pink-500/10 hover:border-pink-500/30 text-pink-400', desc: 'TikTok-style short video' },
@@ -987,7 +987,7 @@ export default function MediaCreationEngine({
                   {activeMode === 'photo' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Drag upload zone */}
-                      <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-zinc-950/20 hover:border-violet-500/30 transition-all flex flex-col items-center justify-center">
+                      <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-zinc-950/20 hover:border-white/10 transition-all flex flex-col items-center justify-center">
                         <FileImage className="w-8 h-8 text-zinc-500 animate-bounce" />
                         <div className="space-y-1">
                           <p className="text-xs text-zinc-300 font-bold">Upload Snapshot</p>
@@ -1092,7 +1092,7 @@ export default function MediaCreationEngine({
                   {activeMode === 'reel' && (
                     /* REEL INTERACTIVE CAMERA */
                     <div className="space-y-3">
-                      <div className="relative aspect-[9/16] max-w-[240px] mx-auto rounded-2xl overflow-hidden bg-black border border-zinc-800 flex flex-col justify-between p-3.5 shadow-2xl">
+                      <div className="relative aspect-[9/16] max-w-[240px] mx-auto rounded-2xl overflow-hidden bg-black border border-zinc-800 flex flex-col justify-between p-3.5 shadow-md">
                         <div className="z-10 flex justify-between items-center text-[8px] font-mono text-zinc-400">
                           <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">RECORDING CONSOLE</span>
                           <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-zinc-900 rounded-full text-white">
@@ -1116,7 +1116,7 @@ export default function MediaCreationEngine({
                               STOP
                             </button>
                           ) : (
-                            <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-fuchsia-600 to-pink-500 rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-xl cursor-pointer">
+                            <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-fuchsia-600 to-pink-500 rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-md cursor-pointer">
                               START
                             </button>
                           )}
@@ -1328,7 +1328,7 @@ export default function MediaCreationEngine({
                         <span className="text-[9px] font-mono text-zinc-500 uppercase block">Stickers & Labels overlays</span>
                         <div className="flex gap-2">
                           {['🔥', '⚡', '✨', '🏆', '👾', '🚀', '💯'].map((emo) => (
-                            <button key={emo} onClick={() => setStickerOverlay(stickerOverlay === emo ? null : emo)} className={`text-lg p-1 hover:scale-110 transition-transform ${stickerOverlay === emo ? 'bg-violet-600/20 rounded-lg border border-violet-500/30' : ''}`}>
+                            <button key={emo} onClick={() => setStickerOverlay(stickerOverlay === emo ? null : emo)} className={`text-lg p-1 hover:scale-110 transition-transform ${stickerOverlay === emo ? 'bg-violet-600/20 rounded-lg border border-white/10' : ''}`}>
                               {emo}
                             </button>
                           ))}
@@ -1359,7 +1359,7 @@ export default function MediaCreationEngine({
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
                       placeholder="Type details... use #developer, #systemsdesign or tag @voh to explore."
-                      className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-violet-500/20 resize-none leading-relaxed"
+                      className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-white/10 resize-none leading-relaxed"
                     />
                     <div className="flex justify-between text-[9px] font-mono text-zinc-500 px-1">
                       <span>Character metrics: {caption.length} / 500</span>
@@ -1385,7 +1385,7 @@ export default function MediaCreationEngine({
                           key={assist.prompt}
                           onClick={() => handleAiWritingAssistance(assist.prompt)}
                           disabled={loadingTranscript}
-                          className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-600/10 border border-violet-500/20 hover:border-violet-500/40 text-violet-300 rounded-lg transition-all disabled:opacity-50"
+                          className="px-2.5 py-1 text-[9.5px] font-sans bg-violet-600/10 border border-white/10 hover:border-white/10 text-violet-300 rounded-lg transition-all disabled:opacity-50"
                         >
                           {assist.label}
                         </button>
@@ -1428,7 +1428,7 @@ export default function MediaCreationEngine({
                         className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
                       />
                       {locationSuggestions.length > 0 && (
-                        <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-xl max-h-32 overflow-y-auto">
+                        <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md max-h-32 overflow-y-auto">
                           {locationSuggestions.map(city => (
                             <div key={city} onClick={() => { setLocation(city); setLocationSuggestions([]); }} className="px-3 py-1.5 hover:bg-zinc-800 text-xs text-white cursor-pointer">{city}</div>
                           ))}
@@ -1462,7 +1462,7 @@ export default function MediaCreationEngine({
                   <div className="p-4 bg-zinc-950 border border-zinc-800/80 rounded-2xl space-y-3.5 text-left">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2.5">
-                        <img src={currentUser.avatar} className="w-9 h-9 rounded-full object-cover border border-violet-500/20" />
+                        <img src={currentUser.avatar} className="w-9 h-9 rounded-full object-cover border border-white/10" />
                         <div>
                           <div className="flex items-center gap-1">
                             <span className="text-xs font-black text-white">{currentUser.name}</span>
@@ -1471,7 +1471,7 @@ export default function MediaCreationEngine({
                           <span className="text-[10px] text-zinc-500 font-mono">@{currentUser.username}</span>
                         </div>
                       </div>
-                      <span className="text-[9px] font-mono text-violet-400 bg-violet-950/25 px-2 py-0.5 rounded border border-violet-500/20">Preview Card</span>
+                      <span className="text-[9px] font-mono text-violet-400 bg-violet-950/25 px-2 py-0.5 rounded border border-white/10">Preview Card</span>
                     </div>
 
                     <p className="text-xs text-zinc-200 leading-relaxed font-sans">{caption || "Write caption text in previous step... #developer #systemsdesign"}</p>

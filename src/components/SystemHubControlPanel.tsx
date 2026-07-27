@@ -231,7 +231,7 @@ export default function SystemHubControlPanel({
         className={`relative w-full max-w-2xl rounded-[32px] ${
           isHighContrast 
             ? 'bg-[#000000] border-2 border-white text-white shadow-none' 
-            : 'bg-[#0d0a1c]/95 border border-violet-500/25 text-purple-100 shadow-[0_0_50px_rgba(139,92,246,0.15)]'
+            : 'bg-[#0d0a1c]/95 border border-white/10 text-purple-100 shadow-[0_0_50px_rgba(139,92,246,0.15)]'
         } overflow-hidden z-10 flex flex-col md:flex-row max-h-[90vh] md:max-h-[80vh] min-h-[500px] select-none`}
       >
         
@@ -278,7 +278,7 @@ export default function SystemHubControlPanel({
                       isSelected
                         ? isHighContrast
                           ? 'bg-white text-black font-black'
-                          : 'bg-violet-600/20 border border-violet-500/40 text-white'
+                          : 'bg-violet-600/20 border border-white/10 text-white'
                         : isHighContrast
                           ? 'hover:bg-white/10 text-white'
                           : 'bg-transparent border border-transparent text-zinc-400 hover:text-white hover:bg-white/3'
@@ -360,7 +360,7 @@ export default function SystemHubControlPanel({
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-[#0c0a15] text-purple-400 border-violet-500/40', style: 'border-[#8B5CF6]/40 text-[#8B5CF6]' },
+                      { id: 'neon-cyber', label: 'Cyber Void', color: 'bg-[#0c0a15] text-purple-400 border-white/10', style: 'border-[#8B5CF6]/40 text-[#8B5CF6]' },
                       { id: 'stealth-dark', label: 'Stealth Slate', color: 'bg-zinc-900 text-zinc-400 border-zinc-700', style: 'border-zinc-500 text-zinc-300' },
                       { id: 'emerald-glass', label: 'Matrix Emerald', color: 'bg-[#040e09] text-emerald-400 border-emerald-950', style: 'border-emerald-500 text-emerald-400' },
                       { id: 'platinum-light', label: 'Ivory Platinum', color: 'bg-white text-slate-900 border-slate-200', style: 'border-slate-400 text-slate-800' }
@@ -614,7 +614,7 @@ export default function SystemHubControlPanel({
                       screenReaderVoice
                         ? isHighContrast
                           ? 'border-2 border-white bg-white text-black font-black'
-                          : 'bg-violet-500/15 border-violet-500/30 text-violet-400'
+                          : 'bg-violet-500/15 border-white/10 text-violet-400'
                         : 'bg-white/[0.02] hover:bg-white/[0.04] border-white/5 text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -655,7 +655,7 @@ export default function SystemHubControlPanel({
                           preferredLanguage === lang.id
                             ? isHighContrast
                               ? 'bg-white text-black border-white'
-                              : 'bg-violet-600/20 border-violet-500/30 text-white'
+                              : 'bg-violet-600/20 border-white/10 text-white'
                             : isHighContrast
                               ? 'border-white/20 bg-black text-white hover:bg-white/10'
                               : 'bg-transparent border-white/5 text-zinc-500 hover:text-white'
@@ -742,7 +742,7 @@ export default function SystemHubControlPanel({
                       lazyLoadImages
                         ? isHighContrast
                           ? 'border-2 border-white bg-white text-black font-black'
-                          : 'bg-violet-600/20 border-violet-500/40 text-violet-300'
+                          : 'bg-violet-600/20 border-white/10 text-violet-300'
                         : 'bg-white/[0.02] hover:bg-white/[0.04] border-white/5 text-zinc-400 hover:text-white'
                     }`}
                   >
@@ -837,7 +837,7 @@ export default function SystemHubControlPanel({
                 
                 {/* 1. Privacy Statement Card */}
                 <div className={`p-4 rounded-2xl ${
-                  isHighContrast ? 'border border-white bg-black' : 'bg-violet-600/5 border border-violet-500/10'
+                  isHighContrast ? 'border border-white bg-black' : 'bg-violet-600/5 border border-white/10'
                 } space-y-2`}>
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-violet-400" />
