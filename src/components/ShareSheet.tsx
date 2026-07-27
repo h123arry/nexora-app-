@@ -291,27 +291,9 @@ export default function ShareSheet({
           </button>
         </div>
 
-        {/* TOP SECTION: Horizontally scrollable list of friends */}
-        <div className="mb-6 bg-black/40 border border-white/10 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3 px-0.5">
-            <span className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase">Send via Nexora Direct</span>
-            {selectedRecipients.length > 0 && (
-              <button
-                onClick={handleSendToSelected}
-                className="px-3 py-1 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-1.5 cursor-pointer animate-fade-in"
-              >
-                <Send className="w-3 h-3" />
-                Send ({selectedRecipients.length})
-              </button>
-            )}
-          </div>
-
-          {realChats.length === 0 ? (
-            <div className="py-4 text-center">
-              <p className="text-xs text-zinc-400 font-sans">No recent conversations yet.</p>
-              <p className="text-[10px] text-zinc-500 font-mono mt-0.5">Start chatting in Inbox to share directly with friends.</p>
-            </div>
-          ) : (
+        {realChats.length > 0 && (
+          <div className="mb-6">
+            <span className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1 block">Nexora Friends</span>
             <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
               {realChats.map((chat) => {
                 const isSelected = selectedRecipients.includes(chat.id);
@@ -321,61 +303,56 @@ export default function ShareSheet({
                   <div 
                     key={chat.id} 
                     onClick={() => !isSent && handleToggleSelectRecipient(chat.id)}
-                    className="flex flex-col items-center gap-1.5 shrink-0 relative w-16 cursor-group group"
+                    className="flex flex-col items-center gap-1.5 shrink-0 w-16 cursor-pointer group"
                   >
                     <div className="relative">
                       <img 
                         src={chat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'} 
                         alt={chat.partnerName || 'User'} 
-                        className={`h-14 w-14 rounded-2xl object-cover border-2 transition-all ${
-                          isSelected ? 'border-violet-500 scale-105 shadow-[0_0_15px_rgba(139,92,246,0.4)]' : 'border-white/10 hover:border-violet-400'
+                        className={`h-14 w-14 rounded-full object-cover border-2 transition-all ${
+                          isSelected ? 'border-violet-500 scale-105' : 'border-transparent'
                         }`} 
                         referrerPolicy="no-referrer"
                       />
-                      {chat.isPartnerOnline && (
-                        <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black" />
-                      )}
                       {isSelected && (
-                        <div className="absolute inset-0 bg-violet-600/40 rounded-2xl flex items-center justify-center backdrop-blur-[1px]">
+                        <div className="absolute inset-0 bg-violet-600/40 rounded-full flex items-center justify-center backdrop-blur-[1px]">
                           <Check className="w-6 h-6 text-white stroke-[3]" />
                         </div>
                       )}
-                      {isSent && (
-                        <div className="absolute inset-0 bg-emerald-600/85 rounded-2xl flex items-center justify-center">
-                          <Check className="w-5 h-5 text-white" />
-                        </div>
-                      )}
                     </div>
-
-                    <div className="flex items-center gap-1 w-full justify-center">
-                      <span className="text-[11px] font-sans font-medium text-zinc-300 truncate text-center max-w-[56px]">
-                        {chat.partnerName || 'User'}
-                      </span>
-                      {chat.isVerified && (
-                        <ShieldCheck className="w-3 h-3 text-violet-400 shrink-0" />
-                      )}
-                    </div>
+                    <span className="text-[10px] font-sans font-medium text-zinc-300 truncate w-full text-center">
+                      {chat.partnerName || 'User'}
+                    </span>
                   </div>
                 );
               })}
             </div>
-          )}
-        </div>
+            {selectedRecipients.length > 0 && (
+              <button
+                onClick={handleSendToSelected}
+                className="w-full mt-3 py-3.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Send className="w-4 h-4" />
+                Send to {selectedRecipients.length} friends
+              </button>
+            )}
+          </div>
+        )}
 
         {/* EXTERNAL SHARING APPS GRID */}
         <div className="mb-6">
           <h4 className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1">Share To External App</h4>
-          <div className="grid grid-cols-4 gap-2.5">
+          <div className="grid grid-cols-4 gap-4">
             {socialDestinations.map((chan) => (
               <button
                 key={chan.id}
                 onClick={chan.action}
-                className={`flex flex-col items-center justify-center p-3 rounded-2xl text-xs transition-all border ${chan.bg} active:scale-95 cursor-pointer shadow-sm group`}
+                className="flex flex-col items-center gap-2 cursor-pointer group"
               >
-                <div className="w-10 h-10 rounded-xl bg-black/40 flex items-center justify-center mb-1.5 group-hover:scale-110 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
                   {chan.icon}
                 </div>
-                <span className="font-sans font-bold text-[11px] truncate max-w-full text-zinc-200">{chan.name}</span>
+                <span className="font-sans font-medium text-[10px] text-zinc-300 truncate w-full text-center">{chan.name}</span>
               </button>
             ))}
           </div>
