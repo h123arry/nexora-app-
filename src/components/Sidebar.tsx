@@ -8,8 +8,8 @@ import VohIcon from './VohIcon';
 
 interface SidebarProps {
   currentUser: User;
-  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live';
-  setActiveTab: (tab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live') => void;
+  activeTab: string;
+  setActiveTab: (tab: any) => void;
   unreadMessagesCount: number;
   unreadNotificationsCount: number;
   theme: ThemeMood;
@@ -72,15 +72,13 @@ export default function Sidebar({
         </div>
       </div>
 
-      {/* 🟣 Simplified Social Media Navigation Menu */}
+      {/* 🟣 Unified Social Media Navigation Menu */}
       <div className="flex flex-col gap-2.5 mb-5 p-1">
         {[
           { id: 'feed', label: 'Home', desc: 'Feed', icon: Home, count: 0 },
           { id: 'explore', label: 'Search', desc: 'Explore', icon: Search, count: 0 },
-          { id: 'communities', label: 'Hub', desc: 'Communities', icon: Compass, count: 0 },
-          { id: 'nida', label: 'AI', desc: 'Assistant', icon: Sparkles, count: 0 },
+          { id: 'menu_gateway', label: 'Navigation ☰', desc: 'All Destinations', icon: Sliders, isMenu: true, count: unreadMessagesCount + unreadNotificationsCount },
           { id: 'create_btn', label: 'Create', desc: 'Post', icon: PlusCircle, isCreate: true, count: 0 },
-          { id: 'inbox', label: 'Inbox', desc: 'Messages', icon: MessageSquare, count: unreadMessagesCount + unreadNotificationsCount },
           { id: 'profile', label: 'Profile', desc: 'Account', icon: UserIcon, count: 0 }
         ].map((item) => {
           const isActive = activeTab === item.id;
@@ -92,6 +90,8 @@ export default function Sidebar({
               onClick={() => {
                 if (item.isCreate) {
                   onOpenCreatePost();
+                } else if (item.isMenu) {
+                  window.dispatchEvent(new CustomEvent('toggleNavMenu'));
                 } else {
                   setActiveTab(item.id as any);
                 }
@@ -102,12 +102,8 @@ export default function Sidebar({
                   : 'bg-black/35 border-current/5 hover:border-violet-500/20 text-current/70 hover:bg-violet-950/10'
               }`}
             >
-              <div className={`p-1.5 rounded-lg transition-all duration-300 ${isActive ? 'bg-violet-600/20 text-violet-400 scale-105' : 'bg-current/5 text-current/60 group-hover:scale-105 group-hover:text-violet-300'}`}>
-                {item.id === 'nida' ? (
-                  <VohIcon size={18} animated={isActive} variant={isActive ? "brand" : "white"} />
-                ) : (
-                  <Icon className="w-4.5 h-4.5" />
-                )}
+              <div className={`p-1.5 rounded-lg transition-all duration-300 ${isActive || item.isMenu ? 'bg-violet-600/20 text-violet-400 scale-105' : 'bg-current/5 text-current/60 group-hover:scale-105 group-hover:text-violet-300'}`}>
+                <Icon className="w-4.5 h-4.5" />
               </div>
               <div className="flex-1 overflow-hidden">
                 <span className="block text-[11px] font-sans tracking-wide font-black uppercase transition-colors duration-300 group-hover:text-violet-300">

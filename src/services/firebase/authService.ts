@@ -223,6 +223,50 @@ export class AuthService {
   }
 
   /**
+   * Dispatches a secure server-side email OTP for verification or password reset
+   */
+  static async sendEmailOtp(
+    email: string, 
+    purpose: 'VERIFY_EMAIL' | 'PASSWORD_RESET' | 'IDENTITY_CONFIRMATION' = 'VERIFY_EMAIL',
+    userName?: string
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await fetch('/api/auth/send-email-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, purpose, userName })
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to send verification code.');
+    }
+
+    return data;
+  }
+
+  /**
+   * Verifies submitted OTP code against secure server hash
+   */
+  static async verifyEmailOtp(
+    email: string,
+    code: string,
+    purpose: 'VERIFY_EMAIL' | 'PASSWORD_RESET' | 'IDENTITY_CONFIRMATION' = 'VERIFY_EMAIL'
+  ): Promise<{ success: boolean; message: string }> {
+    const response = await fetch('/api/auth/verify-email-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code, purpose })
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Verification failed.');
+    }
+
+    return data;
+  }
+
+  /**
    * Real Password Reset via Firebase Auth Email Link
    */
   static async sendPasswordReset(email: string): Promise<boolean> {

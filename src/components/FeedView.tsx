@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity } from 'lucide-react';
+import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Menu } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -1868,28 +1868,29 @@ export default function FeedView({
             })}
           </div>
 
-          {/* Right: Exactly two icons (Bell -> Heart) */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Right: Search icon & Compact Menu button */}
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'activity' } }));
+                window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'explore' } }));
               }}
-              className="relative p-2.5 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none min-h-[44px] min-w-[44px]"
-              title="Notifications"
+              className="p-2.5 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[40px] min-w-[40px] active:scale-95"
+              title="Search"
+              aria-label="Search Nexora"
             >
-              <Bell className="w-5 h-5 stroke-[1.75] text-zinc-300" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-pink-500 rounded-full" />
+              <Search className="w-5 h-5 stroke-[1.75] text-zinc-300" />
             </button>
 
             <button
               onClick={() => {
-                window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'activity' } }));
+                window.dispatchEvent(new CustomEvent('toggleNavMenu'));
               }}
-              className="relative p-2.5 text-zinc-300 hover:text-white transition-colors cursor-pointer flex items-center justify-center focus:outline-none min-h-[44px] min-w-[44px]"
-              title="Activity & Likes"
+              className="relative flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border border-white/10 hover:border-violet-500/40 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer active:scale-95 text-xs font-sans font-medium group"
+              title="Open Navigation Menu"
+              aria-label="Navigation Menu"
             >
-              <Heart className="w-5 h-5 stroke-[1.75] text-zinc-300 fill-none" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-violet-500 rounded-full" />
+              <Menu className="w-4 h-4 stroke-[2.2] text-zinc-200 group-hover:text-violet-300 transition-colors" />
+              <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-violet-400 transition-transform duration-200" />
             </button>
           </div>
         </div>

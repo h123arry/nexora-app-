@@ -43,6 +43,7 @@ import NotificationsView from './components/NotificationsView';
 import WorldPulseView from './components/WorldPulseView';
 import MatrixView from './components/MatrixView';
 import AuthView from './components/AuthView';
+import SlideDownMenu from './components/SlideDownMenu';
 import NexoraPremiumLogo from './components/NexoraPremiumLogo';
 import NexoraBranding from './components/NexoraBranding';
 import AdminDashboardView from './components/AdminDashboardView';
@@ -56,6 +57,9 @@ import LiveView from './components/LiveView';
 import SystemHubControlPanel from './components/SystemHubControlPanel';
 import NidaView from './components/NidaView';
 import CommunitiesHubView from './components/CommunitiesHubView';
+import SavedView from './components/SavedView';
+import WalletView from './components/WalletView';
+import SettingsView from './components/SettingsView';
 import NexoraLoader from './components/NexoraLoader';
 import { ProfileEngine } from './services/voh/profileEngine';
 
@@ -492,7 +496,45 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'settings'>('feed');
+  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+
+  // Global scroll position memory across all destination tabs
+  const pageScrollPositionsRef = useRef<Record<string, number>>({});
+  const prevPageRef = useRef<string>('feed');
+
+  useEffect(() => {
+    pageScrollPositionsRef.current[prevPageRef.current] = window.scrollY || document.documentElement.scrollTop || 0;
+    prevPageRef.current = activeTab;
+
+    const restoredY = pageScrollPositionsRef.current[activeTab] || 0;
+    const timer = setTimeout(() => {
+      window.scrollTo({ top: restoredY, behavior: 'instant' });
+    }, 40);
+
+    return () => clearTimeout(timer);
+  }, [activeTab]);
+
+  // Unified navigation custom event listeners
+  useEffect(() => {
+    const handleToggleNav = () => {
+      setIsNavMenuOpen(prev => !prev);
+    };
+    const handleChangeTab = (e: any) => {
+      if (e.detail?.tab) {
+        setActiveTab(e.detail.tab);
+        if (e.detail.subTab) {
+          setMatrixSubTabRedirect(e.detail.subTab);
+        }
+      }
+    };
+    window.addEventListener('toggleNavMenu', handleToggleNav);
+    window.addEventListener('changeTab', handleChangeTab);
+    return () => {
+      window.removeEventListener('toggleNavMenu', handleToggleNav);
+      window.removeEventListener('changeTab', handleChangeTab);
+    };
+  }, []);
 
   // Pause any playing videos immediately when switching main tabs
   useEffect(() => {
@@ -1045,12 +1087,18 @@ export default function App() {
         if (customEvent.detail.subTab) {
           setMatrixSubTabRedirect(customEvent.detail.subTab);
         }
+        setIsNavMenuOpen(false);
       }
+    };
+
+    const handleToggleNavMenu = () => {
+      setIsNavMenuOpen(prev => !prev);
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('changeTab', handleChangeTab);
+    window.addEventListener('toggleNavMenu', handleToggleNavMenu);
 
     // If a new user just signed up and we missed beforeinstallprompt (or browser doesn't support),
     // still display the setup guidance prompt so they can learn how to install!
@@ -1064,6 +1112,7 @@ export default function App() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('changeTab', handleChangeTab);
+      window.removeEventListener('toggleNavMenu', handleToggleNavMenu);
     };
   }, []);
 
@@ -1596,10 +1645,19 @@ export default function App() {
   // 8. Studio profile settings update
   const handleUpdateProfile = (updatedData: Partial<User>) => {
     setCurrentUser(prev => {
-      const updatedUser = {
+      const freshUser = {
         ...prev,
         ...updatedData
       };
+
+      // Invalidate profile cache so ProfileView receives fresh data
+      ProfileEngine.invalidateProfile(freshUser.id);
+
+      // Update global user map so all views pick up the updated profile instantly
+      setGlobalUsersMap(prevMap => ({
+        ...prevMap,
+        [freshUser.id]: freshUser
+      }));
 
       // Propagate updates in real-time to posts and comments authored by the user
       setPosts(prevPosts => {
@@ -1610,6 +1668,7 @@ export default function App() {
             if (updatedData.name !== undefined) newPost.name = updatedData.name;
             if (updatedData.username !== undefined) newPost.username = updatedData.username;
             if (updatedData.avatar !== undefined) newPost.avatar = updatedData.avatar;
+            if (updatedData.isVerified !== undefined) newPost.isVerified = updatedData.isVerified;
           }
 
           if (post.comments && post.comments.length > 0) {
@@ -1620,8 +1679,6 @@ export default function App() {
                 if (updatedData.username !== undefined) nextComment.username = updatedData.username;
                 if (updatedData.avatar !== undefined) nextComment.avatar = updatedData.avatar;
                 return nextComment;
-// Wait, let's just do it at the end of the handler
-
               }
               return comment;
             });
@@ -1631,10 +1688,11 @@ export default function App() {
         });
       });
 
-      return updatedUser;
-    });
-    saveUserToDb({ ...currentUser, ...updatedData });
+      // Save to database/sync engine
+      saveUserToDb(freshUser);
 
+      return freshUser;
+    });
   };
 
   // 8.5. Identity Switcher
@@ -1826,6 +1884,17 @@ export default function App() {
 
   return (
     <div id="nexora-master-wrapper" className={`${getThemeWrapperClass(theme)} transition-colors duration-500`}>
+      {/* 🧭 Unified Navigation Menu Drawer Overlay */}
+      <SlideDownMenu
+        isOpen={isNavMenuOpen}
+        onClose={() => setIsNavMenuOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        matrixSubTabRedirect={matrixSubTabRedirect}
+        unreadMessagesCount={unreadMessagesCount}
+        unreadNotificationsCount={unreadNotificationsCount}
+      />
+
       <div className={activeTab === 'feed' ? "w-full h-screen md:h-[100dvh] relative overflow-hidden" : "w-full min-h-screen relative overflow-hidden"}>
         
         {/* Main application Grid */}
@@ -2027,6 +2096,30 @@ export default function App() {
                     <CreatorDashboardView
                       currentUser={getRichUser(currentUser)}
                       posts={resolvedPosts}
+                    />
+                  )}
+
+                  {activeTab === 'saved' && (
+                    <SavedView
+                      currentUser={getRichUser(currentUser)}
+                      posts={resolvedPosts}
+                      userBookmarks={userBookmarks}
+                      onBookmarkPost={handleBookmarkPost}
+                      onViewProfile={handleViewProfile}
+                    />
+                  )}
+
+                  {activeTab === 'wallet' && (
+                    <WalletView
+                      currentUser={getRichUser(currentUser)}
+                    />
+                  )}
+
+                  {activeTab === 'settings' && (
+                    <SettingsView
+                      currentUser={getRichUser(currentUser)}
+                      theme={theme}
+                      setTheme={setTheme}
                     />
                   )}
                 </motion.div>
@@ -3100,36 +3193,51 @@ export default function App() {
         )}
       </AnimatePresence>
 
+      {/* Slide-Down Navigation Menu */}
+      <SlideDownMenu
+        isOpen={isNavMenuOpen}
+        onClose={() => setIsNavMenuOpen(false)}
+        activeTab={activeTab}
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setViewedUser(null);
+        }}
+        unreadMessagesCount={unreadMessagesCount}
+        unreadNotificationsCount={unreadNotificationsCount}
+      />
+
       {/* Sleek unified bottom navigation bar (primary app navigation for all sizes) */}
       <div 
         id="nexora-unified-bottom-nav"
-        className="fixed bottom-0 md:bottom-6 inset-x-0 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-[#06040f]/95 border-t md:border border-violet-500/15 md:rounded-2xl backdrop-blur-md z-40 py-2 px-6 flex justify-between items-center text-current/60 shadow-[0_-5px_25px_rgba(139,92,246,0.2)] md:shadow-[0_10px_35px_rgba(0,0,0,0.9)] pb-safe"
+        className="fixed bottom-0 md:bottom-6 inset-x-0 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-[#06040f]/95 border-t md:border border-violet-500/15 md:rounded-2xl backdrop-blur-md z-40 py-2 px-5 flex justify-between items-center text-current/60 shadow-[0_-5px_25px_rgba(139,92,246,0.2)] md:shadow-[0_10px_35px_rgba(0,0,0,0.9)] pb-safe"
       >
+        {/* 1. 🏠 Home */}
         <button 
           onClick={() => {
             setActiveTab('feed');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-3 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'feed' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-violet-500/10' : 'hover:text-current'}`}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'feed' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-violet-500/10' : 'hover:text-current'}`}
           id="mobile-nav-home"
         >
           <Home className="w-5 h-5" />
           <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Home</span>
         </button>
+
+        {/* 2. 🌍 World Pulse */}
         <button 
           onClick={() => {
-            setActiveTab('explore');
+            setActiveTab('pulse');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-cyan-950/20 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] ${activeTab === 'explore' ? 'text-cyan-400 scale-105 font-bold bg-cyan-950/15 border-cyan-500/10' : 'hover:text-current'}`}
-          id="mobile-nav-search"
+          className={`flex flex-col items-center gap-1 py-1 px-2 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-cyan-950/20 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] ${activeTab === 'pulse' ? 'text-cyan-400 scale-105 font-bold bg-cyan-950/15 border-cyan-500/10' : 'hover:text-current'}`}
+          id="mobile-nav-world-pulse"
         >
-          <Search className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Search</span>
+          <Globe className="w-5 h-5" />
+          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">World Pulse</span>
         </button>
 
-        
-        {/* Unified Plus/Create Button in Center with expanded high performance glow */}
+        {/* 3. ➕ Center Create Button */}
         <motion.button 
           onClick={() => {
             setCreatedPostLink(null);
@@ -3138,7 +3246,7 @@ export default function App() {
             setCreationInitialTab(undefined);
             setIsCreateMenuOpen(true);
           }}
-          className="relative -top-4 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 hover:border-white/50 z-10"
+          className="relative -top-4 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 hover:border-white/50 z-10 shrink-0"
           id="nav-create-post-center"
           title="Create Broadcast"
           animate={{
@@ -3180,7 +3288,6 @@ export default function App() {
             }
           }}
         >
-          {/* Subtle radiating pulse rings inside the button acting as a glowing halo */}
           <motion.div
             className="absolute inset-0 rounded-full bg-violet-500/35 pointer-events-none -z-10"
             animate={{
@@ -3208,7 +3315,6 @@ export default function App() {
           />
           <Plus className="w-5.5 h-5.5 text-white relative z-10" />
 
-          {/* Status Indicator Badge */}
           {(isOffline || isSyncPending) && (
             <span 
               className={`absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border border-[#06040f] z-20 shadow-md ${
@@ -3230,20 +3336,23 @@ export default function App() {
           )}
         </motion.button>
  
+        {/* 4. 🔔 Activity */}
         <button 
           onClick={() => {
-            setActiveTab('inbox');
+            setActiveTab('activity');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 relative py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-violet-500/30 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${(activeTab === 'inbox' || activeTab === 'activity') ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-violet-500/10' : 'hover:text-current'}`}
-          id="mobile-nav-inbox"
+          className={`flex flex-col items-center gap-1 relative py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-pink-950/30 hover:border-pink-500/30 hover:shadow-[0_0_15px_rgba(236,72,153,0.2)] ${activeTab === 'activity' ? 'text-pink-400 scale-105 font-bold bg-pink-950/20 border-pink-500/10' : 'hover:text-current'}`}
+          id="mobile-nav-activity"
         >
-          <MessageSquare className="w-5 h-5" />
-          {(unreadNotificationsCount + chats.reduce((acc, c) => acc + c.unreadCount, 0)) > 0 && (
+          <Bell className="w-5 h-5" />
+          {unreadNotificationsCount > 0 && (
             <span className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
           )}
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Inbox</span>
+          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Activity</span>
         </button>
+
+        {/* 5. 👤 Profile */}
         <button 
           onClick={() => {
             setActiveTab('profile');

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical, MoreHorizontal, Radio, ShieldCheck } from 'lucide-react';
 import VohIcon from './VohIcon';
 import ShareSheet from './ShareSheet';
 import { motion, AnimatePresence } from 'motion/react';
@@ -227,7 +227,8 @@ export default function ProfileView({
 }: ProfileViewProps) {
   // Navigation State
   const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections' | 'subscriptions' | 'linked-accounts' | 'other-profile-menu'>('profile');
-  const [profileTab, setProfileTab] = useState<string>('posts');
+  const [profileTab, setProfileTab] = useState<string>('contributions');
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [allContentFilter, setAllContentFilter] = useState<'all' | 'videos' | 'photos' | 'posts' | 'pinned'>('all');
   const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
@@ -242,6 +243,25 @@ export default function ProfileView({
     }, 450);
     return () => clearTimeout(timer);
   }, [currentUser.id]);
+
+  useEffect(() => {
+    const handleCustomTabChange = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail && customEvent.detail.subTab) {
+        const sub = customEvent.detail.subTab;
+        if (sub === 'saved') {
+          setActivePanel('collections');
+        } else if (sub === 'wallet') {
+          setActivePanel('creator-studio');
+        } else if (sub === 'settings') {
+          setActivePanel('menu');
+        }
+      }
+    };
+
+    window.addEventListener('changeTab', handleCustomTabChange);
+    return () => window.removeEventListener('changeTab', handleCustomTabChange);
+  }, []);
 
   // Redesigned Settings & Privacy Hub state
   const [settingsSearchQuery, setSettingsSearchQuery] = useState('');
@@ -748,17 +768,15 @@ export default function ProfileView({
   const pinnedPostIdsList = currentUser.pinnedPosts || [];
   const myPosts = posts.filter(p => p.username === currentUser.username);
   
-  // Tab filtered items (Posts, Pulse, Media, About)
+  // Tab filtered items (Contributions, Media, Voice, Circles, Communities, Reputation)
   const getTabContent = () => {
     const activePosts = myPosts.filter(p => !p.isArchived);
     switch (profileTab) {
-      case 'pulse':
-        return activePosts.filter(p => p.isVoice || p.voiceDuration || p.content.length < 150);
       case 'media':
         return activePosts.filter(p => !!p.image || !!p.videoUrl);
-      case 'about':
-        return [];
-      case 'posts':
+      case 'voice':
+        return activePosts.filter(p => p.isVoice || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙'));
+      case 'contributions':
       default:
         return activePosts;
     }
@@ -1086,318 +1104,429 @@ export default function ProfileView({
             </div>
           )}
 
-          {/* Profile Identity (Refined Compact Layout) */}
-          <div className="flex items-center gap-4 text-left mb-2">
-            <div className="relative shrink-0">
-              {currentUser.hasStory && (
-                <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
-              )}
-              <div 
-                onClick={() => setProfilePicExpanded(true)}
-                className="w-[88px] h-[88px] rounded-full bg-black overflow-hidden relative border border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03]"
-              >
-                <img 
-                  src={currentUser.avatar} 
-                  className="w-full h-full object-cover" 
-                  alt="User Avatar"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            </div>
+          {/* Profile Identity Header (Stage 2 Redesign) */}
+          <div className="flex flex-col space-y-3 text-left mb-4">
+            {/* Identity & Action Bar */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="relative shrink-0">
+                  {currentUser.hasStory && (
+                    <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
+                  )}
+                  <div 
+                    onClick={() => setProfilePicExpanded(true)}
+                    className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-xl"
+                  >
+                    <img 
+                      src={currentUser.avatar} 
+                      className="w-full h-full object-cover" 
+                      alt="User Avatar"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                </div>
 
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <h1 className={`text-xl font-black leading-tight tracking-tight ${!currentUser.name ? 'text-violet-400/70 italic text-base' : 'text-white'}`}>
-                  {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
-                </h1>
-                {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <h1 className={`text-xl sm:text-2xl font-black leading-tight tracking-tight ${!currentUser.name ? 'text-violet-400/70 italic text-base' : 'text-white'}`}>
+                      {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
+                    </h1>
+                    {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
+                  </div>
+                  <p className={`text-xs sm:text-sm font-bold font-mono tracking-wider mt-0.5 ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-400/90'}`}>
+                    @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
+                  </p>
+                </div>
               </div>
-              
-              {/* Username & Twin Action Chips */}
-              <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <p className={`text-sm font-bold font-mono tracking-wider ${!currentUser.username ? 'text-violet-400/60 italic text-xs' : 'text-violet-400/80'}`}>
-                  @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}
-                </p>
+
+              {/* Profile Actions */}
+              <div className="shrink-0 flex items-center gap-2">
                 {isOwnProfile ? (
-                  <div className="flex items-center gap-2">
-                    <motion.button 
-                      whileHover={{ scale: 1.02, y: -0.5 }}
-                      whileTap={{ scale: 0.98 }}
+                  <div className="flex items-center gap-1.5">
+                    <button 
                       onClick={() => setActivePanel('edit-profile')} 
-                      className="px-4 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-[11px] font-bold text-zinc-200 transition-all border border-white/5 cursor-pointer h-8 flex items-center justify-center"
+                      className="p-2.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer shadow-sm"
+                      title="Edit Profile"
                     >
-                      Edit Profile
-                    </motion.button>
-                    <motion.button 
-                      whileHover={{ scale: 1.02, y: -0.5, boxShadow: "0 0 15px rgba(139, 92, 246, 0.25)" }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => onOpenVohAi?.()} 
-                      className="px-3.5 py-1.5 bg-violet-600/20 hover:bg-violet-600/30 rounded-xl text-[11px] font-bold text-violet-200 border border-violet-500/30 transition-all flex items-center gap-1.5 cursor-pointer h-8"
-                      title="VOH AI Command Center"
+                      <Edit3 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setShowShareModal(true)} 
+                      className="p-2.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer shadow-sm"
+                      title="Share Profile"
                     >
-                      <VohIcon size={15} animated variant="brand" />
-                      <span>VOH AI</span>
-                    </motion.button>
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                    <button 
+                      onClick={() => setActivePanel('menu')} 
+                      className="p-2.5 bg-white/5 hover:bg-white/10 active:scale-95 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer shadow-sm"
+                      title="More Options"
+                    >
+                      <MoreHorizontal className="w-4 h-4" />
+                    </button>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <motion.button 
-                      whileHover={{ scale: 1.02, y: -0.5 }}
-                      whileTap={{ scale: 0.95 }}
+                  <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                    <button 
                       onClick={() => { setIsFollowing(!isFollowing); onToggleFollow?.(currentUser.id); }} 
-                      className={`px-6 py-2 rounded-xl text-xs font-bold transition-all duration-300 cursor-pointer h-9 flex items-center justify-center min-w-[96px] overflow-hidden ${
-                        isFollowing ? 'bg-zinc-900 text-zinc-400 border border-white/5' : 'bg-violet-600 text-white hover:bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.35)]'
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer h-9 flex items-center justify-center ${
+                        isFollowing ? 'bg-zinc-900 text-zinc-300 border border-white/10' : 'bg-violet-600 text-white hover:bg-violet-500 shadow-[0_0_15px_rgba(139,92,246,0.3)]'
                       }`}
                     >
-                      <AnimatePresence mode="wait">
-                        <motion.span
-                          key={isFollowing ? 'connected' : 'connect'}
-                          initial={{ opacity: 0, y: -10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          transition={{ duration: 0.2 }}
-                          className="block"
-                        >
-                          {isFollowing ? 'Connected' : 'Connect'}
-                        </motion.span>
-                      </AnimatePresence>
-                    </motion.button>
-                    <motion.button 
-                      whileHover={{ scale: 1.02, y: -0.5 }}
-                      whileTap={{ scale: 0.98 }}
+                      {isFollowing ? 'Following' : 'Follow'}
+                    </button>
+                    <button 
                       onClick={() => onStartChat?.(currentUser.id)} 
-                      className="px-6 py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-zinc-200 transition-all cursor-pointer border border-white/5 h-9 flex items-center justify-center min-w-[96px]"
+                      className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-zinc-200 transition-all cursor-pointer border border-white/10 h-9 flex items-center justify-center"
                     >
                       Message
-                    </motion.button>
+                    </button>
+                    <button 
+                      onClick={() => setIsConnected(!isConnected)} 
+                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer h-9 flex items-center justify-center ${
+                        isConnected ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10'
+                      }`}
+                    >
+                      {isConnected ? 'Connected' : 'Connect'}
+                    </button>
+                    <button 
+                      onClick={() => setShowShareModal(true)} 
+                      className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-zinc-300 hover:text-white transition-all border border-white/10 cursor-pointer h-9 w-9 flex items-center justify-center"
+                      title="Share Profile"
+                    >
+                      <Share2 className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Collapsible Bio */}
+            <div className="text-zinc-300 text-xs leading-relaxed">
+              <motion.div 
+                animate={{ height: isBioExpanded ? "auto" : "2.6rem" }} 
+                className="overflow-hidden relative"
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+              >
+                <p className={`whitespace-pre-wrap ${!currentUser.bio ? 'text-zinc-500 italic' : 'text-zinc-300'}`}>
+                  {currentUser.bio || (isOwnProfile ? 'Add a bio to complete your profile' : 'No bio provided.')}
+                </p>
+              </motion.div>
+              {currentUser.bio && (currentUser.bio.length > 70 || currentUser.bio.split('\n').length > 2) && (
+                <button 
+                  onClick={() => setIsBioExpanded(!isBioExpanded)} 
+                  className="text-violet-400 font-bold mt-1 text-[11px] hover:text-violet-300 transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <span>{isBioExpanded ? 'Show less' : 'Show more'}</span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${isBioExpanded ? 'rotate-180' : ''}`} />
+                </button>
+              )}
+            </div>
+
+            {/* Mutual Connections (Visitors) */}
+            {!isOwnProfile && (
+              <div className="flex items-center gap-2 text-xs font-sans text-zinc-500 pt-1">
+                <div className="flex -space-x-1.5">
+                  <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&auto=format&fit=crop&q=80" alt="mutual 1" referrerPolicy="no-referrer" />
+                  <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&auto=format&fit=crop&q=80" alt="mutual 2" referrerPolicy="no-referrer" />
+                  <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&auto=format&fit=crop&q=80" alt="mutual 3" referrerPolicy="no-referrer" />
+                </div>
+                <span>3 mutual connections in common</span>
+              </div>
+            )}
           </div>
 
-          {/* 3x2 Statistics Grid (No divider) */}
-          <div className="flex items-center justify-between py-2 mb-2 select-none">
-            <div className="flex-1 grid grid-cols-3 gap-y-2 gap-x-2 w-full text-center">
+          {/* Nexora 6 Statistics Grid */}
+          <div className="py-3 px-3 bg-white/[0.02] border border-white/5 rounded-2xl mb-4 select-none">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 text-center">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
                 { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
                 { label: 'Sparks', value: getSecondaryMetric('sparks') },
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
-                { label: 'Contribution', value: getSecondaryMetric('contributions') },
+                { label: 'Contributions', value: getSecondaryMetric('contributions') },
               ].map(stat => (
-                <div key={stat.label} className="flex flex-col">
-                  <span className="text-lg font-black text-white leading-tight">{stat.value}</span>
+                <div key={stat.label} className="flex flex-col py-1">
+                  <span className="text-base font-black text-white leading-tight">{stat.value}</span>
                   <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">{stat.label}</span>
                 </div>
               ))}
             </div>
-            <div className="pl-3 flex items-center justify-center self-stretch">
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowShareModal(true)} 
-                className="p-2.5 bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white rounded-xl transition-all cursor-pointer border border-white/5" 
-                title="Share Profile"
-              >
-                <Share2 className="w-4 h-4" />
-              </motion.button>
-            </div>
-          </div>
-
-          {/* Elegant Truncated Bio */}
-          <div className="text-zinc-300 text-xs leading-relaxed mb-3">
-            <motion.div 
-              animate={{ height: isBioExpanded ? "auto" : "3rem" }} 
-              className="overflow-hidden relative"
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-            >
-              <p className={`whitespace-pre-wrap ${!currentUser.bio ? 'text-zinc-500 italic' : 'text-zinc-300'}`}>
-                {currentUser.bio || (isOwnProfile ? 'Add a bio' : '')}
-              </p>
-            </motion.div>
-            {currentUser.bio && (currentUser.bio.length > 70 || currentUser.bio.split('\n').length > 2) && (
-              <button 
-                onClick={() => setIsBioExpanded(!isBioExpanded)} 
-                className="text-violet-400 font-bold mt-1 text-[11px] hover:text-violet-300 transition-colors cursor-pointer"
-              >
-                {isBioExpanded ? 'Show less' : 'Show More'}
-              </button>
-            )}
-          </div>
-          
-          {/* Creator section (Premium lightweight creator filter chips) */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button 
-              onClick={() => setActivePanel('creator-studio')} 
-              className="px-3 h-7 bg-violet-500/10 hover:bg-violet-500/20 active:bg-violet-500/30 rounded-lg text-[10px] font-bold text-violet-200 transition-all border border-violet-500/20 cursor-pointer flex items-center justify-center"
-            >
-              Nexora Studio
-            </button>
-            <button 
-              onClick={() => setActivePanel('subscriptions')} 
-              className="px-3 h-7 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg text-[10px] font-bold text-zinc-300 transition-all border border-white/10 cursor-pointer flex items-center justify-center"
-            >
-              Subscriptions
-            </button>
-            <button 
-              onClick={() => setActivePanel('linked-accounts')} 
-              className="px-3 h-7 bg-white/5 hover:bg-white/10 active:bg-white/20 rounded-lg text-[10px] font-bold text-zinc-300 transition-all border border-white/10 cursor-pointer flex items-center justify-center"
-            >
-              Linked Accounts
-            </button>
-          </div>
-
-          {/* 6. MUTUAL FRIENDS (Progressive Disclosure) */}
-          {!isOwnProfile && (
-            <div className="flex items-center gap-2 text-xs font-sans text-zinc-500 text-left pt-0.5 mt-0.5 mb-0.5">
-              <div className="flex -space-x-1.5">
-                <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&auto=format&fit=crop&q=80" alt="mutual 1" referrerPolicy="no-referrer" />
-                <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&auto=format&fit=crop&q=80" alt="mutual 2" referrerPolicy="no-referrer" />
-                <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&auto=format&fit=crop&q=80" alt="mutual 3" referrerPolicy="no-referrer" />
-              </div>
-              <span>3 mutual friends in common</span>
-            </div>
-          )}
-        </div>
-
-        {/* 8. CONTENT STICKY TAB NAVIGATION (Posts, Pulse, Media, About) */}
-        <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-0.5 px-0 w-full">
-          <div className="w-full max-w-4xl mx-auto flex justify-around py-2">
-            {[
-              { id: 'posts', icon: FileText, label: 'Posts' },
-              { id: 'pulse', icon: Activity, label: 'Pulse' },
-              { id: 'media', icon: Camera, label: 'Media' },
-              { id: 'about', icon: Info, label: 'About' }
-            ].map(tab => {
-              const Icon = tab.icon;
-              const isActive = profileTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setProfileTab(tab.id)}
-                  className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase transition-all cursor-pointer relative border ${
-                    isActive 
-                      ? 'bg-violet-600/20 text-violet-300 border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.25)]' 
-                      : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
           </div>
         </div>
 
-        {/* 9. RESPONSIVE PROFILE CONTENT SECTION */}
-        <div className="w-full pt-[1px] space-y-0 bg-black min-h-[300px]">
-          {profileTab === 'about' ? (
-            <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 space-y-6 text-left">
-              <div className="bg-[#0b081c] border border-white/10 rounded-3xl p-6 space-y-5 shadow-xl">
-                <h3 className="text-xs font-mono text-violet-400 font-extrabold uppercase tracking-widest border-b border-white/5 pb-3 flex items-center gap-2">
-                  <Info className="w-4 h-4" /> Digital Identity & Bio
-                </h3>
-                <div className="space-y-4 text-xs text-zinc-300">
-                  <div>
-                    <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Bio Summary</span>
-                    <p className="leading-relaxed whitespace-pre-wrap">{currentUser.bio || "No bio configured."}</p>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-white/5">
-                    <div>
-                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Location</span>
-                      <p className="font-semibold text-white">{currentUser.location || 'Nexora Core Node'}</p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Website</span>
-                      <p className="font-semibold text-cyan-400">{currentUser.website || 'https://nexora.ai'}</p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Joined Date</span>
-                      <p className="font-semibold text-white">{currentUser.joinedDate ? new Date(currentUser.joinedDate).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'July 2026'}</p>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-mono text-zinc-500 uppercase block mb-1">Node Type</span>
-                      <p className="font-semibold text-violet-300">Verified Founder Node</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reputation & Stats Card */}
-              <div className="bg-[#0b081c] border border-violet-500/20 rounded-3xl p-6 space-y-4 shadow-xl">
-                <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                  <h3 className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest flex items-center gap-2">
-                    <Award className="w-4 h-4 text-violet-400" /> Reputation & Contributions
-                  </h3>
-                  <button 
-                    onClick={() => setShowReputationModal(true)}
-                    className="text-[10px] font-mono text-violet-300 hover:text-white flex items-center gap-1.5 bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 px-3 py-1.5 rounded-xl cursor-pointer transition-all shadow-sm"
+          {/* Rebuilt Sticky Navigation Tabs (6 Nexora Tabs) */}
+          <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-1 px-0 w-full">
+            <div className="w-full max-w-4xl mx-auto flex items-center justify-between sm:justify-center gap-1 sm:gap-2 py-2 overflow-x-auto no-scrollbar">
+              {[
+                { id: 'contributions', icon: Zap, label: 'Contributions' },
+                { id: 'media', icon: Camera, label: 'Media' },
+                { id: 'voice', icon: Mic, label: 'Voice' },
+                { id: 'circles', icon: Users, label: 'Circles' },
+                { id: 'communities', icon: Compass, label: 'Communities' },
+                { id: 'reputation', icon: Award, label: 'Reputation' }
+              ].map(tab => {
+                const Icon = tab.icon;
+                const isActive = profileTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setProfileTab(tab.id)}
+                    className={`flex items-center gap-1.5 px-3 sm:px-4 py-2 rounded-xl text-[11px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0 border ${
+                      isActive 
+                        ? 'bg-violet-600/20 text-violet-300 border-violet-500/30 shadow-[0_0_15px_rgba(139,92,246,0.25)]' 
+                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5 border-transparent'
+                    }`}
                   >
-                    <Sparkles className="w-3.5 h-3.5 text-pink-400" /> Nexora Algorithm Matrix
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{tab.label}</span>
                   </button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
-                  <div 
-                    onClick={() => setShowReputationModal(true)}
-                    className="bg-violet-950/20 hover:bg-violet-900/30 p-4 rounded-2xl border border-violet-500/20 cursor-pointer transition-all text-center relative group"
-                    title="The trust and impact you have built on Nexora."
-                  >
-                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 0)}</span>
-                    <span className="text-[10px] font-mono text-violet-300 uppercase block mt-1 font-bold">Reputation ℹ️</span>
-                    <p className="text-[9px] text-zinc-400 mt-1 line-clamp-1">Trust & impact built</p>
-                  </div>
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.sparks || 0)}</span>
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Sparks</span>
-                    <p className="text-[9px] text-zinc-500 mt-1 line-clamp-1">Community appreciation</p>
-                  </div>
-                  <div 
-                    onClick={() => setShowReputationModal(true)}
-                    className="bg-pink-950/20 hover:bg-pink-900/30 p-4 rounded-2xl border border-pink-500/20 cursor-pointer transition-all text-center relative group"
-                    title="The value you have added to the Nexora community."
-                  >
-                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)}</span>
-                    <span className="text-[10px] font-mono text-pink-300 uppercase block mt-1 font-bold">Contributions ℹ️</span>
-                    <p className="text-[9px] text-zinc-400 mt-1 line-clamp-1">Value added to Nexora</p>
-                  </div>
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                    <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.followers || 0)}</span>
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase block mt-1">Followers</span>
-                    <p className="text-[9px] text-zinc-500 mt-1 line-clamp-1">Network connections</p>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          ) : filteredTabPosts.length === 0 ? (
-            <div className="mx-4 my-8 p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
-              <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mx-auto text-zinc-400 text-lg">
-                📭
+          </div>
+
+          {/* Profile Tab Content Area */}
+          <div className="w-full pt-4 space-y-4 bg-black min-h-[350px]">
+            {profileTab === 'contributions' ? (
+              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4">
+                {filteredTabPosts.length === 0 ? (
+                  <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center mx-auto text-violet-400">
+                      <Zap className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-zinc-200">No Contributions Yet</h4>
+                      <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-relaxed">
+                        Your contributions reflect your positive impact on the Nexora network.
+                      </p>
+                    </div>
+                    {isOwnProfile && (
+                      <button 
+                        onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
+                        className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all cursor-pointer shadow-md"
+                      >
+                        + Post Contribution
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  filteredTabPosts.map(post => (
+                    <div key={post.id} className="p-4 sm:p-5 bg-[#08051a] border border-white/10 rounded-2xl space-y-3 shadow-lg hover:border-violet-500/30 transition-all text-left">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <img src={currentUser.avatar} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="avatar" />
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-bold text-white">{currentUser.name || currentUser.username}</span>
+                              {currentUser.isVerified && <PurpleVerifiedBadge className="w-3.5 h-3.5" type="founder" />}
+                            </div>
+                            <span className="text-[10px] font-mono text-zinc-500">@{currentUser.username} • <RelativeTimestamp timestamp={post.timestamp} /></span>
+                          </div>
+                        </div>
+                        <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-violet-500/30 px-2.5 py-1 rounded-lg">
+                          +8 Rep Impact
+                        </span>
+                      </div>
+
+                      <p className="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
+
+                      {post.image && (
+                        <div className="rounded-xl overflow-hidden border border-white/10 max-h-80">
+                          <img src={post.image} className="w-full h-full object-cover" alt="contribution attachment" />
+                        </div>
+                      )}
+
+                      {post.videoUrl && (
+                        <div className="rounded-xl overflow-hidden border border-white/10 max-h-80">
+                          <NexoraVideo src={post.videoUrl} />
+                        </div>
+                      )}
+
+                      <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400 font-mono">
+                        <div className="flex items-center gap-4">
+                          <span className="flex items-center gap-1 text-pink-400">
+                            <Sparkles className="w-3.5 h-3.5" /> {post.likes || 0} Sparks
+                          </span>
+                          <span className="flex items-center gap-1 text-zinc-400">
+                            <MessageSquare className="w-3.5 h-3.5" /> {post.comments?.length || 0} Comments
+                          </span>
+                        </div>
+                        <button 
+                          onClick={() => setSelectedGridPost(post)} 
+                          className="text-violet-400 hover:text-violet-300 text-[11px] font-bold cursor-pointer"
+                        >
+                          View Impact →
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-              <div>
-                <h4 className="text-xs font-bold text-zinc-300">Nothing here yet</h4>
-                <p className="text-[11px] text-zinc-500 max-w-sm mx-auto mt-0.5 leading-normal">
-                  Your journey starts with your first post. This space will come alive soon.
-                </p>
+            ) : profileTab === 'media' ? (
+              <div className="w-full max-w-4xl mx-auto px-2">
+                <MediaGrid 
+                  gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
+                  pinnedPostIds={pinnedPostIdsList} 
+                  onSelectPost={(post) => setSelectedGridPost(post)} 
+                />
               </div>
-              {isOwnProfile && (
-                <button 
-                  onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
-                  className="px-3 py-1.5 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-[9px] uppercase rounded-lg transition-all"
-                >
-                  + Create Post
-                </button>
-              )}
-            </div>
-          ) : (
-            <MediaGrid 
-              gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
-              pinnedPostIds={pinnedPostIdsList} 
-              onSelectPost={(post) => setSelectedGridPost(post)} 
-            />
-          )}
-        </div>
+            ) : profileTab === 'voice' ? (
+              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
+                {filteredTabPosts.length === 0 ? (
+                  <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-pink-600/10 border border-pink-500/20 flex items-center justify-center mx-auto text-pink-400">
+                      <Mic className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-zinc-200">No Voice Notes Recorded</h4>
+                      <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-relaxed">
+                        Share your thoughts with voice broadcasts and voice pulses on Nexora.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  filteredTabPosts.map(post => (
+                    <div key={post.id} className="p-4 bg-[#0a071d] border border-violet-500/20 rounded-2xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Mic className="w-4 h-4 text-pink-400" />
+                          <span className="text-xs font-bold text-white">Voice Pulse</span>
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-500"><RelativeTimestamp timestamp={post.timestamp} /></span>
+                      </div>
+                      <p className="text-xs text-zinc-300">{post.content}</p>
+                      <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
+                        <button className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white shrink-0">
+                          <Play className="w-4 h-4 ml-0.5" />
+                        </button>
+                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
+                          <div className="w-1/3 h-full bg-gradient-to-r from-violet-500 to-pink-500 rounded-full" />
+                        </div>
+                        <span className="text-[10px] font-mono text-zinc-400">0:24</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : profileTab === 'circles' ? (
+              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
+                <div className="p-5 bg-[#08051a] border border-white/10 rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div>
+                      <h3 className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider flex items-center gap-2">
+                        <Users className="w-4 h-4 text-violet-400" /> Network Circles
+                      </h3>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">Circles group your strongest mutual relationships and key collaborators.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Close Circle</span>
+                        <span className="text-[10px] font-mono text-violet-400 bg-violet-600/20 px-2 py-0.5 rounded-full">12 Members</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400">Direct collaborators & inner network.</p>
+                    </div>
+
+                    <div className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-white">Founders & Builders</span>
+                        <span className="text-[10px] font-mono text-pink-400 bg-pink-600/20 px-2 py-0.5 rounded-full">48 Members</span>
+                      </div>
+                      <p className="text-[11px] text-zinc-400">Verified core nodes & technology partners.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : profileTab === 'communities' ? (
+              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
+                <div className="p-5 bg-[#08051a] border border-white/10 rounded-2xl space-y-4">
+                  <div className="flex items-center justify-between border-b border-white/5 pb-3">
+                    <div>
+                      <h3 className="text-xs font-mono font-bold text-pink-300 uppercase tracking-wider flex items-center gap-2">
+                        <Compass className="w-4 h-4 text-pink-400" /> Active Communities
+                      </h3>
+                      <p className="text-[11px] text-zinc-400 mt-0.5">Communities owned or frequented by {currentUser.name || currentUser.username}.</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-violet-600/30 flex items-center justify-center text-violet-300 font-black text-sm">
+                          NA
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-white">Nexora Alpha Testers</h4>
+                          <p className="text-[10px] text-zinc-400">1.2k Members • Founder & Creator Hub</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono text-violet-400 bg-violet-600/20 border border-violet-500/30 px-2.5 py-1 rounded-lg">Owner</span>
+                    </div>
+
+                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-pink-600/30 flex items-center justify-center text-pink-300 font-black text-sm">
+                          AI
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-white">AI Builders & Explorers</h4>
+                          <p className="text-[10px] text-zinc-400">4.8k Members • Active Discussion</p>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-mono text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">Member</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : profileTab === 'reputation' ? (
+              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
+                <div className="p-6 bg-[#08051a] border border-violet-500/30 rounded-2xl space-y-5 shadow-xl">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                    <div>
+                      <h3 className="text-xs font-mono font-bold text-violet-300 uppercase tracking-widest flex items-center gap-2">
+                        <Award className="w-4 h-4 text-violet-400" /> Nexora Reputation Matrix
+                      </h3>
+                      <p className="text-xs text-zinc-400 mt-1">
+                        Reputation is organically built through trust signals, verified community contributions, and authentic engagement.
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 12500)}</span>
+                      <span className="block text-[10px] font-mono text-violet-400 uppercase font-bold">Total Rep Score</span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl">
+                      <span className="text-base font-black text-white">{formatSecondaryStat(currentUser.sparks || 850)}</span>
+                      <span className="block text-[10px] font-mono text-zinc-400 uppercase mt-0.5">Sparks Earned</span>
+                    </div>
+                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl">
+                      <span className="text-base font-black text-violet-300">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 4200)}</span>
+                      <span className="block text-[10px] font-mono text-violet-400 uppercase mt-0.5 font-bold">Contributions</span>
+                    </div>
+                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl">
+                      <span className="text-base font-black text-emerald-400">Level 5</span>
+                      <span className="block text-[10px] font-mono text-emerald-300 uppercase mt-0.5">Trust Tier</span>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-violet-950/20 border border-violet-500/20 rounded-xl space-y-2 text-xs text-zinc-300 leading-relaxed">
+                    <div className="flex items-center gap-2 text-violet-300 font-bold font-mono">
+                      <ShieldCheck className="w-4 h-4 text-violet-400" /> Organic Unpredictable Growth
+                    </div>
+                    <p>
+                      Unlike legacy platforms where follower count can be inflated, Nexora Reputation requires verified trust signals, community appreciation sparks, and sustained high-quality contributions over time.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </>
       )}
       

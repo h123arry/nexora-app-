@@ -18,6 +18,7 @@ export type EmailTemplateType =
   | 'WELCOME'
   | 'VERIFY_EMAIL'
   | 'PASSWORD_RESET'
+  | 'IDENTITY_CONFIRMATION'
   | 'SECURITY_ALERT_LOGIN'
   | 'SECURITY_ALERT_PASSWORD'
   | 'SECURITY_ALERT_EMAIL'
@@ -64,40 +65,95 @@ export class EmailService {
         buttonText = 'Verify Email Address';
         bodyContent = `
           <p style="margin-bottom: 16px; font-size: 15px; line-height: 1.6; color: #E4E4E7;">
-            Hi <strong>${params.userName}</strong>, please confirm your email address to unlock full Nexora publishing and interactive capabilities.
+            Hi <strong>${params.userName}</strong>,
+          </p>
+          <p style="margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: #A1A1AA;">
+            Thank you for creating an account on Nexora. Please use the verification code below to confirm your email address and activate your account.
           </p>
           ${params.verificationCode ? `
-            <div style="background-color: #1E1242; border: 1px solid #6D28D9; padding: 18px; border-radius: 12px; text-align: center; margin: 20px 0;">
+            <div style="background-color: #1E1242; border: 1px solid #6D28D9; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0;">
               <span style="font-size: 11px; font-family: monospace; letter-spacing: 2px; color: #C4B5FD; text-transform: uppercase;">Verification Code</span>
-              <div style="font-size: 28px; font-weight: 800; font-family: monospace; letter-spacing: 6px; color: #FFFFFF; margin-top: 6px;">
+              <div style="font-size: 32px; font-weight: 800; font-family: monospace; letter-spacing: 8px; color: #FFFFFF; margin-top: 8px;">
                 ${params.verificationCode}
               </div>
+              <p style="margin-top: 10px; margin-bottom: 0; font-size: 12px; color: #A1A1AA;">
+                Expires in <strong>10 minutes</strong>.
+              </p>
             </div>
           ` : ''}
-          <p style="margin-bottom: 20px; font-size: 13px; color: #A1A1AA;">
-            If you did not create a Nexora account, you can safely ignore this message.
+          <div style="margin-top: 24px; padding: 14px; background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px;">
+            <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #FCA5A5;">
+              <strong>Security Notice:</strong> If you didn't request this verification code, you can safely ignore this email. Your Nexora account remains secure. Never share this code with anyone.
+            </p>
+          </div>
+          <p style="margin-top: 24px; font-size: 13px; color: #C4B5FD; font-weight: 600;">
+            — The Nexora Security Team
           </p>
         `;
         break;
 
       case 'PASSWORD_RESET':
         subject = 'Reset Your Nexora Account Password';
-        title = 'Password Reset Request';
-        buttonText = 'Reset Password Now';
+        title = 'Password Reset Security Code';
+        buttonText = 'Reset Password';
         bodyContent = `
           <p style="margin-bottom: 16px; font-size: 15px; line-height: 1.6; color: #E4E4E7;">
-            Hi <strong>${params.userName}</strong>, we received a request to reset the password for your Nexora account.
+            Hi <strong>${params.userName}</strong>,
+          </p>
+          <p style="margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: #A1A1AA;">
+            We received a request to reset the password for your Nexora account. Use the secure 6-digit code below to proceed with resetting your password:
           </p>
           ${params.verificationCode ? `
-            <div style="background-color: #1E1242; border: 1px solid #6D28D9; padding: 18px; border-radius: 12px; text-align: center; margin: 20px 0;">
+            <div style="background-color: #1E1242; border: 1px solid #6D28D9; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0;">
               <span style="font-size: 11px; font-family: monospace; letter-spacing: 2px; color: #C4B5FD; text-transform: uppercase;">One-Time Security Code</span>
-              <div style="font-size: 28px; font-weight: 800; font-family: monospace; letter-spacing: 6px; color: #FFFFFF; margin-top: 6px;">
+              <div style="font-size: 32px; font-weight: 800; font-family: monospace; letter-spacing: 8px; color: #FFFFFF; margin-top: 8px;">
                 ${params.verificationCode}
               </div>
+              <p style="margin-top: 10px; margin-bottom: 0; font-size: 12px; color: #A1A1AA;">
+                Expires in <strong>10 minutes</strong>.
+              </p>
             </div>
           ` : ''}
-          <p style="margin-bottom: 20px; font-size: 13px; color: #A1A1AA;">
-            This link and code will expire in 15 minutes. If you did not request a password reset, please secure your account immediately.
+          <div style="margin-top: 24px; padding: 14px; background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px;">
+            <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #FCA5A5;">
+              <strong>Security Warning:</strong> If you didn't request a password reset, you can safely ignore this email. Your account remains secure.
+            </p>
+          </div>
+          <p style="margin-top: 24px; font-size: 13px; color: #C4B5FD; font-weight: 600;">
+            — The Nexora Security Team
+          </p>
+        `;
+        break;
+
+      case 'IDENTITY_CONFIRMATION':
+        subject = 'Confirm Your Nexora Account Identity';
+        title = 'Sensitive Action Authorization';
+        buttonText = 'Confirm Action';
+        bodyContent = `
+          <p style="margin-bottom: 16px; font-size: 15px; line-height: 1.6; color: #E4E4E7;">
+            Hi <strong>${params.userName}</strong>,
+          </p>
+          <p style="margin-bottom: 16px; font-size: 14px; line-height: 1.6; color: #A1A1AA;">
+            A sensitive security update (such as changing contact details or 2FA) was requested for your Nexora account. Enter the verification code below to confirm your identity:
+          </p>
+          ${params.verificationCode ? `
+            <div style="background-color: #1E1242; border: 1px solid #6D28D9; padding: 20px; border-radius: 12px; text-align: center; margin: 20px 0;">
+              <span style="font-size: 11px; font-family: monospace; letter-spacing: 2px; color: #C4B5FD; text-transform: uppercase;">Identity Verification Code</span>
+              <div style="font-size: 32px; font-weight: 800; font-family: monospace; letter-spacing: 8px; color: #FFFFFF; margin-top: 8px;">
+                ${params.verificationCode}
+              </div>
+              <p style="margin-top: 10px; margin-bottom: 0; font-size: 12px; color: #A1A1AA;">
+                Expires in <strong>10 minutes</strong>.
+              </p>
+            </div>
+          ` : ''}
+          <div style="margin-top: 24px; padding: 14px; background-color: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 10px;">
+            <p style="margin: 0; font-size: 12px; line-height: 1.5; color: #FCA5A5;">
+              <strong>Security Warning:</strong> If you didn't initiate this action, please secure your password immediately and contact support.
+            </p>
+          </div>
+          <p style="margin-top: 24px; font-size: 13px; color: #C4B5FD; font-weight: 600;">
+            — The Nexora Security Team
           </p>
         `;
         break;

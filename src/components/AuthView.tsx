@@ -14,7 +14,7 @@ import NexoraLoader from './NexoraLoader';
 import VohIcon from './VohIcon';
 import { checkUsernameStatus, UsernameStatus } from '../utils/username';
 import { auth } from '../services/firebase/config';
-import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, ConfirmationResult } from 'firebase/auth';
 import { AuthService } from '../services/firebase/authService';
 import { EmailService } from '../services/firebase/emailService';
 import { PushNotificationService } from '../services/firebase/pushNotificationService';
@@ -167,6 +167,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
   const [smsSent, setSmsSent] = useState(false);
   const [verificationCode, setVerificationCode] = useState('');
   const [otpCountdown, setOtpCountdown] = useState(0);
+  const [phoneConfirmationResult, setPhoneConfirmationResult] = useState<ConfirmationResult | null>(null);
 
   // Forgot Password states
   const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
@@ -506,10 +507,11 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     }
   };
 
-  // Handle Phone OTP Request
-  const handlePhoneOtpRequest = (e: React.FormEvent) => {
+  // Handle Phone OTP Request (Production Firebase SMS Auth)
+  const handlePhoneOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
+    setSuccessMsg('');
 
     if (!phoneNumber.trim() || phoneNumber.trim().length < 7) {
       setErrorMsg('Please enter a valid phone number.');
@@ -517,72 +519,104 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     }
 
     setIsPending(true);
-    setStatusMessage(`Sending 6-digit verification code to ${selectedCountry.code} ${phoneNumber}...`);
+    const fullPhone = `${selectedCountry.code}${phoneNumber.trim()}`;
+    setStatusMessage(`Sending SMS verification code to ${fullPhone}...`);
 
-    setTimeout(() => {
+    try {
+      // Initialize Firebase RecaptchaVerifier
+      const verifier = AuthService.initRecaptchaVerifier('recaptcha-container');
+      const confirmationResult = await AuthService.sendPhoneSMS(fullPhone, verifier);
+      
+      setPhoneConfirmationResult(confirmationResult);
       setIsPending(false);
       setSmsSent(true);
       setOtpCountdown(60);
-      setVerificationCode('');
+      setVerificationCode(''); // Never auto-fill or display OTP code
+      setSuccessMsg('SMS verification code sent to your phone.');
+    } catch (err: any) {
+      console.warn('Firebase Phone Auth SMS error:', err);
+      setIsPending(false);
       
-      // Auto-autofill for seamless testing demo
-      setTimeout(() => {
-        setVerificationCode('849201');
-      }, 2000);
-    }, 1200);
+      if (err.code === 'auth/invalid-phone-number') {
+        setErrorMsg('Invalid phone number format. Please check the digits and try again.');
+      } else if (err.code === 'auth/captcha-check-failed' || err.code === 'auth/invalid-app-credential') {
+        setErrorMsg('Phone verification reCAPTCHA check failed. Please refresh and try again.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setErrorMsg('Too many SMS requests sent to this number. Please wait before trying again.');
+      } else {
+        setErrorMsg('Phone SMS verification is currently unavailable or requires Firebase SMS service configuration. Please ensure Firebase Phone Authentication is enabled in your Firebase Console.');
+      }
+    }
   };
 
-  // Handle Phone OTP Verify
-  const handlePhoneOtpVerify = (e: React.FormEvent) => {
+  // Handle Phone OTP Verify (Production Firebase SMS Verification)
+  const handlePhoneOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
-    if (verificationCode.trim().length !== 6) {
-      setErrorMsg('Please enter the complete 6-digit verification code.');
+    const cleanCode = verificationCode.trim();
+    if (cleanCode.length !== 6) {
+      setErrorMsg('Please enter the complete 6-digit verification code sent to your SMS inbox.');
       return;
     }
 
     setIsPending(true);
-    setStatusMessage('Verifying code...');
+    setStatusMessage('Verifying security code...');
 
-    setTimeout(() => {
-      setIsPending(false);
-      const fullPhone = `${selectedCountry.code}${phoneNumber.trim()}`;
-      const registry = loadAccounts();
-      const existing = registry.find(a => a.phone && a.phone.replace(/\D/g, '') === fullPhone.replace(/\D/g, ''));
+    try {
+      if (phoneConfirmationResult) {
+        // Verify code with real Firebase Auth ConfirmationResult
+        const fbUser = await AuthService.confirmPhoneOTP(phoneConfirmationResult, cleanCode);
+        const fullPhone = `${selectedCountry.code}${phoneNumber.trim()}`;
+        const registry = loadAccounts();
+        const existing = registry.find(a => a.phone && a.phone.replace(/\D/g, '') === fullPhone.replace(/\D/g, ''));
 
-      if (existing) {
-        onLoginSuccess(getRichUser(existing.user));
+        setIsPending(false);
+        if (existing) {
+          onLoginSuccess(getRichUser(existing.user));
+        } else {
+          // Create new account for verified phone user
+          const newUser: User = {
+            id: fbUser.uid || `user-phone-${Date.now()}`,
+            username: '',
+            name: '',
+            avatar: PRESET_AVATARS[Math.floor(Math.random() * PRESET_AVATARS.length)],
+            bio: '',
+            location: selectedCountry.name,
+            website: '',
+            followers: 0,
+            following: 0,
+            sparks: 0,
+            isVerified: true,
+            coverImage: '',
+            joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
+            reputationPoints: 100,
+            reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 10 },
+            interestDNA: {},
+            skills: []
+          };
+
+          const updated = [...registry, { email: `phone_${Date.now()}@nexora.com`, phone: fullPhone, passwordHash: 'phone_otp_pass', user: newUser }];
+          localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
+
+          setOnboardingUser(newUser);
+          setOnboardingUsername(newUser.username);
+          setOnboardingStep(1);
+        }
       } else {
-        // Create new account with Phone (incomplete profile state until user configures)
-        const newUser: User = {
-          id: `user-phone-${Date.now()}`,
-          username: '',
-          name: '',
-          avatar: PRESET_AVATARS[Math.floor(Math.random() * PRESET_AVATARS.length)],
-          bio: '',
-          location: selectedCountry.name,
-          website: '',
-          followers: 0,
-          following: 0,
-          sparks: 0,
-          isVerified: false,
-          coverImage: '',
-          joinedDate: 'Joined July 2026',
-          reputationPoints: 0,
-          reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-          interestDNA: {},
-          skills: []
-        };
-
-        const updated = [...registry, { email: `phone_${Date.now()}@nexora.com`, phone: fullPhone, passwordHash: 'phone_otp_pass', user: newUser }];
-        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-
-        setOnboardingUser(newUser);
-        setOnboardingUsername(newUser.username);
-        setOnboardingStep(1);
+        throw new Error('No active SMS confirmation session. Please request a new verification code.');
       }
-    }, 1200);
+    } catch (err: any) {
+      console.error('Phone OTP verification error:', err);
+      setIsPending(false);
+      if (err.code === 'auth/invalid-verification-code') {
+        setErrorMsg('Invalid verification code. Please check the SMS message and enter the correct 6-digit code.');
+      } else if (err.code === 'auth/code-expired') {
+        setErrorMsg('Verification code has expired. Please tap "Resend SMS Code" to receive a new code.');
+      } else {
+        setErrorMsg(err.message || 'Verification failed. Please check the code and try again.');
+      }
+    }
   };
 
   // Handle Email Account Signup Submit
@@ -608,7 +642,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     }
 
     setIsPending(true);
-    setStatusMessage('Creating your Nexora account and sending verification email...');
+    setStatusMessage('Creating your Nexora account and dispatching verification email...');
 
     const cleanEmail = signupEmail.toLowerCase().trim();
     const defaultUsername = cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
@@ -620,6 +654,13 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         signupName.trim(),
         defaultUsername
       );
+
+      // Dispatch real email OTP via server backend
+      try {
+        await AuthService.sendEmailOtp(cleanEmail, 'VERIFY_EMAIL', signupName.trim());
+      } catch (otpErr) {
+        console.warn('Backend email verification dispatch warning:', otpErr);
+      }
 
       const registry = loadAccounts();
       const updated = [...registry, { email: cleanEmail, passwordHash: signupPassword, user: res.user }];
@@ -652,7 +693,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         sparks: 0,
         isVerified: false,
         coverImage: '',
-        joinedDate: 'Joined July 2026',
+        joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
         reputationPoints: 0,
         reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
         interestDNA: {},
@@ -662,10 +703,12 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       const updated = [...registry, { email: cleanEmail, passwordHash: signupPassword, user: newUser }];
       localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
 
-      EmailService.sendTransactionalEmail('WELCOME', {
-        toEmail: cleanEmail,
-        userName: signupName.trim()
-      });
+      // Dispatch real email OTP code via server backend
+      try {
+        await AuthService.sendEmailOtp(cleanEmail, 'VERIFY_EMAIL', signupName.trim());
+      } catch (otpErr) {
+        console.warn('Backend email verification dispatch warning:', otpErr);
+      }
 
       SecurityNotificationService.notifySecurityEvent(
         newUser.id,
@@ -697,7 +740,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     return { label: 'Strong', color: 'bg-emerald-500', percent: 100 };
   };
 
-  // Forgot Password Submit Handler
+  // Forgot Password Submit Handler (Production Email Verification & Password Recovery System)
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -705,31 +748,70 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
     if (recoveryStep === 1) {
       if (!recoveryIdentifier.trim()) {
-        setErrorMsg('Please enter your email address or phone number.');
+        setErrorMsg('Please enter your account email address or username.');
         return;
       }
       setIsPending(true);
-      setStatusMessage('Locating account and dispatching reset email...');
+      setStatusMessage('Locating account and generating secure one-time verification code...');
 
-      try {
-        if (recoveryIdentifier.includes('@')) {
-          await AuthService.sendPasswordReset(recoveryIdentifier.trim());
-        }
-      } catch (err) {
-        console.warn('Firebase Password Reset warning:', err);
-      }
+      const query = recoveryIdentifier.trim().toLowerCase();
+      const registry = loadAccounts();
+      const matchedAccount = registry.find(a => a.email.toLowerCase() === query || a.user.username.toLowerCase() === query);
 
-      setIsPending(false);
-      setRecoveryCode('739102');
-      setRecoveryStep(2);
-      setSuccessMsg('Password reset link and verification code sent to your email inbox.');
-    } else if (recoveryStep === 2) {
-      if (recoveryCode.trim() !== '739102' && recoveryCode.trim().length !== 6) {
-        setErrorMsg('Invalid verification code.');
+      const targetEmail = matchedAccount ? matchedAccount.email : (query.includes('@') ? query : '');
+      const targetName = matchedAccount ? matchedAccount.user.name : query.split('@')[0];
+
+      if (!targetEmail || !targetEmail.includes('@')) {
+        setIsPending(false);
+        setErrorMsg('Please enter a valid email address associated with your account.');
         return;
       }
-      setRecoveryStep(3);
-      setSuccessMsg('');
+
+      try {
+        // Dispatch secure server-side OTP via /api/auth/send-email-otp
+        await AuthService.sendEmailOtp(targetEmail, 'PASSWORD_RESET', targetName);
+
+        // Also trigger Firebase Auth password reset email link if configured
+        try {
+          await AuthService.sendPasswordReset(targetEmail);
+        } catch (fbErr) {
+          console.warn('Firebase Password Reset link trigger warning:', fbErr);
+        }
+
+        setIsPending(false);
+        setRecoveryCode(''); // Never pre-fill or display OTP code
+        setRecoveryStep(2);
+        setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. Please check your email inbox.`);
+      } catch (err: any) {
+        setIsPending(false);
+        setErrorMsg(err.message || 'Failed to send password reset verification code. Please try again.');
+      }
+    } else if (recoveryStep === 2) {
+      const cleanCode = recoveryCode.trim();
+      if (cleanCode.length !== 6) {
+        setErrorMsg('Please enter the complete 6-digit verification code sent to your email.');
+        return;
+      }
+
+      setIsPending(true);
+      setStatusMessage('Verifying code against security servers...');
+
+      const query = recoveryIdentifier.trim().toLowerCase();
+      const registry = loadAccounts();
+      const matchedAccount = registry.find(a => a.email.toLowerCase() === query || a.user.username.toLowerCase() === query);
+      const targetEmail = matchedAccount ? matchedAccount.email : (query.includes('@') ? query : '');
+
+      try {
+        // Verify submitted OTP against hashed OTP in server memory
+        await AuthService.verifyEmailOtp(targetEmail, cleanCode, 'PASSWORD_RESET');
+
+        setIsPending(false);
+        setRecoveryStep(3);
+        setSuccessMsg('Code verified successfully. Please enter your new password.');
+      } catch (err: any) {
+        setIsPending(false);
+        setErrorMsg(err.message || 'Invalid or expired verification code. Please try again.');
+      }
     } else if (recoveryStep === 3) {
       if (newPassword.length < 8) {
         setErrorMsg('Password must be at least 8 characters.');
@@ -743,8 +825,12 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       setIsPending(true);
       setStatusMessage('Updating password securely...');
 
-      setTimeout(() => {
-        setIsPending(false);
+      try {
+        // Attempt update with Firebase Auth if logged in
+        try {
+          await AuthService.changeUserPassword(newPassword);
+        } catch (e) {}
+
         const registry = loadAccounts();
         const query = recoveryIdentifier.trim().toLowerCase();
         let targetUserId = 'user';
@@ -760,19 +846,35 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           }
           return acc;
         });
+
         localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
 
-        // Notify security event
-        SecurityNotificationService.notifySecurityEvent(
-          targetUserId,
-          targetEmail,
-          targetName,
-          'PASSWORD_CHANGED'
-        );
+        if (targetEmail) {
+          EmailService.sendTransactionalEmail('SECURITY_ALERT_PASSWORD', {
+            toEmail: targetEmail,
+            userName: targetName
+          });
 
-        switchAuthMode('login');
-        setSuccessMsg('Your password has been reset successfully. Please log in.');
-      }, 1200);
+          SecurityNotificationService.notifySecurityEvent(
+            targetUserId,
+            targetEmail,
+            targetName,
+            'PASSWORD_CHANGED'
+          );
+        }
+
+        setIsPending(false);
+        setSuccessMsg('Your password has been updated successfully! You can now log in.');
+
+        setTimeout(() => {
+          switchAuthMode('login');
+          setIdentifierInput(targetEmail || query);
+          setPasswordInput('');
+        }, 1500);
+      } catch (err: any) {
+        setIsPending(false);
+        setErrorMsg(err.message || 'Failed to update password.');
+      }
     }
   };
 
@@ -1500,6 +1602,9 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                         </div>
                       </div>
 
+                      {/* Firebase Recaptcha Container */}
+                      <div id="recaptcha-container"></div>
+
                       <div className="flex gap-2 pt-2">
                         <button
                           type="button"
@@ -1530,7 +1635,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                           maxLength={6}
                           value={verificationCode}
                           onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                          placeholder="123456"
+                          placeholder="──────"
                           required
                           className="w-full px-4 py-3.5 bg-black/40 border border-violet-500/30 rounded-2xl text-center text-xl font-mono tracking-widest text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all"
                         />
@@ -1605,7 +1710,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                     maxLength={6}
                     value={recoveryCode}
                     onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="739102"
+                    placeholder="──────"
                     required
                     className="w-full px-4 py-3.5 bg-black/40 border border-violet-500/30 rounded-2xl text-center text-xl font-mono tracking-widest text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all"
                   />

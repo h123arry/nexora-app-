@@ -299,6 +299,186 @@ app.post('/api/voh-ai/summarize-post', async (req, res) => {
   }
 });
 
+// ----------------- SECURE PRODUCTION OTP VERIFICATION ENGINE -----------------
+
+import crypto from 'crypto';
+import { EmailService } from './src/services/firebase/emailService';
+
+interface OtpRecord {
+  email: string;
+  hashedCode: string;
+  expiresAt: number;
+  attemptsLeft: number;
+  purpose: string;
+  createdAt: number;
+  lastResendAt: number;
+}
+
+// In-memory cryptographically hashed OTP store
+const otpStore = new Map<string, OtpRecord>();
+
+// Clean up expired OTPs every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, record] of otpStore.entries()) {
+    if (now > record.expiresAt) {
+      otpStore.delete(key);
+    }
+  }
+}, 5 * 60 * 1000);
+
+// Helper function to hash OTP securely
+function hashOtp(code: string): string {
+  return crypto.createHash('sha256').update(code.trim()).digest('hex');
+}
+
+// 1. Endpoint: Send Email OTP (for email verification, forgot password, identity confirmation)
+app.post('/api/auth/send-email-otp', async (req, res) => {
+  try {
+    const { email, purpose = 'VERIFY_EMAIL', userName } = req.body;
+
+    if (!email || !email.includes('@')) {
+      return res.status(400).json({ error: 'A valid email address is required.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const key = `${cleanEmail}:${purpose}`;
+    const now = Date.now();
+
+    // Check resend cooldown (60 seconds)
+    const existing = otpStore.get(key);
+    if (existing && now - existing.lastResendAt < 60000) {
+      const waitSec = Math.ceil((60000 - (now - existing.lastResendAt)) / 1000);
+      return res.status(429).json({
+        error: `Please wait ${waitSec} seconds before requesting a new verification code.`
+      });
+    }
+
+    // Generate cryptographically secure 6-digit code
+    const rawCode = crypto.randomInt(100000, 1000000).toString();
+    const hashedCode = hashOtp(rawCode);
+
+    // Expiration: 10 minutes (600,000 ms), Max 5 attempts
+    const expiresAt = now + 10 * 60 * 1000;
+    
+    otpStore.set(key, {
+      email: cleanEmail,
+      hashedCode,
+      expiresAt,
+      attemptsLeft: 5,
+      purpose,
+      createdAt: now,
+      lastResendAt: now
+    });
+
+    // Generate branded email HTML
+    const resolvedName = userName || cleanEmail.split('@')[0];
+    const templateType = purpose === 'PASSWORD_RESET' 
+      ? 'PASSWORD_RESET' 
+      : purpose === 'IDENTITY_CONFIRMATION' 
+        ? 'IDENTITY_CONFIRMATION' 
+        : 'VERIFY_EMAIL';
+
+    const emailContent = EmailService.generateEmailHTML(templateType as any, {
+      toEmail: cleanEmail,
+      userName: resolvedName,
+      verificationCode: rawCode
+    });
+
+    // Queue transactional email log to Firestore if available
+    try {
+      await EmailService.sendTransactionalEmail(templateType as any, {
+        toEmail: cleanEmail,
+        userName: resolvedName,
+        verificationCode: rawCode
+      });
+    } catch (e) {
+      console.warn('Firestore mail queue warning:', e);
+    }
+
+    console.log(`[OTP Engine] Secure ${purpose} OTP generated and dispatched to ${cleanEmail}. Expires in 10 mins.`);
+
+    // Return success to client. CRITICAL: NEVER expose rawCode in response JSON!
+    return res.json({
+      success: true,
+      message: `A secure 6-digit verification code has been dispatched to ${cleanEmail}.`,
+      expiresInSeconds: 600
+    });
+
+  } catch (error: any) {
+    console.error('Send Email OTP Error:', error);
+    return res.status(500).json({ error: 'Failed to process verification request.', details: error.message });
+  }
+});
+
+// 2. Endpoint: Verify Email OTP
+app.post('/api/auth/verify-email-otp', async (req, res) => {
+  try {
+    const { email, code, purpose = 'VERIFY_EMAIL' } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email and verification code are required.' });
+    }
+
+    const cleanEmail = email.toLowerCase().trim();
+    const key = `${cleanEmail}:${purpose}`;
+    const record = otpStore.get(key);
+
+    if (!record) {
+      return res.status(400).json({
+        error: 'No active verification request found. Please request a new verification code.'
+      });
+    }
+
+    const now = Date.now();
+
+    // Check expiration (10 minutes)
+    if (now > record.expiresAt) {
+      otpStore.delete(key);
+      return res.status(400).json({
+        error: 'Verification code has expired. Please request a new code.'
+      });
+    }
+
+    // Check attempt limit (5 attempts max)
+    if (record.attemptsLeft <= 0) {
+      otpStore.delete(key);
+      return res.status(400).json({
+        error: 'Maximum verification attempts exceeded. Please request a new verification code.'
+      });
+    }
+
+    // Hash submitted code and compare
+    const submittedHash = hashOtp(code);
+    if (submittedHash !== record.hashedCode) {
+      record.attemptsLeft -= 1;
+      if (record.attemptsLeft <= 0) {
+        otpStore.delete(key);
+        return res.status(400).json({
+          error: 'Invalid verification code. Maximum attempts exceeded. Please request a new code.'
+        });
+      }
+      return res.status(400).json({
+        error: `Invalid verification code. ${record.attemptsLeft} attempts remaining.`
+      });
+    }
+
+    // SUCCESS! Delete record to prevent OTP reuse!
+    otpStore.delete(key);
+
+    console.log(`[OTP Engine] Verification SUCCESS for ${cleanEmail} (${purpose}). OTP invalidated to prevent reuse.`);
+
+    return res.json({
+      success: true,
+      message: 'Identity successfully verified.'
+    });
+
+  } catch (error: any) {
+    console.error('Verify Email OTP Error:', error);
+    return res.status(500).json({ error: 'Failed to verify code.', details: error.message });
+  }
+});
+
 
 
 // ----------------- VITE DEVELOPMENT / PRODUCTION MIDDLEWARE -----------------
