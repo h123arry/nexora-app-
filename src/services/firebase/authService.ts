@@ -11,7 +11,7 @@ import {
   User as FirebaseUser,
   reload
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from './config';
 import { User } from '../../types';
 import { EmailService } from './emailService';
@@ -318,11 +318,46 @@ export class AuthService {
   }
 
   /**
-   * Verifies Phone SMS OTP code with Firebase
+   * Verifies Phone SMS OTP code with Firebase and initializes user profile
    */
-  static async confirmPhoneOTP(confirmationResult: ConfirmationResult, otpCode: string): Promise<FirebaseUser> {
+  static async confirmPhoneOTP(confirmationResult: ConfirmationResult, otpCode: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
     const credential = await confirmationResult.confirm(otpCode);
     const fbUser = credential.user;
+
+    // Check if user already exists in Firestore
+    let userProfile = await this.getUserProfile(fbUser.uid);
+
+    if (!userProfile) {
+      // Initialize new user profile if not exists
+      const newUser: User = {
+        id: fbUser.uid,
+        username: `user_${fbUser.uid.substring(0, 5)}`,
+        name: fbUser.displayName || 'Nexora User',
+        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        bio: '',
+        location: 'Global',
+        website: '',
+        followers: 0,
+        following: 0,
+        sparks: 0,
+        isVerified: true, // Phone verified
+        coverImage: '',
+        joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
+        reputationPoints: 0,
+        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+        interestDNA: {},
+        skills: []
+      };
+
+      if (db) {
+        await setDoc(doc(db, 'users', fbUser.uid), {
+          ...newUser,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+      userProfile = newUser;
+    }
 
     SecurityNotificationService.notifySecurityEvent(
       fbUser.uid,
@@ -332,7 +367,32 @@ export class AuthService {
       { browser: navigator.userAgent }
     );
 
-    return fbUser;
+    return { firebaseUser: fbUser, user: userProfile };
+  }
+
+  /**
+   * Fetches user profile from Firestore by username
+   */
+  static async getUserByUsername(username: string): Promise<User | null> {
+    if (!db) return null;
+    const q = query(collection(db, 'users'), where('username', '==', username.toLowerCase().trim()));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs[0].data() as User;
+    }
+    return null;
+  }
+
+  /**
+   * Fetches user profile from Firestore
+   */
+  static async getUserProfile(userId: string): Promise<User | null> {
+    const docRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data() as User;
+    }
+    return null;
   }
 
   /**

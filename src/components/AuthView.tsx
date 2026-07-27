@@ -8,32 +8,27 @@ import {
 } from 'lucide-react';
 
 import { User } from '../types';
-import { getRichUser } from '../data/database';
 import NexoraBranding from './NexoraBranding';
 import NexoraLoader from './NexoraLoader';
 import VohIcon from './VohIcon';
 import { checkUsernameStatus, UsernameStatus } from '../utils/username';
 import { auth } from '../services/firebase/config';
-import { GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, ConfirmationResult } from 'firebase/auth';
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword, 
+  ConfirmationResult,
+  sendEmailVerification
+} from 'firebase/auth';
 import { AuthService } from '../services/firebase/authService';
 import { EmailService } from '../services/firebase/emailService';
-import { PushNotificationService } from '../services/firebase/pushNotificationService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 
 interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
 }
 
-const MAX_FAILED_ATTEMPTS = 5;
-
-interface RegisteredAccount {
-  email: string;
-  passwordHash: string;
-  phone?: string;
-  user: User;
-}
-
-// Preset avatars for quick registration profile photo selection
 const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&auto=format&fit=crop&q=80',
@@ -43,7 +38,6 @@ const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80'
 ];
 
-// Country list for Phone login
 const COUNTRIES = [
   { code: '+1', name: 'United States', flag: '🇺🇸' },
   { code: '+1', name: 'Canada', flag: '🇨🇦' },
@@ -68,79 +62,8 @@ const COUNTRIES = [
   { code: '+31', name: 'Netherlands', flag: '🇳🇱' }
 ];
 
-// Interest topics list
-const INTEREST_TOPICS = [
-  { label: 'Technology', icon: '🧠', category: 'Tech & Dev' },
-  { label: 'Football', icon: '⚽', category: 'Sports' },
-  { label: 'Gaming', icon: '🎮', category: 'Entertainment' },
-  { label: 'Music', icon: '🎵', category: 'Arts & Media' },
-  { label: 'Politics', icon: '🏛️', category: 'News' },
-  { label: 'Science', icon: '🧪', category: 'Discovery' },
-  { label: 'Photography', icon: '📸', category: 'Arts & Media' },
-  { label: 'Art', icon: '🎨', category: 'Arts & Media' },
-  { label: 'Comedy', icon: '🎭', category: 'Entertainment' },
-  { label: 'Business', icon: '💼', category: 'Industry' },
-  { label: 'Fashion', icon: '👠', category: 'Lifestyle' },
-  { label: 'Travel', icon: '✈️', category: 'Lifestyle' },
-  { label: 'Movies', icon: '🎬', category: 'Entertainment' },
-  { label: 'Food', icon: '🍜', category: 'Lifestyle' },
-  { label: 'Education', icon: '📚', category: 'Learning' },
-  { label: 'AI', icon: '🤖', category: 'Tech & Dev' },
-  { label: 'Health', icon: '🏥', category: 'Wellness' },
-  { label: 'Nature', icon: '🌿', category: 'Discovery' },
-  { label: 'Sports', icon: '🏆', category: 'Sports' },
-  { label: 'Local News', icon: '📰', category: 'News' },
-  { label: 'Global News', icon: '🌍', category: 'News' },
-  { label: 'Creators', icon: '💫', category: 'Community' }
-];
-
-// Local accounts loader
-const loadAccounts = (): RegisteredAccount[] => {
-  const stored = localStorage.getItem('nexora_registered_accounts');
-  if (stored) {
-    try {
-      return JSON.parse(stored);
-    } catch (e) {}
-  }
-  const defaults: RegisteredAccount[] = [
-    { 
-      email: 'ogoulu131@gmail.com', 
-      passwordHash: 'password123',
-      phone: '+2348012345678', 
-      user: {
-        id: 'user-ogoulu',
-        username: 'ogoulu131',
-        name: 'Ogoulu',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        bio: 'Creator & Builder on Nexora 🚀 Exploring music, design, and football.',
-        location: 'Port Harcourt, Nigeria',
-        website: 'ogoulu.nexora.io',
-        followers: 120,
-        following: 80,
-        sparks: 1450,
-        isVerified: false,
-        coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-        joinedDate: 'Joined June 2026',
-        preferredLanguage: 'English',
-        reputationPoints: 2450,
-        reputationBreakdown: {
-          contributions: 1200,
-          helpfulness: 800,
-          missionsCompleted: 15,
-          skillsVerified: 30
-        },
-        interestDNA: { 'sports': 99, 'music': 99, 'tech': 99 },
-        skills: ['Content Creation', 'UI Design', 'Music Curation']
-      }
-    }
-  ];
-  localStorage.setItem('nexora_registered_accounts', JSON.stringify(defaults));
-  return defaults;
-};
-
 export default function AuthView({ onLoginSuccess }: AuthViewProps) {
   // Navigation & Auth Flow Modes
-  // Modes: 'login', 'signup', 'forgot_password'
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>('login');
   
   // Method selection in signup: 'choose' | 'email' | 'phone'
@@ -171,11 +94,8 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
   // Forgot Password states
   const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
-  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(1); // 1: Contact, 2: Code, 3: New Password
-  const [recoveryCode, setRecoveryCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
-
+  const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1); // 1: Email, 2: Sent
+  
   // Status & UI feedback
   const [isPending, setIsPending] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
@@ -391,7 +311,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     setIsPending(true);
     setStatusMessage('Verifying credentials via Firebase Authentication...');
 
-    const processLoginResult = (found: any) => {
+    const processLoginResult = async (user: User) => {
       AuthService.clearFailedAttempts(query);
       if (rememberMe) {
         localStorage.setItem('nexora_remembered_identifier', identifierInput);
@@ -401,110 +321,44 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
       // Notify security event
       SecurityNotificationService.notifySecurityEvent(
-        found.user.id,
-        found.email,
-        found.user.name,
+        user.id,
+        user.email || '',
+        user.name,
         'NEW_LOGIN',
         { browser: navigator.userAgent }
       );
 
-      onLoginSuccess(getRichUser(found.user));
+      onLoginSuccess(user);
     };
 
-    // Attempt Firebase Email/Password Authentication first if query is email
-    if (query.includes('@')) {
-      signInWithEmailAndPassword(auth, query, passwordInput)
-        .then((userCredential) => {
-          setIsPending(false);
-          const fbUser = userCredential.user;
-          const registry = loadAccounts();
-          const found = registry.find(acc => acc.email.toLowerCase() === query);
-
-          if (found) {
-            processLoginResult(found);
-          } else {
-            const newUser: User = {
-              id: fbUser.uid,
-              username: (fbUser.email?.split('@')[0] || 'user').toLowerCase().replace(/[^a-z0-9_]/g, ''),
-              name: fbUser.displayName || 'Nexora User',
-              avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-              bio: 'Member of the Nexora community.',
-              location: 'Global',
-              website: '',
-              followers: 0,
-              following: 0,
-              sparks: 50,
-              isVerified: fbUser.emailVerified,
-              coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-              joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
-              reputationPoints: 100,
-              reputationBreakdown: { contributions: 50, helpfulness: 50, missionsCompleted: 1, skillsVerified: 0 },
-              interestDNA: {},
-              skills: []
-            };
-            processLoginResult({ email: query, passwordHash: passwordInput, user: newUser });
-          }
-        })
-        .catch((fbErr: any) => {
-          console.warn('Firebase signInWithEmailAndPassword note:', fbErr.code || fbErr.message);
-          // Fallback to local accounts registry
-          setTimeout(() => {
-            const registry = loadAccounts();
-            const queryPhoneDigits = query.replace(/\D/g, '');
-
-            const found = registry.find(acc => {
-              const emailMatch = acc.email.toLowerCase() === query;
-              const usernameMatch = acc.user.username.toLowerCase() === query;
-              const phoneMatch = acc.phone && acc.phone.replace(/\D/g, '') === queryPhoneDigits && queryPhoneDigits.length >= 7;
-              return (emailMatch || usernameMatch || phoneMatch) && acc.passwordHash === passwordInput;
-            });
-
-            setIsPending(false);
-
-            if (found) {
-              processLoginResult(found);
-            } else {
-              const lock = AuthService.recordFailedAttempt(query);
-              if (lock.isLocked) {
-                setErrorMsg(`🔒 Security limit reached. Account locked for 5 minutes.`);
-              } else {
-                if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/invalid-credential') {
-                  setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
-                } else if (fbErr.code === 'auth/operation-not-allowed') {
-                  setErrorMsg(`⚠️ Firebase Email/Password sign-in is disabled in Firebase Console. Please enable Email/Password provider under Auth Settings.`);
-                } else {
-                  setErrorMsg(`The email, username, or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
-                }
-              }
-            }
-          }, 800);
-        });
-    } else {
-      // Username or phone number login via accounts registry
-      setTimeout(() => {
-        const registry = loadAccounts();
-        const queryPhoneDigits = query.replace(/\D/g, '');
-
-        const found = registry.find(acc => {
-          const usernameMatch = acc.user.username.toLowerCase() === query;
-          const phoneMatch = acc.phone && acc.phone.replace(/\D/g, '') === queryPhoneDigits && queryPhoneDigits.length >= 7;
-          return (usernameMatch || phoneMatch) && acc.passwordHash === passwordInput;
-        });
-
+    // Attempt Firebase Email/Password Authentication
+    signInWithEmailAndPassword(auth, query, passwordInput)
+      .then(async (userCredential) => {
         setIsPending(false);
-
-        if (found) {
-          processLoginResult(found);
+        const fbUser = userCredential.user;
+        
+        // Fetch real user profile from Firestore
+        const userProfile = await AuthService.getUserProfile(fbUser.uid);
+        
+        if (userProfile) {
+          processLoginResult(userProfile);
         } else {
-          const lock = AuthService.recordFailedAttempt(query);
-          if (lock.isLocked) {
-            setErrorMsg(`🔒 Security limit reached. Account locked for 5 minutes.`);
-          } else {
-            setErrorMsg(`The username or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
-          }
+          // Handle case where user auth exists but Firestore profile is missing
+          setErrorMsg('Account profile not found. Please contact support.');
+          setIsPending(false);
         }
-      }, 800);
-    }
+      })
+      .catch((fbErr: any) => {
+        setIsPending(false);
+        const lock = AuthService.recordFailedAttempt(query);
+        if (lock.isLocked) {
+          setErrorMsg(`🔒 Security limit reached. Account locked for 5 minutes.`);
+        } else if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/invalid-credential') {
+          setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
+        } else {
+          setErrorMsg('Authentication failed. Please try again.');
+        }
+      });
   };
 
   // Handle Phone OTP Request (Production Firebase SMS Auth)
@@ -566,43 +420,11 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     try {
       if (phoneConfirmationResult) {
         // Verify code with real Firebase Auth ConfirmationResult
-        const fbUser = await AuthService.confirmPhoneOTP(phoneConfirmationResult, cleanCode);
-        const fullPhone = `${selectedCountry.code}${phoneNumber.trim()}`;
-        const registry = loadAccounts();
-        const existing = registry.find(a => a.phone && a.phone.replace(/\D/g, '') === fullPhone.replace(/\D/g, ''));
+        const { user: nexoraUser } = await AuthService.confirmPhoneOTP(phoneConfirmationResult, cleanCode);
 
         setIsPending(false);
-        if (existing) {
-          onLoginSuccess(getRichUser(existing.user));
-        } else {
-          // Create new account for verified phone user
-          const newUser: User = {
-            id: fbUser.uid || `user-phone-${Date.now()}`,
-            username: '',
-            name: '',
-            avatar: PRESET_AVATARS[Math.floor(Math.random() * PRESET_AVATARS.length)],
-            bio: '',
-            location: selectedCountry.name,
-            website: '',
-            followers: 0,
-            following: 0,
-            sparks: 0,
-            isVerified: true,
-            coverImage: '',
-            joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
-            reputationPoints: 100,
-            reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 10 },
-            interestDNA: {},
-            skills: []
-          };
+        onLoginSuccess(nexoraUser);
 
-          const updated = [...registry, { email: `phone_${Date.now()}@nexora.com`, phone: fullPhone, passwordHash: 'phone_otp_pass', user: newUser }];
-          localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-
-          setOnboardingUser(newUser);
-          setOnboardingUsername(newUser.username);
-          setOnboardingStep(1);
-        }
       } else {
         throw new Error('No active SMS confirmation session. Please request a new verification code.');
       }
@@ -642,12 +464,13 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     }
 
     setIsPending(true);
-    setStatusMessage('Creating your Nexora account and dispatching verification email...');
+    setStatusMessage('Creating your Nexora account...');
 
     const cleanEmail = signupEmail.toLowerCase().trim();
     const defaultUsername = cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '');
 
     try {
+      // Use production-ready registration
       const res = await AuthService.registerUserWithEmail(
         cleanEmail,
         signupPassword,
@@ -655,73 +478,19 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         defaultUsername
       );
 
-      // Dispatch real email OTP via server backend
-      try {
-        await AuthService.sendEmailOtp(cleanEmail, 'VERIFY_EMAIL', signupName.trim());
-      } catch (otpErr) {
-        console.warn('Backend email verification dispatch warning:', otpErr);
-      }
-
-      const registry = loadAccounts();
-      const updated = [...registry, { email: cleanEmail, passwordHash: signupPassword, user: res.user }];
-      localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-
+      // Onboarding transition
       setIsPending(false);
       setOnboardingUser(res.user);
       setOnboardingUsername(res.user.username);
       setOnboardingStep(1);
     } catch (firebaseErr: any) {
-      console.warn('Firebase registration fallback to standard account store:', firebaseErr);
-
-      const registry = loadAccounts();
-      if (registry.some(a => a.email.toLowerCase() === cleanEmail)) {
-        setIsPending(false);
-        setErrorMsg('An account with this email address already exists.');
-        return;
-      }
-
-      const newUser: User = {
-        id: `user-${Date.now()}`,
-        username: defaultUsername,
-        name: signupName.trim(),
-        avatar: PRESET_AVATARS[0],
-        bio: '',
-        location: 'Global',
-        website: '',
-        followers: 0,
-        following: 0,
-        sparks: 0,
-        isVerified: false,
-        coverImage: '',
-        joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
-        reputationPoints: 0,
-        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-        interestDNA: {},
-        skills: []
-      };
-
-      const updated = [...registry, { email: cleanEmail, passwordHash: signupPassword, user: newUser }];
-      localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-
-      // Dispatch real email OTP code via server backend
-      try {
-        await AuthService.sendEmailOtp(cleanEmail, 'VERIFY_EMAIL', signupName.trim());
-      } catch (otpErr) {
-        console.warn('Backend email verification dispatch warning:', otpErr);
-      }
-
-      SecurityNotificationService.notifySecurityEvent(
-        newUser.id,
-        cleanEmail,
-        signupName.trim(),
-        'NEW_LOGIN',
-        { browser: navigator.userAgent }
-      );
-
       setIsPending(false);
-      setOnboardingUser(newUser);
-      setOnboardingUsername(newUser.username);
-      setOnboardingStep(1);
+      console.error('Firebase registration error:', firebaseErr);
+      if (firebaseErr.code === 'auth/email-already-in-use') {
+        setErrorMsg('An account with this email address already exists.');
+      } else {
+        setErrorMsg('Failed to create account. Please try again later.');
+      }
     }
   };
 

@@ -352,20 +352,7 @@ export default function ProfileView({
   const [relationsTab, setRelationsTab] = useState<'followers' | 'following' | 'close-friends' | 'blocked' | 'muted'>('followers');
   const [searchRelationQuery, setSearchRelationQuery] = useState('');
   
-  // Stateful Connected Platforms & Subscriptions
-  const [connectedPlatforms, setConnectedPlatforms] = useState([
-    { id: 'youtube', name: 'YouTube', icon: '▶️', connected: true, username: 'NexoraCreator' },
-    { id: 'instagram', name: 'Instagram', icon: '📸', connected: true, username: '@nexora_creator' },
-    { id: 'tiktok', name: 'TikTok', icon: '🎵', connected: false, username: '' },
-    { id: 'facebook', name: 'Facebook', icon: '👥', connected: false, username: '' },
-    { id: 'x', name: 'X', icon: '✖️', connected: false, username: '' },
-    { id: 'github', name: 'GitHub', icon: '🐙', connected: true, username: 'nexora-dev' },
-    { id: 'website', name: 'Personal Website', icon: '🌐', connected: false, username: '' },
-    { id: 'portfolio', name: 'Portfolio', icon: '🎨', connected: false, username: '' }
-  ]);
-  const [showPlatformConnectModal, setShowPlatformConnectModal] = useState(false);
-  const [platformToConnect, setPlatformToConnect] = useState<any | null>(null);
-  const [platformUsernameInput, setPlatformUsernameInput] = useState('');
+  // Stateful Subscriptions
 
   const [subscriptionsTab, setSubscriptionsTab] = useState<'active' | 'plans' | 'exclusive'>('active');
   const [activeSubscriptions, setActiveSubscriptions] = useState([
@@ -1130,17 +1117,9 @@ export default function ProfileView({
                     </button>
                     <button 
                       onClick={() => onStartChat?.(currentUser.id)} 
-                      className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-zinc-200 transition-all cursor-pointer border border-white/10 h-9 flex items-center justify-center"
+                      className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-zinc-200 transition-all cursor-pointer h-9 flex items-center justify-center"
                     >
                       Message
-                    </button>
-                    <button 
-                      onClick={() => setIsConnected(!isConnected)} 
-                      className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer h-9 flex items-center justify-center ${
-                        isConnected ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30' : 'bg-white/5 hover:bg-white/10 text-zinc-200 border border-white/10'
-                      }`}
-                    >
-                      {isConnected ? 'Connected' : 'Connect'}
                     </button>
                     <button 
                       onClick={() => setShowShareModal(true)} 
@@ -1154,8 +1133,25 @@ export default function ProfileView({
               </div>
             </div>
 
+            {/* Nexora 6 Statistics Grid */}
+            <div className="grid grid-cols-3 gap-y-2 gap-x-1 text-center mt-3">
+              {[
+                { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
+                { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
+                { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
+                { label: 'Sparks', value: getSecondaryMetric('sparks') },
+                { label: 'Reputation', value: getSecondaryMetric('reputation') },
+                { label: 'Contributions', value: getSecondaryMetric('contributions') },
+              ].map(stat => (
+                <div key={stat.label} className="flex flex-col py-1">
+                  <span className="text-sm font-black text-white leading-tight">{stat.value}</span>
+                  <span className="text-[10px] font-medium text-zinc-500">{stat.label}</span>
+                </div>
+              ))}
+            </div>
+
             {/* Collapsible Bio */}
-            <div className="text-zinc-300 text-xs leading-relaxed">
+            <div className="text-zinc-300 text-xs leading-relaxed pt-2">
               <motion.div 
                 animate={{ height: isBioExpanded ? "auto" : "2.6rem" }} 
                 className="overflow-hidden relative"
@@ -1168,7 +1164,7 @@ export default function ProfileView({
               {currentUser.bio && (currentUser.bio.length > 70 || currentUser.bio.split('\n').length > 2) && (
                 <button 
                   onClick={() => setIsBioExpanded(!isBioExpanded)} 
-                  className="text-violet-400 font-bold mt-1 text-[11px] hover:text-violet-300 transition-colors cursor-pointer flex items-center gap-1"
+                  className="text-violet-400 font-bold mt-0.5 text-[10px] hover:text-violet-300 transition-colors cursor-pointer flex items-center gap-1"
                 >
                   <span>{isBioExpanded ? 'Show less' : 'Show more'}</span>
                   <ChevronDown className={`w-3 h-3 transition-transform ${isBioExpanded ? 'rotate-180' : ''}`} />
@@ -1187,25 +1183,10 @@ export default function ProfileView({
                 <span>3 mutual connections in common</span>
               </div>
             )}
-          </div>
 
           {/* Nexora 6 Statistics Grid */}
-          <div className="grid grid-cols-3 gap-y-4 gap-x-2 text-center my-3 mb-2">
-            {[
-              { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
-              { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
-              { label: 'Posts', value: formatSecondaryStat(getPostsCount()) },
-              { label: 'Sparks', value: getSecondaryMetric('sparks') },
-              { label: 'Reputation', value: getSecondaryMetric('reputation') },
-              { label: 'Contributions', value: getSecondaryMetric('contributions') },
-            ].map(stat => (
-              <div key={stat.label} className="flex flex-col">
-                <span className="text-base font-black text-white leading-tight">{stat.value}</span>
-                <span className="text-[11px] font-medium text-zinc-500">{stat.label}</span>
-              </div>
-            ))}
+          {/* REMOVED - MOVED ABOVE BIO */}
           </div>
-        </div>
 
           {/* 3. ICON-ONLY NAVIGATION BAR */}
           <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-1 px-0 w-full">
@@ -3164,119 +3145,7 @@ export default function ProfileView({
                 <span className="text-xs font-mono text-zinc-400 font-extrabold uppercase">Linked Accounts</span>
               </div>
               
-              <div className="space-y-6">
-                {/* Header Info */}
-                <div className="p-6 bg-linear-to-tr from-blue-900/20 to-[#04020f] border border-blue-500/20 rounded-3xl">
-                  <h2 className="text-xl font-black text-white mb-2">Connected Platforms</h2>
-                  <p className="text-sm text-zinc-400">Link your other social profiles and websites to display them on your Nexora profile.</p>
-                </div>
-                
-                {/* Platforms List */}
-                <div className="space-y-3">
-                  {connectedPlatforms.map(platform => (
-                    <div key={platform.id} className="flex items-center justify-between p-4 bg-[#0a0818] border border-white/5 rounded-2xl">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white/5 rounded-xl flex items-center justify-center text-lg">{platform.icon}</div>
-                        <div>
-                          <p className="text-sm font-bold text-white">{platform.name}</p>
-                          {platform.connected ? (
-                            <p className="text-[10px] font-mono text-emerald-400">Connected as {platform.username}</p>
-                          ) : (
-                            <p className="text-[10px] font-mono text-zinc-500">Not connected</p>
-                          )}
-                        </div>
-                      </div>
-                      <div>
-                        {platform.connected ? (
-                          <button 
-                            onClick={() => {
-                              setConnectedPlatforms(prev => prev.map(p => p.id === platform.id ? { ...p, connected: false, username: '' } : p));
-                              window.dispatchEvent(new CustomEvent('toast', { detail: `🔌 Disconnected ${platform.name} account` }));
-                            }}
-                            className="text-[10px] font-bold text-zinc-400 hover:text-red-400 transition-colors bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg border border-white/5 cursor-pointer"
-                          >
-                            Disconnect
-                          </button>
-                        ) : (
-                          <button 
-                            onClick={() => {
-                              setPlatformToConnect(platform);
-                              setPlatformUsernameInput(platform.id === 'website' || platform.id === 'portfolio' ? 'https://' : '@');
-                              setShowPlatformConnectModal(true);
-                            }}
-                            className="text-[10px] font-bold text-white bg-blue-600 hover:bg-blue-500 transition-colors px-3 py-1.5 rounded-lg shadow-md shadow-blue-900/20 cursor-pointer"
-                          >
-                            Connect
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
 
-              {/* Platform Connection Modal Overlay */}
-              {showPlatformConnectModal && platformToConnect && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-                  <div className="bg-[#0e0c24] border border-white/10 p-6 rounded-3xl max-w-md w-full space-y-4">
-                    <div className="flex items-center justify-between border-b border-white/5 pb-3">
-                      <h3 className="text-sm font-bold text-white font-mono uppercase flex items-center gap-2">
-                        <span>{platformToConnect.icon}</span> Connect {platformToConnect.name}
-                      </h3>
-                      <button 
-                        onClick={() => {
-                          setShowPlatformConnectModal(false);
-                          setPlatformToConnect(null);
-                        }}
-                        className="text-zinc-500 hover:text-white cursor-pointer"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-mono uppercase text-zinc-400">
-                        {platformToConnect.id === 'website' || platformToConnect.id === 'portfolio' ? 'Website URL' : 'Username / Handle'}
-                      </label>
-                      <input 
-                        type="text" 
-                        value={platformUsernameInput} 
-                        onChange={(e) => setPlatformUsernameInput(e.target.value)}
-                        placeholder={platformToConnect.id === 'website' || platformToConnect.id === 'portfolio' ? 'https://myportfolio.com' : '@username'}
-                        className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white text-xs focus:outline-hidden focus:border-blue-500 font-mono"
-                        autoFocus
-                      />
-                    </div>
-
-                    <div className="flex gap-2 pt-2">
-                      <button 
-                        onClick={() => {
-                          setShowPlatformConnectModal(false);
-                          setPlatformToConnect(null);
-                        }}
-                        className="flex-1 py-2 bg-white/5 hover:bg-white/10 text-xs font-bold text-zinc-300 rounded-xl transition-all cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        onClick={() => {
-                          if (!platformUsernameInput || platformUsernameInput.trim() === '' || platformUsernameInput === '@' || platformUsernameInput === 'https://') {
-                            alert('Please enter a valid handle or URL');
-                            return;
-                          }
-                          setConnectedPlatforms(prev => prev.map(p => p.id === platformToConnect.id ? { ...p, connected: true, username: platformUsernameInput.trim() } : p));
-                          setShowPlatformConnectModal(false);
-                          setPlatformToConnect(null);
-                          window.dispatchEvent(new CustomEvent('toast', { detail: `🔌 Connected ${platformToConnect.name} as ${platformUsernameInput.trim()}` }));
-                        }}
-                        className="flex-1 py-2 bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white rounded-xl transition-all shadow-md shadow-blue-900/20 cursor-pointer"
-                      >
-                        Confirm Link
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
             </div>
           </div>
@@ -3946,6 +3815,7 @@ export default function ProfileView({
         }}
       />
       <StorageDataCenterModal isOpen={isStorageCenterOpen} onClose={() => setIsStorageCenterOpen(false)} />
+      </div>
     </div>
   );
 }
