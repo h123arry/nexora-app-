@@ -363,25 +363,52 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         const fbUser = userCredential.user;
         
         // Fetch real user profile from Firestore
-        const userProfile = await AuthService.getUserProfile(fbUser.uid);
+        let userProfile = await AuthService.getUserProfile(fbUser.uid);
         
-        if (userProfile) {
-          processLoginResult(userProfile);
-        } else {
-          // Handle case where user auth exists but Firestore profile is missing
-          setErrorMsg('Account profile not found. Please contact support.');
-          setIsPending(false);
+        if (!userProfile) {
+          console.warn('Profile missing for user, creating default profile:', fbUser.uid);
+          // Create default profile
+          const defaultUser: User = {
+            id: fbUser.uid,
+            username: fbUser.email?.split('@')[0] || `user_${fbUser.uid.substring(0,5)}`,
+            name: fbUser.displayName || 'Nexora User',
+            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+            bio: '',
+            location: 'Global',
+            website: '',
+            followers: 0,
+            following: 0,
+            sparks: 0,
+            isVerified: fbUser.emailVerified,
+            coverImage: '',
+            joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
+            reputationPoints: 0,
+            reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+            interestDNA: {},
+            skills: []
+          };
+          
+          // Re-create user in Firestore
+          await AuthService.createUserProfile(defaultUser, fbUser.email || '');
+          userProfile = defaultUser;
         }
+        
+        processLoginResult(userProfile);
       })
       .catch((fbErr: any) => {
         setIsPending(false);
+        console.error("Firebase Authentication Error (Email Login):", {
+          code: fbErr.code,
+          message: fbErr.message,
+          stack: fbErr.stack,
+        });
         const lock = AuthService.recordFailedAttempt(query);
         if (lock.isLocked) {
           setErrorMsg(`🔒 Security limit reached. Account locked for 5 minutes.`);
         } else if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/invalid-credential') {
           setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
         } else {
-          setErrorMsg('Authentication failed. Please try again.');
+          setErrorMsg(`Authentication failed: ${fbErr.message || 'Please try again.'}`);
         }
       });
   };
@@ -413,7 +440,11 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       setVerificationCode(''); // Never auto-fill or display OTP code
       setSuccessMsg('SMS verification code sent to your phone.');
     } catch (err: any) {
-      console.warn('Firebase Phone Auth SMS error:', err);
+      console.error('Firebase Phone Auth SMS error:', {
+        code: err.code,
+        message: err.message,
+        stack: err.stack,
+      });
       setIsPending(false);
       
       if (err.code === 'auth/invalid-phone-number') {
@@ -423,7 +454,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       } else if (err.code === 'auth/too-many-requests') {
         setErrorMsg('Too many SMS requests sent to this number. Please wait before trying again.');
       } else {
-        setErrorMsg('Phone SMS verification is currently unavailable or requires Firebase SMS service configuration. Please ensure Firebase Phone Authentication is enabled in your Firebase Console.');
+        setErrorMsg(`Phone SMS verification failed: ${err.message || 'Please ensure Firebase Phone Authentication is enabled in your Firebase Console.'}`);
       }
     }
   };
@@ -454,14 +485,18 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         throw new Error('No active SMS confirmation session. Please request a new verification code.');
       }
     } catch (err: any) {
-      console.error('Phone OTP verification error:', err);
+      console.error('Phone OTP verification error:', {
+        code: err.code,
+        message: err.message,
+        stack: err.stack,
+      });
       setIsPending(false);
       if (err.code === 'auth/invalid-verification-code') {
         setErrorMsg('Invalid verification code. Please check the SMS message and enter the correct 6-digit code.');
       } else if (err.code === 'auth/code-expired') {
         setErrorMsg('Verification code has expired. Please tap "Resend SMS Code" to receive a new code.');
       } else {
-        setErrorMsg(err.message || 'Verification failed. Please check the code and try again.');
+        setErrorMsg(`Verification failed: ${err.message || 'Please check the code and try again.'}`);
       }
     }
   };
@@ -510,11 +545,15 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       setOnboardingStep(1);
     } catch (firebaseErr: any) {
       setIsPending(false);
-      console.error('Firebase registration error:', firebaseErr);
+      console.error('Firebase registration error:', {
+        code: firebaseErr.code,
+        message: firebaseErr.message,
+        stack: firebaseErr.stack,
+      });
       if (firebaseErr.code === 'auth/email-already-in-use') {
         setErrorMsg('An account with this email address already exists.');
       } else {
-        setErrorMsg('Failed to create account. Please try again later.');
+        setErrorMsg(`Failed to create account: ${firebaseErr.message || 'Please try again later.'}`);
       }
     }
   };

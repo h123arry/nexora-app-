@@ -396,6 +396,20 @@ export class AuthService {
   }
 
   /**
+   * Creates a user profile in Firestore
+   */
+  static async createUserProfile(user: User, email: string): Promise<void> {
+    if (db) {
+      await setDoc(doc(db, 'users', user.id), {
+        ...user,
+        email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  }
+
+  /**
    * Change user password with security notification
    */
   static async changeUserPassword(newPassword: string): Promise<boolean> {
