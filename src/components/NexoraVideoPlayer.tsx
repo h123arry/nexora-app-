@@ -1206,7 +1206,7 @@ export default function NexoraVideoPlayer({
       onMouseDown={handleStartHold}
       onMouseUp={handleReleaseHold}
       onMouseLeave={handleReleaseHold}
-      className="relative overflow-hidden bg-black select-none group w-full h-full flex items-center justify-center animate-fade-in touch-pan-y"
+      className="relative overflow-hidden bg-black select-none group w-full h-auto flex items-center justify-center animate-fade-in touch-pan-y"
     >
        {/* Absolute Video Frame */}
        {finalVideoUrl ? (
@@ -1232,7 +1232,7 @@ export default function NexoraVideoPlayer({
               onWaiting={() => setIsBuffering(true)}
               onPlaying={() => setIsBuffering(false)}
               onCanPlay={() => setIsBuffering(false)}
-              className="w-full h-full object-cover cursor-pointer"
+              className="w-full h-auto max-h-[85vh] object-cover cursor-pointer"
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             {isBuffering && (

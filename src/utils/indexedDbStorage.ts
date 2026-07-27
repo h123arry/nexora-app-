@@ -120,12 +120,33 @@ export function generateVideoThumbnail(videoBlob: Blob): Promise<string> {
     const url = URL.createObjectURL(videoBlob);
     video.src = url;
 
-    video.onloadeddata = () => {
-      // Seek to 0.5s for a good thumbnail frame
-      video.currentTime = 0.5;
+    // Timeout fallback if generating takes too long (e.g. infinite buffering)
+    let timeoutId = setTimeout(() => {
+        cleanup();
+        resolve('');
+    }, 5000);
+
+    const cleanup = () => {
+        clearTimeout(timeoutId);
+        URL.revokeObjectURL(url);
+        video.onloadeddata = null;
+        video.onseeked = null;
+        video.onerror = null;
     };
 
-    video.onseeked = () => {
+    video.onloadeddata = () => {
+      // Ensure we have a valid duration
+      let seekTime = 0.5;
+      if (video.duration && video.duration > 0) {
+         seekTime = Math.min(0.5, video.duration / 2);
+      } else if (!video.duration || video.duration === Infinity) {
+         seekTime = 0;
+      }
+      
+      video.currentTime = seekTime;
+    };
+
+    const extractFrame = () => {
       try {
         const canvas = document.createElement('canvas');
         canvas.width = video.videoWidth || 320;
@@ -135,22 +156,24 @@ export function generateVideoThumbnail(videoBlob: Blob): Promise<string> {
         if (ctx) {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
-          URL.revokeObjectURL(url);
+          cleanup();
           resolve(dataUrl);
         } else {
-          URL.revokeObjectURL(url);
+          cleanup();
           resolve('');
         }
       } catch (err) {
         console.error('[Storage] Error drawing video thumbnail content', err);
-        URL.revokeObjectURL(url);
+        cleanup();
         resolve('');
       }
     };
 
+    video.onseeked = extractFrame;
+    
     video.onerror = () => {
       console.error('[Storage] Error loading video for thumbnail generation');
-      URL.revokeObjectURL(url);
+      cleanup();
       resolve('');
     };
   });

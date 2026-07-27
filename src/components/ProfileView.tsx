@@ -78,7 +78,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                   <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/40 via-[#0a0521]/90 to-[#2c0b3d]/30" />
                   <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-pink-500/5 to-transparent animate-pulse" />
                   <NexoraVideo 
-                    src={post.videoUrl ? `${post.videoUrl}#t=0.5` : ''} 
+                    src={post.videoUrl ? `${post.videoUrl}#t=0.001` : ''} 
                     className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
                     preload="metadata" 
                     muted 
@@ -768,9 +768,22 @@ export default function ProfileView({
   const pinnedPostIdsList = currentUser.pinnedPosts || [];
   const myPosts = posts.filter(p => p.username === currentUser.username);
   
+  useEffect(() => {
+    const handleDeletePost = (e: Event) => {
+      const { postId } = (e as CustomEvent).detail || {};
+      if (postId && selectedGridPost?.id === postId) {
+        setSelectedGridPost(null);
+      }
+    };
+    window.addEventListener('nexora-delete-post', handleDeletePost);
+    return () => window.removeEventListener('nexora-delete-post', handleDeletePost);
+  }, [selectedGridPost]);
+
   // Tab filtered items (Contributions, Media, Voice, Circles, Communities, Reputation)
   const getTabContent = () => {
-    const activePosts = myPosts.filter(p => !p.isArchived);
+    const activePosts = myPosts
+      .filter(p => !p.isArchived)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     switch (profileTab) {
       case 'media':
         return activePosts.filter(p => !!p.image || !!p.videoUrl);
@@ -800,8 +813,9 @@ export default function ProfileView({
   };
 
   const getPostsCount = () => {
+    const activeLength = myPosts.filter(p => !p.isArchived).length;
     if (currentUser.username === 'voh') {
-      const extra = Math.max(0, myPosts.length - 2);
+      const extra = Math.max(0, activeLength - 2);
       return 14 + extra;
     }
     if (currentUser.username === 'voh_ai') {
@@ -810,7 +824,7 @@ export default function ProfileView({
     if (currentUser.username === 'nexora_ai') {
       return 8;
     }
-    return myPosts.length;
+    return activeLength;
   };
 
   const getSecondaryMetric = (type: 'sparks' | 'reputation' | 'contributions') => {
@@ -985,69 +999,8 @@ export default function ProfileView({
         </div>
       </div>
 
-      {/* 2. PUBLIC PROFILE CARD & INFORMATION ARCHITECTURE */}
-      {isLoadingProfile ? (
-        <>
-        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-8 pb-2 space-y-6 text-left">
-          {/* Header Banner Skeleton */}
-          <div className="h-28 w-full rounded-2xl bg-violet-950/20 border border-white/10 flex items-center justify-center">
-            <NexoraLoader size="md" center={true} />
-          </div>
-          
-          {/* Identity skeleton */}
-          <div className="flex gap-5 sm:gap-6 items-center text-left animate-pulse">
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-violet-950/30 shrink-0" />
-            <div className="space-y-2 flex-1">
-              <div className="h-6 w-1/3 bg-violet-900/30 rounded-lg" />
-              <div className="h-4 w-1/4 bg-violet-900/25 rounded-md" />
-              <div className="h-3.5 w-1/5 bg-violet-900/25 rounded-md" />
-            </div>
-          </div>
-
-          {/* Followers metrics skeleton */}
-          <div className="grid grid-cols-3 gap-y-4 gap-x-4 sm:gap-x-8 py-4 my-3 border-y border-white/5">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="space-y-2 text-left">
-                <div className="h-5 w-14 bg-violet-900/30 rounded-md" />
-                <div className="h-3 w-10 bg-violet-900/20 rounded-md" />
-              </div>
-            ))}
-          </div>
-
-          {/* Action buttons skeleton */}
-          <div className="flex gap-2">
-            <div className="flex-1 h-[38px] bg-violet-900/20 rounded-xl" />
-            <div className="flex-1 h-[38px] bg-violet-900/20 rounded-xl" />
-            <div className="flex-1 h-[38px] bg-violet-900/20 rounded-xl" />
-          </div>
-
-          {/* Bio skeleton */}
-          <div className="space-y-2">
-            <div className="h-3.5 w-full bg-violet-900/25 rounded-md" />
-            <div className="h-3.5 w-5/6 bg-violet-900/25 rounded-md" />
-            <div className="h-3.5 w-2/3 bg-violet-900/20 rounded-md" />
-          </div>
-
-          {/* Profile Tab bar skeleton */}
-          <div className="flex border-b border-white/5 pb-2 gap-4">
-            <div className="h-5 w-16 bg-violet-900/30 rounded-md" />
-            <div className="h-5 w-16 bg-violet-900/20 rounded-md" />
-            <div className="h-5 w-16 bg-violet-900/20 rounded-md" />
-          </div>
-        </div>
-
-        {/* Feed Grid skeleton - Full Width */}
-        <div className="w-full mt-1 animate-pulse">
-          <div className="grid grid-cols-3 gap-[1px] w-full bg-black">
-            <div className="aspect-[2/3] bg-violet-950/20 border-0 rounded-none" />
-            <div className="aspect-[2/3] bg-violet-950/20 border-0 rounded-none" />
-            <div className="aspect-[2/3] bg-violet-950/20 border-0 rounded-none" />
-          </div>
-        </div>
-        </>
-      ) : (
-        <>
-        <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
+      {/* 2. PROFILE HEADER (COMPRESSED) */}
+      <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Completion Prompts */}
           {isOwnProfile && (!currentUser.name || currentUser.name === 'New User' || !currentUser.username || !currentUser.bio || !currentUser.avatar || currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')) && (
@@ -1254,16 +1207,16 @@ export default function ProfileView({
           </div>
         </div>
 
-          {/* Rebuilt Sticky Navigation Tabs (6 Nexora Tabs) */}
-          <div className="sticky top-[3.5rem] bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-1 px-0 w-full">
+          {/* 3. ICON-ONLY NAVIGATION BAR */}
+          <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-1 px-0 w-full">
             <div className="w-full max-w-4xl mx-auto flex items-center justify-around py-0">
               {[
-                { id: 'contributions', icon: BarChart2, label: 'Contributions' },
-                { id: 'media', icon: Camera, label: 'Media' },
-                { id: 'voice', icon: Mic, label: 'Voice' },
-                { id: 'circles', icon: Users, label: 'Circles' },
-                { id: 'communities', icon: Globe, label: 'Communities' },
-                { id: 'reputation', icon: Award, label: 'Reputation' }
+                { id: 'contributions', icon: BarChart2 },
+                { id: 'media', icon: Camera },
+                { id: 'voice', icon: Mic },
+                { id: 'circles', icon: Users },
+                { id: 'communities', icon: Globe },
+                { id: 'reputation', icon: Award }
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = profileTab === tab.id;
@@ -1276,11 +1229,10 @@ export default function ProfileView({
                         ? 'text-white' 
                         : 'text-zinc-500 hover:text-zinc-300'
                     }`}
-                    title={tab.label}
                   >
-                    <Icon className="w-6 h-6" />
+                    <Icon className="w-5 h-5" />
                     {isActive && (
-                      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-[1px] bg-violet-500" />
+                      <div className="absolute bottom-0 w-full h-[2px] bg-violet-500 rounded-full" />
                     )}
                   </button>
                 );
@@ -1528,9 +1480,7 @@ export default function ProfileView({
               </div>
             ) : null}
           </div>
-        </>
-      )}
-      
+        
         {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure - Redesigned Settings & Privacy Hub) */}
       <AnimatePresence>
         {activePanel === 'other-profile-menu' && !isOwnProfile && (

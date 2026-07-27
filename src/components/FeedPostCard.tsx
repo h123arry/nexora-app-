@@ -158,12 +158,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           navigator.vibrate(20);
         }
       }}
-      className={`py-4 border-b transition-colors duration-150 group text-left relative overflow-hidden space-y-3 transform-gpu ${
+      className={`py-3 sm:py-4 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
         post.isBroadcastPost
-          ? 'bg-gradient-to-b from-[#181108] via-[#0c0804] to-[#060402] border-amber-500/10'
+          ? 'bg-gradient-to-b from-amber-500/5 to-transparent'
           : post.userId === 'user-0'
-          ? 'bg-gradient-to-b from-[#0e0a29] via-[#060417] to-[#03020c] border-white/10'
-          : 'bg-black border-white/5 hover:border-white/10'
+          ? 'bg-gradient-to-b from-violet-500/5 to-transparent'
+          : 'bg-transparent'
       }`}
     >
       {/* Floating hearts double-tap animation */}
@@ -514,7 +514,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (
-        <div className="mb-3 w-full overflow-hidden border-y border-white/10 aspect-[9/16] max-h-[600px] bg-black">
+        <div className="mb-3 w-full overflow-hidden border-y border-white/10 bg-black">
           <NexoraVideoPlayer
             post={post}
             videoUrl={post.videoUrl}
@@ -695,44 +695,38 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             </div>
           </div>
         ) : (
-          <div className="px-4 sm:px-6 flex items-center justify-between gap-1 sm:gap-2 border-t border-white/5 pt-3.5 mt-2 text-violet-300/80 text-xs">
+          <div className="px-4 sm:px-6 flex items-start gap-4 border-t border-white/5 pt-4 mt-2 text-white">
             {/* Spark (Zap) */}
             <button
               onClick={() => onSpark(post.id)}
-              className={`relative flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-xs overflow-hidden ${
-                post.isLikedByUser
-                  ? 'bg-pink-500/15 border-pink-500/40 text-pink-400 font-bold'
-                  : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
-              }`}
+              className="flex flex-col items-center gap-1 group cursor-pointer"
               title="Spark"
             >
-              <Zap className={`w-3.5 h-3.5 ${post.isLikedByUser ? 'fill-pink-500 text-pink-400' : 'text-pink-400/80'}`} />
-              <span className="font-mono text-[11px] relative z-10">{post.likes}</span>
+              <Zap className={`w-6 h-6 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
+              <span className="text-[10px] font-mono font-bold">{post.likes}</span>
             </button>
 
             {/* Comment */}
             <button
               onClick={() => onCommentToggle(post.id)}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-xs ${
-                isCommentsOpen ? 'bg-violet-500/20 border-white/10 text-violet-300 font-bold' : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
-              }`}
+              className="flex flex-col items-center gap-1 group cursor-pointer"
               title="Comment"
             >
-              <MessageCircle className="w-3.5 h-3.5 text-violet-400" />
-              <span className="font-mono text-[11px]">{post.comments?.length || 0}</span>
+              <MessageCircle className="w-6 h-6 text-white" />
+              <span className="text-[10px] font-mono font-bold">{post.comments?.length || 0}</span>
             </button>
 
             {/* Repost */}
             <button
               onClick={() => {
                 if (onSharePost) onSharePost(post.id);
-                window.dispatchEvent(new CustomEvent('toast', { detail: '🔁 Post reposted! (+5 Reputation Points)' }));
+                window.dispatchEvent(new CustomEvent('toast', { detail: '🔁 Post reposted!' }));
               }}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-200 cursor-pointer text-xs text-violet-300/90"
+              className="flex flex-col items-center gap-1 group cursor-pointer"
               title="Repost"
             >
-              <Repeat className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="font-mono text-[11px]">{post.shares || 0}</span>
+              <Repeat className="w-6 h-6 text-white" />
+              <span className="text-[10px] font-mono font-bold">{post.shares || 0}</span>
             </button>
 
             {/* Share */}
@@ -740,28 +734,24 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               onClick={() => {
                 try {
                   navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
-                  window.dispatchEvent(new CustomEvent('toast', { detail: '📋 Post link copied to clipboard!' }));
+                  window.dispatchEvent(new CustomEvent('toast', { detail: '📋 Link copied!' }));
                 } catch (e) {}
               }}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full bg-white/5 border border-white/5 hover:bg-white/10 transition-all duration-200 cursor-pointer text-xs text-violet-300/90"
+              className="flex flex-col items-center gap-1 group cursor-pointer"
               title="Share"
             >
-              <Send className="w-3.5 h-3.5 text-pink-400" />
-              <span className="font-mono text-[11px] hidden sm:inline">Share</span>
+              <Send className="w-6 h-6 text-white" />
+              <span className="text-[10px] font-mono font-bold">Share</span>
             </button>
 
             {/* Bookmark */}
             <button
               onClick={() => onSave(post.id)}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-full transition-all duration-200 cursor-pointer border text-xs ${
-                post.isBookmarkedByUser
-                  ? 'bg-cyan-500/15 border-cyan-500/30 text-cyan-400 font-bold'
-                  : 'bg-white/5 border-white/5 hover:bg-white/10 text-violet-300/90'
-              }`}
+              className="flex flex-col items-center gap-1 group cursor-pointer"
               title="Bookmark"
             >
-              <Bookmark className={`w-3.5 h-3.5 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-cyan-400/80'}`} />
-              <span className="font-mono text-[11px] hidden sm:inline">Bookmark</span>
+              <Bookmark className={`w-6 h-6 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-white'}`} />
+              <span className="text-[10px] font-mono font-bold">{post.bookmarksCount || 0}</span>
             </button>
           </div>
         )
