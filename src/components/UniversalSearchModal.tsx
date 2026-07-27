@@ -30,9 +30,9 @@ export default function UniversalSearchModal({
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('nexora_recent_searches');
-      return saved ? JSON.parse(saved) : ['VOH AI architecture', 'quantum mesh', '#NexoraGlobal', 'creator grants', 'quantum_lab'];
+      return saved ? JSON.parse(saved) : [];
     } catch {
-      return ['VOH AI architecture', 'quantum mesh', '#NexoraGlobal'];
+      return [];
     }
   });
 
@@ -262,10 +262,10 @@ export default function UniversalSearchModal({
               </div>
 
               {/* Recent Searches */}
-              {recentSearches.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between px-1">
-                    <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-400">Recent Searches</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between px-1">
+                  <h3 className="text-xs font-mono uppercase tracking-widest text-zinc-400">Recent Searches</h3>
+                  {recentSearches.length > 0 && (
                     <button
                       onClick={handleClearAllRecent}
                       className="text-xs text-zinc-400 hover:text-red-400 transition-colors cursor-pointer flex items-center gap-1 font-sans"
@@ -273,7 +273,13 @@ export default function UniversalSearchModal({
                       <Trash2 className="w-3.5 h-3.5" />
                       <span>Clear All</span>
                     </button>
+                  )}
+                </div>
+                {recentSearches.length === 0 ? (
+                  <div className="py-6 px-4 text-center rounded-2xl bg-white/5 border border-white/5 text-zinc-400 text-xs font-sans">
+                    No recent searches.
                   </div>
+                ) : (
                   <div className="flex flex-wrap gap-2">
                     {recentSearches.map((term) => (
                       <div
@@ -295,8 +301,8 @@ export default function UniversalSearchModal({
                       </div>
                     ))}
                   </div>
-                </div>
-              )}
+                )}
+              </div>
 
               {/* Platform Overview Info */}
               <div className="p-6 rounded-3xl bg-gradient-to-br from-violet-900/20 via-purple-900/10 to-black border border-violet-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -308,9 +314,6 @@ export default function UniversalSearchModal({
                   <p className="text-xs text-zinc-300 font-sans leading-relaxed max-w-xl">
                     Search across people, posts, World Pulse, trusted circles, communities, private messages, opportunities, and VOH AI conversation logs instantly.
                   </p>
-                </div>
-                <div className="px-4 py-2 rounded-xl bg-violet-500/20 border border-violet-500/40 text-violet-300 font-mono text-xs font-bold shrink-0">
-                  Global Index v4.2
                 </div>
               </div>
 

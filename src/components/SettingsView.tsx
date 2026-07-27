@@ -183,7 +183,6 @@ export default function SettingsView({
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">About Nexora Platform</h3>
               <div className="space-y-2 text-xs text-zinc-300">
-                <p><strong className="text-white">Version:</strong> 3.0 Unified Navigation Edition</p>
                 <p><strong className="text-white">Mesh Network:</strong> Operational & Node Verified</p>
                 <p><strong className="text-white">AI Engine:</strong> VOH AI Multimodal Assistant Connected</p>
               </div>

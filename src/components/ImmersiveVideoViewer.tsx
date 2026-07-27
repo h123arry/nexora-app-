@@ -19,7 +19,7 @@ interface ImmersiveVideoViewerProps {
 
 export default function ImmersiveVideoViewer({
   initialPost,
-  creatorPosts,
+  creatorPosts = [],
   currentUser,
   onClose,
   onLikePost,
@@ -27,24 +27,46 @@ export default function ImmersiveVideoViewer({
   isFollowing = false,
   onAddComment
 }: ImmersiveVideoViewerProps) {
+  if (!initialPost) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center text-white">
+        <p className="text-sm font-mono mb-4">Post unavailable.</p>
+        <button onClick={onClose} className="px-4 py-2 bg-violet-600 rounded-xl text-xs font-bold cursor-pointer">Close</button>
+      </div>
+    );
+  }
+
   // Only include posts that have videoUrl for the swipeable list
-  const videoPosts = creatorPosts.filter(p => p.videoUrl);
+  const videoPosts = (creatorPosts || []).filter(p => p && p.videoUrl);
   
   // Determine initial posts list
   const postsToShow = videoPosts.length > 0 ? videoPosts : [initialPost];
 
   // Remember last watched position in REELS tab
   const [currentIndex, setCurrentIndex] = useState(() => {
-    const savedPostId = localStorage.getItem('nexora_last_reels_post_id');
-    if (savedPostId) {
-      const foundIdx = postsToShow.findIndex(p => p.id === savedPostId);
-      if (foundIdx >= 0) return foundIdx;
+    try {
+      const savedPostId = localStorage.getItem('nexora_last_reels_post_id');
+      if (savedPostId) {
+        const foundIdx = postsToShow.findIndex(p => p && p.id === savedPostId);
+        if (foundIdx >= 0) return foundIdx;
+      }
+      const startIdx = postsToShow.findIndex(p => p && p.id === initialPost.id);
+      return startIdx >= 0 ? startIdx : 0;
+    } catch {
+      return 0;
     }
-    const startIdx = postsToShow.findIndex(p => p.id === initialPost.id);
-    return startIdx >= 0 ? startIdx : 0;
   });
 
-  const currentPost = postsToShow[currentIndex] || postsToShow[0];
+  const currentPost = postsToShow[currentIndex] || postsToShow[0] || initialPost;
+
+  if (!currentPost || !currentPost.id) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center text-white">
+        <p className="text-sm font-mono mb-4">Video stream unavailable.</p>
+        <button onClick={onClose} className="px-4 py-2 bg-violet-600 rounded-xl text-xs font-bold cursor-pointer">Close</button>
+      </div>
+    );
+  }
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);

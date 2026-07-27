@@ -514,7 +514,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (
-        <div className="mb-4 -mx-4 md:mx-0 shadow-2xl rounded-2xl overflow-hidden border border-white/10">
+        <div className="mb-3 -mx-4 sm:-mx-6 overflow-hidden border-y border-white/10 aspect-[9/16] max-h-[600px] bg-black">
           <NexoraVideoPlayer
             post={post}
             videoUrl={post.videoUrl}
@@ -536,7 +536,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           />
         </div>
       ) : (post.image || (post.images && post.images.length > 0)) && !post.opportunityType ? (
-        <div className="mb-4 -mx-4 md:mx-0 shadow-2xl rounded-2xl overflow-hidden border border-white/10">
+        <div className="mb-3 -mx-4 sm:-mx-6 overflow-hidden border-y border-white/10 bg-black">
           <NexoraImagePlayer
             post={post}
             image={post.image}
