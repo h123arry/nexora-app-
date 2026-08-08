@@ -2878,11 +2878,11 @@ export default function ProfileView({
                 {(() => {
                   let list: any[] = [];
                   if (relationsTab === 'followers') {
-                    list = getSeededFollowers(currentUser.id);
+                    list = getSeededFollowers(currentUser.id, currentUser.username);
                   } else if (relationsTab === 'following') {
                     list = [];
                   } else if (relationsTab === 'close-friends') {
-                    list = getSeededFollowers(currentUser.id).filter(f => closeFriends.includes(f.id));
+                    list = getSeededFollowers(currentUser.id, currentUser.username).filter(f => closeFriends.includes(f.id));
                   } else if (relationsTab === 'blocked') {
                     list = blockedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: getDefaultAvatar(u) }));
                   } else if (relationsTab === 'muted') {
@@ -2903,7 +2903,11 @@ export default function ProfileView({
                   }
 
                   return filtered.map(item => (
-                    <div key={item.id} className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0b081c] border border-white/3">
+                    <div 
+                      key={item.id} 
+                      onClick={() => onViewProfile && onViewProfile(item.id)}
+                      className="flex items-center justify-between p-3.5 rounded-2xl bg-[#0b081c] border border-white/3 cursor-pointer hover:bg-violet-950/20 transition-all"
+                    >
                       <div className="flex items-center gap-3">
                         <img src={item.avatar} alt={item.name} className="w-9 h-9 rounded-xl object-cover" />
                         <div>

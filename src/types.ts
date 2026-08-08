@@ -18,6 +18,7 @@ export interface User {
   role?: 'founder' | 'admin' | 'user';
   isBanned?: boolean;
   isSuspended?: boolean;
+  isSeedProfile?: boolean;
   preferredLanguage?: string;
   savedCollections?: { [folderName: string]: string[] };
   // Innovative Living Reputation & Nexora Contributions Algorithm System

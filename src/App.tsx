@@ -22,6 +22,7 @@ import {
   unfollowUserDb, 
   createPostDb, 
   isFollowingDb,
+  getSeededFollowers,
   INITIAL_USER, 
   INITIAL_CHATS, 
   INITIAL_MESSAGES, 
@@ -1532,6 +1533,15 @@ export default function App() {
     const creator = (Object.values(globalUsersMap) as User[]).find(c => c.id === userIdOrUsername || c.username.toLowerCase() === cleanIdOrUser);
     if (creator) {
       finalUserToView = creator;
+    }
+
+    // Try finding in seeded followers
+    if (!finalUserToView && (userIdOrUsername.startsWith('seed-user-') || cleanIdOrUser.startsWith('nexora_seed_'))) {
+      const seeded = getSeededFollowers('nexoraofficial', 'nexoraofficial');
+      const foundSeed = seeded.find(s => s.id === userIdOrUsername || s.username.toLowerCase() === cleanIdOrUser);
+      if (foundSeed) {
+        finalUserToView = foundSeed;
+      }
     }
 
 

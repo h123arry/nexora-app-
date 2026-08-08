@@ -301,7 +301,7 @@ export function leaveCircleDb(userId: string, circleId: string) {
 export function isUserVerified(username: string): boolean {
   if (!username) return false;
   const lower = username.toLowerCase().trim();
-  return lower === 'voh' || lower === 'voh_ai' || lower === 'nexora_ai' || lower === 'lunash';
+  return lower === 'nexoraofficial' || lower === 'voh' || lower === 'voh_ai' || lower === 'nexora_ai' || lower === 'lunash';
 }
 
 // Generate an ultra-modern high-contrast deterministic gradient monogram default avatar
@@ -328,7 +328,9 @@ export function getSafeAvatar(avatar: string | undefined, name: string): string 
 export function getRichUser(user: User): User {
   if (!user) return user;
 
-  const followersCount = (user.username && user.username.toLowerCase() === 'voh') ? 31000000 : getFollowersCount(user.id);
+  const username = (user.username || '').toLowerCase().trim();
+  const isNexoraOfficial = username === 'nexoraofficial' || username === 'voh';
+
   const followingCount = getFollowingCount(user.id);
   const completedMissionsCount = getCompletedMissionsCount(user.id);
 
@@ -367,20 +369,46 @@ export function getRichUser(user: User): User {
 
   // Apply safe avatar transformation
   const resolvedAvatar = getSafeAvatar(user.avatar, user.name || user.username);
-  const isVerified = isUserVerified(user.username);
+  const isVerified = isUserVerified(user.username) || isNexoraOfficial;
 
-  const isVoh = user.username && user.username.toLowerCase() === 'voh';
+  if (isNexoraOfficial) {
+    return {
+      ...user,
+      name: user.name || 'Nexora Official',
+      username: 'nexoraofficial',
+      avatar: resolvedAvatar,
+      isVerified: true,
+      followers: 25000000,
+      following: 0,
+      sparks: 100000000,
+      reputationPoints: 80000000,
+      reputationBreakdown: {
+        contributions: 43000000,
+        helpfulness: 1000000,
+        missionsCompleted: 500,
+        skillsVerified: 1000,
+        categories: algo.categories,
+        trustMultiplier: 1.0,
+        antiGamingStatus: {
+          isFarmingShieldActive: false,
+          diminishingFactor: 1.0,
+          uniqueEngagerRatio: 1.0,
+          qualityBonus: 1.0,
+        },
+      },
+    };
+  }
 
   return {
     ...user,
     avatar: resolvedAvatar,
     isVerified,
-    followers: isVoh ? 31000000 : followersCount,
+    followers: getFollowersCount(user.id),
     following: followingCount,
-    reputationPoints: isVoh ? 20000000 : algo.reputation, // Absolute invariant
-    sparks: isVoh ? 80000000 : getSparksReceived(user.id),
+    reputationPoints: algo.reputation,
+    sparks: getSparksReceived(user.id),
     reputationBreakdown: {
-      contributions: isVoh ? 40000000 : algo.contributions,
+      contributions: algo.contributions,
       helpfulness: Math.round(algo.categories.helpfulResponses * 10),
       missionsCompleted: completedMissionsCount,
       skillsVerified: Math.round(algo.categories.trustBuilding),
@@ -391,6 +419,56 @@ export function getRichUser(user: User): User {
   };
 }
 
-export function getSeededFollowers(targetUserId: string): User[] {
-  return [];
+export function getSeededFollowers(targetUserId: string, targetUsername?: string): User[] {
+  initDb();
+  const username = (targetUsername || '').toLowerCase().trim();
+  const isNexoraOfficial = username === 'nexoraofficial' || username === 'voh' || targetUserId === 'nexoraofficial' || targetUserId === 'user-0';
+
+  if (!isNexoraOfficial) {
+    return [];
+  }
+
+  const seedProfiles: User[] = [];
+  const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Sam', 'Chris', 'Pat', 'Casey', 'Riley', 'Avery', 'Logan', 'Dakota', 'Reagan', 'Quinn', 'Skyler', 'Cameron', 'Jesse', 'Kendall', 'Peyton', 'Harper', 'Rowan', 'Sawyer', 'Emerson', 'Finley', 'Hayden', 'Kai', 'Rory', 'Reese', 'Eden', 'Adrian'];
+  const lastNames = ['Chen', 'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis'];
+  const bios = [
+    'Building the decentralized future on Nexora.',
+    'System architect & distributed networks enthusiast.',
+    'Exploring zero-latency persistence & AI agents.',
+    'Software engineer passionate about scalable UI.',
+    'Creating immersive web applications.',
+    'Data scientist and protocol researcher.',
+    'Full-stack developer building open source tools.',
+    'Designing elegant digital experiences.'
+  ];
+
+  for (let i = 1; i <= 1000; i++) {
+    const fn = firstNames[i % firstNames.length];
+    const ln = lastNames[(i * 7) % lastNames.length];
+    const name = `${fn} ${ln}`;
+    const seedUsername = `nexora_seed_${i}`;
+    const bio = bios[i % bios.length];
+    seedProfiles.push({
+      id: `seed-user-${i}`,
+      username: seedUsername,
+      name: name,
+      avatar: getDefaultAvatar(name),
+      bio: bio,
+      location: 'Global Orbit',
+      website: 'https://nexora.app',
+      followers: 0,
+      following: 0,
+      sparks: 0,
+      reputationPoints: 0,
+      isVerified: false,
+      isSeedProfile: true,
+      coverImage: '',
+      joinedDate: new Date(Date.now() - i * 86400000).toISOString(),
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {},
+      skills: ['Systems Design', 'React']
+    });
+  }
+
+  return seedProfiles;
 }
