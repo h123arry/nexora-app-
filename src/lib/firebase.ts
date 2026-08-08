@@ -5,6 +5,7 @@ import firebaseConfig from '../../firebase-applet-config.json';
 
 console.log("🔥 Initializing Firebase...");
 const app = initializeApp(firebaseConfig);
+export { app };
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth();
 export { signInAnonymously };

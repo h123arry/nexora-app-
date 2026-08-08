@@ -58,7 +58,6 @@ const KEYS = {
   MISSIONS: 'nexora_db_joined_missions',
   SPARKS: 'nexora_db_sparks',
   POSTS: 'nexora_posts',
-  ACCOUNTS: 'nexora_registered_accounts',
 };
 
 export interface FollowRecord {

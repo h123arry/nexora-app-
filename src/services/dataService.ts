@@ -537,15 +537,10 @@ export async function getPages() {
 // 7. REAL-TIME SUBSCRIPTION ENGINE (GLOBAL SYNC)
 // ==========================================
 
+import { subscribeToPosts as subscribeToPostsOriginal } from './posts/postService';
+
 export function subscribeToPosts(callback: (posts: Post[]) => void) {
-  const q = query(collection(db, 'posts'));
-  return onSnapshot(q, (snapshot) => {
-    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
-    posts.forEach(p => cacheManager.setPost(p.id, p));
-    callback(posts);
-  }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'posts', auth);
-  });
+  return subscribeToPostsOriginal(callback);
 }
 
 export function subscribeToNotifications(userId: string, callback: (notifications: Notification[]) => void) {

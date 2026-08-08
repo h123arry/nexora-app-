@@ -129,6 +129,6 @@ window.onerror = (message, source, lineno, colno, error) => {
 
 window.onunhandledrejection = (event) => {
   const reason = event.reason;
-  const errorObj = reason instanceof Error ? reason : new Error(String(reason));
-  showGlobalError(errorObj, 'Unhandled Promise Rejection');
+  console.warn('Unhandled Promise Rejection (non-fatal):', reason);
+  // Do not show global crash overlay for promise rejections unless explicitly critical
 };

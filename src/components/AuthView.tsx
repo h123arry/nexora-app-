@@ -62,6 +62,20 @@ const COUNTRIES = [
   { code: '+31', name: 'Netherlands', flag: '🇳🇱' }
 ];
 
+const INTEREST_TOPICS = [
+  { label: 'Technology & AI', icon: '⚡' },
+  { label: 'Science & Physics', icon: '🌌' },
+  { label: 'Art & Design', icon: '🎨' },
+  { label: 'Philosophy & Mind', icon: '🧠' },
+  { label: 'Music & Audio', icon: '🎵' },
+  { label: 'Startups & Business', icon: '🚀' },
+  { label: 'Writing & Stories', icon: '✍️' },
+  { label: 'Nature & Earth', icon: '🌿' },
+  { label: 'Crypto & Web3', icon: '🔐' },
+];
+
+const MAX_FAILED_ATTEMPTS = 5;
+
 export default function AuthView({ onLoginSuccess }: AuthViewProps) {
   // Navigation & Auth Flow Modes
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>('login');
@@ -94,7 +108,10 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
   // Forgot Password states
   const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
-  const [recoveryStep, setRecoveryStep] = useState<1 | 2>(1); // 1: Email, 2: Sent
+  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(1); // 1: Email, 2: Code, 3: New Password
+  const [recoveryCode, setRecoveryCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   
   // Status & UI feedback
   const [isPending, setIsPending] = useState(false);
@@ -181,133 +198,28 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     setStatusMessage('Opening Google Account Picker...');
 
     try {
-      const provider = new GoogleAuthProvider();
-      // Forces the Google account chooser native interface
-      provider.setCustomParameters({ prompt: 'select_account' });
-      
-      const result = await signInWithPopup(auth, provider);
-      if (result.user) {
-        // Reuse the logic that checks registry and handles user login/onboarding
-        await handleSelectGoogleAccount(
-          result.user.email || '',
-          result.user.displayName || '',
-          result.user.photoURL || ''
-        );
+      const { user, isNewUser } = await AuthService.signInWithGoogle();
+      setIsPending(false);
+      if (isNewUser) {
+        setOnboardingUser(user);
+        setOnboardingUsername(user.username);
+        setOnboardingStep(1);
+      } else {
+        onLoginSuccess(user);
       }
     } catch (error: any) {
-      console.error('Google Auth Error:', error);
+      console.error('Google Auth Error:', {
+        code: error?.code,
+        message: error?.message,
+        stack: error?.stack
+      });
       setIsPending(false);
       if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
         setErrorMsg('Sign-in cancelled.');
       } else {
-        setErrorMsg('Google Sign-In failed. Please try again.');
+        setErrorMsg(`Google Sign-In failed: ${error.message || 'Please try again.'}`);
       }
     }
-  };
-
-  // Select account from Google Picker
-  const handleSelectGoogleAccount = async (accountEmail: string, accountName: string, accountAvatar: string) => {
-    setShowGooglePicker(false);
-    setIsPending(true);
-    setStatusMessage(`Connecting with Google (${accountEmail})...`);
-
-    // Attempt real Firebase Google Auth popup if available, fallback gracefully
-    try {
-      if (auth && auth.app) {
-        const provider = new GoogleAuthProvider();
-        provider.setCustomParameters({ prompt: 'select_account' });
-        // Attempt popup if supported
-        try {
-          const res = await signInWithPopup(auth, provider);
-          if (res.user) {
-            const fbUser = res.user;
-            const registry = loadAccounts();
-            const cleanEmail = (fbUser.email || accountEmail).toLowerCase().trim();
-            const found = registry.find(a => a.email.toLowerCase() === cleanEmail);
-
-            setIsPending(false);
-            if (found) {
-              onLoginSuccess(found.user);
-              return;
-            } else {
-              // Create profile for Google user
-              const newUser: User = {
-                id: fbUser.uid || `user-google-${Date.now()}`,
-                username: (fbUser.email?.split('@')[0] || accountEmail.split('@')[0] || 'google_user').toLowerCase().replace(/[^a-z0-9_]/g, ''),
-                name: fbUser.displayName || accountName || 'Google User',
-                avatar: fbUser.photoURL || accountAvatar,
-                bio: '',
-                location: 'Global',
-                website: '',
-                followers: 0,
-                following: 0,
-                sparks: 0,
-                isVerified: false,
-                coverImage: '',
-                joinedDate: 'Joined July 2026',
-                reputationPoints: 0,
-                reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-                interestDNA: {},
-                skills: []
-              };
-
-              const updated = [...registry, { email: cleanEmail, passwordHash: 'google_oauth_pass', user: newUser }];
-              localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-
-              // Launch onboarding for username and interests
-              setOnboardingUser(newUser);
-              setOnboardingUsername(newUser.username);
-              setOnboardingStep(1);
-              return;
-            }
-          }
-        } catch (popupErr) {
-          console.warn('Firebase Popup skipped or closed, proceeding with standard Google credentials:', popupErr);
-        }
-      }
-    } catch (e) {
-      console.warn('Firebase Google Auth fallback:', e);
-    }
-
-    // Standard smooth Google auth flow fallback
-    setTimeout(() => {
-      const registry = loadAccounts();
-      const cleanEmail = accountEmail.toLowerCase().trim();
-      const found = registry.find(a => a.email.toLowerCase() === cleanEmail);
-
-      setIsPending(false);
-
-      if (found) {
-        onLoginSuccess(found.user);
-      } else {
-        const newUser: User = {
-          id: `user-google-${Date.now()}`,
-          username: cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, ''),
-          name: accountName,
-          avatar: accountAvatar,
-          bio: '',
-          location: 'Global',
-          website: '',
-          followers: 0,
-          following: 0,
-          sparks: 0,
-          isVerified: false,
-          coverImage: '',
-          joinedDate: 'Joined July 2026',
-          reputationPoints: 0,
-          reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-          interestDNA: {},
-          skills: []
-        };
-
-        const updated = [...registry, { email: cleanEmail, passwordHash: 'google_oauth_pass', user: newUser }];
-        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-
-        setOnboardingUser(newUser);
-        setOnboardingUsername(newUser.username);
-        setOnboardingStep(1);
-      }
-    }, 1200);
   };
 
   // Handle Unified Intelligent Login
@@ -573,141 +485,37 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     return { label: 'Strong', color: 'bg-emerald-500', percent: 100 };
   };
 
-  // Forgot Password Submit Handler (Production Email Verification & Password Recovery System)
+  // Forgot Password Submit Handler (Firebase Password Reset Email)
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
 
-    if (recoveryStep === 1) {
-      if (!recoveryIdentifier.trim()) {
-        setErrorMsg('Please enter your account email address or username.');
-        return;
-      }
-      setIsPending(true);
-      setStatusMessage('Locating account and generating secure one-time verification code...');
+    if (!recoveryIdentifier.trim()) {
+      setErrorMsg('Please enter your account email address.');
+      return;
+    }
 
-      const query = recoveryIdentifier.trim().toLowerCase();
-      const registry = loadAccounts();
-      const matchedAccount = registry.find(a => a.email.toLowerCase() === query || a.user.username.toLowerCase() === query);
+    setIsPending(true);
+    setStatusMessage('Sending password reset email via Firebase...');
 
-      const targetEmail = matchedAccount ? matchedAccount.email : (query.includes('@') ? query : '');
-      const targetName = matchedAccount ? matchedAccount.user.name : query.split('@')[0];
+    const targetEmail = recoveryIdentifier.trim().toLowerCase();
 
-      if (!targetEmail || !targetEmail.includes('@')) {
-        setIsPending(false);
-        setErrorMsg('Please enter a valid email address associated with your account.');
-        return;
-      }
-
-      try {
-        // Dispatch secure server-side OTP via /api/auth/send-email-otp
-        await AuthService.sendEmailOtp(targetEmail, 'PASSWORD_RESET', targetName);
-
-        // Also trigger Firebase Auth password reset email link if configured
-        try {
-          await AuthService.sendPasswordReset(targetEmail);
-        } catch (fbErr) {
-          console.warn('Firebase Password Reset link trigger warning:', fbErr);
-        }
-
-        setIsPending(false);
-        setRecoveryCode(''); // Never pre-fill or display OTP code
-        setRecoveryStep(2);
-        setSuccessMsg(`A 6-digit verification code has been dispatched to ${targetEmail}. Please check your email inbox.`);
-      } catch (err: any) {
-        setIsPending(false);
-        setErrorMsg(err.message || 'Failed to send password reset verification code. Please try again.');
-      }
-    } else if (recoveryStep === 2) {
-      const cleanCode = recoveryCode.trim();
-      if (cleanCode.length !== 6) {
-        setErrorMsg('Please enter the complete 6-digit verification code sent to your email.');
-        return;
-      }
-
-      setIsPending(true);
-      setStatusMessage('Verifying code against security servers...');
-
-      const query = recoveryIdentifier.trim().toLowerCase();
-      const registry = loadAccounts();
-      const matchedAccount = registry.find(a => a.email.toLowerCase() === query || a.user.username.toLowerCase() === query);
-      const targetEmail = matchedAccount ? matchedAccount.email : (query.includes('@') ? query : '');
-
-      try {
-        // Verify submitted OTP against hashed OTP in server memory
-        await AuthService.verifyEmailOtp(targetEmail, cleanCode, 'PASSWORD_RESET');
-
-        setIsPending(false);
-        setRecoveryStep(3);
-        setSuccessMsg('Code verified successfully. Please enter your new password.');
-      } catch (err: any) {
-        setIsPending(false);
-        setErrorMsg(err.message || 'Invalid or expired verification code. Please try again.');
-      }
-    } else if (recoveryStep === 3) {
-      if (newPassword.length < 8) {
-        setErrorMsg('Password must be at least 8 characters.');
-        return;
-      }
-      if (newPassword !== confirmNewPassword) {
-        setErrorMsg('Passwords do not match.');
-        return;
-      }
-
-      setIsPending(true);
-      setStatusMessage('Updating password securely...');
-
-      try {
-        // Attempt update with Firebase Auth if logged in
-        try {
-          await AuthService.changeUserPassword(newPassword);
-        } catch (e) {}
-
-        const registry = loadAccounts();
-        const query = recoveryIdentifier.trim().toLowerCase();
-        let targetUserId = 'user';
-        let targetEmail = query.includes('@') ? query : '';
-        let targetName = 'User';
-
-        const updated = registry.map(acc => {
-          if (acc.email.toLowerCase() === query || acc.user.username.toLowerCase() === query) {
-            targetUserId = acc.user.id;
-            targetEmail = acc.email;
-            targetName = acc.user.name;
-            return { ...acc, passwordHash: newPassword };
-          }
-          return acc;
-        });
-
-        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-
-        if (targetEmail) {
-          EmailService.sendTransactionalEmail('SECURITY_ALERT_PASSWORD', {
-            toEmail: targetEmail,
-            userName: targetName
-          });
-
-          SecurityNotificationService.notifySecurityEvent(
-            targetUserId,
-            targetEmail,
-            targetName,
-            'PASSWORD_CHANGED'
-          );
-        }
-
-        setIsPending(false);
-        setSuccessMsg('Your password has been updated successfully! You can now log in.');
-
-        setTimeout(() => {
-          switchAuthMode('login');
-          setIdentifierInput(targetEmail || query);
-          setPasswordInput('');
-        }, 1500);
-      } catch (err: any) {
-        setIsPending(false);
-        setErrorMsg(err.message || 'Failed to update password.');
-      }
+    try {
+      await AuthService.sendPasswordReset(targetEmail);
+      setIsPending(false);
+      setSuccessMsg(`Password reset email sent to ${targetEmail}. Please check your inbox.`);
+      setTimeout(() => {
+        switchAuthMode('login');
+        setIdentifierInput(targetEmail);
+      }, 2500);
+    } catch (err: any) {
+      setIsPending(false);
+      console.error('Password reset error:', {
+        code: err?.code,
+        message: err?.message
+      });
+      setErrorMsg(`Failed to send password reset email: ${err.message || 'Please check the email address and try again.'}`);
     }
   };
 
@@ -768,7 +576,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     );
   };
 
-  const handleCompleteOnboarding = () => {
+  const handleCompleteOnboarding = async () => {
     if (!onboardingUser) return;
 
     const interestDNAObj = selectedInterests.reduce((acc, topic) => {
@@ -781,14 +589,20 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       interestDNA: interestDNAObj
     };
 
-    // Save user in registry
-    const registry = loadAccounts();
-    const updated = registry.map(a => a.user.id === finalUser.id ? { ...a, user: finalUser } : a);
-    localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
+    try {
+      await AuthService.updateUserProfile(finalUser.id, {
+        username: finalUser.username,
+        avatar: finalUser.avatar,
+        interestDNA: finalUser.interestDNA
+      });
+    } catch (e) {
+      console.warn('Update user profile warning during onboarding:', e);
+    }
+
     localStorage.setItem('nexora_just_signed_up', 'true');
 
     // Launch into home feed!
-    onLoginSuccess(getRichUser(finalUser));
+    onLoginSuccess(finalUser);
   };
 
   // Render Onboarding Screen if new user onboarding is active

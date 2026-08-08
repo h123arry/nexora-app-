@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award } from 'lucide-react';
 import { User, Post, Report, CrashLog } from '../types';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 interface AdminDashboardViewProps {
   currentUser: User;
@@ -28,25 +30,28 @@ export default function AdminDashboardView({
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('7d');
 
   // Load and refresh administrative data
-  const loadData = () => {
-    // 1. Load users from registered registry
-    const registryStr = localStorage.getItem('nexora_registered_accounts');
-    let registeredUsers: User[] = [];
-    if (registryStr) {
-      try {
-        const accounts = JSON.parse(registryStr);
-        registeredUsers = accounts.filter((a: any) => a && a.user).map((a: any) => a.user);
-      } catch (e) {
-        console.error(e);
+  const loadData = async () => {
+    // 1. Load users from Firestore
+    try {
+      if (db) {
+        const snap = await getDocs(collection(db, 'users'));
+        const firestoreUsers: User[] = [];
+        snap.forEach(docSnap => {
+          firestoreUsers.push({ id: docSnap.id, ...docSnap.data() } as User);
+        });
+        if (firestoreUsers.length > 0) {
+          setUsers(firestoreUsers);
+        } else {
+          setUsers([currentUser]);
+        }
+      } else {
+        setUsers([currentUser]);
       }
+    } catch (e) {
+      console.error('Error loading users from Firestore:', e);
+      setUsers([currentUser]);
     }
     
-    // Add VOH founder if not present
-    if (!registeredUsers.some(u => u.username === 'voh')) {
-      registeredUsers.unshift(currentUser);
-    }
-    setUsers(registeredUsers);
-
     // 2. Load Reports
     const savedReports = localStorage.getItem('nexora_reports');
     if (savedReports) {
@@ -56,7 +61,6 @@ export default function AdminDashboardView({
         console.error(e);
       }
     } else {
-      // Seed default empty reports list to ensure authentic database-driven reports
       const seedReports: Report[] = [];
       localStorage.setItem('nexora_reports', JSON.stringify(seedReports));
       setReports(seedReports);
@@ -112,27 +116,17 @@ export default function AdminDashboardView({
     loadData();
   }, []);
 
-  // Sync back to registry user mutations
-  const syncUserChange = (updatedUser: User) => {
-    const registryStr = localStorage.getItem('nexora_registered_accounts');
-    if (registryStr) {
-      try {
-        const accounts = JSON.parse(registryStr);
-        const updatedAccounts = accounts.map((a: any) => {
-          if (a && a.user && a.user.id === updatedUser.id) {
-            return { ...a, user: updatedUser };
-          }
-          return a;
+  // Sync back to Firestore user mutations
+  const syncUserChange = async (updatedUser: User) => {
+    try {
+      if (db) {
+        await updateDoc(doc(db, 'users', updatedUser.id), {
+          ...updatedUser,
+          updatedAt: new Date()
         });
-        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updatedAccounts));
-        
-        // If modified user is current logged user, update it
-        if (updatedUser.id === currentUser.id) {
-          localStorage.setItem('nexora_user', JSON.stringify(updatedUser));
-        }
-      } catch (e) {
-        console.error(e);
       }
+    } catch (e) {
+      console.error('Error updating user in Firestore:', e);
     }
     loadData(); // Rehydrate
   };

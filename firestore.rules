@@ -66,15 +66,12 @@ service cloud.firestore {
 
     // --- Activities Collection ---
     match /activities/{activityId} {
-      allow read, list: if isSignedIn();
-      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, list, write: if isSignedIn();
     }
 
     // --- Notifications Collection ---
     match /notifications/{notificationId} {
-      allow read, list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      allow create: if isSignedIn();
-      allow update, delete: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
+      allow read, list, write: if isSignedIn();
     }
 
     // --- Creator Analytics Collection ---

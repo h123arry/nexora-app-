@@ -74,12 +74,6 @@ export default function App() {
 
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
     const map: Record<string, User> = {};
-    const accounts = JSON.parse(localStorage.getItem('nexora_registered_accounts') || '[]');
-    accounts.forEach((a: any) => {
-      if (a && a.user && a.user.id) {
-        map[a.user.id] = a.user;
-      }
-    });
     const savedUser = localStorage.getItem('nexora_user');
     if (savedUser) {
       try {
@@ -740,23 +734,6 @@ export default function App() {
   useEffect(() => {
     if (!currentUser || !currentUser.id) return;
     localStorage.setItem('nexora_user', JSON.stringify(currentUser));
-    
-    // Also sync updates back to the registered accounts registry so profile updates survive logout/login
-    const accountsStr = localStorage.getItem('nexora_registered_accounts');
-    if (accountsStr) {
-      try {
-        const accounts = JSON.parse(accountsStr);
-        const updated = accounts.map((acc: any) => {
-          if (acc.user.id === currentUser.id || acc.user.username === currentUser.username) {
-            return { ...acc, user: currentUser };
-          }
-          return acc;
-        });
-        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
-      } catch (e) {
-        console.error('Failed to sync user to registered accounts registry:', e);
-      }
-    }
   }, [currentUser]);
 
   useEffect(() => {
@@ -1557,23 +1534,7 @@ export default function App() {
       finalUserToView = creator;
     }
 
-    // Try finding in registered database accounts
-    if (!finalUserToView) {
-      try {
-        const stored = localStorage.getItem('nexora_registered_accounts');
-        if (stored) {
-          const accounts = JSON.parse(stored);
-          const match = accounts.find((a: any) => 
-            a.user.id === userIdOrUsername || 
-            a.user.username.toLowerCase() === cleanIdOrUser || 
-            a.email.toLowerCase() === cleanIdOrUser
-          );
-          if (match) {
-            finalUserToView = match.user;
-          }
-        }
-      } catch(e) {}
-    }
+
 
     // Dynamic builder if not pre-configured
     if (!finalUserToView) {
@@ -1633,13 +1594,6 @@ export default function App() {
     if (!userId) return;
     // Find partner detail
     let partner = (Object.values(globalUsersMap) as User[]).find(c => c.id === userId);
-    if (!partner) {
-      try {
-        const accounts = JSON.parse(localStorage.getItem('nexora_registered_accounts') || '[]');
-        const match = accounts.find((a: any) => a.user.id === userId);
-        if (match) partner = match.user;
-      } catch (e) {}
-    }
     if (!partner) {
       // Find from post authors
       const postWithUser = posts.find(p => p.userId === userId);

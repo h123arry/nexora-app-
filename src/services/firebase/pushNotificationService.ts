@@ -1,6 +1,5 @@
 import { getMessaging, getToken, onMessage, Messaging } from 'firebase/messaging';
-import { initializeApp } from 'firebase/app';
-import firebaseConfig from '../../../firebase-applet-config.json';
+import { app } from './config';
 
 export interface PushNotificationPayload {
   title: string;
@@ -47,7 +46,6 @@ export class PushNotificationService {
       }
 
       // Initialize Firebase Messaging if Web Messaging is available
-      const app = initializeApp(firebaseConfig);
       this.messaging = getMessaging(app);
 
       // Attempt acquiring FCM Push Registration Token if VAPID key is configured
