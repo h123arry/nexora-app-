@@ -62,6 +62,85 @@ const COUNTRIES = [
   { code: '+31', name: 'Netherlands', flag: '🇳🇱' }
 ];
 
+const INTEREST_TOPICS = [
+  'Technology',
+  'AI',
+  'Business',
+  'Startups',
+  'Science',
+  'Programming',
+  'Gaming',
+  'Music',
+  'Movies',
+  'Sports',
+  'Photography',
+  'Travel',
+  'Fashion',
+  'Food',
+  'Health',
+  'Fitness',
+  'Education',
+  'Finance',
+  'Crypto',
+  'Art',
+  'Design',
+  'Politics',
+  'News',
+  'Nature'
+];
+
+
+
+const MAX_FAILED_ATTEMPTS = 5;
+
+
+type RegisteredAccount = {
+  email: string;
+  passwordHash: string;
+  user: User;
+};
+
+function loadAccounts(): RegisteredAccount[] {
+  try {
+    return JSON.parse(localStorage.getItem("nexora_registered_accounts") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function saveAccounts(accounts: RegisteredAccount[]) {
+  localStorage.setItem(
+    "nexora_registered_accounts",
+    JSON.stringify(accounts)
+  );
+}
+
+function getRichUser(user: User): User {
+  return {
+    followers: 0,
+    following: 0,
+    sparks: 0,
+    reputationPoints: 0,
+    reputationBreakdown: {
+      contributions: 0,
+      helpfulness: 0,
+      missionsCompleted: 0,
+      skillsVerified: 0
+    },
+    interestDNA: {},
+    skills: [],
+    bio: "",
+    location: "",
+    website: "",
+    avatar: "",
+    coverImage: "",
+    isVerified: false,
+    joinedDate: new Date().toLocaleDateString("en-US",{month:"long",year:"numeric"}),
+    ...user
+  };
+}
+
+
 export default function AuthView({ onLoginSuccess }: AuthViewProps) {
   // Navigation & Auth Flow Modes
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>('login');
@@ -221,7 +300,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           const res = await signInWithPopup(auth, provider);
           if (res.user) {
             const fbUser = res.user;
-            const registry = loadAccounts();
+            const registry: any[] = [];
             const cleanEmail = (fbUser.email || accountEmail).toLowerCase().trim();
             const found = registry.find(a => a.email.toLowerCase() === cleanEmail);
 
@@ -252,7 +331,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
               };
 
               const updated = [...registry, { email: cleanEmail, passwordHash: 'google_oauth_pass', user: newUser }];
-              localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
+              saveAccounts(updated);
 
               // Launch onboarding for username and interests
               setOnboardingUser(newUser);
@@ -271,7 +350,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
     // Standard smooth Google auth flow fallback
     setTimeout(() => {
-      const registry = loadAccounts();
+      const registry: any[] = [];
       const cleanEmail = accountEmail.toLowerCase().trim();
       const found = registry.find(a => a.email.toLowerCase() === cleanEmail);
 
@@ -301,7 +380,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         };
 
         const updated = [...registry, { email: cleanEmail, passwordHash: 'google_oauth_pass', user: newUser }];
-        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
+        saveAccounts(updated);
 
         setOnboardingUser(newUser);
         setOnboardingUsername(newUser.username);
@@ -379,7 +458,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
         if (lock.isLocked) {
           setErrorMsg(`🔒 Security limit reached. Account locked for 5 minutes.`);
         } else if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/invalid-credential') {
-          setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
+          setErrorMsg(`The email or password you entered is incorrect. (${5 - lock.attemptsCount} attempts remaining)`);
         } else {
           setErrorMsg('Authentication failed. Please try again.');
         }
@@ -549,7 +628,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       setStatusMessage('Locating account and generating secure one-time verification code...');
 
       const query = recoveryIdentifier.trim().toLowerCase();
-      const registry = loadAccounts();
+      const registry: any[] = [];
       const matchedAccount = registry.find(a => a.email.toLowerCase() === query || a.user.username.toLowerCase() === query);
 
       const targetEmail = matchedAccount ? matchedAccount.email : (query.includes('@') ? query : '');
@@ -591,7 +670,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
       setStatusMessage('Verifying code against security servers...');
 
       const query = recoveryIdentifier.trim().toLowerCase();
-      const registry = loadAccounts();
+      const registry: any[] = [];
       const matchedAccount = registry.find(a => a.email.toLowerCase() === query || a.user.username.toLowerCase() === query);
       const targetEmail = matchedAccount ? matchedAccount.email : (query.includes('@') ? query : '');
 
@@ -625,7 +704,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           await AuthService.changeUserPassword(newPassword);
         } catch (e) {}
 
-        const registry = loadAccounts();
+        const registry: any[] = [];
         const query = recoveryIdentifier.trim().toLowerCase();
         let targetUserId = 'user';
         let targetEmail = query.includes('@') ? query : '';
@@ -641,7 +720,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
           return acc;
         });
 
-        localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
+        saveAccounts(updated);
 
         if (targetEmail) {
           EmailService.sendTransactionalEmail('SECURITY_ALERT_PASSWORD', {
@@ -743,9 +822,9 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     };
 
     // Save user in registry
-    const registry = loadAccounts();
+    const registry: any[] = [];
     const updated = registry.map(a => a.user.id === finalUser.id ? { ...a, user: finalUser } : a);
-    localStorage.setItem('nexora_registered_accounts', JSON.stringify(updated));
+    saveAccounts(updated);
     localStorage.setItem('nexora_just_signed_up', 'true');
 
     // Launch into home feed!
