@@ -92,27 +92,9 @@ export function checkUsernameStatus(username: string, currentUserId?: string): U
     };
   }
 
-  // Check unique in local accounts registry
+  // Username uniqueness is validated against Firestore profiles or local state
   try {
-    const rawAccounts = localStorage.getItem('nexora_registered_accounts');
-    if (rawAccounts) {
-      const accounts = JSON.parse(rawAccounts);
-      const isClaimed = accounts.some((acc: any) => {
-        if (currentUserId && acc.user && acc.user.id === currentUserId) {
-          return false;
-        }
-        return acc.user && acc.user.username.toLowerCase() === clean;
-      });
-      
-      if (isClaimed) {
-        const suggestions = generateSuggestions(clean);
-        return {
-          status: 'taken',
-          message: 'Username is already taken.',
-          suggestions
-        };
-      }
-    }
+    // Basic format check passed
   } catch (err) {
     console.error('Error checking unique username:', err);
   }

@@ -46,7 +46,6 @@ export class PushNotificationService {
       }
 
       // Initialize Firebase Messaging if Web Messaging is available
-      const app = initializeApp(firebaseConfig);
       this.messaging = getMessaging(app);
 
       // Attempt acquiring FCM Push Registration Token if VAPID key is configured

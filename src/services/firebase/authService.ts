@@ -9,7 +9,9 @@ import {
   signInWithPhoneNumber,
   ConfirmationResult,
   User as FirebaseUser,
-  reload
+  reload,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from './config';
@@ -393,6 +395,92 @@ export class AuthService {
       return docSnap.data() as User;
     }
     return null;
+  }
+
+  /**
+   * Creates a user profile in Firestore
+   */
+  static async createUserProfile(user: User, email: string): Promise<void> {
+    if (db) {
+      await setDoc(doc(db, 'users', user.id), {
+        ...user,
+        email,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+    }
+  }
+
+  /**
+   * Google Sign-In with Firebase popup and automatic Firestore profile mapping
+   */
+  static async signInWithGoogle(): Promise<{ firebaseUser: FirebaseUser; user: User; isNewUser: boolean }> {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    const credential = await signInWithPopup(auth, provider);
+    const fbUser = credential.user;
+
+    let userProfile = await this.getUserProfile(fbUser.uid);
+    let isNewUser = false;
+
+    if (!userProfile) {
+      isNewUser = true;
+      const cleanEmail = fbUser.email || '';
+      const defaultUsername = (cleanEmail.split('@')[0] || `user_${fbUser.uid.substring(0, 5)}`).toLowerCase().replace(/[^a-z0-9_]/g, '');
+
+      const newUser: User = {
+        id: fbUser.uid,
+        username: defaultUsername,
+        name: fbUser.displayName || 'Google User',
+        avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+        bio: '',
+        location: 'Global',
+        website: '',
+        followers: 0,
+        following: 0,
+        sparks: 0,
+        isVerified: fbUser.emailVerified,
+        coverImage: '',
+        joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
+        reputationPoints: 0,
+        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+        interestDNA: {},
+        skills: []
+      };
+
+      if (db) {
+        await setDoc(doc(db, 'users', fbUser.uid), {
+          ...newUser,
+          email: cleanEmail,
+          emailVerified: fbUser.emailVerified,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+      userProfile = newUser;
+    }
+
+    SecurityNotificationService.notifySecurityEvent(
+      fbUser.uid,
+      fbUser.email || '',
+      fbUser.displayName || 'Google User',
+      'NEW_LOGIN',
+      { browser: navigator.userAgent }
+    );
+
+    return { firebaseUser: fbUser, user: userProfile, isNewUser };
+  }
+
+  /**
+   * Updates user profile in Firestore
+   */
+  static async updateUserProfile(userId: string, updates: Partial<User>): Promise<void> {
+    if (!db) return;
+    const docRef = doc(db, 'users', userId);
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
   }
 
   /**
