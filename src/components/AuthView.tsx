@@ -108,10 +108,6 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
 
   // Forgot Password states
   const [recoveryIdentifier, setRecoveryIdentifier] = useState('');
-  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3>(1); // 1: Email, 2: Code, 3: New Password
-  const [recoveryCode, setRecoveryCode] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   
   // Status & UI feedback
   const [isPending, setIsPending] = useState(false);
@@ -188,7 +184,6 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
     setIsPending(false);
     setSmsSent(false);
     setVerificationCode('');
-    setRecoveryStep(1);
   };
 
   // Google Sign In Handler
@@ -1329,68 +1324,21 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
               <div>
                 <h1 className="text-2xl font-black text-white tracking-tight">Reset Password</h1>
                 <p className="text-xs text-zinc-400 mt-1">
-                  {recoveryStep === 1 && "Enter your account email or phone to receive a code"}
-                  {recoveryStep === 2 && "Enter the 6-digit verification code sent to you"}
-                  {recoveryStep === 3 && "Create a new strong password for your account"}
+                  Enter your account email to receive a password reset link
                 </p>
               </div>
 
-              {recoveryStep === 1 && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Email or Phone Number</label>
-                  <input
-                    type="text"
-                    value={recoveryIdentifier}
-                    onChange={(e) => setRecoveryIdentifier(e.target.value)}
-                    placeholder="name@example.com or +1..."
-                    required
-                    className="w-full px-4 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-all"
-                  />
-                </div>
-              )}
-
-              {recoveryStep === 2 && (
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-300">Verification Code</label>
-                  <input
-                    type="text"
-                    maxLength={6}
-                    value={recoveryCode}
-                    onChange={(e) => setRecoveryCode(e.target.value.replace(/\D/g, ''))}
-                    placeholder="──────"
-                    required
-                    className="w-full px-4 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-center text-xl font-mono tracking-widest text-white placeholder-zinc-700 focus:outline-none focus:border-violet-500 transition-all"
-                  />
-                </div>
-              )}
-
-              {recoveryStep === 3 && (
-                <div className="space-y-3">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-300">New Password</label>
-                    <input
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="At least 8 characters"
-                      required
-                      className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-all"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-zinc-300">Confirm New Password</label>
-                    <input
-                      type="password"
-                      value={confirmNewPassword}
-                      onChange={(e) => setConfirmNewPassword(e.target.value)}
-                      placeholder="Re-enter new password"
-                      required
-                      className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-all"
-                    />
-                  </div>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-zinc-300">Email Address</label>
+                <input
+                  type="email"
+                  value={recoveryIdentifier}
+                  onChange={(e) => setRecoveryIdentifier(e.target.value)}
+                  placeholder="name@example.com"
+                  required
+                  className="w-full px-4 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-all"
+                />
+              </div>
 
               <div className="flex gap-2">
                 <button
@@ -1405,9 +1353,7 @@ export default function AuthView({ onLoginSuccess }: AuthViewProps) {
                   disabled={isPending}
                   className="flex-1 py-3.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all shadow-[0_4px_20px_rgba(139,92,246,0.3)] cursor-pointer disabled:opacity-50"
                 >
-                  {recoveryStep === 1 && "Send Reset Code"}
-                  {recoveryStep === 2 && "Verify Code"}
-                  {recoveryStep === 3 && "Save New Password"}
+                  Send Reset Link
                 </button>
               </div>
             </form>
