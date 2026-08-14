@@ -29,6 +29,7 @@ import {
   INITIAL_NOTIFICATIONS
 } from './data/database';
 import { getGlobalPosts, subscribeToPosts, subscribeToUsers, saveUserToDb, savePostToDb, subscribeToNotifications, subscribeToFollows, syncEngine } from './services/dataService';
+import { ProfileService } from './services/firebase/profileService';
 import { db, auth, signInAnonymously } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { TRANSLATIONS } from './utils/translations';
@@ -70,16 +71,71 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User>(() => {
     console.log("🔥 Initializing currentUser...");
     const saved = localStorage.getItem('nexora_user');
-    return saved ? JSON.parse(saved) : INITIAL_USER;
+    const u = saved ? JSON.parse(saved) : INITIAL_USER;
+    return getRichUser(u);
   });
 
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
     const map: Record<string, User> = {};
+
+    // 1. Official Nexora Account
+    const nexoraOfficial = getRichUser({
+      id: 'nexora_official_id',
+      username: 'nexoraofficial',
+      name: 'Nexora Official',
+      avatar: '/logo.svg',
+      bio: 'Official Nexora platform account. Secure decentralized global coordination & neural persistence protocol.',
+      location: 'Global Orbit',
+      website: 'https://nexora.app',
+      followers: 25000000,
+      following: 0,
+      sparks: 100000000,
+      isVerified: true,
+      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      joinedDate: 'Joined June 2026',
+      reputationPoints: 80000000,
+      reputationBreakdown: { contributions: 43000000, helpfulness: 1000000, missionsCompleted: 500, skillsVerified: 1000 },
+      interestDNA: { 'Technology': 100, 'AI': 100 },
+      skills: ['Protocol', 'Consensus']
+    });
+    map[nexoraOfficial.id] = nexoraOfficial;
+
+    // 2. Harrison Personal Account
+    const harrison = getRichUser({
+      id: 'user_voiceofharrison',
+      username: 'voiceofharrison',
+      name: 'Voice of Harrison',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      bio: 'Personal creator account. Building decentralized apps and neural architectures.',
+      location: 'Earth Orbit',
+      website: 'https://nexora.app',
+      followers: 0,
+      following: 0,
+      sparks: 0,
+      isVerified: true,
+      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      joinedDate: 'Joined June 2026',
+      reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: { 'Architecture': 90, 'AI': 90 },
+      skills: ['Systems Design', 'Full-Stack']
+    });
+    map[harrison.id] = harrison;
+
+    // 3. Seed Followers
+    const seeds = getSeededFollowers('nexoraofficial', 'nexoraofficial');
+    seeds.forEach(s => {
+      map[s.id] = s;
+    });
+
     const savedUser = localStorage.getItem('nexora_user');
     if (savedUser) {
       try {
         const u = JSON.parse(savedUser);
-        if (u && u.id) map[u.id] = u;
+        if (u && u.id) {
+          const richU = getRichUser(u);
+          map[richU.id] = richU;
+        }
       } catch {}
     }
     return map;
@@ -1714,8 +1770,9 @@ export default function App() {
         });
       });
 
-      // Save to database/sync engine
+      // Save to database/sync engine & ProfileService
       saveUserToDb(freshUser);
+      ProfileService.updateProfile(freshUser.id, updatedData).catch(err => console.error('Error updating profile in ProfileService:', err));
 
       return freshUser;
     });

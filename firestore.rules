@@ -37,6 +37,18 @@ service cloud.firestore {
         allow create: if isSignedIn();
       }
 
+      match /memoryEvents/{eventId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /memoryState/{stateId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /settings/{settingId} {
+        allow read, write: if isOwner(userId);
+      }
+
       match /notifications/{notifId} {
         allow read, list: if isOwner(userId);
         allow create: if isSignedIn();

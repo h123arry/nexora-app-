@@ -291,53 +291,59 @@ export default function ShareSheet({
           </button>
         </div>
 
-        {realChats.length > 0 && (
-          <div className="mb-6">
-            <span className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1 block">Nexora Friends</span>
-            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
-              {realChats.map((chat) => {
-                const isSelected = selectedRecipients.includes(chat.id);
-                const isSent = sentRecipients.includes(chat.id);
+        <div className="mb-6">
+          <span className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-3 px-1 block">Share with Friends</span>
+          {realChats.length > 0 ? (
+            <div>
+              <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-none">
+                {realChats.map((chat) => {
+                  const isSelected = selectedRecipients.includes(chat.id);
+                  const isSent = sentRecipients.includes(chat.id);
 
-                return (
-                  <div 
-                    key={chat.id} 
-                    onClick={() => !isSent && handleToggleSelectRecipient(chat.id)}
-                    className="flex flex-col items-center gap-1.5 shrink-0 w-16 cursor-pointer group"
-                  >
-                    <div className="relative">
-                      <img 
-                        src={chat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'} 
-                        alt={chat.partnerName || 'User'} 
-                        className={`h-14 w-14 rounded-full object-cover border-2 transition-all ${
-                          isSelected ? 'border-violet-500 scale-105' : 'border-transparent'
-                        }`} 
-                        referrerPolicy="no-referrer"
-                      />
-                      {isSelected && (
-                        <div className="absolute inset-0 bg-violet-600/40 rounded-full flex items-center justify-center backdrop-blur-[1px]">
-                          <Check className="w-6 h-6 text-white stroke-[3]" />
-                        </div>
-                      )}
+                  return (
+                    <div 
+                      key={chat.id} 
+                      onClick={() => !isSent && handleToggleSelectRecipient(chat.id)}
+                      className="flex flex-col items-center gap-1.5 shrink-0 w-16 cursor-pointer group"
+                    >
+                      <div className="relative">
+                        <img 
+                          src={chat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'} 
+                          alt={chat.partnerName || 'User'} 
+                          className={`h-14 w-14 rounded-full object-cover border-2 transition-all ${
+                            isSelected ? 'border-violet-500 scale-105' : 'border-transparent'
+                          }`} 
+                          referrerPolicy="no-referrer"
+                        />
+                        {isSelected && (
+                          <div className="absolute inset-0 bg-violet-600/40 rounded-full flex items-center justify-center backdrop-blur-[1px]">
+                            <Check className="w-6 h-6 text-white stroke-[3]" />
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-sans font-medium text-zinc-300 truncate w-full text-center">
+                        {chat.partnerName || 'User'}
+                      </span>
                     </div>
-                    <span className="text-[10px] font-sans font-medium text-zinc-300 truncate w-full text-center">
-                      {chat.partnerName || 'User'}
-                    </span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
+              {selectedRecipients.length > 0 && (
+                <button
+                  onClick={handleSendToSelected}
+                  className="w-full mt-3 py-3.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Send className="w-4 h-4" />
+                  Send to {selectedRecipients.length} friends
+                </button>
+              )}
             </div>
-            {selectedRecipients.length > 0 && (
-              <button
-                onClick={handleSendToSelected}
-                className="w-full mt-3 py-3.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Send className="w-4 h-4" />
-                Send to {selectedRecipients.length} friends
-              </button>
-            )}
-          </div>
-        )}
+          ) : (
+            <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+              <p className="text-xs text-zinc-400 font-sans">No active direct chats yet. Connect with creators across Nexora to share instantly!</p>
+            </div>
+          )}
+        </div>
 
         {/* EXTERNAL SHARING APPS GRID */}
         <div className="mb-6">
@@ -349,7 +355,7 @@ export default function ShareSheet({
                 onClick={chan.action}
                 className="flex flex-col items-center gap-2 cursor-pointer group"
               >
-                <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm border ${chan.bg}`}>
                   {chan.icon}
                 </div>
                 <span className="font-sans font-medium text-[10px] text-zinc-300 truncate w-full text-center">{chan.name}</span>

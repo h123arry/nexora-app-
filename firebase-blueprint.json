@@ -222,6 +222,46 @@
         "browser": { "type": "string" }
       },
       "required": ["eventType", "title"]
+    },
+    "memoryEvent": {
+      "title": "Memory Event",
+      "description": "User activity memory event",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "targetId": { "type": "string" },
+        "targetType": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "metadata": { "type": "object" }
+      },
+      "required": ["userId", "type", "targetId"]
+    },
+    "memoryState": {
+      "title": "Memory State",
+      "description": "User persistent memory state",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "postId": { "type": "string" },
+        "liked": { "type": "boolean" },
+        "following": { "type": "boolean" },
+        "viewCount": { "type": "number" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId"]
+    },
+    "userSettings": {
+      "title": "User Settings",
+      "description": "User persistent settings and preferences",
+      "type": "object",
+      "properties": {
+        "privacy": { "type": "object" },
+        "notifications": { "type": "object" },
+        "appearance": { "type": "object" },
+        "content": { "type": "object" },
+        "security": { "type": "object" }
+      }
     }
   },
   "firestore": {
@@ -232,6 +272,18 @@
     "/users/{userId}/securityLogs/{logId}": {
       "schema": { "$ref": "securityLog" },
       "description": "User security audit logs"
+    },
+    "/users/{userId}/memoryEvents/{eventId}": {
+      "schema": { "$ref": "memoryEvent" },
+      "description": "User memory activity events"
+    },
+    "/users/{userId}/memoryState/{stateId}": {
+      "schema": { "$ref": "memoryState" },
+      "description": "User memory persistent state"
+    },
+    "/users/{userId}/settings/{settingId}": {
+      "schema": { "$ref": "userSettings" },
+      "description": "User settings preferences"
     },
     "/users/{userId}": {
       "schema": { "$ref": "user" },

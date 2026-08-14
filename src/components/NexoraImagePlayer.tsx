@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Check, Music, Search, Edit3, Archive, Trash, UserPlus, EyeOff } from 'lucide-react';
+import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Check, Music, Search, Edit3, Archive, Trash, UserPlus, EyeOff, Download } from 'lucide-react';
 import VideoBottomSheet from './VideoBottomSheet';
+import NexoraWatermark from './branding/NexoraWatermark';
 
 interface Post {
   id: string;
@@ -66,6 +67,135 @@ export default function NexoraImagePlayer({
   const [isExpanded, setIsExpanded] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
+  const [downloadingState, setDownloadingState] = useState<string | null>(null);
+
+  const handleDownloadWatermarkedImage = async () => {
+    const imgSrc = displayImages[currentImageIndex];
+    if (!imgSrc) return;
+
+    setDownloadingState('Preparing download...');
+    window.dispatchEvent(new CustomEvent('toast', { detail: '📥 Preparing watermarked image download...' }));
+
+    try {
+      setTimeout(() => setDownloadingState('Applying Nexora branding...'), 400);
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = imgSrc;
+
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || 1080;
+      canvas.height = img.naturalHeight || 1080;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas 2D context unavailable');
+
+      ctx.drawImage(img, 0, 0);
+
+      setDownloadingState('Applying Nexora branding...');
+
+      const padding = Math.round(canvas.width * 0.035);
+      const wmWidth = Math.round(canvas.width * 0.32);
+      const wmHeight = Math.round(canvas.height * 0.08);
+      const x = canvas.width - wmWidth - padding;
+      const y = canvas.height - wmHeight - padding;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(12, 10, 33, 0.82)';
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 16;
+      ctx.shadowOffsetY = 6;
+      ctx.beginPath();
+      ctx.roundRect(x, y, wmWidth, wmHeight, 24);
+      ctx.fill();
+      ctx.restore();
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      const fontSize = Math.max(16, Math.round(canvas.width * 0.022));
+      ctx.font = `bold ${fontSize}px sans-serif`;
+      
+      const badgeSize = Math.round(wmHeight * 0.6);
+      const badgeX = x + padding;
+      const badgeY = y + (wmHeight - badgeSize) / 2;
+      
+      const grad = ctx.createLinearGradient(badgeX, badgeY, badgeX + badgeSize, badgeY + badgeSize);
+      grad.addColorStop(0, '#8B5CF6');
+      grad.addColorStop(1, '#3B82F6');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(badgeX, badgeY, badgeSize, badgeSize, badgeSize / 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `900 ${Math.round(badgeSize * 0.65)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('N', badgeX + badgeSize / 2, badgeY + badgeSize / 2);
+
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = `bold ${Math.round(fontSize * 0.95)}px sans-serif`;
+      const textX = badgeX + badgeSize + 12;
+      const usernameText = `@${post.username}`;
+      ctx.fillText(usernameText, textX, y + wmHeight / 2 - 4);
+
+      if (post.isVerified) {
+        const textWidth = ctx.measureText(usernameText).width;
+        const tickX = textX + textWidth + 8;
+        const tickY = y + wmHeight / 2 - 6;
+        ctx.fillStyle = '#8B5CF6';
+        ctx.beginPath();
+        ctx.arc(tickX + 6, tickY, 8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = `bold 10px sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.fillText('✓', tickX + 6, tickY);
+      }
+
+      ctx.fillStyle = '#C4B5FD';
+      ctx.font = `800 ${Math.round(fontSize * 0.6)}px monospace`;
+      ctx.fillText('NEXORA', textX, y + wmHeight / 2 + 12);
+
+      ctx.restore();
+
+      setDownloadingState('Downloading...');
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      const safeUsername = (post.username || 'user').replace(/[^a-zA-Z0-9_]/g, '');
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.download = `nexora-${safeUsername}-${dateStr}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setDownloadingState(null);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Watermarked image downloaded successfully!' }));
+    } catch (err) {
+      console.error('Image download export error:', err);
+      setDownloadingState(null);
+      const link = document.createElement('a');
+      link.href = imgSrc;
+      link.target = '_blank';
+      link.download = `nexora_${post.id}.jpg`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Image downloaded successfully.' }));
+    }
+  };
 
   const [savedCollectionForThis, setSavedCollectionForThis] = useState<string | null>(() => {
     try {
@@ -250,7 +380,18 @@ export default function NexoraImagePlayer({
                 exit={{ opacity: 0, scale: 0.9, x: 10 }}
                 className="absolute right-14 bottom-0 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-md z-50 overflow-hidden font-sans py-1 text-left"
               >
-                {isOwnPost ? (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowMoreMenu(false);
+                        handleDownloadWatermarkedImage();
+                      }}
+                      className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                    >
+                      <Download className="w-3.5 h-3.5 shrink-0 text-violet-400" />
+                      Download Watermarked
+                    </button>
+                    {isOwnPost ? (
                   <>
                     <button
                       onClick={(e) => {
@@ -404,13 +545,15 @@ export default function NexoraImagePlayer({
             <span>{post.location}</span>
           </div>
         )}
+
+
       </div>
 
       <VideoBottomSheet
         isOpen={showShareSheet}
         onClose={() => setShowShareSheet(false)}
         post={post as any}
-        onDownload={() => {}}
+        onDownload={handleDownloadWatermarkedImage}
         onSave={() => {}}
         onShare={() => {}}
         onReport={() => {}}
@@ -419,6 +562,14 @@ export default function NexoraImagePlayer({
         onFollowToggle={() => onToggleFollow?.()}
         isFollowing={isFollowing}
       />
+
+      {/* Downloading Export State Overlay */}
+      {downloadingState && (
+        <div className="absolute inset-0 bg-black/85 backdrop-blur-md flex flex-col items-center justify-center gap-3 z-30">
+          <div className="w-10 h-10 rounded-full border-2 border-violet-500 border-t-transparent animate-spin" />
+          <p className="text-xs font-mono font-bold text-violet-300 tracking-wider uppercase">{downloadingState}</p>
+        </div>
+      )}
     </div>
   );
 }

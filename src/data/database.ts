@@ -39,7 +39,55 @@ export const INITIAL_USER: User = {
 };
 export const MOCK_CREATORS: User[] = [];
 
-export const INITIAL_POSTS: Post[] = [];
+export const INITIAL_POSTS: Post[] = [
+  {
+    id: 'post-1',
+    userId: 'nexora_official_id',
+    username: 'nexoraofficial',
+    name: 'Nexora Official',
+    avatar: '/logo.svg',
+    isVerified: true,
+    content: 'Welcome to Nexora v4.0 — The Decentralized Neural Network & Reputation Architecture. Explore zero-latency persistence, cryptographic identity, and autonomous coordination across global clusters. #Nexora #Decentralized #AI',
+    tags: ['Nexora', 'Decentralized', 'AI'],
+    likes: 1420,
+    commentsCount: 88,
+    shares: 310,
+    timestamp: new Date(Date.now() - 3600000 * 2).toISOString(),
+    comments: [
+      { id: 'c-1', postId: 'post-1', userId: 'seed-user-1', username: 'nexora_seed_1', name: 'Alex Chen', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150', content: 'Incredible launch! Excited to build on Nexora protocol.', timestamp: new Date(Date.now() - 3600000).toISOString(), likes: 0 }
+    ]
+  },
+  {
+    id: 'post-2',
+    userId: 'seed-user-2',
+    username: 'nexora_seed_2',
+    name: 'Jordan Smith',
+    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150',
+    isVerified: false,
+    content: 'Deploying zero-latency mesh nodes across European edge clusters today. The throughput metrics are blowing past our expectations! #SystemsDesign #Cloud',
+    tags: ['SystemsDesign', 'Cloud'],
+    likes: 342,
+    commentsCount: 19,
+    shares: 45,
+    timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
+    comments: []
+  },
+  {
+    id: 'post-3',
+    userId: 'user_voiceofharrison',
+    username: 'voiceofharrison',
+    name: 'Voice of Harrison',
+    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+    isVerified: true,
+    content: 'Building out organic engagement channels and zero-trust protocol layers. Every contributor matters. #Builder #Nexora',
+    tags: ['Builder', 'Nexora'],
+    likes: 89,
+    commentsCount: 12,
+    shares: 8,
+    timestamp: new Date(Date.now() - 3600000 * 8).toISOString(),
+    comments: []
+  }
+];
 export const INITIAL_CHATS: Chat[] = [];
 export const INITIAL_MESSAGES: { [chatId: string]: Message[] } = {};
 
@@ -329,7 +377,7 @@ export function getRichUser(user: User): User {
   if (!user) return user;
 
   const username = (user.username || '').toLowerCase().trim();
-  const isNexoraOfficial = username === 'nexoraofficial' || username === 'voh';
+  const isNexoraOfficial = username === 'nexoraofficial';
 
   const followingCount = getFollowingCount(user.id);
   const completedMissionsCount = getCompletedMissionsCount(user.id);

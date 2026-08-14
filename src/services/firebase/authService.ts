@@ -4,22 +4,21 @@ import {
   sendEmailVerification, 
   sendPasswordResetEmail, 
   updatePassword,
-  updateEmail,
   RecaptchaVerifier, 
   signInWithPhoneNumber,
   ConfirmationResult,
   User as FirebaseUser,
   reload,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signOut
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { auth, db } from './config';
 import { User } from '../../types';
+import { ProfileService } from './profileService';
 import { EmailService } from './emailService';
 import { SecurityNotificationService } from './securityNotificationService';
 
-// Brute force rate-limiting store in memory/localStorage
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCKOUT_TIME_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -31,8 +30,45 @@ export interface RateLimitStatus {
 
 export class AuthService {
   /**
-   * Checks brute-force lock status for an identifier
+   * Centralized Firebase Error Mapper
    */
+  static mapFirebaseError(error: any): string {
+    const code = error?.code || '';
+    switch (code) {
+      case 'auth/invalid-credential':
+      case 'auth/user-not-found':
+      case 'auth/wrong-password':
+        return 'The email or password you entered is incorrect.';
+      case 'auth/email-already-in-use':
+        return 'An account with this email address already exists.';
+      case 'auth/weak-password':
+        return 'The password is too weak. Please choose a stronger password.';
+      case 'auth/invalid-email':
+        return 'The email address format is invalid.';
+      case 'auth/popup-closed-by-user':
+      case 'auth/cancelled-popup-request':
+        return 'Sign-in cancelled by user.';
+      case 'auth/popup-blocked':
+        return 'Pop-up blocked by browser. Please enable pop-ups for this site.';
+      case 'auth/account-exists-with-different-credential':
+        return 'An account already exists with the same email address but different sign-in credentials.';
+      case 'auth/too-many-requests':
+        return 'Too many unsuccessful requests. Please try again later.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'auth/invalid-verification-code':
+        return 'Invalid verification code. Please check and try again.';
+      case 'auth/code-expired':
+        return 'Verification code has expired. Please request a new one.';
+      case 'auth/invalid-phone-number':
+        return 'The phone number format is invalid.';
+      case 'auth/missing-phone-number':
+        return 'Phone number is missing.';
+      default:
+        return error?.message || 'An authentication error occurred. Please try again.';
+    }
+  }
+
   static getRateLimitStatus(identifier: string): RateLimitStatus {
     const key = `nexora_lockout_${identifier.toLowerCase().trim()}`;
     const raw = localStorage.getItem(key);
@@ -46,7 +82,6 @@ export class AuthService {
         return { isLocked: true, remainingSeconds, attemptsCount: data.attempts || MAX_FAILED_ATTEMPTS };
       }
       if (data.lockoutUntil && now >= data.lockoutUntil) {
-        // Lockout expired
         localStorage.removeItem(key);
         return { isLocked: false, remainingSeconds: 0, attemptsCount: 0 };
       }
@@ -56,9 +91,6 @@ export class AuthService {
     }
   }
 
-  /**
-   * Records a failed login attempt and locks account if threshold exceeded
-   */
   static recordFailedAttempt(identifier: string): RateLimitStatus {
     const clean = identifier.toLowerCase().trim();
     const key = `nexora_lockout_${clean}`;
@@ -69,7 +101,6 @@ export class AuthService {
       const lockoutUntil = Date.now() + LOCKOUT_TIME_MS;
       localStorage.setItem(key, JSON.stringify({ attempts: newAttempts, lockoutUntil }));
       
-      // Trigger suspicious login security alert
       SecurityNotificationService.notifySecurityEvent(
         'anonymous',
         clean.includes('@') ? clean : '',
@@ -85,18 +116,53 @@ export class AuthService {
     return { isLocked: false, remainingSeconds: 0, attemptsCount: newAttempts };
   }
 
-  /**
-   * Resets failed login attempt counter on successful login
-   */
   static clearFailedAttempts(identifier: string) {
     const clean = identifier.toLowerCase().trim();
     localStorage.removeItem(`nexora_lockout_${clean}`);
   }
 
   /**
-   * Register a new user with real Firebase Auth and send real verification email
+   * Login with Email & Password
    */
-  static async registerUserWithEmail(
+  static async loginWithEmail(email: string, password: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    const cleanEmail = email.toLowerCase().trim();
+    const rateLimit = this.getRateLimitStatus(cleanEmail);
+    if (rateLimit.isLocked) {
+      throw new Error(`Account temporarily locked. Please retry in ${rateLimit.remainingSeconds} seconds.`);
+    }
+
+    try {
+      const credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+      const fbUser = credential.user;
+      this.clearFailedAttempts(cleanEmail);
+
+      let userProfile = await ProfileService.getProfile(fbUser.uid);
+      if (!userProfile) {
+        userProfile = await ProfileService.createProfile(fbUser.uid, {
+          name: fbUser.displayName || 'Nexora User',
+          isVerified: fbUser.emailVerified
+        }, cleanEmail);
+      }
+
+      SecurityNotificationService.notifySecurityEvent(
+        fbUser.uid,
+        cleanEmail,
+        userProfile.name,
+        'NEW_LOGIN',
+        { browser: navigator.userAgent }
+      );
+
+      return { firebaseUser: fbUser, user: userProfile };
+    } catch (err: any) {
+      this.recordFailedAttempt(cleanEmail);
+      throw new Error(this.mapFirebaseError(err));
+    }
+  }
+
+  /**
+   * Register with Email & Password
+   */
+  static async registerWithEmail(
     email: string,
     password: string,
     fullName: string,
@@ -105,402 +171,226 @@ export class AuthService {
     const cleanEmail = email.toLowerCase().trim();
     const cleanUsername = username.toLowerCase().trim();
 
-    // 1. Firebase Auth user creation
-    const credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
-    const fbUser = credential.user;
-
-    // 2. Trigger real Firebase Auth Email Verification
     try {
-      await sendEmailVerification(fbUser);
-      console.log('✉️ Real email verification sent to:', cleanEmail);
-    } catch (err) {
-      console.warn('Firebase sendEmailVerification warning:', err);
-    }
+      const credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+      const fbUser = credential.user;
 
-    // 3. Construct Nexora User Object
-    const newUser: User = {
-      id: fbUser.uid,
-      username: cleanUsername,
-      name: fullName,
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: '',
-      location: 'Global',
-      website: '',
-      followers: 0,
-      following: 0,
-      sparks: 0,
-      isVerified: fbUser.emailVerified,
-      coverImage: '',
-      joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
-      reputationPoints: 0,
-      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: {},
-      skills: []
-    };
-
-    // 4. Save to Firestore
-    try {
-      if (db) {
-        await setDoc(doc(db, 'users', fbUser.uid), {
-          ...newUser,
-          email: cleanEmail,
-          emailVerified: fbUser.emailVerified,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
+      try {
+        await sendEmailVerification(fbUser);
+      } catch (e) {
+        console.warn('Send email verification warning:', e);
       }
-    } catch (e) {
-      console.warn('Firestore user save warning:', e);
-    }
 
-    // 5. Trigger Welcome Email & Security Log
-    EmailService.sendTransactionalEmail('WELCOME', {
-      toEmail: cleanEmail,
-      userName: fullName
-    });
+      const userProfile = await ProfileService.createProfile(fbUser.uid, {
+        name: fullName.trim(),
+        username: cleanUsername,
+        isVerified: fbUser.emailVerified
+      }, cleanEmail);
 
-    SecurityNotificationService.notifySecurityEvent(
-      fbUser.uid,
-      cleanEmail,
-      fullName,
-      'NEW_LOGIN',
-      { browser: navigator.userAgent }
-    );
-
-    return { firebaseUser: fbUser, user: newUser };
-  }
-
-  /**
-   * Send or Resend Email Verification for currently logged in user
-   */
-  static async sendEmailVerificationLink(user?: FirebaseUser): Promise<boolean> {
-    const targetUser = user || auth.currentUser;
-    if (!targetUser) throw new Error('No user currently authenticated to send verification.');
-
-    await sendEmailVerification(targetUser);
-
-    if (targetUser.email) {
-      await EmailService.sendTransactionalEmail('VERIFY_EMAIL', {
-        toEmail: targetUser.email,
-        userName: targetUser.displayName || 'Nexora User'
+      EmailService.sendTransactionalEmail('WELCOME', {
+        toEmail: cleanEmail,
+        userName: fullName.trim()
       });
-    }
 
-    return true;
+      SecurityNotificationService.notifySecurityEvent(
+        fbUser.uid,
+        cleanEmail,
+        fullName.trim(),
+        'NEW_LOGIN',
+        { browser: navigator.userAgent }
+      );
+
+      return { firebaseUser: fbUser, user: userProfile };
+    } catch (err: any) {
+      throw new Error(this.mapFirebaseError(err));
+    }
   }
 
   /**
-   * Check if current Firebase User has verified their email inbox
+   * Login with Google
    */
-  static async checkVerificationStatus(userId: string): Promise<boolean> {
-    const user = auth.currentUser;
-    if (user) {
-      await reload(user);
-      if (user.emailVerified) {
-        // Sync Firestore
-        try {
-          if (db) {
-            await updateDoc(doc(db, 'users', userId), {
-              isVerified: true,
-              emailVerified: true
-            });
-          }
-        } catch (e) {
-          console.warn('Firestore verification sync error:', e);
-        }
+  static async loginWithGoogle(): Promise<{ firebaseUser: FirebaseUser; user: User; isNewUser: boolean }> {
+    try {
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      const credential = await signInWithPopup(auth, provider);
+      const fbUser = credential.user;
 
-        if (user.email) {
-          SecurityNotificationService.notifySecurityEvent(
-            userId,
-            user.email,
-            user.displayName || 'User',
-            'VERIFICATION_APPROVED'
-          );
-        }
+      let userProfile = await ProfileService.getProfile(fbUser.uid);
+      let isNewUser = false;
 
-        return true;
+      if (!userProfile) {
+        isNewUser = true;
+        userProfile = await ProfileService.createProfile(fbUser.uid, {
+          name: fbUser.displayName || 'Google User',
+          avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80',
+          isVerified: fbUser.emailVerified
+        }, fbUser.email || '');
       }
+
+      SecurityNotificationService.notifySecurityEvent(
+        fbUser.uid,
+        fbUser.email || '',
+        userProfile.name,
+        'NEW_LOGIN',
+        { browser: navigator.userAgent }
+      );
+
+      return { firebaseUser: fbUser, user: userProfile, isNewUser };
+    } catch (err: any) {
+      throw new Error(this.mapFirebaseError(err));
     }
-    return false;
   }
 
   /**
-   * Dispatches a secure server-side email OTP for verification or password reset
-   */
-  static async sendEmailOtp(
-    email: string, 
-    purpose: 'VERIFY_EMAIL' | 'PASSWORD_RESET' | 'IDENTITY_CONFIRMATION' = 'VERIFY_EMAIL',
-    userName?: string
-  ): Promise<{ success: boolean; message: string }> {
-    const response = await fetch('/api/auth/send-email-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, purpose, userName })
-    });
-
-    const data = await response.json();
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || 'Failed to send verification code.');
-    }
-
-    return data;
-  }
-
-  /**
-   * Verifies submitted OTP code against secure server hash
-   */
-  static async verifyEmailOtp(
-    email: string,
-    code: string,
-    purpose: 'VERIFY_EMAIL' | 'PASSWORD_RESET' | 'IDENTITY_CONFIRMATION' = 'VERIFY_EMAIL'
-  ): Promise<{ success: boolean; message: string }> {
-    const response = await fetch('/api/auth/verify-email-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, code, purpose })
-    });
-
-    const data = await response.json();
-    if (!response.ok || !data.success) {
-      throw new Error(data.error || 'Verification failed.');
-    }
-
-    return data;
-  }
-
-  /**
-   * Real Password Reset via Firebase Auth Email Link
-   */
-  static async sendPasswordReset(email: string): Promise<boolean> {
-    const cleanEmail = email.toLowerCase().trim();
-    
-    // Trigger real Firebase Auth password reset email
-    await sendPasswordResetEmail(auth, cleanEmail);
-
-    // Trigger branded email copy
-    await EmailService.sendTransactionalEmail('PASSWORD_RESET', {
-      toEmail: cleanEmail,
-      userName: cleanEmail.split('@')[0]
-    });
-
-    return true;
-  }
-
-  /**
-   * Initializes Firebase RecaptchaVerifier for Phone SMS Auth
+   * Send Phone Verification Code
    */
   static initRecaptchaVerifier(containerId: string): RecaptchaVerifier {
-    if (typeof window === 'undefined') throw new Error('Browser window required for RecaptchaVerifier');
-    
-    // Clear any previous recaptcha instances
+    if (typeof window === 'undefined') throw new Error('Browser window required');
     if ((window as any).recaptchaVerifier) {
       try {
         (window as any).recaptchaVerifier.clear();
       } catch (e) {}
     }
-
     const verifier = new RecaptchaVerifier(auth, containerId, {
       size: 'invisible',
-      callback: () => {
-        console.log('Recaptcha resolved');
-      }
+      callback: () => {}
     });
-
     (window as any).recaptchaVerifier = verifier;
     return verifier;
   }
 
-  /**
-   * Sends real SMS OTP Code via Firebase Phone Auth
-   */
-  static async sendPhoneSMS(phoneNumber: string, verifier: RecaptchaVerifier): Promise<ConfirmationResult> {
-    const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-    console.log('📱 Real Firebase SMS sent to:', phoneNumber);
-    return confirmationResult;
+  static async sendPhoneCode(phoneNumber: string, verifier: RecaptchaVerifier): Promise<ConfirmationResult> {
+    try {
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+      return confirmationResult;
+    } catch (err: any) {
+      throw new Error(this.mapFirebaseError(err));
+    }
   }
 
-  /**
-   * Verifies Phone SMS OTP code with Firebase and initializes user profile
-   */
-  static async confirmPhoneOTP(confirmationResult: ConfirmationResult, otpCode: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
-    const credential = await confirmationResult.confirm(otpCode);
-    const fbUser = credential.user;
+  static async verifyPhoneCode(confirmationResult: ConfirmationResult, code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    try {
+      const credential = await confirmationResult.confirm(code);
+      const fbUser = credential.user;
 
-    // Check if user already exists in Firestore
-    let userProfile = await this.getUserProfile(fbUser.uid);
-
-    if (!userProfile) {
-      // Initialize new user profile if not exists
-      const newUser: User = {
-        id: fbUser.uid,
-        username: `user_${fbUser.uid.substring(0, 5)}`,
-        name: fbUser.displayName || 'Nexora User',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        bio: '',
-        location: 'Global',
-        website: '',
-        followers: 0,
-        following: 0,
-        sparks: 0,
-        isVerified: true, // Phone verified
-        coverImage: '',
-        joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
-        reputationPoints: 0,
-        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-        interestDNA: {},
-        skills: []
-      };
-
-      if (db) {
-        await setDoc(doc(db, 'users', fbUser.uid), {
-          ...newUser,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
+      let userProfile = await ProfileService.getProfile(fbUser.uid);
+      if (!userProfile) {
+        userProfile = await ProfileService.createProfile(fbUser.uid, {
+          name: 'Phone User',
+          isVerified: true
+        }, fbUser.email || `${fbUser.uid}@phone.auth`);
       }
-      userProfile = newUser;
-    }
 
-    SecurityNotificationService.notifySecurityEvent(
-      fbUser.uid,
-      fbUser.email || '',
-      fbUser.displayName || 'Phone User',
-      'NEW_LOGIN',
-      { browser: navigator.userAgent }
-    );
-
-    return { firebaseUser: fbUser, user: userProfile };
-  }
-
-  /**
-   * Fetches user profile from Firestore by username
-   */
-  static async getUserByUsername(username: string): Promise<User | null> {
-    if (!db) return null;
-    const q = query(collection(db, 'users'), where('username', '==', username.toLowerCase().trim()));
-    const querySnapshot = await getDocs(q);
-    if (!querySnapshot.empty) {
-      return querySnapshot.docs[0].data() as User;
-    }
-    return null;
-  }
-
-  /**
-   * Fetches user profile from Firestore
-   */
-  static async getUserProfile(userId: string): Promise<User | null> {
-    const docRef = doc(db, 'users', userId);
-    const docSnap = await getDoc(docRef);
-    if (docSnap.exists()) {
-      return docSnap.data() as User;
-    }
-    return null;
-  }
-
-  /**
-   * Creates a user profile in Firestore
-   */
-  static async createUserProfile(user: User, email: string): Promise<void> {
-    if (db) {
-      await setDoc(doc(db, 'users', user.id), {
-        ...user,
-        email,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-    }
-  }
-
-  /**
-   * Google Sign-In with Firebase popup and automatic Firestore profile mapping
-   */
-  static async signInWithGoogle(): Promise<{ firebaseUser: FirebaseUser; user: User; isNewUser: boolean }> {
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({ prompt: 'select_account' });
-    const credential = await signInWithPopup(auth, provider);
-    const fbUser = credential.user;
-
-    let userProfile = await this.getUserProfile(fbUser.uid);
-    let isNewUser = false;
-
-    if (!userProfile) {
-      isNewUser = true;
-      const cleanEmail = fbUser.email || '';
-      const defaultUsername = (cleanEmail.split('@')[0] || `user_${fbUser.uid.substring(0, 5)}`).toLowerCase().replace(/[^a-z0-9_]/g, '');
-
-      const newUser: User = {
-        id: fbUser.uid,
-        username: defaultUsername,
-        name: fbUser.displayName || 'Google User',
-        avatar: fbUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        bio: '',
-        location: 'Global',
-        website: '',
-        followers: 0,
-        following: 0,
-        sparks: 0,
-        isVerified: fbUser.emailVerified,
-        coverImage: '',
-        joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
-        reputationPoints: 0,
-        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-        interestDNA: {},
-        skills: []
-      };
-
-      if (db) {
-        await setDoc(doc(db, 'users', fbUser.uid), {
-          ...newUser,
-          email: cleanEmail,
-          emailVerified: fbUser.emailVerified,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp()
-        });
-      }
-      userProfile = newUser;
-    }
-
-    SecurityNotificationService.notifySecurityEvent(
-      fbUser.uid,
-      fbUser.email || '',
-      fbUser.displayName || 'Google User',
-      'NEW_LOGIN',
-      { browser: navigator.userAgent }
-    );
-
-    return { firebaseUser: fbUser, user: userProfile, isNewUser };
-  }
-
-  /**
-   * Updates user profile in Firestore
-   */
-  static async updateUserProfile(userId: string, updates: Partial<User>): Promise<void> {
-    if (!db) return;
-    const docRef = doc(db, 'users', userId);
-    await updateDoc(docRef, {
-      ...updates,
-      updatedAt: serverTimestamp()
-    });
-  }
-
-  /**
-   * Change user password with security notification
-   */
-  static async changeUserPassword(newPassword: string): Promise<boolean> {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated.');
-
-    await updatePassword(user, newPassword);
-
-    if (user.email) {
       SecurityNotificationService.notifySecurityEvent(
-        user.uid,
-        user.email,
-        user.displayName || 'Nexora User',
-        'PASSWORD_CHANGED'
+        fbUser.uid,
+        fbUser.email || '',
+        userProfile.name,
+        'NEW_LOGIN',
+        { browser: navigator.userAgent }
       );
-    }
 
-    return true;
+      return { firebaseUser: fbUser, user: userProfile };
+    } catch (err: any) {
+      throw new Error(this.mapFirebaseError(err));
+    }
+  }
+
+  /**
+   * Send Verification Email
+   */
+  static async sendVerificationEmail(user?: FirebaseUser): Promise<boolean> {
+    const targetUser = user || auth.currentUser;
+    if (!targetUser) throw new Error('No user currently authenticated.');
+    try {
+      await sendEmailVerification(targetUser);
+      if (targetUser.email) {
+        await EmailService.sendTransactionalEmail('VERIFY_EMAIL', {
+          toEmail: targetUser.email,
+          userName: targetUser.displayName || 'Nexora User'
+        });
+      }
+      return true;
+    } catch (err: any) {
+      throw new Error(this.mapFirebaseError(err));
+    }
+  }
+
+  /**
+   * Refresh Verification Status
+   */
+  static async refreshVerificationStatus(user?: FirebaseUser): Promise<boolean> {
+    const targetUser = user || auth.currentUser;
+    if (!targetUser) return false;
+    try {
+      await reload(targetUser);
+      if (targetUser.emailVerified && db) {
+        await ProfileService.updateProfile(targetUser.uid, { isVerified: true });
+      }
+      return targetUser.emailVerified;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  /**
+   * Send Password Reset Email
+   */
+  static async sendPasswordReset(email: string): Promise<boolean> {
+    const cleanEmail = email.toLowerCase().trim();
+    try {
+      await sendPasswordResetEmail(auth, cleanEmail);
+      await EmailService.sendTransactionalEmail('PASSWORD_RESET', {
+        toEmail: cleanEmail,
+        userName: cleanEmail.split('@')[0]
+      });
+      return true;
+    } catch (err: any) {
+      throw new Error(this.mapFirebaseError(err));
+    }
+  }
+
+  /**
+   * Logout
+   */
+  static async logout(): Promise<void> {
+    try {
+      await signOut(auth);
+    } catch (err: any) {
+      throw new Error(this.mapFirebaseError(err));
+    }
+  }
+
+  static getCurrentUser(): FirebaseUser | null {
+    return auth.currentUser;
+  }
+
+  // --- Legacy Aliases for AuthView compatibility ---
+  static async signInWithGoogle() {
+    return this.loginWithGoogle();
+  }
+
+  static async getUserProfile(uid: string) {
+    return ProfileService.getProfile(uid);
+  }
+
+  static async createUserProfile(user: User, email: string) {
+    return ProfileService.createProfile(user.id, user, email);
+  }
+
+  static async sendPhoneSMS(phoneNumber: string, verifier: RecaptchaVerifier) {
+    return this.sendPhoneCode(phoneNumber, verifier);
+  }
+
+  static async confirmPhoneOTP(confirmationResult: ConfirmationResult, otpCode: string) {
+    return this.verifyPhoneCode(confirmationResult, otpCode);
+  }
+
+  static async registerUserWithEmail(email: string, pass: string, name: string, username: string) {
+    return this.registerWithEmail(email, pass, name, username);
+  }
+
+  static async updateUserProfile(userId: string, updates: Partial<User>) {
+    return ProfileService.updateProfile(userId, updates);
   }
 }

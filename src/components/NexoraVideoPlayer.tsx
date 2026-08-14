@@ -1494,7 +1494,7 @@ export default function NexoraVideoPlayer({
                isOpen={showShareSheet}
                onClose={() => setShowShareSheet(false)}
                post={post}
-               onDownload={() => {}}
+               onDownload={handleSimulateDownload}
                onSave={() => {}}
                onShare={() => {}}
                onReport={() => {}}
