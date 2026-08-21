@@ -371,8 +371,9 @@ export default function App() {
     const saved = localStorage.getItem('nexora_posts');
     const loadedPosts = saved ? JSON.parse(saved) : [];
     const normalized = normalizePosts(loadedPosts);
-    localStorage.setItem('nexora_posts', JSON.stringify(normalized));
-    return normalized;
+    const realPosts = normalized.filter((p: Post) => p && !['post-1', 'post-2', 'post-3'].includes(p.id));
+    localStorage.setItem('nexora_posts', JSON.stringify(realPosts));
+    return realPosts;
   });
 
   const [resolvedPosts, setResolvedPosts] = useState<Post[]>([]);
