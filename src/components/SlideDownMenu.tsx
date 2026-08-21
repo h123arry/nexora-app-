@@ -231,7 +231,7 @@ export default function SlideDownMenu({
             animate={{ y: 0, opacity: 1, scale: 1 }}
             exit={{ y: -25, opacity: 0, scale: 0.97 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="w-full max-w-xl bg-[#09061a]/95 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-white backdrop-blur-2xl relative z-10 my-auto sm:my-0 touch-none"
+            className="w-full max-w-xl bg-[#09061a]/95 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-white backdrop-blur-2xl relative z-10 my-auto sm:my-0 touch-auto"
           >
             {/* Top Drag Handle for Mobile */}
             <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-3 sm:hidden" />

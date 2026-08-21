@@ -523,7 +523,7 @@ export default function CommunitiesHubView({
   const isActingAsPage = (currentUser as any).isPageIdentity;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-28 sm:pb-12">
       {/* 🔴 Section Title & Premium Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5 text-left">
         <div>

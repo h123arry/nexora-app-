@@ -4,7 +4,7 @@ import { auth } from '../firebase/config';
 import { 
   doc, 
   setDoc,
-  collection, 
+  collection, orderBy, limit, 
   getDocs, 
   query, 
   onSnapshot,
@@ -27,7 +27,7 @@ export async function savePostToDbDirect(post: any) {
 
 export async function getGlobalPosts() {
   try {
-    const q = query(collection(db, path));
+    const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(150));
     const snapshot = await getDocs(q);
     const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
     posts.forEach(p => cacheManager.setPost(p.id, p));
@@ -38,7 +38,7 @@ export async function getGlobalPosts() {
 }
 
 export function subscribeToPosts(callback: (posts: Post[]) => void) {
-  const q = query(collection(db, path));
+  const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(150));
   return onSnapshot(q, (snapshot) => {
     const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
     posts.forEach(p => cacheManager.setPost(p.id, p));

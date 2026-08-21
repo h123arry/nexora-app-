@@ -1829,7 +1829,7 @@ export default function FeedView({
           }
         }}
         onTouchEnd={handlePullEnd}
-        className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative bg-[#04020a] touch-pan-y"
+        className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative bg-[#04020a] touch-pan-y pb-28 sm:pb-12"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* STAGE 1 — HOME FEED NAVIGATION HEADER */}

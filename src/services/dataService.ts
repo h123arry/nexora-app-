@@ -6,7 +6,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
-  collection, 
+  collection, orderBy, limit, 
   getDocs, 
   getDoc,
   query, 
@@ -466,7 +466,7 @@ export async function getActivities(userId: string) {
 export async function getGlobalPosts() {
   const path = 'posts';
   try {
-    const q = query(collection(db, path));
+    const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(150));
     const snapshot = await getDocs(q);
     const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
     posts.forEach(p => cacheManager.setPost(p.id, p));
@@ -523,7 +523,7 @@ export async function getNotifications(userId: string) {
 export async function getPages() {
   const path = 'pages';
   try {
-    const q = query(collection(db, path));
+    const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(150));
     const snapshot = await getDocs(q);
     const pages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Page[];
     pages.forEach(p => cacheManager.setPage(p.id, p));
@@ -554,7 +554,7 @@ export function subscribeToNotifications(userId: string, callback: (notification
 }
 
 export function subscribeToUsers(callback: (users: User[]) => void) {
-  const q = query(collection(db, 'users'));
+  const q = query(collection(db, 'users'), limit(500));
   return onSnapshot(q, (snapshot) => {
     const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
     users.forEach(u => cacheManager.setUser(u.id, u));
@@ -586,8 +586,8 @@ export function subscribeToPages(callback: (pages: Page[]) => void) {
   });
 }
 
-export function subscribeToFollows(callback: (follows: any[]) => void) {
-  const q = query(collection(db, 'follows'));
+export function subscribeToFollows(userId: string, callback: (follows: any[]) => void) {
+  const q = query(collection(db, 'follows'), where('followerId', '==', userId));
   return onSnapshot(q, (snapshot) => {
     const follows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(follows);
@@ -597,7 +597,7 @@ export function subscribeToFollows(callback: (follows: any[]) => void) {
 }
 
 export function subscribeToChats(userId: string, callback: (chats: Chat[]) => void) {
-  const q = query(collection(db, 'chats')); // List all chats user is part of
+  const q = query(collection(db, 'chats'), where('participants', 'array-contains', userId));
   return onSnapshot(q, (snapshot) => {
     const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Chat[];
     callback(chats);

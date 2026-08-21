@@ -245,7 +245,7 @@ export default function App() {
           }
         });
 
-        unsubFollows = subscribeToFollows((dbFollows) => {
+        unsubFollows = subscribeToFollows(user.uid, (dbFollows) => {
           console.log('[App] Received follows:', dbFollows?.length || 0);
           if (dbFollows && dbFollows.length > 0) {
             localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
@@ -672,6 +672,12 @@ export default function App() {
       }
     };
 
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleBackNavigation();
+      }
+    };
+
     const handleToggleNav = () => {
       setIsNavMenuOpen(prev => !prev);
     };
@@ -684,6 +690,7 @@ export default function App() {
       }
     };
     window.addEventListener('popstate', onPopState);
+    window.addEventListener('keydown', onKeyDown);
     window.addEventListener('toggleNavMenu', handleToggleNav);
     window.addEventListener('changeTab', handleChangeTab);
     const handleOpenUniversalSearch = () => setIsUniversalSearchOpen(true);
@@ -695,6 +702,7 @@ export default function App() {
     window.addEventListener('nexora-view-profile', handleViewProfileEvent);
     return () => {
       window.removeEventListener('popstate', onPopState);
+      window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('toggleNavMenu', handleToggleNav);
       window.removeEventListener('changeTab', handleChangeTab);
       window.removeEventListener('openUniversalSearch', handleOpenUniversalSearch);
@@ -859,6 +867,23 @@ export default function App() {
       }
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser && currentUser.id) {
+      try {
+        const savedB = localStorage.getItem(`nexora_bookmarks_${currentUser.id}`);
+        setUserBookmarks(savedB ? JSON.parse(savedB) : []);
+        const savedS = localStorage.getItem(`nexora_sparks_${currentUser.id}`);
+        setUserSparks(savedS ? JSON.parse(savedS) : []);
+      } catch (e) {
+        setUserBookmarks([]);
+        setUserSparks([]);
+      }
+    } else {
+      setUserBookmarks([]);
+      setUserSparks([]);
+    }
+  }, [currentUser?.id]);
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {
@@ -1189,14 +1214,9 @@ export default function App() {
       }
     };
 
-    const handleToggleNavMenu = () => {
-      setIsNavMenuOpen(prev => !prev);
-    };
-
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('changeTab', handleChangeTab);
-    window.addEventListener('toggleNavMenu', handleToggleNavMenu);
 
     // If a new user just signed up and we missed beforeinstallprompt (or browser doesn't support),
     // still display the setup guidance prompt so they can learn how to install!
@@ -1210,7 +1230,6 @@ export default function App() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
       window.removeEventListener('changeTab', handleChangeTab);
-      window.removeEventListener('toggleNavMenu', handleToggleNavMenu);
     };
   }, []);
 
@@ -1973,7 +1992,10 @@ export default function App() {
         isOpen={isNavMenuOpen}
         onClose={() => setIsNavMenuOpen(false)}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={(tab) => {
+          setActiveTab(tab);
+          setViewedUser(null);
+        }}
         matrixSubTabRedirect={matrixSubTabRedirect}
         unreadMessagesCount={unreadMessagesCount}
         unreadNotificationsCount={unreadNotificationsCount}
@@ -3276,19 +3298,6 @@ export default function App() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* Slide-Down Navigation Menu */}
-      <SlideDownMenu
-        isOpen={isNavMenuOpen}
-        onClose={() => setIsNavMenuOpen(false)}
-        activeTab={activeTab}
-        setActiveTab={(tab) => {
-          setActiveTab(tab);
-          setViewedUser(null);
-        }}
-        unreadMessagesCount={unreadMessagesCount}
-        unreadNotificationsCount={unreadNotificationsCount}
-      />
 
       {/* Sleek unified bottom navigation bar (primary app navigation for all sizes) */}
       <div 

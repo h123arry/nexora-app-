@@ -36,7 +36,7 @@ export default function SettingsView({
   ];
 
   return (
-    <div className="w-full max-w-4xl mx-auto space-y-6">
+    <div className="w-full max-w-4xl mx-auto space-y-6 pb-28 sm:pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-zinc-900 via-purple-950/20 to-black border border-white/10 backdrop-blur-xl shadow-md text-left">
         <div className="flex items-center gap-3">

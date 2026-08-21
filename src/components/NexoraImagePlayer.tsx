@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Check, Music, Search, Edit3, Archive, Trash, UserPlus, EyeOff, Download } from 'lucide-react';
 import VideoBottomSheet from './VideoBottomSheet';
+import { resolveMediaUrl } from '../utils/indexedDbStorage';
 import NexoraWatermark from './branding/NexoraWatermark';
 
 interface Post {
@@ -213,16 +214,27 @@ export default function NexoraImagePlayer({
       return null;
     }
   })();
-  const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
+  
+  const rawImages = images && images.length > 0 ? images : (image ? [image] : []);
+  const [displayImages, setDisplayImages] = useState<string[]>([]);
+  
+  useEffect(() => {
+    let active = true;
+    Promise.all(rawImages.map(url => resolveMediaUrl(url))).then(resolved => {
+      if (active) setDisplayImages(resolved.filter(Boolean) as string[]);
+    });
+    return () => { active = false; };
+  }, [rawImages.join(',')]);
 
-  const displayImages = images && images.length > 0 ? images : (image ? [image] : []);
+  const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
   if (displayImages.length === 0) return null;
+
 
   return (
     <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] shadow-md select-none group">
       {/* Background Image Display */}
       <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
-        <img
+        <img loading="lazy"
           src={displayImages[currentImageIndex]}
           alt={post.content || 'Post media'}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"

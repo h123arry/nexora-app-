@@ -1232,7 +1232,7 @@ export default function NexoraVideoPlayer({
               onWaiting={() => setIsBuffering(true)}
               onPlaying={() => setIsBuffering(false)}
               onCanPlay={() => setIsBuffering(false)}
-              className="w-full h-auto max-h-[85vh] object-cover cursor-pointer"
+              className="w-full h-full max-h-[85vh] object-contain cursor-pointer"
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             {isBuffering && (
