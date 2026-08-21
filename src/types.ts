@@ -284,7 +284,7 @@ export interface Chat {
 
 export interface Notification {
   id: string;
-  type: 'like' | 'comment' | 'follow' | 'mention' | 'system' | 'mission_milestone' | 'pulse_alert' | 'message' | 'community' | 'spark' | 'ai_recommendation' | 'reputation_milestone';
+  type: 'like' | 'comment' | 'follow' | 'mention' | 'system' | 'mission_milestone' | 'pulse_alert' | 'message' | 'community' | 'spark' | 'ai_recommendation' | 'reputation_milestone' | 'profile_view';
   userId: string;
   username: string;
   avatar: string;
@@ -294,8 +294,13 @@ export interface Notification {
   isRead: boolean;
   priority?: number; // 1 to 8 priority for sorting
   actionText?: string; // e.g. 'Follow Back', 'Reply', 'Join'
-  actionType?: 'follow_back' | 'reply' | 'join_community' | 'view_post' | 'save' | 'open_chat';
-  category?: 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'voh_ai' | 'comments' | 'sparks';
+  actionType?: 'follow_back' | 'reply' | 'join_community' | 'view_post' | 'save' | 'open_chat' | 'view_profile';
+  category?: 'messages' | 'mentions' | 'followers' | 'communities' | 'world_pulse' | 'voh_ai' | 'comments' | 'sparks' | 'profile_views';
+  actorName?: string;
+  targetPostPreview?: string;
+  targetPostImage?: string;
+  location?: string;
+  matchPercentage?: number;
 }
 
 export type ThemeMood = 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';

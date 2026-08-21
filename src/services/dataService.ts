@@ -142,7 +142,8 @@ class BackgroundSyncEngine {
     if (queue.length === 0) return;
 
     this.processing = true;
-    console.log(`[Sync Engine] Processing ${queue.length} background operations...`);
+    const initialCount = queue.length;
+    console.log(`[Sync Engine] Processing ${initialCount} background operations...`);
 
     const failedActions: PendingAction[] = [];
 
@@ -163,6 +164,18 @@ class BackgroundSyncEngine {
 
     this.saveQueue(failedActions);
     this.processing = false;
+
+    // Dispatch dedicated sync complete event for the UI and toast notifications
+    const syncedCount = initialCount - failedActions.length;
+    if (typeof window !== 'undefined' && syncedCount > 0) {
+      window.dispatchEvent(new CustomEvent('nexora-sync-complete', {
+        detail: {
+          syncedCount,
+          failedCount: failedActions.length,
+          message: `🔄 Background synchronization complete: ${syncedCount} queued ${syncedCount === 1 ? 'post/action has' : 'posts/actions have'} been successfully published and synced live to NEXORA.`
+        }
+      }));
+    }
   }
 
   private async executeAction(item: PendingAction) {

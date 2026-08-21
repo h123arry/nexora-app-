@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Download, Bookmark, Copy, Share2, Flag, EyeOff, UserMinus, Eye, Settings, Play, Check, ChevronRight, MessageCircle, Heart, Zap, Music } from 'lucide-react';
+import { X, Download, Bookmark, Copy, Share2, Flag, EyeOff, User, Eye, Settings, Play, Check, ChevronRight, MessageCircle, Heart, Zap, Music } from 'lucide-react';
 
 interface Props {
   isOpen: boolean;
@@ -104,7 +104,7 @@ export default function VideoBottomSheet({ isOpen, onClose, post, onDownload, on
                 </div>
               </div>
 
-              <ActionRow icon={UserMinus} title="View Profile" onClick={onViewProfile} />
+              <ActionRow icon={User} title="View Profile" onClick={onViewProfile} />
               <ActionRow icon={Check} title={isFollowing ? "Unfollow" : "Follow"} onClick={onFollowToggle} />
             </div>
             

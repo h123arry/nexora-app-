@@ -302,12 +302,20 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
               <AnimatePresence>
                 {activeDotsMenuPostId === post.id && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    className="absolute right-0 mt-1 w-48 bg-[#0c091f] border border-white/10 rounded-xl shadow-md z-50 overflow-hidden font-sans py-1"
-                  >
+                  <>
+                    <div 
+                      className="fixed inset-0 z-40" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setActiveDotsMenuPostId(null);
+                      }} 
+                    />
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                      className="absolute right-0 mt-1 w-48 max-h-[60vh] overflow-y-auto bg-[#0c091f] border border-white/10 rounded-xl shadow-md z-50 font-sans py-1"
+                    >
                     <button
                       onClick={() => {
                         setNidaDiagnosticPost(post);
@@ -431,6 +439,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                       Save to Folder
                     </button>
                   </motion.div>
+                  </>
                 )}
               </AnimatePresence>
             </div>
@@ -769,6 +778,34 @@ export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
              prev.post.comments?.length === next.post.comments?.length &&
              prev.post.content === next.post.content &&
              prev.post.scheduledTime === next.post.scheduledTime;
+    }
+    if (key === 'activeDotsMenuPostId') {
+      return prev.activeDotsMenuPostId !== prev.post.id && next.activeDotsMenuPostId !== next.post.id;
+    }
+    if (key === 'activeCommentsPostId') {
+      return prev.activeCommentsPostId !== prev.post.id && next.activeCommentsPostId !== next.post.id;
+    }
+    if (key === 'playingVoiceId') {
+      return prev.playingVoiceId !== prev.post.id && next.playingVoiceId !== next.post.id;
+    }
+    if (key === 'expandedPostIds') {
+      return prev.expandedPostIds.includes(prev.post.id) === next.expandedPostIds.includes(next.post.id);
+    }
+    if (key === 'editingPostId') {
+      return prev.editingPostId !== prev.post.id && next.editingPostId !== next.post.id;
+    }
+    if (key === 'editingPostContent') {
+      return prev.editingPostId !== prev.post.id && next.editingPostId !== next.post.id;
+    }
+    if (key === 'pinnedPostIds') {
+      return prev.pinnedPostIds.includes(prev.post.id) === next.pinnedPostIds.includes(next.post.id);
+    }
+    if (key === 'voiceSeconds') {
+      // Only care about voiceSeconds if this post is the currently playing voice post
+      if (prev.playingVoiceId === prev.post.id || next.playingVoiceId === next.post.id) {
+        return prev.voiceSeconds === next.voiceSeconds;
+      }
+      return true;
     }
     if (key === 'votedPolls') {
       return prev.votedPolls[prev.post.id] === next.votedPolls[next.post.id];

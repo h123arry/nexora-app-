@@ -532,6 +532,44 @@ export default function FeedView({
   const [activeDotsMenuPostId, setActiveDotsMenuPostId] = useState<string | null>(null);
   const [reportingPost, setReportingPost] = useState<any | null>(null);
 
+  useEffect(() => {
+    const handleEscape = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (activeDotsMenuPostId) {
+        setActiveDotsMenuPostId(null);
+        customEvent.preventDefault();
+        return;
+      }
+      if (activeCommentsPostId) {
+        setActiveCommentsPostId(null);
+        customEvent.preventDefault();
+        return;
+      }
+    };
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => window.removeEventListener('nexora-escape', handleEscape);
+  }, [activeDotsMenuPostId, activeCommentsPostId]);
+
+  // Listener to open and focus a specific post / comment thread from push alerts or notifications
+  useEffect(() => {
+    const handleOpenPostEvent = (e: Event) => {
+      const { postId, focusComment } = (e as CustomEvent<{ postId: string; focusComment?: boolean }>).detail || {};
+      if (!postId) return;
+      if (focusComment) {
+        setActiveCommentsPostId(postId);
+      }
+      setTimeout(() => {
+        const el = document.getElementById(`post-${postId}`) || document.getElementById(`feed-card-${postId}`);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 120);
+    };
+
+    window.addEventListener('nexora-open-post', handleOpenPostEvent as EventListener);
+    return () => window.removeEventListener('nexora-open-post', handleOpenPostEvent as EventListener);
+  }, []);
+
   // Inline post editing states
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editingPostContent, setEditingPostContent] = useState<string>('');
@@ -2021,9 +2059,9 @@ export default function FeedView({
               <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-violet-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/10">
                 <Globe className="w-6 h-6 text-white animate-pulse" />
               </div>
-              <h4 className="text-base font-sans font-extrabold text-white tracking-wide">Welcome to Nexora</h4>
+              <h4 className="text-base font-sans font-extrabold text-white tracking-wide">No posts yet</h4>
               <p className="text-xs text-violet-300/80 max-w-md mx-auto leading-relaxed">
-                Be one of the first creators on the platform.
+                There is currently no content here, and you can create something.
               </p>
             </div>
 
@@ -2034,59 +2072,7 @@ export default function FeedView({
               >
                 + Create your first post
               </button>
-              <button 
-                onClick={() => {
-                  setSearchFilterType('users');
-                  const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-                  if (searchInput) searchInput.focus();
-                }}
-                className="px-5 py-2.5 bg-white/5 hover:bg-white/10 text-violet-200 border border-white/10 rounded-xl text-xs font-mono font-bold cursor-pointer transition-all active:scale-95"
-              >
-                🔍 Discover creators
-              </button>
             </div>
-
-            {/* Registered creators on Nexora if any exist */}
-            {suggestedUsers.length > 0 && (
-              <div className="bg-[#0b0a24]/60 border border-white/10 rounded-2xl p-4 text-left space-y-3 relative z-10 mt-4">
-                <span className="text-[10px] font-mono text-violet-400 font-extrabold uppercase tracking-widest block">⭐ Registered Creators on Nexora</span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {suggestedUsers.map(u => (
-                    <div key={u.id} className="flex items-center justify-between p-2.5 bg-black/30 border border-white/5 rounded-xl">
-                      <div className="flex items-center gap-2 min-w-0 cursor-pointer" onClick={() => onViewProfile?.(u.id)}>
-                        <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-lg object-cover border border-white/10 shrink-0" />
-                        <div className="min-w-0 leading-tight">
-                          <p className="text-xs font-bold text-white truncate hover:text-violet-400 transition-colors">{u.name}</p>
-                          <p className="text-[9.5px] font-mono text-violet-400/80 truncate">@{u.username}</p>
-                        </div>
-                      </div>
-                      <motion.button 
-                        whileTap={{ scale: 0.9 }}
-                        onClick={() => onToggleFollow?.(u.id)}
-                        className={`p-1 px-2.5 rounded-lg text-[9px] font-mono uppercase font-extrabold cursor-pointer transition-all duration-300 shrink-0 ${
-                          followingIds.includes(u.id) 
-                            ? 'bg-violet-950 text-violet-300 border border-white/10' 
-                            : 'bg-linear-to-r from-violet-600 to-pink-500 text-white shadow-md shadow-violet-500/20 hover:shadow-violet-500/40'
-                        }`}
-                      >
-                        <AnimatePresence mode="wait">
-                          <motion.span
-                            key={followingIds.includes(u.id) ? 'followed' : 'follow'}
-                            initial={{ opacity: 0, y: -5 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 5 }}
-                            transition={{ duration: 0.15 }}
-                            className="block"
-                          >
-                            {followingIds.includes(u.id) ? 'Followed' : '+ Follow'}
-                          </motion.span>
-                        </AnimatePresence>
-                      </motion.button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         )}
 

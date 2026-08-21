@@ -231,7 +231,7 @@ export default function NexoraImagePlayer({
 
 
   return (
-    <div className="relative w-full overflow-hidden rounded-2xl border border-white/10 bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] shadow-md select-none group">
+    <div className="relative w-full overflow-hidden bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] select-none group">
       {/* Background Image Display */}
       <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
         <img loading="lazy"

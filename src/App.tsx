@@ -633,6 +633,14 @@ export default function App() {
   });
 
   const handleBackNavigation = () => {
+    // Dispatch a custom event to allow local components to handle back navigation first
+    // For example, closing active dots menus inside FeedView or FeedPostCard.
+    const escapeEvent = new CustomEvent('nexora-escape', { cancelable: true });
+    window.dispatchEvent(escapeEvent);
+    if (escapeEvent.defaultPrevented) {
+      return true;
+    }
+
     // Overlay Priority:
     // 1. Dialogs & Modals
     if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
@@ -2115,7 +2123,7 @@ export default function App() {
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
-                      isOwnProfile={!viewedUser}
+                      isOwnProfile={!viewedUser || viewedUser.id === currentUser.id}
                       onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
                       onToggleFollow={handleToggleFollow}
                       isFollowingField={viewedUser ? followingIds.includes(viewedUser.id) : false}

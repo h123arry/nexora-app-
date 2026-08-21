@@ -16,6 +16,8 @@ interface Post {
   name: string;
   avatar: string;
   content: string;
+  image?: string;
+  images?: string[];
   videoUrl?: string;
   likes: number;
   comments: any[];
@@ -1223,6 +1225,7 @@ export default function NexoraVideoPlayer({
             <video
               ref={videoRef}
               src={isNearby || shouldPreload ? finalVideoUrl : undefined}
+              poster={post?.image}
               loop
               playsInline
               preload={preloadMode || ((isNearby || shouldPreload) ? "auto" : "none")}

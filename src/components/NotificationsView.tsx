@@ -5,6 +5,16 @@ import { Notification, User } from '../types';
 import StoriesView from './StoriesView';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
+import { 
+  triggerTestSparkPop, 
+  triggerTestCommentPop, 
+  triggerTestFollowPop, 
+  triggerTestProfileViewPop,
+  requestPushPermission,
+  isPushPermissionGranted,
+  playNotificationSound,
+  NETWORK_CREATORS
+} from '../services/notificationService';
 
 interface NotificationsViewProps {
   notifications: Notification[];
@@ -339,11 +349,12 @@ export default function NotificationsView({
           addToast(`💡 Highlighted Comment from @${notif.username}: "${notif.previewText || notif.content}"`);
         }
       }, 500);
-    } else if (notif.type === 'follow') {
-      if (onViewProfile && notif.userId !== 'multiple') {
+    } else if (notif.type === 'follow' || notif.type === 'profile_view') {
+      if (onViewProfile && notif.userId && notif.userId !== 'multiple') {
         onViewProfile(notif.userId);
       } else {
-        addToast(`Viewing connection profile of @${notif.username}`);
+        window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: notif.userId || notif.username } }));
+        addToast(`Viewing profile of @${notif.username}`);
       }
     } else if (notif.type === 'pulse_alert') {
       if (notif.id === 'notif-live-1') {
@@ -443,6 +454,7 @@ export default function NotificationsView({
       if (activeCategory === 'comments') return n.type === 'comment';
       if (activeCategory === 'likes') return n.type === 'like' || n.type === 'spark';
       if (activeCategory === 'followers') return n.type === 'follow';
+      if (activeCategory === 'profile_views') return n.type === 'profile_view';
       if (activeCategory === 'system') return n.type === 'system';
       if (activeCategory === 'communities') return n.type === 'community';
       if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
@@ -510,6 +522,8 @@ export default function NotificationsView({
         return <MessageSquare className="w-4 h-4 text-pink-400" />;
       case 'follow':
         return <UserPlus className="w-4 h-4 text-emerald-400" />;
+      case 'profile_view':
+        return <Eye className="w-4 h-4 text-cyan-400" />;
       case 'mention':
         return <AtSign className="w-4 h-4 text-violet-400" />;
       case 'system':
@@ -877,6 +891,107 @@ export default function NotificationsView({
       </AnimatePresence>
 
       {/* ----------------------------------------------------------------------- */}
+      {/* ⚡ REAL-TIME NOTIFICATION SYSTEM CONTROLS & LIVE POP SIMULATOR */}
+      {/* ----------------------------------------------------------------------- */}
+      <div className="p-4 rounded-3xl bg-linear-to-r from-[#0d0a22]/90 via-[#0a0718]/90 to-[#04010b]/90 border border-violet-500/20 shadow-[0_4px_24px_rgba(139,92,246,0.12)] text-left">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-pink-400 animate-ping" />
+            <span className="text-xs font-mono font-black text-violet-200 uppercase tracking-wider flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
+              Live Heads-Up Pop Engine (TikTok & IG Style)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={async () => {
+                const res = await requestPushPermission();
+                if (res === 'granted') {
+                  addToast("🔔 Native phone push notifications activated!");
+                } else {
+                  addToast("⚠️ Push permission was not granted by the browser.");
+                }
+              }}
+              className="px-2.5 py-1 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 border border-violet-500/30 text-[11px] font-mono flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <Bell className="w-3 h-3 text-violet-400" />
+              <span>{isPushPermissionGranted() ? 'Phone Push Active' : 'Enable Phone Push'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                playNotificationSound('spark');
+                addToast("🔊 Sound alert chime test played!");
+              }}
+              className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors"
+              title="Test chime sound"
+            >
+              <Volume2 className="w-3.5 h-3.5 text-violet-300" />
+            </button>
+          </div>
+        </div>
+
+        {/* Instant test trigger buttons */}
+        <div className="pt-3 flex items-center gap-2 flex-wrap">
+          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Test Pops:</span>
+          
+          <button
+            type="button"
+            onClick={() => triggerTestSparkPop()}
+            className="px-3 py-1.5 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            <Flame className="w-3.5 h-3.5 text-rose-400" />
+            <span>Spark Pop</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => triggerTestCommentPop()}
+            className="px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-violet-400" />
+            <span>Comment Pop</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => triggerTestFollowPop()}
+            className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Follow Pop</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => triggerTestProfileViewPop(currentUser)}
+            className="px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
+          >
+            <Eye className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Profile View Pop</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerTestSparkPop();
+              setTimeout(() => triggerTestCommentPop(), 1500);
+              setTimeout(() => triggerTestProfileViewPop(currentUser), 3200);
+              setTimeout(() => triggerTestFollowPop(), 4800);
+              addToast("🌊 Triggered 4-wave live social interaction wave!");
+            }}
+            className="px-3 py-1.5 rounded-xl bg-linear-to-r from-violet-600 to-pink-600 hover:brightness-110 text-white text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer ml-auto shadow-xs"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            <span>Simulate Engagement Wave</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ----------------------------------------------------------------------- */}
       {/* SEARCH AND INSTANT FILTER TABS */}
       {/* ----------------------------------------------------------------------- */}
       <div className="grid grid-cols-1 gap-4">
@@ -905,6 +1020,7 @@ export default function NotificationsView({
             { id: 'comments', label: 'Comments' },
             { id: 'likes', label: 'Sparks & Likes' },
             { id: 'followers', label: 'Followers' },
+            { id: 'profile_views', label: 'Profile Views' },
             { id: 'requests', label: 'Requests' },
             { id: 'live', label: 'Live Streams' },
             { id: 'communities', label: 'Communities' },
