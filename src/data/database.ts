@@ -1,7 +1,7 @@
 import { User, Post, SocialMission, Circle, Chat, Message, Notification } from '../types';
-import { calculateNexoraReputationSystem } from '../services/reputationEngine';
+import { ActivityService } from '../services/activityService';
 
-export let DEMO_MODE = true;
+export let DEMO_MODE = false;
 export function setDemoMode(value: boolean) {
   DEMO_MODE = value;
   localStorage.setItem('nexora_demo_mode', JSON.stringify(value));
@@ -140,27 +140,40 @@ export function isFollowingDb(followerId: string, followingId: string): boolean 
 }
 
 export function getReputationPoints(userId: string): number {
-  initDb();
-  const events: ReputationRecord[] = JSON.parse(localStorage.getItem(KEYS.REPUTATION) || '[]');
-  return events.filter(e => e.userId === userId).reduce((sum, e) => sum + e.change, 0);
+  if (!userId) return 0;
+  return ActivityService.getUserMetrics(userId).reputationPoints;
 }
 
 export function getReputationBreakdown(userId: string) {
-  initDb();
-  const events: ReputationRecord[] = JSON.parse(localStorage.getItem(KEYS.REPUTATION) || '[]');
-  const userEvents = events.filter(e => e.userId === userId);
-  
-  return {
-    contributions: userEvents.filter(e => e.reason === 'Create post' || e.reason === 'Community contribution').reduce((sum, e) => sum + e.change, 0),
-    helpfulness: userEvents.filter(e => e.reason === 'Helpful comment').reduce((sum, e) => sum + e.change, 0),
-    missionsCompleted: userEvents.filter(e => e.reason === 'Complete mission').reduce((sum, e) => sum + e.change, 0),
-    skillsVerified: userEvents.filter(e => e.reason === 'Receive Spark' || e.reason === 'Community leadership action').reduce((sum, e) => sum + e.change, 0),
-  };
+  if (!userId) {
+    return {
+      contributions: 0,
+      helpfulness: 0,
+      missionsCompleted: 0,
+      skillsVerified: 0,
+      categories: {
+        contentCreation: 0,
+        communityEngagement: 0,
+        helpfulResponses: 0,
+        discoveryImpact: 0,
+        trustBuilding: 0,
+        platformParticipation: 0
+      },
+      trustMultiplier: 0.85,
+      antiGamingStatus: {
+        isFarmingShieldActive: true,
+        diminishingFactor: 1,
+        uniqueEngagerRatio: 1,
+        qualityBonus: 0
+      }
+    };
+  }
+  return ActivityService.getUserMetrics(userId).breakdown;
 }
 
 export function getContributionsCount(userId: string): number {
-  const posts: Post[] = JSON.parse(localStorage.getItem(KEYS.POSTS) || '[]');
-  return posts.filter(p => p.userId === userId).length;
+  if (!userId) return 0;
+  return ActivityService.getUserMetrics(userId).contributions;
 }
 
 export function getJoinedCirclesCount(userId: string): number {
@@ -237,15 +250,13 @@ export function addReputationDb(userId: string, change: number, reason: Reputati
   localStorage.setItem(KEYS.REPUTATION, JSON.stringify(events));
 }
 
-export function createPostDb(userId: string) {
-  // +5 reputation for creating a post
-  addReputationDb(userId, 5, 'Create post');
+export function createPostDb(userId: string, postId?: string, postType: 'post_create' | 'media_upload' | 'video_publish' | 'pulse_create' | 'voice_publish' = 'post_create') {
+  ActivityService.recordActivityEvent(userId, postType, postId || `post_${Date.now()}`);
 }
 
 export function addSparkDb(fromUserId: string, toUserId: string, targetType: SparkRecord['targetType'], targetId: string) {
   initDb();
   const sparks: SparkRecord[] = JSON.parse(localStorage.getItem(KEYS.SPARKS) || '[]');
-  // Check if already sparked to prevent double sparking
   if (!sparks.some(s => s.fromUserId === fromUserId && s.targetType === targetType && s.targetId === targetId)) {
     sparks.push({
       id: `spark-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -255,14 +266,16 @@ export function addSparkDb(fromUserId: string, toUserId: string, targetType: Spa
       targetId,
     });
     localStorage.setItem(KEYS.SPARKS, JSON.stringify(sparks));
-    // +1 reputation for receiver
-    addReputationDb(toUserId, 1, 'Receive Spark');
+    // Record idempotent spark received for destination creator
+    ActivityService.recordActivityEvent(toUserId, 'spark_received', targetId, { fromUserId });
   }
 }
 
-export function addHelpfulCommentDb(userId: string) {
-  // +2 reputation for helpful comments
-  addReputationDb(userId, 2, 'Helpful comment');
+export function addHelpfulCommentDb(userId: string, commentId?: string, postAuthorId?: string) {
+  ActivityService.recordActivityEvent(userId, 'comment_create', commentId || `comment_${Date.now()}`);
+  if (postAuthorId && postAuthorId !== userId) {
+    ActivityService.recordActivityEvent(postAuthorId, 'comment_received', commentId || `comment_${Date.now()}`, { fromUserId: userId });
+  }
 }
 
 export function completeMissionDb(userId: string, missionId: string) {
@@ -275,8 +288,7 @@ export function completeMissionDb(userId: string, missionId: string) {
     list.push({ userId, missionId, completed: true });
   }
   localStorage.setItem(KEYS.MISSIONS, JSON.stringify(list));
-  // +10 reputation for completed mission
-  addReputationDb(userId, 10, 'Complete mission');
+  ActivityService.recordActivityEvent(userId, 'mission_complete', missionId);
 }
 
 export function joinCircleDb(userId: string, circleId: string) {
@@ -285,8 +297,7 @@ export function joinCircleDb(userId: string, circleId: string) {
   if (!list.some(c => c.userId === userId && c.circleId === circleId)) {
     list.push({ userId, circleId });
     localStorage.setItem(KEYS.CIRCLES, JSON.stringify(list));
-    // +15 reputation for community contribution / joining circle
-    addReputationDb(userId, 15, 'Community contribution');
+    ActivityService.recordActivityEvent(userId, 'circle_join', circleId);
   }
 }
 
@@ -324,180 +335,45 @@ export function getSafeAvatar(avatar: string | undefined, name: string): string 
   return avatar;
 }
 
-// Compute dynamically calculated profile with absolute integrity using the Nexora Reputation & Contributions Algorithm System
+// Return authentic user with true persistent reputation & contributions metrics
 export function getRichUser(user: User): User {
-  if (!user) return user;
+  if (!user || !user.id) return user;
 
   const username = (user.username || '').toLowerCase().trim();
   const isNexoraOfficial = username === 'nexoraofficial';
 
-  const followingCount = getFollowingCount(user.id);
-  const completedMissionsCount = getCompletedMissionsCount(user.id);
+  const followingCount = getFollowingCount(user.id) || user.following || 0;
+  const followersCount = getFollowersCount(user.id) || user.followers || 0;
+  const sparksCount = getSparksReceived(user.id) || user.sparks || 0;
 
-  // Load records from local storage for multi-signal analysis
-  initDb();
-  let allPosts: Post[] = [];
-  try {
-    allPosts = JSON.parse(localStorage.getItem(KEYS.POSTS) || '[]');
-  } catch {}
-  const userPosts = allPosts.filter(p => p && p.userId === user.id);
+  // Retrieve user's verified metrics from ActivityService
+  const metrics = ActivityService.getUserMetrics(user.id);
   
-  let sparksRecords: SparkRecord[] = [];
-  try {
-    sparksRecords = JSON.parse(localStorage.getItem(KEYS.SPARKS) || '[]');
-  } catch {}
-
-  let missionRecords: JoinedMissionRecord[] = [];
-  try {
-    missionRecords = JSON.parse(localStorage.getItem(KEYS.MISSIONS) || '[]');
-  } catch {}
-
-  let circleRecords: JoinedCircleRecord[] = [];
-  try {
-    circleRecords = JSON.parse(localStorage.getItem(KEYS.CIRCLES) || '[]');
-  } catch {}
-
-  // Run the Hidden Nexora Algorithm Calculation Engine
-  const algo = calculateNexoraReputationSystem(
-    user,
-    userPosts,
-    allPosts,
-    sparksRecords,
-    missionRecords,
-    circleRecords
-  );
+  const contributions = user.contributions ?? (metrics.contributions > 0 ? metrics.contributions : (user.reputationBreakdown?.contributions ?? 0));
+  const reputationPoints = user.reputationPoints ?? (metrics.reputationPoints > 0 ? metrics.reputationPoints : 0);
 
   // Apply safe avatar transformation
   const resolvedAvatar = getSafeAvatar(user.avatar, user.name || user.username);
-  const isVerified = isUserVerified(user.username) || isNexoraOfficial;
-
-  if (isNexoraOfficial) {
-    return {
-      ...user,
-      name: user.name || 'Nexora Official',
-      username: 'nexoraofficial',
-      avatar: resolvedAvatar,
-      isVerified: true,
-      followers: 25000000,
-      following: 0,
-      sparks: 100000000,
-      reputationPoints: 80000000,
-      reputationBreakdown: {
-        contributions: 43000000,
-        helpfulness: 1000000,
-        missionsCompleted: 500,
-        skillsVerified: 1000,
-        categories: algo.categories,
-        trustMultiplier: 1.0,
-        antiGamingStatus: {
-          isFarmingShieldActive: false,
-          diminishingFactor: 1.0,
-          uniqueEngagerRatio: 1.0,
-          qualityBonus: 1.0,
-        },
-      },
-    };
-  }
-
-  const isVoiceOfHarrison = username === 'voiceofharrison' || user.id === 'user_voiceofharrison';
-  if (isVoiceOfHarrison) {
-    return {
-      ...user,
-      name: user.name || 'Voice of Harrison',
-      username: 'voiceofharrison',
-      avatar: resolvedAvatar,
-      isVerified: true,
-      followers: 25000000,
-      following: 0,
-      sparks: 80000000,
-      reputationPoints: 40,
-      reputationBreakdown: {
-        contributions: 20000000,
-        helpfulness: 10,
-        missionsCompleted: 5,
-        skillsVerified: 10,
-        categories: algo.categories,
-        trustMultiplier: 1.0,
-        antiGamingStatus: {
-          isFarmingShieldActive: false,
-          diminishingFactor: 1.0,
-          uniqueEngagerRatio: 1.0,
-          qualityBonus: 1.0,
-        },
-      },
-    };
-  }
+  const isVerified = isUserVerified(user.username) || isNexoraOfficial || !!user.isVerified;
 
   return {
     ...user,
     avatar: resolvedAvatar,
     isVerified,
-    followers: getFollowersCount(user.id),
+    followers: followersCount,
     following: followingCount,
-    reputationPoints: algo.reputation,
-    sparks: getSparksReceived(user.id),
+    sparks: sparksCount,
+    contributions,
+    reputationPoints,
     reputationBreakdown: {
-      contributions: algo.contributions,
-      helpfulness: Math.round(algo.categories.helpfulResponses * 10),
-      missionsCompleted: completedMissionsCount,
-      skillsVerified: Math.round(algo.categories.trustBuilding),
-      categories: algo.categories,
-      trustMultiplier: algo.trustMultiplier,
-      antiGamingStatus: algo.antiGamingStatus,
+      ...metrics.breakdown,
+      contributions,
     },
   };
 }
 
-export function getSeededFollowers(targetUserId: string, targetUsername?: string): User[] {
-  initDb();
-  const username = (targetUsername || '').toLowerCase().trim();
-  const isNexoraOfficial = username === 'nexoraofficial' || username === 'voh' || targetUserId === 'nexoraofficial' || targetUserId === 'user-0';
-
-  if (!isNexoraOfficial) {
-    return [];
-  }
-
-  const seedProfiles: User[] = [];
-  const firstNames = ['Alex', 'Jordan', 'Taylor', 'Morgan', 'Sam', 'Chris', 'Pat', 'Casey', 'Riley', 'Avery', 'Logan', 'Dakota', 'Reagan', 'Quinn', 'Skyler', 'Cameron', 'Jesse', 'Kendall', 'Peyton', 'Harper', 'Rowan', 'Sawyer', 'Emerson', 'Finley', 'Hayden', 'Kai', 'Rory', 'Reese', 'Eden', 'Adrian'];
-  const lastNames = ['Chen', 'Smith', 'Johnson', 'Williams', 'Brown', 'Jones', 'Garcia', 'Miller', 'Davis', 'Rodriguez', 'Martinez', 'Hernandez', 'Lopez', 'Gonzalez', 'Wilson', 'Anderson', 'Thomas', 'Taylor', 'Moore', 'Jackson', 'Martin', 'Lee', 'Perez', 'Thompson', 'White', 'Harris', 'Sanchez', 'Clark', 'Ramirez', 'Lewis'];
-  const bios = [
-    'Building the decentralized future on Nexora.',
-    'System architect & distributed networks enthusiast.',
-    'Exploring zero-latency persistence & AI agents.',
-    'Software engineer passionate about scalable UI.',
-    'Creating immersive web applications.',
-    'Data scientist and protocol researcher.',
-    'Full-stack developer building open source tools.',
-    'Designing elegant digital experiences.'
-  ];
-
-  for (let i = 1; i <= 1000; i++) {
-    const fn = firstNames[i % firstNames.length];
-    const ln = lastNames[(i * 7) % lastNames.length];
-    const name = `${fn} ${ln}`;
-    const seedUsername = `nexora_seed_${i}`;
-    const bio = bios[i % bios.length];
-    seedProfiles.push({
-      id: `seed-user-${i}`,
-      username: seedUsername,
-      name: name,
-      avatar: getDefaultAvatar(name),
-      bio: bio,
-      location: 'Global Orbit',
-      website: 'https://nexora.app',
-      followers: 0,
-      following: 0,
-      sparks: 0,
-      reputationPoints: 0,
-      isVerified: false,
-      isSeedProfile: true,
-      coverImage: '',
-      joinedDate: new Date(Date.now() - i * 86400000).toISOString(),
-      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: {},
-      skills: ['Systems Design', 'React']
-    });
-  }
-
-  return seedProfiles;
+export function getSeededFollowers(_targetUserId: string, _targetUsername?: string): User[] {
+  // Real data only: No synthetic/fake followers generated
+  return [];
 }
+

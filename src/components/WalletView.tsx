@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Wallet, Coins, ArrowUpRight, ArrowDownLeft, Sparkles, TrendingUp, ShieldCheck, CreditCard, History, Lock, Clock, CheckCircle2 } from 'lucide-react';
+import { Wallet, Coins, ArrowUpRight, ArrowDownLeft, Zap, TrendingUp, ShieldCheck, CreditCard, History, Lock, Clock, CheckCircle2 } from 'lucide-react';
 import { User } from '../types';
 
 interface WalletViewProps {
@@ -96,7 +96,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         <div className="p-6 rounded-3xl bg-linear-to-br from-purple-950/60 to-black border border-purple-500/30 shadow-md relative overflow-hidden text-left space-y-4">
           <div className="flex justify-between items-center">
             <span className="text-xs font-mono font-bold text-pink-400 uppercase tracking-wider flex items-center gap-1.5">
-              <Sparkles className="w-4 h-4" /> Creator Sparks
+              <Zap className="w-4 h-4" /> Creator Sparks
             </span>
             <span className="text-[10px] font-mono bg-pink-500/20 text-pink-300 border border-pink-500/30 px-2 py-0.5 rounded-full">
               Monetized

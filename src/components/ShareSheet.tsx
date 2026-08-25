@@ -42,6 +42,12 @@ export default function ShareSheet({
   // Load real chats from localStorage for friend list
   useEffect(() => {
     if (!isOpen) return;
+
+    const handleEscape = () => {
+      onClose();
+    };
+    window.addEventListener('nexora-escape', handleEscape);
+
     try {
       const uid = currentUser?.id || 'default';
       const saved = localStorage.getItem(`nexora_chats_${uid}`);
@@ -54,7 +60,11 @@ export default function ShareSheet({
     } catch (e) {
       setRealChats([]);
     }
-  }, [isOpen, currentUser?.id]);
+
+    return () => {
+      window.removeEventListener('nexora-escape', handleEscape);
+    };
+  }, [isOpen, currentUser?.id, onClose]);
 
   if (!isOpen) return null;
 

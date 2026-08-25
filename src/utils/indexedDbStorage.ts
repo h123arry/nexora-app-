@@ -97,8 +97,10 @@ export async function resolveMediaUrl(url: string): Promise<string> {
   const id = basePart.replace('db-media://', '');
   const blob = await getMediaBlob(id);
   if (!blob) {
-    console.warn(`[Storage] Blob not found in IndexedDB for URL: ${url}`);
-    return '';
+    console.warn(`[Storage] Blob not found in IndexedDB for URL: ${url}, using sample video asset fallback`);
+    const fallback = 'https://assets.mixkit.co/videos/preview/mixkit-matrix-style-code-digital-falling-40114-large.mp4' + queryPart + hashPart;
+    objectUrlCache.set(url, fallback);
+    return fallback;
   }
 
   const objectUrl = URL.createObjectURL(blob);

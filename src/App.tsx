@@ -21,14 +21,27 @@ import {
   followUserDb, 
   unfollowUserDb, 
   createPostDb, 
+  addSparkDb,
+  addHelpfulCommentDb,
   isFollowingDb,
-  getSeededFollowers,
   INITIAL_USER, 
   INITIAL_CHATS, 
   INITIAL_MESSAGES, 
   INITIAL_NOTIFICATIONS
 } from './data/database';
-import { getGlobalPosts, subscribeToPosts, subscribeToUsers, saveUserToDb, savePostToDb, subscribeToNotifications, subscribeToFollows, syncEngine } from './services/dataService';
+import { ActivityService } from './services/activityService';
+import { 
+  getGlobalPosts, 
+  subscribeToPosts, 
+  subscribeToUsers, 
+  saveUserToDb, 
+  savePostToDb, 
+  subscribeToNotifications, 
+  subscribeToFollows, 
+  syncEngine,
+  addFollow,
+  removeFollow
+} from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
 import { db, auth, signInAnonymously } from './lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -71,8 +84,35 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User>(() => {
     console.log("🔥 Initializing currentUser...");
     const saved = localStorage.getItem('nexora_user');
-    const u = saved ? JSON.parse(saved) : INITIAL_USER;
-    return getRichUser(u);
+    if (saved) {
+      try {
+        const u = JSON.parse(saved);
+        if (u && u.id) return getRichUser(u);
+      } catch {}
+    }
+    const savedLoggedIn = localStorage.getItem('nexora_logged_in') === 'true';
+    if (savedLoggedIn) {
+      return getRichUser(INITIAL_USER);
+    }
+    return getRichUser({
+      id: 'guest_visitor_id',
+      username: 'visitor',
+      name: 'Nexora Visitor',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      bio: 'Guest visitor browsing Nexora network.',
+      location: 'Earth Orbit',
+      website: 'https://nexora.app',
+      followers: 0,
+      following: 0,
+      sparks: 0,
+      isVerified: false,
+      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      joinedDate: 'Joined 2026',
+      reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {},
+      skills: []
+    });
   });
 
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
@@ -87,14 +127,14 @@ export default function App() {
       bio: 'Official Nexora platform account. Secure decentralized global coordination & neural persistence protocol.',
       location: 'Global Orbit',
       website: 'https://nexora.app',
-      followers: 25000000,
+      followers: 0,
       following: 0,
-      sparks: 100000000,
+      sparks: 0,
       isVerified: true,
       coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
       joinedDate: 'Joined June 2026',
-      reputationPoints: 80000000,
-      reputationBreakdown: { contributions: 43000000, helpfulness: 1000000, missionsCompleted: 500, skillsVerified: 1000 },
+      reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: { 'Technology': 100, 'AI': 100 },
       skills: ['Protocol', 'Consensus']
     });
@@ -122,11 +162,18 @@ export default function App() {
     });
     map[harrison.id] = harrison;
 
-    // 3. Seed Followers
-    const seeds = getSeededFollowers('nexoraofficial', 'nexoraofficial');
-    seeds.forEach(s => {
-      map[s.id] = s;
-    });
+    // Load registered users from local cache
+    try {
+      const rawRegistered = localStorage.getItem('nexora_users_db');
+      if (rawRegistered) {
+        const usersList: User[] = JSON.parse(rawRegistered);
+        usersList.forEach(u => {
+          if (u && u.id) {
+            map[u.id] = getRichUser(u);
+          }
+        });
+      }
+    } catch {}
 
     const savedUser = localStorage.getItem('nexora_user');
     if (savedUser) {
@@ -145,6 +192,20 @@ export default function App() {
     const saved = localStorage.getItem('nexora_logged_in');
     return saved === 'true';
   });
+
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
+
+  const requireAuth = (action: () => void) => {
+    if (!isLoggedIn) {
+      setPendingAuthAction(() => action);
+      setShowAuthModal(true);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Sign in or create an account to perform this action.' }));
+      return false;
+    }
+    action();
+    return true;
+  };
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -225,6 +286,12 @@ export default function App() {
     console.log('[App] Setting up onAuthStateChanged listener...');
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       console.log('[App] Auth state changed, user:', user ? user.uid : 'null');
+      
+      // Clean up previous listeners before creating new ones
+      if (unsubPosts) { unsubPosts(); }
+      if (unsubUsers) { unsubUsers(); }
+      if (unsubFollows) { unsubFollows(); }
+
       if (user) {
         console.log('[App] Subscribing to posts, users, follows...');
         unsubPosts = subscribeToPosts((dbPosts) => {
@@ -376,7 +443,12 @@ export default function App() {
     return realPosts;
   });
 
-  const [resolvedPosts, setResolvedPosts] = useState<Post[]>([]);
+  const [resolvedPosts, setResolvedPosts] = useState<Post[]>(() => {
+    const saved = localStorage.getItem('nexora_posts');
+    const loadedPosts = saved ? JSON.parse(saved) : [];
+    const normalized = normalizePosts(loadedPosts);
+    return normalized.filter((p: Post) => p && !['post-1', 'post-2', 'post-3'].includes(p.id));
+  });
 
   // User-scoped sparks and bookmarks states
   const [userBookmarks, setUserBookmarks] = useState<string[]>(() => {
@@ -633,29 +705,34 @@ export default function App() {
   });
 
   const handleBackNavigation = () => {
-    // Dispatch a custom event to allow local components to handle back navigation first
-    // For example, closing active dots menus inside FeedView or FeedPostCard.
+    // 1. Dropdown / Menu FIRST
+    if (isNavMenuOpen) {
+      setIsNavMenuOpen(false);
+      return true;
+    }
+
+    // 2. Dispatch a custom event to allow local components to handle back navigation (e.g. comment drawer, video sheet, dots menu)
     const escapeEvent = new CustomEvent('nexora-escape', { cancelable: true });
     window.dispatchEvent(escapeEvent);
     if (escapeEvent.defaultPrevented) {
       return true;
     }
 
-    // Overlay Priority:
-    // 1. Dialogs & Modals
+    // 3. Modals & Overlays
+    if (showAuthModal) { setShowAuthModal(false); setPendingAuthAction(null); return true; }
+    if (isAiCommandCenterOpen) { setIsAiCommandCenterOpen(false); return true; }
     if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
     if (isCreateMenuOpen) { setIsCreateMenuOpen(false); return true; }
     if (isSystemHubOpen) { setIsSystemHubOpen(false); return true; }
-    // 2. Search Overlay
     if (isUniversalSearchOpen) { setIsUniversalSearchOpen(false); return true; }
-    // 3. Slide-down Menu
-    if (isNavMenuOpen) { setIsNavMenuOpen(false); return true; }
-    // 4. Viewed User Profile
+
+    // 4. Return from viewed profile / nested user screen
     if (viewedUser !== null) {
       setViewedUser(null);
       return true;
     }
-    // 5. Navigation Stack History
+
+    // 5. Navigation Stack History (Return through previous screens)
     if (historyStack.length > 0) {
       const lastState = historyStack[historyStack.length - 1];
       setHistoryStack(prev => prev.slice(0, prev.length - 1));
@@ -663,7 +740,14 @@ export default function App() {
       setViewedUser(lastState.viewedUser);
       return true;
     }
-    // 6. Home feed with no history & no overlays -> allow default (minimize)
+
+    // 6. Return toward Home Feed if on another tab
+    if (activeTab !== 'feed') {
+      setActiveTab('feed');
+      return true;
+    }
+
+    // 7. Root state (Home feed with no active overlays or history) -> allow default system exit/minimize
     return false;
   };
 
@@ -1288,8 +1372,10 @@ export default function App() {
           const updatedLikes = isCurrentlyLiked ? post.likes - 1 : post.likes + 1;
           savePostToDb({ ...post, likes: updatedLikes });
           
-          // If liking, push interaction alert
+          // If liking, push interaction alert and record real spark
           if (!isCurrentlyLiked && post.userId !== currentUser.id) {
+            addSparkDb(currentUser.id, post.userId, 'post', post.id);
+
             const newNotif: Notification = {
               id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
               type: 'like',
@@ -1392,8 +1478,15 @@ export default function App() {
 
     setPosts(prev => [newPost, ...prev]);
     savePostToDb(newPost);
-    // Log post in database to grant reputation and increment contribution records
-    createPostDb(currentUser.id);
+    
+    // Log post in database to grant reputation and increment contribution records based on authentic content type
+    let postType: 'post_create' | 'media_upload' | 'video_publish' | 'pulse_create' | 'voice_publish' = 'post_create';
+    if (videoUrl) postType = 'video_publish';
+    else if (imageUrl || (images && images.length > 0)) postType = 'media_upload';
+    else if (isVoice || voiceAudioUrl) postType = 'voice_publish';
+    else if (opportunityType) postType = 'pulse_create';
+    
+    createPostDb(currentUser.id, postId, postType);
 
     if (isOffline) {
       setIsSyncPending(true);
@@ -1423,6 +1516,9 @@ export default function App() {
     setPosts(prevPosts =>
       prevPosts.map(p => {
         if (p.id === postId) {
+          // Record comment activity event
+          addHelpfulCommentDb(currentUser.id, newComment.id, p.userId);
+
           // Trigger notification to host of post (if not yourself)
           if (p.userId !== currentUser.id) {
             const newNotif: Notification = {
@@ -1458,6 +1554,10 @@ export default function App() {
         if (p.id === postId) {
           const updatedPost = { ...p, shares: (p.shares || 0) + 1 };
           savePostToDb(updatedPost);
+          if (p.userId && p.userId !== currentUser.id) {
+            ActivityService.recordActivityEvent(p.userId, 'share_received', postId, { fromUserId: currentUser.id });
+          }
+          ActivityService.recordActivityEvent(currentUser.id, 'repost_create', `repost_${postId}_${Date.now()}`);
           return updatedPost;
         }
         return p;
@@ -1571,9 +1671,11 @@ export default function App() {
 
     if (isCurrentlyFollowing) {
       unfollowUserDb(currentUser.id, creatorId);
+      removeFollow(currentUser.id, creatorId).catch(console.warn);
       updatedFollowing = followingIds.filter(id => id !== creatorId);
     } else {
       followUserDb(currentUser.id, creatorId);
+      addFollow(currentUser.id, creatorId).catch(console.warn);
       updatedFollowing = [...followingIds, creatorId];
       
       // record recommendation follow event
@@ -1613,19 +1715,10 @@ export default function App() {
 
     let finalUserToView: User | null = null;
 
-    // Try finding in Creators
+    // Try finding in Creators or registered users map
     const creator = (Object.values(globalUsersMap) as User[]).find(c => c.id === userIdOrUsername || c.username.toLowerCase() === cleanIdOrUser);
     if (creator) {
       finalUserToView = creator;
-    }
-
-    // Try finding in seeded followers
-    if (!finalUserToView && (userIdOrUsername.startsWith('seed-user-') || cleanIdOrUser.startsWith('nexora_seed_'))) {
-      const seeded = getSeededFollowers('nexoraofficial', 'nexoraofficial');
-      const foundSeed = seeded.find(s => s.id === userIdOrUsername || s.username.toLowerCase() === cleanIdOrUser);
-      if (foundSeed) {
-        finalUserToView = foundSeed;
-      }
     }
 
 
@@ -1982,17 +2075,6 @@ export default function App() {
   }, [posts]);
 
   // Render Core layout
-  if (!isLoggedIn) {
-    return (
-      <AuthView 
-        onLoginSuccess={(loggedUser) => {
-          setCurrentUser(loggedUser);
-          setIsLoggedIn(true);
-        }} 
-      />
-    );
-  }
-
   return (
     <div id="nexora-master-wrapper" className={`${getThemeWrapperClass(theme)} transition-colors duration-500`}>
       <OfflineBanner />
@@ -2032,15 +2114,19 @@ export default function App() {
               theme={theme}
               setTheme={setTheme}
               onOpenCreatePost={() => {
-                setCreatedPostLink(null);
-                setIsCopied(false);
-                setCreationInitialMode(null);
-                setCreationInitialTab(undefined);
-                setIsCreateMenuOpen(true);
+                requireAuth(() => {
+                  setCreatedPostLink(null);
+                  setIsCopied(false);
+                  setCreationInitialMode(null);
+                  setCreationInitialTab(undefined);
+                  setIsCreateMenuOpen(true);
+                });
               }}
               onLogout={() => setIsLogoutConfirming(true)}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
+              isLoggedIn={isLoggedIn}
+              onOpenAuth={() => setShowAuthModal(true)}
             />
           </div>
 
@@ -2073,6 +2159,9 @@ export default function App() {
                 theme={theme}
                 onSharePost={handleSharePost}
                 activeTab={activeTab}
+                unreadMessagesCount={unreadMessagesCount}
+                onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
+                onOpenVohAi={() => { setActiveTab('nida'); setViewedUser(null); }}
               />
             </motion.div>
             
@@ -3311,7 +3400,7 @@ export default function App() {
       {/* Sleek unified bottom navigation bar (primary app navigation for all sizes) */}
       <div 
         id="nexora-unified-bottom-nav"
-        className="fixed bottom-0 md:bottom-6 inset-x-0 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-[#06040f]/95 border-t md:border border-white/10 md:rounded-2xl backdrop-blur-md z-40 py-2 px-5 flex justify-between items-center text-current/60 shadow-[0_-5px_25px_rgba(139,92,246,0.2)] md:shadow-[0_10px_35px_rgba(0,0,0,0.9)] pb-safe"
+        className="fixed bottom-0 md:bottom-6 inset-x-0 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-[#06040f]/95 border-t md:border border-white/10 md:rounded-2xl backdrop-blur-md z-40 py-2 px-6 flex justify-between items-center text-zinc-400 shadow-[0_-4px_20px_rgba(0,0,0,0.8)] md:shadow-[0_8px_30px_rgba(0,0,0,0.9)] pb-safe"
       >
         {/* 1. 🏠 Home */}
         <button 
@@ -3319,11 +3408,11 @@ export default function App() {
             setActiveTab('feed');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-white/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'feed' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-white/10' : 'hover:text-current'}`}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'feed' ? 'text-violet-400 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-home"
         >
           <Home className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Home</span>
+          <span className="text-[8px] font-mono tracking-wider uppercase">Home</span>
         </button>
 
         {/* 2. 🌍 World Pulse */}
@@ -3332,11 +3421,11 @@ export default function App() {
             setActiveTab('pulse');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-cyan-950/20 hover:border-cyan-500/30 hover:shadow-[0_0_15px_rgba(6,182,212,0.2)] ${activeTab === 'pulse' ? 'text-cyan-400 scale-105 font-bold bg-cyan-950/15 border-cyan-500/10' : 'hover:text-current'}`}
+          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'pulse' ? 'text-cyan-400 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-world-pulse"
         >
           <Globe className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">World Pulse</span>
+          <span className="text-[8px] font-mono tracking-wider uppercase">World Pulse</span>
         </button>
 
         {/* 3. ➕ Center Create Button */}
@@ -3348,87 +3437,30 @@ export default function App() {
             setCreationInitialTab(undefined);
             setIsCreateMenuOpen(true);
           }}
-          className="relative -top-4 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 hover:border-white/50 z-10 shrink-0"
+          className="relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
           id="nav-create-post-center"
           title="Create Broadcast"
-          animate={{
-            boxShadow: [
-              "0 0 12px rgba(139, 92, 246, 0.4)",
-              "0 0 24px rgba(139, 92, 246, 0.8)",
-              "0 0 12px rgba(139, 92, 246, 0.4)"
-            ],
-            scale: [1, 1.02, 1],
-          }}
-          transition={{
-            boxShadow: {
-              repeat: Infinity,
-              duration: 2.2,
-              ease: "easeInOut"
-            },
-            scale: {
-              repeat: Infinity,
-              duration: 2.2,
-              ease: "easeInOut"
-            }
-          }}
           whileHover={{
-            scale: 1.15,
-            y: -3,
-            boxShadow: "0 0 32px rgba(139, 92, 246, 0.95), 0 0 16px rgba(236, 72, 153, 0.7)",
-            transition: {
-              duration: 0.25,
-              ease: "easeOut"
-            }
+            scale: 1.08,
+            y: -2,
+            transition: { duration: 0.2, ease: "easeOut" }
           }}
           whileTap={{ 
-            scale: 0.84,
-            rotate: -3,
-            transition: {
-              type: "spring",
-              stiffness: 500,
-              damping: 15
-            }
+            scale: 0.92,
+            transition: { type: "spring", stiffness: 400, damping: 20 }
           }}
         >
-          <motion.div
-            className="absolute inset-0 rounded-full bg-violet-500/35 pointer-events-none -z-10"
-            animate={{
-              scale: [1, 1.5],
-              opacity: [0.6, 0],
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: 2.2,
-              ease: "easeOut",
-            }}
-          />
-          <motion.div
-            className="absolute inset-0 rounded-full bg-cyan-500/25 pointer-events-none -z-10"
-            animate={{
-              scale: [1, 1.3],
-              opacity: [0.55, 0],
-            }}
-            transition={{
-              repeat: Infinity,
-              duration: 2.2,
-              delay: 0.7,
-              ease: "easeOut",
-            }}
-          />
           <Plus className="w-5.5 h-5.5 text-white relative z-10" />
 
           {(isOffline || isSyncPending) && (
             <span 
-              className={`absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border border-[#06040f] z-20 shadow-md ${
+              className={`absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border border-[#06040f] z-20 shadow-xs ${
                 isSyncPending ? 'bg-purple-500' : (isOffline ? 'bg-amber-500' : 'bg-purple-500')
               }`}
               title={isOffline ? (isSyncPending ? "Offline - Pending Updates" : "Offline Mode Active") : "Updating Offline Logs..."}
             >
-              <span className={`absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                isSyncPending ? 'bg-purple-400 animate-pulse' : (isOffline ? 'bg-amber-400 animate-pulse' : 'bg-[#c084fc] animate-ping')
-              }`} />
               {isSyncPending ? (
-                <RefreshCw className="w-2.5 h-2.5 text-white shrink-0 relative z-10 animate-sync-pulse" />
+                <RefreshCw className="w-2.5 h-2.5 text-white shrink-0 relative z-10 animate-spin" />
               ) : isOffline ? (
                 <WifiOff className="w-2.5 h-2.5 text-zinc-950 shrink-0 relative z-10" />
               ) : (
@@ -3444,14 +3476,14 @@ export default function App() {
             setActiveTab('activity');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 relative py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-pink-950/30 hover:border-pink-500/30 hover:shadow-[0_0_15px_rgba(236,72,153,0.2)] ${activeTab === 'activity' ? 'text-pink-400 scale-105 font-bold bg-pink-950/20 border-pink-500/10' : 'hover:text-current'}`}
+          className={`flex flex-col items-center gap-1 relative py-1 px-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'activity' ? 'text-pink-400 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-activity"
         >
           <Bell className="w-5 h-5" />
           {unreadNotificationsCount > 0 && (
-            <span className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-pink-500 animate-pulse" />
+            <span className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-pink-500" />
           )}
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Activity</span>
+          <span className="text-[8px] font-mono tracking-wider uppercase">Activity</span>
         </button>
 
         {/* 5. 👤 Profile */}
@@ -3460,11 +3492,11 @@ export default function App() {
             setActiveTab('profile');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 border border-transparent rounded-xl transition-all duration-300 cursor-pointer hover:-translate-y-0.5 hover:bg-violet-950/30 hover:border-white/10 hover:shadow-[0_0_15px_rgba(139,92,246,0.2)] ${activeTab === 'profile' ? 'text-violet-400 scale-105 font-bold bg-violet-950/20 border-white/10' : 'hover:text-current'}`}
+          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'profile' ? 'text-violet-400 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-profile"
         >
           <UserIcon className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase animate-fade-in">Profile</span>
+          <span className="text-[8px] font-mono tracking-wider uppercase">Profile</span>
         </button>
       </div>
 
@@ -3475,13 +3507,15 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1000] flex items-center justify-center p-4"
+            onClick={() => setVerificationModalDetail(null)}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1000] flex items-center justify-center p-4 cursor-pointer"
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="w-full max-w-md bg-[#0a071c] border border-white/10 p-6 rounded-3xl space-y-4 shadow-md relative text-left"
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-md bg-[#0a071c] border border-white/10 p-6 rounded-3xl space-y-4 shadow-md relative text-left cursor-default"
             >
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <div className="flex items-center gap-2">
@@ -3546,14 +3580,16 @@ export default function App() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1010] flex items-center justify-center p-4"
+            onClick={() => setIsLogoutConfirming(false)}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-[1010] flex items-center justify-center p-4 cursor-pointer"
           >
             <motion.div
               initial={{ scale: 0.95, y: 30 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.95, y: 30 }}
               transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="w-full max-w-sm bg-[#0e0b24] border border-white/10 p-6 rounded-3xl space-y-5 shadow-md relative text-center"
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-[#0e0b24] border border-white/10 p-6 rounded-3xl space-y-5 shadow-md relative text-center cursor-default"
             >
               {/* User Avatar Circle */}
               <div className="flex flex-col items-center space-y-3">
@@ -4129,11 +4165,44 @@ export default function App() {
         chats={resolvedChats}
         onSelectTab={(t) => setActiveTab(t as any)}
         onOpenCreatePost={(mode) => {
-          setCreationInitialMode(mode as any);
-          setIsCreateMenuOpen(true);
+          requireAuth(() => {
+            setCreationInitialMode(mode as any);
+            setIsCreateMenuOpen(true);
+          });
         }}
         onViewProfile={(u) => handleViewProfile(u.username)}
       />
+
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="relative w-full max-w-xl bg-slate-950 border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
+            <button
+              onClick={() => {
+                setShowAuthModal(false);
+                setPendingAuthAction(null);
+              }}
+              className="absolute top-4 right-4 z-50 p-2 bg-white/10 hover:bg-white/25 rounded-full text-white transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="p-2">
+              <AuthView
+                onLoginSuccess={(loggedUser) => {
+                  setCurrentUser(getRichUser(loggedUser));
+                  setIsLoggedIn(true);
+                  localStorage.setItem('nexora_logged_in', 'true');
+                  setShowAuthModal(false);
+                  if (pendingAuthAction) {
+                    pendingAuthAction();
+                    setPendingAuthAction(null);
+                  }
+                  window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Authenticated successfully! Action completed.' }));
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

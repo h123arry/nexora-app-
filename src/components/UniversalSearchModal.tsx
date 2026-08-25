@@ -99,41 +99,46 @@ export default function UniversalSearchModal({
   ).slice(0, 4);
 
   // 4. Communities
-  const mockCommunities = [
-    { id: 'c-1', name: 'Global Tech & AI', description: 'Exploring artificial intelligence, quantum systems, and modern web architectures.', membersCount: 14200, category: 'Technology', isPrivate: false },
-    { id: 'c-2', name: 'Nexora Creators & Media', description: 'Creators building the future of digital expression and monetization.', membersCount: 8900, category: 'Creators', isPrivate: false },
-    { id: 'c-3', name: 'Quantum Cryptography', description: 'Advanced cryptographic protocols and secure decentralized ledger research.', membersCount: 3400, category: 'Science', isPrivate: true },
-    { id: 'c-4', name: 'Acoustic Soundwaves', description: 'Audio frequency synthesis, ambient loops, and high fidelity sound design.', membersCount: 5100, category: 'Audio', isPrivate: false },
-  ];
-  const matchedCommunities = mockCommunities.filter(c =>
-    c.name.toLowerCase().includes(trimmedQ) || c.description.toLowerCase().includes(trimmedQ) || c.category.toLowerCase().includes(trimmedQ)
+  let storedCommunities: any[] = [];
+  try {
+    const saved = localStorage.getItem('nexora_communities_list');
+    if (saved) storedCommunities = JSON.parse(saved);
+  } catch {}
+  const matchedCommunities = storedCommunities.filter(c =>
+    c.name?.toLowerCase().includes(trimmedQ) || c.description?.toLowerCase().includes(trimmedQ) || c.category?.toLowerCase().includes(trimmedQ)
   ).slice(0, 4);
 
   // 5. Circles
-  const mockCircles = [
-    { id: 'cir-1', name: 'Inner Circle Core', description: 'Trusted founding circle and strategic advisors.', membersCount: 7 },
-    { id: 'cir-2', name: 'Quantum Devs', description: 'Core engineering team reviewing mesh algorithms.', membersCount: 12 },
-  ];
-  const matchedCircles = mockCircles.filter(cir =>
-    cir.name.toLowerCase().includes(trimmedQ) || cir.description.toLowerCase().includes(trimmedQ)
+  let storedCircles: any[] = [];
+  try {
+    const saved = localStorage.getItem('nexora_user_circles');
+    if (saved) storedCircles = JSON.parse(saved);
+  } catch {}
+  const matchedCircles = storedCircles.filter(cir =>
+    cir.name?.toLowerCase().includes(trimmedQ) || cir.description?.toLowerCase().includes(trimmedQ)
   ).slice(0, 3);
 
   // 6. Messages / Chats
   const matchedChats = chats.filter(ch =>
-    ch.partnerName.toLowerCase().includes(trimmedQ) ||
+    ch.partnerName?.toLowerCase().includes(trimmedQ) ||
     ch.lastMessage?.toLowerCase().includes(trimmedQ) ||
     ch.groupCategory?.toLowerCase().includes(trimmedQ)
   ).slice(0, 4);
 
-  // 7. Opportunities
-  const mockOpportunities = [
-    { id: 'opp-1', title: 'Senior Quantum AI Architect', type: 'Job', reward: '12,500 NEX', description: 'Leading distributed AI model training across secure edge networks.' },
-    { id: 'opp-2', title: 'Creator Grant — Season IV', type: 'Grant', reward: '5,000 NEX', description: 'Funding high-impact educational content on Nexora World Pulse.' },
-    { id: 'opp-3', title: 'Decentralized Protocol Hackathon', type: 'Competition', reward: '20,000 NEX', description: 'Build innovative social intelligence apps.' },
-  ];
-  const matchedOpportunities = mockOpportunities.filter(o =>
-    o.title.toLowerCase().includes(trimmedQ) || o.description.toLowerCase().includes(trimmedQ) || o.type.toLowerCase().includes(trimmedQ)
-  ).slice(0, 3);
+  // 7. Opportunities (from real published posts with opportunity tag/type)
+  const matchedOpportunities = posts.filter(p =>
+    p.opportunityType && (
+      p.content.toLowerCase().includes(trimmedQ) ||
+      p.opportunityType.toLowerCase().includes(trimmedQ) ||
+      p.tags?.some(t => t.toLowerCase().includes(trimmedQ))
+    )
+  ).map(p => ({
+    id: p.id,
+    title: p.content.slice(0, 45) + (p.content.length > 45 ? '...' : ''),
+    type: p.opportunityType || 'Opportunity',
+    reward: p.tags?.find(t => t.includes('NEX') || t.includes('$')) || 'Verified',
+    description: p.content
+  })).slice(0, 3);
 
   // 8. Saved Content
   const savedPostIds = currentUser.savedCollections ? Object.values(currentUser.savedCollections).flat() : [];

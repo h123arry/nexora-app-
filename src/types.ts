@@ -22,6 +22,7 @@ export interface User {
   preferredLanguage?: string;
   savedCollections?: { [folderName: string]: string[] };
   // Innovative Living Reputation & Nexora Contributions Algorithm System
+  contributions?: number;
   reputationPoints: number;
   reputationBreakdown: {
     contributions: number;
@@ -395,5 +396,36 @@ export interface LiveEvent {
   hostAvatar: string;
   rsvpedUserIds: string[];
   isRemindEnabled: boolean;
+}
+
+export type ActivityEventType =
+  | 'post_create'
+  | 'media_upload'
+  | 'video_publish'
+  | 'pulse_create'
+  | 'voice_publish'
+  | 'comment_create'
+  | 'comment_received'
+  | 'repost_create'
+  | 'share_received'
+  | 'circle_join'
+  | 'community_join'
+  | 'poll_vote'
+  | 'mission_complete'
+  | 'mission_progress'
+  | 'spark_received'
+  | 'profile_completed'
+  | 'profile_verified';
+
+export interface ActivityEvent {
+  id: string; // Deterministic idempotent key
+  userId: string;
+  type: ActivityEventType;
+  targetId: string;
+  fromUserId?: string;
+  contributionDelta: number;
+  reputationDelta: number;
+  timestamp: string;
+  metadata?: Record<string, any>;
 }
 

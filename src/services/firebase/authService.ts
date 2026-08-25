@@ -60,8 +60,8 @@ export class AuthService {
         return 'Invalid verification code. Please check and try again.';
       case 'auth/code-expired':
         return 'Verification code has expired. Please request a new one.';
-      case 'auth/invalid-phone-number':
-        return 'The phone number format is invalid.';
+      case 'auth/operation-not-allowed':
+        return 'Email/Password sign-in is not enabled in Firebase Console. Please enable Email/Password provider in your Firebase Authentication settings or use Demo Mode.';
       case 'auth/missing-phone-number':
         return 'Phone number is missing.';
       default:

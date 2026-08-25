@@ -20,6 +20,13 @@ export default function ReactionDetailsSheet({
   partnerName,
   partnerAvatar
 }: ReactionDetailsSheetProps) {
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = () => onClose();
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => window.removeEventListener('nexora-escape', handleEscape);
+  }, [isOpen, onClose]);
+
   if (!isOpen || !message || !message.reactions || message.reactions.length === 0) return null;
 
   // Calculate total count

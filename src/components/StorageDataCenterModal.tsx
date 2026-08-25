@@ -51,6 +51,15 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   // Localized search inside the sub-panels
   const [panelSearchQuery, setPanelSearchQuery] = useState('');
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = () => {
+      onClose();
+    };
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => window.removeEventListener('nexora-escape', handleEscape);
+  }, [isOpen, onClose]);
+
   // --- STATE PERSISTENCE ---
   const [cacheLevels, setCacheLevels] = useState(() => {
     const saved = localStorage.getItem('nx_storage_cache');
@@ -767,8 +776,12 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md overflow-hidden">
+      <div 
+        onClick={onClose}
+        className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/85 backdrop-blur-md overflow-hidden"
+      >
         <motion.div
+          onClick={(e) => e.stopPropagation()}
           initial={{ opacity: 0, scale: 0.97, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.97, y: 20 }}

@@ -112,9 +112,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   expandedPostIds,
   setExpandedPostIds
 }) => {
-  const [floatingHearts, setFloatingHearts] = useState<Array<{ id: string; x: number; y: number }>>([]);
-  const longPressTimerRef = useRef<any>(null);
-
   const isPlaying = playingVoiceId === post.id;
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
@@ -124,40 +121,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       id={`post-${post.id}`}
       data-post-id={post.id}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 450px' }}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        setContextualMenuPost(post);
-      }}
-      onTouchStart={() => {
-        longPressTimerRef.current = setTimeout(() => {
-          setContextualMenuPost(post);
-          if (navigator.vibrate) navigator.vibrate(40);
-        }, 600);
-      }}
-      onTouchEnd={() => {
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
-      }}
-      onDoubleClick={(e) => {
-        e.preventDefault();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const heartId = `${Date.now()}-${Math.random()}`;
-        setFloatingHearts((prev) => [...prev, { id: heartId, x, y }]);
-        setTimeout(() => {
-          setFloatingHearts((prev) => prev.filter((h) => h.id !== heartId));
-        }, 1000);
-
-        if (!post.isLikedByUser) {
-          onSpark(post.id);
-        } else if (navigator.vibrate) {
-          navigator.vibrate(20);
-        }
-      }}
       className={`py-3 sm:py-4 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
         post.isBroadcastPost
           ? 'bg-gradient-to-b from-amber-500/5 to-transparent'
@@ -166,19 +129,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           : 'bg-transparent'
       }`}
     >
-      {/* Floating hearts double-tap animation */}
-      {floatingHearts.map((heart) => (
-        <motion.div
-          key={heart.id}
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: [0, 1.5, 1.2, 1], opacity: [0, 1, 1, 0], y: -90, rotate: (Math.random() - 0.5) * 30 }}
-          transition={{ duration: 0.8, ease: 'easeOut' }}
-          style={{ left: heart.x, top: heart.y }}
-          className="absolute -translate-x-1/2 -translate-y-1/2 pointer-events-none z-50 text-pink-500 text-5xl filter drop-shadow-[0_0_15px_rgba(244,63,94,0.6)]"
-        >
-          ❤️
-        </motion.div>
-      ))}
 
       {/* Scheduled Queue Warning */}
       {post.scheduledTime && new Date(post.scheduledTime).getTime() > Date.now() && (
@@ -199,22 +149,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
         </div>
       )}
 
-      {/* Dynamic Recommendation Badge */}
-      <div className="px-4 sm:px-6 mb-3 text-[9px] font-mono font-bold tracking-wider text-violet-400/60 uppercase flex items-center gap-1.5 border-b border-white/5 pb-2">
-        <span className="w-1.5 h-1.5 rounded-full bg-violet-500 shrink-0"></span>
-        {(() => {
-          if (post.userId === 'user-0') return '⭐ Highlight: Recommended by Founder';
-          if (post.username === 'voh_ai' || post.username === 'nexora_ai') return '🧠 Intelligence: Recommended by Nexora AI';
-          if (post.username === 'nexora_official') return '🌌 System: Nexora Official Update';
-          if (post.isBroadcastPost) return '📣 Broadcast channel propagation';
-          if (post.userId && followingIds.includes(post.userId)) return '👥 Followed Creator';
-          if (post.tags && post.tags.length > 0) {
-            return `🔥 Recommended because you read ${post.tags[0]}`;
-          }
-          return '✨ High Engagement Feed Distribution';
-        })()}
-      </div>
-
       {/* Card Header Row */}
       <div className="px-4 sm:px-6 flex items-start justify-between gap-3 mb-4">
         <div className="flex gap-3">
@@ -224,12 +158,18 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             loading="lazy"
             decoding="async"
             className="w-10 h-10 rounded-xl object-cover border border-white/10 cursor-pointer"
-            onClick={() => post.userId && onViewProfile?.(post.userId)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewProfile?.(post.userId || post.username);
+            }}
           />
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
               <span
-                onClick={() => post.userId && onViewProfile?.(post.userId)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewProfile?.(post.userId || post.username);
+                }}
                 className="font-sans font-extrabold text-sm text-white hover:text-violet-400 transition-colors cursor-pointer"
               >
                 {post.name}
@@ -770,50 +710,64 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 };
 
 export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
-  return Object.keys(prev).every(key => {
-    if (typeof prev[key] === 'function') return true; // Ignore functions
-    if (key === 'post') {
-      return prev.post.isLikedByUser === next.post.isLikedByUser && 
-             prev.post.likes === next.post.likes &&
-             prev.post.comments?.length === next.post.comments?.length &&
-             prev.post.content === next.post.content &&
-             prev.post.scheduledTime === next.post.scheduledTime;
-    }
-    if (key === 'activeDotsMenuPostId') {
-      return prev.activeDotsMenuPostId !== prev.post.id && next.activeDotsMenuPostId !== next.post.id;
-    }
-    if (key === 'activeCommentsPostId') {
-      return prev.activeCommentsPostId !== prev.post.id && next.activeCommentsPostId !== next.post.id;
-    }
-    if (key === 'playingVoiceId') {
-      return prev.playingVoiceId !== prev.post.id && next.playingVoiceId !== next.post.id;
-    }
-    if (key === 'expandedPostIds') {
-      return prev.expandedPostIds.includes(prev.post.id) === next.expandedPostIds.includes(next.post.id);
-    }
-    if (key === 'editingPostId') {
-      return prev.editingPostId !== prev.post.id && next.editingPostId !== next.post.id;
-    }
-    if (key === 'editingPostContent') {
-      return prev.editingPostId !== prev.post.id && next.editingPostId !== next.post.id;
-    }
-    if (key === 'pinnedPostIds') {
-      return prev.pinnedPostIds.includes(prev.post.id) === next.pinnedPostIds.includes(next.post.id);
-    }
-    if (key === 'voiceSeconds') {
-      // Only care about voiceSeconds if this post is the currently playing voice post
-      if (prev.playingVoiceId === prev.post.id || next.playingVoiceId === next.post.id) {
-        return prev.voiceSeconds === next.voiceSeconds;
-      }
-      return true;
-    }
-    if (key === 'votedPolls') {
-      return prev.votedPolls[prev.post.id] === next.votedPolls[next.post.id];
-    }
-    if (key === 'followingIds') {
-      return prev.followingIds.includes(prev.post.userId) === next.followingIds.includes(next.post.userId);
-    }
-    return prev[key] === next[key];
-  });
+  if (prev.post.id !== next.post.id) return false;
+  if (prev.isActive !== next.isActive) return false;
+  if (prev.shouldPreload !== next.shouldPreload) return false;
+  if (prev.isReleased !== next.isReleased) return false;
+  if (prev.preloadMode !== next.preloadMode) return false;
+  if (prev.selectedTag !== next.selectedTag) return false;
+
+  // Post core metrics and contents
+  if (
+    prev.post.isLikedByUser !== next.post.isLikedByUser ||
+    prev.post.likes !== next.post.likes ||
+    prev.post.isBookmarkedByUser !== next.post.isBookmarkedByUser ||
+    prev.post.bookmarksCount !== next.post.bookmarksCount ||
+    prev.post.shares !== next.post.shares ||
+    prev.post.comments?.length !== next.post.comments?.length ||
+    prev.post.content !== next.post.content ||
+    prev.post.isArchived !== next.post.isArchived ||
+    prev.post.scheduledTime !== next.post.scheduledTime ||
+    prev.post.views !== next.post.views
+  ) {
+    return false;
+  }
+
+  // Active UI overlays targeting this specific post
+  const wasDotsActive = prev.activeDotsMenuPostId === prev.post.id;
+  const isDotsActive = next.activeDotsMenuPostId === next.post.id;
+  if (wasDotsActive !== isDotsActive) return false;
+
+  const wasCommentsActive = prev.activeCommentsPostId === prev.post.id;
+  const isCommentsActive = next.activeCommentsPostId === next.post.id;
+  if (wasCommentsActive !== isCommentsActive) return false;
+
+  const wasVoiceActive = prev.playingVoiceId === prev.post.id;
+  const isVoiceActive = next.playingVoiceId === next.post.id;
+  if (wasVoiceActive !== isVoiceActive) return false;
+  if (isVoiceActive && prev.voiceSeconds !== next.voiceSeconds) return false;
+
+  const wasExpanded = prev.expandedPostIds.includes(prev.post.id);
+  const isExpanded = next.expandedPostIds.includes(next.post.id);
+  if (wasExpanded !== isExpanded) return false;
+
+  const wasEditing = prev.editingPostId === prev.post.id;
+  const isEditing = next.editingPostId === next.post.id;
+  if (wasEditing !== isEditing) return false;
+  if (isEditing && prev.editingPostContent !== next.editingPostContent) return false;
+
+  const wasPinned = prev.pinnedPostIds.includes(prev.post.id);
+  const isPinned = next.pinnedPostIds.includes(next.post.id);
+  if (wasPinned !== isPinned) return false;
+
+  if (prev.votedPolls[prev.post.id] !== next.votedPolls[next.post.id]) return false;
+
+  if (prev.post.userId) {
+    const wasFollowing = prev.followingIds.includes(prev.post.userId);
+    const isFollowing = next.followingIds.includes(next.post.userId);
+    if (wasFollowing !== isFollowing) return false;
+  }
+
+  return true;
 });
 export default FeedPostCard;

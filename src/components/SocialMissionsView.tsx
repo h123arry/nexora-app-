@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Target, Sparkles, Users, TrendingUp, Calendar, Plus, ListRestart, Flame, Check, Gift, UsersRound, Dribbble, Award } from 'lucide-react';
 import { SocialMission, User } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
-import { INITIAL_MISSIONS } from '../data/database';
+import { INITIAL_MISSIONS, completeMissionDb } from '../data/database';
+import { ActivityService } from '../services/activityService';
 
 interface SocialMissionsViewProps {
   currentUser: User;
@@ -38,6 +39,10 @@ export default function SocialMissionsView({ currentUser }: SocialMissionsViewPr
   const handleCommitContribution = (e: React.FormEvent) => {
     e.preventDefault();
     if (logAmount <= 0) return;
+
+    // Record verified mission activity event in activity service
+    ActivityService.recordActivityEvent(currentUser.id, 'mission_progress', `mission_${selectedMissionId}_${Date.now()}`);
+    completeMissionDb(currentUser.id, selectedMissionId);
 
     setMissions(prev => prev.map(m => {
       if (m.id === selectedMissionId) {

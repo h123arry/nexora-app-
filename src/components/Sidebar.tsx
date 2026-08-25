@@ -18,6 +18,8 @@ interface SidebarProps {
   onLogout?: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  isLoggedIn?: boolean;
+  onOpenAuth?: () => void;
 }
 
 export default function Sidebar({
@@ -31,7 +33,9 @@ export default function Sidebar({
   onOpenCreatePost,
   onLogout,
   searchQuery,
-  setSearchQuery
+  setSearchQuery,
+  isLoggedIn = true,
+  onOpenAuth
 }: SidebarProps) {
   
   const themes: { id: ThemeMood; label: string; desc: string; color: string }[] = [
@@ -71,6 +75,21 @@ export default function Sidebar({
           </p>
         </div>
       </div>
+
+      {/* Guest Sign-in prompt if not logged in */}
+      {!isLoggedIn && (
+        <div className="mb-5 p-3 rounded-2xl bg-gradient-to-tr from-violet-900/40 via-purple-950/30 to-black border border-violet-500/20 text-center">
+          <p className="text-[10px] font-sans text-violet-200 font-bold mb-2">
+            Browsing as Visitor 👁️
+          </p>
+          <button
+            onClick={onOpenAuth}
+            className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[11px] font-sans font-bold shadow-lg shadow-violet-600/30 transition-all cursor-pointer"
+          >
+            Sign In / Join Nexora
+          </button>
+        </div>
+      )}
 
       {/* 🟣 Unified Social Media Navigation Menu */}
       <div className="flex flex-col gap-2.5 mb-5 p-1">

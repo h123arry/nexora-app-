@@ -20,7 +20,6 @@ import {
   getReputationPoints, 
   getSparksReceived, 
   getContributionsCount, 
-  getSeededFollowers,
   getRichUser,
   getDefaultAvatar
 } from '../data/database';
@@ -227,7 +226,19 @@ export default function ProfileView({
 }: ProfileViewProps) {
   // Navigation State
   const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections' | 'subscriptions' | 'linked-accounts' | 'other-profile-menu'>('profile');
-  const [profileTab, setProfileTab] = useState<string>('contributions');
+  const [profileTab, setProfileTab] = useState<string>('media');
+  const [userBookmarks] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`nexora_bookmarks_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [userSparks] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`nexora_sparks_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [allContentFilter, setAllContentFilter] = useState<'all' | 'videos' | 'photos' | 'posts' | 'pinned'>('all');
   const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
@@ -235,6 +246,32 @@ export default function ProfileView({
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
   const [detailCommentText, setDetailCommentText] = useState<string>('');
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+  const touchStartPos = useRef<{ x: number; y: number } | null>(null);
+
+  const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'bookmarks', 'archive'];
+
+  const handleContentTouchStart = (e: React.TouchEvent) => {
+    touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+
+  const handleContentTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartPos.current) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartPos.current.x;
+    const deltaY = e.changedTouches[0].clientY - touchStartPos.current.y;
+    touchStartPos.current = null;
+
+    // Only switch if deltaX is significant and clearly horizontal (at least 60px and 1.8x deltaY)
+    if (Math.abs(deltaX) > 60 && Math.abs(deltaX) > Math.abs(deltaY) * 1.8) {
+      const currentIndex = profileTabsList.indexOf(profileTab);
+      if (deltaX < 0 && currentIndex < profileTabsList.length - 1) {
+        // Swiped left -> next tab
+        setProfileTab(profileTabsList[currentIndex + 1]);
+      } else if (deltaX > 0 && currentIndex > 0) {
+        // Swiped right -> prev tab
+        setProfileTab(profileTabsList[currentIndex - 1]);
+      }
+    }
+  };
 
   useEffect(() => {
     setIsLoadingProfile(true);
@@ -753,7 +790,8 @@ export default function ProfileView({
 
   // Pinned items filtering
   const pinnedPostIdsList = currentUser.pinnedPosts || [];
-  const myPosts = posts.filter(p => p.username === currentUser.username);
+  const myPosts = posts.filter(p => p.username === currentUser.username || p.userId === currentUser.id);
+  const [, setMetricsUpdateTick] = useState(0);
   
   useEffect(() => {
     const handleDeletePost = (e: Event) => {
@@ -762,23 +800,42 @@ export default function ProfileView({
         setSelectedGridPost(null);
       }
     };
-    window.addEventListener('nexora-delete-post', handleDeletePost);
-    return () => window.removeEventListener('nexora-delete-post', handleDeletePost);
-  }, [selectedGridPost]);
 
-  // Tab filtered items (Contributions, Media, Voice, Circles, Communities, Reputation)
+    const handleMetricsUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      if (detail.userId === currentUser.id) {
+        setMetricsUpdateTick(t => t + 1);
+      }
+    };
+
+    window.addEventListener('nexora-delete-post', handleDeletePost);
+    window.addEventListener('nexora-user-metrics-updated', handleMetricsUpdated);
+    return () => {
+      window.removeEventListener('nexora-delete-post', handleDeletePost);
+      window.removeEventListener('nexora-user-metrics-updated', handleMetricsUpdated);
+    };
+  }, [selectedGridPost, currentUser.id]);
+
+  // Tab filtered items (Media, Voice, Reposts, Sparks, Bookmarks, Archive)
   const getTabContent = () => {
-    const activePosts = myPosts
-      .filter(p => !p.isArchived)
-      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const allActive = posts.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const userMyPosts = allActive.filter(p => p.username === currentUser.username || p.userId === currentUser.id);
+
     switch (profileTab) {
       case 'media':
-        return activePosts.filter(p => !!p.image || !!p.videoUrl);
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
       case 'voice':
-        return activePosts.filter(p => p.isVoice || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙'));
-      case 'contributions':
+        return userMyPosts.filter(p => !p.isArchived && (p.isVoice || p.voiceDuration || (p as any).audioUrl || p.content.includes('🎙')));
+      case 'reposts':
+        return allActive.filter(p => !p.isArchived && ((p as any).isRepost && ((p as any).repostedBy === currentUser.username || (p as any).repostedBy === currentUser.id || p.userId === currentUser.id)));
+      case 'sparks':
+        return allActive.filter(p => !p.isArchived && (userSparks.includes(p.id) || (p as any).isSparkedByMe));
+      case 'bookmarks':
+        return allActive.filter(p => !p.isArchived && userBookmarks.includes(p.id));
+      case 'archive':
+        return userMyPosts.filter(p => p.isArchived);
       default:
-        return activePosts;
+        return userMyPosts.filter(p => !p.isArchived && (!!p.image || !!p.videoUrl));
     }
   };
 
@@ -800,44 +857,17 @@ export default function ProfileView({
   };
 
   const getPostsCount = () => {
-    const activeLength = myPosts.filter(p => !p.isArchived).length;
-    if (currentUser.username === 'voh') {
-      const extra = Math.max(0, activeLength - 2);
-      return 14 + extra;
-    }
-    if (currentUser.username === 'voh_ai') {
-      return 10;
-    }
-    if (currentUser.username === 'nexora_ai') {
-      return 8;
-    }
-    return activeLength;
+    return myPosts.filter(p => !p.isArchived).length;
   };
 
   const getSecondaryMetric = (type: 'sparks' | 'reputation' | 'contributions') => {
-    if (currentUser.username === 'voh') {
-      if (type === 'sparks') return formatSecondaryStat(80000000);
-      if (type === 'reputation') return formatSecondaryStat(20000000);
-      return formatSecondaryStat(40000000);
-    }
-    if (currentUser.username === 'voh_ai') {
-      if (type === 'sparks') return formatSecondaryStat(62000000);
-      if (type === 'reputation') return formatSecondaryStat(15000000);
-      return formatSecondaryStat(30000000);
-    }
-    if (currentUser.username === 'nexora_ai') {
-      if (type === 'sparks') return formatSecondaryStat(45000000);
-      if (type === 'reputation') return formatSecondaryStat(11000000);
-      return formatSecondaryStat(22000000);
-    }
-
     if (type === 'sparks') {
       return formatSecondaryStat(currentUser.sparks || 0);
     }
     if (type === 'reputation') {
       return formatSecondaryStat(currentUser.reputationPoints || 0);
     }
-    return formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0);
+    return formatSecondaryStat(currentUser.contributions ?? currentUser.reputationBreakdown?.contributions ?? 0);
   };
 
   return (
@@ -889,9 +919,9 @@ export default function ProfileView({
                       { label: 'Profile Settings', action: () => { setActivePanel('edit-profile'); setIsProfileMenuOpen(false); }, icon: Edit3, iconColor: 'text-violet-400' },
                       { label: 'Analytics', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('storage'); setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '📊 Loading Profile Analytics...' })); }, icon: BarChart2, iconColor: 'text-pink-400' },
                       { label: 'Achievements', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🏆 You earned: "Founders Genesis" achievement!' })); }, icon: Award, iconColor: 'text-amber-400' },
-                      { label: 'Saved Posts', action: () => { setActivePanel('collections'); setIsProfileMenuOpen(false); }, icon: FolderClosed, iconColor: 'text-cyan-400' },
+                      { label: 'Saved Posts', action: () => { window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'saved' } })); setIsProfileMenuOpen(false); }, icon: Bookmark, iconColor: 'text-yellow-400' },
                       { label: 'Account Status', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🟢 Secure Account Status: Optimal.' })); }, icon: Shield, iconColor: 'text-emerald-400' },
-                      { label: 'Nexora Studio', action: () => { setActivePanel('creator-studio'); setIsProfileMenuOpen(false); }, icon: Coins, iconColor: 'text-yellow-400' },
+                      { label: 'Creator Studio', action: () => { window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'creator' } })); setIsProfileMenuOpen(false); }, icon: BarChart2, iconColor: 'text-indigo-400' },
                       { label: 'Privacy', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('privacy'); setIsProfileMenuOpen(false); }, icon: Lock, iconColor: 'text-teal-400' },
                       { label: 'Share Profile', action: () => { setShowShareModal(true); setIsProfileMenuOpen(false); }, icon: QrCode, iconColor: 'text-indigo-400' },
                       { label: 'Export Profile', action: () => { 
@@ -1192,12 +1222,12 @@ export default function ProfileView({
           <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-1 px-0 w-full">
             <div className="w-full max-w-4xl mx-auto flex items-center justify-around py-0">
               {[
-                { id: 'contributions', icon: BarChart2 },
                 { id: 'media', icon: Camera },
                 { id: 'voice', icon: Mic },
-                { id: 'circles', icon: Users },
-                { id: 'communities', icon: Globe },
-                { id: 'reputation', icon: Award }
+                { id: 'reposts', icon: Repeat2 },
+                { id: 'sparks', icon: Zap },
+                { id: 'bookmarks', icon: Bookmark },
+                { id: 'archive', icon: HardDrive }
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = profileTab === tab.id;
@@ -1222,83 +1252,34 @@ export default function ProfileView({
           </div>
 
           {/* Profile Tab Content Area */}
-          <div className="w-full pt-4 space-y-4 bg-black min-h-[350px]">
-            {profileTab === 'contributions' ? (
-              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4">
-                {filteredTabPosts.length === 0 ? (
-                  <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
-                      <Zap className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-zinc-200">No Contributions Yet</h4>
-                      <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-relaxed">
-                        Your contributions reflect your positive impact on the Nexora network.
-                      </p>
-                    </div>
-                    {isOwnProfile && (
-                      <button 
-                        onClick={() => window.dispatchEvent(new CustomEvent('openComposer', { detail: 'posts' }))}
-                        className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono font-bold text-xs uppercase rounded-xl transition-all cursor-pointer shadow-md"
-                      >
-                        + Post Contribution
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  filteredTabPosts.map(post => (
-                    <div key={post.id} className="py-5 border-b border-white/10 space-y-3 transition-all text-left">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <img src={currentUser.avatar} className="w-9 h-9 rounded-full object-cover border border-white/10" alt="avatar" />
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-xs font-bold text-white">{currentUser.name || currentUser.username}</span>
-                              {currentUser.isVerified && <PurpleVerifiedBadge className="w-3.5 h-3.5" type="founder" />}
-                            </div>
-                            <span className="text-[10px] font-mono text-zinc-500">@{currentUser.username} • <RelativeTimestamp timestamp={post.timestamp} /></span>
-                          </div>
-                        </div>
-                        <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-white/10 px-2.5 py-1 rounded-lg">
-                          +8 Rep Impact
-                        </span>
-                      </div>
-
-                      <p className="text-xs text-zinc-200 leading-relaxed whitespace-pre-wrap">{post.content}</p>
-
-                      {post.image && (
-                        <div className="rounded-xl overflow-hidden border border-white/10 max-h-80">
-                          <img src={post.image} className="w-full h-full object-cover" alt="contribution attachment" />
-                        </div>
-                      )}
-
-                      {post.videoUrl && (
-                        <div className="rounded-xl overflow-hidden border border-white/10 max-h-80">
-                          <NexoraVideo src={post.videoUrl} />
-                        </div>
-                      )}
-
-                      <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400 font-mono">
-                        <div className="flex items-center gap-4">
-                          <span className="flex items-center gap-1 text-pink-400">
-                            <Sparkles className="w-3.5 h-3.5" /> {post.likes || 0} Sparks
-                          </span>
-                          <span className="flex items-center gap-1 text-zinc-400">
-                            <MessageSquare className="w-3.5 h-3.5" /> {post.comments?.length || 0} Comments
-                          </span>
-                        </div>
-                        <button 
-                          onClick={() => setSelectedGridPost(post)} 
-                          className="text-violet-400 hover:text-violet-300 text-[11px] font-bold cursor-pointer"
-                        >
-                          View Impact →
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
+          <div 
+            onTouchStart={handleContentTouchStart}
+            onTouchEnd={handleContentTouchEnd}
+            className="w-full pt-4 space-y-4 bg-black min-h-[350px] touch-pan-y"
+          >
+            {filteredTabPosts.length === 0 ? (
+              <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
+                <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
+                  {profileTab === 'media' && <Camera className="w-6 h-6" />}
+                  {profileTab === 'voice' && <Mic className="w-6 h-6" />}
+                  {profileTab === 'reposts' && <Repeat2 className="w-6 h-6" />}
+                  {profileTab === 'sparks' && <Zap className="w-6 h-6" />}
+                  {profileTab === 'bookmarks' && <Bookmark className="w-6 h-6" />}
+                  {profileTab === 'archive' && <HardDrive className="w-6 h-6" />}
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-zinc-200 capitalize">No {profileTab} found</h4>
+                  <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-relaxed">
+                    {profileTab === 'media' && 'Published visual media and videos will appear here.'}
+                    {profileTab === 'voice' && 'Recorded voice pulses and audio broadcasts will appear here.'}
+                    {profileTab === 'reposts' && 'Content reposted by this creator will appear here.'}
+                    {profileTab === 'sparks' && 'Content sparked by this creator will appear here.'}
+                    {profileTab === 'bookmarks' && 'Saved bookmarks and favorite posts will appear here.'}
+                    {profileTab === 'archive' && 'Archived studio posts and past assets will appear here.'}
+                  </p>
+                </div>
               </div>
-            ) : profileTab === 'media' ? (
+            ) : (
               <div className="w-full max-w-4xl mx-auto px-2">
                 <MediaGrid 
                   gridPosts={filteredTabPosts.sort((a, b) => (pinnedPostIdsList.includes(b.id) ? 1 : -1) - (pinnedPostIdsList.includes(a.id) ? 1 : 0))} 
@@ -1306,160 +1287,7 @@ export default function ProfileView({
                   onSelectPost={(post) => setSelectedGridPost(post)} 
                 />
               </div>
-            ) : profileTab === 'voice' ? (
-              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
-                {filteredTabPosts.length === 0 ? (
-                  <div className="p-8 py-12 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-2xl bg-pink-600/10 border border-pink-500/20 flex items-center justify-center mx-auto text-pink-400">
-                      <Mic className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-zinc-200">No Voice Notes Recorded</h4>
-                      <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 leading-relaxed">
-                        Share your thoughts with voice broadcasts and voice pulses on Nexora.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  filteredTabPosts.map(post => (
-                    <div key={post.id} className="py-5 border-b border-white/10 space-y-3 transition-all text-left">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Mic className="w-4 h-4 text-pink-400" />
-                          <span className="text-xs font-bold text-white">Voice Pulse</span>
-                        </div>
-                        <span className="text-[10px] font-mono text-zinc-500"><RelativeTimestamp timestamp={post.timestamp} /></span>
-                      </div>
-                      <p className="text-xs text-zinc-300">{post.content}</p>
-                      <div className="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/5">
-                        <button className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white shrink-0">
-                          <Play className="w-4 h-4 ml-0.5" />
-                        </button>
-                        <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                          <div className="w-1/3 h-full bg-gradient-to-r from-violet-500 to-pink-500 rounded-full" />
-                        </div>
-                        <span className="text-[10px] font-mono text-zinc-400">0:24</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            ) : profileTab === 'circles' ? (
-              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
-                <div className="py-5 border-b border-white/10 space-y-4">
-                  <div className="flex items-center justify-between pb-3">
-                    <div>
-                      <h3 className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider flex items-center gap-2">
-                        <Users className="w-4 h-4 text-violet-400" /> Network Circles
-                      </h3>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">Circles group your strongest mutual relationships and key collaborators.</p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">Close Circle</span>
-                        <span className="text-[10px] font-mono text-violet-400 bg-violet-600/20 px-2 py-0.5 rounded-full">12 Members</span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400">Direct collaborators & inner network.</p>
-                    </div>
-
-                    <div className="p-4 bg-white/5 border border-white/5 rounded-xl space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-white">Founders & Builders</span>
-                        <span className="text-[10px] font-mono text-pink-400 bg-pink-600/20 px-2 py-0.5 rounded-full">48 Members</span>
-                      </div>
-                      <p className="text-[11px] text-zinc-400">Verified core nodes & technology partners.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : profileTab === 'communities' ? (
-              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
-                <div className="py-5 border-b border-white/10 space-y-4">
-                  <div className="flex items-center justify-between pb-3">
-                    <div>
-                      <h3 className="text-xs font-mono font-bold text-pink-300 uppercase tracking-wider flex items-center gap-2">
-                        <Compass className="w-4 h-4 text-pink-400" /> Active Communities
-                      </h3>
-                      <p className="text-[11px] text-zinc-400 mt-0.5">Communities owned or frequented by {currentUser.name || currentUser.username}.</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-violet-600/30 flex items-center justify-center text-violet-300 font-black text-sm">
-                          NA
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-white">Nexora Alpha Testers</h4>
-                          <p className="text-[10px] text-zinc-400">1.2k Members • Founder & Creator Hub</p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono text-violet-400 bg-violet-600/20 border border-white/10 px-2.5 py-1 rounded-lg">Owner</span>
-                    </div>
-
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-pink-600/30 flex items-center justify-center text-pink-300 font-black text-sm">
-                          AI
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-white">AI Builders & Explorers</h4>
-                          <p className="text-[10px] text-zinc-400">4.8k Members • Active Discussion</p>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-mono text-zinc-400 bg-white/5 border border-white/10 px-2.5 py-1 rounded-lg">Member</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : profileTab === 'reputation' ? (
-              <div className="w-full max-w-3xl mx-auto space-y-4 px-2 sm:px-4 text-left">
-                <div className="py-5 border-b border-white/10 space-y-5">
-                  <div className="flex items-center justify-between pb-4">
-                    <div>
-                      <h3 className="text-xs font-mono font-bold text-violet-300 uppercase tracking-widest flex items-center gap-2">
-                        <Award className="w-4 h-4 text-violet-400" /> Nexora Reputation Matrix
-                      </h3>
-                      <p className="text-[11px] text-zinc-400 mt-1">
-                        Reputation is organically built through trust signals, verified community contributions, and authentic engagement.
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xl font-black text-white">{formatSecondaryStat(currentUser.reputationPoints || 12500)}</span>
-                      <span className="block text-[10px] font-mono text-violet-400 uppercase font-bold">Total Rep Score</span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl">
-                      <span className="text-base font-black text-white">{formatSecondaryStat(currentUser.sparks || 850)}</span>
-                      <span className="block text-[10px] font-mono text-zinc-400 uppercase mt-0.5">Sparks Earned</span>
-                    </div>
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl">
-                      <span className="text-base font-black text-violet-300">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 4200)}</span>
-                      <span className="block text-[10px] font-mono text-violet-400 uppercase mt-0.5 font-bold">Contributions</span>
-                    </div>
-                    <div className="p-3.5 bg-white/5 border border-white/5 rounded-xl">
-                      <span className="text-base font-black text-emerald-400">Level 5</span>
-                      <span className="block text-[10px] font-mono text-emerald-300 uppercase mt-0.5">Trust Tier</span>
-                    </div>
-                  </div>
-
-                  <div className="p-4 bg-violet-950/20 border border-white/10 rounded-xl space-y-2 text-xs text-zinc-300 leading-relaxed">
-                    <div className="flex items-center gap-2 text-violet-300 font-bold font-mono">
-                      <ShieldCheck className="w-4 h-4 text-violet-400" /> Organic Unpredictable Growth
-                    </div>
-                    <p>
-                      Unlike legacy platforms where follower count can be inflated, Nexora Reputation requires verified trust signals, community appreciation sparks, and sustained high-quality contributions over time.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ) : null}
+            )}
           </div>
         
         {/* 6. ADVANCED SLIDE-OUT DRAWER MENU ☰ (Progressive Disclosure - Redesigned Settings & Privacy Hub) */}
@@ -2877,12 +2705,25 @@ export default function ProfileView({
               <div className="space-y-2 text-left">
                 {(() => {
                   let list: any[] = [];
+                  let allFollows: { followerId: string; followingId: string }[] = [];
+                  try {
+                    allFollows = JSON.parse(localStorage.getItem('nexora_db_follows') || localStorage.getItem('nexora_db_follows_v1') || '[]');
+                  } catch {}
+
+                  let allRegisteredUsers: User[] = [];
+                  try {
+                    const rawUsers = localStorage.getItem('nexora_users_db');
+                    if (rawUsers) allRegisteredUsers = JSON.parse(rawUsers);
+                  } catch {}
+
                   if (relationsTab === 'followers') {
-                    list = getSeededFollowers(currentUser.id, currentUser.username);
+                    const followerIds = allFollows.filter(f => f.followingId === currentUser.id).map(f => f.followerId);
+                    list = allRegisteredUsers.filter(u => followerIds.includes(u.id));
                   } else if (relationsTab === 'following') {
-                    list = [];
+                    const followingIds = allFollows.filter(f => f.followerId === currentUser.id).map(f => f.followingId);
+                    list = allRegisteredUsers.filter(u => followingIds.includes(u.id));
                   } else if (relationsTab === 'close-friends') {
-                    list = getSeededFollowers(currentUser.id, currentUser.username).filter(f => closeFriends.includes(f.id));
+                    list = allRegisteredUsers.filter(u => closeFriends.includes(u.id));
                   } else if (relationsTab === 'blocked') {
                     list = blockedUsers.map(u => ({ id: u, username: u, name: u.toUpperCase(), avatar: getDefaultAvatar(u) }));
                   } else if (relationsTab === 'muted') {
@@ -2890,8 +2731,8 @@ export default function ProfileView({
                   }
 
                   const filtered = list.filter(item => 
-                    item.username.toLowerCase().includes(searchRelationQuery.toLowerCase()) ||
-                    item.name.toLowerCase().includes(searchRelationQuery.toLowerCase())
+                    (item.username || '').toLowerCase().includes(searchRelationQuery.toLowerCase()) ||
+                    (item.name || '').toLowerCase().includes(searchRelationQuery.toLowerCase())
                   );
 
                   if (filtered.length === 0) {

@@ -237,40 +237,6 @@ export default function NewInboxView({
     } catch (e) {
       console.warn('[Inbox] Firestore send error:', e);
     }
-
-    // Simulate partner typing & reply
-    setTimeout(() => {
-      setPartnerTyping(true);
-      setTimeout(async () => {
-        setPartnerTyping(false);
-        const replyId = `msg-reply-${Date.now()}`;
-        const replyText = `Got your message! Thanks for connecting on Nexora. ✨`;
-        const replyMsg: ExtendedMessage = {
-          id: replyId,
-          chatId: activeChatId,
-          senderId: activeChat?.partnerId || 'partner',
-          content: replyText,
-          timestamp: new Date().toISOString(),
-          status: 'read'
-        };
-
-        setLocalMessages(prev => ({
-          ...prev,
-          [activeChatId]: [...(prev[activeChatId] || []), replyMsg]
-        }));
-
-        setChats(prev => prev.map(c => {
-          if (c.id === activeChatId) {
-            return {
-              ...c,
-              lastMessage: replyText,
-              lastTimestamp: new Date().toISOString()
-            };
-          }
-          return c;
-        }));
-      }, 2000);
-    }, 1000);
   };
 
   const handleStartChatWithUser = (user: User) => {

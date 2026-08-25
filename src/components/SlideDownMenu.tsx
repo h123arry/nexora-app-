@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Home, 
@@ -17,7 +17,6 @@ import {
   X, 
   ChevronRight 
 } from 'lucide-react';
-import NexoraBranding from './NexoraBranding';
 
 interface SlideDownMenuProps {
   isOpen: boolean;
@@ -39,20 +38,20 @@ export default function SlideDownMenu({
   unreadNotificationsCount = 0
 }: SlideDownMenuProps) {
 
-  // Strict required order:
-  // 1. Home
-  // 2. World Pulse
-  // 3. Communities
-  // 4. Circles
-  // 5. Messages
-  // 6. Notifications
-  // 7. Missions
-  // 8. Opportunities
-  // 9. VOH AI
-  // 10. Saved
-  // 11. Creator Hub
-  // 12. Wallet
-  // 13. Settings
+  // Close on Escape key press
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
+  // Comprehensive list of all 13 core Nexora destinations in logical order
   const menuItems = [
     {
       id: 'home',
@@ -61,118 +60,118 @@ export default function SlideDownMenu({
       icon: Home,
       tab: 'feed',
       badge: 0,
-      color: 'from-violet-500 to-indigo-500'
+      iconColor: 'text-violet-400 bg-violet-500/10'
     },
     {
       id: 'world-pulse',
       label: 'World Pulse',
-      desc: 'Live global trends & conversations',
+      desc: 'Live global trends & radar',
       icon: Globe,
       tab: 'pulse',
       badge: 0,
-      color: 'from-cyan-500 to-blue-500'
+      iconColor: 'text-cyan-400 bg-cyan-500/10'
     },
     {
       id: 'communities',
       label: 'Communities',
-      desc: 'Hubs, spaces & creator pages',
+      desc: 'Public spaces',
       icon: Compass,
       tab: 'communities',
       badge: 0,
-      color: 'from-purple-500 to-pink-500'
+      iconColor: 'text-purple-400 bg-purple-500/10'
     },
     {
       id: 'circles',
       label: 'Circles',
-      desc: 'Interactive networks & friends',
+      desc: 'Your audiences',
       icon: Users,
       tab: 'matrix',
       subTab: 'circles',
       badge: 0,
-      color: 'from-emerald-500 to-teal-500'
+      iconColor: 'text-emerald-400 bg-emerald-500/10'
     },
     {
       id: 'messages',
       label: 'Messages',
-      desc: 'Direct chats & group messaging',
+      desc: 'Direct chats',
       icon: MessageSquare,
       tab: 'inbox',
       badge: unreadMessagesCount,
-      color: 'from-blue-500 to-indigo-600'
+      iconColor: 'text-blue-400 bg-blue-500/10'
     },
     {
       id: 'notifications',
       label: 'Notifications',
-      desc: 'Activity alerts, likes & interactions',
+      desc: 'Activity & alerts',
       icon: Bell,
       tab: 'activity',
       badge: unreadNotificationsCount,
-      color: 'from-pink-500 to-rose-500'
+      iconColor: 'text-pink-400 bg-pink-500/10'
     },
     {
       id: 'missions',
       label: 'Missions',
-      desc: 'Social tasks & community quests',
+      desc: 'Social tasks & quests',
       icon: Target,
       tab: 'matrix',
       subTab: 'missions',
       badge: 0,
-      color: 'from-amber-500 to-orange-500'
+      iconColor: 'text-amber-400 bg-amber-500/10'
     },
     {
       id: 'opportunities',
       label: 'Opportunities',
-      desc: 'Gigs, bounties & career sparks',
+      desc: 'Gigs & bounties',
       icon: Briefcase,
       tab: 'matrix',
       subTab: 'opportunities',
       badge: 0,
-      color: 'from-emerald-400 to-cyan-500'
+      iconColor: 'text-emerald-300 bg-emerald-500/10'
     },
     {
       id: 'voh-ai',
       label: 'VOH AI',
-      desc: 'Next-gen intelligence assistant',
+      desc: 'AI co-pilot & speech',
       icon: Sparkles,
       tab: 'nida',
       badge: 0,
-      color: 'from-violet-400 to-fuchsia-500'
+      iconColor: 'text-fuchsia-400 bg-fuchsia-500/10'
     },
     {
       id: 'saved',
       label: 'Saved',
-      desc: 'Bookmarks & saved collections',
+      desc: 'Bookmarks & collections',
       icon: Bookmark,
       tab: 'saved',
       badge: 0,
-      color: 'from-yellow-500 to-amber-600'
+      iconColor: 'text-yellow-400 bg-yellow-500/10'
     },
     {
       id: 'creator-hub',
       label: 'Creator Hub',
-      desc: 'Studio, monetization & analytics',
+      desc: 'Creator studio & analytics',
       icon: BarChart2,
       tab: 'creator',
       badge: 0,
-      color: 'from-purple-600 to-indigo-600'
+      iconColor: 'text-indigo-400 bg-indigo-500/10'
     },
     {
       id: 'wallet',
       label: 'Wallet',
-      desc: 'Sparks, earnings & transactions',
+      desc: 'Wallet & balance',
       icon: Wallet,
       tab: 'wallet',
       badge: 0,
-      color: 'from-emerald-500 to-green-600'
+      iconColor: 'text-green-400 bg-green-500/10'
     },
     {
       id: 'settings',
       label: 'Settings',
-      desc: 'Privacy, security & preferences',
+      desc: 'Preferences & privacy',
       icon: Sliders,
       tab: 'settings',
       badge: 0,
-      color: 'from-zinc-400 to-zinc-600'
+      iconColor: 'text-zinc-300 bg-zinc-500/10'
     }
   ];
 
@@ -207,91 +206,79 @@ export default function SlideDownMenu({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-center items-start pt-3 sm:pt-6 px-3 sm:px-4 pb-12 overflow-y-auto">
-          {/* Backdrop */}
+        <>
+          {/* Subtle click-catcher backdrop - preserves full view of Home feed underneath */}
           <motion.div
+            key="menu-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-md cursor-pointer"
+            className="fixed inset-0 z-[90] bg-black/30 sm:bg-black/20 backdrop-blur-[1.5px] cursor-pointer"
+            aria-hidden="true"
           />
 
-          {/* Menu Card Container with Swipe-to-Dismiss */}
+          {/* Compact Top-Right Popover Dropdown */}
           <motion.div
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.1, bottom: 0.8 }}
-            onDragEnd={(e, info) => {
-              if (info.offset.y > 80 || info.offset.y < -80) {
-                onClose();
-              }
-            }}
-            initial={{ y: -30, opacity: 0, scale: 0.97 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -25, opacity: 0, scale: 0.97 }}
-            transition={{ type: "spring", stiffness: 400, damping: 30 }}
-            className="w-full max-w-xl bg-[#09061a]/95 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-[0_25px_60px_rgba(0,0,0,0.95)] text-white backdrop-blur-2xl relative z-10 my-auto sm:my-0 touch-auto"
+            key="menu-popover"
+            id="nexora-home-dropdown-popover"
+            initial={{ opacity: 0, scale: 0.94, y: -8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.94, y: -8 }}
+            transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+            style={{ transformOrigin: 'top right' }}
+            className="fixed top-13 sm:top-15 right-2 sm:right-4 md:right-6 lg:right-8 z-[95] w-72 sm:w-80 max-w-[calc(100vw-16px)] max-h-[min(520px,calc(100dvh-76px))] flex flex-col bg-[#0c0a18]/95 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_16px_40px_rgba(0,0,0,0.85),0_0_1px_1px_rgba(139,92,246,0.25)] text-white overflow-hidden"
           >
-            {/* Top Drag Handle for Mobile */}
-            <div className="w-12 h-1 bg-white/20 rounded-full mx-auto mb-3 sm:hidden" />
-
-            {/* Header bar */}
-            <div className="flex items-center justify-between pb-4 mb-4 border-b border-white/10">
+            {/* Compact Header */}
+            <div className="px-3.5 py-2.5 border-b border-white/5 flex items-center justify-between bg-white/[0.02] shrink-0">
               <div className="flex items-center gap-2">
-                <NexoraBranding size="sm" showSubtitle={true} />
+                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                <span className="text-[11px] font-mono font-bold tracking-wider text-zinc-300 uppercase">
+                  Menu Navigation
+                </span>
               </div>
               
-              <div className="flex items-center gap-3">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-violet-400/90 bg-violet-950/60 px-2.5 py-1 rounded-full border border-white/10 shadow-xs">
-                  Unified Navigation
-                </span>
-                <button
-                  onClick={onClose}
-                  className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                  title="Close Menu"
-                  aria-label="Close Menu"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                title="Close"
+                aria-label="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            {/* Grid of menu items */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[70vh] overflow-y-auto pr-1 custom-scrollbar">
+            {/* Scrollable list of compact destination items */}
+            <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
               {menuItems.map((item) => {
                 const Icon = item.icon;
                 const active = isItemActive(item);
 
                 return (
-                  <motion.button
+                  <button
                     key={item.id}
-                    whileHover={{ scale: 1.01, x: 2 }}
-                    whileTap={{ scale: 0.98 }}
+                    type="button"
                     onClick={() => handleSelect(item)}
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all text-left cursor-pointer group ${
+                    className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-left transition-all cursor-pointer group ${
                       active 
-                        ? 'bg-linear-to-r from-violet-900/60 via-purple-900/40 to-pink-900/30 border-violet-500 text-white shadow-lg shadow-violet-500/20 ring-1 ring-violet-500/50' 
-                        : 'bg-white/5 hover:bg-white/10 border-white/5 hover:border-white/10 text-zinc-300 hover:text-white'
+                        ? 'bg-violet-600/20 border border-violet-500/40 text-white shadow-xs' 
+                        : 'border border-transparent hover:bg-white/5 hover:border-white/5 text-zinc-300 hover:text-white'
                     }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`p-2.5 rounded-xl bg-linear-to-br ${item.color} text-white shrink-0 shadow-sm group-hover:scale-105 transition-transform`}>
-                        <Icon className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className={`p-1.5 rounded-lg shrink-0 ${item.iconColor} transition-transform group-hover:scale-105`}>
+                        <Icon className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
-                          <span className={`font-sans font-bold text-xs truncate block ${active ? 'text-violet-200' : 'text-zinc-100 group-hover:text-violet-300'} transition-colors`}>
+                          <span className={`font-sans text-xs truncate font-medium ${active ? 'text-violet-200 font-semibold' : 'text-zinc-200 group-hover:text-white'}`}>
                             {item.label}
                           </span>
                           {item.badge > 0 && (
                             <span className="bg-pink-500 text-white text-[9px] font-mono font-bold px-1.5 py-0.2 rounded-full animate-pulse">
                               {item.badge}
-                            </span>
-                          )}
-                          {active && (
-                            <span className="text-[8px] font-mono font-bold text-violet-300 bg-violet-600/40 border border-violet-400/40 px-1.5 py-0.2 rounded-md uppercase">
-                              ACTIVE
                             </span>
                           )}
                         </div>
@@ -301,13 +288,17 @@ export default function SlideDownMenu({
                       </div>
                     </div>
 
-                    <ChevronRight className={`w-4 h-4 ${active ? 'text-violet-300' : 'text-zinc-500 group-hover:text-violet-400'} group-hover:translate-x-0.5 transition-all shrink-0 ml-2`} />
-                  </motion.button>
+                    <ChevronRight className={`w-3.5 h-3.5 shrink-0 ml-2 transition-transform ${
+                      active 
+                        ? 'text-violet-300 translate-x-0.5' 
+                        : 'text-zinc-600 group-hover:text-zinc-400 group-hover:translate-x-0.5'
+                    }`} />
+                  </button>
                 );
               })}
             </div>
           </motion.div>
-        </div>
+        </>
       )}
     </AnimatePresence>
   );

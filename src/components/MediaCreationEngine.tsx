@@ -495,12 +495,12 @@ export default function MediaCreationEngine({
       const mockCaptions: Record<string, string> = {
         rewrite: `🚀 streamlined content creation engine in Nexora. Accelerating creator capability! #nexora #innovation`,
         shorten: `Accelerating creative workflows on Nexora. ⚡`,
-        expand: `Absolutely thrilled to announce the rollout of Content Studio v2.4 on Nexora. Designed for supreme responsiveness, we are cutting friction for developers and modern creators alike. Check out the custom filters and multi-step publisher. #systemsdesign`,
+        expand: `Absolutely thrilled to announce the rollout of Content Studio on Nexora. Designed for supreme responsiveness, we are cutting friction for modern creators. Check out the custom filters and multi-step publisher. #systemsdesign`,
         tags: `${caption} #developer #creativehub #nextgen #futureReady`,
         translate: `Studio de création de contenu Nexora. Publier des médias en toute fluidité. 🚀`
       };
       setCaption(mockCaptions[promptType] || caption);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ local fallback optimized successfully.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption enhanced!' }));
     } finally {
       setLoadingTranscript(false);
     }

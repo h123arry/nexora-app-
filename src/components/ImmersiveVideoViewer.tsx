@@ -336,11 +336,17 @@ export default function ImmersiveVideoViewer({
                 {currentPost.comments?.map((c, commentIndex) => (
                   <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
                     <div className="flex items-start justify-between gap-2 text-xs">
-                      <div className="flex gap-2">
-                        <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
+                      <div 
+                        className="flex gap-2 items-center cursor-pointer group/commentuser"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: c.userId || c.username }));
+                        }}
+                      >
+                        <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/30" />
                         <div>
-                          <span className="font-sans font-bold text-violet-200">{c.name}</span>
-                          <span className="text-[10px] font-mono text-violet-400/60 block">
+                          <span className="font-sans font-bold text-violet-200 group-hover/commentuser:underline">{c.name}</span>
+                          <span className="text-[10px] font-mono text-violet-400/60 block group-hover/commentuser:underline">
                             @{c.username} • <RelativeTime timestamp={c.timestamp} />
                           </span>
                         </div>
@@ -380,11 +386,17 @@ export default function ImmersiveVideoViewer({
                       <div className="pl-9 space-y-2.5 pt-1.5 border-l border-white/10 ml-3.5">
                         {c.replies.map(rep => (
                           <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
-                            <div className="flex items-center gap-2 mb-1">
-                              <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
+                            <div 
+                              className="flex items-center gap-2 mb-1 cursor-pointer group/replyuser"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: rep.userId || rep.username }));
+                              }}
+                            >
+                              <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover ring-1 ring-violet-500/20" />
                               <div>
-                                <span className="font-sans font-black text-violet-200 text-[11px]">{rep.name}</span>
-                                <span className="text-[9px] font-mono text-violet-400/50 block">
+                                <span className="font-sans font-black text-violet-200 text-[11px] group-hover/replyuser:underline">{rep.name}</span>
+                                <span className="text-[9px] font-mono text-violet-400/50 block group-hover/replyuser:underline">
                                   @{rep.username} • <RelativeTime timestamp={rep.timestamp} />
                                 </span>
                               </div>

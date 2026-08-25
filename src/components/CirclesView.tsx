@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Download, Award } from 'lucide-react';
 import { Circle, User } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
+import { joinCircleDb, leaveCircleDb } from '../data/database';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -66,6 +67,9 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
     const target = circles.find(c => c.id === circleId);
     if (target && !target.isJoinedByMe) {
       recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
+      joinCircleDb(currentUser.id, circleId);
+    } else if (target && target.isJoinedByMe) {
+      leaveCircleDb(currentUser.id, circleId);
     }
     setCircles(prev => prev.map(c => {
       if (c.id === circleId) {
@@ -179,13 +183,13 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Compass className="w-5 h-5 text-pink-400" />
+            <Users className="w-5 h-5 text-emerald-400" />
             <h2 className="text-xl font-black font-sans tracking-tight text-white">
-              Thematic Communities
+              Circles
             </h2>
           </div>
           <p className="text-xs text-violet-300/60 font-sans">
-            Beautiful interest groups and discussion spaces with your peers
+            Your audiences • Curated networks, close connections & shared interest groups
           </p>
         </div>
 

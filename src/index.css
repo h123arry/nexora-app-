@@ -8,6 +8,14 @@
 
 body {
   background-color: #070514;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
+}
+
+button, a, input, select, textarea {
+  touch-action: manipulation;
 }
 
 /* Custom gorgeous scrollbar aesthetics */

@@ -4,6 +4,8 @@ import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, S
 import { Circle, User, Page, Post, Comment } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { createCommunity, createPage, subscribeToCommunities, subscribeToPages } from '../services/dataService';
+import { joinCircleDb, leaveCircleDb } from '../data/database';
+import { ActivityService } from '../services/activityService';
 
 interface CommunitiesHubViewProps {
   currentUser: User;
@@ -356,6 +358,9 @@ export default function CommunitiesHubView({
         const joined = !c.isJoinedByMe;
         if (joined) {
           recordRecommendationEvent('join_community', { communityName: c.name, tags: c.tags });
+          joinCircleDb(currentUser.id, circleId);
+        } else {
+          leaveCircleDb(currentUser.id, circleId);
         }
         return {
           ...c,
@@ -375,7 +380,8 @@ export default function CommunitiesHubView({
   const [votedPollOption, setVotedPollOption] = useState<{ [key: string]: string }>({});
   const handleVoteCommunityPoll = (circleId: string, optionId: string) => {
     setVotedPollOption(prev => ({ ...prev, [circleId]: optionId }));
-    window.dispatchEvent(new CustomEvent('toast', { detail: `🗳️ Vote registered! reputation updated.` }));
+    ActivityService.recordActivityEvent(currentUser.id, 'poll_vote', `poll_${circleId}_${optionId}`);
+    window.dispatchEvent(new CustomEvent('toast', { detail: `🗳️ Vote registered! Activity recorded.` }));
   };
 
   // 21. RSVP Community Event
@@ -536,7 +542,7 @@ export default function CommunitiesHubView({
             </h2>
           </div>
           <p className="text-xs text-current/60 font-sans">
-            Connect around shared interests, manage official entities, and seamless identity toggles.
+            Public spaces • Connect around shared interests, join open discussions, and explore global communities.
           </p>
         </div>
 

@@ -157,6 +157,9 @@ interface FeedViewProps {
   theme?: ThemeMood;
   onSharePost?: (postId: string) => void;
   activeTab?: string;
+  unreadMessagesCount?: number;
+  onOpenMessages?: () => void;
+  onOpenVohAi?: () => void;
 }
 
 export default function FeedView({
@@ -176,7 +179,10 @@ export default function FeedView({
   onToggleFollow,
   theme = 'stealth-dark',
   onSharePost,
-  activeTab = 'feed'
+  activeTab = 'feed',
+  unreadMessagesCount = 0,
+  onOpenMessages,
+  onOpenVohAi
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
@@ -535,6 +541,21 @@ export default function FeedView({
   useEffect(() => {
     const handleEscape = (e: Event) => {
       const customEvent = e as CustomEvent;
+      if (reportingPost) {
+        setReportingPost(null);
+        customEvent.preventDefault();
+        return;
+      }
+      if (showSaveToCollectionModalId) {
+        setShowSaveToCollectionModalId(null);
+        customEvent.preventDefault();
+        return;
+      }
+      if (composerOpen) {
+        setComposerOpen(false);
+        customEvent.preventDefault();
+        return;
+      }
       if (activeDotsMenuPostId) {
         setActiveDotsMenuPostId(null);
         customEvent.preventDefault();
@@ -548,7 +569,7 @@ export default function FeedView({
     };
     window.addEventListener('nexora-escape', handleEscape);
     return () => window.removeEventListener('nexora-escape', handleEscape);
-  }, [activeDotsMenuPostId, activeCommentsPostId]);
+  }, [activeDotsMenuPostId, activeCommentsPostId, composerOpen, reportingPost, showSaveToCollectionModalId]);
 
   // Listener to open and focus a specific post / comment thread from push alerts or notifications
   useEffect(() => {
@@ -827,42 +848,53 @@ export default function FeedView({
     setIsCreateMomentOpen(false);
   };
 
-  // Infinite Scroll intersection callback simulator
+  // Header expansion state tracking ref to eliminate duplicate re-renders
+  const isHeaderExpandedRef = useRef(true);
+
+  // High-performance passive scroll handler for infinite scroll & header collapse
   useEffect(() => {
     let debounceTimer: any = null;
 
     const handleScroll = () => {
-      if (!scrollContainerRef.current) return;
-      const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+      const container = scrollContainerRef.current;
+      if (!container) return;
+      const { scrollTop, scrollHeight, clientHeight } = container;
       
-      // Debounce localStorage writes to prevent main thread blocking and UI stutter
+      // Debounce localStorage writes to prevent main thread blocking
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
-      }, 200);
+      }, 300);
 
-      if (scrollHeight - scrollTop - clientHeight < 120) {
-        // threshold reached! Automatically load more
-        setVisibleCount(prev => Math.min(prev + 6, localPosts.length));
+      // Pre-load next batch when nearing bottom (threshold 350px)
+      if (scrollHeight - scrollTop - clientHeight < 350) {
+        setVisibleCount(prev => prev + 6);
       }
 
-      // Scroll direction detection for header collapse/restore
+      // Smooth scroll direction detection for header collapse/restore
       const diff = scrollTop - lastScrollTopRef.current;
       if (scrollTop <= 15) {
-        setIsHeaderExpanded(true);
-      } else if (diff > 8 && scrollTop > 50) {
-        // Scrolling down -> collapse top header
-        setIsHeaderExpanded(false);
-      } else if (diff < -8) {
-        // Scrolling up -> restore top header
-        setIsHeaderExpanded(true);
+        if (!isHeaderExpandedRef.current) {
+          isHeaderExpandedRef.current = true;
+          setIsHeaderExpanded(true);
+        }
+      } else if (diff > 12 && scrollTop > 60) {
+        if (isHeaderExpandedRef.current) {
+          isHeaderExpandedRef.current = false;
+          setIsHeaderExpanded(false);
+        }
+      } else if (diff < -12) {
+        if (!isHeaderExpandedRef.current) {
+          isHeaderExpandedRef.current = true;
+          setIsHeaderExpanded(true);
+        }
       }
       lastScrollTopRef.current = Math.max(0, scrollTop);
     };
     
     const container = scrollContainerRef.current;
     if (container) {
-      container.addEventListener('scroll', handleScroll);
+      container.addEventListener('scroll', handleScroll, { passive: true });
     }
     return () => {
       if (container) {
@@ -870,7 +902,7 @@ export default function FeedView({
       }
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [localPosts, visibleCount]);
+  }, []);
 
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
@@ -1253,7 +1285,7 @@ export default function FeedView({
           
           // Prepend a beautiful simulated post
           addNewFreshSimulatedPost();
-          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Telemetry sync successful. Feed updated!' }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed updated!' }));
         }, 1200);
       } else {
         setPullState('idle');
@@ -1572,124 +1604,6 @@ export default function FeedView({
 
   const currentDisplayList = orderedPosts.slice(0, visibleCount);
 
-  // "One Swipe = One Video" precise navigation interceptor to prevent multi-video jumps
-  const isInterceptScrollingRef = useRef(false);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    let touchStartY = 0;
-    let touchStartX = 0;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      // Do not block scrolling inside comments container, modal or other overlays
-      if (
-        (e.target as HTMLElement).closest('.comments-container') || 
-        (e.target as HTMLElement).closest('.modal-content') || 
-        activeCommentsPostId
-      ) {
-        return;
-      }
-      touchStartY = e.touches[0].clientY;
-      touchStartX = e.touches[0].clientX;
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (
-        (e.target as HTMLElement).closest('.comments-container') || 
-        (e.target as HTMLElement).closest('.modal-content') || 
-        activeCommentsPostId
-      ) {
-        return;
-      }
-
-      if (isInterceptScrollingRef.current) {
-        if (e.cancelable) e.preventDefault();
-        return;
-      }
-
-      const deltaY = e.touches[0].clientY - touchStartY;
-      const deltaX = e.touches[0].clientX - touchStartX;
-
-      // Vertical swipe detection (greater than horizontal swipe and exceeds threshold of 40px)
-      if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 40) {
-        const direction = deltaY < 0 ? 1 : -1; // 1 = swipe up (next post), -1 = swipe down (prev post)
-        const currentIndex = currentDisplayList.findIndex(p => p.id === activePostId);
-        
-        if (currentIndex !== -1) {
-          const nextIndex = currentIndex + direction;
-          if (nextIndex >= 0 && nextIndex < currentDisplayList.length) {
-            const nextPost = currentDisplayList[nextIndex];
-            const nextElement = document.getElementById(`post-${nextPost.id}`);
-            if (nextElement) {
-              if (e.cancelable) e.preventDefault();
-              isInterceptScrollingRef.current = true;
-              setActivePostId(nextPost.id);
-              
-              // Smooth precise scrolling using browser APIs
-              nextElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              
-              setTimeout(() => {
-                isInterceptScrollingRef.current = false;
-              }, 500); // Enforce a 500ms cool-down period to lock aggressive scrolls
-            }
-          }
-        }
-      }
-    };
-
-    const handleWheel = (e: WheelEvent) => {
-      if (
-        (e.target as HTMLElement).closest('.comments-container') || 
-        (e.target as HTMLElement).closest('.modal-content') || 
-        activeCommentsPostId
-      ) {
-        return;
-      }
-
-      if (isInterceptScrollingRef.current) {
-        if (e.cancelable) e.preventDefault();
-        return;
-      }
-
-      // Check if scroll delta is significant to trigger page jump
-      if (Math.abs(e.deltaY) > 15) {
-        const direction = e.deltaY > 0 ? 1 : -1;
-        const currentIndex = currentDisplayList.findIndex(p => p.id === activePostId);
-        
-        if (currentIndex !== -1) {
-          const nextIndex = currentIndex + direction;
-          if (nextIndex >= 0 && nextIndex < currentDisplayList.length) {
-            const nextPost = currentDisplayList[nextIndex];
-            const nextElement = document.getElementById(`post-${nextPost.id}`);
-            if (nextElement) {
-              if (e.cancelable) e.preventDefault();
-              isInterceptScrollingRef.current = true;
-              setActivePostId(nextPost.id);
-              
-              nextElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              
-              setTimeout(() => {
-                isInterceptScrollingRef.current = false;
-              }, 500);
-            }
-          }
-        }
-      }
-    };
-
-    container.addEventListener('touchstart', handleTouchStart, { passive: true });
-    container.addEventListener('touchmove', handleTouchMove, { passive: false });
-    container.addEventListener('wheel', handleWheel, { passive: false });
-
-    return () => {
-      container.removeEventListener('touchstart', handleTouchStart);
-      container.removeEventListener('touchmove', handleTouchMove);
-      container.removeEventListener('wheel', handleWheel);
-    };
-  }, [currentDisplayList, activePostId, activeCommentsPostId]);
-
   // Active Post Viewport Detection using IntersectionObserver
   useEffect(() => {
     const container = scrollContainerRef.current;
@@ -1906,24 +1820,65 @@ export default function FeedView({
             })}
           </div>
 
-          {/* Right: Search icon & Compact Menu button */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right: Frequent Destinations & Utility Menu */}
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* VOH AI Quick Trigger */}
+            <button
+              onClick={() => {
+                if (onOpenVohAi) {
+                  onOpenVohAi();
+                } else {
+                  window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'nida' } }));
+                }
+              }}
+              className="p-2 text-zinc-300 hover:text-fuchsia-300 hover:bg-fuchsia-500/10 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[38px] min-w-[38px] active:scale-95 group"
+              title="VOH AI Intelligence"
+              aria-label="Open VOH AI"
+            >
+              <Sparkles className="w-4.5 h-4.5 text-fuchsia-400 group-hover:scale-110 transition-transform" />
+            </button>
+
+            {/* Direct Messages Quick Trigger */}
+            <button
+              onClick={() => {
+                if (onOpenMessages) {
+                  onOpenMessages();
+                } else {
+                  window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
+                }
+              }}
+              className="relative p-2 text-zinc-300 hover:text-blue-300 hover:bg-blue-500/10 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[38px] min-w-[38px] active:scale-95 group"
+              title="Messages"
+              aria-label="Direct Messages"
+            >
+              <MessageCircle className="w-4.5 h-4.5 text-zinc-300 group-hover:text-blue-300 transition-colors" />
+              {unreadMessagesCount > 0 && (
+                <span className="absolute top-1 right-1 min-w-[15px] h-3.5 px-0.5 rounded-full bg-blue-500 text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-xs">
+                  {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+                </span>
+              )}
+            </button>
+
+            {/* Universal Search */}
             <button
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('openUniversalSearch'));
               }}
-              className="p-2.5 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[40px] min-w-[40px] active:scale-95"
+              className="p-2 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[38px] min-w-[38px] active:scale-95"
               title="Search"
               aria-label="Search Nexora"
             >
-              <Search className="w-5 h-5 stroke-[1.75] text-zinc-300" />
+              <Search className="w-4.5 h-4.5 stroke-[1.75] text-zinc-300" />
             </button>
 
+            {/* Utility Chevron Menu */}
             <button
+              id="nexora-home-chevron-menu-trigger"
+              type="button"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('toggleNavMenu'));
               }}
-              className="relative flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border border-white/10 hover:border-white/10 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer active:scale-95 text-xs font-sans font-medium group"
+              className="relative flex items-center gap-1 py-1.5 px-2 rounded-xl border border-white/10 hover:border-violet-500/30 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer active:scale-95 text-xs font-sans font-medium group"
               title="Open Navigation Menu"
               aria-label="Navigation Menu"
             >

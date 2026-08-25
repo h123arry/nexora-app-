@@ -67,7 +67,7 @@ export const cacheManager = new MemoryCacheManager();
 // ==========================================
 interface PendingAction {
   id: string; // Unique transaction UUID
-  action: 'saveUser' | 'savePost' | 'addComment' | 'addFollow' | 'addNotification' | 'createPage' | 'createCommunity' | 'report' | 'saveDraft' | 'logActivity' | 'sendMessage' | 'updatePrivacy';
+  action: 'saveUser' | 'savePost' | 'addComment' | 'addFollow' | 'removeFollow' | 'addNotification' | 'createPage' | 'createCommunity' | 'report' | 'saveDraft' | 'logActivity' | 'sendMessage' | 'updatePrivacy';
   payload: any;
   timestamp: number;
   retryCount: number;
@@ -191,6 +191,9 @@ class BackgroundSyncEngine {
       case 'addFollow':
         await addFollowDirect(payload.followerId, payload.followingId);
         break;
+      case 'removeFollow':
+        await removeFollowDirect(payload.followerId, payload.followingId);
+        break;
       case 'addNotification':
         await addNotificationDirect(payload.userId, payload.type, payload.content);
         break;
@@ -265,6 +268,18 @@ async function addFollowDirect(followerId: string, followingId: string) {
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path, auth);
+  }
+}
+
+async function removeFollowDirect(followerId: string, followingId: string) {
+  const path = 'follows';
+  try {
+    const q = query(collection(db, path), where('followerId', '==', followerId), where('followingId', '==', followingId));
+    const snapshot = await getDocs(q);
+    const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, path, d.id)));
+    await Promise.all(deletePromises);
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path, auth);
   }
 }
 
@@ -384,6 +399,10 @@ export async function savePostToDb(post: any) {
 
 export async function addFollow(followerId: string, followingId: string) {
   await syncEngine.enqueue('addFollow', { followerId, followingId });
+}
+
+export async function removeFollow(followerId: string, followingId: string) {
+  await syncEngine.enqueue('removeFollow', { followerId, followingId });
 }
 
 export async function addNotification(userId: string, type: string, content: string) {

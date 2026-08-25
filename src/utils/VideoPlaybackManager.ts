@@ -70,15 +70,11 @@ class VideoPlaybackManager {
   }
 
   /**
-   * Translates a raw video URL to its optimized adaptive resolution query
+   * Translates a raw video URL to its optimized stream URL
    */
   public getAdaptiveUrl(rawUrl: string): string {
     if (!rawUrl) return '';
-    if (rawUrl.startsWith('data:') || rawUrl.startsWith('blob:')) return rawUrl;
-    
-    // Emulate server-side responsive video query
-    const suffix = rawUrl.includes('?') ? '&' : '?';
-    return `${rawUrl}${suffix}quality=${this.currentQuality}`;
+    return rawUrl;
   }
 
   /**
@@ -167,10 +163,11 @@ class VideoPlaybackManager {
   public async play(id: string, videoElement: HTMLVideoElement, url: string): Promise<boolean> {
     if (!videoElement) return false;
 
-    // Use adaptive quality URL for play session
-    const adaptiveUrl = this.getAdaptiveUrl(url);
-    if (videoElement.src !== adaptiveUrl) {
-      videoElement.src = adaptiveUrl;
+    // Only update videoElement.src if it is empty or points to a different source
+    const targetUrl = this.getAdaptiveUrl(url);
+    const existingSrc = videoElement.currentSrc || videoElement.src || '';
+    if (!existingSrc || (!existingSrc.endsWith(targetUrl) && existingSrc !== targetUrl)) {
+      videoElement.src = targetUrl;
     }
 
     // Guard: Prevent trying to play a video element with no source
@@ -213,7 +210,7 @@ class VideoPlaybackManager {
       // Dispatch play event
       if (typeof window !== 'undefined') {
         window.dispatchEvent(
-          new CustomEvent('nexora-video-play-sync', { detail: { id, url: adaptiveUrl } })
+          new CustomEvent('nexora-video-play-sync', { detail: { id, url: targetUrl } })
         );
       }
       return true;

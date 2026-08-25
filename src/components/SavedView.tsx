@@ -130,7 +130,13 @@ export default function SavedView({
             >
               {/* Post author header */}
               <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => onViewProfile && onViewProfile(post.userId)}>
+                <div 
+                  className="flex items-center gap-3 cursor-pointer group/saveduser" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewProfile && onViewProfile(post.userId || post.username);
+                  }}
+                >
                   <img
                     src={post.avatar}
                     alt={post.name}
@@ -139,10 +145,10 @@ export default function SavedView({
                   />
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-white hover:text-violet-300 transition-colors">{post.name}</span>
+                      <span className="text-xs font-bold text-white group-hover/saveduser:underline transition-colors">{post.name}</span>
                       {post.isVerified && <PurpleVerifiedBadge className="w-3.5 h-3.5" type="founder" />}
                     </div>
-                    <span className="text-[10px] font-mono text-zinc-500">@{post.username} &bull; <RelativeTimestamp timestamp={post.timestamp} /></span>
+                    <span className="text-[10px] font-mono text-zinc-500 group-hover/saveduser:underline">@{post.username} &bull; <RelativeTimestamp timestamp={post.timestamp} /></span>
                   </div>
                 </div>
 

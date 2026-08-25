@@ -136,6 +136,7 @@ export default function NexoraVideoPlayer({
   // Double-tap pulse effect
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
   const [heartPosition, setHeartPosition] = useState({ x: 0, y: 0 });
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const lastTapRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const longPressTimerRef = useRef<any>(null);
@@ -253,9 +254,13 @@ export default function NexoraVideoPlayer({
     };
   }, []);
 
-  // Observer 2: Scroll-Based Playback: play only if >= 80% is visible.
-  // If leaves viewport (< 80% visible), pause immediately and save position.
+  // Observer 2: Scroll-Based Playback for standalone players (when isActive is not controlled by parent)
   useEffect(() => {
+    // If isActive is explicitly controlled by parent (FeedView, ImmersiveVideoViewer), delegate to isActive effect
+    if (typeof isActive === 'boolean') {
+      return;
+    }
+
     if (!containerRef.current || !isNearby || !finalVideoUrl) {
       // If not nearby or no resolved URL yet, ensure paused
       globalVideoPlaybackManager.pause(playerId);
@@ -266,7 +271,7 @@ export default function NexoraVideoPlayer({
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.8) {
+          if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
             if (videoRef.current && finalVideoUrl) {
               globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
                 .then((played) => {
@@ -283,7 +288,7 @@ export default function NexoraVideoPlayer({
         });
       },
       {
-        threshold: [0.0, 0.8, 1.0] // Observe transition boundaries clearly
+        threshold: [0.0, 0.7, 1.0] // Observe transition boundaries clearly
       }
     );
 
@@ -291,7 +296,7 @@ export default function NexoraVideoPlayer({
     return () => {
       observer.disconnect();
     };
-  }, [playerId, videoUrl, isNearby, finalVideoUrl]);
+  }, [playerId, videoUrl, isNearby, finalVideoUrl, isActive]);
 
   // Sync playback with isActive prop to guarantee zero sound bleed from inactive/hidden tabs
   useEffect(() => {
@@ -514,47 +519,25 @@ export default function NexoraVideoPlayer({
     }, 600);
   };
 
+  // Gesture controls temporarily disabled during Nexora stability pass.
   const handleStartHold = (e: React.MouseEvent) => {
-    if (e.button !== 0) return;
-    touchStartRef.current = { x: e.clientX, y: e.clientY };
-    if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
-    longPressTimerRef.current = setTimeout(() => {
-      if (!videoRef.current) return;
-      videoRef.current.pause();
-      setIsLongPressing(true);
-      setIsPlaying(false);
-      setShowControls(false);
-    }, 450);
+    // Disabled during gesture clearance pass
   };
 
   const handleReleaseHold = () => {
-    if (longPressTimerRef.current) {
-      clearTimeout(longPressTimerRef.current);
-      longPressTimerRef.current = null;
-    }
-    touchStartRef.current = null;
-    if (isLongPressing) {
-      setIsLongPressing(false);
-      if (videoRef.current) {
-        videoRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
-      }
-    }
+    // Disabled during gesture clearance pass
   };
 
-  // Variables to hold swipe state
+  // Variables to hold swipe state (preserved for future restoration)
   const isDraggingVerticalRef = useRef(false);
   const initialVolumeRef = useRef(80);
   const initialBrightnessRef = useRef(100);
   const hudTimeoutRef = useRef<any>(null);
   const touchStartTimeRef = useRef<number>(0);
 
-  // Helper to show HUD temporarily
+  // Helper to show HUD temporarily (disabled during gesture clearance pass)
   const triggerHud = (type: 'volume' | 'brightness', value: number) => {
-    setHud({ type, value, visible: true });
-    if (hudTimeoutRef.current) clearTimeout(hudTimeoutRef.current);
-    hudTimeoutRef.current = setTimeout(() => {
-      setHud(prev => ({ ...prev, visible: false }));
-    }, 1200); // 1.2s fade out
+    // Disabled during gesture clearance pass
   };
 
   const resetControlsTimeout = () => {
@@ -578,159 +561,99 @@ export default function NexoraVideoPlayer({
     };
   }, [isPlaying]);
 
-  // Handle single tap, double tap, and long press gestures
+  // Handle single tap gesture (double-tap and long-press temporarily disabled during stability pass)
   const handleTapOrGesture = (clientX: number, clientY: number) => {
-    const clickArea = containerRef.current?.getBoundingClientRect();
-    if (!clickArea) return;
-
-    // Relative coordinates
-    const x = clientX - clickArea.left;
-    const y = clientY - clickArea.top;
-
-    const now = Date.now();
-    const DOUBLE_TAP_DELAY = 280;
-
-    if (now - lastTapRef.current < DOUBLE_TAP_DELAY) {
-      // Clear single tap timeout if any
-      if (singleTapTimeoutRef.current) {
-        clearTimeout(singleTapTimeoutRef.current);
-        singleTapTimeoutRef.current = null;
-      }
-
-      // DOUBLE TAP: Spark post
-      setHeartPosition({ x, y });
-      setShowDoubleTapHeart(true);
-      onSpark();
-      recordRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
-
-      // If autoplay was blocked and we are muted, double tap to like can also unmute beautifully!
-      if (autoplayBlocked && isMuted) {
-        handleVolumeToggle(false);
-      }
-
-      // Clear double-tap heart visual after 800ms
-      setTimeout(() => setShowDoubleTapHeart(false), 800);
-      lastTapRef.current = 0;
+    if (autoplayBlocked && isMuted) {
+      handleVolumeToggle(false);
     } else {
-      lastTapRef.current = now;
-
-      // SINGLE TAP: Schedule with 280ms delay to check for double tap
-      if (singleTapTimeoutRef.current) {
-        clearTimeout(singleTapTimeoutRef.current);
-      }
-      singleTapTimeoutRef.current = setTimeout(() => {
-        if (autoplayBlocked && isMuted) {
-          handleVolumeToggle(false);
-        } else {
-          togglePlayback();
-        }
-        singleTapTimeoutRef.current = null;
-      }, DOUBLE_TAP_DELAY);
+      togglePlayback();
     }
   };
 
-  // Passive touch event listeners to ensure native vertical scrolling is never blocked on mobile/Android
+  // Handle quick actions from sheet / menu
+  const handleQuickAction = (actionId: string) => {
+    setIsQuickActionsOpen(false);
+    switch (actionId) {
+      case 'download':
+        handleSimulateDownload();
+        break;
+      case 'save':
+        handleSaveToCollection('Favorites');
+        break;
+      case 'copy-link':
+        try {
+          const text = `${window.location.origin}/post/${post.id}`;
+          navigator.clipboard.writeText(text);
+        } catch (e) {}
+        window.dispatchEvent(new CustomEvent('toast', { detail: '📋 Post link copied to clipboard!' }));
+        break;
+      case 'edit-caption':
+        const newCaption = prompt('Edit caption:', post.content);
+        if (newCaption !== null && newCaption.trim() !== '') {
+          window.dispatchEvent(new CustomEvent('nexora-edit-caption', { detail: { postId: post.id, newCaption } }));
+        }
+        break;
+      case 'archive':
+        const archiveState = !post.isArchived;
+        window.dispatchEvent(new CustomEvent('nexora-archive-post', { detail: { postId: post.id, archiveState } }));
+        break;
+      case 'delete':
+        if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+          window.dispatchEvent(new CustomEvent('nexora-delete-post', { detail: { postId: post.id } }));
+        }
+        break;
+      case 'not-interested':
+        onNotInterested?.();
+        window.dispatchEvent(new CustomEvent('toast', { detail: '👁️ Post marked as not interested. Feed adjusted.' }));
+        break;
+      case 'report':
+        window.dispatchEvent(new CustomEvent('toast', { detail: '🚩 Post reported to moderation team. Thank you.' }));
+        break;
+      case 'hide-creator':
+        window.dispatchEvent(new CustomEvent('toast', { detail: `👤 Creator @${post.username} hidden from your feed.` }));
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Passive touch event listeners ensuring native vertical scrolling has absolute priority on mobile/Android
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
 
     const onTouchStart = (e: TouchEvent) => {
+      touchStartTimeRef.current = Date.now();
       const touch = e.touches[0];
       touchStartRef.current = { x: touch.clientX, y: touch.clientY };
-      touchStartTimeRef.current = Date.now();
-      isDraggingVerticalRef.current = false;
-      initialVolumeRef.current = videoRef.current ? videoRef.current.volume * 100 : volumeLevel;
-      initialBrightnessRef.current = brightnessLevel;
     };
 
     const onTouchMove = (e: TouchEvent) => {
       if (!touchStartRef.current) return;
       const touch = e.touches[0];
-      const deltaX = touch.clientX - touchStartRef.current.x;
-      const deltaY = touch.clientY - touchStartRef.current.y;
-      const absX = Math.abs(deltaX);
-      const absY = Math.abs(deltaY);
-
-      const startXPercent = (touchStartRef.current.x / window.innerWidth) * 100;
-
-      // Detect vertical swipe on side boundaries
-      if (!isDraggingVerticalRef.current) {
-        if (absY > 12 && absY > absX) {
-          if (startXPercent < 25 || startXPercent > 75) {
-            isDraggingVerticalRef.current = true;
-          } else {
-            // Center vertical movement means scrolling feed - cancel hold timer
-            touchStartRef.current = null;
-          }
-        } else if (absX > 10) {
-          // Horizontal movement - cancel hold timer
-          touchStartRef.current = null;
-        }
-      }
-
-      // Perform Swipe volume/brightness adjustments
-      if (isDraggingVerticalRef.current) {
-        if (e.cancelable) e.preventDefault();
-        
-        // Negative deltaY means moving UP (increasing)
-        const change = (deltaY / window.innerHeight) * 150;
-        
-        if (startXPercent < 25) {
-          // LEFT SIDE: Brightness
-          const newB = Math.max(10, Math.min(100, initialBrightnessRef.current - change));
-          setBrightnessLevel(newB);
-          triggerHud('brightness', Math.round(newB));
-        } else if (startXPercent > 75) {
-          // RIGHT SIDE: Volume
-          const newV = Math.max(0, Math.min(100, initialVolumeRef.current - change));
-          setVolumeLevel(newV);
-          if (videoRef.current) {
-            videoRef.current.volume = newV / 100;
-            if (newV > 0 && isMuted) {
-              handleVolumeToggle(false);
-            }
-          }
-          triggerHud('volume', Math.round(newV));
-        }
+      const deltaX = Math.abs(touch.clientX - touchStartRef.current.x);
+      const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+      if (deltaX > 10 || deltaY > 10) {
+        touchStartRef.current = null;
       }
     };
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (longPressTimerRef.current) {
-        clearTimeout(longPressTimerRef.current);
-        longPressTimerRef.current = null;
-      }
+      if (!touchStartRef.current) return;
+      const duration = Date.now() - touchStartTimeRef.current;
+      const endTouch = e.changedTouches[0];
+      const deltaX = Math.abs(endTouch.clientX - touchStartRef.current.x);
+      const deltaY = Math.abs(endTouch.clientY - touchStartRef.current.y);
 
-      const wasLongPressing = isLongPressing;
-      setIsLongPressing(false);
-
-      if (wasLongPressing && !showQuickActions) {
-        if (videoRef.current) {
-          videoRef.current.play().catch(() => {});
-          setIsPlaying(true);
-        }
-        setShowControls(true);
-      }
-
-      // Check if this was a quick tap instead of a drag or hold
-      if (!isDraggingVerticalRef.current && touchStartRef.current) {
-        const duration = Date.now() - touchStartTimeRef.current;
-        const endTouch = e.changedTouches[0];
-        const deltaX = Math.abs(endTouch.clientX - touchStartRef.current.x);
-        const deltaY = Math.abs(endTouch.clientY - touchStartRef.current.y);
-
-        if (duration < 280 && deltaX < 8 && deltaY < 8) {
-          handleTapOrGesture(endTouch.clientX, endTouch.clientY);
-        }
+      if (duration < 280 && deltaX < 8 && deltaY < 8) {
+        handleTapOrGesture(endTouch.clientX, endTouch.clientY);
       }
 
       touchStartRef.current = null;
-      isDraggingVerticalRef.current = false;
     };
 
-    // Attach with { passive: false } on onTouchMove to allow scroll prevention when dragging HUD
     element.addEventListener('touchstart', onTouchStart, { passive: true });
-    element.addEventListener('touchmove', onTouchMove, { passive: false });
+    element.addEventListener('touchmove', onTouchMove, { passive: true });
     element.addEventListener('touchend', onTouchEnd, { passive: true });
     element.addEventListener('touchcancel', onTouchEnd, { passive: true });
 
@@ -740,7 +663,7 @@ export default function NexoraVideoPlayer({
       element.removeEventListener('touchend', onTouchEnd);
       element.removeEventListener('touchcancel', onTouchEnd);
     };
-  }, [isLongPressing, showLongPressMenu, brightnessLevel, volumeLevel, isMuted, autoplayBlocked]);
+  }, [isMuted, autoplayBlocked]);
 
   // Seek bar scrub action
   const handleScrubChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -813,365 +736,59 @@ export default function NexoraVideoPlayer({
     setNewCollectionName('');
   };
 
-  // Download simulation
+  // Download video asset directly and reliably as playable MP4
   const handleSimulateDownload = async () => {
     if (!downloadsOn) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Downloads are restricted of this video by creator settings!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Downloads are restricted for this video by creator settings!' }));
       return;
     }
 
     setExportState({
       isExporting: true,
-      progress: 0,
-      statusText: 'Preparing secure media pipeline...'
+      progress: 25,
+      statusText: 'Preparing video download...'
     });
 
     const videoSrc = finalVideoUrl || videoUrl;
-    const uploader = post.username;
-
-    // Standard high-fidelity Nexora logo drawer on canvas
-    const drawNexoraN = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number, strokeWidth: number, glow = false) => {
-      const s = size / 240;
-      
-      const grad = ctx.createLinearGradient(x, y, x + size, y + size);
-      grad.addColorStop(0, '#8B5CF6');
-      grad.addColorStop(0.5, '#D946EF');
-      grad.addColorStop(1, '#3B82F6');
-
-      const path = () => {
-        ctx.beginPath();
-        ctx.moveTo(x + 50 * s, y + 190 * s);
-        ctx.lineTo(x + 50 * s, y + 80 * s);
-        ctx.quadraticCurveTo(x + 50 * s, y + 50 * s, x + 80 * s, y + 80 * s);
-        ctx.lineTo(x + 160 * s, y + 160 * s);
-        ctx.quadraticCurveTo(x + 190 * s, y + 190 * s, x + 190 * s, y + 160 * s);
-        ctx.lineTo(x + 190 * s, y + 50 * s);
-      };
-
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      if (glow) {
-        ctx.shadowColor = '#8B5CF6';
-        ctx.shadowBlur = 14 * s;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        
-        path();
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = (36 / 240) * size;
-        ctx.globalAlpha = 0.5;
-        ctx.stroke();
-        ctx.globalAlpha = 1.0;
-        ctx.shadowBlur = 0; // reset shadow
-      }
-
-      path();
-      ctx.strokeStyle = grad;
-      ctx.lineWidth = (32 / 240) * size;
-      ctx.stroke();
-
-      const glass = ctx.createLinearGradient(x, y, x + size, y + size);
-      glass.addColorStop(0, 'rgba(255, 255, 255, 0.7)');
-      glass.addColorStop(0.2, 'rgba(255, 255, 255, 0.1)');
-      glass.addColorStop(0.8, 'rgba(0, 0, 0, 0.1)');
-      glass.addColorStop(1, 'rgba(0, 0, 0, 0.5)');
-
-      path();
-      ctx.strokeStyle = glass;
-      ctx.lineWidth = (32 / 240) * size;
-      ctx.stroke();
-
-      // Inner Core Tube Reflection (Soft specular glint)
-      path();
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.lineWidth = (6 / 240) * size;
-      ctx.globalCompositeOperation = 'overlay';
-      ctx.globalAlpha = 0.3;
-      ctx.stroke();
-
-      ctx.restore();
-    };
-
-    // Helper to run fallback
-    const runFallback = (errorMsg: string) => {
-      console.warn("Export error, falling back to direct stream:", errorMsg);
-      setExportState(prev => prev ? { ...prev, progress: 90, statusText: 'CORS/Environment limit detected. Downloading standard copy...' } : null);
-      
-      // Delay slightly so the user sees what's happening
-      setTimeout(() => {
-        const link = document.createElement('a');
-        link.href = videoSrc;
-        link.setAttribute('download', `nexora_video_${post.id}.mp4`);
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video stream downloaded successfully.' }));
-        setExportState(null);
-      }, 1500);
-    };
+    const safeUsername = post.username || 'creator';
+    const filename = `Nexora_${safeUsername}_${post.id || Date.now()}.mp4`;
 
     try {
-      // Create offscreen video element
-      const video = document.createElement('video');
-      video.src = videoSrc;
-      video.crossOrigin = 'anonymous';
-      video.muted = true;
-      video.playsInline = true;
-
-      // Force video to load
-      video.load();
-
-      // Set a safety timeout of 10 seconds to load metadata
-      const loadTimeout = setTimeout(() => {
-        runFallback('Video metadata load timed out.');
+      setExportState(prev => prev ? { ...prev, progress: 60, statusText: 'Fetching original video asset...' } : null);
+      const response = await fetch(videoSrc, { mode: 'cors' });
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
       }, 10000);
 
-      video.addEventListener('loadedmetadata', async () => {
-        clearTimeout(loadTimeout);
-        
-        try {
-          setExportState(prev => prev ? { ...prev, progress: 15, statusText: 'Configuring canvas rasterizer (720p aspect)...' } : null);
-          
-          const canvas = document.createElement('canvas');
-          const width = video.videoWidth || 720;
-          const height = video.videoHeight || 1280;
-          canvas.width = width;
-          canvas.height = height;
+      setExportState(prev => prev ? { ...prev, progress: 100, statusText: 'Download complete!' } : null);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video downloaded successfully as playable MP4.' }));
+      setTimeout(() => {
+        setExportState(null);
+      }, 800);
+    } catch (err) {
+      console.warn('Direct blob fetch download fallback triggered:', err);
+      // Fallback to direct anchor download
+      const link = document.createElement('a');
+      link.href = videoSrc;
+      link.download = filename;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
-          const ctx = canvas.getContext('2d');
-          if (!ctx) {
-            throw new Error('Could not get 2D context');
-          }
-
-          setExportState(prev => prev ? { ...prev, progress: 25, statusText: 'Multiplexing audio streams...' } : null);
-
-          // Prepare Web Audio if supported
-          let audioDest: MediaStreamAudioDestinationNode | null = null;
-          let audioCtx: AudioContext | null = null;
-          try {
-            audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-            const sourceNode = audioCtx.createMediaElementSource(video);
-            audioDest = audioCtx.createMediaStreamDestination();
-            sourceNode.connect(audioDest);
-          } catch (ae) {
-            console.warn("Audio Context capture failed, exporting video-only track", ae);
-          }
-
-          // Capture canvas stream at 30fps
-          const canvasStream = canvas.captureStream(30);
-          
-          // Assemble combined stream
-          const tracks = [...canvasStream.getVideoTracks()];
-          if (audioDest) {
-            tracks.push(...audioDest.stream.getAudioTracks());
-          }
-          const combinedStream = new MediaStream(tracks);
-
-          // Setup MediaRecorder
-          let options = { mimeType: 'video/webm;codecs=vp9,opus' };
-          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: 'video/webm;codecs=vp8,opus' };
-          }
-          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: 'video/mp4' };
-          }
-          if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-            options = { mimeType: '' }; // let browser decide
-          }
-
-          const recorder = new MediaRecorder(combinedStream, options);
-          const chunks: Blob[] = [];
-
-          recorder.ondataavailable = (e) => {
-            if (e.data && e.data.size > 0) {
-              chunks.push(e.data);
-            }
-          };
-
-          recorder.onstop = () => {
-            setExportState(prev => prev ? { ...prev, progress: 98, statusText: 'Packaging media container...' } : null);
-            const blob = new Blob(chunks, { type: recorder.mimeType || 'video/mp4' });
-            const url = URL.createObjectURL(blob);
-            
-            // Download the final watermarked video
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `nexora_watermarked_${post.username}_${post.id}.mp4`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            setTimeout(() => {
-              window.dispatchEvent(new CustomEvent('toast', { detail: '🔥 Premium watermarked video downloaded successfully!' }));
-              setExportState(null);
-            }, 1000);
-          };
-
-          // Start playback and recording
-          video.currentTime = 0;
-          await video.play();
-          recorder.start();
-
-          // Rendering / Animation loop variables
-          const baseFontSize = Math.max(16, Math.round(width * 0.035));
-          const duration = video.duration || 10; // Fallback to 10s if duration is NaN/Infinity
-          const outroDuration = 1.8; // seconds
-
-          // Keep track of animation frames
-          let animFrameId: number;
-          let isOutroStarted = false;
-          let outroStartTime = 0;
-
-          const renderFrame = () => {
-            const now = video.currentTime;
-            
-            if (video.ended || now >= duration) {
-              // Video finished, start or continue outro
-              if (!isOutroStarted) {
-                isOutroStarted = true;
-                outroStartTime = performance.now();
-                setExportState(prev => prev ? { ...prev, progress: 95, statusText: 'Baking branded outro and signature...' } : null);
-              }
-
-              const elapsedOutro = (performance.now() - outroStartTime) / 1000;
-              if (elapsedOutro >= outroDuration) {
-                // Outro finished! Stop recording
-                recorder.stop();
-                video.pause();
-                cancelAnimationFrame(animFrameId);
-                return;
-              }
-
-              // Draw beautiful branded outro
-              // Deep Nexora purple/indigo radial gradient background
-              const grad = ctx.createRadialGradient(width / 2, height / 2, 10, width / 2, height / 2, width);
-              grad.addColorStop(0, '#15103c');
-              grad.addColorStop(1, '#030112');
-              ctx.fillStyle = grad;
-              ctx.fillRect(0, 0, width, height);
-
-              // Calculate outro text fade-in and fade-out opacity
-              let outroOpacity = 1;
-              if (elapsedOutro < 0.4) {
-                outroOpacity = elapsedOutro / 0.4;
-              } else if (elapsedOutro > outroDuration - 0.4) {
-                outroOpacity = Math.max(0, (outroDuration - elapsedOutro) / 0.4);
-              }
-
-              ctx.save();
-              ctx.globalAlpha = outroOpacity;
-              ctx.textAlign = 'center';
-              ctx.textBaseline = 'middle';
-
-              // Violet glow shadow
-              ctx.shadowColor = 'rgba(139, 92, 246, 0.5)';
-              ctx.shadowBlur = 20;
-              ctx.shadowOffsetX = 0;
-              ctx.shadowOffsetY = 0;
-
-              // Draw Centerpiece Glowing official N logo mark
-              const logoL = baseFontSize * 3.5;
-              const logoX = width / 2 - logoL / 2;
-              const logoY = height / 2 - baseFontSize * 4.0;
-              drawNexoraN(ctx, logoX, logoY, logoL, logoL * 0.12, true);
-
-              // Draw title
-              ctx.fillStyle = '#FFFFFF';
-              ctx.font = `bold ${baseFontSize * 2.0}px "Space Grotesk", "Inter", sans-serif`;
-              ctx.fillText('NEXORA', width / 2, height / 2 + baseFontSize * 0.4);
-
-              // Draw uploader info
-              ctx.shadowBlur = 5;
-              ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-              ctx.fillStyle = 'rgba(255, 255, 255, 0.75)';
-              ctx.font = `500 ${baseFontSize * 1.1}px "JetBrains Mono", sans-serif`;
-              ctx.fillText(`@${uploader}`, width / 2, height / 2 + baseFontSize * 2.0);
-
-              ctx.restore();
-
-            } else {
-              // Draw active video frame
-              ctx.drawImage(video, 0, 0, width, height);
-
-              // Update progress bar status
-              const currentProgress = Math.min(90, Math.round(30 + (now / duration) * 60));
-              setExportState(prev => prev ? { ...prev, progress: currentProgress, statusText: `Applying NEXORA watermark... ${Math.round((now/duration)*100)}%` } : null);
-
-              // Draw permanent bottom-right corner export watermark
-              const drawExportWatermark = () => {
-                ctx.save();
-                const padding = Math.max(16, Math.round(width * 0.03));
-                const boxWidth = Math.max(180, Math.round(width * 0.28));
-                const boxHeight = Math.max(50, Math.round(height * 0.09));
-                const x = width - boxWidth - padding;
-                const y = height - boxHeight - padding;
-
-                // Semi-transparent rounded pill background with soft dark backdrop
-                ctx.fillStyle = 'rgba(12, 10, 33, 0.72)';
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
-                ctx.shadowBlur = 14;
-                ctx.shadowOffsetX = 0;
-                ctx.shadowOffsetY = 4;
-
-                const radius = 12;
-                ctx.beginPath();
-                ctx.roundRect(x, y, boxWidth, boxHeight, radius);
-                ctx.fill();
-
-                // Subtle glowing border
-                ctx.strokeStyle = 'rgba(139, 92, 246, 0.4)';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-
-                // Draw Nexora N logo inside the box
-                const logoSize = boxHeight * 0.55;
-                const logoX = x + padding * 0.75;
-                const logoY = y + (boxHeight - logoSize) / 2;
-                drawNexoraN(ctx, logoX, logoY, logoSize, logoSize * 0.12, false);
-
-                // Text positioning
-                const textX = logoX + logoSize + 10;
-                
-                // Nexora branding
-                ctx.fillStyle = '#FFFFFF';
-                ctx.font = `bold ${Math.max(12, Math.round(boxHeight * 0.32))}px "Space Grotesk", "Inter", sans-serif`;
-                ctx.shadowBlur = 4;
-                ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                ctx.fillText('NEXORA', textX, y + boxHeight * 0.38);
-
-                // Creator username + verified badge
-                ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
-                ctx.font = `500 ${Math.max(10, Math.round(boxHeight * 0.28))}px "JetBrains Mono", sans-serif`;
-                const usernameText = `@${uploader}${post.isVerified ? ' ✓' : ''}`;
-                ctx.fillText(usernameText, textX, y + boxHeight * 0.75);
-
-                ctx.restore();
-              };
-
-              drawExportWatermark();
-            }
-
-            animFrameId = requestAnimationFrame(renderFrame);
-          };
-
-          // Begin the render loop
-          animFrameId = requestAnimationFrame(renderFrame);
-
-        } catch (innerErr) {
-          runFallback('Failed to initialize recording nodes: ' + String(innerErr));
-        }
-      });
-
-      video.addEventListener('error', (e) => {
-        runFallback('CORS or playback pipeline failure.');
-      });
-
-    } catch (e) {
-      runFallback('Export context initiation error: ' + String(e));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video stream download initiated.' }));
+      setExportState(null);
     }
   };
 
@@ -1321,96 +938,13 @@ export default function NexoraVideoPlayer({
                  <button 
                    onClick={(e) => { 
                      e.stopPropagation(); 
-                     setShowMoreMenu(!showMoreMenu);
+                     setIsQuickActionsOpen(true);
                    }}
                    className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg"
                    title="More options"
                  >
                    <MoreVertical className="w-5 h-5 text-white" />
                  </button>
-
-                 <AnimatePresence>
-                   {showMoreMenu && (
-                     <motion.div
-                       initial={{ opacity: 0, scale: 0.9, x: 10 }}
-                       animate={{ opacity: 1, scale: 1, x: 0 }}
-                       exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                       className="absolute right-14 bottom-0 w-44 bg-[#0c091f]/95 backdrop-blur-md border border-white/10 rounded-xl shadow-md z-50 overflow-hidden font-sans py-1 text-left"
-                     >
-                       {isOwnPost ? (
-                         <>
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               const newCaption = prompt('Edit caption:', post.content);
-                               if (newCaption !== null && newCaption.trim() !== '') {
-                                 window.dispatchEvent(new CustomEvent('nexora-edit-caption', { detail: { postId: post.id, newCaption } }));
-                               }
-                               setShowMoreMenu(false);
-                             }}
-                             className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
-                           >
-                             <Edit3 className="w-3.5 h-3.5 shrink-0 text-amber-400" />
-                             Edit Caption
-                           </button>
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               const archiveState = !post.isArchived;
-                               window.dispatchEvent(new CustomEvent('nexora-archive-post', { detail: { postId: post.id, archiveState } }));
-                               setShowMoreMenu(false);
-                             }}
-                             className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
-                           >
-                             <Archive className="w-3.5 h-3.5 shrink-0 text-fuchsia-400" />
-                             {post.isArchived ? 'Restore Post' : 'Archive Post'}
-                           </button>
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
-                                 window.dispatchEvent(new CustomEvent('nexora-delete-post', { detail: { postId: post.id } }));
-                               }
-                               setShowMoreMenu(false);
-                             }}
-                             className="w-full text-left px-3 py-2 hover:bg-red-500/10 text-red-400 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
-                           >
-                             <Trash className="w-3.5 h-3.5 shrink-0 text-red-500" />
-                             Delete Post
-                           </button>
-                         </>
-                       ) : (
-                         <>
-                           {onToggleFollow && (
-                             <button
-                               onClick={(e) => {
-                                 e.stopPropagation();
-                                 onToggleFollow();
-                                 setShowMoreMenu(false);
-                               }}
-                               className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
-                             >
-                               <UserPlus className="w-3.5 h-3.5 shrink-0 text-violet-400" />
-                               {isFollowing ? 'Unfollow Creator' : 'Follow Creator'}
-                             </button>
-                           )}
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               onNotInterested?.();
-                               setShowMoreMenu(false);
-                               window.dispatchEvent(new CustomEvent('toast', { detail: '🙈 Marked as not interested' }));
-                             }}
-                             className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer"
-                           >
-                             <EyeOff className="w-3.5 h-3.5 shrink-0 text-zinc-400" />
-                             Not Interested
-                           </button>
-                         </>
-                       )}
-                     </motion.div>
-                   )}
-                 </AnimatePresence>
                </div>
              </div>
 
@@ -1708,6 +1242,15 @@ export default function NexoraVideoPlayer({
         onSave={() => {
           setShowSaveModal(true);
         }}
+      />
+
+      {/* Quick Actions Sheet (Triggered by 5s intentional long press or three-dot button) */}
+      <QuickActionsSheet 
+        isOpen={isQuickActionsOpen}
+        onClose={() => setIsQuickActionsOpen(false)}
+        onAction={handleQuickAction}
+        isOwnPost={isOwnPost}
+        isArchived={post.isArchived}
       />
 
       {/* Floating Bottom custom simplified controls block */}

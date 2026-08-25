@@ -216,7 +216,7 @@ export default function PrivacySettingsModal({
     { id: 'rep-1', target: 'Zane Malicious', type: 'Spam', status: 'Approved (Blocked)', date: 'May 12, 2026' }
   ]);
   const [loginHistory, setLoginHistory] = useState<any[]>([
-    { id: 'lh-1', device: 'Nexora Web Client v2.4 (Chrome/Linux)', location: 'London, UK', ip: '82.165.12.98', status: 'Active Now', date: 'Jul 10, 2026 13:33' },
+    { id: 'lh-1', device: 'Nexora Web Client (Chrome)', location: 'London, UK', ip: '82.165.12.98', status: 'Active Now', date: 'Jul 10, 2026 13:33' },
     { id: 'lh-2', device: 'Nexora Mobile App (iOS 19)', location: 'Paris, France', ip: '193.56.24.11', status: 'Authorized Session', date: 'Jul 08, 2026 10:15' }
   ]);
   const [suspiciousActivity, setSuspiciousActivity] = useState<any[]>([
