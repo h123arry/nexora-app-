@@ -193,11 +193,15 @@ export default function App() {
     return saved === 'true';
   });
 
+  const [isPostsHydrated, setIsPostsHydrated] = useState(false);
+
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
+  const [authPromptReason, setAuthPromptReason] = useState<string>('Join Nexora to like, comment, follow creators, and personalize your experience.');
 
-  const requireAuth = (action: () => void) => {
+  const requireAuth = (action: () => void, reason = 'Join Nexora to like, comment, follow creators, and personalize your experience.') => {
     if (!isLoggedIn) {
+      setAuthPromptReason(reason);
       setPendingAuthAction(() => action);
       setShowAuthModal(true);
       window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Sign in or create an account to perform this action.' }));
@@ -283,38 +287,34 @@ export default function App() {
     let unsubUsers: () => void;
     let unsubFollows: () => void;
 
-    console.log('[App] Setting up onAuthStateChanged listener...');
+    console.log('[App] Subscribing to public posts and user directory...');
+    unsubPosts = subscribeToPosts((dbPosts) => {
+      console.log('[App] Received posts:', dbPosts?.length || 0);
+      if (dbPosts) {
+        setPosts(normalizePosts(dbPosts));
+      }
+      setIsPostsHydrated(true);
+    });
+
+    unsubUsers = subscribeToUsers((dbUsers) => {
+      console.log('[App] Received users:', dbUsers?.length || 0);
+      if (dbUsers) {
+        setGlobalUsersMap(prev => {
+          const newMap = { ...prev };
+          dbUsers.forEach(u => newMap[u.id] = u);
+          return newMap;
+        });
+      }
+    });
+
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
       console.log('[App] Auth state changed, user:', user ? user.uid : 'null');
-      
-      // Clean up previous listeners before creating new ones
-      if (unsubPosts) { unsubPosts(); }
-      if (unsubUsers) { unsubUsers(); }
       if (unsubFollows) { unsubFollows(); }
 
       if (user) {
-        console.log('[App] Subscribing to posts, users, follows...');
-        unsubPosts = subscribeToPosts((dbPosts) => {
-          console.log('[App] Received posts:', dbPosts?.length || 0);
-          if (dbPosts) {
-            setPosts(normalizePosts(dbPosts));
-          }
-        });
-        
-        unsubUsers = subscribeToUsers((dbUsers) => {
-          console.log('[App] Received users:', dbUsers?.length || 0);
-          if (dbUsers && dbUsers.length > 0) {
-            setGlobalUsersMap(prev => {
-              const newMap = { ...prev };
-              dbUsers.forEach(u => newMap[u.id] = u);
-              return newMap;
-            });
-          }
-        });
-
         unsubFollows = subscribeToFollows(user.uid, (dbFollows) => {
           console.log('[App] Received follows:', dbFollows?.length || 0);
-          if (dbFollows && dbFollows.length > 0) {
+          if (dbFollows) {
             localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
             const currentUserId = auth.currentUser?.uid || currentUser?.id;
             if (currentUserId) {
@@ -323,8 +323,6 @@ export default function App() {
             }
           }
         });
-      } else {
-        console.log('[App] User is logged out.');
       }
     });
 
@@ -341,7 +339,7 @@ export default function App() {
   useEffect(() => {
     if (!currentUser?.id) return;
     const unsubNotif = subscribeToNotifications(currentUser.id, (dbNotifs) => {
-      if (dbNotifs && dbNotifs.length > 0) {
+      if (dbNotifs) {
         setNotifications(dbNotifs);
       }
     });
@@ -719,6 +717,8 @@ export default function App() {
     }
 
     // 3. Modals & Overlays
+    if (isLogoutConfirming) { setIsLogoutConfirming(false); return true; }
+    if (verificationModalDetail) { setVerificationModalDetail(null); return true; }
     if (showAuthModal) { setShowAuthModal(false); setPendingAuthAction(null); return true; }
     if (isAiCommandCenterOpen) { setIsAiCommandCenterOpen(false); return true; }
     if (isCreatePostModalOpen) { setIsCreatePostModalOpen(false); return true; }
@@ -789,7 +789,7 @@ export default function App() {
     const handleOpenUniversalSearch = () => setIsUniversalSearchOpen(true);
     window.addEventListener('openUniversalSearch', handleOpenUniversalSearch);
     const handleViewProfileEvent = (e: any) => {
-      const target = e.detail?.userIdOrUsername;
+      const target = typeof e.detail === 'string' ? e.detail : (e.detail?.userIdOrUsername || e.detail?.userId);
       if (target) handleViewProfile(target);
     };
     window.addEventListener('nexora-view-profile', handleViewProfileEvent);
@@ -854,13 +854,6 @@ export default function App() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPWAInstallPrompt, setShowPWAInstallPrompt] = useState(false);
   const [pwaInstallStatus, setPwaInstallStatus] = useState<'idle' | 'installing' | 'installed' | 'not-supported'>('idle');
-
-  // Modal input state
-  const [modalContent, setModalContent] = useState('');
-  const [modalImage, setModalImage] = useState('');
-  const [modalTags, setModalTags] = useState('');
-  const [createdPostLink, setCreatedPostLink] = useState<string | null>(null);
-  const [isCopied, setIsCopied] = useState(false);
   const [verificationModalDetail, setVerificationModalDetail] = useState<{ type: string; tooltip: string } | null>(null);
 
   useEffect(() => {
@@ -872,21 +865,6 @@ export default function App() {
     window.addEventListener('show-voh-verification-modal', handleShowModal);
     return () => window.removeEventListener('show-voh-verification-modal', handleShowModal);
   }, []);
-
-  // Advanced Category Post options states
-  const [activePostType, setActivePostType] = useState<'text' | 'photo' | 'video' | 'voice' | 'poll' | 'article' | 'mission' | 'community' | 'pulse' | null>(null);
-  const [selectedAudience, setSelectedAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>('public');
-  const [addToWorldPulse, setAddToWorldPulse] = useState(true);
-  const [loadingAi, setLoadingAi] = useState(false);
-  const [voiceRecordingState, setVoiceRecordingState] = useState<'idle' | 'recording' | 'finished'>('idle');
-  const [voiceAudioLength, setVoiceAudioLength] = useState(0);
-  const [voiceTranscription, setVoiceTranscription] = useState('');
-  const [videoMuted, setVideoMuted] = useState(false);
-  const [videoTimer, setVideoTimer] = useState(15);
-  const [pollOptions, setPollOptions] = useState<string[]>(['', '']);
-  const [pollQuestion, setPollQuestion] = useState('');
-  const [missionTarget, setMissionTarget] = useState('');
-  const [pulseRegion, setPulseRegion] = useState('');
 
   // 2. Local Storage Persistence Synchronization sync
   useEffect(() => {
@@ -957,20 +935,6 @@ export default function App() {
         const follows = JSON.parse(localStorage.getItem('nexora_db_follows') || '[]');
         const userFollowing = follows.filter((f: any) => f.followerId === uid).map((f: any) => f.followingId);
         setFollowingIds(userFollowing);
-      }
-    }
-  }, [currentUser]);
-
-  useEffect(() => {
-    if (currentUser && currentUser.id) {
-      try {
-        const savedB = localStorage.getItem(`nexora_bookmarks_${currentUser.id}`);
-        setUserBookmarks(savedB ? JSON.parse(savedB) : []);
-        const savedS = localStorage.getItem(`nexora_sparks_${currentUser.id}`);
-        setUserSparks(savedS ? JSON.parse(savedS) : []);
-      } catch (e) {
-        setUserBookmarks([]);
-        setUserSparks([]);
       }
     } else {
       setUserBookmarks([]);
@@ -1359,59 +1323,63 @@ export default function App() {
 
   // 5. Shared Post Interact Controllers
   const handleLikePost = (postId: string) => {
-    const isCurrentlyLiked = userSparks.includes(postId);
-    const updatedSparks = isCurrentlyLiked
-      ? userSparks.filter(id => id !== postId)
-      : [...userSparks, postId];
-    
-    setUserSparks(updatedSparks);
+    requireAuth(() => {
+      const isCurrentlyLiked = userSparks.includes(postId);
+      const updatedSparks = isCurrentlyLiked
+        ? userSparks.filter(id => id !== postId)
+        : [...userSparks, postId];
+      
+      setUserSparks(updatedSparks);
 
-    setPosts(prevPosts => 
-      prevPosts.map(post => {
-        if (post.id === postId) {
-          const updatedLikes = isCurrentlyLiked ? post.likes - 1 : post.likes + 1;
-          savePostToDb({ ...post, likes: updatedLikes });
-          
-          // If liking, push interaction alert and record real spark
-          if (!isCurrentlyLiked && post.userId !== currentUser.id) {
-            addSparkDb(currentUser.id, post.userId, 'post', post.id);
+      setPosts(prevPosts => 
+        prevPosts.map(post => {
+          if (post.id === postId) {
+            const updatedLikes = isCurrentlyLiked ? post.likes - 1 : post.likes + 1;
+            savePostToDb({ ...post, likes: updatedLikes });
+            
+            // If liking, push interaction alert and record real spark
+            if (!isCurrentlyLiked && post.userId !== currentUser.id) {
+              addSparkDb(currentUser.id, post.userId, 'post', post.id);
 
-            const newNotif: Notification = {
-              id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-              type: 'like',
-              userId: currentUser.id,
-              username: currentUser.username,
-              avatar: currentUser.avatar,
-              targetId: post.id,
-              content: `liked your post: "${post.content.slice(0, 30)}..."`,
-              timestamp: new Date().toISOString(),
-              isRead: false
+              const newNotif: Notification = {
+                id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+                type: 'like',
+                userId: currentUser.id,
+                username: currentUser.username,
+                avatar: currentUser.avatar,
+                targetId: post.id,
+                content: `liked your post: "${post.content.slice(0, 30)}..."`,
+                timestamp: new Date().toISOString(),
+                isRead: false
+              };
+              setNotifications(prev => [newNotif, ...prev]);
+            }
+
+            return { 
+              ...post, 
+              likes: updatedLikes
             };
-            setNotifications(prev => [newNotif, ...prev]);
           }
-
-          return { 
-            ...post, 
-            likes: updatedLikes
-          };
-        }
-        return post;
-      })
-    );
+          return post;
+        })
+      );
+    }, 'Join Nexora to like posts, spark conversations, and interact with creators.');
   };
 
   const handleBookmarkPost = (postId: string) => {
-    const isCurrentlyBookmarked = userBookmarks.includes(postId);
-    const updatedBookmarks = isCurrentlyBookmarked
-      ? userBookmarks.filter(id => id !== postId)
-      : [...userBookmarks, postId];
-    
-    setUserBookmarks(updatedBookmarks);
-    
-    // Also dispatch update collections event
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('update-collections'));
-    }, 100);
+    requireAuth(() => {
+      const isCurrentlyBookmarked = userBookmarks.includes(postId);
+      const updatedBookmarks = isCurrentlyBookmarked
+        ? userBookmarks.filter(id => id !== postId)
+        : [...userBookmarks, postId];
+      
+      setUserBookmarks(updatedBookmarks);
+      
+      // Also dispatch update collections event
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('update-collections'));
+      }, 100);
+    }, 'Join Nexora to save and bookmark posts to your collections.');
   };
 
   const handleAddPost = (
@@ -1501,51 +1469,53 @@ export default function App() {
   };
 
   const handleAddComment = (postId: string, commentContent: string) => {
-    const newComment = {
-      id: `comment-${Date.now()}`,
-      postId,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      content: commentContent,
-      timestamp: new Date().toISOString(),
-      likes: 0
-    };
+    requireAuth(() => {
+      const newComment = {
+        id: `comment-${Date.now()}`,
+        postId,
+        userId: currentUser.id,
+        username: currentUser.username,
+        name: currentUser.name,
+        avatar: currentUser.avatar,
+        content: commentContent,
+        timestamp: new Date().toISOString(),
+        likes: 0
+      };
 
-    setPosts(prevPosts =>
-      prevPosts.map(p => {
-        if (p.id === postId) {
-          // Record comment activity event
-          addHelpfulCommentDb(currentUser.id, newComment.id, p.userId);
+      setPosts(prevPosts =>
+        prevPosts.map(p => {
+          if (p.id === postId) {
+            // Record comment activity event
+            addHelpfulCommentDb(currentUser.id, newComment.id, p.userId);
 
-          // Trigger notification to host of post (if not yourself)
-          if (p.userId !== currentUser.id) {
-            const newNotif: Notification = {
-              id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-              type: 'comment',
-              userId: currentUser.id,
-              username: currentUser.username,
-              avatar: currentUser.avatar,
-              targetId: p.id,
-              content: `commented on your post: "${commentContent.slice(0, 30)}..."`,
-              timestamp: new Date().toISOString(),
-              isRead: false
+            // Trigger notification to host of post (if not yourself)
+            if (p.userId !== currentUser.id) {
+              const newNotif: Notification = {
+                id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+                type: 'comment',
+                userId: currentUser.id,
+                username: currentUser.username,
+                avatar: currentUser.avatar,
+                targetId: p.id,
+                content: `commented on your post: "${commentContent.slice(0, 30)}..."`,
+                timestamp: new Date().toISOString(),
+                isRead: false
+              };
+              setNotifications(prev => [newNotif, ...prev]);
+            }
+
+            const updatedPost = {
+              ...p,
+              commentsCount: p.commentsCount + 1,
+              comments: [...p.comments, newComment]
             };
-            setNotifications(prev => [newNotif, ...prev]);
+            savePostToDb(updatedPost);
+            return updatedPost;
           }
-
-          const updatedPost = {
-            ...p,
-            commentsCount: p.commentsCount + 1,
-            comments: [...p.comments, newComment]
-          };
-          savePostToDb(updatedPost);
-          return updatedPost;
-        }
-        return p;
-      })
-    );
+          return p;
+        })
+      );
+    }, 'Join Nexora to comment on posts and join community discussions.');
   };
 
   const handleSharePost = (postId: string) => {
@@ -1567,55 +1537,57 @@ export default function App() {
 
   // 6. Messaging pipelines
   const handleSendMessage = (chatId: string, content: string) => {
-    const msgId = `msg-${Date.now()}`;
-    const newMsg: Message = {
-      id: msgId,
-      chatId,
-      senderId: currentUser.id,
-      content,
-      timestamp: new Date().toISOString(),
-      status: 'sent'
-    };
+    requireAuth(() => {
+      const msgId = `msg-${Date.now()}`;
+      const newMsg: Message = {
+        id: msgId,
+        chatId,
+        senderId: currentUser.id,
+        content,
+        timestamp: new Date().toISOString(),
+        status: 'sent'
+      };
 
-    setMessages(prev => ({
-      ...prev,
-      [chatId]: [...(prev[chatId] || []), newMsg]
-    }));
+      setMessages(prev => ({
+        ...prev,
+        [chatId]: [...(prev[chatId] || []), newMsg]
+      }));
 
-    setChats(prevChats =>
-      prevChats.map(c => {
-        if (c.id === chatId) {
+      setChats(prevChats =>
+        prevChats.map(c => {
+          if (c.id === chatId) {
+            return {
+              ...c,
+              lastMessage: content,
+              lastTimestamp: new Date().toISOString()
+            };
+          }
+          return c;
+        })
+      );
+
+      // Simulate transition to 'delivered' (double check)
+      setTimeout(() => {
+        setMessages(prev => {
+          const list = prev[chatId] || [];
           return {
-            ...c,
-            lastMessage: content,
-            lastTimestamp: new Date().toISOString()
+            ...prev,
+            [chatId]: list.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)
           };
-        }
-        return c;
-      })
-    );
+        });
+      }, 600);
 
-    // Simulate transition to 'delivered' (double check)
-    setTimeout(() => {
-      setMessages(prev => {
-        const list = prev[chatId] || [];
-        return {
-          ...prev,
-          [chatId]: list.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)
-        };
-      });
-    }, 600);
-
-    // Simulate transition to 'read' (cyan double check) when the receiver consumes the message
-    setTimeout(() => {
-      setMessages(prev => {
-        const list = prev[chatId] || [];
-        return {
-          ...prev,
-          [chatId]: list.map(m => m.id === msgId ? { ...m, status: 'read' } : m)
-        };
-      });
-    }, 1500);
+      // Simulate transition to 'read' (cyan double check) when the receiver consumes the message
+      setTimeout(() => {
+        setMessages(prev => {
+          const list = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: list.map(m => m.id === msgId ? { ...m, status: 'read' } : m)
+          };
+        });
+      }, 1500);
+    }, 'Join Nexora to send messages and chat directly with creators.');
   };
 
   const handleReceiveBotMessage = (chatId: string, content: string, senderId: string) => {
@@ -1666,38 +1638,40 @@ export default function App() {
 
   // 7. Discovery Align Switch
   const handleToggleFollow = (creatorId: string) => {
-    const isCurrentlyFollowing = followingIds.includes(creatorId);
-    let updatedFollowing: string[];
+    requireAuth(() => {
+      const isCurrentlyFollowing = followingIds.includes(creatorId);
+      let updatedFollowing: string[];
 
-    if (isCurrentlyFollowing) {
-      unfollowUserDb(currentUser.id, creatorId);
-      removeFollow(currentUser.id, creatorId).catch(console.warn);
-      updatedFollowing = followingIds.filter(id => id !== creatorId);
-    } else {
-      followUserDb(currentUser.id, creatorId);
-      addFollow(currentUser.id, creatorId).catch(console.warn);
-      updatedFollowing = [...followingIds, creatorId];
-      
-      // record recommendation follow event
-      const targetCreator = (Object.values(globalUsersMap) as User[]).find(c => c.id === creatorId);
-      if (targetCreator) {
-        recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
+      if (isCurrentlyFollowing) {
+        unfollowUserDb(currentUser.id, creatorId);
+        removeFollow(currentUser.id, creatorId).catch(console.warn);
+        updatedFollowing = followingIds.filter(id => id !== creatorId);
+      } else {
+        followUserDb(currentUser.id, creatorId);
+        addFollow(currentUser.id, creatorId).catch(console.warn);
+        updatedFollowing = [...followingIds, creatorId];
         
-        const newNotif: Notification = {
-          id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-          type: 'follow',
-          userId: targetCreator.id,
-          username: targetCreator.username,
-          avatar: targetCreator.avatar,
-          content: `joined your close friends circle with your studio channel.`,
-          timestamp: new Date().toISOString(),
-          isRead: false
-        };
-        setNotifications(prev => [newNotif, ...prev]);
+        // record recommendation follow event
+        const targetCreator = (Object.values(globalUsersMap) as User[]).find(c => c.id === creatorId);
+        if (targetCreator) {
+          recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
+          
+          const newNotif: Notification = {
+            id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+            type: 'follow',
+            userId: targetCreator.id,
+            username: targetCreator.username,
+            avatar: targetCreator.avatar,
+            content: `joined your close friends circle with your studio channel.`,
+            timestamp: new Date().toISOString(),
+            isRead: false
+          };
+          setNotifications(prev => [newNotif, ...prev]);
+        }
       }
-    }
 
-    setFollowingIds(updatedFollowing);
+      setFollowingIds(updatedFollowing);
+    }, 'Join Nexora to follow creators, build your network, and personalize your feed.');
   };
 
   const handleViewProfile = (userIdOrUsername: string) => {
@@ -1944,53 +1918,10 @@ export default function App() {
     setNotifications([]);
   };
 
-  // 10. Floating modal deployer submit
-  const handleDeployPost = (withShare: boolean) => {
-    if (!modalContent.trim()) return;
-
-    const newPostId = handleAddPost(modalContent, modalImage || undefined, modalTags);
-    const mockLink = `${window.location.origin}/post/${newPostId}`;
-    setCreatedPostLink(mockLink);
-    setIsCopied(false);
-
-    if (withShare) {
-      try {
-        navigator.clipboard.writeText(mockLink);
-        setIsCopied(true);
-        setTimeout(() => setIsCopied(false), 2000);
-      } catch (err) {
-        console.error("Failed to copy link: ", err);
-      }
-    }
-  };
-
-  const handleModalSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    handleDeployPost(false);
-  };
-
   const handleCloseCreateModal = () => {
     setIsCreatePostModalOpen(false);
-    setCreatedPostLink(null);
-    setIsCopied(false);
-    setModalContent('');
-    setModalImage('');
-    setModalTags('');
-
-    // Reset advanced sub-screen states
-    setActivePostType(null);
-    setSelectedAudience('public');
-    setAddToWorldPulse(true);
-    setLoadingAi(false);
-    setVoiceRecordingState('idle');
-    setVoiceAudioLength(0);
-    setVoiceTranscription('');
-    setVideoMuted(false);
-    setVideoTimer(15);
-    setPollOptions(['', '']);
-    setPollQuestion('');
-    setMissionTarget('');
-    setPulseRegion('');
+    setCreationInitialMode(null);
+    setCreationInitialTab(undefined);
   };
 
   // 11. Determine specific theme CSS configurations dynamically
@@ -2115,8 +2046,6 @@ export default function App() {
               setTheme={setTheme}
               onOpenCreatePost={() => {
                 requireAuth(() => {
-                  setCreatedPostLink(null);
-                  setIsCopied(false);
                   setCreationInitialMode(null);
                   setCreationInitialTab(undefined);
                   setIsCreateMenuOpen(true);
@@ -2145,6 +2074,7 @@ export default function App() {
               <FeedView creators={Object.values(globalUsersMap) as User[]}
                 currentUser={getRichUser(currentUser)}
                 posts={resolvedPosts}
+                isHydrated={isPostsHydrated}
                 followingIds={followingIds}
                 onLikePost={handleLikePost}
                 onBookmarkPost={handleBookmarkPost}
@@ -2386,913 +2316,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Legacy Create Modal - Deactivated */}
-      <AnimatePresence>
-        {false && isCreatePostModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={handleCloseCreateModal}
-              className="absolute inset-0 bg-slate-950/70 backdrop-blur-xs" 
-            />
-
-            {/* Modal Card content */}
-            <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className={`relative max-w-xl w-full rounded-3xl p-6 ${getCardClass(theme)} overflow-hidden z-10 max-h-[90vh] flex flex-col`}
-            >
-              {/* Header section of modal */}
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-current/5 shrink-0">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-xl bg-violet-600/10 text-violet-400">
-                    <Plus className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-sm font-sans font-black tracking-widest uppercase">
-                    {activePostType === null 
-                      ? 'Create Contribution' 
-                      : activePostType === 'text' ? '📝 Text Post'
-                      : activePostType === 'photo' ? '📸 Photo Post'
-                      : activePostType === 'video' ? '🎥 Video Workspace'
-                      : activePostType === 'voice' ? '🎙 Voice Composer'
-                      : activePostType === 'poll' ? '📊 Interactive Poll'
-                      : activePostType === 'article' ? '📄 Long-form Article'
-                      : activePostType === 'mission' ? '🎯 Community Mission'
-                      : activePostType === 'community' ? '🏟 Community Channel'
-                      : '🌍 Pulse Report'
-                    }
-                  </h3>
-                </div>
-                <button 
-                  onClick={handleCloseCreateModal}
-                  className="p-1.5 rounded-lg hover:bg-current/5 text-current/60 hover:text-current cursor-pointer transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Scrollable Modal Content body */}
-              <div className="flex-1 overflow-y-auto pr-1 space-y-4 text-left scrollbar-thin">
-                {createdPostLink ? (
-                  // Success Link State
-                  <div className="space-y-5 py-4 text-center">
-                    <div className="mx-auto w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center">
-                      <Check className="w-6 h-6 animate-bounce" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-sans font-black tracking-widest uppercase text-emerald-400">
-                        Post Successfully Shared!
-                      </h4>
-                      <p className="text-xs text-current/60 mt-1 font-sans">
-                        Your update is online and propagates across the Nexora mesh network.
-                      </p>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-current/5 border border-current/10 flex flex-col gap-2 text-left">
-                      <span className="text-[9px] font-mono uppercase text-current/40 tracking-wider">Shareable post address link</span>
-                      <div className="flex items-center gap-2 bg-black/40 rounded-xl p-2.5 border border-current/5">
-                        <input 
-                          type="text" 
-                          readOnly 
-                          value={createdPostLink} 
-                          className="flex-1 bg-transparent border-0 outline-hidden font-mono text-[11px] text-violet-300 w-full"
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => {
-                            try {
-                              navigator.clipboard.writeText(createdPostLink);
-                              setIsCopied(true);
-                              setTimeout(() => setIsCopied(false), 2000);
-                            } catch (err) {
-                              console.error(err);
-                            }
-                          }}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 text-violet-400 text-xs font-mono font-bold transition-all shrink-0 cursor-pointer"
-                        >
-                          {isCopied ? (
-                            <>
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                              COPIED
-                            </>
-                          ) : (
-                            <>
-                              <Forward className="w-3.5 h-3.5 text-current" />
-                              COPY LINK
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end pt-2">
-                      <button
-                        type="button"
-                        onClick={handleCloseCreateModal}
-                        className="px-6 py-2.5 text-xs font-mono font-bold rounded-xl bg-linear-to-r from-violet-600 to-pink-500 text-white hover:brightness-110 active:scale-98 transition-all cursor-pointer uppercase tracking-wider"
-                      >
-                        Complete Session
-                      </button>
-                    </div>
-                  </div>
-                ) : activePostType === null ? (
-                  // MENU SELECTION SCREEN (1st View)
-                  <div className="space-y-3 py-1">
-                    <p className="text-xs text-current/60 font-sans mb-4">
-                      Select one of NEXORA's unique formats to share your contribution with the grid:
-                    </p>
-                    
-                    <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
-                      {[
-                        { id: 'text', icon: FileText, color: 'text-violet-400 bg-violet-400/10', title: '📝 Text Post', desc: 'Share thoughts, updates, questions, ideas.' },
-                        { id: 'photo', icon: Camera, color: 'text-pink-400 bg-pink-400/10', title: '📸 Photo Post', desc: 'Upload or attach premium aesthetic photography.' },
-                        { id: 'video', icon: VideoIcon, color: 'text-cyan-400 bg-cyan-400/10', title: '🎥 Video Workspace', desc: 'Sleek video editor options. Play, trim, mute and post.' },
-                        { id: 'voice', icon: Mic, color: 'text-violet-400 bg-violet-400/10', title: '🎙 Voice Post', desc: 'Record your voice directly. Nexora\'s signature feature with automatic transcript.' },
-                        { id: 'poll', icon: BarChart2, color: 'text-emerald-400 bg-emerald-400/10', title: '📊 Community Poll', desc: 'Ask a question with interactive voters tracking.' },
-                        { id: 'article', icon: FileText, color: 'text-amber-400 bg-amber-400/10', title: '📄 Long-form Article', desc: 'Publish clean, format-rich editorial blogs.' },
-                        { id: 'mission', icon: Award, color: 'text-rose-400 bg-rose-400/10', title: '🎯 Community Mission', desc: 'Initiate challenges, goal targets, and community missions.' },
-                        { id: 'community', icon: UsersIcon, color: 'text-violet-400 bg-violet-400/10', title: '🏟 Community Channel', desc: 'Post and align directly inside active communities.' },
-                        { id: 'pulse', icon: MapPin, color: 'text-cyan-400 bg-cyan-400/10', title: '🌍 Pulse Report', desc: 'Signal regional incidents or local happenings. Feeds World Pulse.' }
-                      ].map((item) => {
-                        const IconComponent = item.icon;
-                        return (
-                          <button
-                            key={item.id}
-                            onClick={() => {
-                              setActivePostType(item.id as any);
-                              // Seed some starter content if matching
-                              if (item.id === 'voice') {
-                                setVoiceTranscription('');
-                              }
-                            }}
-                            className="w-full p-3.5 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-[#8B5CF6]/30 transition-all text-left flex items-center justify-between gap-3 cursor-pointer group"
-                          >
-                            <div className="flex items-center gap-3.5 min-w-0">
-                              <div className={`w-9 h-9 rounded-xl ${item.color} flex items-center justify-center shrink-0`}>
-                                <IconComponent className="w-4.5 h-4.5" />
-                              </div>
-                              <div className="min-w-0">
-                                <h4 className="text-xs font-extrabold text-white font-sans flex items-center gap-1.5 leading-none">
-                                  {item.title}
-                                  {['voice', 'mission', 'community', 'pulse'].includes(item.id) && (
-                                    <span className="text-[7.5px] font-mono uppercase bg-[#8B5CF6]/15 text-[#8B5CF6] border border-[#8B5CF6]/20 px-1 py-0.5 rounded-sm tracking-widest font-black shrink-0">
-                                      NEXORA SPEC
-                                    </span>
-                                  )}
-                                </h4>
-                                <p className="text-[10px] text-current/60 leading-normal font-sans mt-1 group-hover:text-current/90 transition-colors">
-                                  {item.desc}
-                                </p>
-                              </div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 text-current/30 group-hover:text-[#8B5CF6] group-hover:translate-x-1 transition-all shrink-0" />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  // SUB-SCREEN DETAIL FORMS (2nd View)
-                  <div className="space-y-4">
-                    
-                    {/* Upper back action */}
-                    <button 
-                      onClick={() => setActivePostType(null)}
-                      className="text-[10.5px] font-mono hover:text-[#8B5CF6] flex items-center gap-1 cursor-pointer transition-colors"
-                    >
-                      &larr; Choose another type
-                    </button>
-
-                    {/* Profile preview block */}
-                    <div className="p-3 rounded-2xl bg-white/[0.02] border border-white/5 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <img 
-                          src={currentUser.avatar} 
-                          alt="avatar" 
-                          referrerPolicy="no-referrer"
-                          className="w-8.5 h-8.5 rounded-xl object-cover border border-white/10 shrink-0" 
-                        />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-bold text-white font-sans leading-none">{currentUser.name}</span>
-                            <span className="text-[9px] text-[#8B5CF6] animate-pulse">🟣✓</span>
-                          </div>
-                          <span className="text-[10px] font-mono text-violet-400 font-bold block mt-0.5">@{currentUser.username}</span>
-                        </div>
-                      </div>
-                      
-                      {/* Audience Selector right inline */}
-                      <div className="space-y-0.5 shrink-0 text-right">
-                        <label className="text-[8px] font-mono text-current/40 uppercase block">Audience Selector</label>
-                        <select 
-                          value={selectedAudience}
-                          onChange={(e) => setSelectedAudience(e.target.value as any)}
-                          className="bg-black/40 border border-white/10 rounded-lg text-[10px] font-sans px-2 py-1 text-violet-300 focus:outline-hidden cursor-pointer"
-                        >
-                          <option value="public">🌍 Public</option>
-                          <option value="circle">🔵 Close Friends</option>
-                          <option value="community">🏟 Community</option>
-                          <option value="followers">👥 Followers</option>
-                          <option value="onlyme">🔒 Only Me</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* VOH VOICE RECORDING SECTION OR NORMAL TEXT COMPOSER */}
-                    {activePostType === 'voice' ? (
-                      /* VOICE POST CHANNEL COMPONENT */
-                      <div className="p-5 rounded-2xl bg-[#09071c] border border-white/10 space-y-4 text-center">
-                        <div className="space-y-1">
-                          <h4 className="text-xs font-mono font-black text-rose-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
-                            <span className="relative flex h-2 w-2">
-                              {voiceRecordingState === 'recording' && (
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
-                              )}
-                              <span className={`relative inline-flex rounded-full h-2 w-2 ${voiceRecordingState === 'recording' ? 'bg-rose-500' : 'bg-current/30'}`} />
-                            </span>
-                            {voiceRecordingState === 'idle' ? 'STANDBY DIRECT RECORD' : voiceRecordingState === 'recording' ? 'BROADCASTING VOICE STREAM' : 'VOH AI DIGESTION ENGINE'}
-                          </h4>
-                          <span className="text-[24px] font-mono font-bold text-white block mt-2">
-                            0:{voiceAudioLength.toString().padStart(2, '0')}
-                            <span className="text-xs text-current/40"> / 0:18</span>
-                          </span>
-                        </div>
-
-                        {/* Animated waveform container */}
-                        <div className="flex items-center justify-center gap-[3px] h-10 w-full px-5 overflow-hidden">
-                          {[...Array(32)].map((_, i) => {
-                            const isRec = voiceRecordingState === 'recording';
-                            const height = isRec 
-                              ? Math.sin(i * 0.9 + voiceAudioLength) * 85 + Math.random() * 15
-                              : 10 + Math.sin(i) * 20;
-                            return (
-                              <div 
-                                key={i}
-                                className={`w-[2.5px] rounded-full transition-all duration-300 ${isRec ? 'bg-linear-to-t from-violet-500 via-pink-400 to-cyan-400' : 'bg-white/10'}`}
-                                style={{ height: `${Math.max(15, Math.abs(height))}%` }}
-                              />
-                            );
-                          })}
-                        </div>
-
-                        {/* Controls row */}
-                        <div className="flex justify-center items-center gap-4">
-                          {voiceRecordingState === 'recording' ? (
-                            <>
-                              <button 
-                                type="button"
-                                onClick={() => setVoiceRecordingState('finished')}
-                                className="w-12 h-12 rounded-full border border-white/10 bg-violet-600/20 text-white flex items-center justify-center cursor-pointer hover:bg-violet-600/30 active:scale-95 transition-all text-xs font-black font-mono"
-                              >
-                                STOP
-                              </button>
-                            </>
-                          ) : voiceRecordingState === 'finished' ? (
-                            <>
-                              <button 
-                                type="button"
-                                onClick={() => {
-                                  setVoiceRecordingState('idle');
-                                  setVoiceAudioLength(0);
-                                  setVoiceTranscription('');
-                                }}
-                                className="px-3.5 py-2 text-[10px] font-mono text-rose-400 hover:bg-rose-400/5 bg-transparent border border-rose-500/15 rounded-xl cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 inline mr-1" /> RESET
-                              </button>
-                              <div className="w-14 h-14 rounded-full bg-linear-to-r from-violet-600 to-pink-500 flex items-center justify-center text-white cursor-pointer active:scale-95 transition-all">
-                                <Play className="w-4 h-4 ml-0.5" />
-                              </div>
-                              <button 
-                                type="button"
-                                onClick={() => {
-                                  setVoiceRecordingState('recording');
-                                  setVoiceAudioLength(0);
-                                  setVoiceTranscription('');
-                                  const timer = setInterval(() => {
-                                    setVoiceAudioLength(prev => {
-                                      if (prev >= 18) {
-                                        clearInterval(timer);
-                                        setVoiceRecordingState('finished');
-                                        return 18;
-                                      }
-                                      return prev + 1;
-                                    });
-                                  }, 1000);
-                                }}
-                                className="px-3.5 py-2 text-[10px] font-mono text-cyan-400 hover:bg-cyan-400/5 bg-transparent border border-cyan-500/15 rounded-xl cursor-pointer"
-                              >
-                                <RefreshCw className="w-3.5 h-3.5 inline mr-1" /> RE-WRITE
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setVoiceRecordingState('recording');
-                                setVoiceAudioLength(0);
-                                setVoiceTranscription('');
-                                
-                                // Simulated 18 seconds record timer sequence
-                                const recordingInterval = setInterval(() => {
-                                  setVoiceAudioLength(prev => {
-                                    if (prev >= 17) {
-                                      clearInterval(recordingInterval);
-                                      // Trigger end of voice recording and transcribe
-                                      setVoiceRecordingState('finished');
-                                      setLoadingAi(true);
-                                      setTimeout(() => {
-                                        setVoiceTranscription('Bypassing standard traditional noisy broadcasts, I am live-transcribing organic code aesthetics on the Nexora timeline. This voice broadcast represents the high-craft systems thinking.');
-                                        setLoadingAi(false);
-                                      }, 1500);
-                                      return 18;
-                                    }
-                                    return prev + 1;
-                                  });
-                                }, 1000);
-                              }}
-                              className="w-16 h-16 rounded-full bg-linear-to-r from-rose-500 to-pink-600 shadow-lg shadow-rose-500/30 flex items-center justify-center text-white cursor-pointer hover:scale-105 active:scale-95 transition-all"
-                            >
-                              <Mic className="w-6 h-6 animate-pulse" />
-                            </button>
-                          )}
-                        </div>
-
-                        {/* Automatic VOH AI transcribing readout card */}
-                        {(voiceRecordingState === 'finished' || loadingAi) && (
-                          <div className="p-4 rounded-xl bg-black/40 border border-[#8B5CF6]/20 text-left space-y-2">
-                            <span className="text-[8px] font-mono text-[#8B5CF6] font-black tracking-widest uppercase block animate-pulse">
-                              🧠 VOH AI VOICE EXTRACTION PIPELINE
-                            </span>
-                            {loadingAi ? (
-                              <div className="flex items-center gap-2">
-                                <NexoraLoader size="sm" />
-                                <p className="text-[10px] text-current/50 italic font-mono">
-                                  VOH AI is extracting context...
-                                </p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                <div className="space-y-0.5">
-                                  <span className="text-[7.5px] font-mono uppercase bg-violet-600/20 text-violet-300 px-1 py-0.5 rounded-sm">AUTO-TRANSCRIPT</span>
-                                  <p className="text-[11px] font-sans text-white/90 italic leading-relaxed mt-1">
-                                    "{voiceTranscription}"
-                                  </p>
-                                </div>
-                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5 text-[9.5px]">
-                                  <div>
-                                    <span className="text-[7px] font-mono text-[#8B5CF6]">SPANISH TRANSLATION</span>
-                                    <p className="font-sans text-current/80 mt-0.5">"Transmitiendo en vivo estética de código orgánico sin latencia..."</p>
-                                  </div>
-                                  <div>
-                                    <span className="text-[7px] font-mono text-cyan-400">KEYWORDS SUMMARY</span>
-                                    <p className="font-sans text-current/80 mt-0.5">High-craft layout engineering; Bypassing traditional news noise.</p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ) : activePostType === 'video' ? (
-                      /* NEXORA STUDIO VIDEO WORKSPACE */
-                      <div className="space-y-4">
-                        <div className="relative aspect-video rounded-2xl overflow-hidden bg-black/60 border border-white/10 flex flex-col justify-between p-4 group">
-                          {/* Inner watermarks styling */}
-                          <div className="absolute inset-0 z-0 flex items-center justify-center opacity-70">
-                            <div className="flex flex-col items-center text-center space-y-2">
-                              <VideoIcon className="w-12 h-12 text-[#8B5CF6]/30 animate-pulse" />
-                              <span className="text-[10px] font-mono text-white/30 uppercase tracking-widest">NEXORA VIDEO RENDER ACTIVE</span>
-                            </div>
-                          </div>
-
-                          <div className="z-10 flex justify-between items-center text-[9px] font-mono text-white/40 uppercase">
-                            <span>Muted: {videoMuted ? 'YES' : 'NO'}</span>
-                            <span>Resolution: 1080P PRO</span>
-                          </div>
-
-                          {/* Footer options */}
-                          <div className="z-10 bg-slate-950/80 border border-white/5 p-3 rounded-xl mt-auto max-w-xs space-y-1">
-                            <span className="text-[8px] font-mono text-cyan-300 font-bold block uppercase">PREV TRIM SELECTION</span>
-                            <p className="text-[10px] text-white font-sans truncate">
-                              {modalContent || 'Aesthetic Nexora Video Stream Clip'}
-                            </p>
-                          </div>
-                        </div>
-
-                        {/* Video Editor Slider Controls */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-4 rounded-2xl bg-white/[0.02] border border-white/5">
-                          <div className="space-y-1.5 text-left">
-                            <label className="text-[9.5px] font-mono text-current/50 uppercase block">✂️ TRIM LENGTH</label>
-                            <div className="flex gap-2">
-                              {[15, 30, 60].map((t) => (
-                                <button
-                                  key={t}
-                                  type="button"
-                                  onClick={() => setVideoTimer(t)}
-                                  className={`flex-1 px-3 py-1.5 text-xs font-mono rounded-lg border transition-all cursor-pointer ${
-                                    videoTimer === t 
-                                      ? 'bg-violet-600/20 border-violet-500 text-violet-300 font-bold' 
-                                      : 'bg-transparent border-white/10 hover:border-white/20'
-                                  }`}
-                                >
-                                  {t}s
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          <div className="space-y-1.5 text-left">
-                            <label className="text-[9.5px] font-mono text-current/50 uppercase block">🔉 AUDIO TRACK</label>
-                            <button
-                              type="button"
-                              onClick={() => setVideoMuted(!videoMuted)}
-                              className={`w-full py-1.5 text-xs font-sans rounded-lg border transition-all cursor-pointer ${
-                                videoMuted 
-                                  ? 'bg-rose-500/10 border-rose-500/30 text-rose-400' 
-                                  : 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                              }`}
-                            >
-                              {videoMuted ? '🔇 Audio Stream Muted' : '🔊 Studio Audio Active'}
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Video Caption area */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-mono uppercase text-current/50">Video Caption</label>
-                          <input 
-                            type="text"
-                            placeholder="What is happening in this clip?"
-                            value={modalContent}
-                            onChange={(e) => setModalContent(e.target.value)}
-                            className="w-full px-4 py-2.5 text-xs rounded-xl bg-current/5 border border-current/5 focus:outline-hidden text-current font-sans"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      /* CUSTOM TEXT-BASED WORKSPACES (Text, Photo, Poll, Article, Mission, Community, Pulse) */
-                      <div className="space-y-3.5">
-                        
-                        {/* Title text area for Article / Mission / Poll */}
-                        {(activePostType === 'article' || activePostType === 'mission') && (
-                          <div className="space-y-1">
-                            <label className="text-[10px] font-mono uppercase text-[#8B5CF6] font-bold">
-                              {activePostType === 'article' ? '📄 Title' : '🎯 Challenge / Goal Target'}
-                            </label>
-                            <input 
-                              type="text"
-                              value={pulseRegion}
-                              onChange={(e) => setPulseRegion(e.target.value)}
-                              placeholder={activePostType === 'article' ? 'Diving deep into low-latency memory serialization' : 'Perform 100 organic UI layout reviews'}
-                              className="w-full px-4 py-2.5 text-xs font-sans font-extrabold rounded-xl bg-current/5 border border-current/10 focus:outline-hidden text-white"
-                            />
-                          </div>
-                        )}
-
-                        {/* Normal textarea for typing */}
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-mono uppercase text-current/50">
-                            {activePostType === 'poll' ? '📊 Poll Question' : "What's happening?"}
-                          </label>
-                          <textarea
-                            required
-                            rows={activePostType === 'article' ? 6 : 4}
-                            maxLength={800}
-                            placeholder="What's happening?"
-                            value={activePostType === 'poll' ? pollQuestion : modalContent}
-                            onChange={(e) => {
-                              if (activePostType === 'poll') {
-                                setPollQuestion(e.target.value);
-                              } else {
-                                setModalContent(e.target.value);
-                              }
-                            }}
-                            className="w-full px-4 py-3 text-xs rounded-xl bg-current/5 border border-white/5 focus:border-[#8B5CF6]/30 focus:outline-hidden text-current font-sans leading-relaxed"
-                          />
-                        </div>
-
-                        {/* Interactive Poll choice inputs if setting up a poll */}
-                        {activePostType === 'poll' && (
-                          <div className="p-3.5 rounded-2xl bg-[#09071c] border border-white/10 space-y-2.5">
-                            <span className="text-[9px] font-mono text-[#8B5CF6] font-black uppercase tracking-wider block">
-                              📊 ADD POLL RESPONSES
-                            </span>
-                            {pollOptions.map((opt, optIndex) => (
-                              <div key={optIndex} className="flex items-center gap-2">
-                                <span className="text-[10px] font-mono text-current/40 w-4">{optIndex + 1}</span>
-                                <input 
-                                  type="text"
-                                  value={opt}
-                                  onChange={(e) => {
-                                    const nextOpts = [...pollOptions];
-                                    nextOpts[optIndex] = e.target.value;
-                                    setPollOptions(nextOpts);
-                                  }}
-                                  placeholder={`Response option ${optIndex + 1}`}
-                                  className="flex-1 px-3 py-2 text-xs font-sans rounded-xl bg-black/40 border border-white/10 text-white focus:outline-hidden focus:border-[#8B5CF6]/30 font-bold"
-                                />
-                                {pollOptions.length > 2 && (
-                                  <button 
-                                    type="button" 
-                                    onClick={() => setPollOptions(prev => prev.filter((_, idx) => idx !== optIndex))}
-                                    className="p-1 text-rose-400 hover:text-rose-500 transition-colors"
-                                  >
-                                    <X className="w-4 h-4" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                            {pollOptions.length < 5 && (
-                              <button
-                                type="button"
-                                onClick={() => setPollOptions(prev => [...prev, ''])}
-                                className="text-[10px] font-mono text-[#8B5CF6] hover:underline flex items-center gap-1 cursor-pointer"
-                              >
-                                + Add another choice
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Aesthetic photo presets selection grid if photo category is active */}
-                        {activePostType === 'photo' && (
-                          <div className="space-y-2 p-3 bg-white/[0.01] border border-white/5 rounded-2xl">
-                            <div className="flex justify-between items-center text-[10px] font-mono">
-                              <span className="text-current/50">📷 ATTACH AESTHETIC VISUAL GRID:</span>
-                              {modalImage && (
-                                <button
-                                  type="button"
-                                  onClick={() => setModalImage('')}
-                                  className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer"
-                                >
-                                  Clear selection [x]
-                                </button>
-                              )}
-                            </div>
-                            <div className="grid grid-cols-4 gap-2">
-                              {[
-                                { name: 'Tech/Abstract', url: 'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=400&q=80' },
-                                { name: 'Glow/Design', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80' },
-                                { name: 'City/Neon', url: 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=400&q=80' },
-                                { name: 'Space/Stars', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400&q=80' }
-                              ].map((img, idx) => (
-                                <button
-                                  key={idx}
-                                  type="button"
-                                  onClick={() => setModalImage(img.url)}
-                                  className={`relative h-12 rounded-lg overflow-hidden border transition-all cursor-pointer hover:opacity-100 ${
-                                    modalImage === img.url 
-                                      ? 'border-[#8B5CF6] ring-2 ring-[#8B5CF6]/50 opacity-100' 
-                                      : 'border-white/10 opacity-60'
-                                  }`}
-                                >
-                                  <img src={img.url} alt={img.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Extra City Tag option for Pulse Report type */}
-                        {activePostType === 'pulse' && (
-                          <div className="space-y-1 text-left">
-                            <label className="text-[10px] font-mono uppercase text-cyan-400">📍 CITY / REGION PATH</label>
-                            <input 
-                              type="text" 
-                              required
-                              placeholder="e.g. Port Harcourt, Copenhagen, Lagos, Tokyo"
-                              value={pulseRegion}
-                              onChange={(e) => setPulseRegion(e.target.value)}
-                              className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-white/10 text-xs font-sans text-white focus:outline-hidden focus:border-[#8B5CF6]/30 font-bold"
-                            />
-                          </div>
-                        )}
-
-                        {/* Extra target Community selector for Community Post type */}
-                        {activePostType === 'community' && (
-                          <div className="space-y-1.5 text-left">
-                            <label className="text-[10px] font-mono text-violet-400 uppercase">🏟 TARGET NETWORK CHANNEL</label>
-                            <div className="grid grid-cols-2 gap-2 text-[10.5px]">
-                              {[
-                                '⚽ Football Tacticians Group',
-                                '🧠 Premium AI Forge',
-                                '🎨 Symmetrical Designers'
-                              ].map((item) => (
-                                <button
-                                  key={item}
-                                  type="button"
-                                  onClick={() => setPulseRegion(item)}
-                                  className={`p-2 rounded-xl border text-left font-sans transition-all cursor-pointer ${
-                                    pulseRegion === item 
-                                      ? 'bg-violet-600/10 border-violet-500 text-violet-300 font-bold' 
-                                      : 'bg-black/40 border-white/5 hover:bg-white/5 text-current/70'
-                                  }`}
-                                >
-                                  {item}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Topics Section */}
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-mono uppercase text-current/50">🏷 Topics Tags</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Football, Technology, Business"
-                            value={modalTags}
-                            onChange={(e) => setModalTags(e.target.value)}
-                            className="w-full px-4 py-2.5 text-xs rounded-xl bg-current/5 border border-white/5 focus:outline-hidden text-current font-sans"
-                          />
-                          
-                          {/* Recommended rapid-tap tags */}
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {['#Football', '#Technology', '#Business', '#Gaming'].map((tag) => (
-                              <button
-                                key={tag}
-                                type="button"
-                                onClick={() => {
-                                  // Clean tag
-                                  const rawTag = tag.replace('#', '');
-                                  if (!modalTags.includes(rawTag)) {
-                                    setModalTags(prev => prev ? `${prev}, ${rawTag}` : rawTag);
-                                  }
-                                }}
-                                className="text-[9.5px] font-mono bg-current/5 hover:bg-current/10 text-violet-400 px-2 py-0.5 rounded-md cursor-pointer transition-colors"
-                              >
-                                {tag}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Premium NEXORA Custom toggles configuration */}
-                        <div className="p-3.5 rounded-2xl bg-white/[0.01] border border-white/5 flex items-center justify-between gap-3">
-                          <div className="text-left space-y-0.5">
-                            <h5 className="text-[11px] font-bold text-white font-sans flex items-center gap-1.5 leading-none">
-                              ☑ Add To World Pulse
-                              <span className="text-[7px] font-mono bg-cyan-500/15 text-cyan-300 px-1 py-0.5 rounded-sm uppercase tracking-wider font-extrabold">LIVE</span>
-                            </h5>
-                            <p className="text-[10px] text-current/50 font-sans leading-relaxed">
-                              If content discusses events, local news or sports, it feeds directly on the World Pulse map indices.
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setAddToWorldPulse(!addToWorldPulse)}
-                            className={`w-10 h-6 rounded-full shrink-0 p-0.5 transition-colors cursor-pointer relative ${
-                              addToWorldPulse ? 'bg-[#8B5CF6]' : 'bg-zinc-800'
-                            }`}
-                          >
-                            <div className={`w-5 h-5 rounded-full bg-white transition-all shadow-md ${
-                              addToWorldPulse ? 'translate-x-4' : 'translate-x-0'
-                            }`} />
-                          </button>
-                        </div>
-
-                        {/* Simulated VOH AI intelligence enhancement loader / button */}
-                        <div className="pt-1.5 flex justify-between items-center bg-violet-600/5 border border-[#8B5CF6]/15 rounded-2xl px-3.5 py-2">
-                          <div className="flex items-center gap-2">
-                            <VohIcon size={15} animated variant="brand" />
-                            <span className="text-[10px] font-mono text-violet-300 font-extrabold uppercase">Intelligent VOH AI Enhancer</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={async () => {
-                              setLoadingAi(true);
-                              try {
-                                if (activePostType === 'poll') {
-                                  const textToImprove = pollQuestion.trim() || "What technology is best?";
-                                  const res = await fetch('/api/voh-ai/chat', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      message: `Create an extremely engaging tech/community poll based on this topic: "${textToImprove}". Provide the poll question and exactly 3 options. Respond in simple JSON format like: {"question": "...", "options": ["...", "...", "..."], "tags": "..."}`,
-                                    })
-                                  });
-                                  const data = await res.json();
-                                  try {
-                                    const parsed = JSON.parse(data.text);
-                                    if (parsed.question && Array.isArray(parsed.options)) {
-                                      setPollQuestion(parsed.question);
-                                      setPollOptions(parsed.options);
-                                      setModalTags(parsed.tags || 'Technology, SystemsDesign');
-                                    }
-                                  } catch (pe) {
-                                    setPollQuestion('Which system engine topology serves decentralized community spaces best?');
-                                    setPollOptions(['Rust Raw Socket SIMD Serialization', 'Go High-Concurrency Channels', 'Zig Arena-allocated Buffers']);
-                                    setModalTags('Technology, Rust, SystemsDesign');
-                                  }
-                                } else {
-                                  const textToImprove = modalContent.trim() || 'Co-building a new design framework today';
-                                  const res = await fetch('/api/voh-ai/improve-post', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ content: textToImprove })
-                                  });
-                                  const data = await res.json();
-                                  setModalContent(data.text);
-                                  setModalTags('SpaceGlass, SystemsDesign, Innovation');
-                                }
-                              } catch (err) {
-                                console.error('Improve post AI error:', err);
-                              } finally {
-                                setLoadingAi(false);
-                              }
-                            }}
-                            className="bg-[#8B5CF6] text-white px-3 py-1.5 rounded-xl text-[10px] font-sans font-bold hover:brightness-110 cursor-pointer flex items-center gap-1 shadow-sm uppercase tracking-wide"
-                          >
-                            {loadingAi ? 'IMPROVING...' : '✨ Improve Post'}
-                          </button>
-                        </div>
-
-                        {/* LIVE PREVIEW BOX - Highly polished render of post */}
-                        {(modalContent.trim() || pollQuestion.trim()) && (
-                          <div className="space-y-1.5">
-                            <span className="text-[9px] font-mono text-current/30 uppercase block">POST PREVIEW:</span>
-                            <div className="p-4 rounded-2xl bg-black/60 border border-white/5 text-left space-y-3">
-                              <div className="flex items-center gap-2.5">
-                                <img src={currentUser.avatar} alt="avatar" className="w-8 h-8 rounded-xl object-cover" />
-                                <div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs font-bold font-sans text-white leading-none">{currentUser.name}</span>
-                                    <span className="text-[9px] text-[#8B5CF6]">🟣✓</span>
-                                  </div>
-                                  <span className="text-[9px] font-mono text-violet-400 mt-0.5 block">@{currentUser.username} • Just now</span>
-                                </div>
-                              </div>
-                              <p className="text-xs text-white/95 font-sans leading-relaxed">
-                                {activePostType === 'poll' ? `📊 ${pollQuestion}` : modalContent}
-                              </p>
-                              {activePostType === 'poll' && (
-                                <div className="space-y-1.5 pl-3">
-                                  {pollOptions.filter(o => o.trim()).map((o, idx) => (
-                                    <div key={idx} className="p-2 rounded-xl bg-violet-950/20 border border-white/10 text-[11px] font-sans text-violet-200">
-                                      {o}
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
-                              {modalImage && (
-                                <div className="overflow-hidden rounded-xl border border-white/5 h-24 bg-slate-900">
-                                  <img src={modalImage} className="w-full h-full object-cover" alt="preview" />
-                                </div>
-                              )}
-                              {modalTags && (
-                                <div className="flex flex-wrap gap-1">
-                                  {modalTags.split(',').map((t, idx) => (
-                                    <span key={idx} className="text-[9px] font-mono text-[#8B5CF6]">#{t.trim().replace('#', '')}</span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Submit Footers */}
-                    <div className="flex items-center justify-between border-t border-white/5 pt-3">
-                      <span className="text-[9.5px] font-mono text-current/40">
-                        Format: Premium Nexora Mesh Spec
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setActivePostType(null)}
-                          className="px-4 py-2 text-xs font-mono font-bold text-current/60 hover:bg-current/5 rounded-xl border border-transparent cursor-pointer transition-all"
-                        >
-                          Cancel
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={
-                            activePostType === 'voice' 
-                              ? (voiceRecordingState !== 'finished' || !voiceTranscription)
-                              : activePostType === 'poll' ? (!pollQuestion.trim() || !pollOptions[0].trim()) : !modalContent.trim()
-                          }
-                          onClick={() => {
-                            // Extract content dynamically
-                            let finalContent = modalContent;
-                            if (activePostType === 'voice') {
-                              finalContent = `🎙 Voice Post: "${voiceTranscription || 'Vocal discussion broad overview'}"`;
-                            } else if (activePostType === 'article') {
-                              finalContent = `📄 [Long-form Article] ${modalContent}`;
-                            } else if (activePostType === 'pulse') {
-                              finalContent = `🌍 [Pulse Report: ${pulseRegion || 'Local Area'}] ${modalContent}`;
-                            } else if (activePostType === 'community') {
-                              finalContent = `🏟 [Posted in community: ${pulseRegion || 'General Group'}] ${modalContent}`;
-                            } else if (activePostType === 'poll') {
-                              finalContent = `📊 Poll Question: ${pollQuestion}`;
-                            }
-
-                            // Share flow trigger
-                            const newPostId = handleAddPost(finalContent, modalImage || undefined, modalTags);
-                            
-                            // Attach special entities
-                            if (activePostType === 'poll') {
-                              setPosts(prev => prev.map(p => {
-                                if (p.id === newPostId) {
-                                  return {
-                                    ...p,
-                                    interactivePoll: {
-                                      question: pollQuestion,
-                                      options: pollOptions.filter(o => o.trim()).map((o, idx) => ({
-                                        id: `opt-${Date.now()}-${idx}`,
-                                        text: o,
-                                        votes: Math.floor(Math.random() * 20)+1
-                                      }))
-                                    }
-                                  };
-                                }
-                                return p;
-                              }));
-                            }
-
-                            const mockLink = `${window.location.origin}/post/${newPostId}`;
-                            setCreatedPostLink(mockLink);
-                            setIsCopied(false);
-                            
-                            try {
-                              navigator.clipboard.writeText(mockLink);
-                              setIsCopied(true);
-                              setTimeout(() => setIsCopied(false), 2000);
-                            } catch(e){}
-                          }}
-                          className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-mono font-bold rounded-xl bg-violet-600/15 hover:bg-violet-600/25 text-violet-300 disabled:opacity-40 transition-all border border-white/10 cursor-pointer uppercase"
-                        >
-                          <Forward className="w-3.5 h-3.5 hover:scale-110" />
-                          Share & Copy
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled={
-                            activePostType === 'voice' 
-                              ? (voiceRecordingState !== 'finished' || !voiceTranscription)
-                              : activePostType === 'poll' ? (!pollQuestion.trim() || !pollOptions[0].trim()) : !modalContent.trim()
-                          }
-                          onClick={() => {
-                            // Unified submit action
-                            let finalContent = modalContent;
-                            if (activePostType === 'voice') {
-                              finalContent = `🎙 Voice Post: "${voiceTranscription || 'Vocal discussion broad overview'}"`;
-                            } else if (activePostType === 'article') {
-                              finalContent = `📄 [Long-form Article] ${modalContent}`;
-                            } else if (activePostType === 'pulse') {
-                              finalContent = `🌍 [Pulse Report: ${pulseRegion || 'Local Area'}] ${modalContent}`;
-                            } else if (activePostType === 'community') {
-                              finalContent = `🏟 [Posted in community: ${pulseRegion || 'General Group'}] ${modalContent}`;
-                            } else if (activePostType === 'poll') {
-                              finalContent = `📊 Poll Question: ${pollQuestion}`;
-                            }
-
-                            const newPostId = handleAddPost(finalContent, modalImage || undefined, modalTags);
-                            
-                            // Attach special entities
-                            if (activePostType === 'poll') {
-                              setPosts(prev => prev.map(p => {
-                                if (p.id === newPostId) {
-                                  return {
-                                    ...p,
-                                    interactivePoll: {
-                                      question: pollQuestion,
-                                      options: pollOptions.filter(o => o.trim()).map((o, idx) => ({
-                                        id: `opt-${Date.now()}-${idx}`,
-                                        text: o,
-                                        votes: Math.floor(Math.random() * 20)+1
-                                      }))
-                                    }
-                                  };
-                                }
-                                return p;
-                              }));
-                            }
-                            
-                            handleCloseCreateModal();
-                          }}
-                          className="px-5 py-2.5 text-xs font-mono font-bold rounded-xl bg-linear-to-r from-violet-600 to-pink-500 text-white hover:brightness-110 active:scale-98 disabled:opacity-50 transition-all cursor-pointer uppercase tracking-wider"
-                        >
-                          Post
-                        </button>
-                      </div>
-                    </div>
-
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* 📥 PWA CUSTOM INSTALLATION POPUP & OVERLAY */}
       <AnimatePresence>
         {showPWAInstallPrompt && (
@@ -3431,8 +2454,6 @@ export default function App() {
         {/* 3. ➕ Center Create Button */}
         <motion.button 
           onClick={() => {
-            setCreatedPostLink(null);
-            setIsCopied(false);
             setCreationInitialMode(null);
             setCreationInitialTab(undefined);
             setIsCreateMenuOpen(true);
@@ -3619,12 +2640,41 @@ export default function App() {
               {/* Action Buttons */}
               <div className="flex flex-col gap-2 pt-2">
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     // Secure sign out
                     setIsLogoutConfirming(false);
                     // Clear session state
                     setIsLoggedIn(false);
                     localStorage.setItem('nexora_logged_in', 'false');
+                    const guestUser = getRichUser({
+                      id: 'guest_visitor_id',
+                      username: 'visitor',
+                      name: 'Nexora Visitor',
+                      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+                      bio: 'Guest visitor browsing Nexora network.',
+                      location: 'Earth Orbit',
+                      website: 'https://nexora.app',
+                      followers: 0,
+                      following: 0,
+                      sparks: 0,
+                      isVerified: false,
+                      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+                      joinedDate: 'Joined 2026',
+                      reputationPoints: 0,
+                      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+                      interestDNA: {},
+                      skills: []
+                    });
+                    setCurrentUser(guestUser);
+                    localStorage.setItem('nexora_user', JSON.stringify(guestUser));
+                    setViewedUser(null);
+                    localStorage.removeItem('nexora_last_reels_post_id');
+                    localStorage.removeItem('nexora_last_reels_index');
+                    try {
+                      await auth.signOut();
+                    } catch (e) {
+                      console.warn('Sign out warning:', e);
+                    }
                     window.dispatchEvent(new CustomEvent('toast', { detail: '🚪 Signed out successfully' }));
                   }}
                   className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-sans text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/20 active:scale-[0.98]"
@@ -4187,6 +3237,7 @@ export default function App() {
             </button>
             <div className="p-2">
               <AuthView
+                promptReason={authPromptReason}
                 onLoginSuccess={(loggedUser) => {
                   setCurrentUser(getRichUser(loggedUser));
                   setIsLoggedIn(true);

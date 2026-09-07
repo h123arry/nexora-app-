@@ -119,6 +119,7 @@ export default function NexoraVideoPlayer({
   const [selectedQuality, setSelectedQuality] = useState<'1080p' | '720p' | '480p' | 'Auto'>('Auto');
   const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [hasVideoError, setHasVideoError] = useState(false);
   
   // Premium Player Adjustments & HUD Telemetry
   const [brightnessLevel, setBrightnessLevel] = useState(100);
@@ -301,8 +302,8 @@ export default function NexoraVideoPlayer({
   // Sync playback with isActive prop to guarantee zero sound bleed from inactive/hidden tabs
   useEffect(() => {
     if (!videoRef.current) return;
-    if (isActive && finalVideoUrl) {
-      if (isNearby) {
+    if (isActive !== false && finalVideoUrl) {
+      if (isNearby || isActive) {
         globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
           .then((played) => {
             if (played) {
@@ -834,15 +835,15 @@ export default function NexoraVideoPlayer({
             <div className="bg-gradient-to-t from-black/90 via-black/25 to-transparent absolute bottom-0 inset-x-0 h-52 pointer-events-none z-10" />
             <div className="bg-gradient-to-l from-black/55 via-transparent to-transparent absolute right-0 inset-y-0 w-28 pointer-events-none z-10" />
             
-            {/* Prevent Next-Video Bleeding, Glows, and Flickering (Solid Black cover when inactive) */}
-            {!isActive && (
-              <div className="absolute inset-0 bg-black z-30 pointer-events-none transition-opacity duration-300" />
+            {/* Ambient dimming for inactive video slides without obscuring posters */}
+            {typeof isActive === 'boolean' && !isActive && (
+              <div className="absolute inset-0 bg-black/40 z-20 pointer-events-none transition-opacity duration-300" />
             )}
 
             <video
               ref={videoRef}
-              src={isNearby || shouldPreload ? finalVideoUrl : undefined}
-              poster={post?.image}
+              src={hasVideoError ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
+              poster={post?.image || undefined}
               loop
               playsInline
               preload={preloadMode || ((isNearby || shouldPreload) ? "auto" : "none")}
@@ -852,10 +853,30 @@ export default function NexoraVideoPlayer({
               onWaiting={() => setIsBuffering(true)}
               onPlaying={() => setIsBuffering(false)}
               onCanPlay={() => setIsBuffering(false)}
+              onError={() => setHasVideoError(true)}
               className="w-full h-full max-h-[85vh] object-contain cursor-pointer"
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
-            {isBuffering && (
+            {hasVideoError && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 text-center p-6 z-20 animate-fade-in">
+                <AlertTriangle className="w-10 h-10 text-pink-500 mb-2 animate-pulse" />
+                <p className="text-sm font-bold text-white mb-1">Video unavailable</p>
+                <p className="text-xs text-zinc-400 mb-4">The video file could not be loaded or network connection failed.</p>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setHasVideoError(false);
+                    if (videoRef.current) {
+                      videoRef.current.load();
+                    }
+                  }}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Tap to retry
+                </button>
+              </div>
+            )}
+            {isBuffering && !hasVideoError && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-xs pointer-events-none z-10 animate-fade-in">
                 <NexoraLoader size="md" center={true} />
               </div>

@@ -148,12 +148,12 @@ export default function CommunitiesHubView({
   // Real-time synchronization for Communities and Pages
   useEffect(() => {
     const unsubComm = subscribeToCommunities((dbComms) => {
-      if (dbComms && dbComms.length > 0) {
+      if (dbComms) {
         setCommunities(dbComms);
       }
     });
     const unsubPages = subscribeToPages((dbPages) => {
-      if (dbPages && dbPages.length > 0) {
+      if (dbPages) {
         setPages(dbPages);
       }
     });
@@ -350,30 +350,40 @@ export default function CommunitiesHubView({
   };
 
   // 19. Join/Leave Community
-  const handleJoinCircleToggle = (circleId: string, e?: React.MouseEvent) => {
+  const handleJoinCircleToggle = async (circleId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     
-    setCommunities(prev => prev.map(c => {
-      if (c.id === circleId) {
-        const joined = !c.isJoinedByMe;
-        if (joined) {
-          recordRecommendationEvent('join_community', { communityName: c.name, tags: c.tags });
-          joinCircleDb(currentUser.id, circleId);
-        } else {
-          leaveCircleDb(currentUser.id, circleId);
-        }
-        return {
-          ...c,
-          isJoinedByMe: joined,
-          membersCount: joined ? c.membersCount + 1 : c.membersCount - 1,
-          activityLog: [
-            ...(c.activityLog || []),
-            `@${currentUser.username} ${joined ? 'joined' : 'left'} the community space.`
-          ]
-        };
+    const target = communities.find(c => c.id === circleId);
+    if (!target) return;
+    const willJoin = !target.isJoinedByMe;
+
+    try {
+      if (willJoin) {
+        recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
+        await joinCircleDb(currentUser.id, circleId);
+      } else {
+        await leaveCircleDb(currentUser.id, circleId);
       }
-      return c;
-    }));
+
+      setCommunities(prev => prev.map(c => {
+        if (c.id === circleId) {
+          return {
+            ...c,
+            isJoinedByMe: willJoin,
+            membersCount: willJoin ? c.membersCount + 1 : c.membersCount - 1,
+            activityLog: [
+              ...(c.activityLog || []),
+              `@${currentUser.username} ${willJoin ? 'joined' : 'left'} the community space.`
+            ]
+          };
+        }
+        return c;
+      }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: willJoin ? `✓ Joined ${target.name}` : `✓ Left ${target.name}` }));
+    } catch (err) {
+      console.error('Failed community join/leave:', err);
+      window.dispatchEvent(new CustomEvent('toast', { detail: `❌ Failed to update membership. Please try again.` }));
+    }
   };
 
   // 20. Voting helper
@@ -690,7 +700,7 @@ export default function CommunitiesHubView({
                           <img src={c.avatarImage || c.bannerImage} className="w-9 h-9 rounded-xl object-cover ring-1 ring-violet-500/30" />
                           <div>
                             <p className="text-xs font-bold text-white">{c.name}</p>
-                            <p className="text-[9px] font-mono text-violet-400/60">{c.membersCount} Members • {c.onlineCount || 10} Online</p>
+                            <p className="text-[9px] font-mono text-violet-400/60">{c.membersCount} Members • {c.onlineCount || 0} Online</p>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-violet-400/40" />

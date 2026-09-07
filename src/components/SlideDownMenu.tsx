@@ -38,7 +38,7 @@ export default function SlideDownMenu({
   unreadNotificationsCount = 0
 }: SlideDownMenuProps) {
 
-  // Close on Escape key press
+  // Close on Escape key press or Android Back event
   useEffect(() => {
     if (!isOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -47,8 +47,16 @@ export default function SlideDownMenu({
         onClose();
       }
     };
+    const handleEscape = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('nexora-escape', handleEscape);
+    };
   }, [isOpen, onClose]);
 
   // Comprehensive list of all 13 core Nexora destinations in logical order

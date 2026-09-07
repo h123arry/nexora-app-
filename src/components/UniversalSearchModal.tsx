@@ -43,8 +43,26 @@ export default function UniversalSearchModal({
       setTimeout(() => {
         inputRef.current?.focus();
       }, 50);
+
+      const handleKeyDown = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+
+      const handleEscape = (e: Event) => {
+        e.preventDefault();
+        onClose();
+      };
+
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('nexora-escape', handleEscape);
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('nexora-escape', handleEscape);
+      };
     }
-  }, [isOpen]);
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 

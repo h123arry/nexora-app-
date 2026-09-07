@@ -64,27 +64,29 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
-              {post.image ? (
-                <img 
-                  src={post.image} 
-                  loading="lazy"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
-                  alt={post.content}
-                  referrerPolicy="no-referrer"
-                />
-              ) : isVideo ? (
+              {isVideo ? (
                 <div className="w-full h-full bg-slate-950 relative overflow-hidden">
                   <div className="absolute inset-0 bg-gradient-to-tr from-violet-950/40 via-[#0a0521]/90 to-[#2c0b3d]/30" />
-                  <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-pink-500/5 to-transparent animate-pulse" />
-                  <NexoraVideo 
-                    src={post.videoUrl ? `${post.videoUrl}#t=0.001` : ''} 
-                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
-                    preload="metadata" 
-                    muted 
-                    playsInline
-                  />
+                  {post.image ? (
+                    <img 
+                      src={post.image} 
+                      loading="lazy"
+                      decoding="async"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
+                      alt={post.content || 'Video thumbnail'}
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <NexoraVideo 
+                      src={post.videoUrl ? `${post.videoUrl}#t=0.001` : ''} 
+                      className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity relative z-10" 
+                      preload="metadata" 
+                      muted 
+                      playsInline
+                    />
+                  )}
                   <div className="absolute top-2 right-2 p-1.5 bg-black/60 backdrop-blur-md rounded-full z-20">
-                    <Film className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                    <Film className="w-3.5 h-3.5 text-pink-400" />
                   </div>
                   {/* Consistent Bottom overlays for video count and duration */}
                   <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20 flex items-center gap-1">
@@ -100,13 +102,18 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                     })()}
                   </div>
                   <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-md rounded text-white text-[9px] font-mono font-bold z-20">
-                    {post.videoDuration || (() => {
-                      const num = post.id.charCodeAt(post.id.length - 1) || 12;
-                      const secs = (num % 45) + 10;
-                      return `0:${secs < 10 ? '0' + secs : secs}`;
-                    })()}
+                    {post.videoDuration || 'Reel'}
                   </div>
                 </div>
+              ) : post.image ? (
+                <img 
+                  src={post.image} 
+                  loading="lazy"
+                  decoding="async"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.05]" 
+                  alt={post.content || 'Post image'}
+                  referrerPolicy="no-referrer"
+                />
               ) : isVoice ? (
                 <div className="w-full h-full bg-gradient-to-tr from-pink-950/75 via-[#1d1242] to-[#040212] flex flex-col justify-between p-3">
                   <div className="flex justify-between items-center">
@@ -441,15 +448,98 @@ export default function ProfileView({
   const [avatarRotation, setAvatarRotation] = useState(0);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  // Android Back / Escape event listener to close active overlays gracefully
+  useEffect(() => {
+    const handleEscape = (e: Event) => {
+      if (isAvatarModalOpen) {
+        setIsAvatarModalOpen(false);
+        e.preventDefault();
+        return;
+      }
+      if (selectedGridPost) {
+        setSelectedGridPost(null);
+        e.preventDefault();
+        return;
+      }
+      if (showShareModal) {
+        setShowShareModal(false);
+        e.preventDefault();
+        return;
+      }
+      if (isProfileMenuOpen) {
+        setIsProfileMenuOpen(false);
+        e.preventDefault();
+        return;
+      }
+      if (showAllContentDropdown) {
+        setShowAllContentDropdown(false);
+        e.preventDefault();
+        return;
+      }
+      if (isStorageCenterOpen) {
+        setIsStorageCenterOpen(false);
+        e.preventDefault();
+        return;
+      }
+      if (showTwoFactorSetup) {
+        setShowTwoFactorSetup(false);
+        e.preventDefault();
+        return;
+      }
+      if (showAddAccountModal) {
+        setShowAddAccountModal(false);
+        e.preventDefault();
+        return;
+      }
+      if (showReputationModal) {
+        setShowReputationModal(false);
+        e.preventDefault();
+        return;
+      }
+      if (activePanel !== 'profile') {
+        setActivePanel('profile');
+        setSettingsActiveSubPanel('main');
+        setSettingsSearchQuery('');
+        e.preventDefault();
+        return;
+      }
+    };
+
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => window.removeEventListener('nexora-escape', handleEscape);
+  }, [
+    isAvatarModalOpen,
+    selectedGridPost,
+    showShareModal,
+    isProfileMenuOpen,
+    showAllContentDropdown,
+    isStorageCenterOpen,
+    showTwoFactorSetup,
+    showAddAccountModal,
+    showReputationModal,
+    activePanel
+  ]);
+
   const handleGalleryFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (!file.type.startsWith('image/')) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Please select a valid image file.' }));
+        return;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Image file is too large (max 5MB).' }));
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
         setGalleryImage(reader.result as string);
         setAvatarSourceType('gallery_edit');
         setAvatarZoom(1.0);
         setAvatarRotation(0);
+      };
+      reader.onerror = () => {
+        window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Failed to read image file. Please try another.' }));
       };
       reader.readAsDataURL(file);
     }
@@ -667,7 +757,7 @@ export default function ProfileView({
   };
 
   // Validate and submit profile updates (Locks rules)
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     if (isSavingProfile || showSavedFeedback) return;
 
     // 7-day display name lock
@@ -708,9 +798,8 @@ export default function ProfileView({
     // Start saving animation & lock controls
     setIsSavingProfile(true);
 
-    setTimeout(() => {
-      // Complete save
-      onUpdateProfile({
+    try {
+      await Promise.resolve(onUpdateProfile({
         name: editName,
         username: editUsername,
         bio: editBio,
@@ -720,7 +809,7 @@ export default function ProfileView({
         coverImage: editCover,
         lastDisplayNameChangeTime: editName !== currentUser.name ? new Date().toISOString() : currentUser.lastDisplayNameChangeTime,
         lastUsernameChangeTime: editUsername !== currentUser.username ? new Date().toISOString() : currentUser.lastUsernameChangeTime,
-      });
+      }));
 
       localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
       localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, statusEmoji);
@@ -729,15 +818,20 @@ export default function ProfileView({
       setIsSavingProfile(false);
       setShowSavedFeedback(true);
 
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✓ Profile updated successfully' }));
+      const isOnline = navigator.onLine;
+      const successMsg = isOnline ? '✓ Profile updated successfully' : '⚠️ Profile updated locally and queued for offline sync.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: successMsg }));
 
       // Wait 1.5s for the success message feedback, then transition back smoothly
       setTimeout(() => {
         setShowSavedFeedback(false);
         setActivePanel('profile');
       }, 1500);
-
-    }, 1200);
+    } catch (err) {
+      console.error('Profile update failed:', err);
+      setIsSavingProfile(false);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Failed to save profile updates. Please check connection.' }));
+    }
   };
 
   const handleCancelEditProfile = () => {
@@ -1226,8 +1320,10 @@ export default function ProfileView({
                 { id: 'voice', icon: Mic },
                 { id: 'reposts', icon: Repeat2 },
                 { id: 'sparks', icon: Zap },
-                { id: 'bookmarks', icon: Bookmark },
-                { id: 'archive', icon: HardDrive }
+                ...(isOwnProfile ? [
+                  { id: 'bookmarks', icon: Bookmark },
+                  { id: 'archive', icon: HardDrive }
+                ] : [])
               ].map(tab => {
                 const Icon = tab.icon;
                 const isActive = profileTab === tab.id;

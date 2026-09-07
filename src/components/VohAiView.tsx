@@ -470,14 +470,18 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       // Disable typing indicator once streaming begins
       setTypingIndicator(false);
 
+      const tickMs = words.length > 80 ? 12 : words.length > 40 ? 18 : 30;
+      const wordsPerTick = words.length > 100 ? 3 : words.length > 50 ? 2 : 1;
+
       const streamTimer = setInterval(() => {
         if (wordIndex < words.length) {
-          currentTypedText += (wordIndex === 0 ? '' : ' ') + words[wordIndex];
+          const chunk = words.slice(wordIndex, wordIndex + wordsPerTick).join(' ');
+          currentTypedText += (wordIndex === 0 ? '' : ' ') + chunk;
           setSessions(prev => prev.map(s => s.id === sessionId ? {
             ...s,
             messages: s.messages.map(m => m.id === aiMsgId ? { ...m, text: currentTypedText } : m)
           } : s));
-          wordIndex++;
+          wordIndex += wordsPerTick;
         } else {
           clearInterval(streamTimer);
           // Auto TTS if voice config auto-read is on
@@ -485,7 +489,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             VoiceEngine.speak(responseText, voiceConfig);
           }
         }
-      }, 30); // 30ms per word reveal
+      }, tickMs);
 
     } catch (err) {
       console.error(err);
@@ -747,6 +751,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-2 text-xs text-amber-200">
           <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
           <p className="font-medium leading-relaxed text-[11px]">
+            VOH AI is currently using fallback responses. Some answers may be less contextual than normal.
           </p>
         </div>
       )}

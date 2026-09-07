@@ -38,6 +38,17 @@ self.addEventListener('activate', (event) => {
 
 // Proxy network calls
 self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (
+    event.request.method !== 'GET' ||
+    url.pathname.startsWith('/api/') ||
+    url.hostname.includes('firebase') ||
+    url.hostname.includes('googleapis.com') ||
+    url.hostname.includes('google.com')
+  ) {
+    return;
+  }
+
   // Only cache GET requests
   if (event.request.method !== 'GET') return;
 

@@ -27,6 +27,7 @@ import { SecurityNotificationService } from '../services/firebase/securityNotifi
 
 interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
+  promptReason?: string;
 }
 
 const PRESET_AVATARS = [
@@ -76,7 +77,7 @@ const INTEREST_TOPICS = [
 
 const MAX_FAILED_ATTEMPTS = 5;
 
-export default function AuthView({ onLoginSuccess }: AuthViewProps) {
+export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps) {
   // Navigation & Auth Flow Modes
   const [authMode, setAuthMode] = useState<'login' | 'signup' | 'forgot_password'>('login');
   

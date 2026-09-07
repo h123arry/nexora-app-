@@ -110,71 +110,94 @@ export async function resolveMediaUrl(url: string): Promise<string> {
 }
 
 /**
- * Generates and stores a video thumbnail at 0.5s from a video File or Blob
+ * Generates and stores a video thumbnail at 0.1-0.5s from a video File or Blob
  */
 export function generateVideoThumbnail(videoBlob: Blob): Promise<string> {
   return new Promise((resolve) => {
     const video = document.createElement('video');
-    video.preload = 'metadata';
+    video.preload = 'auto';
     video.muted = true;
     video.playsInline = true;
 
     const url = URL.createObjectURL(videoBlob);
     video.src = url;
 
-    // Timeout fallback if generating takes too long (e.g. infinite buffering)
-    let timeoutId = setTimeout(() => {
-        cleanup();
-        resolve('');
-    }, 5000);
+    let hasExtracted = false;
+
+    // Timeout fallback if generating takes too long
+    const timeoutId = setTimeout(() => {
+      if (!hasExtracted) {
+        hasExtracted = true;
+        extractFrame();
+      }
+    }, 3000);
 
     const cleanup = () => {
-        clearTimeout(timeoutId);
-        URL.revokeObjectURL(url);
-        video.onloadeddata = null;
-        video.onseeked = null;
-        video.onerror = null;
-    };
-
-    video.onloadeddata = () => {
-      // Ensure we have a valid duration
-      let seekTime = 0.5;
-      if (video.duration && video.duration > 0) {
-         seekTime = Math.min(0.5, video.duration / 2);
-      } else if (!video.duration || video.duration === Infinity) {
-         seekTime = 0;
-      }
-      
-      video.currentTime = seekTime;
+      clearTimeout(timeoutId);
+      URL.revokeObjectURL(url);
+      video.onloadeddata = null;
+      video.onloadedmetadata = null;
+      video.oncanplay = null;
+      video.onseeked = null;
+      video.onerror = null;
     };
 
     const extractFrame = () => {
       try {
+        const width = video.videoWidth || 480;
+        const height = video.videoHeight || 640;
         const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth || 320;
-        canvas.height = video.videoHeight || 240;
+        canvas.width = width;
+        canvas.height = height;
         
         const ctx = canvas.getContext('2d');
         if (ctx) {
-          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+          ctx.drawImage(video, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
           cleanup();
           resolve(dataUrl);
-        } else {
-          cleanup();
-          resolve('');
+          return;
         }
       } catch (err) {
-        console.error('[Storage] Error drawing video thumbnail content', err);
-        cleanup();
-        resolve('');
+        console.error('[Storage] Error drawing video thumbnail frame', err);
+      }
+      cleanup();
+      resolve('');
+    };
+
+    const prepareAndSeek = () => {
+      if (hasExtracted) return;
+      let seekTime = 0.2;
+      if (video.duration && video.duration > 0 && isFinite(video.duration)) {
+        seekTime = Math.max(0.1, Math.min(0.5, video.duration / 2));
+      }
+      try {
+        video.currentTime = seekTime;
+      } catch {
+        // Seek failed or unsupported, extract immediately
+        hasExtracted = true;
+        extractFrame();
       }
     };
 
-    video.onseeked = extractFrame;
+    video.onloadedmetadata = prepareAndSeek;
+    video.onloadeddata = prepareAndSeek;
+    video.oncanplay = () => {
+      if (!hasExtracted && video.currentTime > 0) {
+        hasExtracted = true;
+        extractFrame();
+      }
+    };
+
+    video.onseeked = () => {
+      if (!hasExtracted) {
+        hasExtracted = true;
+        extractFrame();
+      }
+    };
     
     video.onerror = () => {
-      console.error('[Storage] Error loading video for thumbnail generation');
+      console.warn('[Storage] Video thumbnail load error, resolving fallback');
       cleanup();
       resolve('');
     };

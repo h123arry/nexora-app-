@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronLeft, ChevronRight, Zap, Trash, Send, MessageSquare } from 'lucide-react';
 import { Post, User } from '../types';
@@ -36,26 +36,50 @@ export default function ImmersiveVideoViewer({
     );
   }
 
-  // Only include posts that have videoUrl for the swipeable list
-  const videoPosts = (creatorPosts || []).filter(p => p && p.videoUrl);
-  
-  // Determine initial posts list
-  const postsToShow = videoPosts.length > 0 ? videoPosts : [initialPost];
-
-  // Remember last watched position in REELS tab
-  const [currentIndex, setCurrentIndex] = useState(() => {
-    try {
-      const savedPostId = localStorage.getItem('nexora_last_reels_post_id');
-      if (savedPostId) {
-        const foundIdx = postsToShow.findIndex(p => p && p.id === savedPostId);
-        if (foundIdx >= 0) return foundIdx;
-      }
-      const startIdx = postsToShow.findIndex(p => p && p.id === initialPost.id);
-      return startIdx >= 0 ? startIdx : 0;
-    } catch {
-      return 0;
+  // Filter posts with videoUrl or media, and guarantee the clicked initialPost is included
+  const postsToShow = useMemo(() => {
+    const list = (creatorPosts || []).filter(p => p && (p.videoUrl || p.image || p.id === initialPost.id));
+    if (initialPost && !list.some(p => p.id === initialPost.id)) {
+      return [initialPost, ...list];
     }
+    return list.length > 0 ? list : [initialPost];
+  }, [creatorPosts, initialPost]);
+
+  // Initialize strictly with initialPost index
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    if (initialPost?.id) {
+      const startIdx = postsToShow.findIndex(p => p && p.id === initialPost.id);
+      if (startIdx >= 0) return startIdx;
+    }
+    return 0;
   });
+
+  // Sync index whenever initialPost ID changes
+  useEffect(() => {
+    if (initialPost?.id) {
+      const idx = postsToShow.findIndex(p => p && p.id === initialPost.id);
+      if (idx >= 0) {
+        setCurrentIndex(idx);
+      }
+    }
+  }, [initialPost?.id, postsToShow]);
+
+  // Listen for post deletions while viewer is open to avoid crashing
+  useEffect(() => {
+    const handleDeleteEvent = (e: Event) => {
+      const { postId } = (e as CustomEvent).detail || {};
+      if (!postId) return;
+      if (postsToShow.length <= 1) {
+        onClose();
+      } else {
+        setCurrentIndex(prev => Math.max(0, Math.min(prev, postsToShow.length - 2)));
+      }
+    };
+    window.addEventListener('nexora-delete-post', handleDeleteEvent);
+    return () => {
+      window.removeEventListener('nexora-delete-post', handleDeleteEvent);
+    };
+  }, [postsToShow.length, onClose]);
 
   const currentPost = postsToShow[currentIndex] || postsToShow[0] || initialPost;
 
@@ -121,12 +145,30 @@ export default function ImmersiveVideoViewer({
           setIsCommentsOpen(false);
         }
       } else if (e.key === 'Escape') {
-        onClose();
+        if (isCommentsOpen) {
+          setIsCommentsOpen(false);
+        } else {
+          onClose();
+        }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentIndex, postsToShow.length, onClose]);
+  }, [currentIndex, postsToShow.length, isCommentsOpen, onClose]);
+
+  // Android Back & Global escape handling
+  useEffect(() => {
+    const handleEscape = (e: Event) => {
+      e.preventDefault();
+      if (isCommentsOpen) {
+        setIsCommentsOpen(false);
+      } else {
+        onClose();
+      }
+    };
+    window.addEventListener('nexora-escape', handleEscape);
+    return () => window.removeEventListener('nexora-escape', handleEscape);
+  }, [isCommentsOpen, onClose]);
 
   const handleNext = (e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -277,6 +319,10 @@ export default function ImmersiveVideoViewer({
                 onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
                 isCommentsOpen={isCommentsOpen}
                 onNotInterested={handleNext}
+                onViewProfile={(userId) => {
+                  onClose();
+                  window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: userId || post.userId || post.username } }));
+                }}
               />
             </div>
           );
@@ -295,6 +341,10 @@ export default function ImmersiveVideoViewer({
               onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
               isCommentsOpen={isCommentsOpen}
               onNotInterested={handleNext}
+              onViewProfile={(userId) => {
+                onClose();
+                window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: userId || currentPost.userId || currentPost.username } }));
+              }}
             />
           </div>
         ) : !currentPost.videoUrl ? (
@@ -340,7 +390,8 @@ export default function ImmersiveVideoViewer({
                         className="flex gap-2 items-center cursor-pointer group/commentuser"
                         onClick={(e) => {
                           e.stopPropagation();
-                          window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: c.userId || c.username }));
+                          onClose();
+                          window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: c.userId || c.username } }));
                         }}
                       >
                         <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover ring-1 ring-violet-500/30" />
@@ -390,7 +441,8 @@ export default function ImmersiveVideoViewer({
                               className="flex items-center gap-2 mb-1 cursor-pointer group/replyuser"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: rep.userId || rep.username }));
+                                onClose();
+                                window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: rep.userId || rep.username } }));
                               }}
                             >
                               <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover ring-1 ring-violet-500/20" />

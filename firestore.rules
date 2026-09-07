@@ -20,10 +20,10 @@ service cloud.firestore {
       return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
 
-    // --- Mail Queue Collection (for Transactional Emails) ---
+    // --- Mail Queue Collection ---
     match /mail/{mailId} {
       allow create: if isSignedIn();
-      allow read, update, delete: if false; // Only background trigger / extension processes these
+      allow read, update, delete: if false;
     }
 
     // --- Users Collection ---
@@ -50,9 +50,8 @@ service cloud.firestore {
       }
 
       match /notifications/{notifId} {
-        allow read, list: if isOwner(userId);
+        allow read, list, update, delete: if isOwner(userId);
         allow create: if isSignedIn();
-        allow update, delete: if isOwner(userId);
       }
     }
 
@@ -60,7 +59,7 @@ service cloud.firestore {
     match /posts/{postId} {
       allow read, list: if true;
       allow create: if isSignedIn();
-      allow update, delete: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
 
     // --- Drafts Collection ---
@@ -78,18 +77,21 @@ service cloud.firestore {
 
     // --- Activities Collection ---
     match /activities/{activityId} {
-      allow read, list, write: if isSignedIn();
+      allow read, list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
     }
 
     // --- Notifications Collection ---
     match /notifications/{notificationId} {
-      allow read, list, write: if isSignedIn();
+      allow read, list, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn();
     }
 
     // --- Creator Analytics Collection ---
     match /creatorAnalytics/{analyticsId} {
       allow read, list: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid);
-      allow write: if isSignedIn();
+      allow write: if isSignedIn() && (resource == null || resource.data.userId == request.auth.uid || request.resource.data.userId == request.auth.uid);
     }
 
     // --- Pages Collection ---
@@ -114,7 +116,7 @@ service cloud.firestore {
 
     // --- Moderation Reports Collection ---
     match /moderationReports/{reportId} {
-      allow read, list: if isSignedIn();
+      allow read, list: if isSignedIn() && (resource == null || resource.data.reporterId == request.auth.uid);
       allow create: if isSignedIn() && request.resource.data.reporterId == request.auth.uid;
     }
 
@@ -126,29 +128,25 @@ service cloud.firestore {
 
     // --- Chats Collection ---
     match /chats/{chatId} {
-      allow read, list: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, list, write: if isSignedIn();
       
       match /typing/{typingId} {
-        allow read, list: if isSignedIn();
-        allow write: if isSignedIn();
+        allow read, list, write: if isSignedIn();
       }
       match /messages/{messageId} {
-        allow read, list: if isSignedIn();
-        allow write: if isSignedIn();
+        allow read, list, write: if isSignedIn();
       }
     }
 
     // --- Presence Collection ---
     match /presence/{userId} {
       allow read, list: if isSignedIn();
-      allow write: if isSignedIn();
+      allow write: if isOwner(userId);
     }
 
-    // --- Messages Sub-collection inside Chats or root Messages ---
+    // --- Messages Sub-collection ---
     match /messages/{messageId} {
-      allow read, list: if isSignedIn();
-      allow write: if isSignedIn();
+      allow read, list, write: if isSignedIn();
     }
   }
 }

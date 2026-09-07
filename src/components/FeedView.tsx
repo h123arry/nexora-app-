@@ -160,6 +160,7 @@ interface FeedViewProps {
   unreadMessagesCount?: number;
   onOpenMessages?: () => void;
   onOpenVohAi?: () => void;
+  isHydrated?: boolean;
 }
 
 export default function FeedView({
@@ -182,7 +183,8 @@ export default function FeedView({
   activeTab = 'feed',
   unreadMessagesCount = 0,
   onOpenMessages,
-  onOpenVohAi
+  onOpenVohAi,
+  isHydrated = true
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
@@ -2003,8 +2005,13 @@ export default function FeedView({
           </div>
         )}
 
-        {/* Empty feed state */}
-        {filteredPosts.length === 0 && (
+        {/* Hydration / Empty feed state */}
+        {!isHydrated ? (
+          <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-white/10 text-center py-16 space-y-4 mx-4 md:mx-0">
+            <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin mx-auto" />
+            <p className="text-xs font-mono text-violet-300">Hydrating feed securely...</p>
+          </div>
+        ) : filteredPosts.length === 0 && (
           <div className="p-6 md:p-8 rounded-3xl bg-[#09071c]/50 border border-white/10 text-center py-10 space-y-6 mx-4 md:mx-0 relative overflow-hidden">
             {/* Glowing aesthetic backdrop lights */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-2xl" />
