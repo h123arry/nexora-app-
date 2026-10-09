@@ -189,6 +189,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
 
   // Instant Demo Access / Bypass Auth Handler
   const handleDemoLogin = () => {
+    if (!import.meta.env.DEV) return;
     const demoUser: User = {
       id: 'demo-user-1',
       username: 'nexora_explorer',
@@ -1055,17 +1056,17 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                 </button>
               </div>
 
-              {/* Instant Demo Access Button */}
-              <div className="mt-3">
+              {/* Development-only read-only demo; never grants Firebase identity. */}
+              {import.meta.env.DEV && <div className="mt-3">
                 <button
                   type="button"
                   onClick={handleDemoLogin}
                   className="w-full py-3 px-4 bg-gradient-to-r from-violet-600/30 to-fuchsia-600/30 hover:from-violet-600/50 hover:to-fuchsia-600/50 border border-violet-500/30 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-violet-950/30"
                 >
                   <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
-                  <span>🚀 Instant Demo Access (Bypass Auth)</span>
+                  <span>Development demo (read-only)</span>
                 </button>
-              </div>
+              </div>}
 
               {/* Bottom Switch to Signup */}
               <div className="pt-2 text-center text-xs text-zinc-400">

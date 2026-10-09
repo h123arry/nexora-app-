@@ -586,13 +586,13 @@ export function subscribeToNotifications(userId: string, callback: (notification
 }
 
 export function subscribeToUsers(callback: (users: User[]) => void) {
-  const q = query(collection(db, 'users'), limit(500));
+  const q = query(collection(db, 'publicProfiles'), limit(500));
   return onSnapshot(q, (snapshot) => {
     const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
     users.forEach(u => cacheManager.setUser(u.id, u));
     callback(users);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'users', auth);
+    handleFirestoreError(error, OperationType.LIST, 'publicProfiles', auth);
   });
 }
 
@@ -717,4 +717,3 @@ export async function updateMessageReadReceipt(chatId: string, messageId: string
     // Fail silently or fallback
   }
 }
-

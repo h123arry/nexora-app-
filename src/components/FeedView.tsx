@@ -13,7 +13,6 @@ import RelativeTime from './RelativeTime';
 import FeedPostCard from './FeedPostCard';
 import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import StoriesView from './StoriesView';
 import { getRecommendationScore, recordRecommendationEvent } from '../utils/recommendations';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
@@ -665,7 +664,7 @@ export default function FeedView({
         if (matchingIncoming) {
           const hasChanged = 
             existingPost.likes !== matchingIncoming.likes ||
-            existingPost.comments.length !== matchingIncoming.comments.length ||
+            JSON.stringify(existingPost.comments) !== JSON.stringify(matchingIncoming.comments) ||
             existingPost.isLikedByUser !== matchingIncoming.isLikedByUser ||
             existingPost.isBookmarkedByUser !== matchingIncoming.isBookmarkedByUser ||
             existingPost.shares !== matchingIncoming.shares ||
@@ -1048,6 +1047,7 @@ export default function FeedView({
 
   // Spark / Like status toggle for comments
   const handleSparkComment = (postId: string, commentId: string) => {
+    window.dispatchEvent(new CustomEvent('nexora-spark-comment', { detail: { postId, commentId } }));
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return {
@@ -1097,30 +1097,6 @@ export default function FeedView({
       recordRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
     }
 
-    const newComment: InteractiveComment = {
-      id: `comment-new-${Date.now()}`,
-      postId,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      content,
-      timestamp: "Just now",
-      likes: 0,
-      replies: []
-    };
-
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          commentsCount: p.commentsCount + 1,
-          comments: [newComment, ...p.comments]
-        };
-      }
-      return p;
-    }));
-
     setCommentInputs(prev => ({ ...prev, [postId]: '' }));
   };
 
@@ -1139,22 +1115,8 @@ export default function FeedView({
       timestamp: "Just now"
     };
 
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          comments: p.comments.map(c => {
-            if (c.id === commentId) {
-              return {
-                ...c,
-                replies: [...(c.replies || []), newReply]
-              };
-            }
-            return c;
-          })
-        };
-      }
-      return p;
+    window.dispatchEvent(new CustomEvent('nexora-add-reply', {
+      detail: { postId, commentId, replyContent: content }
     }));
 
     setReplyInputs(prev => ({ ...prev, [commentId]: '' }));
@@ -1168,30 +1130,6 @@ export default function FeedView({
     const tags = composerText.match(/#\w+/g)?.map(t => t.replace('#', '')) || ["NEXORA"];
 
     onAddPost(composerText, composerImgUrl || undefined, tags.join(','));
-
-    const newPost: RefactoredPost = {
-      id: `composed-${Date.now()}`,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      isVerified: currentUser.isVerified || false,
-      content: composerText,
-      image: composerImgUrl || undefined,
-      tags,
-      likes: 0,
-      commentsCount: 0,
-      shares: 0,
-      timestamp: "Just now",
-      comments: [],
-      location: composerCategory === 'pulse' ? (composerLocation || "Port Harcourt, Nigeria") : undefined,
-      communityName: composerCategory === 'community' ? (composerCommunityName || "General Hub") : undefined,
-      opportunityType: composerCategory === 'opportunity' ? composerOpportunityType : undefined,
-      opportunityReward: composerCategory === 'opportunity' ? composerReward : undefined,
-      category: composerCategory
-    };
-
-    setLocalPosts(prev => [newPost, ...prev]);
 
     // Reset Composer
     setComposerText('');
@@ -1783,13 +1721,13 @@ export default function FeedView({
           }
         }}
         onTouchEnd={handlePullEnd}
-        className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative bg-[#04020a] touch-pan-y pb-28 sm:pb-12"
+        className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative bg-[#04020a] touch-pan-y pb-24 lg:pb-6"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* STAGE 1 — HOME FEED NAVIGATION HEADER */}
-        <div className="sticky top-0 z-30 bg-[#04020a]/95 backdrop-blur-xl border-b border-white/10 px-4 sm:px-6 py-3.5 sm:py-4 flex items-center justify-between min-h-[64px]">
+        <div className="sticky top-0 z-30 bg-[#04020a]/95 backdrop-blur-xl border-b border-white/10 px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between gap-2 min-h-[60px]">
           {/* Left: Feed Categories (Exact Order: Posts, Following, Friends, Trending, Reels) */}
-          <div className="flex items-center gap-6 sm:gap-8 overflow-x-auto scrollbar-none pr-3 py-1">
+          <div role="group" aria-label="Feed categories" className="flex flex-1 min-w-0 items-center gap-1 sm:gap-8 overflow-x-auto overscroll-x-contain scrollbar-none pr-0 sm:pr-2 py-1">
             {([
               { id: 'posts', label: 'Posts' },
               { id: 'following', label: 'Following' },
@@ -1801,11 +1739,14 @@ export default function FeedView({
               return (
                 <button
                   key={cat.id}
+                  type="button"
                   onClick={() => {
                     setFeedTab(cat.id as any);
                     setVisibleCount(8);
                   }}
-                  className={`relative py-2.5 px-1 text-sm sm:text-base font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
+                  aria-label={cat.label}
+                  aria-pressed={isActive}
+                  className={`relative py-2.5 px-0 sm:px-1 text-xs sm:text-base font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
                     isActive ? 'text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200 font-medium'
                   }`}
                 >
@@ -1823,7 +1764,7 @@ export default function FeedView({
           </div>
 
           {/* Right: Frequent Destinations & Utility Menu */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+          <div className="flex items-center gap-1 shrink-0">
             {/* VOH AI Quick Trigger */}
             <button
               onClick={() => {
@@ -1833,7 +1774,7 @@ export default function FeedView({
                   window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'nida' } }));
                 }
               }}
-              className="p-2 text-zinc-300 hover:text-fuchsia-300 hover:bg-fuchsia-500/10 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[38px] min-w-[38px] active:scale-95 group"
+              className="hidden sm:inline-flex nx-icon-button text-fuchsia-300"
               title="VOH AI Intelligence"
               aria-label="Open VOH AI"
             >
@@ -1849,7 +1790,7 @@ export default function FeedView({
                   window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
                 }
               }}
-              className="relative p-2 text-zinc-300 hover:text-blue-300 hover:bg-blue-500/10 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[38px] min-w-[38px] active:scale-95 group"
+              className="relative hidden sm:inline-flex nx-icon-button text-blue-300"
               title="Messages"
               aria-label="Direct Messages"
             >
@@ -1866,7 +1807,7 @@ export default function FeedView({
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('openUniversalSearch'));
               }}
-              className="p-2 text-zinc-300 hover:text-white hover:bg-white/5 rounded-xl transition-all cursor-pointer flex items-center justify-center focus:outline-none min-h-[38px] min-w-[38px] active:scale-95"
+              className="inline-flex nx-icon-button"
               title="Search"
               aria-label="Search Nexora"
             >
@@ -1880,7 +1821,7 @@ export default function FeedView({
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('toggleNavMenu'));
               }}
-              className="relative flex items-center gap-1 py-1.5 px-2 rounded-xl border border-white/10 hover:border-violet-500/30 bg-white/5 hover:bg-white/10 text-zinc-200 hover:text-white transition-all cursor-pointer active:scale-95 text-xs font-sans font-medium group"
+              className="inline-flex nx-icon-button gap-1 px-2 text-xs font-sans font-medium"
               title="Open Navigation Menu"
               aria-label="Navigation Menu"
             >
@@ -1903,7 +1844,7 @@ export default function FeedView({
               onClick={() => setComposerOpen(true)}
               className="flex-1 text-left py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-400 hover:text-zinc-200 text-xs font-sans transition-all cursor-pointer flex items-center justify-between group"
             >
-              <span>What's on your mind? Share updates, pulse news, or opportunities...</span>
+              <span>Share a moment with your circles…</span>
               <Sparkles className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform shrink-0 ml-2" />
             </button>
           </div>
