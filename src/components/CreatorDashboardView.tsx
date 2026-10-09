@@ -153,59 +153,29 @@ export default function CreatorDashboardView({
     return () => clearInterval(checkSchedule);
   }, [scheduledPosts, currentUser.id]);
 
-  // Real Platform Data Statistics Computations
+  // Only aggregate counters present on the user's stored post records.
   const stats = useMemo(() => {
     const active = localPosts.filter(p => !p.isArchived);
-    const totalViews = active.reduce((sum, p) => sum + (p.views || 0), 0) || (localPosts.length * 520 + 240);
-    const totalSparks = active.reduce((sum, p) => sum + (p.likes || 0), 0) || (localPosts.length * 110 + 45);
-    const totalComments = active.reduce((sum, p) => sum + (p.commentsCount || p.comments?.length || 0), 0) || (localPosts.length * 15 + 8);
-    const totalShares = active.reduce((sum, p) => sum + (p.shares || 0), 0) || (localPosts.length * 28 + 6);
-    const totalBookmarks = active.reduce((sum, p) => sum + (p.saves || 0), 0) || (localPosts.length * 19 + 4);
-    
-    // Dynamic derivations
-    const followersGained = Math.floor(currentUser.followers * 0.14) || 68;
-    const followersLost = Math.floor(currentUser.followers * 0.012) || 5;
-    const netFollowers = followersGained - followersLost;
-    const profileViews = Math.floor(totalViews * 0.32) || 160;
-
-    const totalWatchSeconds = active.reduce((sum, p) => {
-      const views = p.views || 180;
-      const dur = p.videoDuration ? parseFloat(p.videoDuration) || 12 : 15;
-      return sum + (views * dur * 0.68); // 68% avg retention ratio
-    }, 0) || (totalViews * 10.4);
-    const totalWatchTimeHours = Math.round((totalWatchSeconds / 3600) * 10) / 10;
-    const avgWatchDuration = 10.2; // sec
-    const avgCompletionRate = 65.8; // percent
-
+    const totalViews = active.reduce((sum, p) => sum + (p.views || 0), 0);
+    const totalSparks = active.reduce((sum, p) => sum + (p.likes || 0), 0);
+    const totalComments = active.reduce((sum, p) => sum + (p.commentsCount || p.comments?.length || 0), 0);
+    const totalShares = active.reduce((sum, p) => sum + (p.shares || 0), 0);
+    const totalBookmarks = active.reduce((sum, p) => sum + (p.saves || 0), 0);
     return {
       totalViews,
       totalSparks,
       totalComments,
       totalShares,
       totalBookmarks,
-      followersGained,
-      followersLost,
-      netFollowers,
-      profileViews,
-      totalWatchTimeHours,
-      avgWatchDuration,
-      avgCompletionRate
+      followerChange: null as number | null,
+      profileViews: null as number | null,
+      totalWatchTimeHours: null as number | null,
+      avgWatchDuration: null as number | null,
+      avgCompletionRate: null as number | null
     };
-  }, [localPosts, currentUser.followers]);
+  }, [localPosts]);
 
-  // Dynamic analytic charts growth data
-  const trendData = useMemo(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days.map((day, i) => {
-      const multiplier = 0.6 + (i * 0.12) + Math.sin(i * 1.5) * 0.18;
-      return {
-        day,
-        views: Math.floor((stats.totalViews / 7) * multiplier),
-        sparks: Math.floor((stats.totalSparks / 7) * multiplier),
-        followers: Math.floor((stats.followersGained / 7) * multiplier)
-      };
-    });
-  }, [stats]);
+  const formatMetric = (value: number | null) => value === null ? 'Not tracked' : value.toLocaleString();
 
   // Optimistic Post Management Functions (Firestore Sync in background)
   const handleEditPostSave = async () => {
@@ -606,10 +576,10 @@ export default function CreatorDashboardView({
               {/* Bento Grid Analytics */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Total Impressions', val: stats.totalViews.toLocaleString(), sub: 'Impressions across feed', icon: Eye, color: 'text-sky-400' },
-                  { label: 'Sparks (Likes)', val: stats.totalSparks.toLocaleString(), sub: 'High engagement score', icon: Sparkles, color: 'text-pink-400' },
-                  { label: 'Watch Duration', val: `${stats.totalWatchTimeHours} hrs`, sub: `Avg watch: ${stats.avgWatchDuration}s`, icon: Clock, color: 'text-violet-400' },
-                  { label: 'Net Followers', val: `+${stats.netFollowers}`, sub: `Gained: ${stats.followersGained} / Lost: ${stats.followersLost}`, icon: Users, color: 'text-emerald-400' }
+                  { label: 'Recorded Views', val: formatMetric(stats.totalViews), sub: 'Total on available post records', icon: Eye, color: 'text-sky-400' },
+                  { label: 'Sparks (Likes)', val: formatMetric(stats.totalSparks), sub: 'Total on available post records', icon: Sparkles, color: 'text-pink-400' },
+                  { label: 'Watch Duration', val: formatMetric(stats.totalWatchTimeHours), sub: 'Watch-time tracking unavailable', icon: Clock, color: 'text-violet-400' },
+                  { label: 'Follower Change', val: formatMetric(stats.followerChange), sub: 'Follower history is not tracked', icon: Users, color: 'text-emerald-400' }
                 ].map((card, i) => {
                   const Icon = card.icon;
                   return (
@@ -634,58 +604,16 @@ export default function CreatorDashboardView({
                 <div className="lg:col-span-2 p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Impressions & Sparks Growth</h4>
-                      <p className="text-xs text-zinc-400 font-mono">Dynamic week-over-week performance matrix</p>
+                      <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Performance over time</h4>
+                      <p className="text-xs text-zinc-400 font-mono">Time-series analytics are not available yet.</p>
                     </div>
                     <div className="flex items-center gap-3 text-[10px] font-bold">
-                      <span className="flex items-center gap-1 text-sky-400"><span className="w-2 h-2 rounded-full bg-sky-400" /> Views</span>
-                      <span className="flex items-center gap-1 text-pink-400"><span className="w-2 h-2 rounded-full bg-pink-400" /> Sparks</span>
+                      <span className="text-zinc-500">No time-series data</span>
                     </div>
                   </div>
 
-                  {/* Svg line path renderer */}
-                  <div className="relative h-48 w-full">
-                    <svg className="w-full h-full" viewBox="0 0 500 160" preserveAspectRatio="none">
-                      {/* Grid Lines */}
-                      <line x1="0" y1="40" x2="500" y2="40" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-                      <line x1="0" y1="80" x2="500" y2="80" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-                      <line x1="0" y1="120" x2="500" y2="120" stroke="rgba(255,255,255,0.03)" strokeWidth="1" />
-                      
-                      {/* Views Curve Line */}
-                      <path 
-                        d={`M 10,${150 - (trendData[0].views / stats.totalViews) * 200} 
-                            L 90,${150 - (trendData[1].views / stats.totalViews) * 200} 
-                            L 170,${150 - (trendData[2].views / stats.totalViews) * 200} 
-                            L 250,${150 - (trendData[3].views / stats.totalViews) * 200} 
-                            L 330,${150 - (trendData[4].views / stats.totalViews) * 200} 
-                            L 410,${150 - (trendData[5].views / stats.totalViews) * 200} 
-                            L 490,${150 - (trendData[6].views / stats.totalViews) * 200}`} 
-                        fill="none" 
-                        stroke="#38bdf8" 
-                        strokeWidth="2.5" 
-                        strokeLinecap="round"
-                      />
-                      
-                      {/* Sparks Curve Line */}
-                      <path 
-                        d={`M 10,${150 - (trendData[0].sparks / stats.totalSparks) * 200} 
-                            L 90,${150 - (trendData[1].sparks / stats.totalSparks) * 200} 
-                            L 170,${150 - (trendData[2].sparks / stats.totalSparks) * 200} 
-                            L 250,${150 - (trendData[3].sparks / stats.totalSparks) * 200} 
-                            L 330,${150 - (trendData[4].sparks / stats.totalSparks) * 200} 
-                            L 410,${150 - (trendData[5].sparks / stats.totalSparks) * 200} 
-                            L 490,${150 - (trendData[6].sparks / stats.totalSparks) * 200}`} 
-                        fill="none" 
-                        stroke="#f472b6" 
-                        strokeWidth="2.5" 
-                        strokeLinecap="round"
-                      />
-                    </svg>
-
-                    {/* SVG X Labels */}
-                    <div className="flex justify-between text-[10px] font-mono text-zinc-500 pt-2 px-1">
-                      {trendData.map(d => <span key={d.day}>{d.day}</span>)}
-                    </div>
+                  <div className="h-48 w-full flex items-center justify-center rounded-xl border border-dashed border-white/10 text-sm text-zinc-500">
+                    A dated analytics event source is required to show a real trend chart.
                   </div>
                 </div>
 
@@ -695,22 +623,9 @@ export default function CreatorDashboardView({
                     <Bell className="w-4 h-4 text-violet-400" /> Platform Event Feeds
                   </h4>
                   <div className="space-y-3 max-h-52 overflow-y-auto pr-1">
-                    {[
-                      { icon: Eye, color: 'bg-sky-500/10 text-sky-400', label: 'Milestone reached!', detail: `Your post reached ${stats.totalViews} total impressions.` },
-                      { icon: Users, color: 'bg-emerald-500/10 text-emerald-400', label: 'Audience upsurge', detail: 'Net followers increased today, trending upwards.' },
-                      { icon: Sparkles, color: 'bg-pink-500/10 text-pink-400', label: 'Sparks spike!', detail: 'Your video is receiving 2x higher engagement.' },
-                      { icon: Calendar, color: 'bg-violet-500/10 text-violet-400', label: 'Publish worker', detail: 'Scheduled publication systems initialized and idle.' }
-                    ].map((n, i) => (
-                      <div key={i} className="flex gap-3 p-3 bg-white/3 border border-white/5 rounded-xl text-xs">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${n.color}`}>
-                          <n.icon className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <p className="font-bold text-white leading-tight">{n.label}</p>
-                          <p className="text-[10px] text-zinc-400 mt-0.5">{n.detail}</p>
-                        </div>
-                      </div>
-                    ))}
+                    <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-zinc-500">
+                      No creator events are available yet. Activity will appear here when persisted event tracking is connected.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -719,134 +634,11 @@ export default function CreatorDashboardView({
 
           {/* TAB 2: AUDIENCE INSIGHTS */}
           {activeTab === 'analytics' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Engagement Insights */}
-              <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-5 md:col-span-2">
-                <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">User Retention & Interaction</h4>
-                
-                {/* Custom Svg Area Retention Chart */}
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs font-bold">
-                    <span>Average Completion Rate: <strong className="text-violet-400">{stats.avgCompletionRate}%</strong></span>
-                    <span className="text-zinc-500">Video duration curve</span>
-                  </div>
-                  <div className="h-32 bg-black/20 rounded-xl p-2 relative">
-                    <svg className="w-full h-full" viewBox="0 0 100 40" preserveAspectRatio="none">
-                      {/* Retention Area path fill */}
-                      <path d="M 0,0 L 5,3 L 15,10 L 30,14 L 60,16 L 80,18 L 100,20 L 100,40 L 0,40 Z" fill="rgba(124, 58, 237, 0.15)" />
-                      <path d="M 0,0 L 5,3 L 15,10 L 30,14 L 60,16 L 80,18 L 100,20" fill="none" stroke="#7c3aed" strokeWidth="1.5" />
-                    </svg>
-                    <div className="absolute bottom-1 right-2 text-[9px] font-mono text-zinc-500">Video length progress →</div>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 italic">🔥 Insight: Your initial hook (first 3s) is retaining 88% of users, which outperforms similar creators by 14%.</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-2">
-                  <div className="p-4 rounded-xl bg-white/3 border border-white/5">
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Share-after-watch Rate</p>
-                    <p className="text-xl font-extrabold text-white">12.4%</p>
-                  </div>
-                  <div className="p-4 rounded-xl bg-white/3 border border-white/5">
-                    <p className="text-[10px] text-zinc-400 font-bold uppercase tracking-widest">Bookmark-after-watch Rate</p>
-                    <p className="text-xl font-extrabold text-white">8.2%</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Returning vs New & Devices */}
-              <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-5">
-                <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Audience Structure</h4>
-                
-                {/* Returning Viewers gauge */}
-                <div className="flex items-center justify-between p-3 bg-white/3 border border-white/5 rounded-xl">
-                  <div>
-                    <p className="text-xs font-bold">New vs Returning</p>
-                    <div className="flex gap-2 text-[10px] text-zinc-400 font-mono mt-1">
-                      <span>New: 65%</span>
-                      <span>Returning: 35%</span>
-                    </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-full border-4 border-violet-600 border-t-pink-500 rotate-45" />
-                </div>
-
-                {/* Device distribution list */}
-                <div className="space-y-3">
-                  <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-widest">Platform & Devices</span>
-                  {[
-                    { label: 'Mobile Device', pct: '78%', icon: Smartphone, progress: 78 },
-                    { label: 'Desktop Clients', pct: '14%', icon: Laptop, progress: 14 },
-                    { label: 'Tablet Screen', pct: '8%', icon: Tablet, progress: 8 }
-                  ].map((dev, i) => (
-                    <div key={i} className="space-y-1">
-                      <div className="flex justify-between text-xs">
-                        <span className="flex items-center gap-1.5 text-zinc-300">
-                          <dev.icon className="w-3.5 h-3.5" /> {dev.label}
-                        </span>
-                        <span className="font-mono text-white font-bold">{dev.pct}</span>
-                      </div>
-                      <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-violet-600 to-pink-500" style={{ width: `${dev.progress}%` }} />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Geographic distribution & Upload matrix */}
-              <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-5 md:col-span-3">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Geographic */}
-                  <div className="space-y-3">
-                    <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">Top Countries</h5>
-                    <div className="space-y-2">
-                      {[
-                        { country: 'United States', code: 'US', views: '42%' },
-                        { country: 'United Kingdom', code: 'UK', views: '18%' },
-                        { country: 'Germany', code: 'DE', views: '12%' },
-                        { country: 'France', code: 'FR', views: '8%' }
-                      ].map((geo, i) => (
-                        <div key={i} className="flex justify-between items-center text-xs p-2.5 bg-white/3 rounded-lg border border-white/5">
-                          <span className="flex items-center gap-2">
-                            <span className="w-5 h-5 bg-zinc-800 rounded-full flex items-center justify-center font-mono font-black text-[9px]">{geo.code}</span>
-                            {geo.country}
-                          </span>
-                          <span className="font-mono text-zinc-300 font-extrabold">{geo.views}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Heatmap Upload Times */}
-                  <div className="space-y-3">
-                    <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">Best Post Times (Engagement Peak)</h5>
-                    <div className="grid grid-cols-7 gap-1 bg-black/30 p-2 rounded-xl">
-                      {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, dIdx) => (
-                        <div key={dIdx} className="space-y-1 text-center">
-                          <span className="text-[9px] font-bold text-zinc-500 block mb-1">{day}</span>
-                          {[0, 1, 2, 3, 4].map((slot) => {
-                            // High peaks on Tuesday, Thursday evening
-                            const isPeak = (dIdx === 1 && slot === 3) || (dIdx === 3 && slot === 4);
-                            const isMed = (dIdx === 4 && slot === 3) || (dIdx === 2 && slot === 2);
-                            return (
-                              <div 
-                                key={slot} 
-                                className={`w-full h-5 rounded-sm transition-all cursor-pointer ${
-                                  isPeak ? 'bg-pink-500 shadow-md shadow-pink-500/20' : isMed ? 'bg-violet-600/60' : 'bg-white/5'
-                                }`}
-                                title="Click to view hour engagement density"
-                              />
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex justify-between items-center text-[10px] text-zinc-500 font-mono">
-                      <span>08:00 AM (Low)</span>
-                      <span>06:00 PM (High Peak 🔥)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a071f]/60 p-8 text-center">
+              <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Audience analytics unavailable</h4>
+              <p className="mx-auto mt-2 max-w-xl text-xs leading-relaxed text-zinc-400">
+                Retention, new-versus-returning audience, device, geographic and best-time metrics require a persisted analytics event source. No estimates are shown.
+              </p>
             </div>
           )}
 

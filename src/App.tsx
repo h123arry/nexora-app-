@@ -34,7 +34,6 @@ import {
   getGlobalPosts, 
   subscribeToPosts, 
   subscribeToUsers, 
-  saveUserToDb, 
   savePostToDb, 
   subscribeToNotifications, 
   subscribeToFollows, 
@@ -43,8 +42,8 @@ import {
   removeFollow
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
-import { db, auth, signInAnonymously } from './lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
+import { db } from './lib/firebase';
+import { useFirebase } from './context/FirebaseContext';
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
@@ -61,7 +60,6 @@ import AuthView from './components/AuthView';
 import SlideDownMenu from './components/SlideDownMenu';
 import NexoraPremiumLogo from './components/NexoraPremiumLogo';
 import NexoraBranding from './components/NexoraBranding';
-import AdminDashboardView from './components/AdminDashboardView';
 import CreatorDashboardView from './components/CreatorDashboardView';
 import ActivityView from './components/ActivityView';
 import OnboardingTour from './components/OnboardingTour';
@@ -81,20 +79,10 @@ import OfflineBanner from './components/OfflineBanner';
 import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User>(() => {
-    console.log("🔥 Initializing currentUser...");
-    const saved = localStorage.getItem('nexora_user');
-    if (saved) {
-      try {
-        const u = JSON.parse(saved);
-        if (u && u.id) return getRichUser(u);
-      } catch {}
-    }
-    const savedLoggedIn = localStorage.getItem('nexora_logged_in') === 'true';
-    if (savedLoggedIn) {
-      return getRichUser(INITIAL_USER);
-    }
-    return getRichUser({
+  const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, logout } = useFirebase();
+  const isLoggedIn = !!firebaseUser && !firebaseUser.isAnonymous && firebaseProfile?.id === firebaseUser.uid;
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
       username: 'visitor',
       name: 'Nexora Visitor',
@@ -112,8 +100,7 @@ export default function App() {
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {},
       skills: []
-    });
-  });
+    }));
 
   const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
     const map: Record<string, User> = {};
@@ -162,35 +149,7 @@ export default function App() {
     });
     map[harrison.id] = harrison;
 
-    // Load registered users from local cache
-    try {
-      const rawRegistered = localStorage.getItem('nexora_users_db');
-      if (rawRegistered) {
-        const usersList: User[] = JSON.parse(rawRegistered);
-        usersList.forEach(u => {
-          if (u && u.id) {
-            map[u.id] = getRichUser(u);
-          }
-        });
-      }
-    } catch {}
-
-    const savedUser = localStorage.getItem('nexora_user');
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        if (u && u.id) {
-          const richU = getRichUser(u);
-          map[richU.id] = richU;
-        }
-      } catch {}
-    }
     return map;
-  });
-
-  const [isLoggedIn, setIsLoggedIn] = useState(() => {
-    const saved = localStorage.getItem('nexora_logged_in');
-    return saved === 'true';
   });
 
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
@@ -210,6 +169,38 @@ export default function App() {
     action();
     return true;
   };
+
+  useEffect(() => {
+    if (authInitializing) return;
+    if (isLoggedIn && firebaseProfile) {
+      setIsDemoMode(false);
+      setCurrentUser(getRichUser(firebaseProfile));
+      localStorage.setItem('nexora_user', JSON.stringify(firebaseProfile));
+      localStorage.removeItem('nexora_logged_in');
+      return;
+    }
+    localStorage.removeItem('nexora_user');
+    localStorage.removeItem('nexora_logged_in');
+    if (!isDemoMode) setCurrentUser(getRichUser({
+      id: 'guest_visitor_id', username: 'visitor', name: 'Nexora Visitor',
+      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      bio: 'Guest visitor browsing Nexora network.', location: 'Earth Orbit', website: 'https://nexora.app',
+      followers: 0, following: 0, sparks: 0, isVerified: false,
+      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
+      joinedDate: 'Joined 2026', reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {}, skills: []
+    }));
+  }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile, isDemoMode]);
+
+  useEffect(() => {
+    if (isLoggedIn && pendingAuthAction) {
+      const action = pendingAuthAction;
+      setPendingAuthAction(null);
+      action();
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Authenticated successfully! Action completed.' }));
+    }
+  }, [isLoggedIn, pendingAuthAction]);
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
@@ -275,14 +266,6 @@ export default function App() {
   }, [currentUser]);
 
   useEffect(() => {
-    signInAnonymously(auth).catch((err) => {
-      if (err.code === 'auth/admin-restricted-operation') {
-        console.warn('Anonymous Auth is disabled. Using offline mode.');
-      }
-    });
-  }, []);
-
-  useEffect(() => {
     let unsubPosts: () => void;
     let unsubUsers: () => void;
     let unsubFollows: () => void;
@@ -307,38 +290,27 @@ export default function App() {
       }
     });
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      console.log('[App] Auth state changed, user:', user ? user.uid : 'null');
-      if (unsubFollows) { unsubFollows(); }
-
-      if (user) {
-        unsubFollows = subscribeToFollows(user.uid, (dbFollows) => {
-          console.log('[App] Received follows:', dbFollows?.length || 0);
-          if (dbFollows) {
-            localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
-            const currentUserId = auth.currentUser?.uid || currentUser?.id;
-            if (currentUserId) {
-              const updatedFollowing = dbFollows.filter((f: any) => f.followerId === currentUserId).map((f: any) => f.followingId);
-              setFollowingIds(updatedFollowing);
-            }
-          }
-        });
-      }
-    });
+    if (isLoggedIn && firebaseUser) {
+      unsubFollows = subscribeToFollows(firebaseUser.uid, (dbFollows) => {
+        if (dbFollows) {
+          localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
+          setFollowingIds(dbFollows.filter((f: any) => f.followerId === firebaseUser.uid).map((f: any) => f.followingId));
+        }
+      });
+    }
 
     return () => {
       console.log('[App] Cleaning up auth and data subscriptions...');
-      unsubscribeAuth();
       if (unsubPosts) unsubPosts();
       if (unsubUsers) unsubUsers();
       if (unsubFollows) unsubFollows();
     };
-  }, []);
+  }, [firebaseUser?.uid, isLoggedIn]);
 
   // Real-time notifications synchronization for active logged-in identity
   useEffect(() => {
-    if (!currentUser?.id) return;
-    const unsubNotif = subscribeToNotifications(currentUser.id, (dbNotifs) => {
+    if (!isLoggedIn || !firebaseUser?.uid) return;
+    const unsubNotif = subscribeToNotifications(firebaseUser.uid, (dbNotifs) => {
       if (dbNotifs) {
         setNotifications(dbNotifs);
       }
@@ -346,7 +318,7 @@ export default function App() {
     return () => {
       if (unsubNotif) unsubNotif();
     };
-  }, [currentUser?.id]);
+  }, [firebaseUser?.uid, isLoggedIn]);
 
   // Poll background synchronization status from dataService queue
   useEffect(() => {
@@ -866,15 +838,15 @@ export default function App() {
     return () => window.removeEventListener('show-voh-verification-modal', handleShowModal);
   }, []);
 
-  // 2. Local Storage Persistence Synchronization sync
+  // The cached profile is only for display convenience; Firebase Auth is the sole authority.
   useEffect(() => {
-    if (!currentUser || !currentUser.id) return;
-    localStorage.setItem('nexora_user', JSON.stringify(currentUser));
-  }, [currentUser]);
-
-  useEffect(() => {
-    localStorage.setItem('nexora_logged_in', String(isLoggedIn));
-  }, [isLoggedIn]);
+    if (isLoggedIn && firebaseUser && currentUser.id === firebaseUser.uid) {
+      localStorage.setItem('nexora_user', JSON.stringify(currentUser));
+    } else if (!firebaseUser) {
+      localStorage.removeItem('nexora_user');
+      localStorage.removeItem('nexora_logged_in');
+    }
+  }, [currentUser, firebaseUser?.uid, isLoggedIn]);
 
   useEffect(() => {
     localStorage.setItem('nexora_posts', JSON.stringify(posts));
@@ -1082,7 +1054,7 @@ export default function App() {
       setPosts(prev => {
         const next = prev.map(p => {
           if (p.id !== postId) return p;
-          return {
+          const updatedPost = {
             ...p,
             comments: (p.comments || []).map(c => {
               if (c.id !== commentId) return c;
@@ -1094,6 +1066,8 @@ export default function App() {
               };
             })
           };
+          savePostToDb(updatedPost);
+          return updatedPost;
         });
         localStorage.setItem('nexora_posts', JSON.stringify(next));
         return next;
@@ -1117,7 +1091,7 @@ export default function App() {
       setPosts(prev => {
         const next = prev.map(p => {
           if (p.id !== postId) return p;
-          return {
+          const updatedPost = {
             ...p,
             comments: (p.comments || []).map(c => {
               if (c.id !== commentId) return c;
@@ -1127,6 +1101,8 @@ export default function App() {
               };
             })
           };
+          savePostToDb(updatedPost);
+          return updatedPost;
         });
         localStorage.setItem('nexora_posts', JSON.stringify(next));
         return next;
@@ -1402,6 +1378,10 @@ export default function App() {
     isBroadcastPost?: boolean,
     communityName?: string
   ): string => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName), 'Sign in to publish content.');
+      return '';
+    }
     // Parse tags safely
     const parsedTags = tagsString
       ? tagsString.split(',').map(t => t.trim().replace('#', '')).filter(t => t.length > 0)
@@ -1519,6 +1499,10 @@ export default function App() {
   };
 
   const handleSharePost = (postId: string) => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      requireAuth(() => handleSharePost(postId), 'Sign in to share posts.');
+      return;
+    }
     setPosts(prevPosts =>
       prevPosts.map(p => {
         if (p.id === postId) {
@@ -1674,14 +1658,11 @@ export default function App() {
     }, 'Join Nexora to follow creators, build your network, and personalize your feed.');
   };
 
-  const handleViewProfile = (userIdOrUsername: string) => {
+  const handleViewProfile = async (userIdOrUsername: string) => {
     if (!userIdOrUsername) return;
     // Check if itself
     const cleanIdOrUser = userIdOrUsername.replace('@', '').toLowerCase().trim();
     
-    // Record profile visit for recommendations
-    recordRecommendationEvent('visit_profile', { creatorId: cleanIdOrUser, creatorUsername: cleanIdOrUser });
-
     if (userIdOrUsername === currentUser.id || currentUser.username.toLowerCase() === cleanIdOrUser) {
       navigateTo('profile', null);
       return;
@@ -1697,52 +1678,23 @@ export default function App() {
 
 
 
-    // Dynamic builder if not pre-configured
     if (!finalUserToView) {
       const matchingPost = posts.find(p => p.userId === userIdOrUsername || p.username.toLowerCase() === cleanIdOrUser);
-      if (matchingPost) {
-        finalUserToView = {
-          id: matchingPost.userId,
-          username: matchingPost.username,
-          name: matchingPost.name,
-          avatar: matchingPost.avatar,
-          bio: `Prominent broadcaster specializing in secure data flows. Follow @${matchingPost.username} to find active discussions.`,
-          location: 'Earth Orbit',
-          website: `nexora.ai/${matchingPost.username}`,
-          followers: 130,
-          following: 58,
-          isVerified: matchingPost.isVerified || false,
-          coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-          joinedDate: 'Joined June 2026',
-          reputationPoints: 1200,
-          reputationBreakdown: { contributions: 300, helpfulness: 250, missionsCompleted: 2, skillsVerified: 650 },
-          interestDNA: { 'AI': 80, 'Technology': 70, 'Creative Coding': 60 },
-          skills: ['Broadcasting']
-        };
+      if (matchingPost?.userId) {
+        try {
+          finalUserToView = await ProfileService.getPublicProfile(matchingPost.userId);
+        } catch (error) {
+          console.warn('Unable to load post author profile.', error);
+        }
       }
     }
 
-    // Fallback: build standard template
     if (!finalUserToView) {
-      finalUserToView = {
-        id: userIdOrUsername,
-        username: cleanIdOrUser,
-        name: cleanIdOrUser.charAt(0).toUpperCase() + cleanIdOrUser.slice(1),
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-        bio: `Connected explorer mapping data parameters across the NEXORA network.`,
-        location: 'Space Station Arc',
-        website: '',
-        followers: 4,
-        following: 1,
-        isVerified: false,
-        coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-        joinedDate: 'Joined June 2026',
-        reputationPoints: 50,
-        reputationBreakdown: { contributions: 10, helpfulness: 10, missionsCompleted: 0, skillsVerified: 30 },
-        interestDNA: { 'Technology': 100 },
-        skills: ['Explorer']
-      };
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This profile is unavailable or could not be loaded.' }));
+      return;
     }
+
+    recordRecommendationEvent('visit_profile', { creatorId: finalUserToView.id, creatorUsername: finalUserToView.username });
 
     // Get instantly from ProfileEngine with quiet background revalidation
     const instantUser = ProfileEngine.getProfileInstantly(finalUserToView, (freshUser) => {
@@ -1753,6 +1705,10 @@ export default function App() {
 
   const handleStartChat = (userId: string) => {
     if (!userId) return;
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      requireAuth(() => handleStartChat(userId), 'Sign in to start a conversation.');
+      return;
+    }
     // Find partner detail
     let partner = (Object.values(globalUsersMap) as User[]).find(c => c.id === userId);
     if (!partner) {
@@ -1821,6 +1777,10 @@ export default function App() {
 
   // 8. Studio profile settings update
   const handleUpdateProfile = (updatedData: Partial<User>) => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      requireAuth(() => handleUpdateProfile(updatedData), 'Sign in to edit your profile.');
+      return;
+    }
     setCurrentUser(prev => {
       const freshUser = {
         ...prev,
@@ -1866,8 +1826,9 @@ export default function App() {
       });
 
       // Save to database/sync engine & ProfileService
-      saveUserToDb(freshUser);
-      ProfileService.updateProfile(freshUser.id, updatedData).catch(err => console.error('Error updating profile in ProfileService:', err));
+      if (isLoggedIn && firebaseUser?.uid === freshUser.id) {
+        ProfileService.updateProfile(freshUser.id, updatedData).catch(err => console.error('Error updating profile in ProfileService:', err));
+      }
 
       return freshUser;
     });
@@ -2005,6 +1966,18 @@ export default function App() {
       .slice(0, 5);
   }, [posts]);
 
+  // Do not render account data until the provider has resolved the current Firebase identity.
+  const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== 'demo-user-1' && currentUser.id !== firebaseUser?.uid;
+  if (authInitializing || staleAccountVisible) {
+    return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring secure session…" /></div>;
+  }
+  if (firebaseUser && !firebaseUser.isAnonymous && !firebaseProfile) {
+    return <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#07060b] p-6 text-center text-white">
+      <p role="alert" className="max-w-md text-sm text-rose-200">{authError || 'Your account profile could not be loaded. Private screens remain locked.'}</p>
+      <button className="rounded-xl border border-white/15 px-4 py-2 text-sm" onClick={() => logout().catch(() => window.location.reload())}>Sign out</button>
+    </div>;
+  }
+
   // Render Core layout
   return (
     <div id="nexora-master-wrapper" className={`${getThemeWrapperClass(theme)} transition-colors duration-500`}>
@@ -2091,12 +2064,19 @@ export default function App() {
                 activeTab={activeTab}
                 unreadMessagesCount={unreadMessagesCount}
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
-                onOpenVohAi={() => { setActiveTab('nida'); setViewedUser(null); }}
+                onOpenVohAi={() => { setMatrixSubTabRedirect('ai'); setActiveTab('matrix'); setViewedUser(null); }}
               />
             </motion.div>
             
             {activeTab !== 'feed' && (
               <div className={activeTab === 'profile' ? "w-full min-h-[620px]" : `${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
+                {!isLoggedIn && ['matrix', 'inbox', 'activity', 'admin', 'creator', 'saved', 'wallet', 'settings'].includes(activeTab) ? (
+                  <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
+                    <h2 className="text-lg font-bold">Sign in required</h2>
+                    <p className="max-w-md text-sm text-zinc-400">This area contains account-specific information and is available only to a verified Firebase account.</p>
+                    <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold" onClick={() => { setAuthPromptReason('Sign in to access your private Nexora workspace.'); setShowAuthModal(true); }}>Sign in or create account</button>
+                  </div>
+                ) : (
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={activeTab}
@@ -2218,12 +2198,9 @@ export default function App() {
                   )}
 
                   {activeTab === 'admin' && (
-                    <AdminDashboardView
-                      currentUser={getRichUser(currentUser)}
-                      posts={resolvedPosts}
-                      onRemovePost={handleRemovePost}
-                      lang={TRANSLATIONS[currentUser.preferredLanguage as any] || TRANSLATIONS.en}
-                    />
+                    <div role="status" className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 text-sm text-amber-100">
+                      Admin controls are disabled in this client. Secure moderation requires a trusted Firebase admin claim and server-side authorization.
+                    </div>
                   )}
 
                   {activeTab === 'creator' && (
@@ -2258,6 +2235,7 @@ export default function App() {
                   )}
                 </motion.div>
               </AnimatePresence>
+                )}
             </div>
             )}
           </div>
@@ -2454,9 +2432,11 @@ export default function App() {
         {/* 3. ➕ Center Create Button */}
         <motion.button 
           onClick={() => {
-            setCreationInitialMode(null);
-            setCreationInitialTab(undefined);
-            setIsCreateMenuOpen(true);
+            requireAuth(() => {
+              setCreationInitialMode(null);
+              setCreationInitialTab(undefined);
+              setIsCreateMenuOpen(true);
+            }, 'Sign in to create and publish posts.');
           }}
           className="relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
           id="nav-create-post-center"
@@ -2641,41 +2621,20 @@ export default function App() {
               <div className="flex flex-col gap-2 pt-2">
                 <button
                   onClick={async () => {
-                    // Secure sign out
-                    setIsLogoutConfirming(false);
-                    // Clear session state
-                    setIsLoggedIn(false);
-                    localStorage.setItem('nexora_logged_in', 'false');
-                    const guestUser = getRichUser({
-                      id: 'guest_visitor_id',
-                      username: 'visitor',
-                      name: 'Nexora Visitor',
-                      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-                      bio: 'Guest visitor browsing Nexora network.',
-                      location: 'Earth Orbit',
-                      website: 'https://nexora.app',
-                      followers: 0,
-                      following: 0,
-                      sparks: 0,
-                      isVerified: false,
-                      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-                      joinedDate: 'Joined 2026',
-                      reputationPoints: 0,
-                      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-                      interestDNA: {},
-                      skills: []
-                    });
-                    setCurrentUser(guestUser);
-                    localStorage.setItem('nexora_user', JSON.stringify(guestUser));
-                    setViewedUser(null);
-                    localStorage.removeItem('nexora_last_reels_post_id');
-                    localStorage.removeItem('nexora_last_reels_index');
                     try {
-                      await auth.signOut();
+                      await logout();
+                      setIsDemoMode(false);
+                      setViewedUser(null);
+                      localStorage.removeItem('nexora_user');
+                      localStorage.removeItem('nexora_logged_in');
+                      localStorage.removeItem('nexora_last_reels_post_id');
+                      localStorage.removeItem('nexora_last_reels_index');
+                      setIsLogoutConfirming(false);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: '🚪 Signed out successfully' }));
                     } catch (e) {
-                      console.warn('Sign out warning:', e);
+                      console.warn('Sign out failed:', e);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: 'Sign out failed. Your session is still active.' }));
                     }
-                    window.dispatchEvent(new CustomEvent('toast', { detail: '🚪 Signed out successfully' }));
                   }}
                   className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-sans text-xs font-black transition-all cursor-pointer shadow-lg shadow-rose-600/20 active:scale-[0.98]"
                 >
@@ -3239,15 +3198,15 @@ export default function App() {
               <AuthView
                 promptReason={authPromptReason}
                 onLoginSuccess={(loggedUser) => {
-                  setCurrentUser(getRichUser(loggedUser));
-                  setIsLoggedIn(true);
-                  localStorage.setItem('nexora_logged_in', 'true');
-                  setShowAuthModal(false);
-                  if (pendingAuthAction) {
-                    pendingAuthAction();
-                    setPendingAuthAction(null);
+                  if (loggedUser.id === 'demo-user-1' && import.meta.env.DEV) {
+                    setIsDemoMode(true);
+                    setCurrentUser(getRichUser(loggedUser));
+                    setShowAuthModal(false);
+                    return;
                   }
-                  window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Authenticated successfully! Action completed.' }));
+                  setIsDemoMode(false);
+                  setCurrentUser(getRichUser(loggedUser));
+                  setShowAuthModal(false);
                 }}
               />
             </div>

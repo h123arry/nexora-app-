@@ -665,7 +665,7 @@ export default function FeedView({
         if (matchingIncoming) {
           const hasChanged = 
             existingPost.likes !== matchingIncoming.likes ||
-            existingPost.comments.length !== matchingIncoming.comments.length ||
+            JSON.stringify(existingPost.comments) !== JSON.stringify(matchingIncoming.comments) ||
             existingPost.isLikedByUser !== matchingIncoming.isLikedByUser ||
             existingPost.isBookmarkedByUser !== matchingIncoming.isBookmarkedByUser ||
             existingPost.shares !== matchingIncoming.shares ||
@@ -1048,6 +1048,7 @@ export default function FeedView({
 
   // Spark / Like status toggle for comments
   const handleSparkComment = (postId: string, commentId: string) => {
+    window.dispatchEvent(new CustomEvent('nexora-spark-comment', { detail: { postId, commentId } }));
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return {
@@ -1097,30 +1098,6 @@ export default function FeedView({
       recordRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
     }
 
-    const newComment: InteractiveComment = {
-      id: `comment-new-${Date.now()}`,
-      postId,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      content,
-      timestamp: "Just now",
-      likes: 0,
-      replies: []
-    };
-
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          commentsCount: p.commentsCount + 1,
-          comments: [newComment, ...p.comments]
-        };
-      }
-      return p;
-    }));
-
     setCommentInputs(prev => ({ ...prev, [postId]: '' }));
   };
 
@@ -1139,22 +1116,8 @@ export default function FeedView({
       timestamp: "Just now"
     };
 
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          comments: p.comments.map(c => {
-            if (c.id === commentId) {
-              return {
-                ...c,
-                replies: [...(c.replies || []), newReply]
-              };
-            }
-            return c;
-          })
-        };
-      }
-      return p;
+    window.dispatchEvent(new CustomEvent('nexora-add-reply', {
+      detail: { postId, commentId, replyContent: content }
     }));
 
     setReplyInputs(prev => ({ ...prev, [commentId]: '' }));
@@ -1168,30 +1131,6 @@ export default function FeedView({
     const tags = composerText.match(/#\w+/g)?.map(t => t.replace('#', '')) || ["NEXORA"];
 
     onAddPost(composerText, composerImgUrl || undefined, tags.join(','));
-
-    const newPost: RefactoredPost = {
-      id: `composed-${Date.now()}`,
-      userId: currentUser.id,
-      username: currentUser.username,
-      name: currentUser.name,
-      avatar: currentUser.avatar,
-      isVerified: currentUser.isVerified || false,
-      content: composerText,
-      image: composerImgUrl || undefined,
-      tags,
-      likes: 0,
-      commentsCount: 0,
-      shares: 0,
-      timestamp: "Just now",
-      comments: [],
-      location: composerCategory === 'pulse' ? (composerLocation || "Port Harcourt, Nigeria") : undefined,
-      communityName: composerCategory === 'community' ? (composerCommunityName || "General Hub") : undefined,
-      opportunityType: composerCategory === 'opportunity' ? composerOpportunityType : undefined,
-      opportunityReward: composerCategory === 'opportunity' ? composerReward : undefined,
-      category: composerCategory
-    };
-
-    setLocalPosts(prev => [newPost, ...prev]);
 
     // Reset Composer
     setComposerText('');

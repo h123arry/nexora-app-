@@ -39,12 +39,12 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
   const [isVohThinking, setIsVohThinking] = useState(false);
 
   // User interactive states
-  const [followedAlerts, setFollowedAlerts] = useState<string[]>(['⚽ Football', '🧠 AI']);
+  const [followedAlerts, setFollowedAlerts] = useState<string[]>([]);
   const [activeDiscussion, setActiveDiscussion] = useState<PulseEvent | null>(null);
-  const [discussionComments, setDiscussionComments] = useState<{ user: string; text: string; rep: number }[]>([
+  const [discussionComments, setDiscussionComments] = useState<{ user: string; text: string; rep: number }[]>(import.meta.env.DEV ? [
     { user: 'alex_founder', text: 'This alters our layout roadmap completely!', rep: 124 },
     { user: 'david_analytics', text: 'Spoken statistics show 94% retention rate on this topic.', rep: 82 }
-  ]);
+  ] : []);
   const [newCommentText, setNewCommentText] = useState('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
   };
 
   // Static high-fidelity Pulse Data
-  const pulseEvents: PulseEvent[] = [
+  const pulseEvents: PulseEvent[] = import.meta.env.DEV ? [
     {
       id: 'pe-sports-1',
       title: '⚽ Champions League Final Fanfare',
@@ -195,10 +195,10 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       ],
       predictionScore: 92
     }
-  ];
+  ] : [];
 
   // Locations for World Map
-  const mapPins = [
+  const mapPins = import.meta.env.DEV ? [
     { id: 'pin-lagos', city: 'Lagos', x: 45, y: 64, pulse: 97, info: '⚽ Champions League Screening & Tech Hub Startup Launch', category: 'sports' },
     { id: 'pin-aba', city: 'Aba', x: 47, y: 66, pulse: 88, info: '📍 Aba Regional Co-Build Meetup Group', category: 'local' },
     { id: 'pin-london', city: 'London', x: 44, y: 28, pulse: 94, info: '⚽ Champions League tactical matrices and predictions', category: 'sports' },
@@ -206,7 +206,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
     { id: 'pin-sanfran', city: 'San Francisco', x: 18, y: 39, pulse: 95, info: '🧠 Open compiler optimization and generative architectures', category: 'tech' },
     { id: 'pin-berlin', city: 'Berlin', x: 49, y: 31, pulse: 85, info: '🎵 Electronic Synthesizer performance wave', category: 'entertainment' },
     { id: 'pin-johannesburg', city: 'Johannesburg', x: 52, y: 82, pulse: 93, info: '💼 Mobile micro-finance and offline banking protocols', category: 'business' }
-  ];
+  ] : [];
 
   // Active category filter function
   const filteredEvents = useMemo(() => {
@@ -257,30 +257,15 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
         })
       });
 
+      if (!response.ok) throw new Error('VOH AI request failed');
       const data = await response.json();
-      setVohReplies(prev => [{ query, reply: data.text }, ...prev]);
-      triggerToast("VOH AI retrieved latest pulse trends!");
+      const responseText = data.isDemo
+        ? `${data.text}\n\nDemo response — live AI is not configured.`
+        : data.text;
+      setVohReplies(prev => [{ query, reply: responseText || 'No response was returned.' }, ...prev]);
     } catch (err) {
-      console.error("VOH AI Pulse request failed, using mock:", err);
-      let replyText = '';
-      const q = query.toLowerCase();
-
-      if (q.includes('nigeria') || q.includes('aba') || q.includes('lagos')) {
-        replyText = "🧠 VOH AI Scan: In Nigeria, the Aba Co-Build Meetup (88 Pulse) and Lagos Champions League Fan screening (97 Pulse Score) are currently fueling local community transactions. Startup founder networks are co-building open payment SDKs in Lagos Hubs.";
-      } else if (q.includes('football') || q.includes('champions') || q.includes('sports')) {
-        replyText = "🧠 VOH AI Scan: Champions League Final is spiking globally on-chain with 35,000 active discussions. Top discussing guilds include '⚽ Football Nigeria' and '⚽ Premier League Fans' with high participant reputation.";
-      } else if (q.includes('summarize') || q.includes('pulse') || q.includes('today')) {
-        replyText = "🧠 VOH AI Daily Sum: 1. Sports leads today (Champions League 97 PR); 2. Business micro-payments in Sub-Saharan Africa expand rapidly (+18 countries); 3. Tech pioneers launch on-device Neural Alignment guides worldwide.";
-      } else if (q.includes('startup') || q.includes('founder') || q.includes('business')) {
-        replyText = "🧠 VOH AI Scan: Startup founders are actively discussing real-time micro-payments without service fees. Curated communities like '💼 Founders Alliance' are holding interactive testing forums right now.";
-      } else if (q.includes('ai') || q.includes('breakthrough') || q.includes('tech')) {
-        replyText = "🧠 VOH AI Scan: Responsive user interface layers are hot worldwide. 45 communities are actively analyzing code blueprints.";
-      } else {
-        replyText = `🧠 VOH AI Scan for '${query}': Activity streams show positive social spark trends (+15% momentum). Relevant tags found in 'Technology' and 'Sports' with stable growth index. Ask me about football, AI, or today's pulse summary!`;
-      }
-
-      setVohReplies(prev => [{ query, reply: replyText }, ...prev]);
-      triggerToast("VOH AI retrieved latest pulse trends!");
+      console.error("VOH AI Pulse request failed:", err);
+      setVohReplies(prev => [{ query, reply: 'VOH AI could not reach the service. Check your connection and try again.' }, ...prev]);
     } finally {
       setIsVohThinking(false);
     }
@@ -293,13 +278,17 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       triggerToast(`Muted immediate alerts for ${topic}`);
     } else {
       setFollowedAlerts(prev => [...prev, topic]);
-      triggerToast(`Alert enabled! You'll receive instant trending updates for ${topic}`);
+      triggerToast(`Alert preference saved on this device for ${topic}. Delivery is not configured here.`);
     }
   };
 
   // Add Comment strictly inside a specific event discussion
   const handleAddComment = () => {
     if (!newCommentText.trim() || !activeDiscussion) return;
+    if (!import.meta.env.DEV) {
+      triggerToast('Pulse discussion replies are not connected to persistent storage yet.');
+      return;
+    }
     setDiscussionComments(prev => [
       ...prev,
       { user: 'you_builder_voh', text: newCommentText, rep: 25 }
@@ -331,8 +320,13 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
           <span className="text-xl">🌍</span> World Pulse
         </h2>
         <p className="text-xs text-violet-300/60 mt-0.5">
-          Discover what the world is discussing right now.
+          Discover what people are discussing. Live trend aggregation is not connected yet.
         </p>
+        {import.meta.env.DEV && (
+          <p className="mt-2 inline-flex rounded-full border border-amber-400/20 bg-amber-400/5 px-2.5 py-1 text-[10px] text-amber-200/80">
+            Development preview data only — not live activity
+          </p>
+        )}
       </div>
 
       {/* SEARCH BAR & QUICK TAGS */}
@@ -416,10 +410,10 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
             </div>
             <div>
               <span className="text-xs font-mono uppercase tracking-widest font-black text-violet-300">VOH AI Pulse Agent</span>
-              <p className="text-[10px] text-violet-300/40">Query community trends and upcoming topic analytics</p>
+              <p className="text-[10px] text-violet-300/40">Ask VOH AI; live World Pulse trend data is not connected yet.</p>
             </div>
           </div>
-          <span className="text-[9px] font-mono bg-violet-500/10 text-violet-300 border border-white/10 px-2 py-0.5 rounded-md uppercase font-black tracking-tight">Active Core</span>
+          <span className="text-[9px] font-mono bg-violet-500/10 text-violet-300 border border-white/10 px-2 py-0.5 rounded-md uppercase font-black tracking-tight">AI service</span>
         </div>
 
         {/* Dynamic input bar to Ask VOH */}
@@ -658,7 +652,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                       ● FEED ADVISORY
                     </span>
                     <p className="text-[11px] font-sans text-violet-200/50 leading-relaxed">
-                      Click any pulse coordinate indicator pin on the map to filter and view specific community discussions.
+                      {import.meta.env.DEV ? 'Development map fixtures are visible only in a development build.' : 'Live location-based activity is not available yet.'}
                     </p>
                   </div>
                 )}
@@ -684,7 +678,9 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
                 <Globe className="w-8 h-8 text-violet-400/20 mx-auto" />
                 <h4 className="text-xs font-bold text-white uppercase tracking-wider">🌍 World Pulse is Quiet</h4>
                 <p className="text-[11px] text-violet-300/40 max-w-xs mx-auto font-sans leading-relaxed">
-                  Check back later to see what people are discussing, or clear your query criteria to view active trending topics.
+                  {import.meta.env.DEV
+                    ? 'Preview events appear in development only. Live trends will appear here when real activity aggregation is connected.'
+                    : 'Live trends are not connected yet. Explore posts or communities to find activity.'}
                 </p>
                 {pulseSearch && (
                   <button 

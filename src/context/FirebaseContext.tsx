@@ -51,22 +51,25 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   useEffect(() => {
     console.log("🔥 FirebaseProvider: Setting up onAuthStateChanged...");
+    let sequence = 0;
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      const currentSequence = ++sequence;
       setFirebaseUser(fbUser);
-      if (fbUser) {
+      setUser(null);
+      setError(null);
+      setInitializing(true);
+      if (fbUser && !fbUser.isAnonymous) {
         try {
           const profile = await ProfileService.getOrCreateProfile(fbUser);
-          setUser(profile);
+          if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setUser(profile);
         } catch (e) {
           console.error("Failed to load user profile in provider:", e);
-          setUser(null);
+          if (currentSequence === sequence) setError('Unable to load your account profile. Please retry or sign out.');
         }
-      } else {
-        setUser(null);
       }
-      setInitializing(false);
+      if (currentSequence === sequence) setInitializing(false);
     });
-    return unsubscribe;
+    return () => { sequence++; unsubscribe(); };
   }, []);
 
   useEffect(() => {
@@ -209,7 +212,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       value={{
         firebaseUser,
         user,
-        isAuthenticated: !!firebaseUser && !!user,
+        isAuthenticated: !!firebaseUser && !firebaseUser.isAnonymous && !!user && user.id === firebaseUser.uid,
         initializing,
         loading,
         error,
