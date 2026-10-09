@@ -318,10 +318,10 @@ export default function NewInboxView({
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full w-full bg-[#0A0A0A] text-white font-sans overflow-hidden relative">
+    <div className="flex flex-col md:flex-row h-full w-full bg-[var(--nx-canvas)] text-white font-sans overflow-hidden relative">
       
       {/* LEFT COLUMN: Conversation List */}
-      <div className={`w-full md:w-96 border-r border-zinc-800/80 flex flex-col h-full bg-[#0d0b1a]/50 ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-96 border-r border-white/10 flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
         
         {/* Header */}
         <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/60 backdrop-blur-md">
@@ -331,7 +331,7 @@ export default function NewInboxView({
           </div>
           <button
             onClick={() => setShowNewMessageModal(true)}
-            className="p-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl shadow-lg transition-all flex items-center justify-center cursor-pointer"
+            className="nx-icon-button inline-flex bg-violet-600 text-white hover:bg-violet-500"
             title="New Message"
           >
             <Plus className="w-4 h-4" />
@@ -343,19 +343,19 @@ export default function NewInboxView({
           <div className="flex bg-zinc-900/90 p-1 rounded-xl border border-white/10 text-xs">
             <button
               onClick={() => setInboxTab('chats')}
-              className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${inboxTab === 'chats' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
+              className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'chats' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
               Chats
             </button>
             <button
               onClick={() => setInboxTab('requests')}
-              className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${inboxTab === 'requests' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
+              className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'requests' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
               Requests
             </button>
             <button
               onClick={() => setInboxTab('archived')}
-              className={`flex-1 py-1.5 rounded-lg font-bold transition-all ${inboxTab === 'archived' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
+              className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'archived' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
               Archived
             </button>
@@ -368,7 +368,7 @@ export default function NewInboxView({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search conversations..."
-              className="w-full bg-zinc-900/80 border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 transition-all font-sans"
+              className="nx-field w-full pl-9 pr-4 py-2 text-xs font-sans"
             />
           </div>
         </div>

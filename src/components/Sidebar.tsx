@@ -95,7 +95,7 @@ export default function Sidebar({
       <div className="flex flex-col gap-2.5 mb-5 p-1">
         {[
           { id: 'feed', label: 'Home', desc: 'Feed', icon: Home, count: 0 },
-          { id: 'explore', label: 'Search', desc: 'Explore', icon: Search, count: 0 },
+          { id: 'explore', label: 'Explore', desc: 'Discover', icon: Search, count: 0 },
           { id: 'menu_gateway', label: 'Navigation ☰', desc: 'All Destinations', icon: Sliders, isMenu: true, count: unreadMessagesCount + unreadNotificationsCount },
           { id: 'create_btn', label: 'Create', desc: 'Post', icon: PlusCircle, isCreate: true, count: 0 },
           { id: 'profile', label: 'Profile', desc: 'Account', icon: UserIcon, count: 0 }
@@ -107,9 +107,7 @@ export default function Sidebar({
               whileTap={{ scale: 0.95 }}
               key={item.id}
               onClick={() => {
-                if (item.id === 'explore') {
-                  window.dispatchEvent(new CustomEvent('openUniversalSearch'));
-                } else if (item.isCreate) {
+                if (item.isCreate) {
                   onOpenCreatePost();
                 } else if (item.isMenu) {
                   window.dispatchEvent(new CustomEvent('toggleNavMenu'));

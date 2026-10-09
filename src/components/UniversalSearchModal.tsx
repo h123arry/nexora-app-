@@ -484,7 +484,7 @@ export default function UniversalSearchModal({
                               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">{c.category}</span>
                             </div>
                             <p className="text-xs text-zinc-300 line-clamp-2">{c.description}</p>
-                            <div className="text-[11px] text-zinc-400">{c.membersCount.toLocaleString()} members</div>
+                            <div className="text-[11px] text-zinc-400">{typeof c.membersCount === 'number' ? `${c.membersCount.toLocaleString()} members` : 'Member total not tracked'}</div>
                           </div>
                         ))}
                       </div>

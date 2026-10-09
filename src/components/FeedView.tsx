@@ -17,6 +17,7 @@ import { getRecommendationScore, recordRecommendationEvent } from '../utils/reco
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
+import StoriesView from './StoriesView';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -129,13 +130,6 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
   return blended;
 }
 
-// Active moments structure
-const MOCK_MOMENTS = [
-  { id: 'm-0', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', active: true, quotes: ["Building the future of social networks with clean designs.", "Great seeing our community grow so rapidly!", "Continuous listening and iterating with you guys."] },
-  { id: 'm-1', name: 'Official', username: 'official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Official platform account 🌟 Keeping you posted with community updates!", "Super excited to share our latest developments today.", "Always working to bring you the best experience!"] },
-  { id: 'm-2', name: 'AI Assistant', username: 'ai_assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["The Intelligent AI assistant.", "Connected and ready to assist you anytime.", "Analyzing daily trends."] }
-];
-
 const SEARCHABLE_SYSTEM_USERS: any[] = [];
 
 interface FeedViewProps {
@@ -160,6 +154,7 @@ interface FeedViewProps {
   onOpenMessages?: () => void;
   onOpenVohAi?: () => void;
   isHydrated?: boolean;
+  onRequireAuth?: () => void;
 }
 
 export default function FeedView({
@@ -183,7 +178,8 @@ export default function FeedView({
   unreadMessagesCount = 0,
   onOpenMessages,
   onOpenVohAi,
-  isHydrated = true
+  isHydrated = true,
+  onRequireAuth
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
@@ -276,22 +272,6 @@ export default function FeedView({
     window.addEventListener('nexora-recommendations-updated', handleUpdate);
     return () => {
       window.removeEventListener('nexora-recommendations-updated', handleUpdate);
-    };
-  }, []);
-
-  useEffect(() => {
-    const handleMomentsUpdate = () => {
-      const saved = localStorage.getItem('nexora_moments_list');
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && parsed.length > 0) setMomentsList(parsed);
-        } catch (e) {}
-      }
-    };
-    window.addEventListener('nexora-moments-updated', handleMomentsUpdate);
-    return () => {
-      window.removeEventListener('nexora-moments-updated', handleMomentsUpdate);
     };
   }, []);
 
@@ -391,31 +371,6 @@ export default function FeedView({
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
 
-  // Moments List State (hydrated and preserved)
-  const [momentsList, setMomentsList] = useState<any[]>(() => {
-    const saved = localStorage.getItem('nexora_moments_list');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return MOCK_MOMENTS;
-  });
-
-  // Moments Overlay Viewer state
-  const [selectedMoment, setSelectedMoment] = useState<any | null>(null);
-  const [storyIndex, setStoryIndex] = useState(0);
-
-  // Moments creation modal state
-  const [isCreateMomentOpen, setIsCreateMomentOpen] = useState(false);
-  const [momentCaption, setMomentCaption] = useState('');
-  const [momentMediaType, setMomentMediaType] = useState<'photo' | 'video' | 'voice' | 'text'>('photo');
-  const [momentMediaUrl, setMomentMediaUrl] = useState('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80');
-  const [simulatedVoiceRecording, setSimulatedVoiceRecording] = useState(false);
-  const [simulatedVoiceSeconds, setSimulatedVoiceSeconds] = useState(0);
-  const [playingVoiceMoment, setPlayingVoiceMoment] = useState(false);
-
   // Phase 6 & Phase 7 - Interactive states
   const [expandedPostIds, setExpandedPostIds] = useState<string[]>([]);
   const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
@@ -427,35 +382,6 @@ export default function FeedView({
     return saved ? JSON.parse(saved) : [];
   });
   const [analyticsPost, setAnalyticsPost] = useState<RefactoredPost | null>(null);
-
-  const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
-  const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => {
-    const saved = localStorage.getItem('nexora_story_highlights');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.length > 0) return parsed;
-      } catch (e) {}
-    }
-    return [
-      {
-        id: 'hl-sample-1',
-        title: 'Vibe check ⚡',
-        cover: '⚡',
-        stories: [
-          { mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80', caption: 'Consolidating the new Nexora mobile interface!' }
-        ]
-      },
-      {
-        id: 'hl-sample-2',
-        title: 'Coding ☕',
-        cover: '☕',
-        stories: [
-          { mediaUrl: 'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=600&auto=format&fit=crop&q=80', caption: 'Early morning coffee coding sprints!' }
-        ]
-      }
-    ];
-  });
 
   // Floating Composer Box
   const [composerOpen, setComposerOpen] = useState(false);
@@ -715,7 +641,6 @@ export default function FeedView({
   }, [posts, currentUser.id]);
 
   const audioCtxRef = useRef<any>(null);
-  const [voiceMomentSeconds, setVoiceMomentSeconds] = useState(0);
 
   const playVoiceSynthesizer = (seconds: number) => {
     try {
@@ -782,72 +707,6 @@ export default function FeedView({
     }
     return () => clearInterval(timer);
   }, [playingVoiceId]);
-
-  // Voice Story/Moment Player simulation with Web Audio synthesis
-  useEffect(() => {
-    let timer: any = null;
-    if (playingVoiceMoment) {
-      playVoiceSynthesizer(0);
-      setVoiceMomentSeconds(0);
-      timer = setInterval(() => {
-        setVoiceMomentSeconds(s => {
-          const nextSec = s + 1;
-          if (nextSec >= (selectedMoment?.voiceDuration || 15)) {
-            setPlayingVoiceMoment(false);
-            return 0;
-          }
-          playVoiceSynthesizer(nextSec);
-          return nextSec;
-        });
-      }, 1000);
-    } else {
-      setVoiceMomentSeconds(0);
-    }
-    return () => clearInterval(timer);
-  }, [playingVoiceMoment, selectedMoment]);
-
-  // Voice Recording Simulator effect
-  useEffect(() => {
-    let interval: any = null;
-    if (simulatedVoiceRecording) {
-      interval = setInterval(() => {
-        setSimulatedVoiceSeconds(s => s + 1);
-      }, 1000);
-    } else {
-      setSimulatedVoiceSeconds(0);
-    }
-    return () => clearInterval(interval);
-  }, [simulatedVoiceRecording]);
-
-  const handleSaveNewMoment = (e: React.FormEvent) => {
-    e.preventDefault();
-    // For voice moment, prompt default title if blank
-    const defaultCaption = momentCaption.trim() || 
-      (momentMediaType === 'voice' ? "🎙️ Voice Message" : 
-       momentMediaType === 'video' ? "🎥 Video Clip" : "📸 Image Post");
-
-    const newMoment = {
-      id: `moment-${Date.now()}`,
-      name: currentUser.name,
-      username: currentUser.username,
-      avatar: currentUser.avatar,
-      active: true,
-      quotes: [defaultCaption],
-      mediaType: momentMediaType,
-      mediaUrl: momentMediaType === 'text' ? '' : momentMediaUrl,
-      voiceDuration: momentMediaType === 'voice' ? (simulatedVoiceSeconds || 15) : undefined
-    };
-
-    const updated = [newMoment, ...momentsList];
-    setMomentsList(updated);
-    localStorage.setItem('nexora_moments_list', JSON.stringify(updated));
-
-    // Reset onboarding values
-    setMomentCaption('');
-    setMomentMediaType('photo');
-    setMomentMediaUrl('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80');
-    setIsCreateMomentOpen(false);
-  };
 
   // Header expansion state tracking ref to eliminate duplicate re-renders
   const isHeaderExpandedRef = useRef(true);
@@ -1790,7 +1649,7 @@ export default function FeedView({
                   window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'inbox' } }));
                 }
               }}
-              className="relative hidden sm:inline-flex nx-icon-button text-blue-300"
+              className="relative inline-flex nx-icon-button text-blue-300"
               title="Messages"
               aria-label="Direct Messages"
             >
@@ -1821,7 +1680,7 @@ export default function FeedView({
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('toggleNavMenu'));
               }}
-              className="inline-flex nx-icon-button gap-1 px-2 text-xs font-sans font-medium"
+              className="inline-flex lg:hidden nx-icon-button gap-1 px-2 text-xs font-sans font-medium"
               title="Open Navigation Menu"
               aria-label="Navigation Menu"
             >
@@ -1830,6 +1689,8 @@ export default function FeedView({
             </button>
           </div>
         </div>
+
+        <StoriesView currentUser={currentUser} onRequireAuth={onRequireAuth} />
 
         {/* INLINE CREATE POST COMPOSER */}
         <div className="px-4 sm:px-6 py-4 border-b border-white/10 bg-[#04020a] transition-all">
@@ -1844,7 +1705,7 @@ export default function FeedView({
               onClick={() => setComposerOpen(true)}
               className="flex-1 text-left py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-400 hover:text-zinc-200 text-xs font-sans transition-all cursor-pointer flex items-center justify-between group"
             >
-              <span>Share a moment with your circles…</span>
+              <span>Share a post with your circles…</span>
               <Sparkles className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform shrink-0 ml-2" />
             </button>
           </div>
@@ -2474,468 +2335,6 @@ export default function FeedView({
                 </button>
               </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* NEW MOMENT STORIES CREATOR MODAL */}
-      <AnimatePresence>
-        {isCreateMomentOpen && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-md"
-          >
-            <motion.div 
-              initial={{ scale: 0.95, y: 15 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 15 }}
-              className="bg-linear-to-b from-[#110d2d] to-[#04030d] border border-white/10 rounded-2xl p-6 max-w-md w-full relative space-y-4 text-left font-sans"
-            >
-              <button 
-                type="button"
-                onClick={() => setIsCreateMomentOpen(false)}
-                className="absolute top-4 right-4 p-1 rounded-lg bg-white/5 text-violet-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-
-              <div className="space-y-1">
-                <h3 className="text-md font-sans font-black text-white flex items-center gap-1.5">
-                  <span className="text-lg">✨</span> Add to Your Story
-                </h3>
-                <p className="text-[10.5px] font-mono text-violet-400/60 leading-normal">
-                  Stories disappear after 24 hours. Share a quick update, photo, or voice note with your friends!
-                </p>
-              </div>
-
-              {/* Form container */}
-              <form onSubmit={handleSaveNewMoment} className="space-y-4">
-                
-                {/* Media Select segment */}
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-mono text-violet-400 block uppercase font-bold">Choose Media Type</label>
-                  <div className="grid grid-cols-4 gap-1.5">
-                    {[
-                      { id: 'photo', label: '📸 Photo', defaultUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80' },
-                      { id: 'video', label: '🎥 Video', defaultUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80' },
-                      { id: 'voice', label: '🎙️ Voice', defaultUrl: '' },
-                      { id: 'text', label: '📝 Plain', defaultUrl: '' }
-                    ].map((type) => (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => {
-                          setMomentMediaType(type.id as any);
-                          if (type.defaultUrl) setMomentMediaUrl(type.defaultUrl);
-                        }}
-                        className={`py-2 px-1 rounded-xl font-sans text-[10px] font-bold text-center border transition-all cursor-pointer ${
-                          momentMediaType === type.id 
-                            ? 'bg-violet-600 border-violet-400 text-white shadow-md shadow-violet-600/20' 
-                            : 'bg-black/40 border-white/5 text-violet-400/80 hover:text-white'
-                        }`}
-                      >
-                        {type.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Conditional photo preset backdrops select */}
-                {momentMediaType === 'photo' && (
-                  <div className="space-y-1.5 animate-fade-in">
-                    <label className="text-[10px] font-mono text-violet-400 block uppercase font-bold">Select Backdrop</label>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { name: 'Aurora', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80' },
-                        { name: 'Cosmic', url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80' },
-                        { name: 'Neon', url: 'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=600&auto=format&fit=crop&q=80' },
-                        { name: 'Haze', url: 'https://images.unsplash.com/photo-1518156677180-95a2893f3e9f?w=600&auto=format&fit=crop&q=80' }
-                      ].map((img) => (
-                        <button
-                          key={img.name}
-                          type="button"
-                          onClick={() => setMomentMediaUrl(img.url)}
-                          className={`relative h-12 rounded-xl overflow-hidden border transition-all ${
-                            momentMediaUrl === img.url ? 'border-violet-400 ring-2 ring-violet-500/20 scale-102' : 'border-white/5 opacity-70 hover:opacity-100'
-                          }`}
-                        >
-                          <img src={img.url} alt={img.name} className="w-full h-full object-cover" />
-                          <div className="absolute inset-x-0 bottom-0 py-0.5 bg-black/70 text-[8px] font-mono font-bold text-center text-white truncate">
-                            {img.name}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Conditional Voice Recording simulator panel */}
-                {momentMediaType === 'voice' && (
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center justify-center space-y-3 animate-fade-in">
-                    <button
-                      type="button"
-                      onClick={() => setSimulatedVoiceRecording(!simulatedVoiceRecording)}
-                      className={`h-14 w-14 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        simulatedVoiceRecording 
-                          ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white font-black text-xs scale-105' 
-                          : 'bg-violet-600 hover:bg-violet-500 text-white'
-                      }`}
-                    >
-                      {simulatedVoiceRecording ? <span className="text-[10px] uppercase font-mono tracking-tighter col-indigo">STOP</span> : <Mic className="w-5 h-5 col-violet" />}
-                    </button>
-                    <div className="text-center">
-                      <span className="text-[9.5px] font-mono text-violet-300">
-                        {simulatedVoiceRecording 
-                          ? `🔴 Recording Wave - ${simulatedVoiceSeconds}s elapsed` 
-                          : simulatedVoiceSeconds > 0 
-                            ? `🎙️ Voice broadcast ready: ${simulatedVoiceSeconds} seconds` 
-                            : 'Click microphone to record voice wave'}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Caption / Quote inputs */}
-                <div className="space-y-1">
-                  <label className="text-[10px] font-mono text-violet-400 block uppercase font-bold">Caption / Display text</label>
-                  <textarea
-                    required={momentMediaType === 'text'}
-                    placeholder={
-                      momentMediaType === 'voice' ? 'Describe your voice message...' :
-                      momentMediaType === 'video' ? 'Add some tags or notes...' :
-                      'What is on your mind today?'
-                    }
-                    value={momentCaption}
-                    onChange={(e) => setMomentCaption(e.target.value)}
-                    rows={3}
-                    className="w-full bg-slate-950/60 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl py-2 px-3 focus:outline-hidden resize-none placeholder:text-violet-400/20 text-left"
-                  />
-                </div>
-
-                {/* Submit panel */}
-                <div className="pt-2 border-t border-white/5 flex gap-2 justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateMomentOpen(false)}
-                    className="px-4 py-2 border border-white/10 hover:bg-white/5 rounded-xl text-violet-300 text-xs font-mono font-bold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 rounded-xl text-white text-xs font-mono font-black uppercase tracking-wider cursor-pointer"
-                  >
-                    Post Story ✨
-                  </button>
-                </div>
-
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* DUMP SCREEN MOMENT STORIES VIEWER OVERLAY */}
-      <AnimatePresence>
-        {selectedMoment && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-[#060413] z-50 flex flex-col overflow-hidden"
-          >
-            {/* Background Media Rendering */}
-            {selectedMoment.mediaUrl && selectedMoment.mediaType === 'photo' && (
-              <div className="absolute inset-0 z-0 select-none pointer-events-none">
-                <img 
-                  referrerPolicy="no-referrer"
-                  src={selectedMoment.mediaUrl} 
-                  alt="Background aura" 
-                  className="w-full h-full object-cover opacity-35 select-none" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#060413] via-[#060413]/70 to-[#060413]" />
-              </div>
-            )}
-
-            {selectedMoment.mediaType === 'video' && selectedMoment.mediaUrl && (
-              <div className="absolute inset-0 z-0 overflow-hidden select-none">
-                <NexoraVideo
-                  src={selectedMoment.mediaUrl}
-                  autoPlay
-                  loop
-                  muted={false}
-                  playsInline
-                  className="w-full h-full object-cover opacity-80"
-                />
-                <div className="absolute inset-0 bg-gradient-to-b from-[#060413]/70 via-[#060413]/30 to-[#060413]" />
-                <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(139,92,246,0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgba(139,92,246,0.1)_1px,transparent_1px)] bg-[size:30px_30px]" />
-                <div className="absolute bottom-5 left-5 text-[8px] font-mono text-cyan-400/60 uppercase tracking-widest leading-relaxed">
-                  STREAMING // HIGH DEFINITION // 60 FPS<br />
-                  TIMECODE: 00:00:{(storyIndex * 15).toString().padStart(2, '0')}
-                </div>
-              </div>
-            )}
-
-            {/* Story loading sequence indicator */}
-            <div className="flex gap-1.5 p-3 shrink-0 z-10">
-              {selectedMoment.quotes.map((_, i) => (
-                <div key={i} className="flex-1 h-[3px] bg-white/20 rounded-full overflow-hidden relative">
-                  {i < storyIndex && <div className="absolute inset-0 bg-violet-500" />}
-                  {i === storyIndex && (
-                    <motion.div 
-                      initial={{ width: 0 }}
-                      animate={{ width: '100%' }}
-                      transition={{ duration: 7, ease: 'linear' }}
-                      onAnimationComplete={() => {
-                        if (storyIndex < selectedMoment.quotes.length - 1) {
-                          setStoryIndex(idx => idx + 1);
-                        } else {
-                          setSelectedMoment(null);
-                        }
-                      }}
-                      className="absolute left-0 top-0 bottom-0 bg-linear-to-r from-violet-500 to-pink-400"
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {/* Title banner */}
-            <div className="p-4 flex items-center justify-between shrink-0 z-10">
-              <div className="flex items-center gap-3">
-                <img src={selectedMoment.avatar} alt={selectedMoment.name} className="w-10 h-10 rounded-xl object-cover border border-white/10" />
-                <div>
-                  <span className="font-sans font-black text-sm text-white flex items-center gap-1">
-                    {selectedMoment.name}
-                    {(selectedMoment.username === 'voh' || selectedMoment.username === 'nexora_ai' || selectedMoment.username === 'voh_ai') && <CheckCircle className="w-3.5 h-3.5 text-violet-400 fill-current" />}
-                  </span>
-                  <span className="text-[10px] font-mono text-violet-400/70 block">
-                    @{selectedMoment.username} • {selectedMoment.mediaType === 'voice' ? '🎙️ Voice broadcast' : selectedMoment.mediaType === 'video' ? '🎥 Video moment' : selectedMoment.mediaType === 'photo' ? '📸 Interactive image' : '📝 Text Broadcast'}
-                  </span>
-                </div>
-              </div>
-              <button 
-                onClick={() => setSelectedMoment(null)}
-                className="p-1.5 bg-white/5 hover:bg-white/10 rounded-full text-violet-400 hover:text-white cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Immersive core content display depending on mediaType */}
-            <div className="flex-1 p-6 md:p-10 flex flex-col justify-center items-center text-center relative z-10 select-none">
-              
-              {selectedMoment.mediaType === 'voice' ? (
-                /* Dynamic active voice moment equalizer experience */
-                <div className="max-w-md w-full space-y-8 flex flex-col items-center">
-                  <div className="relative flex items-center justify-center">
-                    {/* Pulsing ring */}
-                    <div className={`absolute w-32 h-32 rounded-full border-2 border-white/10 ${playingVoiceMoment ? 'animate-ping scale-110 opacity-70' : ''}`} style={{ animationDuration: '3s' }} />
-                    <div className="relative w-24 h-24 rounded-full bg-linear-to-r from-violet-600 to-pink-500 flex items-center justify-center shadow-lg border border-white/10 z-10">
-                      <button 
-                        onClick={() => setPlayingVoiceMoment(!playingVoiceMoment)}
-                        className="text-white hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-                      >
-                        {playingVoiceMoment ? <Pause className="w-10 h-10" /> : <Play className="w-10 h-10 pl-1" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="text-center space-y-2">
-                    <span className="text-[10px] font-mono bg-violet-500/10 border border-white/10 px-3 py-1 rounded-full text-violet-300 font-extrabold uppercase tracking-widest">
-                      {playingVoiceMoment ? '🎙️ Playing Voice Matrix...' : '🎙️ Click to Hear Broadcast'}
-                    </span>
-                    <p className="text-xs text-violet-300/60 font-mono">Duration: {selectedMoment.voiceDuration || 15} seconds</p>
-                  </div>
-
-                  {/* Equalizer animation */}
-                  <div className="flex items-end gap-1 h-12">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((bar) => {
-                      const delay = bar * 0.1;
-                      return (
-                        <div 
-                          key={bar} 
-                          className="w-1.5 rounded-t bg-linear-to-t from-violet-500 to-pink-400 transition-all origin-bottom"
-                          style={{
-                            height: playingVoiceMoment ? `${Math.floor(Math.sin(bar * 0.5) * 20) + 18}px` : '4px',
-                            transition: 'height 0.1s ease-in-out',
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  <blockquote className="text-sm md:text-md italic text-violet-200/90 font-medium max-w-sm">
-                    "{selectedMoment.quotes[storyIndex]}"
-                  </blockquote>
-                </div>
-              ) : (
-                /* Classic background typography display */
-                <div className="max-w-xl space-y-6">
-                  <div className="absolute top-24 left-10 text-[120px] font-serif text-white/5 select-none font-black pointer-events-none">"</div>
-                  <blockquote className="text-xl md:text-3.5xl font-sans text-transparent bg-clip-text bg-linear-to-b from-white via-violet-100 to-violet-300 font-extrabold tracking-tight leading-relaxed select-all">
-                    {selectedMoment.quotes[storyIndex]}
-                  </blockquote>
-                  <div className="flex justify-center">
-                    <div className="w-12 h-[2px] bg-linear-to-r from-violet-600 to-pink-500 rounded-full" />
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Story Reactions and DM Quick replies */}
-            <div className="px-8 py-2.5 bg-[#09071c]/60 max-w-lg mx-auto w-full z-10 rounded-2xl border border-white/10 space-y-3.5 mb-2">
-              
-              {/* Seen List Viewer (For own stories or when author looks!) */}
-              {selectedMoment && selectedMoment.username === currentUser.username && (
-                <div className="border-b border-white/5 pb-2 text-left">
-                  <span className="text-[9px] font-mono text-[#10B981] font-bold uppercase tracking-widest block mb-1">👀 Seen List ({selectedMoment.seenList?.length || 0} views)</span>
-                  <div className="flex gap-1 overflow-x-auto pb-1 scrollbar-none">
-                    {selectedMoment.seenList && selectedMoment.seenList.length > 0 ? (
-                      selectedMoment.seenList.map((viewerId: string, idx: number) => (
-                        <div key={idx} className="flex items-center gap-1 bg-white/5 py-1 px-2 rounded-lg text-[9px] font-mono shrink-0">
-                          <div className="w-3.5 h-3.5 rounded-full bg-violet-600/20 text-violet-400 flex items-center justify-center text-[7px] font-extrabold font-sans">
-                            {viewerId.slice(0, 2).toUpperCase()}
-                          </div>
-                          <span className="text-zinc-300">viewer_{viewerId.slice(-4)}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <span className="text-[9.5px] text-zinc-500 font-sans italic">No views registered yet today. Keep co-building!</span>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Highlight Pinner Action button */}
-              {selectedMoment && !selectedMoment.isHighlightPlay && (
-                <div className="border-b border-white/5 pb-2.5 flex items-center justify-between text-left">
-                  <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider flex items-center gap-1 select-none">
-                    ⭐ Story Highlights
-                  </span>
-                  {isCreatingHighlight ? (
-                    <div className="flex gap-1 items-center">
-                      <input 
-                        type="text" 
-                        id="hl-input-title"
-                        placeholder="Title e.g. Coding 💻"
-                        className="bg-black/60 text-[10px] text-white py-1 px-2 rounded-lg border border-amber-500/30 w-32 focus:outline-hidden"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const el = e.currentTarget;
-                            if (!el.value.trim()) return;
-                            
-                            const title = el.value.trim();
-                            const newHl = {
-                              id: `hl-${Date.now()}`,
-                              title,
-                              cover: title.split(' ').pop() || '⭐',
-                              stories: [
-                                { mediaUrl: selectedMoment.mediaUrl || '', caption: selectedMoment.quotes[storyIndex] }
-                              ]
-                            };
-                            const nextList = [newHl, ...storyHighlightsList];
-                            setStoryHighlightsList(nextList);
-                            localStorage.setItem('nexora_story_highlights', JSON.stringify(nextList));
-                            setIsCreatingHighlight(false);
-                            window.dispatchEvent(new CustomEvent('toast', { detail: `🌟 Highlight '${title}' created and saved!` }));
-                          }
-                        }}
-                      />
-                      <button 
-                        onClick={() => setIsCreatingHighlight(false)}
-                        className="text-[10px] text-rose-400 px-1 font-bold"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => setIsCreatingHighlight(true)}
-                      className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 rounded-lg font-mono text-[9px] font-black uppercase tracking-wider cursor-pointer"
-                    >
-                      + Save to Highlight
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-violet-400 font-bold uppercase tracking-wider">Quick Reactions</span>
-                <div className="flex gap-4 text-sm col-f flex-row">
-                  {['❤️', '🔥', '😂', '👍', '😮'].map((emoji) => (
-                    <button
-                      key={emoji}
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent('toast', { detail: `Sent ${emoji} reaction to @${selectedMoment.username}` }));
-                      }}
-                      className="hover:scale-130 active:scale-95 transition-transform cursor-pointer"
-                      title={`React ${emoji}`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* DM Reply box */}
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder={`Send direct reply to @${selectedMoment.username}...`}
-                  className="flex-1 px-4 py-2 text-xs rounded-xl bg-slate-950/80 border border-white/10 focus:border-[#8B5CF6] focus:outline-hidden text-white placeholder-violet-400/30 font-sans"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      const input = e.currentTarget;
-                      if (!input.value.trim()) return;
-                      window.dispatchEvent(new CustomEvent('toast', { detail: `Reply sent as secure DM: "${input.value}"` }));
-                      input.value = '';
-                    }
-                  }}
-                />
-                <button
-                  onClick={(e) => {
-                    const sibling = e.currentTarget.previousSibling as HTMLInputElement;
-                    if (sibling && sibling.value.trim()) {
-                      window.dispatchEvent(new CustomEvent('toast', { detail: `Reply sent as secure DM: "${sibling.value}"` }));
-                      sibling.value = '';
-                    }
-                  }}
-                  className="px-3 py-2 bg-linear-to-r from-violet-600 to-indigo-600 rounded-xl font-mono text-[10px] font-bold text-white uppercase hover:brightness-110 active:scale-98 transition-all cursor-pointer"
-                >
-                  Send Reply
-                </button>
-              </div>
-            </div>
-
-            {/* Navigation buttons */}
-            <div className="p-6 flex justify-between shrink-0 mb-4 px-8 z-10">
-              <button 
-                onClick={() => {
-                  if (storyIndex > 0) {
-                    setStoryIndex(storyIndex - 1);
-                  }
-                }}
-                disabled={storyIndex === 0}
-                className="px-5 py-2.5 border border-white/10 rounded-xl font-mono text-xs text-violet-300 disabled:opacity-30 cursor-pointer"
-              >
-                ← Back
-              </button>
-              <button 
-                onClick={() => {
-                  if (storyIndex < selectedMoment.quotes.length - 1) {
-                    setStoryIndex(storyIndex + 1);
-                  } else {
-                    setSelectedMoment(null);
-                  }
-                }}
-                className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white rounded-xl font-mono text-xs font-bold cursor-pointer"
-              >
-                {storyIndex === selectedMoment.quotes.length - 1 ? 'Close Story' : 'Next →'}
-              </button>
-            </div>
           </motion.div>
         )}
       </AnimatePresence>

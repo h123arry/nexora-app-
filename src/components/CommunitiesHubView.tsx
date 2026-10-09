@@ -3,9 +3,14 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Download, Award, Search, PlusCircle, Eye, Settings, Heart, MessageSquare, Bookmark, ThumbsUp, Trash2, AlertTriangle, UserPlus, ChevronRight, Phone, Link as LinkIcon, CheckCircle, HelpCircle, Info, Layers, ArrowRight, Forward } from 'lucide-react';
 import { Circle, User, Page, Post, Comment } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
-import { createCommunity, createPage, subscribeToCommunities, subscribeToPages } from '../services/dataService';
-import { joinCircleDb, leaveCircleDb } from '../data/database';
+import { addFollow, createCommunity, createPage, removeFollow, subscribeToCommunities, subscribeToFollows, subscribeToPages } from '../services/dataService';
+import { isCircleJoinedDb, joinCircleDb, leaveCircleDb } from '../data/database';
 import { ActivityService } from '../services/activityService';
+import { auth } from '../services/firebase/config';
+
+const hideUnavailableImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
+  event.currentTarget.style.display = 'none';
+};
 
 interface CommunitiesHubViewProps {
   currentUser: User;
@@ -46,7 +51,12 @@ export default function CommunitiesHubView({
     const saved = localStorage.getItem(COMMUNITIES_STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const cached = JSON.parse(saved);
+        const accountId = auth.currentUser?.uid || currentUser.id;
+        return Array.isArray(cached) ? cached.map((community) => ({
+          ...community,
+          isJoinedByMe: isCircleJoinedDb(accountId, community.id)
+        })) : [];
       } catch (e) {
         console.error(e);
       }
@@ -63,48 +73,10 @@ export default function CommunitiesHubView({
         console.error(e);
       }
     }
-    // Seed default pages
-    return [
-      {
-        id: 'page-1',
-        name: 'The Tech Collective',
-        username: 'tech_collective',
-        avatar: 'https://images.unsplash.com/photo-1518770660439-4636190af475?w=150&auto=format&fit=crop&q=80',
-        coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-        category: 'Organization',
-        description: 'Democratizing knowledge on modern engineering practices, secure microkernels, and decentralized feed routing databases.',
-        website: 'techcollective.nexora.ai',
-        contactInfo: 'ops@techcollective.nexora.ai',
-        isVerified: true,
-        followersCount: 12540,
-        postsCount: 48,
-        videosCount: 12,
-        sparksReceived: 890,
-        joinedDate: 'Joined June 2026',
-        ownerId: 'user-0',
-        followers: ['user-0']
-      },
-      {
-        id: 'page-2',
-        name: 'Afrobeat Records',
-        username: 'afrobeat_records',
-        avatar: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=150&auto=format&fit=crop&q=80',
-        coverImage: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1000&auto=format&fit=crop&q=80',
-        category: 'Music Artist',
-        description: 'Connecting global listeners to the authentic heartbeat of African sounds, Davido fan sync integrations, and live artist audio rooms.',
-        website: 'afrobeats.nexora.ai',
-        contactInfo: 'booking@afrobeats.ai',
-        isVerified: true,
-        followersCount: 45890,
-        postsCount: 156,
-        videosCount: 45,
-        sparksReceived: 4210,
-        joinedDate: 'Joined June 2026',
-        ownerId: 'creator-4',
-        followers: ['user-0']
-      }
-    ];
+    return [];
   });
+  const [followedPageIds, setFollowedPageIds] = useState<string[]>([]);
+  const followActorId = auth.currentUser?.uid || currentUser.id;
 
   // 5. Active Selected Community Portal State
   const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
@@ -148,20 +120,23 @@ export default function CommunitiesHubView({
   // Real-time synchronization for Communities and Pages
   useEffect(() => {
     const unsubComm = subscribeToCommunities((dbComms) => {
-      if (dbComms) {
-        setCommunities(dbComms);
-      }
+      setCommunities(dbComms.map((community) => ({
+        ...community,
+        isJoinedByMe: isCircleJoinedDb(followActorId, community.id)
+      })));
     });
     const unsubPages = subscribeToPages((dbPages) => {
-      if (dbPages) {
-        setPages(dbPages);
-      }
+      setPages(dbPages);
+    });
+    const unsubFollows = subscribeToFollows(followActorId, (follows) => {
+      setFollowedPageIds(follows.map((follow) => follow.followingId).filter((id): id is string => typeof id === 'string'));
     });
     return () => {
       unsubComm();
       unsubPages();
+      unsubFollows();
     };
-  }, []);
+  }, [followActorId]);
 
   // 12. Backup Personal User for Identity Switching
   useEffect(() => {
@@ -243,15 +218,13 @@ export default function CommunitiesHubView({
       description: newCommDesc,
       bannerImage: newCommBanner || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800',
       avatarImage: newCommAvatar || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150',
-      creatorId: currentUser.id,
+      creatorId: followActorId,
       rules: newCommRules.split('\n').filter(r => r.trim() !== ''),
-      membersCount: 1,
-      onlineCount: 1,
       tags: newCommTags.split(',').map(t => t.trim()).filter(t => t !== ''),
       isJoinedByMe: true,
       moderators: [currentUser.username],
       admins: [currentUser.username],
-      ownerId: currentUser.id,
+      ownerId: followActorId,
       type: newCommType,
       bannedUsers: [],
       mutedUsers: [],
@@ -263,8 +236,9 @@ export default function CommunitiesHubView({
       mediaLibrary: []
     };
 
+    joinCircleDb(followActorId, newComm.id);
     setCommunities(prev => [newComm, ...prev]);
-    createCommunity(newComm.name, newComm.description, newComm.ownerId);
+    createCommunity(newComm);
     setShowCreateCommunityModal(false);
     // reset form
     setNewCommName('');
@@ -291,17 +265,12 @@ export default function CommunitiesHubView({
       website: newPageWebsite,
       contactInfo: newPageContact,
       isVerified: false,
-      followersCount: 0,
-      postsCount: 0,
-      videosCount: 0,
-      sparksReceived: 0,
       joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`,
-      ownerId: currentUser.id,
-      followers: []
+      ownerId: followActorId
     };
 
     setPages(prev => [newPg, ...prev]);
-    createPage(newPg.ownerId, newPg.name, newPg.username, newPg.category);
+    createPage(newPg);
     setShowCreatePageModal(false);
     // reset form
     setNewPageName('');
@@ -314,21 +283,17 @@ export default function CommunitiesHubView({
   };
 
   // 17. Follow Page toggle
-  const handleToggleFollowPage = (pageId: string) => {
-    setPages(prev => prev.map(p => {
-      if (p.id === pageId) {
-        const isFollowing = p.followers.includes(currentUser.id);
-        const updatedFollowers = isFollowing 
-          ? p.followers.filter(id => id !== currentUser.id)
-          : [...p.followers, currentUser.id];
-        return {
-          ...p,
-          followers: updatedFollowers,
-          followersCount: updatedFollowers.length
-        };
-      }
-      return p;
-    }));
+  const handleToggleFollowPage = async (pageId: string) => {
+    const isFollowing = followedPageIds.includes(pageId);
+    setFollowedPageIds((prev) => isFollowing ? prev.filter((id) => id !== pageId) : [...prev, pageId]);
+    try {
+      if (isFollowing) await removeFollow(followActorId, pageId);
+      else await addFollow(followActorId, pageId);
+    } catch (error) {
+      setFollowedPageIds((prev) => isFollowing ? [...prev, pageId] : prev.filter((id) => id !== pageId));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Page follow could not be saved. Please try again.' }));
+      console.error('Page follow update failed:', error);
+    }
   };
 
   // 18. Community Post Submit (Dynamic global synchronization)
@@ -356,13 +321,18 @@ export default function CommunitiesHubView({
     const target = communities.find(c => c.id === circleId);
     if (!target) return;
     const willJoin = !target.isJoinedByMe;
+    const access = target.type ?? 'unknown';
+    if (willJoin && access !== 'public' && target.ownerId !== followActorId) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: access === 'unknown' ? 'Access settings are unavailable for this community.' : 'Access requests are not available yet.' }));
+      return;
+    }
 
     try {
       if (willJoin) {
         recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
-        await joinCircleDb(currentUser.id, circleId);
+        await joinCircleDb(followActorId, circleId);
       } else {
-        await leaveCircleDb(currentUser.id, circleId);
+        await leaveCircleDb(followActorId, circleId);
       }
 
       setCommunities(prev => prev.map(c => {
@@ -370,11 +340,6 @@ export default function CommunitiesHubView({
           return {
             ...c,
             isJoinedByMe: willJoin,
-            membersCount: willJoin ? c.membersCount + 1 : c.membersCount - 1,
-            activityLog: [
-              ...(c.activityLog || []),
-              `@${currentUser.username} ${willJoin ? 'joined' : 'left'} the community space.`
-            ]
           };
         }
         return c;
@@ -384,6 +349,21 @@ export default function CommunitiesHubView({
       console.error('Failed community join/leave:', err);
       window.dispatchEvent(new CustomEvent('toast', { detail: `❌ Failed to update membership. Please try again.` }));
     }
+  };
+
+  const handleOpenCommunity = async (community: Circle) => {
+    const access = community.type ?? 'unknown';
+    if (access === 'unknown') {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Access settings are unavailable for this community.' }));
+      return;
+    }
+    if (access !== 'public' && !community.isJoinedByMe && community.ownerId !== followActorId) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This community is restricted. Access requests are not available yet.' }));
+      return;
+    }
+    if (access === 'public' && !community.isJoinedByMe) await handleJoinCircleToggle(community.id);
+    setSelectedCircle(community);
+    setActivePortalTab('feed');
   };
 
   // 20. Voting helper
@@ -691,16 +671,16 @@ export default function CommunitiesHubView({
                 <div className="p-4 rounded-3xl bg-[#090515] border border-white/10 space-y-3 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/5 rounded-full blur-xl" />
                   <h3 className="text-xs font-black font-mono tracking-widest text-pink-400 uppercase flex items-center gap-1.5">
-                    <Sparkles className="w-3.5 h-3.5" /> Featured Spaces
+                    <Sparkles className="w-3.5 h-3.5" /> Communities on Nexora
                   </h3>
                   <div className="space-y-2">
                     {getFeaturedCommunities().map((c) => (
-                      <div key={c.id} onClick={() => setSelectedCircle(c)} className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer transition-all">
+                      <div key={c.id} onClick={() => void handleOpenCommunity(c)} className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer transition-all">
                         <div className="flex items-center gap-2">
-                          <img src={c.avatarImage || c.bannerImage} className="w-9 h-9 rounded-xl object-cover ring-1 ring-violet-500/30" />
+                          <img src={c.avatarImage || c.bannerImage || ''} alt="" onError={hideUnavailableImage} className="w-9 h-9 rounded-xl object-cover ring-1 ring-violet-500/30 bg-zinc-900" />
                           <div>
                             <p className="text-xs font-bold text-white">{c.name}</p>
-                            <p className="text-[9px] font-mono text-violet-400/60">{c.membersCount} Members • {c.onlineCount || 0} Online</p>
+                            <p className="text-[9px] font-mono text-violet-400/60">{c.type === 'unknown' ? 'Access not configured' : c.type === 'public' ? 'Public community' : 'Restricted community'}</p>
                           </div>
                         </div>
                         <ChevronRight className="w-4 h-4 text-violet-400/40" />
@@ -713,24 +693,24 @@ export default function CommunitiesHubView({
                 <div className="p-4 rounded-3xl bg-[#090515] border border-white/10 space-y-3 relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl" />
                   <h3 className="text-xs font-black font-mono tracking-widest text-cyan-400 uppercase flex items-center gap-1.5">
-                    <Flame className="w-3.5 h-3.5" /> Trending Spaces
+                    <Flame className="w-3.5 h-3.5" /> Member-created spaces
                   </h3>
                   <div className="space-y-2">
                     {getNewCommunities().length > 0 ? (
                       getNewCommunities().map((c) => (
-                        <div key={c.id} onClick={() => setSelectedCircle(c)} className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer transition-all">
+                      <div key={c.id} onClick={() => void handleOpenCommunity(c)} className="p-2.5 bg-black/40 hover:bg-black/60 border border-white/5 rounded-2xl flex items-center justify-between cursor-pointer transition-all">
                           <div className="flex items-center gap-2">
-                            <img src={c.avatarImage || c.bannerImage} className="w-9 h-9 rounded-xl object-cover ring-1 ring-cyan-500/30" />
+                            <img src={c.avatarImage || c.bannerImage || ''} alt="" onError={hideUnavailableImage} className="w-9 h-9 rounded-xl object-cover ring-1 ring-cyan-500/30 bg-zinc-900" />
                             <div>
                               <p className="text-xs font-bold text-white">{c.name}</p>
-                              <p className="text-[9px] font-mono text-cyan-400/60">New • #{c.tags[0]}</p>
+                              <p className="text-[9px] font-mono text-cyan-400/60">New • {c.tags[0] ? `#${c.tags[0]}` : 'Community'}</p>
                             </div>
                           </div>
                           <ChevronRight className="w-4 h-4 text-cyan-400/40" />
                         </div>
                       ))
                     ) : (
-                      <p className="text-[11px] text-current/45 italic py-4">No custom spaces created yet. Build one autonomously!</p>
+                      <p className="text-[11px] text-current/45 italic py-4">No member-created spaces yet.</p>
                     )}
                   </div>
                 </div>
@@ -740,30 +720,20 @@ export default function CommunitiesHubView({
             {/* Communities Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredCommunities.map((circle) => {
-                const isModerator = circle.moderators?.includes(currentUser.username) || circle.ownerId === currentUser.id;
+                const isModerator = circle.moderators?.includes(currentUser.username) || circle.ownerId === followActorId;
                 
                 return (
                   <div 
                     key={circle.id} 
-                    onClick={() => {
-                      if (circle.isJoinedByMe || circle.type === 'public') {
-                        // Join automatically if public and clicking to browse
-                        if (!circle.isJoinedByMe) {
-                          handleJoinCircleToggle(circle.id);
-                        }
-                        setSelectedCircle(circle);
-                        setActivePortalTab('feed');
-                      } else {
-                        alert(`This is an invite-only / private community. Click "Join" to submit an onboarding request.`);
-                      }
-                    }}
+                    onClick={() => void handleOpenCommunity(circle)}
                     className="bg-black/45 border border-white/5 rounded-3xl overflow-hidden hover:border-white/10 transition-all duration-300 group flex flex-col justify-between cursor-pointer relative"
                   >
                     {/* Cover image banner */}
                     <div className="relative h-24 w-full bg-slate-900 border-b border-white/5 overflow-hidden">
                       <img 
-                        src={circle.bannerImage} 
-                        alt={circle.name} 
+                        src={circle.bannerImage || ''}
+                        alt=""
+                        onError={hideUnavailableImage}
                         className="w-full h-full object-cover group-hover:scale-105 transition-all duration-500 brightness-75" 
                       />
                       
@@ -785,7 +755,7 @@ export default function CommunitiesHubView({
 
                       {/* Small avatar circle */}
                       <div className="absolute bottom-2 left-3 w-10 h-10 rounded-xl overflow-hidden border border-white/20 bg-zinc-900">
-                        <img src={circle.avatarImage || circle.bannerImage} className="w-full h-full object-cover" />
+                        <img src={circle.avatarImage || circle.bannerImage || ''} alt="" onError={hideUnavailableImage} className="w-full h-full object-cover" />
                       </div>
                     </div>
 
@@ -807,25 +777,23 @@ export default function CommunitiesHubView({
                       </p>
                     </div>
 
-                    {/* Bottom deck counts and button */}
+                    {/* Access label and button */}
                     <div className="p-3 bg-zinc-900/40 border-t border-white/5 flex items-center justify-between mt-auto">
                       <div className="flex items-center gap-1.5 text-[9px] font-mono text-current/50">
                         <Users className="w-3 h-3 text-violet-400" />
-                        <span>{circle.membersCount} members</span>
-                        {circle.onlineCount && (
-                          <span className="text-emerald-400">• {circle.onlineCount} online</span>
-                        )}
+                        <span>{circle.type === 'unknown' ? 'Access not configured' : circle.type === 'public' ? 'Public community' : 'Restricted community'}</span>
                       </div>
 
                       <button
                         onClick={(e) => handleJoinCircleToggle(circle.id, e)}
-                        className={`px-3 py-1 rounded-xl font-mono text-[9px] font-black uppercase transition-all ${
+                        disabled={!circle.isJoinedByMe && circle.type !== 'public' && circle.ownerId !== followActorId}
+                        className={`min-h-11 min-w-11 px-3 py-2 rounded-xl font-mono text-[9px] font-black uppercase transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
                           circle.isJoinedByMe 
                             ? 'bg-transparent text-emerald-400 border border-emerald-500/30' 
                             : 'bg-violet-600 text-white hover:brightness-110'
                         }`}
                       >
-                        {circle.isJoinedByMe ? 'JOINED' : 'JOIN'}
+                        {circle.isJoinedByMe ? 'JOINED' : circle.type === 'public' || circle.ownerId === followActorId ? 'JOIN' : circle.type === 'unknown' ? 'UNAVAILABLE' : 'RESTRICTED'}
                       </button>
                     </div>
                   </div>
@@ -849,8 +817,9 @@ export default function CommunitiesHubView({
             {/* Pages Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredPages.map((pg) => {
-                const isFollowing = pg.followers.includes(currentUser.id);
-                const isOwner = pg.ownerId === currentUser.id;
+                const isFollowing = followedPageIds.includes(pg.id);
+                const isOwner = pg.ownerId === followActorId;
+                const pagePosts = posts.filter((post) => post.userId === pg.id);
 
                 return (
                   <div 
@@ -860,7 +829,7 @@ export default function CommunitiesHubView({
                   >
                     {/* Header Cover */}
                     <div className="relative h-24 bg-slate-800">
-                      <img src={pg.coverImage} className="w-full h-full object-cover brightness-75" />
+                      <img src={pg.coverImage || ''} alt="" onError={hideUnavailableImage} className="w-full h-full object-cover brightness-75" />
                       
                       {pg.isVerified && (
                         <div className="absolute top-2 right-2 bg-purple-900/80 border border-purple-500/40 text-purple-300 text-[8px] font-mono px-1.5 py-0.5 rounded flex items-center gap-0.5 uppercase">
@@ -870,7 +839,7 @@ export default function CommunitiesHubView({
 
                       {/* Floating Profile Avatar */}
                       <div className="absolute -bottom-4 left-4 w-12 h-12 rounded-xl overflow-hidden border border-zinc-900 bg-zinc-900">
-                        <img src={pg.avatar} className="w-full h-full object-cover" />
+                        <img src={pg.avatar || ''} alt="" onError={hideUnavailableImage} className="w-full h-full object-cover" />
                       </div>
                     </div>
 
@@ -891,8 +860,8 @@ export default function CommunitiesHubView({
                     {/* Footer Stats and Button */}
                     <div className="p-3 bg-zinc-900/40 border-t border-white/5 flex items-center justify-between mt-auto">
                       <div className="text-[9px] font-mono text-current/50 space-y-0.5">
-                        <p>{pg.followersCount} Followers</p>
-                        <p>{pg.postsCount} Publications</p>
+                        <p>Follower total not tracked</p>
+                        <p>{pagePosts.length} Posts in feed</p>
                       </div>
 
                       <div className="flex gap-1">
@@ -901,7 +870,7 @@ export default function CommunitiesHubView({
                             e.stopPropagation();
                             handleToggleFollowPage(pg.id);
                           }}
-                          className={`px-3 py-1 rounded-xl font-mono text-[9px] font-black uppercase transition-all ${
+                          className={`min-h-11 px-3 py-2 rounded-xl font-mono text-[9px] font-black uppercase transition-all ${
                             isFollowing 
                               ? 'bg-zinc-800 text-white border border-white/10' 
                               : 'bg-pink-600 text-white hover:brightness-110'
@@ -914,6 +883,16 @@ export default function CommunitiesHubView({
                   </div>
                 );
               })}
+              {filteredPages.length === 0 && (
+                <div className="col-span-full nx-surface rounded-2xl p-6 text-center">
+                  <h3 className="text-sm font-semibold text-zinc-200">
+                    {pages.length === 0 ? 'No public Pages are available yet.' : 'No Pages match these filters.'}
+                  </h3>
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                    {pages.length === 0 ? 'New Pages will appear here when their owners publish them.' : 'Try another search term or choose a different category.'}
+                  </p>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
@@ -941,13 +920,13 @@ export default function CommunitiesHubView({
                 {pages.filter(p => p.ownerId === (localStorage.getItem(PERSONAL_USER_KEY) ? JSON.parse(localStorage.getItem(PERSONAL_USER_KEY)!).id : currentUser.id)).map((p) => (
                   <div key={p.id} className="p-4 bg-black/40 border border-white/5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all hover:bg-black/60">
                     <div className="flex items-center gap-3">
-                      <img src={p.avatar} className="w-12 h-12 rounded-xl object-cover ring-1 ring-violet-500/20" />
+                      <img src={p.avatar || ''} alt="" onError={hideUnavailableImage} className="w-12 h-12 rounded-xl object-cover ring-1 ring-violet-500/20 bg-zinc-900" />
                       <div>
                         <div className="flex items-center gap-1.5">
                           <h4 className="text-xs sm:text-sm font-bold text-white">{p.name}</h4>
                           <span className="text-[8px] font-mono uppercase bg-violet-600/20 text-violet-300 border border-white/10 px-1 py-0.5 rounded">{p.category}</span>
                         </div>
-                        <p className="text-[10px] font-mono text-current/40">@{p.username} • {p.followersCount} followers</p>
+                        <p className="text-[10px] font-mono text-current/40">@{p.username} • Follower total not tracked</p>
                       </div>
                     </div>
 
@@ -989,83 +968,12 @@ export default function CommunitiesHubView({
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-6 text-left"
+            className="nx-surface rounded-3xl p-6 text-left"
           >
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {[
-                { label: 'Platform Reach', value: '142,590', delta: '+12.4% this week', color: 'text-violet-400' },
-                { label: 'Video Views', value: '28,950', delta: '+8.2% this month', color: 'text-cyan-400' },
-                { label: 'Engagement Rate', value: '4.8%', delta: '+0.5% shift', color: 'text-pink-400' },
-                { label: 'Sparks Acquired', value: '5,100 NEX', delta: '+150 sparks today', color: 'text-emerald-400' }
-              ].map((st, i) => (
-                <div key={i} className="p-4 bg-[#090515] border border-white/5 rounded-3xl space-y-1">
-                  <span className="text-[10px] font-mono text-current/50 uppercase block">{st.label}</span>
-                  <p className={`text-xl font-black ${st.color}`}>{st.value}</p>
-                  <span className="text-[9px] text-emerald-400 font-mono font-bold block">{st.delta}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="bg-[#090515] border border-white/5 p-5 rounded-3xl space-y-4">
-              <h3 className="text-xs font-black font-mono tracking-widest text-violet-400 uppercase flex items-center gap-1.5">
-                <BarChart2 className="w-4 h-4" /> Audience Growth & Trends
-              </h3>
-              
-              {/* Fake visual bar chart representing activity metrics */}
-              <div className="h-44 flex items-end gap-2 border-b border-white/5 pb-2">
-                {[45, 65, 55, 85, 75, 95, 120, 110, 130, 145, 125, 160].map((val, idx) => (
-                  <div key={idx} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                    <motion.div 
-                      initial={{ height: 0 }}
-                      animate={{ height: `${(val / 160) * 100}%` }}
-                      transition={{ delay: idx * 0.05, duration: 0.6 }}
-                      className="w-full bg-linear-to-t from-violet-600 via-pink-600 to-cyan-500 rounded-md shadow-lg hover:brightness-110 cursor-pointer"
-                      title={`Month ${idx + 1}: ${val} users`}
-                    />
-                    <span className="text-[8px] font-mono text-current/30">{idx + 1}M</span>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <h4 className="text-[11px] font-mono text-violet-400 uppercase font-black">Top Performing Posts</h4>
-                  <div className="space-y-1.5">
-                    {[
-                      { text: 'Unlocking secure network microkernels on Web3 feed registries...', engagement: '1.2k likes • 45 comments' },
-                      { text: 'A look into Port Harcourt custom soccer match leagues...', engagement: '890 likes • 21 comments' }
-                    ].map((pst, i) => (
-                      <div key={i} className="p-2.5 bg-black/40 border border-white/5 rounded-xl text-[11px] space-y-1">
-                        <p className="text-white font-medium line-clamp-1">{pst.text}</p>
-                        <p className="text-[9px] text-[#A78BFA]/50 font-mono">{pst.engagement}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <h4 className="text-[11px] font-mono text-pink-400 uppercase font-black">Audience Demographics</h4>
-                  <div className="space-y-2 text-xs font-sans">
-                    {[
-                      { city: 'Lagos, Nigeria', pct: '45%' },
-                      { city: 'Port Harcourt, Nigeria', pct: '25%' },
-                      { city: 'Abuja, Nigeria', pct: '15%' },
-                      { city: 'London, United Kingdom', pct: '8%' }
-                    ].map((dem, i) => (
-                      <div key={i} className="flex items-center justify-between text-[11px]">
-                        <span className="text-white">{dem.city}</span>
-                        <div className="flex items-center gap-2">
-                          <div className="w-16 bg-white/5 h-1.5 rounded-full overflow-hidden">
-                            <div style={{ width: dem.pct }} className="bg-pink-500 h-full" />
-                          </div>
-                          <span className="font-mono text-pink-300 font-bold">{dem.pct}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <h3 className="text-sm font-black font-mono tracking-widest text-violet-300 uppercase">Page analytics</h3>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-400">
+              Audience reach, follower totals, demographics, and engagement trends are not connected to a trusted analytics source yet. No sample metrics are shown here.
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1085,7 +993,8 @@ export default function CommunitiesHubView({
               {/* Cover Header */}
               <div className="relative h-28 sm:h-36 bg-slate-900 overflow-hidden shrink-0 flex items-end p-4 border-b border-white/10">
                 <img 
-                  src={selectedCircle.bannerImage} 
+                  src={selectedCircle.bannerImage || ''}
+                  onError={hideUnavailableImage}
                   alt={selectedCircle.name} 
                   className="absolute inset-0 w-full h-full object-cover brightness-50" 
                 />
@@ -1093,7 +1002,7 @@ export default function CommunitiesHubView({
                 
                 <div className="relative z-10 flex items-center justify-between w-full gap-4">
                   <div className="flex items-center gap-3">
-                    <img src={selectedCircle.avatarImage || selectedCircle.bannerImage} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500" />
+                    <img src={selectedCircle.avatarImage || selectedCircle.bannerImage || ''} alt="" onError={hideUnavailableImage} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500 bg-zinc-900" />
                     <div>
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <h2 className="text-base sm:text-xl font-black text-white tracking-tight leading-none">
@@ -1493,7 +1402,7 @@ export default function CommunitiesHubView({
             >
               {/* Cover Header */}
               <div className="relative h-28 sm:h-36 bg-slate-900 shrink-0">
-                <img src={selectedPage.coverImage} className="w-full h-full object-cover brightness-75" />
+                <img src={selectedPage.coverImage || ''} alt="" onError={hideUnavailableImage} className="w-full h-full object-cover brightness-75" />
                 <button 
                   onClick={() => setSelectedPage(null)}
                   className="absolute top-3 right-3 p-1.5 bg-black/40 hover:bg-black/60 text-white rounded-xl border border-white/5 transition-all cursor-pointer"
@@ -1503,7 +1412,7 @@ export default function CommunitiesHubView({
 
                 {/* Floating Avatar */}
                 <div className="absolute -bottom-6 left-6 w-16 h-16 rounded-2xl overflow-hidden border-2 border-zinc-900 bg-zinc-900">
-                  <img src={selectedPage.avatar} className="w-full h-full object-cover" />
+                  <img src={selectedPage.avatar || ''} alt="" onError={hideUnavailableImage} className="w-full h-full object-cover" />
                 </div>
               </div>
 
@@ -1520,13 +1429,14 @@ export default function CommunitiesHubView({
 
                   <button
                     onClick={() => handleToggleFollowPage(selectedPage.id)}
-                    className={`px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase ${
-                      selectedPage.followers.includes(currentUser.id) 
+                    className={`min-h-11 px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase ${
+                      followedPageIds.includes(selectedPage.id)
                         ? 'bg-zinc-800 text-white border border-white/10' 
                         : 'bg-pink-600 text-white hover:brightness-110'
                     }`}
+                    type="button"
                   >
-                    {selectedPage.followers.includes(currentUser.id) ? 'Following' : 'Follow Page'}
+                    {followedPageIds.includes(selectedPage.id) ? 'Following' : 'Follow Page'}
                   </button>
                 </div>
 
@@ -1535,15 +1445,15 @@ export default function CommunitiesHubView({
                 <div className="grid grid-cols-3 gap-3 bg-black/40 border border-white/5 rounded-2xl p-3 text-center">
                   <div>
                     <span className="text-[9px] font-mono text-current/40 uppercase block">Followers</span>
-                    <span className="text-xs sm:text-sm font-black text-violet-300">{selectedPage.followersCount}</span>
+                    <span className="text-xs sm:text-sm font-black text-violet-300">Not tracked</span>
                   </div>
                   <div>
-                    <span className="text-[9px] font-mono text-current/40 uppercase block">Publications</span>
-                    <span className="text-xs sm:text-sm font-black text-pink-300">{selectedPage.postsCount}</span>
+                    <span className="text-[9px] font-mono text-current/40 uppercase block">Posts in feed</span>
+                    <span className="text-xs sm:text-sm font-black text-pink-300">{posts.filter((post) => post.userId === selectedPage.id).length}</span>
                   </div>
                   <div>
-                    <span className="text-[9px] font-mono text-current/40 uppercase block">Sparks Received</span>
-                    <span className="text-xs sm:text-sm font-black text-emerald-300">{selectedPage.sparksReceived}</span>
+                    <span className="text-[9px] font-mono text-current/40 uppercase block">Sparks on feed posts</span>
+                    <span className="text-xs sm:text-sm font-black text-emerald-300">{posts.filter((post) => post.userId === selectedPage.id).reduce((total, post) => total + (post.likes || 0), 0)}</span>
                   </div>
                 </div>
 
@@ -1562,7 +1472,7 @@ export default function CommunitiesHubView({
                   )}
                   <p className="flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-violet-400" />
-                    <span>{selectedPage.joinedDate}</span>
+                    <span>{selectedPage.joinedDate || 'Date unavailable'}</span>
                   </p>
                 </div>
               </div>

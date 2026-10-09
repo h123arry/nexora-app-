@@ -157,7 +157,7 @@ export default function ExploreView({
                   addRecentSearch(localSearch.trim());
                 }
               }}
-              className="w-full pl-11 pr-10 py-3 bg-[#0d0924] border border-white/10 focus:border-violet-500 focus:outline-hidden rounded-2xl text-xs text-white placeholder-zinc-500 transition-all font-sans shadow-inner"
+              className="nx-field min-h-12 w-full pl-11 pr-10 py-3 text-xs font-sans"
             />
             {localSearch && (
               <button 
@@ -182,7 +182,7 @@ export default function ExploreView({
             <button
               key={f.id}
               onClick={() => setSearchFilterType(f.id as any)}
-              className={`px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer ${
+              className={`min-h-11 px-4 py-2 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer ${
                 searchFilterType === f.id
                   ? 'bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-white/10'
                   : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
@@ -467,7 +467,7 @@ export default function ExploreView({
                       className="w-full text-left p-2.5 rounded-xl bg-white/5 hover:bg-cyan-600/15 border border-white/5 text-xs text-zinc-200 font-medium transition-all flex items-center justify-between cursor-pointer"
                     >
                       <span className="truncate">{comm.name}</span>
-                      <span className="text-[10px] font-mono text-cyan-400">{comm.membersCount || 1} members</span>
+                      <span className="text-[10px] font-mono text-cyan-400">{typeof comm.membersCount === 'number' ? `${comm.membersCount.toLocaleString()} members` : 'Member total not tracked'}</span>
                     </button>
                   ))}
                 </div>

@@ -1514,7 +1514,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           <div key={c.id} className="flex items-center justify-between border-b border-white/5 pb-2">
                             <div>
                               <p className="text-xs font-black text-white">{c.name}</p>
-                              <p className="text-[10px] text-current/40">{c.membersCount} active members</p>
+                              <p className="text-[10px] text-current/40">{typeof c.membersCount === 'number' ? `${c.membersCount.toLocaleString()} members` : 'Member total not tracked'}</p>
                             </div>
                           </div>
                         ))

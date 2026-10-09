@@ -69,10 +69,7 @@ export default function CreatorDashboardView({
     const userUploaded = posts.filter(p => p.userId === currentUser.id);
     setLocalPosts(userUploaded);
     
-    // Simulate initial studio loads
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
+    setIsLoading(false);
 
     // Read stored autosaved draft
     const saved = localStorage.getItem('nexora_unsaved_draft');
@@ -85,17 +82,15 @@ export default function CreatorDashboardView({
       } catch (e) {}
     }
 
-    // Load drafts & scheduled posts from LocalStorage / Mock db
+    // Load drafts stored for this account on this device.
     const savedDrafts = localStorage.getItem(`nexora_drafts_${currentUser.id}`);
     if (savedDrafts) {
-      setDrafts(JSON.parse(savedDrafts));
-    } else {
-      const initialDrafts = [
-        { id: 'draft-1', caption: 'Editing the new tech breakdown!', tags: 'tech,ai', type: 'video', videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-matrix-style-code-digital-falling-40114-large.mp4', updatedAt: new Date(Date.now() - 3600000).toISOString() },
-        { id: 'draft-2', caption: 'Sunday vibes in the city setup 🌆', tags: 'city,vibes', type: 'image', videoUrl: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=500', updatedAt: new Date(Date.now() - 86400000).toISOString() }
-      ];
-      setDrafts(initialDrafts);
-      localStorage.setItem(`nexora_drafts_${currentUser.id}`, JSON.stringify(initialDrafts));
+      try {
+        const parsedDrafts = JSON.parse(savedDrafts);
+        setDrafts(Array.isArray(parsedDrafts) ? parsedDrafts : []);
+      } catch {
+        setDrafts([]);
+      }
     }
 
     const savedScheduled = localStorage.getItem(`nexora_scheduled_${currentUser.id}`);
@@ -103,7 +98,6 @@ export default function CreatorDashboardView({
       setScheduledPosts(JSON.parse(savedScheduled));
     }
 
-    return () => clearTimeout(timer);
   }, [posts, currentUser.id]);
 
   // Draft Continuous Auto-Save Trigger
@@ -126,32 +120,6 @@ export default function CreatorDashboardView({
 
     return () => clearInterval(interval);
   }, [draftCaption, draftTags, draftType, draftUrl, showDraftModal, currentUser.id]);
-
-  // Automated scheduled publishing countdown worker
-  useEffect(() => {
-    const checkSchedule = setInterval(() => {
-      if (scheduledPosts.length === 0) return;
-      const now = new Date();
-      const toPublish = scheduledPosts.filter(p => new Date(p.publishTime) <= now);
-      
-      if (toPublish.length > 0) {
-        // Publish them!
-        toPublish.forEach(p => {
-          // Simulate feed post dispatch
-          const customPostEvent = new CustomEvent('toast', { detail: `🚀 Published scheduled post: "${p.caption.slice(0, 20)}..."` });
-          window.dispatchEvent(customPostEvent);
-
-          // Remove from scheduled list
-          setScheduledPosts(prev => {
-            const updated = prev.filter(sp => sp.id !== p.id);
-            localStorage.setItem(`nexora_scheduled_${currentUser.id}`, JSON.stringify(updated));
-            return updated;
-          });
-        });
-      }
-    }, 5000);
-    return () => clearInterval(checkSchedule);
-  }, [scheduledPosts, currentUser.id]);
 
   // Only aggregate counters present on the user's stored post records.
   const stats = useMemo(() => {
@@ -291,9 +259,18 @@ export default function CreatorDashboardView({
         alert('Please specify a scheduled publish date and time.');
         return;
       }
+      if (!draftCaption.trim()) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Add content before saving a reminder.' }));
+        return;
+      }
       const schedTime = `${scheduleDate}T${scheduleTime}`;
+      if (!Number.isFinite(new Date(schedTime).getTime()) || new Date(schedTime).getTime() <= Date.now()) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a future reminder time.' }));
+        return;
+      }
       const newSched = {
         id: `sched-${Date.now()}`,
+        draftId: draft.id,
         caption: draftCaption,
         tags: draftTags,
         type: draftType,
@@ -304,24 +281,29 @@ export default function CreatorDashboardView({
       setScheduledPosts(updated);
       localStorage.setItem(`nexora_scheduled_${currentUser.id}`, JSON.stringify(updated));
       
-      // Remove original draft
-      handleDeleteDraft(draft.id);
       setShowDraftModal(false);
       clearDraftForm();
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📅 Post scheduled successfully!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Reminder saved on this device. Nexora will not publish it automatically.' }));
     } else {
-      // Publish Immediately
-      const mockPostEvent = new CustomEvent('add-post', {
+      const content = String(draft?.caption ?? draftCaption).trim();
+      const tagText = String(draft?.tags ?? draftTags);
+      const videoUrl = String(draft?.videoUrl ?? draftUrl);
+      if (!content) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Add content before publishing.' }));
+        return;
+      }
+
+      // Send the content to the app's authenticated publishing flow.
+      const publishEvent = new CustomEvent('add-post', {
         detail: {
-          content: draftCaption,
-          tags: draftTags,
-          videoUrl: draftUrl,
+          content,
+          tags: tagText,
+          videoUrl,
           audience: 'public'
         }
       });
-      window.dispatchEvent(mockPostEvent);
+      window.dispatchEvent(publishEvent);
       
-      // Force instant local add for UI feel
       const newPost: Post = {
         id: `post-gen-${Date.now()}`,
         userId: currentUser.id,
@@ -329,9 +311,9 @@ export default function CreatorDashboardView({
         name: currentUser.name,
         avatar: currentUser.avatar,
         isVerified: currentUser.isVerified,
-        content: draftCaption,
-        videoUrl: draftUrl || undefined,
-        tags: draftTags.split(',').map(t => t.trim().replace('#', '')).filter(Boolean),
+        content,
+        videoUrl: videoUrl || undefined,
+        tags: tagText.split(',').map(t => t.trim().replace('#', '')).filter(Boolean),
         likes: 0,
         commentsCount: 0,
         shares: 0,
@@ -343,11 +325,20 @@ export default function CreatorDashboardView({
       setLocalPosts(prev => [newPost, ...prev]);
 
       // Remove from drafts
-      handleDeleteDraft(draft.id);
+      handleDeleteDraft(draft?.draftId ?? draft.id);
       setShowDraftModal(false);
       clearDraftForm();
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🚀 Post published immediately!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Post submitted for publishing.' }));
     }
+  };
+
+  const handlePublishScheduledPost = (post: any) => {
+    handlePublishDraft(post);
+    setScheduledPosts(prev => {
+      const updated = prev.filter(item => item.id !== post.id);
+      localStorage.setItem(`nexora_scheduled_${currentUser.id}`, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleOpenDraftEdit = (draft: any) => {
@@ -461,15 +452,12 @@ export default function CreatorDashboardView({
   return (
     <div className="text-white space-y-6 max-w-6xl mx-auto pb-16">
       {/* 1. Header Area with dynamic recovery bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 border border-white/10 backdrop-blur-md">
+      <div className="nx-surface flex flex-col md:flex-row md:items-center justify-between gap-4 p-5 sm:p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 backdrop-blur-md">
         <div>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-black text-white tracking-tight">Nexora Studio V1.2</h2>
-            <span className="flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" /> Good Standing
-            </span>
           </div>
-          <p className="text-sm text-violet-200/60 mt-1">Manage content publishing, deep metrics analysis, and platform growth.</p>
+          <p className="text-sm text-violet-200/70 mt-1">Create and manage your posts, drafts, and media. Audience metrics are shown only when tracked data is available.</p>
         </div>
         <div className="flex gap-2">
           {onClose && (
@@ -867,12 +855,13 @@ export default function CreatorDashboardView({
               {/* Scheduled Posts lists */}
               <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Releases</h4>
-                  <span className="text-[10px] font-mono bg-pink-500/20 text-pink-300 border border-pink-500/20 px-2 py-0.5 rounded-full">{scheduledPosts.length} queued</span>
+                  <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled reminders</h4>
+                  <span className="text-[10px] font-mono bg-pink-500/20 text-pink-300 border border-pink-500/20 px-2 py-0.5 rounded-full">{scheduledPosts.length} on this device</span>
                 </div>
+                <p className="text-[11px] text-zinc-400">Reminders are stored on this device. Nexora does not automatically publish scheduled posts yet.</p>
                 <div className="space-y-3">
                   {scheduledPosts.length === 0 ? (
-                    <p className="text-xs text-zinc-500 font-mono text-center py-8">No scheduled releases queued in scheduling pipeline.</p>
+                    <p className="text-xs text-zinc-500 font-mono text-center py-8">No local reminders saved.</p>
                   ) : (
                     scheduledPosts.map(post => (
                       <div key={post.id} className="p-4 bg-white/3 border border-white/5 rounded-xl space-y-2.5 text-xs">
@@ -881,7 +870,7 @@ export default function CreatorDashboardView({
                             <Clock className="w-4 h-4 text-pink-500 shrink-0" />
                             <div>
                               <p className="font-bold text-white line-clamp-1">{post.caption}</p>
-                              <p className="text-[9px] text-pink-400 font-mono font-bold">Release: {new Date(post.publishTime).toLocaleString()}</p>
+                              <p className="text-[9px] text-pink-400 font-mono font-bold">Reminder: {new Date(post.publishTime).toLocaleString()}</p>
                             </div>
                           </div>
                           <button 
@@ -889,7 +878,7 @@ export default function CreatorDashboardView({
                               const updated = scheduledPosts.filter(p => p.id !== post.id);
                               setScheduledPosts(updated);
                               localStorage.setItem(`nexora_scheduled_${currentUser.id}`, JSON.stringify(updated));
-                              window.dispatchEvent(new CustomEvent('toast', { detail: '📅 Scheduled release cancelled.' }));
+                              window.dispatchEvent(new CustomEvent('toast', { detail: 'Local reminder removed.' }));
                             }}
                             className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded-lg"
                           >
@@ -898,10 +887,7 @@ export default function CreatorDashboardView({
                         </div>
                         <div className="flex gap-1.5 justify-end">
                           <button 
-                            onClick={() => {
-                              // Publish immediately
-                              handlePublishDraft({ id: post.id });
-                            }}
+                            onClick={() => handlePublishScheduledPost(post)}
                             className="px-2.5 py-1 bg-violet-600/20 border border-white/10 text-violet-300 text-[10px] font-bold rounded-lg hover:bg-violet-600/30 transition-colors"
                           >
                             Publish Now

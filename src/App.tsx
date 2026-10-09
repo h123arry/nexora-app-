@@ -2065,6 +2065,7 @@ export default function App() {
                 unreadMessagesCount={unreadMessagesCount}
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
                 onOpenVohAi={() => { setMatrixSubTabRedirect('ai'); setActiveTab('matrix'); setViewedUser(null); }}
+                onRequireAuth={() => { setAuthPromptReason('Sign in to view and share stories.'); setShowAuthModal(true); }}
               />
             </motion.div>
             
