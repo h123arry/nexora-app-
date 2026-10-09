@@ -115,6 +115,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const isPlaying = playingVoiceId === post.id;
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
+  const hasMediaCaptionOverlay = Boolean(post.videoUrl || ((post.image || (post.images && post.images.length > 0)) && !post.opportunityType));
 
   return (
     <div
@@ -399,7 +400,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
         </div>
       </div>
 
-      {/* Content Section */}
+      {/* Media-player cards already render the caption in their in-player information overlay. */}
+      {(editingPostId === post.id || !hasMediaCaptionOverlay) && (
       <div className="px-4 sm:px-6 space-y-3 mb-4 text-left">
         {editingPostId === post.id ? (
           <div className="space-y-2 bg-slate-950/60 p-3 rounded-2xl border border-white/10">
@@ -460,6 +462,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (

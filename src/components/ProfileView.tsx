@@ -611,26 +611,12 @@ export default function ProfileView({
   const [statusText, setStatusText] = useState(() => localStorage.getItem(`nexora_status_text_${currentUser.id}`) || 'Exploring...');
   const [statusEmoji, setStatusEmoji] = useState(() => localStorage.getItem(`nexora_status_emoji_${currentUser.id}`) || '🌌');
 
-  // Music Widget States
-  const [pinnedSong, setPinnedSong] = useState(() => localStorage.getItem(`nexora_pinned_song_${currentUser.id}`) || 'Afro-Cosmology');
-  const [pinnedArtist, setPinnedArtist] = useState(() => localStorage.getItem(`nexora_pinned_artist_${currentUser.id}`) || 'Davido & VOH');
-  const [isSongPlaying, setIsSongPlaying] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const audioOscRef = useRef<OscillatorNode | null>(null);
-
   // Social Stats follow action toggle
   const [isFollowing, setIsFollowing] = useState(isFollowingField);
   const [profilePicExpanded, setProfilePicExpanded] = useState(false);
 
   // Analytics tab options
   const [analyticsTimeframe, setAnalyticsTimeframe] = useState<'7d' | '30d' | '90d'>('7d');
-
-  // Live streaming simulation console states
-  const [isLiveStreaming, setIsLiveStreaming] = useState(false);
-  const [liveDuration, setLiveDuration] = useState(0);
-  const [liveViewerCount, setLiveViewerCount] = useState(0);
-  const [liveChat, setLiveChat] = useState<any[]>([]);
-  const [liveMessageInput, setLiveMessageInput] = useState('');
 
   // Sync edits when user switches
   useEffect(() => {
@@ -642,80 +628,6 @@ export default function ProfileView({
     setEditAvatar(currentUser.avatar);
     setEditCover(currentUser.coverImage);
   }, [currentUser.id]);
-
-  // Live Stream Clock Effect
-  useEffect(() => {
-    let interval: any;
-    if (isLiveStreaming) {
-      interval = setInterval(() => {
-        setLiveDuration(p => p + 1);
-        // Fluctuate viewer counts
-        setLiveViewerCount(Math.floor(Math.random() * 20) + 120);
-      }, 1000);
-    } else {
-      setLiveDuration(0);
-      setLiveViewerCount(0);
-    }
-    return () => clearInterval(interval);
-  }, [isLiveStreaming]);
-
-  // Audio Showpiece Player (Synthesizer hum on play)
-  const toggleMusicAudio = () => {
-    if (isSongPlaying) {
-      if (audioOscRef.current) {
-        try {
-          audioOscRef.current.stop();
-        } catch(e){}
-        audioOscRef.current = null;
-      }
-      setIsSongPlaying(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🎵 Music playback paused.' }));
-    } else {
-      try {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!audioCtxRef.current) {
-          audioCtxRef.current = new AudioContextClass();
-        }
-        const ctx = audioCtxRef.current;
-        if (ctx.state === 'suspended') {
-          ctx.resume();
-        }
-        
-        // Setup simple harmonic ambient oscillator
-        const osc = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(261.63, ctx.currentTime); // C4 note
-        
-        // Multi-frequency sound effect
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(400, ctx.currentTime);
-
-        gainNode.gain.setValueAtTime(0.08, ctx.currentTime);
-        
-        osc.connect(filter);
-        filter.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        
-        osc.start();
-        audioOscRef.current = osc;
-        setIsSongPlaying(true);
-        window.dispatchEvent(new CustomEvent('toast', { detail: `🎵 Now streaming custom profile vibe: ${pinnedSong}!` }));
-      } catch (err) {
-        console.error("Synthesizer failed", err);
-      }
-    }
-  };
-
-  // Close audio on component unmount
-  useEffect(() => {
-    return () => {
-      if (audioOscRef.current) {
-        try { audioOscRef.current.stop(); } catch(e){}
-      }
-    };
-  }, []);
 
   // Web camera activation
   const startWebcam = async () => {
@@ -813,7 +725,6 @@ export default function ProfileView({
 
       localStorage.setItem(`nexora_status_text_${currentUser.id}`, statusText);
       localStorage.setItem(`nexora_status_emoji_${currentUser.id}`, statusEmoji);
-      localStorage.setItem(`nexora_pinned_song_${currentUser.id}`, pinnedSong);
 
       setIsSavingProfile(false);
       setShowSavedFeedback(true);
@@ -1258,7 +1169,7 @@ export default function ProfileView({
             </div>
 
             {/* Nexora 6 Statistics Grid */}
-            <div className="grid grid-cols-3 gap-y-2 gap-x-1 text-center mt-3">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-y-2 gap-x-1 sm:gap-x-2 text-center mt-3">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
@@ -1268,8 +1179,8 @@ export default function ProfileView({
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
               ].map(stat => (
                 <div key={stat.label} className="flex flex-col py-1">
-                  <span className="text-sm font-black text-white leading-tight">{stat.value}</span>
-                  <span className="text-[10px] font-medium text-zinc-500">{stat.label}</span>
+                  <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
+                  <span className="text-[10px] sm:text-[11px] font-medium text-zinc-400">{stat.label}</span>
                 </div>
               ))}
             </div>
@@ -1296,119 +1207,19 @@ export default function ProfileView({
               )}
             </div>
 
-            {/* Mutual Connections (Visitors) */}
-            {!isOwnProfile && (
-              <div className="flex items-center gap-2 text-xs font-sans text-zinc-500 pt-1">
-                <div className="flex -space-x-1.5">
-                  <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=50&auto=format&fit=crop&q=80" alt="mutual 1" referrerPolicy="no-referrer" />
-                  <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=50&auto=format&fit=crop&q=80" alt="mutual 2" referrerPolicy="no-referrer" />
-                  <img className="w-5 h-5 rounded-full border border-black object-cover" src="https://images.unsplash.com/photo-1517841905240-472988babdf9?w=50&auto=format&fit=crop&q=80" alt="mutual 3" referrerPolicy="no-referrer" />
-                </div>
-                <span>3 mutual connections in common</span>
-              </div>
-            )}
-
-            {/* REDESIGNED PROFILE HUB WIDGETS: PINNED HIGHLIGHTS, AUDIO VIBE & ANALYTICS */}
-            <div className="pt-3 space-y-3">
-              {/* Pinned Highlights Stories Row */}
-              <div className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
-                {[
-                  { title: 'Genesis', icon: Sparkles, image: currentUser.avatar },
-                  { title: 'Live Set', icon: Radio, image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80' },
-                  { title: 'Alpha AI', icon: Zap, image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80' },
-                  { title: 'Milestones', icon: Award, image: 'https://images.unsplash.com/photo-1533227268428-f9ed0900fb3b?w=150&auto=format&fit=crop&q=80' },
-                  { title: 'Studio', icon: Tv, image: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=150&auto=format&fit=crop&q=80' }
-                ].map((item, idx) => (
-                  <div key={idx} className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group" onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: `✨ Opening highlight: ${item.title}` }))}>
-                    <div className="w-15 h-15 rounded-full p-[2px] bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 shadow-md group-hover:scale-105 transition-transform">
-                      <div className="w-full h-full rounded-full bg-black overflow-hidden relative">
-                        <img src={item.image} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt={item.title} referrerPolicy="no-referrer" />
-                      </div>
-                    </div>
-                    <span className="text-[10px] font-sans text-zinc-300 font-medium tracking-tight truncate max-w-[60px]">{item.title}</span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Interactive Audio Vibe Player & Live Streaming Widget */}
-              <div className="rounded-2xl bg-gradient-to-r from-violet-950/40 via-[#0d0724] to-pink-950/30 border border-white/10 p-3 flex items-center justify-between shadow-lg">
-                <div className="flex items-center gap-3 min-w-0">
-                  <button 
-                    onClick={toggleMusicAudio}
-                    className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center text-white shrink-0 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
-                  >
-                    {isSongPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
-                  </button>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] font-mono font-extrabold text-pink-400 uppercase tracking-wider">VIBE SHOWPIECE</span>
-                      {isSongPlaying && (
-                        <div className="flex items-end gap-0.5 h-3">
-                          <span className="w-0.5 bg-pink-400 h-2 animate-bounce" />
-                          <span className="w-0.5 bg-violet-400 h-3 animate-bounce" style={{ animationDelay: '0.1s' }} />
-                          <span className="w-0.5 bg-pink-400 h-1.5 animate-bounce" style={{ animationDelay: '0.2s' }} />
-                        </div>
-                      )}
-                    </div>
-                    <p className="text-xs font-bold text-white truncate">{pinnedSong} • <span className="text-zinc-400 font-normal">{pinnedArtist}</span></p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {isOwnProfile && (
-                    <button 
-                      onClick={() => setIsLiveStreaming(!isLiveStreaming)}
-                      className={`px-3 py-1.5 rounded-xl font-mono text-[9px] uppercase font-black tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
-                        isLiveStreaming 
-                          ? 'bg-red-500/20 border border-red-500 text-red-400 animate-pulse' 
-                          : 'bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10'
-                      }`}
-                    >
-                      <Radio className="w-3.5 h-3.5" />
-                      {isLiveStreaming ? `LIVE (${liveDuration}s)` : 'Go Live'}
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Advanced Creator Analytics & Earnings Summary Strip */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { label: 'Weekly Reach', value: '+142.8K', change: '+24.5%', icon: TrendingUp, color: 'text-emerald-400' },
-                  { label: 'Engagement Rate', value: '18.4%', change: '+4.1%', icon: Zap, color: 'text-yellow-400' },
-                  { label: 'Sparks Earned', value: formatSecondaryStat(currentUser.sparks || 2450), change: 'Active', icon: Sparkles, color: 'text-pink-400' },
-                  { label: 'Est. Creator Payout', value: '$1,284.50', change: 'Tier 1', icon: Award, color: 'text-violet-400' }
-                ].map((metric, i) => {
-                  const MIcon = metric.icon;
-                  return (
-                    <div key={i} className="p-3 rounded-xl bg-black/40 border border-white/5 flex flex-col justify-between">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-zinc-400 font-medium">{metric.label}</span>
-                        <MIcon className={`w-3.5 h-3.5 ${metric.color}`} />
-                      </div>
-                      <div className="mt-2 flex items-baseline justify-between">
-                        <span className="text-sm font-black text-white">{metric.value}</span>
-                        <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded">{metric.change}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
           </div>
 
-          {/* 3. ICON-ONLY NAVIGATION BAR */}
-          <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-35 border-b border-white/5 mt-1 px-0 w-full">
+          {/* Profile content navigation */}
+          <div role="group" aria-label="Profile content views" className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-30 border-y border-white/10 mt-4 px-0 w-full">
             <div className="w-full max-w-4xl mx-auto flex items-center justify-around py-0">
               {[
-                { id: 'media', icon: Camera },
-                { id: 'voice', icon: Mic },
-                { id: 'reposts', icon: Repeat2 },
-                { id: 'sparks', icon: Zap },
+                { id: 'media', label: 'Posts', icon: Camera },
+                { id: 'voice', label: 'Voice', icon: Mic },
+                { id: 'reposts', label: 'Reposts', icon: Repeat2 },
+                { id: 'sparks', label: 'Sparks', icon: Zap },
                 ...(isOwnProfile ? [
-                  { id: 'bookmarks', icon: Bookmark },
-                  { id: 'archive', icon: HardDrive }
+                  { id: 'bookmarks', label: 'Saved', icon: Bookmark },
+                  { id: 'archive', label: 'Archive', icon: HardDrive }
                 ] : [])
               ].map(tab => {
                 const Icon = tab.icon;
@@ -1416,14 +1227,19 @@ export default function ProfileView({
                 return (
                   <button
                     key={tab.id}
+                    type="button"
                     onClick={() => setProfileTab(tab.id)}
-                    className={`flex-1 flex justify-center items-center py-3.5 transition-all cursor-pointer relative ${
+                    aria-label={tab.label}
+                    aria-pressed={isActive}
+                    title={tab.label}
+                    className={`flex-1 min-h-14 flex flex-col justify-center items-center gap-1 py-2 transition-all cursor-pointer relative ${
                       isActive 
                         ? 'text-white' 
                         : 'text-zinc-500 hover:text-zinc-300'
                     }`}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className="w-4.5 h-4.5" aria-hidden="true" />
+                    <span className="text-[10px] font-mono uppercase tracking-wide">{tab.label}</span>
                     {isActive && (
                       <div className="absolute bottom-0 w-full h-[2px] bg-violet-500 rounded-full" />
                     )}

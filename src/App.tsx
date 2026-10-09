@@ -1999,10 +1999,10 @@ export default function App() {
       <div className={activeTab === 'feed' ? "w-full h-screen md:h-[100dvh] relative overflow-hidden" : "w-full min-h-screen relative overflow-hidden"}>
         
         {/* Main application Grid */}
-        <div id="nexora-main-grid" className={activeTab === 'feed' ? "grid grid-cols-1 lg:grid-cols-4 h-full w-full relative overflow-hidden" : "grid grid-cols-1 lg:grid-cols-4 items-start"}>
+        <div id="nexora-main-grid" className={activeTab === 'feed' ? "grid grid-cols-1 lg:grid-cols-12 h-full w-full relative overflow-hidden" : "grid grid-cols-1 lg:grid-cols-12 items-start"}>
           
           {/* Col 1: Left Navigation sidebar */}
-          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-1 h-full border-r border-zinc-800 bg-[#0A0A0A] overflow-y-auto" : "hidden lg:block lg:col-span-1"}>
+          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-3 h-full border-r border-zinc-800 bg-[#0A0A0A] overflow-y-auto" : "hidden lg:block lg:col-span-3"}>
             <Sidebar 
               currentUser={getRichUser(currentUser)}
               activeTab={activeTab}
@@ -2033,7 +2033,7 @@ export default function App() {
           </div>
 
           {/* Col 2 & 3: Main Immersive View Area */}
-          <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-2 h-full w-full relative min-h-0" : "lg:col-span-2 min-h-0"}>
+          <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-6 h-full w-full relative min-h-0" : "lg:col-span-9 min-h-0"}>
             <motion.div 
               initial={false}
               animate={{ 
@@ -2241,7 +2241,7 @@ export default function App() {
           </div>
 
           {/* Col 4: Right Discovery sidebar */}
-          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-1 h-full border-l border-white/5 bg-black/20 p-4 overflow-y-auto" : "hidden lg:block lg:col-span-1 lg:sticky lg:top-6"}>
+          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-3 h-full border-l border-white/5 bg-black/20 p-4 overflow-y-auto" : "hidden"}>
             <RightSidebar
               creators={(Object.values(globalUsersMap) as User[]).filter(u => u.id !== currentUser.id)}
               followingIds={followingIds}
@@ -2398,39 +2398,45 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Sleek unified bottom navigation bar (primary app navigation for all sizes) */}
-      <div 
+      {/* Nexora mobile dock; desktop navigation remains in the established sidebar. */}
+      <nav
         id="nexora-unified-bottom-nav"
-        className="fixed bottom-0 md:bottom-6 inset-x-0 md:left-1/2 md:-translate-x-1/2 md:max-w-xl bg-[#06040f]/95 border-t md:border border-white/10 md:rounded-2xl backdrop-blur-md z-40 py-2 px-6 flex justify-between items-center text-zinc-400 shadow-[0_-4px_20px_rgba(0,0,0,0.8)] md:shadow-[0_8px_30px_rgba(0,0,0,0.9)] pb-safe"
+        aria-label="Primary mobile navigation"
+        className="fixed bottom-0 inset-x-0 lg:hidden bg-[#06040f]/95 border-t border-white/10 backdrop-blur-xl z-40 py-1.5 px-1 flex justify-between items-center text-zinc-400 shadow-[0_-4px_20px_rgba(0,0,0,0.45)]"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.375rem)' }}
       >
-        {/* 1. 🏠 Home */}
         <button 
+          type="button"
           onClick={() => {
             setActiveTab('feed');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'feed' ? 'text-violet-400 font-semibold' : 'hover:text-zinc-200'}`}
+          aria-label="Home feed"
+          aria-current={activeTab === 'feed' ? 'page' : undefined}
+          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'feed' ? 'text-violet-300 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-home"
         >
-          <Home className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase">Home</span>
+          <Home className="w-5 h-5" aria-hidden="true" />
+          <span className="text-[9px] font-mono tracking-wide uppercase">Home</span>
         </button>
 
-        {/* 2. 🌍 World Pulse */}
         <button 
+          type="button"
           onClick={() => {
             setActiveTab('pulse');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'pulse' ? 'text-cyan-400 font-semibold' : 'hover:text-zinc-200'}`}
+          aria-label="World Pulse"
+          aria-current={activeTab === 'pulse' ? 'page' : undefined}
+          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'pulse' ? 'text-cyan-300 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-world-pulse"
         >
-          <Globe className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase">World Pulse</span>
+          <Globe className="w-5 h-5" aria-hidden="true" />
+          <span className="text-[9px] font-mono tracking-wide uppercase">Pulse</span>
         </button>
 
-        {/* 3. ➕ Center Create Button */}
         <motion.button 
+          type="button"
           onClick={() => {
             requireAuth(() => {
               setCreationInitialMode(null);
@@ -2441,6 +2447,7 @@ export default function App() {
           className="relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
           id="nav-create-post-center"
           title="Create Broadcast"
+          aria-label="Create a post"
           whileHover={{
             scale: 1.08,
             y: -2,
@@ -2471,35 +2478,59 @@ export default function App() {
           )}
         </motion.button>
  
-        {/* 4. 🔔 Activity */}
         <button 
+          type="button"
+          onClick={() => {
+            setActiveTab('inbox');
+            setViewedUser(null);
+          }}
+          aria-label={unreadMessagesCount > 0 ? `Messages, ${unreadMessagesCount} unread` : 'Messages'}
+          aria-current={activeTab === 'inbox' ? 'page' : undefined}
+          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 relative rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'inbox' ? 'text-blue-300 font-semibold' : 'hover:text-zinc-200'}`}
+          id="mobile-nav-inbox"
+        >
+          <MessageSquare className="w-5 h-5" aria-hidden="true" />
+          {unreadMessagesCount > 0 && (
+            <span className="absolute top-0.5 right-1/4 min-w-3.5 h-3.5 px-1 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" aria-hidden="true">
+              {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+            </span>
+          )}
+          <span className="text-[9px] font-mono tracking-wide uppercase">Inbox</span>
+        </button>
+
+        <button
+          type="button"
           onClick={() => {
             setActiveTab('activity');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 relative py-1 px-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'activity' ? 'text-pink-400 font-semibold' : 'hover:text-zinc-200'}`}
+          aria-label={unreadNotificationsCount > 0 ? `Activity, ${unreadNotificationsCount} unread` : 'Activity'}
+          aria-current={activeTab === 'activity' ? 'page' : undefined}
+          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 relative rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'activity' ? 'text-pink-300 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-activity"
         >
-          <Bell className="w-5 h-5" />
+          <Bell className="w-5 h-5" aria-hidden="true" />
           {unreadNotificationsCount > 0 && (
-            <span className="absolute top-1 right-2.5 w-1.5 h-1.5 rounded-full bg-pink-500" />
+            <span className="absolute top-1 right-1/4 w-1.5 h-1.5 rounded-full bg-pink-400" aria-hidden="true" />
           )}
-          <span className="text-[8px] font-mono tracking-wider uppercase">Activity</span>
+          <span className="text-[9px] font-mono tracking-wide uppercase">Activity</span>
         </button>
 
-        {/* 5. 👤 Profile */}
         <button 
+          type="button"
           onClick={() => {
             setActiveTab('profile');
             setViewedUser(null);
           }}
-          className={`flex flex-col items-center gap-1 py-1 px-2.5 rounded-xl transition-all duration-200 cursor-pointer ${activeTab === 'profile' ? 'text-violet-400 font-semibold' : 'hover:text-zinc-200'}`}
+          aria-label="Your profile"
+          aria-current={activeTab === 'profile' ? 'page' : undefined}
+          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'profile' ? 'text-violet-300 font-semibold' : 'hover:text-zinc-200'}`}
           id="mobile-nav-profile"
         >
-          <UserIcon className="w-5 h-5" />
-          <span className="text-[8px] font-mono tracking-wider uppercase">Profile</span>
+          <UserIcon className="w-5 h-5" aria-hidden="true" />
+          <span className="text-[9px] font-mono tracking-wide uppercase">Profile</span>
         </button>
-      </div>
+      </nav>
 
       {/* 🟣 VOH AI VERIFICATION EXPLANATION MODAL */}
       <AnimatePresence>

@@ -6,8 +6,18 @@
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
 }
 
+:root {
+  --nx-canvas: #070514;
+  --nx-surface: #100c21;
+  --nx-edge: rgba(255, 255, 255, 0.1);
+  --nx-violet: #8b5cf6;
+  --nx-pink: #ec4899;
+  --nx-cyan: #22d3ee;
+  --nx-focus: #c4b5fd;
+}
+
 body {
-  background-color: #070514;
+  background-color: var(--nx-canvas);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
@@ -16,6 +26,34 @@ body {
 
 button, a, input, select, textarea {
   touch-action: manipulation;
+}
+
+:focus-visible {
+  outline: 2px solid var(--nx-focus);
+  outline-offset: 2px;
+}
+
+.nx-icon-button {
+  min-width: 44px;
+  min-height: 44px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--nx-edge);
+  border-radius: 0.875rem;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(244, 244, 245, 0.82);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nx-icon-button:hover {
+  border-color: rgba(139, 92, 246, 0.34);
+  background: rgba(139, 92, 246, 0.12);
+  color: #fff;
+}
+
+.nx-icon-button:active {
+  transform: scale(0.96);
 }
 
 /* Custom gorgeous scrollbar aesthetics */
@@ -68,5 +106,3 @@ button, a, input, select, textarea {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
-
-

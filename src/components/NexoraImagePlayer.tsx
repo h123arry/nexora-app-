@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Check, Music, Search, Edit3, Archive, Trash, UserPlus, EyeOff, Download } from 'lucide-react';
+import { Zap, MessageSquare, Send, Bookmark, MoreVertical, Check, Music, Search, Edit3, Archive, Trash, UserPlus, EyeOff, Download, ImageOff } from 'lucide-react';
 import VideoBottomSheet from './VideoBottomSheet';
 import { resolveMediaUrl } from '../utils/indexedDbStorage';
 import NexoraWatermark from './branding/NexoraWatermark';
@@ -69,6 +69,9 @@ export default function NexoraImagePlayer({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [downloadingState, setDownloadingState] = useState<string | null>(null);
+  const [isResolvingMedia, setIsResolvingMedia] = useState(true);
+  const [isImageLoading, setIsImageLoading] = useState(true);
+  const [hasImageLoadError, setHasImageLoadError] = useState(false);
 
   const handleDownloadWatermarkedImage = async () => {
     const imgSrc = displayImages[currentImageIndex];
@@ -220,27 +223,80 @@ export default function NexoraImagePlayer({
   
   useEffect(() => {
     let active = true;
-    Promise.all(rawImages.map(url => resolveMediaUrl(url))).then(resolved => {
-      if (active) setDisplayImages(resolved.filter(Boolean) as string[]);
-    });
+    setIsResolvingMedia(true);
+    setHasImageLoadError(false);
+    setIsImageLoading(true);
+    Promise.all(rawImages.map(url => resolveMediaUrl(url)))
+      .then(resolved => {
+        if (active) {
+          setDisplayImages(resolved.filter(Boolean) as string[]);
+          setIsResolvingMedia(false);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setDisplayImages([]);
+          setIsResolvingMedia(false);
+          setIsImageLoading(false);
+        }
+      });
     return () => { active = false; };
   }, [rawImages.join(',')]);
 
+  useEffect(() => {
+    setIsImageLoading(true);
+    setHasImageLoadError(false);
+  }, [currentImageIndex, displayImages]);
+
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
-  if (displayImages.length === 0) return null;
 
 
   return (
     <div className="relative w-full overflow-hidden bg-black aspect-square sm:aspect-[4/3] md:aspect-[16/10] max-h-[580px] select-none group">
       {/* Background Image Display */}
-      <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
-        <img loading="lazy"
-          src={displayImages[currentImageIndex]}
-          alt={post.content || 'Post media'}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01]"
-          referrerPolicy="no-referrer"
-          style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
-        />
+      <div className="w-full h-full relative overflow-hidden bg-[#080612] flex items-center justify-center">
+        {isResolvingMedia ? (
+          <div role="status" aria-live="polite" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
+            <span className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" aria-hidden="true" />
+            <span className="text-xs font-medium text-zinc-300">Loading media…</span>
+          </div>
+        ) : displayImages[currentImageIndex] ? (
+          <>
+            <img loading="lazy"
+              src={displayImages[currentImageIndex]}
+              alt={post.content || 'Post media'}
+              aria-hidden={hasImageLoadError}
+              onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
+              onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}
+              className={`w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.01] ${hasImageLoadError ? 'opacity-0' : ''}`}
+              referrerPolicy="no-referrer"
+              style={{ filter: (post.imageFilters && post.imageFilters[currentImageIndex]) || post.imageFilter || 'none' }}
+            />
+            {isImageLoading && !hasImageLoadError && (
+              <div role="status" aria-live="polite" className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
+                <span className="w-8 h-8 rounded-full border-2 border-violet-400 border-t-transparent animate-spin" aria-hidden="true" />
+                <span className="text-xs font-medium text-zinc-300">Loading media…</span>
+              </div>
+            )}
+            {hasImageLoadError && (
+              <div role="status" aria-live="polite" className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
+                <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-400/20 flex items-center justify-center">
+                  <ImageOff className="w-6 h-6 text-violet-300" aria-hidden="true" />
+                </div>
+                <p className="text-sm font-bold text-white">Media unavailable</p>
+                <p className="text-xs text-zinc-400 max-w-xs">This image could not be loaded. The post caption and actions are still available.</p>
+              </div>
+            )}
+          </>
+        ) : (
+          <div role="status" aria-live="polite" className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gradient-to-br from-[#15102a] via-[#080612] to-[#1c0b20] p-6 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-violet-400/20 flex items-center justify-center">
+              <ImageOff className="w-6 h-6 text-violet-300" aria-hidden="true" />
+            </div>
+            <p className="text-sm font-bold text-white">Media unavailable</p>
+            <p className="text-xs text-zinc-400 max-w-xs">This image could not be loaded. The post caption and actions are still available.</p>
+          </div>
+        )}
         {/* Subtle top and bottom dark gradient overlays for legibility */}
         <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/80 via-black/40 to-transparent pointer-events-none z-10" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent pointer-events-none z-10" />
