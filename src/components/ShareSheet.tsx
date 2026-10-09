@@ -341,7 +341,7 @@ export default function ShareSheet({
               {selectedRecipients.length > 0 && (
                 <button
                   onClick={handleSendToSelected}
-                  className="w-full mt-3 py-3.5 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  className="w-full mt-3 py-3.5 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 hover:opacity-95 text-white font-bold rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Send className="w-4 h-4" />
                   Send to {selectedRecipients.length} friends
@@ -381,31 +381,31 @@ export default function ShareSheet({
             {/* Repost */}
             <button
               onClick={handleRepost}
-              className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border text-xs transition-all active:scale-95 cursor-pointer ${
+              className={`flex flex-col items-center justify-center p-3.5 rounded-full border text-xs transition-all active:scale-95 cursor-pointer backdrop-blur-md ${
                 isReposted 
                   ? 'bg-zinc-900 border-zinc-800 text-zinc-500' 
-                  : 'bg-violet-950/40 border-white/10 hover:border-white/10 text-white shadow-md'
+                  : 'bg-white/10 hover:bg-white/15 border-white/15 text-white shadow-md'
               }`}
             >
-              <Rocket className="w-4 h-4 text-violet-400 mb-1.5" />
+              <Rocket className="w-4 h-4 text-violet-400 mb-1" />
               <span className="font-sans font-bold text-xs">{isReposted ? 'Reposted' : 'Repost'}</span>
             </button>
 
             {/* Copy Link */}
             <button
               onClick={handleCopyLink}
-              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs transition-all active:scale-95 cursor-pointer shadow-md"
+              className="flex flex-col items-center justify-center p-3.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs transition-all active:scale-95 cursor-pointer shadow-md backdrop-blur-md"
             >
-              {copied ? <Check className="w-4 h-4 text-emerald-400 mb-1.5" /> : <Link2 className="w-4 h-4 text-cyan-400 mb-1.5" />}
+              {copied ? <Check className="w-4 h-4 text-emerald-400 mb-1" /> : <Link2 className="w-4 h-4 text-cyan-400 mb-1" />}
               <span className="font-sans font-bold text-xs">{copied ? 'Copied!' : 'Copy Link'}</span>
             </button>
 
             {/* Save to Board */}
             <button
               onClick={handleSaveToggle}
-              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs transition-all active:scale-95 cursor-pointer shadow-md"
+              className="flex flex-col items-center justify-center p-3.5 rounded-full bg-white/10 hover:bg-white/15 border border-white/15 text-white text-xs transition-all active:scale-95 cursor-pointer shadow-md backdrop-blur-md"
             >
-              <Bookmark className={`w-4 h-4 mb-1.5 ${isSaved ? 'text-yellow-400 fill-yellow-400' : 'text-amber-400'}`} />
+              <Bookmark className={`w-4 h-4 mb-1 ${isSaved ? 'text-yellow-400 fill-yellow-400' : 'text-amber-400'}`} />
               <span className="font-sans font-bold text-xs">{isSaved ? 'Saved' : 'Save'}</span>
             </button>
           </div>

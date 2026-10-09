@@ -1308,8 +1308,94 @@ export default function ProfileView({
               </div>
             )}
 
-          {/* Nexora 6 Statistics Grid */}
-          {/* REMOVED - MOVED ABOVE BIO */}
+            {/* REDESIGNED PROFILE HUB WIDGETS: PINNED HIGHLIGHTS, AUDIO VIBE & ANALYTICS */}
+            <div className="pt-3 space-y-3">
+              {/* Pinned Highlights Stories Row */}
+              <div className="flex items-center gap-3 overflow-x-auto pb-1 no-scrollbar">
+                {[
+                  { title: 'Genesis', icon: Sparkles, image: currentUser.avatar },
+                  { title: 'Live Set', icon: Radio, image: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=150&auto=format&fit=crop&q=80' },
+                  { title: 'Alpha AI', icon: Zap, image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80' },
+                  { title: 'Milestones', icon: Award, image: 'https://images.unsplash.com/photo-1533227268428-f9ed0900fb3b?w=150&auto=format&fit=crop&q=80' },
+                  { title: 'Studio', icon: Tv, image: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=150&auto=format&fit=crop&q=80' }
+                ].map((item, idx) => (
+                  <div key={idx} className="flex flex-col items-center gap-1 shrink-0 cursor-pointer group" onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: `✨ Opening highlight: ${item.title}` }))}>
+                    <div className="w-15 h-15 rounded-full p-[2px] bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 shadow-md group-hover:scale-105 transition-transform">
+                      <div className="w-full h-full rounded-full bg-black overflow-hidden relative">
+                        <img src={item.image} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" alt={item.title} referrerPolicy="no-referrer" />
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-sans text-zinc-300 font-medium tracking-tight truncate max-w-[60px]">{item.title}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Interactive Audio Vibe Player & Live Streaming Widget */}
+              <div className="rounded-2xl bg-gradient-to-r from-violet-950/40 via-[#0d0724] to-pink-950/30 border border-white/10 p-3 flex items-center justify-between shadow-lg">
+                <div className="flex items-center gap-3 min-w-0">
+                  <button 
+                    onClick={toggleMusicAudio}
+                    className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-600 to-pink-500 flex items-center justify-center text-white shrink-0 shadow-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+                  >
+                    {isSongPlaying ? <Pause className="w-4 h-4 fill-white" /> : <Play className="w-4 h-4 fill-white ml-0.5" />}
+                  </button>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] font-mono font-extrabold text-pink-400 uppercase tracking-wider">VIBE SHOWPIECE</span>
+                      {isSongPlaying && (
+                        <div className="flex items-end gap-0.5 h-3">
+                          <span className="w-0.5 bg-pink-400 h-2 animate-bounce" />
+                          <span className="w-0.5 bg-violet-400 h-3 animate-bounce" style={{ animationDelay: '0.1s' }} />
+                          <span className="w-0.5 bg-pink-400 h-1.5 animate-bounce" style={{ animationDelay: '0.2s' }} />
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-xs font-bold text-white truncate">{pinnedSong} • <span className="text-zinc-400 font-normal">{pinnedArtist}</span></p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {isOwnProfile && (
+                    <button 
+                      onClick={() => setIsLiveStreaming(!isLiveStreaming)}
+                      className={`px-3 py-1.5 rounded-xl font-mono text-[9px] uppercase font-black tracking-wider transition-all cursor-pointer flex items-center gap-1.5 ${
+                        isLiveStreaming 
+                          ? 'bg-red-500/20 border border-red-500 text-red-400 animate-pulse' 
+                          : 'bg-white/5 border border-white/10 text-zinc-300 hover:bg-white/10'
+                      }`}
+                    >
+                      <Radio className="w-3.5 h-3.5" />
+                      {isLiveStreaming ? `LIVE (${liveDuration}s)` : 'Go Live'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Advanced Creator Analytics & Earnings Summary Strip */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { label: 'Weekly Reach', value: '+142.8K', change: '+24.5%', icon: TrendingUp, color: 'text-emerald-400' },
+                  { label: 'Engagement Rate', value: '18.4%', change: '+4.1%', icon: Zap, color: 'text-yellow-400' },
+                  { label: 'Sparks Earned', value: formatSecondaryStat(currentUser.sparks || 2450), change: 'Active', icon: Sparkles, color: 'text-pink-400' },
+                  { label: 'Est. Creator Payout', value: '$1,284.50', change: 'Tier 1', icon: Award, color: 'text-violet-400' }
+                ].map((metric, i) => {
+                  const MIcon = metric.icon;
+                  return (
+                    <div key={i} className="p-3 rounded-xl bg-black/40 border border-white/5 flex flex-col justify-between">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] text-zinc-400 font-medium">{metric.label}</span>
+                        <MIcon className={`w-3.5 h-3.5 ${metric.color}`} />
+                      </div>
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <span className="text-sm font-black text-white">{metric.value}</span>
+                        <span className="text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/10 px-1 py-0.5 rounded">{metric.change}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
           </div>
 
           {/* 3. ICON-ONLY NAVIGATION BAR */}
