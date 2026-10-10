@@ -17,6 +17,7 @@ import { getRecommendationScore, recordRecommendationEvent } from '../utils/reco
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
+import StoryRail from './StoryRail';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -160,6 +161,7 @@ interface FeedViewProps {
   onOpenMessages?: () => void;
   onOpenVohAi?: () => void;
   isHydrated?: boolean;
+  onRequireAuth?: () => void;
 }
 
 export default function FeedView({
@@ -183,7 +185,8 @@ export default function FeedView({
   unreadMessagesCount = 0,
   onOpenMessages,
   onOpenVohAi,
-  isHydrated = true
+  isHydrated = true,
+  onRequireAuth
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
@@ -1725,7 +1728,17 @@ export default function FeedView({
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* STAGE 1 — HOME FEED NAVIGATION HEADER */}
-        <div className="sticky top-0 z-30 bg-[#04020a]/95 backdrop-blur-xl border-b border-white/10 px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between gap-2 min-h-[60px]">
+        <div className="sticky top-0 z-30 bg-[#04020a]/95 backdrop-blur-xl border-b border-white/10">
+          {/* Brand row */}
+          <div className="flex items-center justify-between gap-3 px-3 sm:px-6 pt-3 pb-0.5">
+            <div className="flex items-baseline gap-2 min-w-0">
+              <span className="text-xl sm:text-2xl font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
+              <span className="hidden sm:inline text-[11px] text-zinc-400 font-medium truncate">Your world. Your people. Your growth.</span>
+            </div>
+            <span className="sm:hidden text-[10px] font-mono text-zinc-500 truncate">Your world. Your people.</span>
+          </div>
+          {/* Categories + utilities row */}
+          <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2">
           {/* Left: Feed Categories (Exact Order: Posts, Following, Friends, Trending, Reels) */}
           <div role="group" aria-label="Feed categories" className="flex flex-1 min-w-0 items-center gap-1 sm:gap-8 overflow-x-auto overscroll-x-contain scrollbar-none pr-0 sm:pr-2 py-1">
             {([
@@ -1829,6 +1842,21 @@ export default function FeedView({
               <ChevronDown className="w-3.5 h-3.5 text-zinc-400 group-hover:text-violet-400 transition-transform duration-200" />
             </button>
           </div>
+          </div>
+        </div>
+
+        {/* STAGE 2 — STORIES RAIL + SEARCH */}
+        <StoryRail currentUser={currentUser} onRequireAuth={onRequireAuth} onViewProfile={onViewProfile} />
+        <div className="px-4 sm:px-6 pb-3">
+          <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('openUniversalSearch'))}
+            className="nx-field w-full flex items-center gap-2 px-4 text-sm text-zinc-400 hover:border-violet-500/40 transition-colors cursor-pointer"
+            aria-label="Search Nexora"
+          >
+            <Search className="w-4 h-4 text-violet-300" />
+            <span>Search Nexora…</span>
+          </button>
         </div>
 
         {/* INLINE CREATE POST COMPOSER */}
@@ -1837,62 +1865,53 @@ export default function FeedView({
             <img
               src={currentUser.avatar}
               alt={currentUser.name}
-              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/20 shrink-0 cursor-pointer hover:scale-105 transition-transform"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/30 shrink-0 cursor-pointer hover:scale-105 transition-transform"
               onClick={() => onViewProfile?.(currentUser.id)}
+              referrerPolicy="no-referrer"
             />
             <button
               onClick={() => setComposerOpen(true)}
-              className="flex-1 text-left py-2.5 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-400 hover:text-zinc-200 text-xs font-sans transition-all cursor-pointer flex items-center justify-between group"
+              className="flex-1 text-left py-2.5 px-4 rounded-xl nx-field text-zinc-400 hover:text-zinc-200 text-sm font-sans transition-all cursor-pointer flex items-center justify-between group"
             >
-              <span>Share a moment with your circles…</span>
+              <span>What&apos;s on your mind, {(currentUser.name || 'there').split(' ')[0]}?</span>
               <Sparkles className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform shrink-0 ml-2" />
             </button>
           </div>
           <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/5 text-xs text-zinc-400">
-            <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
+            <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
               <button
                 onClick={() => {
                   setComposerCategory('general');
                   setComposerOpen(true);
                 }}
-                className="flex items-center gap-1.5 text-zinc-300 hover:text-violet-300 transition-colors text-[11px] font-medium cursor-pointer"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/5 text-zinc-200 transition-colors text-[11px] font-semibold cursor-pointer"
               >
-                <span className="text-violet-400 font-bold">🖼️</span>
-                <span>Media / Photo</span>
+                <span className="text-violet-400">🖼️</span>
+                <span>Post</span>
               </button>
-              
               <button
-                onClick={() => {
-                  setComposerCategory('pulse');
-                  setComposerOpen(true);
-                }}
-                className="flex items-center gap-1.5 text-zinc-300 hover:text-cyan-300 transition-colors text-[11px] font-medium cursor-pointer"
+                onClick={() => setFeedTab('reels')}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/5 text-zinc-200 transition-colors text-[11px] font-semibold cursor-pointer"
               >
-                <span className="text-cyan-400 font-bold">🌍</span>
-                <span>Pulse</span>
+                <span className="text-pink-400">🎬</span>
+                <span>Reel</span>
               </button>
-
               <button
-                onClick={() => {
-                  setComposerCategory('opportunity');
-                  setComposerOpen(true);
-                }}
-                className="flex items-center gap-1.5 text-zinc-300 hover:text-pink-300 transition-colors text-[11px] font-medium cursor-pointer"
+                onClick={() => window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'live' } }))}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-white/5 text-zinc-200 transition-colors text-[11px] font-semibold cursor-pointer"
               >
-                <span className="text-pink-400 font-bold">🚀</span>
-                <span>Opportunity</span>
+                <span className="text-cyan-400">🔴</span>
+                <span>Live</span>
               </button>
             </div>
-
             <button
               onClick={() => setComposerOpen(true)}
-              className="px-3.5 py-1.5 bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-lg text-[11px] font-sans font-bold cursor-pointer transition-all shadow-sm"
+              className="nx-btn-primary !min-h-9 px-4 text-[11px]"
             >
-              Post ⚡
+              Create
             </button>
           </div>
         </div>
-
         {/* Animated Pull-To-Refresh indicators */}
         <AnimatePresence>
           {pullY > 0 && (

@@ -143,7 +143,11 @@ export default function ExploreView({
     <div id="explore-view-master-panel" className="space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
       
       {/* Search Header & Input */}
-      <div className="sticky top-0 z-30 bg-[#070512]/95 backdrop-blur-md pb-4 pt-3 border-b border-white/5 space-y-3">
+      <div className="sticky top-0 z-30 nx-glass pb-4 pt-3 px-3 sm:px-0 space-y-3">
+        <div className="flex items-baseline gap-2 px-1">
+          <span className="text-lg sm:text-xl font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
+          <span className="nx-eyebrow">Discover</span>
+        </div>
         <div className="flex items-center gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
@@ -157,7 +161,7 @@ export default function ExploreView({
                   addRecentSearch(localSearch.trim());
                 }
               }}
-              className="w-full pl-11 pr-10 py-3 bg-[#0d0924] border border-white/10 focus:border-violet-500 focus:outline-hidden rounded-2xl text-xs text-white placeholder-zinc-500 transition-all font-sans shadow-inner"
+              className="nx-field w-full pl-11 pr-10 text-sm font-sans"
             />
             {localSearch && (
               <button 
@@ -247,7 +251,7 @@ export default function ExploreView({
           </div>
 
           {totalResultsCount === 0 ? (
-            <div className="p-12 rounded-3xl bg-[#0b081c] border border-white/10 text-center space-y-3 my-8">
+            <div className="p-12 rounded-3xl nx-surface text-center space-y-3 my-8">
               <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                 <Search className="w-6 h-6" />
               </div>
@@ -271,7 +275,7 @@ export default function ExploreView({
                           addRecentSearch(user.username);
                           onViewProfile?.(user.id);
                         }}
-                        className="p-4 rounded-2xl bg-[#0b081c] border border-white/10 hover:border-white/10 flex items-center justify-between gap-3 cursor-pointer transition-all group shadow-sm"
+                        className="p-4 rounded-2xl nx-surface hover:border-white/10 flex items-center justify-between gap-3 cursor-pointer transition-all group shadow-sm"
                       >
                         <div className="flex items-center gap-3 overflow-hidden">
                           <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
@@ -309,7 +313,7 @@ export default function ExploreView({
                   <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Posts & Discussions ({filteredPosts.length})</h3>
                   <div className="space-y-3">
                     {filteredPosts.map(post => (
-                      <div key={post.id} className="p-4 rounded-2xl bg-[#0b081c] border border-white/10 space-y-2.5 shadow-sm">
+                      <div key={post.id} className="p-4 rounded-2xl nx-surface space-y-2.5 shadow-sm">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onViewProfile?.(post.userId || post.username)}>
                             <img src={post.avatar} alt={post.username} className="w-8 h-8 rounded-lg object-cover" />
@@ -352,7 +356,7 @@ export default function ExploreView({
                   <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Videos ({filteredVideos.length})</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {filteredVideos.map(video => (
-                      <div key={video.id} className="p-3.5 rounded-2xl bg-[#0b081c] border border-white/10 space-y-2 flex items-center justify-between gap-3 shadow-sm">
+                      <div key={video.id} className="p-3.5 rounded-2xl nx-surface space-y-2 flex items-center justify-between gap-3 shadow-sm">
                         <div className="flex items-center gap-3 overflow-hidden">
                           <div className="relative w-12 h-14 rounded-xl overflow-hidden bg-black shrink-0 border border-white/10">
                             {video.videoUrl ? (
@@ -424,7 +428,7 @@ export default function ExploreView({
         <div className="space-y-6">
 
           {/* Nexora Pulse: Trending Topics & Communities */}
-          <div className="bg-[#0b081c] border border-white/10 rounded-3xl p-5 space-y-4 shadow-sm text-left">
+          <div className="nx-surface rounded-3xl p-5 space-y-4 shadow-sm text-left">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
                 <Flame className="w-4 h-4 text-pink-500" /> Nexora Pulse (Trending)
@@ -485,7 +489,7 @@ export default function ExploreView({
                 <div
                   key={user.id}
                   onClick={() => onViewProfile?.(user.id)}
-                  className="w-[150px] shrink-0 p-4 bg-[#0b081c] border border-white/10 hover:border-white/10 rounded-2xl flex flex-col items-center text-center gap-2.5 cursor-pointer transition-all group shadow-sm"
+                  className="w-[150px] shrink-0 p-4 nx-surface hover:border-white/10 rounded-2xl flex flex-col items-center text-center gap-2.5 cursor-pointer transition-all group shadow-sm"
                 >
                   <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-all" />
                   <div className="w-full overflow-hidden">
@@ -514,7 +518,7 @@ export default function ExploreView({
           </div>
 
           {/* Active Live Streams */}
-          <div className="bg-[#0b081c] border border-white/10 rounded-3xl p-5 space-y-3 text-left shadow-sm">
+          <div className="nx-surface rounded-3xl p-5 space-y-3 text-left shadow-sm">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
                 <Radio className="w-3.5 h-3.5 text-rose-500 animate-ping" /> Live Streams
@@ -546,7 +550,7 @@ export default function ExploreView({
           </div>
 
           {/* Trending Audio & Sounds */}
-          <div className="bg-[#0b081c] border border-white/10 rounded-3xl p-5 space-y-3 text-left shadow-sm">
+          <div className="nx-surface rounded-3xl p-5 space-y-3 text-left shadow-sm">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-mono font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
                 <Music className="w-4 h-4 text-amber-400" /> Trending Sounds

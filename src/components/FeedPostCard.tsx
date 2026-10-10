@@ -158,7 +158,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             alt={post.name}
             loading="lazy"
             decoding="async"
-            className="w-10 h-10 rounded-xl object-cover border border-white/10 cursor-pointer"
+            className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40 cursor-pointer"
             onClick={(e) => {
               e.stopPropagation();
               onViewProfile?.(post.userId || post.username);
@@ -466,7 +466,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
       {/* Media Players (Photo or Video) */}
       {post.videoUrl ? (
-        <div className="mb-3 w-full overflow-hidden border-y border-white/10 bg-black">
+        <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
           <NexoraVideoPlayer
             post={post}
             videoUrl={post.videoUrl}
@@ -488,7 +488,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           />
         </div>
       ) : (post.image || (post.images && post.images.length > 0)) && !post.opportunityType ? (
-        <div className="mb-3 w-full overflow-hidden border-y border-white/10 bg-black">
+        <div className="mb-3 mx-4 sm:mx-6 overflow-hidden rounded-2xl border border-white/10 bg-black">
           <NexoraImagePlayer
             post={post}
             image={post.image}

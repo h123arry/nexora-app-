@@ -2065,6 +2065,7 @@ export default function App() {
                 unreadMessagesCount={unreadMessagesCount}
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
                 onOpenVohAi={() => { setMatrixSubTabRedirect('ai'); setActiveTab('matrix'); setViewedUser(null); }}
+                onRequireAuth={() => { setAuthPromptReason('Sign in to view and share stories.'); setShowAuthModal(true); }}
               />
             </motion.div>
             
@@ -2402,40 +2403,36 @@ export default function App() {
       <nav
         id="nexora-unified-bottom-nav"
         aria-label="Primary mobile navigation"
-        className="fixed bottom-0 inset-x-0 lg:hidden bg-[#06040f]/95 border-t border-white/10 backdrop-blur-xl z-40 py-1.5 px-1 flex justify-between items-center text-zinc-400 shadow-[0_-4px_20px_rgba(0,0,0,0.45)]"
+        className="fixed bottom-0 inset-x-0 lg:hidden nx-glass-strong border-t border-white/10 z-40 py-1.5 px-1 flex justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.45)]"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.375rem)' }}
       >
-        <button 
+        <button
           type="button"
-          onClick={() => {
-            setActiveTab('feed');
-            setViewedUser(null);
-          }}
+          onClick={() => { setActiveTab('feed'); setViewedUser(null); }}
           aria-label="Home feed"
           aria-current={activeTab === 'feed' ? 'page' : undefined}
-          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'feed' ? 'text-violet-300 font-semibold' : 'hover:text-zinc-200'}`}
+          data-active={activeTab === 'feed'}
+          className="nx-dock-item cursor-pointer"
           id="mobile-nav-home"
         >
           <Home className="w-5 h-5" aria-hidden="true" />
           <span className="text-[9px] font-mono tracking-wide uppercase">Home</span>
         </button>
 
-        <button 
+        <button
           type="button"
-          onClick={() => {
-            setActiveTab('pulse');
-            setViewedUser(null);
-          }}
-          aria-label="World Pulse"
-          aria-current={activeTab === 'pulse' ? 'page' : undefined}
-          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'pulse' ? 'text-cyan-300 font-semibold' : 'hover:text-zinc-200'}`}
-          id="mobile-nav-world-pulse"
+          onClick={() => { setActiveTab('communities'); setViewedUser(null); }}
+          aria-label="Communities"
+          aria-current={activeTab === 'communities' ? 'page' : undefined}
+          data-active={activeTab === 'communities'}
+          className="nx-dock-item cursor-pointer"
+          id="mobile-nav-communities"
         >
-          <Globe className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[9px] font-mono tracking-wide uppercase">Pulse</span>
+          <UsersIcon className="w-5 h-5" aria-hidden="true" />
+          <span className="text-[9px] font-mono tracking-wide uppercase">Circles</span>
         </button>
 
-        <motion.button 
+        <motion.button
           type="button"
           onClick={() => {
             requireAuth(() => {
@@ -2446,22 +2443,14 @@ export default function App() {
           }}
           className="relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
           id="nav-create-post-center"
-          title="Create Broadcast"
+          title="Create"
           aria-label="Create a post"
-          whileHover={{
-            scale: 1.08,
-            y: -2,
-            transition: { duration: 0.2, ease: "easeOut" }
-          }}
-          whileTap={{ 
-            scale: 0.92,
-            transition: { type: "spring", stiffness: 400, damping: 20 }
-          }}
+          whileHover={{ scale: 1.08, y: -2, transition: { duration: 0.2, ease: 'easeOut' } }}
+          whileTap={{ scale: 0.92, transition: { type: 'spring', stiffness: 400, damping: 20 } }}
         >
           <Plus className="w-5.5 h-5.5 text-white relative z-10" />
-
           {(isOffline || isSyncPending) && (
-            <span 
+            <span
               className={`absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full border border-[#06040f] z-20 shadow-xs ${
                 isSyncPending ? 'bg-purple-500' : (isOffline ? 'bg-amber-500' : 'bg-purple-500')
               }`}
@@ -2477,54 +2466,32 @@ export default function App() {
             </span>
           )}
         </motion.button>
- 
-        <button 
+
+        <button
           type="button"
-          onClick={() => {
-            setActiveTab('inbox');
-            setViewedUser(null);
-          }}
+          onClick={() => { setActiveTab('inbox'); setViewedUser(null); }}
           aria-label={unreadMessagesCount > 0 ? `Messages, ${unreadMessagesCount} unread` : 'Messages'}
           aria-current={activeTab === 'inbox' ? 'page' : undefined}
-          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 relative rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'inbox' ? 'text-blue-300 font-semibold' : 'hover:text-zinc-200'}`}
+          data-active={activeTab === 'inbox'}
+          className="nx-dock-item relative cursor-pointer"
           id="mobile-nav-inbox"
         >
           <MessageSquare className="w-5 h-5" aria-hidden="true" />
           {unreadMessagesCount > 0 && (
-            <span className="absolute top-0.5 right-1/4 min-w-3.5 h-3.5 px-1 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" aria-hidden="true">
+            <span className="absolute top-1.5 right-1/4 min-w-3.5 h-3.5 px-1 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" aria-hidden="true">
               {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
             </span>
           )}
-          <span className="text-[9px] font-mono tracking-wide uppercase">Inbox</span>
+          <span className="text-[9px] font-mono tracking-wide uppercase">Messages</span>
         </button>
 
         <button
           type="button"
-          onClick={() => {
-            setActiveTab('activity');
-            setViewedUser(null);
-          }}
-          aria-label={unreadNotificationsCount > 0 ? `Activity, ${unreadNotificationsCount} unread` : 'Activity'}
-          aria-current={activeTab === 'activity' ? 'page' : undefined}
-          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 relative rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'activity' ? 'text-pink-300 font-semibold' : 'hover:text-zinc-200'}`}
-          id="mobile-nav-activity"
-        >
-          <Bell className="w-5 h-5" aria-hidden="true" />
-          {unreadNotificationsCount > 0 && (
-            <span className="absolute top-1 right-1/4 w-1.5 h-1.5 rounded-full bg-pink-400" aria-hidden="true" />
-          )}
-          <span className="text-[9px] font-mono tracking-wide uppercase">Activity</span>
-        </button>
-
-        <button 
-          type="button"
-          onClick={() => {
-            setActiveTab('profile');
-            setViewedUser(null);
-          }}
+          onClick={() => { setActiveTab('profile'); setViewedUser(null); }}
           aria-label="Your profile"
           aria-current={activeTab === 'profile' ? 'page' : undefined}
-          className={`flex min-w-0 flex-1 min-h-12 flex-col items-center justify-center gap-1 rounded-xl transition-colors duration-200 cursor-pointer ${activeTab === 'profile' ? 'text-violet-300 font-semibold' : 'hover:text-zinc-200'}`}
+          data-active={activeTab === 'profile'}
+          className="nx-dock-item cursor-pointer"
           id="mobile-nav-profile"
         >
           <UserIcon className="w-5 h-5" aria-hidden="true" />
