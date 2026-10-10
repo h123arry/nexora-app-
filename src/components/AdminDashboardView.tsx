@@ -246,6 +246,7 @@ export default function AdminDashboardView({
       {/* Header Banner */}
       <div className="p-6 rounded-3xl bg-linear-to-r from-red-950/40 via-purple-950/30 to-violet-950/20 border border-red-500/15 flex flex-col md:flex-row md:items-center justify-between gap-4 text-left">
         <div>
+          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-2">
             <span className="p-1 px-3 bg-red-500/15 border border-red-500/20 text-red-400 font-mono text-[8s] rounded-full uppercase tracking-wider font-extrabold">
               FOUNDER SECURITY CLEARANCE LEVEL 1

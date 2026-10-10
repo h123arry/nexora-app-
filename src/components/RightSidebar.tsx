@@ -31,8 +31,8 @@ export default function RightSidebar({
     <div id="nexora-right-panel" className="flex flex-col h-full py-6 pl-4 border-l border-current/10 space-y-8 select-none">
       
       {/* Premium Spacious Brand Message */}
-      <div className="p-5 rounded-2xl bg-violet-600/5 border border-white/10 text-center relative overflow-hidden">
-        <p className="text-[11px] font-sans font-medium text-purple-200/85 relative z-10 leading-relaxed">
+      <div className="p-5 rounded-2xl nx-gradient-border text-center relative overflow-hidden">
+        <p className="text-[11px] font-sans font-medium text-purple-100/90 relative z-10 leading-relaxed">
           ⚡ Shape what’s happening by exploring high-affinity creators and trending conversations.
         </p>
       </div>
@@ -41,12 +41,12 @@ export default function RightSidebar({
       <div id="trending-topics-widget" className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <Flame className="w-4 h-4 text-pink-500" />
-          <h2 className="text-xs font-mono font-black tracking-widest uppercase text-current/75">
+          <h2 className="nx-eyebrow">
             Trending Sparks
           </h2>
         </div>
 
-        <div className="p-3 bg-current/3 border border-current/5 rounded-2xl space-y-1">
+        <div className="p-3 nx-surface rounded-2xl space-y-1">
           {selectedTag && (
             <button
               onClick={() => setSelectedTag(null)}
@@ -93,12 +93,12 @@ export default function RightSidebar({
       <div id="creators-to-follow-widget" className="space-y-3">
         <div className="flex items-center gap-2 px-1">
           <Users className="w-4 h-4 text-cyan-400" />
-          <h2 className="text-xs font-mono font-black tracking-widest uppercase text-current/75">
+          <h2 className="nx-eyebrow">
             Peer Discovery
           </h2>
         </div>
 
-        <div className="p-3 bg-current/3 border border-current/5 rounded-2xl space-y-3">
+        <div className="p-3 nx-surface rounded-2xl space-y-3">
           {creators.length === 0 ? (
             <p className="text-[11px] font-sans text-current/50 p-2 text-center leading-relaxed">
               No other creators registered yet.
@@ -115,7 +115,7 @@ export default function RightSidebar({
                     alt={creator.name} 
                     referrerPolicy="no-referrer"
                     onClick={() => onViewProfile?.(creator.id)}
-                    className="w-9 h-9 rounded-lg object-cover cursor-pointer hover:opacity-85 transition-opacity" 
+                    className="w-9 h-9 rounded-full object-cover cursor-pointer hover:opacity-85 transition-opacity ring-2 ring-violet-500/30" 
                   />
                   <div className="overflow-hidden">
                     <p 

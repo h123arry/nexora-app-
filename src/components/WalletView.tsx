@@ -26,6 +26,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
             <Wallet className="w-6 h-6" />
           </div>
           <div>
+            <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
             <h1 className="text-xl font-sans font-black tracking-tight text-white flex items-center gap-2">
               Nexora Wallet
               <span className="text-[10px] font-mono font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 px-2.5 py-0.5 rounded-full uppercase">

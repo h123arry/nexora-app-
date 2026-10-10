@@ -86,7 +86,7 @@ export default function SettingsView({
         </div>
 
         {/* Section Content Panel */}
-        <div className="md:col-span-2 p-6 rounded-3xl bg-[#080614]/90 border border-white/10 shadow-md space-y-6">
+        <div className="md:col-span-2 p-6 rounded-3xl nx-surface shadow-md space-y-6">
           {activeSection === 'account' && (
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Account Overview</h3>
@@ -96,7 +96,7 @@ export default function SettingsView({
                   <input
                     type="text"
                     defaultValue={currentUser.name}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-violet-500"
+                    className="w-full nx-field px-4 py-2.5 text-xs"
                   />
                 </div>
                 <div>
@@ -104,7 +104,7 @@ export default function SettingsView({
                   <input
                     type="text"
                     defaultValue={`@${currentUser.username}`}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-violet-500"
+                    className="w-full nx-field px-4 py-2.5 text-xs"
                   />
                 </div>
                 <div>
@@ -112,7 +112,7 @@ export default function SettingsView({
                   <textarea
                     rows={3}
                     defaultValue={currentUser.bio}
-                    className="w-full px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-white focus:outline-none focus:border-violet-500"
+                    className="w-full nx-field px-4 py-2.5 text-xs"
                   />
                 </div>
               </div>

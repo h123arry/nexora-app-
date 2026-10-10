@@ -696,6 +696,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       {/* Primary Top Panel Row */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-4">
         <div>
+          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-2.5 mb-1">
             <VohIcon size={26} animated glow variant="brand" />
             <h1 className="text-2xl font-black font-sans tracking-tight text-current uppercase">

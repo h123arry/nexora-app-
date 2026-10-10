@@ -122,7 +122,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       <div className="flex-1 overflow-y-auto px-2">
         {groupedNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-4">
-            <div className="w-20 h-20 bg-zinc-900 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 nx-surface rounded-full flex items-center justify-center">
               <Bell className="w-10 h-10 text-zinc-700" />
             </div>
             <div className='space-y-1'>
@@ -137,13 +137,13 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
               {notifs.map(notif => (
                 <motion.div 
                   key={notif.id} 
-                  className={`p-4 border-b border-zinc-800 flex gap-4 items-start hover:bg-zinc-900/50 rounded-2xl transition-colors group ${!notif.isRead ? 'bg-violet-950/10' : ''}`} 
+                  className={`p-4 mb-2 nx-surface border border-white/5 flex gap-4 items-start hover:border-white/10 rounded-2xl transition-colors group ${!notif.isRead ? 'ring-1 ring-violet-500/20' : ''}`} 
                   onClick={() => markAsRead(notif.id)}
                   layout
                 >
-                  <div className="p-2 bg-zinc-900 rounded-full shrink-0 relative">
+                  <div className="p-2 bg-white/5 rounded-full shrink-0 relative">
                     {getIcon(notif.type)}
-                    {!notif.isRead && <div className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500 rounded-full ring-2 ring-[#0A0A0A]" />}
+                    {!notif.isRead && <div className="absolute -top-1 -right-1 w-3 h-3 bg-violet-500 rounded-full ring-2 ring-[#05030f]" />}
                   </div>
                   <div className="flex-1">
                     <p className="text-sm text-zinc-200">
