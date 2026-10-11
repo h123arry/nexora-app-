@@ -361,7 +361,7 @@ export default function ImmersiveVideoViewer({
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 220 }}
-              className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] bg-zinc-950/95 backdrop-blur-2xl border-t border-white/10 z-40 flex flex-col p-5 shadow-md overflow-hidden"
+              className="comments-container absolute bottom-0 inset-x-0 h-[65%] rounded-t-[32px] nx-glass-strong border-t border-white/10 z-40 flex flex-col p-5 shadow-md overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-white/5 mb-3 shrink-0">
@@ -469,7 +469,7 @@ export default function ImmersiveVideoViewer({
                             value={replyInputs[c.id] || ''}
                             onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
                             onKeyDown={(e) => { if(e.key === 'Enter') handleSendReply(c.id); }}
-                            className="flex-1 bg-slate-900 border border-white/10 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
+                            className="flex-1 nx-field py-1 px-3 text-xs text-white"
                           />
                           <button 
                             onClick={() => handleSendReply(c.id)}
@@ -505,11 +505,11 @@ export default function ImmersiveVideoViewer({
                   value={commentInput}
                   onChange={(e) => setCommentInput(e.target.value)}
                   onKeyDown={(e) => { if(e.key === 'Enter') handleSendComment(); }}
-                  className="flex-1 bg-slate-950 border border-white/10 rounded-2xl py-2 px-4 text-xs text-white placeholder-zinc-500 focus:outline-hidden focus:border-white/10"
+                  className="flex-1 nx-field py-2 px-4 text-xs text-white placeholder-zinc-500"
                 />
                 <button 
                   onClick={handleSendComment}
-                  className="bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-mono font-bold text-xs px-4 py-2 rounded-2xl transition-all flex items-center gap-1 cursor-pointer"
+                  className="nx-btn-primary !min-h-0 py-2 px-4 text-xs"
                 >
                   <span>Send</span>
                   <Send className="w-3 h-3" />

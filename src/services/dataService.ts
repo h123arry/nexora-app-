@@ -198,10 +198,10 @@ class BackgroundSyncEngine {
         await addNotificationDirect(payload.userId, payload.type, payload.content);
         break;
       case 'createPage':
-        await createPageDirect(payload.ownerId, payload.name, payload.username, payload.category);
+        await createPageDirect(payload as Page);
         break;
       case 'createCommunity':
-        await createCommunityDirect(payload.name, payload.description, payload.ownerId);
+        await createCommunityDirect(payload as Community);
         break;
       case 'report':
         await reportContentDirect(payload.reporterId, payload.targetType, payload.targetId, payload.reason);
@@ -298,14 +298,11 @@ async function addNotificationDirect(userId: string, type: string, content: stri
   }
 }
 
-async function createPageDirect(ownerId: string, name: string, username: string, category: string) {
+async function createPageDirect(page: Page) {
   const path = 'pages';
   try {
-    return await addDoc(collection(db, path), {
-      ownerId,
-      name,
-      username,
-      category,
+    return await setDoc(doc(db, path, page.id), {
+      ...page,
       createdAt: serverTimestamp()
     });
   } catch (error) {
@@ -313,13 +310,15 @@ async function createPageDirect(ownerId: string, name: string, username: string,
   }
 }
 
-async function createCommunityDirect(name: string, description: string, ownerId: string) {
+async function createCommunityDirect(community: Community) {
   const path = 'communities';
   try {
-    return await addDoc(collection(db, path), {
-      name,
-      description,
-      ownerId,
+    const storedCommunity: Record<string, unknown> = { ...community };
+    delete storedCommunity.isJoinedByMe;
+    delete storedCommunity.membersCount;
+    delete storedCommunity.onlineCount;
+    return await setDoc(doc(db, path, community.id), {
+      ...storedCommunity,
       createdAt: serverTimestamp()
     });
   } catch (error) {
@@ -409,12 +408,12 @@ export async function addNotification(userId: string, type: string, content: str
   await syncEngine.enqueue('addNotification', { userId, type, content });
 }
 
-export async function createPage(ownerId: string, name: string, username: string, category: string) {
-  await syncEngine.enqueue('createPage', { ownerId, name, username, category });
+export async function createPage(page: Page) {
+  await syncEngine.enqueue('createPage', page);
 }
 
-export async function createCommunity(name: string, description: string, ownerId: string) {
-  await syncEngine.enqueue('createCommunity', { name, description, ownerId });
+export async function createCommunity(community: Community) {
+  await syncEngine.enqueue('createCommunity', community);
 }
 
 export async function reportContent(reporterId: string, targetType: string, targetId: string, reason: string) {
@@ -599,7 +598,34 @@ export function subscribeToUsers(callback: (users: User[]) => void) {
 export function subscribeToCommunities(callback: (communities: Community[]) => void) {
   const q = query(collection(db, 'communities'));
   return onSnapshot(q, (snapshot) => {
-    const communities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Community[];
+    const communities = snapshot.docs.map((snapshotDoc) => {
+      const data = snapshotDoc.data();
+      const validTypes = ['public', 'private', 'invite-only'];
+      const normalized: Record<string, any> = { ...data, id: snapshotDoc.id };
+      // Membership belongs to an individual user; this app has no live presence/count service.
+      delete normalized.isJoinedByMe;
+      delete normalized.membersCount;
+      delete normalized.onlineCount;
+      normalized.name = typeof data.name === 'string' ? data.name : '';
+      normalized.description = typeof data.description === 'string' ? data.description : '';
+      normalized.bannerImage = typeof data.bannerImage === 'string' ? data.bannerImage : '';
+      normalized.avatarImage = typeof data.avatarImage === 'string' ? data.avatarImage : '';
+      normalized.creatorId = typeof data.creatorId === 'string' ? data.creatorId : (typeof data.ownerId === 'string' ? data.ownerId : '');
+      normalized.rules = Array.isArray(data.rules) ? data.rules : [];
+      normalized.tags = Array.isArray(data.tags) ? data.tags : [];
+      normalized.type = validTypes.includes(data.type) ? data.type : 'unknown';
+      normalized.moderators = Array.isArray(data.moderators) ? data.moderators : [];
+      normalized.admins = Array.isArray(data.admins) ? data.admins : [];
+      normalized.bannedUsers = Array.isArray(data.bannedUsers) ? data.bannedUsers : [];
+      normalized.mutedUsers = Array.isArray(data.mutedUsers) ? data.mutedUsers : [];
+      normalized.pendingMembers = Array.isArray(data.pendingMembers) ? data.pendingMembers : [];
+      normalized.pinnedPosts = Array.isArray(data.pinnedPosts) ? data.pinnedPosts : [];
+      normalized.reports = Array.isArray(data.reports) ? data.reports : [];
+      normalized.activityLog = Array.isArray(data.activityLog) ? data.activityLog : [];
+      normalized.events = Array.isArray(data.events) ? data.events : [];
+      normalized.mediaLibrary = Array.isArray(data.mediaLibrary) ? data.mediaLibrary : [];
+      return normalized as Community;
+    });
     communities.forEach(c => cacheManager.setCommunity(c.id, c));
     callback(communities);
   }, (error) => {
@@ -610,7 +636,30 @@ export function subscribeToCommunities(callback: (communities: Community[]) => v
 export function subscribeToPages(callback: (pages: Page[]) => void) {
   const q = query(collection(db, 'pages'));
   return onSnapshot(q, (snapshot) => {
-    const pages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Page[];
+    const pages = snapshot.docs.map((snapshotDoc) => {
+      const data = snapshotDoc.data();
+      const normalized: Record<string, any> = { ...data, id: snapshotDoc.id };
+      normalized.name = typeof data.name === 'string' ? data.name : '';
+      normalized.username = typeof data.username === 'string' ? data.username : '';
+      normalized.avatar = typeof data.avatar === 'string' ? data.avatar : '';
+      normalized.coverImage = typeof data.coverImage === 'string' ? data.coverImage : '';
+      normalized.category = typeof data.category === 'string' ? data.category : 'Other';
+      normalized.description = typeof data.description === 'string' ? data.description : '';
+      normalized.website = typeof data.website === 'string' ? data.website : '';
+      normalized.contactInfo = typeof data.contactInfo === 'string' ? data.contactInfo : '';
+      normalized.ownerId = typeof data.ownerId === 'string' ? data.ownerId : '';
+      delete normalized.followers;
+      for (const key of ['isVerified', 'followersCount', 'postsCount', 'videosCount', 'sparksReceived', 'joinedDate']) {
+        const value = data[key];
+        const isValid = key === 'joinedDate'
+            ? typeof value === 'string'
+            : key === 'isVerified'
+              ? typeof value === 'boolean'
+              : typeof value === 'number' && Number.isFinite(value);
+        if (!isValid) delete normalized[key];
+      }
+      return normalized as Page;
+    });
     pages.forEach(p => cacheManager.setPage(p.id, p));
     callback(pages);
   }, (error) => {

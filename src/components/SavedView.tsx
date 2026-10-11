@@ -55,6 +55,7 @@ export default function SavedView({
             <Bookmark className="w-6 h-6" />
           </div>
           <div>
+            <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
             <h1 className="text-xl font-sans font-black tracking-tight text-white flex items-center gap-2">
               Saved Collection
               <span className="text-xs font-mono font-bold text-violet-400 bg-violet-950/60 border border-white/10 px-2.5 py-0.5 rounded-full">
@@ -126,7 +127,7 @@ export default function SavedView({
               key={post.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-5 rounded-3xl bg-[#0a0718]/80 border border-white/10 hover:border-white/10 transition-all shadow-lg text-left relative group"
+              className="p-5 rounded-3xl nx-surface hover:border-white/10 transition-all shadow-lg text-left relative group"
             >
               {/* Post author header */}
               <div className="flex items-center justify-between mb-3">

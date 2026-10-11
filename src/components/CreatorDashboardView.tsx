@@ -463,6 +463,7 @@ export default function CreatorDashboardView({
       {/* 1. Header Area with dynamic recovery bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 rounded-3xl bg-linear-to-r from-violet-950/40 via-purple-950/30 to-zinc-950/40 border border-white/10 backdrop-blur-md">
         <div>
+          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-black text-white tracking-tight">Nexora Studio V1.2</h2>
             <span className="flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">

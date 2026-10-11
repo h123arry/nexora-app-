@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, Sparkles, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, Send, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Tv, Trash2, Play, Volume2, VolumeX, Shield, UserCheck, AlertTriangle, RefreshCw, Layers, Check, CheckSquare, Square, Trash, Archive, Star, Calendar, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, Pin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
-import StoriesView from './StoriesView';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { 
@@ -82,11 +81,7 @@ export default function NotificationsView({
   // Simulated Live Streaming overlay
   const [activeLiveStream, setActiveLiveStream] = useState<{ username: string; avatar: string; viewers: string; title: string } | null>(null);
   const [liveHearts, setLiveHearts] = useState<{ id: number; left: number }[]>([]);
-  const [liveChat, setLiveChat] = useState<{ username: string; text: string }[]>([
-    { username: "cyber_junkie", text: "Wow, this glassmorphic shader is super slick!" },
-    { username: "voh_node_9", text: "Does this support high FPS rendering?" },
-    { username: "lucid_dreamer", text: "NEXORA is leveling up!" }
-  ]);
+  const [liveChat, setLiveChat] = useState<{ username: string; text: string }[]>([]);
   const [liveInput, setLiveInput] = useState('');
 
   // Watch History (reused from existing template specs)
@@ -118,7 +113,7 @@ export default function NotificationsView({
     pushDelay: 'batch_5m' // 'immediate' | 'batch_5m' | 'batch_1h'
   });
 
-  // Comprehensive mockup dataset that incorporates EVERY required category, priority, time-section, and layout
+  // Notifications are hydrated from the real notification prop; no sample activity is seeded.
   const [notificationsList, setNotificationsList] = useState<RichNotification[]>([]);
 
   // ---------------------------------------------------------------------------
@@ -136,7 +131,7 @@ export default function NotificationsView({
   // CONFETTI LAUNCHER (Creator Milestone reward)
   // ---------------------------------------------------------------------------
   const triggerConfetti = () => {
-    addToast("🎉 Milestone unlocked! Glittering Spark rewards transferred to your balance!");
+    addToast("🎉 Milestone reached. Enjoy the celebration!");
     const colors = ["#8B5CF6", "#EC4899", "#10B981", "#F59E0B", "#3B82F6", "#EF4444"];
     const particles = Array.from({ length: 60 }).map((_, i) => ({
       id: i,
@@ -173,8 +168,6 @@ export default function NotificationsView({
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const seedMockNotifications = () => {
-      const mockNotifs: RichNotification[] = [];
-
       // Convert propNotifications to RichNotifications if any are supplied by the app
       const resolvedProps = (propNotifications || []).map((n, i) => ({
         ...n,
@@ -183,14 +176,9 @@ export default function NotificationsView({
         isRead: n.isRead
       }));
 
-      // Merge avoiding duplicates
-      const finalSet = [...mockNotifs];
-      resolvedProps.forEach(pn => {
-        if (!finalSet.some(m => m.id === pn.id || m.content === pn.content)) {
-          finalSet.push(pn as any);
-        }
-      });
-
+      const finalSet = resolvedProps.filter((notification, index, all) =>
+        all.findIndex(candidate => candidate.id === notification.id || candidate.content === notification.content) === index
+      );
       setNotificationsList(finalSet);
     };
 
@@ -558,7 +546,7 @@ export default function NotificationsView({
   // RENDERING COMPONENTS
   // ---------------------------------------------------------------------------
   return (
-    <div id="nexora-notification-suite" className="space-y-6 relative select-none">
+    <div id="nexora-notification-suite" className="nx-surface space-y-6 rounded-2xl p-4 sm:p-5 relative select-none">
       
       {/* Toast Feedback Layer */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col gap-2 max-w-sm">
@@ -629,7 +617,7 @@ export default function NotificationsView({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
-            className={`px-3 py-1.5 rounded-xl border text-[11px] font-sans font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
+            className={`min-h-11 px-3 rounded-xl border text-[11px] font-sans font-bold uppercase transition-all flex items-center gap-1.5 cursor-pointer ${
               isMultiSelectMode
                 ? 'bg-amber-500/25 border-amber-400/40 text-amber-300'
                 : 'bg-black/30 border-white/10 text-violet-300 hover:text-white'
@@ -642,7 +630,7 @@ export default function NotificationsView({
           {totalUnread > 0 && (
             <button
               onClick={handleMarkAllAsReadLocal}
-              className="px-3 py-1.5 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-[11px] font-sans font-extrabold text-violet-300 border border-white/10 transition-all uppercase flex items-center gap-1.5 cursor-pointer"
+              className="min-h-11 px-3 rounded-xl bg-violet-500/10 hover:bg-violet-500/20 text-[11px] font-sans font-extrabold text-violet-300 border border-white/10 transition-all uppercase flex items-center gap-1.5 cursor-pointer"
             >
               <CheckCheck className="w-3.5 h-3.5 text-violet-400" />
               <span>Mark All Read</span>
@@ -651,7 +639,7 @@ export default function NotificationsView({
 
           <button
             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-            className={`p-2 rounded-xl border transition-all cursor-pointer ${
+            className={`nx-icon-button inline-flex border transition-all cursor-pointer ${
               isSettingsOpen 
                 ? 'bg-violet-500/20 border-white/10 text-white' 
                 : 'bg-black/30 border-white/10 text-violet-300 hover:text-white'
@@ -664,16 +652,13 @@ export default function NotificationsView({
           <button
             onClick={handlePullToRefresh}
             disabled={isRefreshing}
-            className="p-2 rounded-xl bg-black/30 border border-white/10 text-violet-300 hover:text-white transition-all cursor-pointer"
+            className="nx-icon-button inline-flex text-violet-300"
             title="Refresh Notification Sync"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>
       </div>
-
-      {/* RENDER THE STORIES / MOMENTS FEATURE AT THE VERY TOP */}
-      <StoriesView currentUser={currentUser} />
 
       {/* ----------------------------------------------------------------------- */}
       {/* MULTI-SELECT ACTIVE MANAGEMENT DRAWER */}

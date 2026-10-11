@@ -19,12 +19,12 @@ export default function NexoraBranding({ size = 'md', showSubtitle = true, class
 
   return (
     <div className={`flex flex-col select-none ${className}`} onClick={onClick} style={{ cursor: onClick ? 'pointer' : 'default' }}>
-      <span className={`${s.text} font-extrabold tracking-tight text-white font-sans leading-none`}>
-        Nexora
+      <span className={`${s.text} font-extrabold tracking-tight nx-gradient-text font-sans leading-none`}>
+        NEXORA
       </span>
       {showSubtitle && (
-        <span className={`${s.sub} font-sans text-zinc-400 font-normal tracking-wide text-left mt-0.5`}>
-          The World's Living Social Network
+        <span className={`${s.sub} font-sans text-zinc-400 font-normal tracking-wide text-left mt-1`}>
+          Your world. Your people. Your growth.
         </span>
       )}
     </div>

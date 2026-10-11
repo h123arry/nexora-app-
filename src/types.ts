@@ -95,15 +95,16 @@ export interface Circle {
   bannerImage: string;
   creatorId: string;
   rules: string[];
-  membersCount: number;
   tags: string[];
+  // Optional legacy fields; current UI must not synthesize values when absent.
+  membersCount?: number;
+  onlineCount?: number;
   isJoinedByMe?: boolean;
   avatarImage?: string;
-  onlineCount?: number;
   moderators?: string[];
   admins?: string[];
   ownerId?: string;
-  type?: 'public' | 'private' | 'invite-only';
+  type?: 'public' | 'private' | 'invite-only' | 'unknown';
   bannedUsers?: string[];
   mutedUsers?: string[];
   pendingMembers?: string[];
@@ -353,18 +354,17 @@ export interface Page {
   username: string;
   avatar: string;
   coverImage: string;
-  category: 'Creator' | 'Business' | 'Brand' | 'Organization' | 'School' | 'Sports Club' | 'Entertainment' | 'Music Artist' | 'Public Figure' | 'Community' | 'News & Media' | 'Non-Profit';
+  category: 'Creator' | 'Business' | 'Brand' | 'Organization' | 'School' | 'Sports Club' | 'Entertainment' | 'Music Artist' | 'Public Figure' | 'Community' | 'News & Media' | 'Non-Profit' | 'Other';
   description: string;
   website: string;
   contactInfo: string;
-  isVerified: boolean;
-  followersCount: number;
-  postsCount: number;
-  videosCount: number;
-  sparksReceived: number;
-  joinedDate: string;
+  isVerified?: boolean;
+  followersCount?: number;
+  postsCount?: number;
+  videosCount?: number;
+  sparksReceived?: number;
+  joinedDate?: string;
   ownerId: string;
-  followers: string[];
 }
 
 export interface LiveStream {
@@ -428,4 +428,3 @@ export interface ActivityEvent {
   timestamp: string;
   metadata?: Record<string, any>;
 }
-

@@ -879,8 +879,9 @@ export default function ProfileView({
     <div className="relative w-full min-h-screen bg-[#030112] text-white font-sans overflow-x-hidden pb-24">
       
       {/* 1. TOP NAVIGATION ACTION BAR */}
-      <div className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-40 py-1.5 px-4 flex items-center justify-between">
+      <div className="sticky top-0 nx-glass z-40 py-1.5 px-4 flex items-center justify-between">
         <div className="flex items-center gap-3 relative">
+          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none">NEXORA</span>
           {onCloseProfile && (
             <button 
               onClick={onCloseProfile}
@@ -1210,7 +1211,7 @@ export default function ProfileView({
           </div>
 
           {/* Profile content navigation */}
-          <div role="group" aria-label="Profile content views" className="sticky top-0 bg-[#030112]/95 backdrop-blur-md z-30 border-y border-white/10 mt-4 px-0 w-full">
+          <div role="group" aria-label="Profile content views" className="sticky top-0 nx-glass z-30 border-y border-white/10 mt-4 px-0 w-full">
             <div className="w-full max-w-4xl mx-auto flex items-center justify-around py-0">
               {[
                 { id: 'media', label: 'Posts', icon: Camera },

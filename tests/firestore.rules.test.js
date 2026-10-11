@@ -13,7 +13,9 @@ import {
   getDoc,
   getDocs,
   query,
+  serverTimestamp,
   setDoc,
+  Timestamp,
   updateDoc,
   where
 } from 'firebase/firestore';
@@ -155,5 +157,46 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(dbFor('alice'), 'posts', 'p1'), { likes: 500 }));
     await assertFails(updateDoc(doc(dbFor('mallory'), 'posts', 'p1'), { content: 'hijacked' }));
     await assertFails(deleteDoc(doc(dbFor('mallory'), 'posts', 'p1')));
+  });
+
+  it('restricts stories to authenticated readers and verified text-story authors, with owner-only deletion', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'publicProfiles', 'alice'), publicProfile('alice'));
+    });
+    const story = {
+      id: 'story-1', userId: 'alice', name: 'alice', username: 'alice', avatar: '',
+      caption: 'A real text update', mediaType: 'text', privacy: 'everyone',
+      createdAt: serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 23 * 60 * 60 * 1000)
+    };
+
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'stories', 'story-1'), story));
+    await assertFails(setDoc(doc(dbFor('bob'), 'stories', 'spoofed'), { ...story, id: 'spoofed' }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'stories', 'forged-metrics'), { ...story, id: 'forged-metrics', views: 500 }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'stories', 'too-long'), { ...story, id: 'too-long', caption: 'x'.repeat(501) }));
+    await assertFails(getDoc(doc(guestDb(), 'stories', 'story-1')));
+    await assertSucceeds(getDocs(query(
+      collection(dbFor('bob'), 'stories'),
+      where('privacy', '==', 'everyone'),
+      where('expiresAt', '>', Timestamp.now())
+    )));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'stories', 'story-1')));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'stories', 'story-1'), { caption: 'Changed after publishing' }));
+    await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'stories', 'story-1')));
+  });
+
+  it('binds Pages and Communities to their owner and document ID, and prevents client-assigned Page verification', async () => {
+    const page = { id: 'page-alice', ownerId: 'alice', name: 'Alice Studio', isVerified: false };
+    const community = { id: 'community-alice', ownerId: 'alice', name: 'Alice Community', type: 'public' };
+
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'pages', page.id), page));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'communities', community.id), community));
+    await assertSucceeds(getDoc(doc(guestDb(), 'pages', page.id)));
+    await assertSucceeds(getDoc(doc(guestDb(), 'communities', community.id)));
+    await assertFails(setDoc(doc(dbFor('alice'), 'pages', 'mismatched-page'), page));
+    await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'mismatched-community'), community));
+    await assertFails(setDoc(doc(dbFor('bob'), 'pages', 'forged-page'), { ...page, id: 'forged-page' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'pages', page.id), { isVerified: true }));
+    await assertSucceeds(updateDoc(doc(dbFor('alice'), 'pages', page.id), { name: 'Updated Studio' }));
+    await assertFails(updateDoc(doc(dbFor('bob'), 'communities', community.id), { name: 'Hijacked' }));
   });
 });

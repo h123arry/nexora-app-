@@ -836,14 +836,17 @@ export default function MediaCreationEngine({
         id="creation-studio-frame"
       >
         {/* Header toolbar */}
-        <div className="flex justify-between items-start border-b border-zinc-800/60 pb-3 mb-4 shrink-0">
+        <div className="flex justify-between items-start border-b border-white/10 pb-3 mb-4 shrink-0">
           <div>
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-violet-600/10 border border-white/10 rounded-lg text-violet-400">
                 <VohIcon size={18} animated glow variant="brand" />
               </div>
               <div>
-                <h2 className="text-[11px] font-mono font-bold tracking-widest uppercase text-violet-400">Nexora Content Studio</h2>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
+                  <span className="text-[11px] font-mono font-bold tracking-widest uppercase text-violet-400">Content Studio</span>
+                </div>
                 <h1 className="text-sm font-black font-sans uppercase tracking-tight">Unified Publisher v3.0</h1>
               </div>
             </div>

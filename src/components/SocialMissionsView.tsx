@@ -76,6 +76,7 @@ export default function SocialMissionsView({ currentUser }: SocialMissionsViewPr
       {/* Tab Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-4">
         <div>
+          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-2 mb-1">
             <Target className="w-5 h-5 text-yellow-400" />
             <h2 className="text-xl font-black font-sans tracking-tight text-current">

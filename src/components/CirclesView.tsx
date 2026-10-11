@@ -76,8 +76,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         const joined = !c.isJoinedByMe;
         return { 
           ...c, 
-          isJoinedByMe: joined,
-          membersCount: joined ? c.membersCount + 1 : c.membersCount - 1
+          isJoinedByMe: joined
         };
       }
       return c;
@@ -402,7 +401,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 {/* Creator/Members count */}
                 <div className="flex items-center gap-2 text-violet-400">
                   <Users className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-mono">{circle.membersCount.toLocaleString()} Members</span>
+                  <span className="text-[10px] font-mono">Member total not tracked</span>
                 </div>
 
                 {/* Toggle Button */}

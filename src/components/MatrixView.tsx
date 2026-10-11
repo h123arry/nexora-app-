@@ -71,6 +71,7 @@ export default function MatrixView({
       {/* Control Center Banner Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5">
         <div>
+          <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-2 mb-1">
             <div className="p-1 px-1.5 rounded-md bg-violet-500/10 border border-white/10 text-violet-400">
               <VohIcon size={18} animated glow variant="brand" />

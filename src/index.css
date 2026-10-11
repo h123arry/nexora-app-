@@ -8,12 +8,18 @@
 
 :root {
   --nx-canvas: #070514;
+  --nx-canvas-deep: #04020a;
   --nx-surface: #100c21;
+  --nx-surface-2: #0e0a2b;
   --nx-edge: rgba(255, 255, 255, 0.1);
+  --nx-edge-strong: rgba(255, 255, 255, 0.16);
   --nx-violet: #8b5cf6;
   --nx-pink: #ec4899;
   --nx-cyan: #22d3ee;
+  --nx-blue: #3b82f6;
   --nx-focus: #c4b5fd;
+  --nx-gradient: linear-gradient(120deg, #7c3aed 0%, #a855f7 38%, #ec4899 72%, #22d3ee 130%);
+  --nx-gradient-soft: linear-gradient(120deg, rgba(124, 58, 237, 0.22), rgba(236, 72, 153, 0.18) 60%, rgba(34, 211, 238, 0.16));
 }
 
 body {
@@ -33,6 +39,122 @@ button, a, input, select, textarea {
   outline-offset: 2px;
 }
 
+/* ------------------------------------------------------------------ */
+/* Nexora design system — cohesive dark neon-gradient language         */
+/* ------------------------------------------------------------------ */
+
+/* Brand gradient text (NEXORA wordmark, headings, accents) */
+.nx-gradient-text {
+  background: var(--nx-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+/* Elevated glass surface used for cards, panels and sheets */
+.nx-surface {
+  background-color: color-mix(in srgb, var(--nx-surface) 88%, transparent);
+  border: 1px solid var(--nx-edge);
+}
+
+.nx-glass {
+  background-color: rgba(16, 12, 33, 0.72);
+  border: 1px solid var(--nx-edge);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+.nx-glass-strong {
+  background-color: rgba(7, 5, 20, 0.9);
+  border: 1px solid var(--nx-edge);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+/* 1px gradient border ring */
+.nx-gradient-border {
+  position: relative;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--nx-surface), var(--nx-surface)) padding-box,
+    var(--nx-gradient) border-box;
+}
+
+/* Text / search field */
+.nx-field {
+  min-height: 44px;
+  border: 1px solid var(--nx-edge);
+  border-radius: 0.875rem;
+  background-color: rgba(255, 255, 255, 0.035);
+  color: #fff;
+  transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.nx-field::placeholder {
+  color: rgba(161, 161, 170, 0.72);
+}
+
+.nx-field:focus {
+  border-color: rgba(139, 92, 246, 0.7);
+  background-color: rgba(139, 92, 246, 0.06);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+  outline: none;
+}
+
+/* Primary gradient action button */
+.nx-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 1.25rem;
+  border-radius: 0.9rem;
+  background-image: var(--nx-gradient);
+  color: #fff;
+  font-weight: 700;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 8px 24px -10px rgba(139, 92, 246, 0.7);
+  transition: filter 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.nx-btn-primary:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 10px 30px -10px rgba(236, 72, 153, 0.65);
+}
+
+.nx-btn-primary:active {
+  transform: scale(0.97);
+}
+
+/* Secondary / ghost button */
+.nx-btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.6rem 1.1rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--nx-edge);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(244, 244, 245, 0.9);
+  font-weight: 600;
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+}
+
+.nx-btn-ghost:hover {
+  border-color: rgba(139, 92, 246, 0.4);
+  background: rgba(139, 92, 246, 0.12);
+  color: #fff;
+}
+
+.nx-btn-ghost:active {
+  transform: scale(0.97);
+}
+
+/* Square icon button */
 .nx-icon-button {
   min-width: 44px;
   min-height: 44px;
@@ -55,6 +177,57 @@ button, a, input, select, textarea {
 .nx-icon-button:active {
   transform: scale(0.96);
 }
+
+/* Story ring (gradient halo around avatars) */
+.nx-story-ring {
+  border-radius: 9999px;
+  padding: 2px;
+  background: var(--nx-gradient);
+}
+
+.nx-story-ring-seen {
+  border-radius: 9999px;
+  padding: 2px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* Small uppercase section label */
+.nx-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(196, 181, 253, 0.85);
+  font-weight: 700;
+}
+
+/* Mobile dock item */
+.nx-dock-item {
+  display: flex;
+  flex: 1 1 0%;
+  min-width: 0;
+  min-height: 48px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  border-radius: 0.85rem;
+  color: rgba(161, 161, 170, 1);
+  transition: color 180ms ease, background-color 180ms ease;
+}
+
+.nx-dock-item:hover {
+  color: rgba(228, 228, 231, 1);
+}
+
+.nx-dock-item[data-active="true"] {
+  color: #fff;
+  background: rgba(139, 92, 246, 0.12);
+}
+
+/* Ambient gradient glow helper */
+.nx-glow-violet { box-shadow: 0 0 60px -20px rgba(139, 92, 246, 0.65); }
+.nx-glow-pink { box-shadow: 0 0 60px -20px rgba(236, 72, 153, 0.6); }
 
 /* Custom gorgeous scrollbar aesthetics */
 .custom-scrollbar {
@@ -97,6 +270,17 @@ button, a, input, select, textarea {
 
 .animate-sync-pulse {
   animation: syncPulse 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes nxShimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.nx-shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(139,92,246,0.14) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: nxShimmer 1.6s linear infinite;
 }
 
 .scrollbar-none {
