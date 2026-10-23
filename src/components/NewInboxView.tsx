@@ -17,8 +17,17 @@ import {
   query, 
   orderBy,
   limit,
+  startAfter,
+  getDocs,
+  type QueryDocumentSnapshot,
+  type DocumentData,
   deleteDoc 
 } from 'firebase/firestore';
+import {
+  subscribeToTypingState,
+  updateMessageReadReceipt,
+  updateTypingState,
+} from '../services/dataService';
 import MessageBubble from './MessageBubble';
 import AttachmentMenu from './AttachmentMenu';
 import VoiceRecorder from './VoiceRecorder';
@@ -85,8 +94,13 @@ export default function NewInboxView({
   const [archivedChats, setArchivedChats] = useState<string[]>([]);
   const [messageRequests, setMessageRequests] = useState<Chat[]>([]);
   const [partnerTyping, setPartnerTyping] = useState(false);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const [hasOlderMessages, setHasOlderMessages] = useState<Record<string, boolean>>({});
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const messagesScrollRef = useRef<HTMLDivElement | null>(null);
+  const messageCursorsRef = useRef<Record<string, QueryDocumentSnapshot<DocumentData> | null>>({});
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Persistence
   useEffect(() => {
@@ -109,30 +123,61 @@ export default function NewInboxView({
     if (!activeChatId || !db) return;
 
     const messagesRef = collection(db, `chats/${activeChatId}/messages`);
-    const q = query(messagesRef, orderBy('timestamp', 'asc'), limit(200));
+    messageCursorsRef.current[activeChatId] = null;
+    setHasOlderMessages(prev => ({ ...prev, [activeChatId]: false }));
+    const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(50));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgsList: ExtendedMessage[] = [];
       const seen = new Set<string>();
-      snapshot.forEach(doc => {
+      [...snapshot.docs].reverse().forEach(doc => {
         if (seen.has(doc.id)) return;
         seen.add(doc.id);
         msgsList.push({ id: doc.id, ...doc.data() } as any);
       });
 
-      if (msgsList.length > 0) {
-        setLocalMessages(prev => ({
+      messageCursorsRef.current[activeChatId] = snapshot.docs.length > 0
+        ? snapshot.docs[snapshot.docs.length - 1]
+        : null;
+      setHasOlderMessages(prev => ({ ...prev, [activeChatId]: snapshot.docs.length === 50 }));
+      setLocalMessages(prev => {
+        const existing = prev[activeChatId] || [];
+        const byId = new Map(existing.map(message => [message.id, message]));
+        msgsList.forEach(message => byId.set(message.id, message));
+        return {
           ...prev,
-          [activeChatId]: msgsList
-        }));
-        setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, unreadCount: 0 } : c));
-      }
+          [activeChatId]: Array.from(byId.values()).sort((a, b) => (
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )),
+        };
+      });
+      setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, unreadCount: 0 } : c));
+      void Promise.all(msgsList
+        .filter(message => message.senderId !== currentUser.id && message.status !== 'read')
+        .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read')));
     }, (error) => {
       console.warn('[Inbox] Message snapshot error:', error);
     });
 
     return () => unsubscribe();
-  }, [activeChatId]);
+  }, [activeChatId, currentUser.id]);
+
+  // Subscribe to the active partner's ephemeral typing state.
+  useEffect(() => {
+    if (!activeChatId) {
+      setPartnerTyping(false);
+      return;
+    }
+    const unsubscribe = subscribeToTypingState(activeChatId, states => {
+      setPartnerTyping(Object.entries(states).some(([userId, state]) => userId !== currentUser.id && Boolean(state)));
+    });
+    return () => {
+      unsubscribe?.();
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      void updateTypingState(activeChatId, currentUser.id, null);
+      setPartnerTyping(false);
+    };
+  }, [activeChatId, currentUser.id]);
 
   const activeChat = chats.find(c => c.id === activeChatId);
   const activeMessages = activeChatId ? (localMessages[activeChatId] || []) : [];
@@ -173,6 +218,60 @@ export default function NewInboxView({
     });
   }, [creators, currentUser.id, userSearchQuery]);
 
+  const loadOlderMessages = async () => {
+    if (!activeChatId || !db || isLoadingOlderMessages || !hasOlderMessages[activeChatId]) return;
+    const cursor = messageCursorsRef.current[activeChatId];
+    if (!cursor) return;
+    const scrollContainer = messagesScrollRef.current;
+    const previousScrollHeight = scrollContainer?.scrollHeight || 0;
+    setIsLoadingOlderMessages(true);
+    try {
+      const messagesRef = collection(db, `chats/${activeChatId}/messages`);
+      const olderQuery = query(messagesRef, orderBy('timestamp', 'desc'), startAfter(cursor), limit(50));
+      const snapshot = await getDocs(olderQuery);
+      const olderMessages = [...snapshot.docs].reverse().map(messageDoc => ({
+        id: messageDoc.id,
+        ...messageDoc.data(),
+      } as ExtendedMessage));
+      messageCursorsRef.current[activeChatId] = snapshot.docs.length > 0
+        ? snapshot.docs[snapshot.docs.length - 1]
+        : cursor;
+      setHasOlderMessages(prev => ({ ...prev, [activeChatId]: snapshot.docs.length === 50 }));
+      setLocalMessages(prev => {
+        const current = prev[activeChatId] || [];
+        const byId = new Map(current.map(message => [message.id, message]));
+        olderMessages.forEach(message => byId.set(message.id, message));
+        return {
+          ...prev,
+          [activeChatId]: Array.from(byId.values()).sort((a, b) => (
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )),
+        };
+      });
+      requestAnimationFrame(() => {
+        if (scrollContainer) {
+          scrollContainer.scrollTop += scrollContainer.scrollHeight - previousScrollHeight;
+        }
+      });
+    } catch (error) {
+      console.warn('[Inbox] Unable to load older messages.', error);
+    } finally {
+      setIsLoadingOlderMessages(false);
+    }
+  };
+
+  const handleMessageInputChange = (value: string) => {
+    setNewMessageText(value);
+    if (!activeChatId) return;
+    void updateTypingState(activeChatId, currentUser.id, value.trim() ? 'typing' : null);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (value.trim()) {
+      typingTimeoutRef.current = setTimeout(() => {
+        void updateTypingState(activeChatId, currentUser.id, null);
+      }, 1200);
+    }
+  };
+
   // Send message
   const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string }) => {
     const contentToSend = customContent || newMessageText.trim();
@@ -182,6 +281,8 @@ export default function NewInboxView({
     if (!customContent) {
       setNewMessageText('');
     }
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    void updateTypingState(activeChatId, currentUser.id, null);
 
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
     const nowIso = new Date().toISOString();
@@ -535,7 +636,16 @@ export default function NewInboxView({
             </div>
 
             {/* Messages Body */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/15 via-black to-black">
+            <div
+              ref={messagesScrollRef}
+              onScroll={(event) => {
+                if (event.currentTarget.scrollTop < 120) void loadOlderMessages();
+              }}
+              className="flex-1 overflow-y-auto p-4 space-y-3 scrollbar-none bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-violet-950/15 via-black to-black"
+            >
+              {isLoadingOlderMessages && (
+                <div className="py-2 text-center text-[10px] font-mono text-violet-300/70">Loading older messages…</div>
+              )}
               {activeMessages.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-center p-6">
                   <div className="w-12 h-12 rounded-2xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-3 shadow-sm">
@@ -627,7 +737,7 @@ export default function NewInboxView({
                 <input
                   type="text"
                   value={newMessageText}
-                  onChange={(e) => setNewMessageText(e.target.value)}
+                  onChange={(e) => handleMessageInputChange(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
                       e.preventDefault();
