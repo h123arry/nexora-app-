@@ -7,19 +7,19 @@
 }
 
 :root {
-  --nx-canvas: #070514;
-  --nx-canvas-deep: #04020a;
-  --nx-surface: #100c21;
-  --nx-surface-2: #0e0a2b;
-  --nx-edge: rgba(255, 255, 255, 0.1);
-  --nx-edge-strong: rgba(255, 255, 255, 0.16);
-  --nx-violet: #8b5cf6;
-  --nx-pink: #ec4899;
-  --nx-cyan: #22d3ee;
-  --nx-blue: #3b82f6;
+  --nx-canvas: #03060e;
+  --nx-canvas-deep: #03060e;
+  --nx-surface: #070c18;
+  --nx-surface-2: #0d1527;
+  --nx-edge: #18243b;
+  --nx-edge-strong: #273957;
+  --nx-violet: #7138ff;
+  --nx-pink: #9c5bff;
+  --nx-cyan: #8e9bb0;
+  --nx-blue: #64748b;
   --nx-focus: #c4b5fd;
-  --nx-gradient: linear-gradient(120deg, #7c3aed 0%, #a855f7 38%, #ec4899 72%, #22d3ee 130%);
-  --nx-gradient-soft: linear-gradient(120deg, rgba(124, 58, 237, 0.22), rgba(236, 72, 153, 0.18) 60%, rgba(34, 211, 238, 0.16));
+  --nx-gradient: linear-gradient(120deg, #7138ff 0%, #7a3efe 58%, #9c5bff 100%);
+  --nx-gradient-soft: linear-gradient(120deg, rgba(113, 56, 255, 0.18), rgba(156, 91, 255, 0.08));
 }
 
 body {
@@ -227,7 +227,7 @@ button, a, input, select, textarea {
 
 /* Ambient gradient glow helper */
 .nx-glow-violet { box-shadow: 0 0 60px -20px rgba(139, 92, 246, 0.65); }
-.nx-glow-pink { box-shadow: 0 0 60px -20px rgba(236, 72, 153, 0.6); }
+.nx-glow-pink { box-shadow: 0 0 44px -22px rgba(156, 91, 255, 0.42); }
 
 /* Custom gorgeous scrollbar aesthetics */
 .custom-scrollbar {
@@ -296,20 +296,20 @@ button, a, input, select, textarea {
 /* Nexora premium social shell — reference-inspired editorial polish   */
 /* ------------------------------------------------------------------ */
 :root {
-  --nx-canvas: #050914;
-  --nx-canvas-deep: #050914;
-  --nx-surface: #070d19;
-  --nx-surface-2: #0b1424;
-  --nx-surface-3: #101b2e;
-  --nx-edge: #1b2940;
+  --nx-canvas: #03060e;
+  --nx-canvas-deep: #03060e;
+  --nx-surface: #070c18;
+  --nx-surface-2: #0d1527;
+  --nx-surface-3: #111a2e;
+  --nx-edge: #18243b;
   --nx-edge-strong: #273957;
   --nx-violet: #7138ff;
-  --nx-pink: #a855f7;
-  --nx-cyan: #94a3b8;
+  --nx-pink: #9c5bff;
+  --nx-cyan: #8e9bb0;
   --nx-blue: #64748b;
   --nx-focus: #c4b5fd;
-  --nx-gradient: linear-gradient(120deg, #7138ff 0%, #8b5cf6 54%, #a855f7 100%);
-  --nx-gradient-soft: linear-gradient(120deg, rgba(113, 56, 255, 0.18), rgba(168, 85, 247, 0.08));
+  --nx-gradient: linear-gradient(120deg, #7138ff 0%, #7a3efe 58%, #9c5bff 100%);
+  --nx-gradient-soft: linear-gradient(120deg, rgba(113, 56, 255, 0.18), rgba(156, 91, 255, 0.08));
 }
 
 html,
@@ -337,7 +337,7 @@ textarea {
 }
 
 .nx-app-shell {
-  background: linear-gradient(180deg, #070d19 0%, #050914 100%);
+  background: linear-gradient(180deg, #070c18 0%, #03060e 100%);
 }
 
 .nx-sidebar-shell {
