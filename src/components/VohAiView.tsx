@@ -899,8 +899,9 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               {/* Dialogue Header */}
               <div className="p-3 border-b border-current/5 bg-current/5 flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${isDemoMode ? 'bg-amber-400' : 'bg-emerald-500'}`} />
                   <span className="text-xs font-bold text-current">{activeSession?.title || 'Dialogue Session'}</span>
+                  {isDemoMode && <span className="text-[9px] font-mono text-amber-300 border border-amber-400/20 rounded px-1.5 py-0.5">DEMO FALLBACK</span>}
                 </div>
                 {activeSession?.messages && activeSession.messages.length > 0 && (
                   <button 
@@ -1081,7 +1082,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5">
                           <BrainCircuit className="w-4 h-4 text-violet-400 animate-pulse" />
-                          <span className="text-[10px] font-sans font-black tracking-wider text-violet-300 uppercase">AI Memory DNA Capsule</span>
+                          <span className="text-[10px] font-sans font-black tracking-wider text-violet-300 uppercase">AI Preference Capsule</span>
                         </div>
                         {memoryDNA.length > 0 && (
                           <button 
@@ -1110,22 +1111,22 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                         <p className="text-[10px] text-current/40 italic">No persistent memory logged. Speak or chat with VOH AI to build your profile DNA.</p>
                       )}
                       
-                      <p className="text-[9px] text-current/40 font-mono">This context is automatically prepended to queries to preserve personalization without manual prompts.</p>
+                      <p className="text-[9px] text-current/40 font-mono">These are local preference labels only. VOH does not silently save new memories from this chat.</p>
                     </div>
 
                     {/* Bento Row 3: Diagnostic Node Metrics */}
                     <div className="grid grid-cols-3 gap-3">
                       <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
                         <span className="text-[8px] text-current/40 uppercase block mb-0.5">VOH Link Speed</span>
-                        <span className="text-xs font-black font-sans text-emerald-400">1.8ms</span>
+                        <span className="text-xs font-black font-sans text-emerald-400">Local UI</span>
                       </div>
                       <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
                         <span className="text-[8px] text-current/40 uppercase block mb-0.5">Linked Engines</span>
-                        <span className="text-xs font-black font-sans text-violet-300">25 active</span>
+                        <span className="text-xs font-black font-sans text-violet-300">Scoped</span>
                       </div>
                       <div className="bg-[#05030f] border border-white/5 p-2.5 rounded-xl text-center">
                         <span className="text-[8px] text-current/40 uppercase block mb-0.5">Database Sync</span>
-                        <span className="text-xs font-black font-sans text-cyan-400">100% On-Chain</span>
+                        <span className="text-xs font-black font-sans text-cyan-400">Explicit only</span>
                       </div>
                     </div>
 
@@ -1139,7 +1140,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     </div>
                     <div className="p-3 rounded-2xl text-xs bg-[#0a071c] border border-white/10 text-violet-400 italic font-mono flex items-center gap-2 animate-pulse">
                       <VohIcon size={15} animated variant="violet" />
-                      <span>VOH AI is thinking...</span>
+                      <span role="status" aria-live="polite">VOH AI is thinking...</span>
                     </div>
                   </div>
                 )}
@@ -1195,16 +1196,16 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     </button>
 
                     <span className="text-[10px] text-current/60 font-sans hidden sm:inline">
-                      {attachedContextType === 'feed' && "📎 Connected: Active Home Feed & Regional Pulse databases (15 feed packets online)"}
-                      {attachedContextType === 'profile' && `👤 Connected: User Identity context, NEX Wallet Balance & reputation index`}
-                      {attachedContextType === 'inbox' && "💬 Connected: Direct messages metadata, circles notifications & active channels"}
-                      {attachedContextType === 'none' && "🌐 Connected: Global VOH AI general knowledge index"}
+                      {attachedContextType === 'feed' && "📎 Shared: posts currently loaded in this browser"}
+                      {attachedContextType === 'profile' && `👤 Shared: profile fields explicitly sent with this request`}
+                      {attachedContextType === 'inbox' && "💬 Shared: inbox mode label only; message content is not attached"}
+                      {attachedContextType === 'none' && "🌐 Shared: no Nexora context"}
                     </span>
                     <span className="text-[10px] text-current/60 font-sans sm:hidden inline">
-                      {attachedContextType === 'feed' && "📎 Feed Context"}
-                      {attachedContextType === 'profile' && "👤 Profile Context"}
-                      {attachedContextType === 'inbox' && "💬 DM/Inbox Context"}
-                      {attachedContextType === 'none' && "🌐 General Index"}
+                      {attachedContextType === 'feed' && "📎 Loaded Feed"}
+                      {attachedContextType === 'profile' && "👤 Shared Profile"}
+                      {attachedContextType === 'inbox' && "💬 Inbox Mode"}
+                      {attachedContextType === 'none' && "🌐 No Context"}
                     </span>
                   </div>
 
