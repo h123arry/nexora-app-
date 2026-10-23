@@ -296,20 +296,20 @@ button, a, input, select, textarea {
 /* Nexora premium social shell — reference-inspired editorial polish   */
 /* ------------------------------------------------------------------ */
 :root {
-  --nx-canvas: #070b19;
-  --nx-canvas-deep: #040814;
-  --nx-surface: #0b1224;
-  --nx-surface-2: #101a32;
-  --nx-surface-3: #121e3a;
-  --nx-edge: rgba(139, 160, 206, 0.15);
-  --nx-edge-strong: rgba(168, 183, 226, 0.24);
-  --nx-violet: #8b5cf6;
-  --nx-pink: #d946ef;
-  --nx-cyan: #38bdf8;
-  --nx-blue: #4f7cff;
+  --nx-canvas: #050914;
+  --nx-canvas-deep: #050914;
+  --nx-surface: #070d19;
+  --nx-surface-2: #0b1424;
+  --nx-surface-3: #101b2e;
+  --nx-edge: #1b2940;
+  --nx-edge-strong: #273957;
+  --nx-violet: #7138ff;
+  --nx-pink: #a855f7;
+  --nx-cyan: #94a3b8;
+  --nx-blue: #64748b;
   --nx-focus: #c4b5fd;
-  --nx-gradient: linear-gradient(120deg, #7c3aed 0%, #a855f7 42%, #d946ef 72%, #38bdf8 125%);
-  --nx-gradient-soft: linear-gradient(120deg, rgba(124, 58, 237, 0.22), rgba(217, 70, 239, 0.14) 58%, rgba(56, 189, 248, 0.12));
+  --nx-gradient: linear-gradient(120deg, #7138ff 0%, #8b5cf6 54%, #a855f7 100%);
+  --nx-gradient-soft: linear-gradient(120deg, rgba(113, 56, 255, 0.18), rgba(168, 85, 247, 0.08));
 }
 
 html,
@@ -320,10 +320,7 @@ body,
 
 body {
   color: #f8faff;
-  background:
-    radial-gradient(circle at 15% -10%, rgba(83, 67, 181, 0.22), transparent 34rem),
-    radial-gradient(circle at 90% 0%, rgba(56, 189, 248, 0.09), transparent 28rem),
-    var(--nx-canvas-deep);
+  background: var(--nx-canvas-deep);
 }
 
 button,
@@ -340,9 +337,7 @@ textarea {
 }
 
 .nx-app-shell {
-  background:
-    radial-gradient(circle at 48% -20%, rgba(86, 64, 190, 0.16), transparent 32rem),
-    linear-gradient(180deg, #080d1d 0%, #050916 100%);
+  background: linear-gradient(180deg, #070d19 0%, #050914 100%);
 }
 
 .nx-sidebar-shell {
@@ -512,5 +507,50 @@ textarea {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Shared destination primitives for the premium mobile-first shell. */
+.nx-page-shell {
+  background: var(--nx-canvas);
+  color: #f5f7ff;
+}
+
+.nx-page-header {
+  border-color: var(--nx-edge) !important;
+  background: rgba(7, 13, 25, 0.82);
+}
+
+.nx-soft-card {
+  background: var(--nx-surface);
+  border: 1px solid var(--nx-edge);
+  border-radius: 1rem;
+  box-shadow: 0 12px 28px rgba(1, 4, 12, 0.16);
+}
+
+.nx-segmented {
+  background: var(--nx-surface-2);
+  border: 1px solid var(--nx-edge);
+  border-radius: 0.875rem;
+  padding: 0.25rem;
+}
+
+.nx-segmented > button {
+  min-height: 2.75rem;
+  border-radius: 0.625rem;
+  color: #94a3b8;
+  transition: background-color 160ms ease, color 160ms ease;
+}
+
+.nx-segmented > button:hover { color: #f5f7ff; }
+.nx-segmented > button[aria-selected="true"] {
+  background: var(--nx-violet);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(113, 56, 255, 0.2);
+}
+
+@media (max-width: 1023px) {
+  .nx-page-shell {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
   }
 }

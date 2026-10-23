@@ -140,10 +140,10 @@ export default function ExploreView({
   const totalResultsCount = filteredCreators.length + filteredPosts.length + filteredVideos.length;
 
   return (
-    <div id="explore-view-master-panel" className="space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
+    <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
       
       {/* Search Header & Input */}
-      <div className="sticky top-0 z-30 nx-glass pb-4 pt-3 px-3 sm:px-0 space-y-3">
+      <div className="nx-page-header sticky top-0 z-30 pb-4 pt-3 px-3 sm:px-0 space-y-3 border-b">
         <div className="flex items-baseline gap-2 px-1">
           <span className="text-lg sm:text-xl font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
           <span className="nx-eyebrow">Discover</span>
@@ -186,10 +186,11 @@ export default function ExploreView({
             <button
               key={f.id}
               onClick={() => setSearchFilterType(f.id as any)}
-              className={`px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer ${
-                searchFilterType === f.id
-                  ? 'bg-violet-600 text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] border border-white/10'
-                  : 'bg-white/5 text-zinc-400 hover:text-white border border-white/5'
+                aria-selected={searchFilterType === f.id}
+                className={`px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer border ${
+                  searchFilterType === f.id
+                  ? 'bg-violet-600 text-white border-violet-400/30'
+                  : 'bg-transparent text-zinc-400 hover:text-white border-[#1b2940]'
               }`}
             >
               {f.label}
@@ -275,7 +276,7 @@ export default function ExploreView({
                           addRecentSearch(user.username);
                           onViewProfile?.(user.id);
                         }}
-                        className="p-4 rounded-2xl nx-surface hover:border-white/10 flex items-center justify-between gap-3 cursor-pointer transition-all group shadow-sm"
+                        className="nx-soft-card p-4 hover:border-violet-400/30 flex items-center justify-between gap-3 cursor-pointer transition-all group"
                       >
                         <div className="flex items-center gap-3 overflow-hidden">
                           <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />

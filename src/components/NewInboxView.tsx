@@ -318,13 +318,13 @@ export default function NewInboxView({
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-full w-full bg-[var(--nx-canvas)] text-white font-sans overflow-hidden relative">
+    <div className="nx-page-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
       
       {/* LEFT COLUMN: Conversation List */}
-      <div className={`w-full md:w-96 border-r border-white/10 flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-96 border-r border-[#1b2940] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
         
         {/* Header */}
-        <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/60 backdrop-blur-md">
+        <div className="nx-page-header p-4 border-b flex items-center justify-between backdrop-blur-md">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-violet-400" />
             <h1 className="text-base font-black tracking-tight text-white font-sans">Inbox</h1>
@@ -340,21 +340,24 @@ export default function NewInboxView({
 
         {/* Tabs & Search */}
         <div className="p-3 border-b border-white/5 space-y-3 bg-black/30">
-          <div className="flex bg-zinc-900/90 p-1 rounded-xl border border-white/10 text-xs">
+          <div className="nx-segmented flex text-xs">
             <button
               onClick={() => setInboxTab('chats')}
+              aria-selected={inboxTab === 'chats'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'chats' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
               Chats
             </button>
             <button
               onClick={() => setInboxTab('requests')}
+              aria-selected={inboxTab === 'requests'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'requests' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
               Requests
             </button>
             <button
               onClick={() => setInboxTab('archived')}
+              aria-selected={inboxTab === 'archived'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'archived' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
               Archived

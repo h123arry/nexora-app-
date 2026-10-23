@@ -546,7 +546,7 @@ export default function NotificationsView({
   // RENDERING COMPONENTS
   // ---------------------------------------------------------------------------
   return (
-    <div id="nexora-notification-suite" className="nx-surface space-y-6 rounded-2xl p-4 sm:p-5 relative select-none">
+    <div id="nexora-notification-suite" className="nx-page-shell nx-soft-card space-y-6 rounded-2xl p-4 sm:p-5 relative select-none">
       
       {/* Toast Feedback Layer */}
       <div className="fixed bottom-10 right-10 z-50 flex flex-col gap-2 max-w-sm">
@@ -594,10 +594,10 @@ export default function NotificationsView({
       {/* ----------------------------------------------------------------------- */}
       {/* HEADER SECTION */}
       {/* ----------------------------------------------------------------------- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-5">
+      <div className="nx-page-header flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-linear-to-tr from-violet-600 to-pink-500 text-white relative">
+              <div className="p-2.5 rounded-2xl bg-violet-600 text-white relative">
               <Bell className="w-5 h-5 animate-swing" />
               {totalUnread > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 min-w-4 px-1 rounded-full bg-red-500 text-[9px] font-mono font-black items-center justify-center border border-slate-950 animate-bounce">
@@ -1107,7 +1107,7 @@ export default function NotificationsView({
                           initial={{ opacity: 0, y: 15 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          className={`p-4 rounded-3xl border text-left flex flex-col gap-3.5 transition-all relative overflow-hidden group/item ${
+                          className={`nx-soft-card p-4 rounded-3xl border text-left flex flex-col gap-3.5 transition-all relative overflow-hidden group/item ${
                             isPinned 
                               ? 'bg-linear-to-r from-[#170a2c] via-[#100720] to-[#04010b] border-amber-500/30'
                               : isSelected

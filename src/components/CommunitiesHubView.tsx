@@ -519,9 +519,9 @@ export default function CommunitiesHubView({
   const isActingAsPage = (currentUser as any).isPageIdentity;
 
   return (
-    <div className="space-y-6 pb-28 sm:pb-12">
+    <div className="nx-page-shell space-y-6 pb-28 sm:pb-12">
       {/* 🔴 Section Title & Premium Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-current/10 pb-5 text-left">
+      <div className="nx-page-header flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-5 text-left">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <div className="p-1 px-1.5 rounded-md bg-purple-500/10 border border-purple-500/20 text-purple-400">
@@ -537,7 +537,7 @@ export default function CommunitiesHubView({
         </div>
 
         {/* 🏢 Account switcher HUD on the Hub Header */}
-        <div className="flex items-center gap-3 bg-black/40 border border-white/10 p-2 rounded-2xl">
+        <div className="nx-soft-card flex items-center gap-3 p-2 rounded-2xl">
           <div className="flex items-center gap-2">
             <img src={currentUser.avatar} alt={currentUser.name} className="w-8 h-8 rounded-xl object-cover ring-1 ring-violet-500" />
             <div className="text-left font-sans shrink-0">
@@ -726,7 +726,7 @@ export default function CommunitiesHubView({
                   <div 
                     key={circle.id} 
                     onClick={() => void handleOpenCommunity(circle)}
-                    className="bg-black/45 border border-white/5 rounded-3xl overflow-hidden hover:border-white/10 transition-all duration-300 group flex flex-col justify-between cursor-pointer relative"
+                    className="nx-soft-card overflow-hidden hover:border-violet-400/30 transition-all duration-300 group flex flex-col justify-between cursor-pointer relative"
                   >
                     {/* Cover image banner */}
                     <div className="relative h-24 w-full bg-slate-900 border-b border-white/5 overflow-hidden">
@@ -825,7 +825,7 @@ export default function CommunitiesHubView({
                   <div 
                     key={pg.id}
                     onClick={() => setSelectedPage(pg)}
-                    className="bg-black/40 border border-white/5 rounded-3xl overflow-hidden hover:border-white/10 transition-all duration-300 flex flex-col justify-between cursor-pointer"
+                    className="nx-soft-card overflow-hidden hover:border-violet-400/30 transition-all duration-300 flex flex-col justify-between cursor-pointer"
                   >
                     {/* Header Cover */}
                     <div className="relative h-24 bg-slate-800">

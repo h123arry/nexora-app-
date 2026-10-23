@@ -876,10 +876,10 @@ export default function ProfileView({
   };
 
   return (
-    <div className="relative w-full min-h-screen bg-[#030112] text-white font-sans overflow-x-hidden pb-24">
+    <div className="nx-page-shell relative w-full min-h-screen text-white font-sans overflow-x-hidden pb-24">
       
       {/* 1. TOP NAVIGATION ACTION BAR */}
-      <div className="sticky top-0 nx-glass z-40 py-1.5 px-4 flex items-center justify-between">
+      <div className="nx-page-header sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
         <div className="flex items-center gap-3 relative">
           <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none">NEXORA</span>
           {onCloseProfile && (
