@@ -162,6 +162,9 @@ interface FeedViewProps {
   onOpenVohAi?: () => void;
   isHydrated?: boolean;
   onRequireAuth?: () => void;
+  onLoadMorePosts?: () => Promise<void>;
+  hasMorePosts?: boolean;
+  isLoadingMorePosts?: boolean;
 }
 
 export default function FeedView({
@@ -186,7 +189,10 @@ export default function FeedView({
   onOpenMessages,
   onOpenVohAi,
   isHydrated = true,
-  onRequireAuth
+  onRequireAuth,
+  onLoadMorePosts,
+  hasMorePosts = false,
+  isLoadingMorePosts = false
 }: FeedViewProps) {
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
@@ -873,6 +879,7 @@ export default function FeedView({
       // Pre-load next batch when nearing bottom (threshold 350px)
       if (scrollHeight - scrollTop - clientHeight < 350) {
         setVisibleCount(prev => prev + 6);
+        void onLoadMorePosts?.();
       }
 
       // Smooth scroll direction detection for header collapse/restore
@@ -906,7 +913,7 @@ export default function FeedView({
       }
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, []);
+  }, [onLoadMorePosts]);
 
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
@@ -2337,16 +2344,16 @@ export default function FeedView({
         })}
 
         {/* Infinite Scroll / Pagination Loading State */}
-        {visibleCount < orderedPosts.length && (
+        {(visibleCount < orderedPosts.length || isLoadingMorePosts) && (
           <div className="py-8 flex flex-col items-center justify-center space-y-2">
             <NexoraLoader size="md" center={true} />
             <span className="text-[10px] font-mono font-bold text-violet-400/80 uppercase tracking-widest">
-              Loading more Nexora posts...
+              {isLoadingMorePosts ? 'Loading more Nexora posts...' : 'Preparing more Nexora posts...'}
             </span>
           </div>
         )}
 
-        {visibleCount >= orderedPosts.length && orderedPosts.length > 0 && (
+        {!isLoadingMorePosts && !hasMorePosts && visibleCount >= orderedPosts.length && orderedPosts.length > 0 && (
           <div className="py-8 text-center space-y-1.5 opacity-80">
             <div className="w-2 h-2 bg-gradient-to-r from-violet-500 to-pink-500 rounded-full mx-auto animate-pulse" />
             <p className="text-[11px] font-mono font-extrabold text-violet-300 uppercase tracking-widest">

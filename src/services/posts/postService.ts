@@ -83,10 +83,15 @@ export async function getGlobalPostsPage(
   }
 }
 
-export function subscribeToPosts(callback: (posts: Post[]) => void) {
+export function subscribeToPosts(callback: (posts: Post[], page?: FeedPage) => void) {
   const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(DEFAULT_FEED_PAGE_SIZE));
   return onSnapshot(q, (snapshot) => {
-    callback(normalizePosts(snapshot));
+    const posts = normalizePosts(snapshot);
+    callback(posts, {
+      posts,
+      nextCursor: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null,
+      hasMore: snapshot.docs.length === DEFAULT_FEED_PAGE_SIZE,
+    });
   }, (error) => {
     handleFirestoreError(error, OperationType.LIST, path, auth);
   });

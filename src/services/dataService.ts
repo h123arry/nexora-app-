@@ -568,9 +568,13 @@ export async function getPages() {
 // 7. REAL-TIME SUBSCRIPTION ENGINE (GLOBAL SYNC)
 // ==========================================
 
-import { subscribeToPosts as subscribeToPostsOriginal } from './posts/postService';
+import { subscribeToPosts as subscribeToPostsOriginal, getGlobalPostsPage } from './posts/postService';
+import type { FeedPage } from './posts/postService';
 
-export function subscribeToPosts(callback: (posts: Post[]) => void) {
+export { getGlobalPostsPage };
+export type { FeedPage };
+
+export function subscribeToPosts(callback: (posts: Post[], page?: FeedPage) => void) {
   return subscribeToPostsOriginal(callback);
 }
 

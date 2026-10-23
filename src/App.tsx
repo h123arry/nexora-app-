@@ -31,7 +31,8 @@ import {
 } from './data/database';
 import { ActivityService } from './services/activityService';
 import { 
-  getGlobalPosts, 
+  getGlobalPosts,
+  getGlobalPostsPage,
   subscribeToPosts, 
   subscribeToUsers, 
   savePostToDb, 
@@ -269,12 +270,27 @@ export default function App() {
     let unsubPosts: () => void;
     let unsubUsers: () => void;
     let unsubFollows: () => void;
+    let receivedInitialPosts = false;
 
+    feedCursorRef.current = null;
+    feedHasMoreRef.current = false;
+    setHasMoreFeedPosts(false);
     console.log('[App] Subscribing to public posts and user directory...');
-    unsubPosts = subscribeToPosts((dbPosts) => {
+    unsubPosts = subscribeToPosts((dbPosts, page) => {
       console.log('[App] Received posts:', dbPosts?.length || 0);
       if (dbPosts) {
-        setPosts(normalizePosts(dbPosts));
+        setPosts(previousPosts => {
+          const incomingPosts = normalizePosts(dbPosts);
+          if (!receivedInitialPosts) return incomingPosts;
+          const incomingIds = new Set(incomingPosts.map(post => post.id));
+          return [...incomingPosts, ...previousPosts.filter(post => !incomingIds.has(post.id))];
+        });
+        if (!receivedInitialPosts && page) {
+          feedCursorRef.current = page.nextCursor;
+          feedHasMoreRef.current = page.hasMore;
+          setHasMoreFeedPosts(page.hasMore);
+        }
+        receivedInitialPosts = true;
       }
       setIsPostsHydrated(true);
     });
@@ -412,6 +428,35 @@ export default function App() {
     localStorage.setItem('nexora_posts', JSON.stringify(realPosts));
     return realPosts;
   });
+  const feedCursorRef = useRef<any>(null);
+  const feedHasMoreRef = useRef(false);
+  const feedLoadingRef = useRef(false);
+  const [hasMoreFeedPosts, setHasMoreFeedPosts] = useState(false);
+  const [isLoadingMoreFeedPosts, setIsLoadingMoreFeedPosts] = useState(false);
+
+  const loadMoreFeedPosts = async () => {
+    if (feedLoadingRef.current || !feedHasMoreRef.current) return;
+    feedLoadingRef.current = true;
+    setIsLoadingMoreFeedPosts(true);
+    try {
+      const page = await getGlobalPostsPage(feedCursorRef.current);
+      feedCursorRef.current = page.nextCursor;
+      feedHasMoreRef.current = page.hasMore;
+      setHasMoreFeedPosts(page.hasMore);
+      if (page.posts.length > 0) {
+        setPosts(previousPosts => {
+          const existingIds = new Set(previousPosts.map(post => post.id));
+          return [...previousPosts, ...page.posts.filter(post => !existingIds.has(post.id))];
+        });
+      }
+    } catch (error) {
+      console.warn('[App] Unable to load the next feed page.', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not load more posts. Please try again.' }));
+    } finally {
+      feedLoadingRef.current = false;
+      setIsLoadingMoreFeedPosts(false);
+    }
+  };
 
   const [resolvedPosts, setResolvedPosts] = useState<Post[]>(() => {
     const saved = localStorage.getItem('nexora_posts');
@@ -2066,6 +2111,9 @@ export default function App() {
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
                 onOpenVohAi={() => { setMatrixSubTabRedirect('ai'); setActiveTab('matrix'); setViewedUser(null); }}
                 onRequireAuth={() => { setAuthPromptReason('Sign in to view and share stories.'); setShowAuthModal(true); }}
+                onLoadMorePosts={loadMoreFeedPosts}
+                hasMorePosts={hasMoreFeedPosts}
+                isLoadingMorePosts={isLoadingMoreFeedPosts}
               />
             </motion.div>
             
