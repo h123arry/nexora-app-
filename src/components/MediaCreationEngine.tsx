@@ -4,6 +4,7 @@ import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, Chevro
 import VohIcon from './VohIcon';
 import { User } from '../types';
 import { saveMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
+import { revokeObjectUrl, validateMediaFile } from '../utils/mediaValidation';
 import NexoraLoader from './NexoraLoader';
 
 interface MediaCreationEngineProps {
@@ -230,6 +231,32 @@ export default function MediaCreationEngine({
   const audioChunksRef = useRef<Blob[]>([]);
   const loopTimerRef = useRef<any>(null);
   const uploadIntervalRef = useRef<any>(null);
+  const createdObjectUrlsRef = useRef<Set<string>>(new Set());
+
+  const trackObjectUrl = (url: string) => {
+    createdObjectUrlsRef.current.add(url);
+    return url;
+  };
+
+  const revokeTrackedObjectUrl = (url: string | null | undefined) => {
+    if (!url || !createdObjectUrlsRef.current.has(url)) return;
+    revokeObjectUrl(url);
+    createdObjectUrlsRef.current.delete(url);
+  };
+
+  const clearTrackedObjectUrls = () => {
+    createdObjectUrlsRef.current.forEach(url => revokeObjectUrl(url));
+    createdObjectUrlsRef.current.clear();
+  };
+
+  useEffect(() => () => {
+    if (loopTimerRef.current) clearInterval(loopTimerRef.current);
+    if (uploadIntervalRef.current) clearInterval(uploadIntervalRef.current);
+    videoStreamRef.current?.getTracks().forEach(track => track.stop());
+    if (mediaRecorderVideoRef.current?.state !== 'inactive') mediaRecorderVideoRef.current?.stop();
+    if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
+    clearTrackedObjectUrls();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('nexora_media_permissions_granted', permissionState);
@@ -324,11 +351,17 @@ export default function MediaCreationEngine({
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
     requestPermission('gallery', () => {
-      Array.from(files).forEach((file: File) => {
+      void Promise.all(Array.from(files).slice(0, 10).map(async (file: File) => {
+        try {
+          await validateMediaFile(file, 'image');
+        } catch (error) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'Image validation failed.'}` }));
+          return;
+        }
         const reader = new FileReader();
         reader.onload = (ev) => {
           if (ev.target?.result) {
@@ -339,8 +372,9 @@ export default function MediaCreationEngine({
           }
         };
         reader.readAsDataURL(file);
-      });
+      }));
     });
+    e.target.value = '';
   };
 
   const captureCameraSnapshot = () => {
@@ -356,17 +390,28 @@ export default function MediaCreationEngine({
     });
   };
 
-  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
     requestPermission('gallery', () => {
-      const file = files[0];
-      setVideoFileUrl(URL.createObjectURL(file));
-      setVideoRawBlob(file);
-      setVideoTrimStart(0);
-      setVideoTrimEnd(15);
-      setVideoDuration(15);
+      void (async () => {
+        const file = files[0];
+        try {
+          const metadata = await validateMediaFile(file, 'video');
+          setVideoFileUrl(previous => {
+            revokeTrackedObjectUrl(previous);
+            return trackObjectUrl(URL.createObjectURL(file));
+          });
+          setVideoRawBlob(file);
+          setVideoTrimStart(0);
+          setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
+          setVideoDuration(metadata.duration || 15);
+        } catch (error) {
+          window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${error instanceof Error ? error.message : 'Video validation failed.'}` }));
+        }
+      })();
     });
+    e.target.value = '';
   };
 
   const startReelRecording = () => {
@@ -391,7 +436,10 @@ export default function MediaCreationEngine({
                 };
                 recorder.onstop = () => {
                   const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-                  setRecordedVideoUrl(URL.createObjectURL(blob));
+                  setRecordedVideoUrl(previous => {
+                    revokeTrackedObjectUrl(previous);
+                    return trackObjectUrl(URL.createObjectURL(blob));
+                  });
                   setVideoRawBlob(blob);
                 };
                 recorder.start();
@@ -442,7 +490,10 @@ export default function MediaCreationEngine({
             };
             recorder.onstop = () => {
               const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-              setVoiceFileUrl(URL.createObjectURL(blob));
+              setVoiceFileUrl(previous => {
+                revokeTrackedObjectUrl(previous);
+                return trackObjectUrl(URL.createObjectURL(blob));
+              });
               setVoiceRawBlob(blob);
             };
             recorder.start();
@@ -569,6 +620,7 @@ export default function MediaCreationEngine({
     setVideoFileUrl(null);
     setRecordedVideoUrl(null);
     setVoiceFileUrl(null);
+    clearTrackedObjectUrls();
     setVoiceTranscript('');
     setPollQuestion('');
     setPollOptionsList(['', '']);

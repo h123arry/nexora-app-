@@ -133,6 +133,7 @@ export default function NexoraVideoPlayer({
   });
   const singleTapTimeoutRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<any>(null);
+  const qualitySwitchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Double-tap pulse effect
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
@@ -339,7 +340,8 @@ export default function NexoraVideoPlayer({
       
       // Update simulated background quality without interrupting active playback!
       setIsSwitchingQuality(true);
-      setTimeout(() => {
+      if (qualitySwitchTimeoutRef.current) clearTimeout(qualitySwitchTimeoutRef.current);
+      qualitySwitchTimeoutRef.current = setTimeout(() => {
         setIsSwitchingQuality(false);
       }, 400);
     };
@@ -348,8 +350,16 @@ export default function NexoraVideoPlayer({
     
     // Periodically adapt quality to background bandwidth changes
     const interval = setInterval(checkQuality, 12000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (qualitySwitchTimeoutRef.current) clearTimeout(qualitySwitchTimeoutRef.current);
+      qualitySwitchTimeoutRef.current = null;
+    };
   }, [selectedQuality]);
+
+  useEffect(() => {
+    setHasVideoError(false);
+  }, [finalVideoUrl]);
 
   // Recover gracefully after temporary network loss
   useEffect(() => {
@@ -684,15 +694,23 @@ export default function NexoraVideoPlayer({
       videoRef.current.pause();
     }
 
-    setTimeout(() => {
+    if (qualitySwitchTimeoutRef.current) clearTimeout(qualitySwitchTimeoutRef.current);
+    qualitySwitchTimeoutRef.current = setTimeout(() => {
       setIsSwitchingQuality(false);
       if (wasPlaying && videoRef.current) {
-        videoRef.current.play().catch(() => {});
+        globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl).catch(() => {});
       }
       window.dispatchEvent(
         new CustomEvent('toast', { detail: `✨ Video quality updated to ${quality}!` })
       );
     }, 900);
+  };
+
+  const handleVideoFailure = () => {
+    setIsBuffering(false);
+    setHasVideoError(true);
+    globalVideoPlaybackManager.pause(playerId);
+    setIsPlaying(false);
   };
 
   // Add the post URL to a bookmark collection
@@ -853,7 +871,9 @@ export default function NexoraVideoPlayer({
               onWaiting={() => setIsBuffering(true)}
               onPlaying={() => setIsBuffering(false)}
               onCanPlay={() => setIsBuffering(false)}
-              onError={() => setHasVideoError(true)}
+              onError={handleVideoFailure}
+              onStalled={() => setIsBuffering(true)}
+              onAbort={() => setIsBuffering(false)}
               className="w-full h-full max-h-[85vh] object-contain cursor-pointer"
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />

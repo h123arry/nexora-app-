@@ -575,7 +575,7 @@ export function subscribeToPosts(callback: (posts: Post[]) => void) {
 }
 
 export function subscribeToNotifications(userId: string, callback: (notifications: Notification[]) => void) {
-  const q = query(collection(db, 'notifications'), where('userId', '==', userId));
+  const q = query(collection(db, 'notifications'), where('userId', '==', userId), limit(100));
   return onSnapshot(q, (snapshot) => {
     const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
     callback(notifications);
@@ -596,7 +596,7 @@ export function subscribeToUsers(callback: (users: User[]) => void) {
 }
 
 export function subscribeToCommunities(callback: (communities: Community[]) => void) {
-  const q = query(collection(db, 'communities'));
+  const q = query(collection(db, 'communities'), limit(200));
   return onSnapshot(q, (snapshot) => {
     const communities = snapshot.docs.map((snapshotDoc) => {
       const data = snapshotDoc.data();
@@ -634,7 +634,7 @@ export function subscribeToCommunities(callback: (communities: Community[]) => v
 }
 
 export function subscribeToPages(callback: (pages: Page[]) => void) {
-  const q = query(collection(db, 'pages'));
+  const q = query(collection(db, 'pages'), limit(200));
   return onSnapshot(q, (snapshot) => {
     const pages = snapshot.docs.map((snapshotDoc) => {
       const data = snapshotDoc.data();
@@ -668,7 +668,7 @@ export function subscribeToPages(callback: (pages: Page[]) => void) {
 }
 
 export function subscribeToFollows(userId: string, callback: (follows: any[]) => void) {
-  const q = query(collection(db, 'follows'), where('followerId', '==', userId));
+  const q = query(collection(db, 'follows'), where('followerId', '==', userId), limit(500));
   return onSnapshot(q, (snapshot) => {
     const follows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(follows);
@@ -678,7 +678,7 @@ export function subscribeToFollows(userId: string, callback: (follows: any[]) =>
 }
 
 export function subscribeToChats(userId: string, callback: (chats: Chat[]) => void) {
-  const q = query(collection(db, 'chats'), where('participants', 'array-contains', userId));
+  const q = query(collection(db, 'chats'), where('participants', 'array-contains', userId), limit(100));
   return onSnapshot(q, (snapshot) => {
     const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Chat[];
     callback(chats);
@@ -688,7 +688,7 @@ export function subscribeToChats(userId: string, callback: (chats: Chat[]) => vo
 }
 
 export function subscribeToMessages(chatId: string, callback: (messages: Message[]) => void) {
-  const q = query(collection(db, `chats/${chatId}/messages`));
+  const q = query(collection(db, `chats/${chatId}/messages`), orderBy('timestamp', 'asc'), limit(200));
   return onSnapshot(q, (snapshot) => {
     const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Message[];
     callback(messages);
@@ -742,8 +742,8 @@ export async function updateOnlinePresence(userId: string, isOnline: boolean) {
 }
 
 export function subscribeToOnlinePresence(callback: (presence: Record<string, boolean>) => void) {
-  const colRef = collection(db, 'presence');
-  return onSnapshot(colRef, (snapshot) => {
+  const presenceQuery = query(collection(db, 'presence'), limit(500));
+  return onSnapshot(presenceQuery, (snapshot) => {
     const presenceMap: Record<string, boolean> = {};
     snapshot.docs.forEach(doc => {
       presenceMap[doc.id] = doc.data().isOnline || false;

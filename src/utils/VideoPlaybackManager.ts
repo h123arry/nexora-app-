@@ -111,12 +111,10 @@ class VideoPlaybackManager {
    * Unregister a player instance
    */
   public unregister(id: string) {
-    this.registeredPlayers.delete(id);
     if (this.activePlayerId === id) {
-      this.activePlayerId = null;
-      this.activeVideoElement = null;
-      this.activeVideoUrl = null;
+      this.pause(id);
     }
+    this.registeredPlayers.delete(id);
   }
 
   /**
@@ -125,6 +123,8 @@ class VideoPlaybackManager {
    */
   public preloadVideo(url: string) {
     if (!url || typeof document === 'undefined') return;
+    const connection = (navigator as any).connection;
+    if (connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType)) return;
     const resolvedUrl = this.getAdaptiveUrl(url);
 
     if (this.preloadElements.has(resolvedUrl)) return; // Already cached/preloading

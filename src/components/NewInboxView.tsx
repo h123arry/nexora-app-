@@ -16,6 +16,7 @@ import {
   onSnapshot, 
   query, 
   orderBy,
+  limit,
   deleteDoc 
 } from 'firebase/firestore';
 import MessageBubble from './MessageBubble';
@@ -108,11 +109,14 @@ export default function NewInboxView({
     if (!activeChatId || !db) return;
 
     const messagesRef = collection(db, `chats/${activeChatId}/messages`);
-    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+    const q = query(messagesRef, orderBy('timestamp', 'asc'), limit(200));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const msgsList: ExtendedMessage[] = [];
+      const seen = new Set<string>();
       snapshot.forEach(doc => {
+        if (seen.has(doc.id)) return;
+        seen.add(doc.id);
         msgsList.push({ id: doc.id, ...doc.data() } as any);
       });
 
@@ -236,6 +240,11 @@ export default function NewInboxView({
       }
     } catch (e) {
       console.warn('[Inbox] Firestore send error:', e);
+      setLocalMessages(prev => ({
+        ...prev,
+        [activeChatId]: (prev[activeChatId] || []).filter(message => message.id !== messageId),
+      }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Please try again.' }));
     }
   };
 

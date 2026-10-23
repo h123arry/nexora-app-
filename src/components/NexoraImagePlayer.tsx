@@ -265,6 +265,8 @@ export default function NexoraImagePlayer({
             <img loading="lazy"
               src={displayImages[currentImageIndex]}
               alt={post.content || 'Post media'}
+              decoding="async"
+              fetchPriority="low"
               aria-hidden={hasImageLoadError}
               onLoad={() => { setIsImageLoading(false); setHasImageLoadError(false); }}
               onError={() => { setIsImageLoading(false); setHasImageLoadError(true); }}

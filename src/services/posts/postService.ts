@@ -5,15 +5,31 @@ import {
   doc, 
   setDoc,
   collection, orderBy, limit, 
+  startAfter,
   getDocs, 
   query, 
   onSnapshot,
-  serverTimestamp
+  QueryDocumentSnapshot,
+  DocumentData
 } from 'firebase/firestore';
 import { Post } from '../../types';
 import { cacheManager } from '../cache/cacheService';
 
 const path = 'posts';
+export const DEFAULT_FEED_PAGE_SIZE = 50;
+export const MAX_FEED_PAGE_SIZE = 100;
+
+function normalizePosts(snapshot: { docs: Array<{ id: string; data: () => DocumentData }> }): Post[] {
+  const seen = new Set<string>();
+  return snapshot.docs.reduce<Post[]>((posts, snapshotDoc) => {
+    if (seen.has(snapshotDoc.id)) return posts;
+    seen.add(snapshotDoc.id);
+    const post = { id: snapshotDoc.id, ...snapshotDoc.data() } as Post;
+    cacheManager.setPost(post.id, post);
+    posts.push(post);
+    return posts;
+  }, []);
+}
 
 export async function savePostToDbDirect(post: any) {
   const sanitizedPost = JSON.parse(JSON.stringify(post));
@@ -27,24 +43,51 @@ export async function savePostToDbDirect(post: any) {
 
 export async function getGlobalPosts() {
   try {
-    const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(150));
+    const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(DEFAULT_FEED_PAGE_SIZE));
     const snapshot = await getDocs(q);
-    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
-    posts.forEach(p => cacheManager.setPost(p.id, p));
-    return posts;
+    return normalizePosts(snapshot);
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path, auth);
   }
 }
 
+export interface FeedPage {
+  posts: Post[];
+  nextCursor: QueryDocumentSnapshot<DocumentData> | null;
+  hasMore: boolean;
+}
+
+/**
+ * Fetch one bounded feed page. The cursor is the last snapshot returned by
+ * the previous page; callers should retain it rather than re-querying from 0.
+ */
+export async function getGlobalPostsPage(
+  cursor: QueryDocumentSnapshot<DocumentData> | null = null,
+  pageSize = DEFAULT_FEED_PAGE_SIZE,
+): Promise<FeedPage> {
+  const safePageSize = Math.min(Math.max(1, Math.floor(pageSize)), MAX_FEED_PAGE_SIZE);
+  try {
+    const constraints = [orderBy('timestamp', 'desc'), limit(safePageSize)];
+    const q = cursor
+      ? query(collection(db, path), orderBy('timestamp', 'desc'), startAfter(cursor), limit(safePageSize))
+      : query(collection(db, path), ...constraints);
+    const snapshot = await getDocs(q);
+    return {
+      posts: normalizePosts(snapshot),
+      nextCursor: snapshot.docs.length > 0 ? snapshot.docs[snapshot.docs.length - 1] : null,
+      hasMore: snapshot.docs.length === safePageSize,
+    };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, path, auth);
+    return { posts: [], nextCursor: null, hasMore: false };
+  }
+}
+
 export function subscribeToPosts(callback: (posts: Post[]) => void) {
-  const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(150));
+  const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(DEFAULT_FEED_PAGE_SIZE));
   return onSnapshot(q, (snapshot) => {
-    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
-    posts.forEach(p => cacheManager.setPost(p.id, p));
-    callback(posts);
+    callback(normalizePosts(snapshot));
   }, (error) => {
     handleFirestoreError(error, OperationType.LIST, path, auth);
   });
 }
-
