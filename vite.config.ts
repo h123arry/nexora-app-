@@ -6,6 +6,9 @@ import {defineConfig} from 'vite';
 export default defineConfig(() => {
   return {
     plugins: [react(), tailwindcss()],
+    define: {
+      'globalThis.__NEXORA_APPCHECK_SITE_KEY__': JSON.stringify(process.env.VITE_FIREBASE_APPCHECK_SITE_KEY || ''),
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),

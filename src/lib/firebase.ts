@@ -8,7 +8,9 @@ import firebaseConfig from '../../firebase-applet-config.json';
 console.log("🔥 Initializing Firebase...");
 const app = initializeApp(firebaseConfig);
 export { app };
-const appCheckSiteKey = import.meta.env.VITE_FIREBASE_APPCHECK_SITE_KEY as string | undefined;
+const appCheckSiteKey = (globalThis as typeof globalThis & {
+  __NEXORA_APPCHECK_SITE_KEY__?: string;
+}).__NEXORA_APPCHECK_SITE_KEY__;
 export const appCheck: AppCheck | null = appCheckSiteKey
   ? initializeAppCheck(app, {
       provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
