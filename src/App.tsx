@@ -2026,6 +2026,12 @@ export default function App() {
   // Render Core layout
   return (
     <div id="nexora-master-wrapper" className={`nx-app-shell ${getThemeWrapperClass(theme)} transition-colors duration-500`}>
+      <a
+        href="#nexora-main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-violet-600 focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-white focus:shadow-xl"
+      >
+        Skip to main content
+      </a>
       <OfflineBanner />
       {/* 🧭 Unified Navigation Menu Drawer Overlay */}
       <SlideDownMenu
@@ -2078,7 +2084,7 @@ export default function App() {
           </div>
 
           {/* Col 2 & 3: Main Immersive View Area */}
-          <div className={activeTab === 'feed' ? "col-span-1 h-full w-full relative min-h-0" : "lg:col-span-9 min-h-0"}>
+          <main id="nexora-main-content" tabIndex={-1} className={activeTab === 'feed' ? "col-span-1 h-full w-full relative min-h-0 outline-none" : "lg:col-span-9 min-h-0 outline-none"}>
             <motion.div 
               initial={false}
               animate={{ 
@@ -2289,7 +2295,7 @@ export default function App() {
                 )}
             </div>
             )}
-          </div>
+          </main>
 
           {/* Col 4: Right Discovery sidebar */}
           <div className={activeTab === 'feed' ? "hidden lg:block h-full border-l border-white/10 bg-[#060b1b]/55 overflow-y-auto" : "hidden"}>
@@ -3085,7 +3091,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* 🥞 LIGHTWEIGHT TOAST NOTIFICATIONS */}
-      <div id="nexora-global-toast-container" className="fixed top-16 right-6 left-6 md:left-auto md:right-8 md:w-80 z-50 flex flex-col gap-2 pointer-events-none" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div id="nexora-global-toast-container" role="status" aria-live="polite" aria-atomic="true" className="fixed top-16 right-6 left-6 md:left-auto md:right-8 md:w-80 z-50 flex flex-col gap-2 pointer-events-none" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
         <AnimatePresence>
           {toasts.map(toast => (
             <motion.div
