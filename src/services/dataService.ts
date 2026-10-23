@@ -333,8 +333,10 @@ async function reportContentDirect(reporterId: string, targetType: string, targe
       reporterId,
       targetType,
       targetId,
-      reason,
+      reason: reason.slice(0, 80),
       status: 'pending',
+      policyVersion: '2026-10',
+      source: 'client-report',
       createdAt: serverTimestamp()
     });
   } catch (error) {

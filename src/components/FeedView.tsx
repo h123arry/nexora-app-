@@ -1177,25 +1177,25 @@ export default function FeedView({
       });
       
       if (maxTagScore > 3) {
-        reasons.push(`You show interest in the topic #${maxTag} (weight: +${maxTagScore}).`);
+        reasons.push(`Your local preference profile shows interest in the topic #${maxTag} (affinity: +${maxTagScore}).`);
       }
       
       const creatorScore = (profile.creators && (profile.creators[postItem.userId] || profile.creators[postItem.username])) || 0;
       if (creatorScore > 3) {
-        reasons.push(`You regularly interact with @${postItem.username} (affinity: +${creatorScore}).`);
+        reasons.push(`Your local preference profile shows previous interaction with @${postItem.username} (affinity: +${creatorScore}).`);
       }
       
       if (reasons.length === 0) {
         if (postItem.isVerified) {
-          reasons.push("Recommended because this verified creator is broadcasting high-fidelity media.");
+          reasons.push("This item is from a verified creator and is eligible for the current feed.");
         } else {
-          reasons.push("Recommended based on positive engagement signals and overall platform velocity.");
+          reasons.push(`This item is eligible for the ${feedTab} feed based on its current post metadata and your active feed controls.`);
         }
       }
       
       return reasons;
     } catch (e) {
-      return ["Recommended based on positive engagement signals and overall platform velocity."];
+      return [`This item is eligible for the ${feedTab} feed based on the data currently available on this device.`];
     }
   };
 
@@ -3625,7 +3625,7 @@ export default function FeedView({
 
               <div className="space-y-4">
                 <p className="text-xs text-zinc-300 font-sans leading-relaxed">
-                  Nexora compiles a dynamic telemetry graph mapping interest weights from your interactions (clicks, Sparks/likes, dwell time, comments). Here is why this item was dispatched:
+                  Nexora explains this recommendation using the preference signals currently stored on this device and the active feed mode. It does not expose hidden personal data or claim that this explanation is a complete description of every ranking decision.
                 </p>
 
                 <div className="p-3 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-2">

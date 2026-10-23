@@ -207,4 +207,25 @@ const publicProfile = (uid) => ({
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'pages', page.id), { name: 'Updated Studio' }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'communities', community.id), { name: 'Hijacked' }));
   });
+
+  it('scopes moderation reports and appeals to their owner and rejects forged review state', async () => {
+    const report = {
+      reporterId: 'alice', targetType: 'post', targetId: 'post-1', reason: 'Spam: repeated links',
+      status: 'pending', policyVersion: '2026-10', source: 'client-report', createdAt: serverTimestamp()
+    };
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'moderationReports', 'report-1'), report));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'moderationReports', 'report-1')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'moderationReports', 'report-1')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'moderationReports', 'report-2'), report));
+    await assertFails(setDoc(doc(dbFor('alice'), 'moderationReports', 'report-3'), { ...report, status: 'resolved' }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'moderationReports', 'report-4'), { ...report, targetType: 'account' }));
+
+    const appeal = {
+      userId: 'alice', targetType: 'post', targetId: 'post-1', reason: 'This content is original and complies with the policy.',
+      status: 'pending', policyVersion: '2026-10', createdAt: serverTimestamp()
+    };
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'moderationAppeals', 'appeal-1'), appeal));
+    await assertFails(getDoc(doc(dbFor('bob'), 'moderationAppeals', 'appeal-1')));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'moderationAppeals', 'appeal-1'), { status: 'approved' }));
+  });
 });

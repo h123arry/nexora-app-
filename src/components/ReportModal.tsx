@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { AlertTriangle, X, ShieldAlert, CheckCircle, Flame } from 'lucide-react';
 import { Post, User } from '../types';
+import { auth } from '../services/firebase/config';
+import { reportContent } from '../services/dataService';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -34,6 +36,7 @@ export default function ReportModal({
   const [selectedReason, setSelectedReason] = useState<ReportReason>('Spam');
   const [comments, setComments] = useState('');
   const [isDone, setIsDone] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
@@ -48,8 +51,10 @@ export default function ReportModal({
     'Other'
   ];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     
     const newReport = {
       id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -59,7 +64,7 @@ export default function ReportModal({
       targetContent,
       reason: selectedReason,
       comment: comments.trim() || 'No additional comments provided.',
-      timestamp: 'Just now',
+      timestamp: new Date().toISOString(),
       status: 'pending' as const
     };
 
@@ -72,7 +77,17 @@ export default function ReportModal({
       console.error(e);
     }
 
+    try {
+      const reporterId = auth.currentUser?.uid;
+      if (reporterId) {
+        await reportContent(reporterId, targetType, targetId, `${selectedReason}: ${comments.trim()}`.slice(0, 500));
+      }
+    } catch (error) {
+      console.warn('Durable report queue unavailable; local report retained.', error);
+    }
+
     setIsDone(true);
+    setIsSubmitting(false);
     
     // Dispatch a global event so any active screens can update
     window.dispatchEvent(new CustomEvent('toast', { 
@@ -85,6 +100,7 @@ export default function ReportModal({
       setIsDone(false);
       setComments('');
       setSelectedReason('Spam');
+      setIsSubmitting(false);
       if (onSubmitSuccess) onSubmitSuccess();
     }, 1500);
   };
@@ -109,7 +125,7 @@ export default function ReportModal({
               <div className="flex items-center gap-2.5 text-red-400">
                 <ShieldAlert className="w-5 h-5 animate-pulse" />
                 <h3 className="text-base font-black uppercase font-mono tracking-wider">
-                  Report Post
+                  Report {targetType}
                 </h3>
               </div>
 
@@ -155,7 +171,7 @@ export default function ReportModal({
                 type="submit"
                 className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:brightness-110 text-white font-mono text-xs font-black tracking-widest uppercase rounded-xl cursor-pointer shadow-lg active:scale-98 transition-all"
               >
-                SUBMIT REPORT FOR REVIEW
+                {isSubmitting ? 'SECURING REPORT...' : 'SUBMIT REPORT FOR REVIEW'}
               </button>
             </form>
           ) : (

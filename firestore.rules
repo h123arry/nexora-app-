@@ -250,7 +250,36 @@ service cloud.firestore {
 
     match /moderationReports/{reportId} {
       allow get, list: if signedIn() && resource.data.reporterId == request.auth.uid;
-      allow create: if signedIn() && request.resource.data.reporterId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['reporterId', 'targetType', 'targetId', 'reason', 'status', 'policyVersion', 'source', 'createdAt'])
+        && request.resource.data.reporterId == request.auth.uid
+        && request.resource.data.targetType in ['post', 'comment', 'user', 'community']
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() > 0
+        && request.resource.data.targetId.size() <= 200
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 500
+        && request.resource.data.status == 'pending'
+        && request.resource.data.policyVersion == '2026-10'
+        && request.resource.data.source == 'client-report';
+      allow update, delete: if false;
+    }
+
+    match /moderationAppeals/{appealId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['userId', 'targetType', 'targetId', 'reason', 'status', 'policyVersion', 'createdAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.targetType in ['post', 'account', 'comment']
+        && request.resource.data.targetId is string
+        && request.resource.data.targetId.size() > 0
+        && request.resource.data.targetId.size() <= 200
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 1000
+        && request.resource.data.status == 'pending'
+        && request.resource.data.policyVersion == '2026-10';
       allow update, delete: if false;
     }
 
