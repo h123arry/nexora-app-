@@ -422,6 +422,21 @@ export async function reportContent(reporterId: string, targetType: string, targ
   await syncEngine.enqueue('report', { reporterId, targetType, targetId, reason });
 }
 
+export async function submitModerationAppeal(userId: string, targetType: 'post' | 'account' | 'comment', targetId: string, reason: string) {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('Sign in to submit a moderation appeal.');
+  }
+  await addDoc(collection(db, 'moderationAppeals'), {
+    userId,
+    targetType,
+    targetId: targetId.slice(0, 200),
+    reason: reason.trim().slice(0, 1000),
+    status: 'pending',
+    policyVersion: '2026-10',
+    createdAt: serverTimestamp()
+  });
+}
+
 export async function saveDraft(userId: string, caption: string, videoUrl: string) {
   await syncEngine.enqueue('saveDraft', { userId, caption, videoUrl });
 }

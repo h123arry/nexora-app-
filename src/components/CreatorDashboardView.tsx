@@ -8,6 +8,7 @@ import {
   doc, updateDoc, deleteDoc, addDoc, collection, 
   getDocs, query, where, serverTimestamp 
 } from 'firebase/firestore';
+import { submitModerationAppeal } from '../services/dataService';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -384,14 +385,20 @@ export default function CreatorDashboardView({
   };
 
   // Copyright Appeals Handler
-  const handleSubmitAppeal = () => {
+  const handleSubmitAppeal = async () => {
     if (!appealReason.trim()) {
       alert('Please provide an explanation for your appeal.');
       return;
     }
-    window.dispatchEvent(new CustomEvent('toast', { detail: '⚖️ Appeal submitted! Moderation team will respond in 24 hours.' }));
-    setAppealModalOpen(false);
-    setAppealReason('');
+    try {
+      await submitModerationAppeal(currentUser.id, 'post', appealPostId, appealReason);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '⚖️ Appeal submitted to the moderation queue.' }));
+      setAppealModalOpen(false);
+      setAppealReason('');
+    } catch (error) {
+      console.error('Moderation appeal submission failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Appeal could not be submitted.' }));
+    }
   };
 
   // Search, Filters & Optimization for Content Center
