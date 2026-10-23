@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward } from 'lucide-react';
 import VohIcon from './components/VohIcon';
@@ -53,28 +53,28 @@ import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
 import FeedView from './components/FeedView';
-import ProfileView from './components/ProfileView';
-import NotificationsView from './components/NotificationsView';
-import WorldPulseView from './components/WorldPulseView';
-import MatrixView from './components/MatrixView';
+const ProfileView = lazy(() => import('./components/ProfileView'));
+const NotificationsView = lazy(() => import('./components/NotificationsView'));
+const WorldPulseView = lazy(() => import('./components/WorldPulseView'));
+const MatrixView = lazy(() => import('./components/MatrixView'));
 import AuthView from './components/AuthView';
 import SlideDownMenu from './components/SlideDownMenu';
 import NexoraPremiumLogo from './components/NexoraPremiumLogo';
 import NexoraBranding from './components/NexoraBranding';
-import CreatorDashboardView from './components/CreatorDashboardView';
-import ActivityView from './components/ActivityView';
+const CreatorDashboardView = lazy(() => import('./components/CreatorDashboardView'));
+const ActivityView = lazy(() => import('./components/ActivityView'));
 import OnboardingTour from './components/OnboardingTour';
 import MediaCreationEngine from './components/MediaCreationEngine';
-import ExploreView from './components/ExploreView';
-import NewInboxView from './components/NewInboxView';
-import LiveView from './components/LiveView';
+const ExploreView = lazy(() => import('./components/ExploreView'));
+const NewInboxView = lazy(() => import('./components/NewInboxView'));
+const LiveView = lazy(() => import('./components/LiveView'));
 import SystemHubControlPanel from './components/SystemHubControlPanel';
-import NidaView from './components/NidaView';
-import CommunitiesHubView from './components/CommunitiesHubView';
-import SavedView from './components/SavedView';
+const NidaView = lazy(() => import('./components/NidaView'));
+const CommunitiesHubView = lazy(() => import('./components/CommunitiesHubView'));
+const SavedView = lazy(() => import('./components/SavedView'));
 import UniversalSearchModal from './components/UniversalSearchModal';
-import WalletView from './components/WalletView';
-import SettingsView from './components/SettingsView';
+const WalletView = lazy(() => import('./components/WalletView'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import OfflineBanner from './components/OfflineBanner';
 import { ProfileEngine } from './services/voh/profileEngine';
@@ -2126,8 +2126,9 @@ export default function App() {
                     <button className="rounded-xl bg-violet-600 px-4 py-2 text-sm font-semibold" onClick={() => { setAuthPromptReason('Sign in to access your private Nexora workspace.'); setShowAuthModal(true); }}>Sign in or create account</button>
                   </div>
                 ) : (
-                <AnimatePresence mode="wait">
-                  <motion.div
+                <Suspense fallback={<div className="flex min-h-[420px] items-center justify-center"><NexoraLoader size="lg" center /></div>}>
+                  <AnimatePresence mode="wait">
+                    <motion.div
                     key={activeTab}
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -2282,8 +2283,9 @@ export default function App() {
                       setTheme={setTheme}
                     />
                   )}
-                </motion.div>
-              </AnimatePresence>
+                    </motion.div>
+                  </AnimatePresence>
+                </Suspense>
                 )}
             </div>
             )}
