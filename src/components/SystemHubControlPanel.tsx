@@ -903,18 +903,32 @@ export default function SystemHubControlPanel({
                   isHighContrast ? 'border border-white bg-black' : 'bg-white/[0.02] border border-white/5'
                 } flex items-center justify-between gap-3`}>
                   <div className="space-y-0.5">
-                    <h4 className="text-[11px] font-sans font-black text-white uppercase">Download Personal Identity Archive</h4>
-                    <p className="text-[10px] text-zinc-500 font-sans">Backup and export all draft keys, bookmarks, and sparks in JSON.</p>
+                    <h4 className="text-[11px] font-sans font-black text-white uppercase">Download Device Data Export</h4>
+                    <p className="text-[10px] text-zinc-500 font-sans">Export an allowlisted snapshot of Nexora and VOH data stored on this device. Server data requires a separate account export.</p>
                   </div>
                   
                   <button
                     onClick={() => {
                       playHapticHum(220, 0.12);
-                      speakAnnouncement("Downloading data archive file.");
-                      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(localStorage.getItem('nexora_user') || '{}');
+                      speakAnnouncement("Downloading device data export.");
+                      const exportedAt = new Date().toISOString();
+                      const exportedData: Record<string, unknown> = { exportedAt, source: 'Nexora device storage' };
+                      Object.keys(localStorage)
+                        .filter(key => key.startsWith('nexora_') || key.startsWith('nx_') || key.startsWith('voh_'))
+                        .sort()
+                        .forEach(key => {
+                          const value = localStorage.getItem(key);
+                          if (value === null) return;
+                          try {
+                            exportedData[key] = JSON.parse(value);
+                          } catch {
+                            exportedData[key] = value;
+                          }
+                        });
+                      const dataStr = "data:application/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportedData, null, 2));
                       const dlAnchor = document.createElement('a');
                       dlAnchor.setAttribute("href", dataStr);
-                      dlAnchor.setAttribute("download", `nexora-profile-backup-${Date.now()}.json`);
+                      dlAnchor.setAttribute("download", `nexora-device-export-${Date.now()}.json`);
                       dlAnchor.click();
                     }}
                     className={`px-3 py-2 rounded-xl text-xs font-mono font-bold border transition-all cursor-pointer ${
