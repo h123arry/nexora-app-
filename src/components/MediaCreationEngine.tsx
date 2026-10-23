@@ -5,6 +5,7 @@ import VohIcon from './VohIcon';
 import { User } from '../types';
 import { saveMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 import { revokeObjectUrl, validateMediaFile } from '../utils/mediaValidation';
+import { uploadMediaFile } from '../services/firebase/storageService';
 import NexoraLoader from './NexoraLoader';
 
 interface MediaCreationEngineProps {
@@ -676,10 +677,24 @@ export default function MediaCreationEngine({
         try {
           const thumb = await generateVideoThumbnail(videoRawBlob);
           if (thumb) mainImg = thumb;
-          const uri = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
-          finalVid = uri;
+          if (!isOffline && currentUser.id) {
+            const uploaded = await uploadMediaFile({
+              file: videoRawBlob,
+              userId: currentUser.id,
+              fileName: `video-${Date.now()}.webm`,
+              onProgress: progress => setUploadProgress(Math.max(75, progress)),
+            });
+            finalVid = uploaded.downloadUrl;
+          } else {
+            finalVid = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
+          }
         } catch (e) {
-          console.error(e);
+          console.error('[MediaCreation] Remote video upload failed; keeping local fallback.', e);
+          try {
+            finalVid = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
+          } catch (fallbackError) {
+            console.error('[MediaCreation] Local video fallback failed.', fallbackError);
+          }
         }
       }
 

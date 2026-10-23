@@ -1,0 +1,31 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function validMedia() {
+      return request.resource.size > 0
+        && request.resource.size <= 262144000
+        && request.resource.contentType.matches('(image|video|audio)/.*');
+    }
+
+    match /users/{userId}/media/{mediaId} {
+      allow read: if signedIn();
+      allow create: if isOwner(userId) && validMedia()
+        && request.resource.metadata.ownerId == userId
+        && request.resource.metadata.mediaId == mediaId;
+      allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
