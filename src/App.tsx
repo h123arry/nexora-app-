@@ -1980,7 +1980,7 @@ export default function App() {
 
   // Render Core layout
   return (
-    <div id="nexora-master-wrapper" className={`${getThemeWrapperClass(theme)} transition-colors duration-500`}>
+    <div id="nexora-master-wrapper" className={`nx-app-shell ${getThemeWrapperClass(theme)} transition-colors duration-500`}>
       <OfflineBanner />
       {/* 🧭 Unified Navigation Menu Drawer Overlay */}
       <SlideDownMenu
@@ -1999,10 +1999,10 @@ export default function App() {
       <div className={activeTab === 'feed' ? "w-full h-screen md:h-[100dvh] relative overflow-hidden" : "w-full min-h-screen relative overflow-hidden"}>
         
         {/* Main application Grid */}
-        <div id="nexora-main-grid" className={activeTab === 'feed' ? "grid grid-cols-1 lg:grid-cols-12 h-full w-full relative overflow-hidden" : "grid grid-cols-1 lg:grid-cols-12 items-start"}>
+        <div id="nexora-main-grid" className={activeTab === 'feed' ? "grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_320px] h-full w-full relative overflow-hidden" : "grid grid-cols-1 lg:grid-cols-12 items-start"}>
           
           {/* Col 1: Left Navigation sidebar */}
-          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-3 h-full border-r border-zinc-800 bg-[#0A0A0A] overflow-y-auto" : "hidden lg:block lg:col-span-3"}>
+          <div className={activeTab === 'feed' ? "hidden lg:block h-full border-r border-white/10 overflow-y-auto nx-sidebar-shell" : "hidden lg:block lg:col-span-3"}>
             <Sidebar 
               currentUser={getRichUser(currentUser)}
               activeTab={activeTab}
@@ -2033,7 +2033,7 @@ export default function App() {
           </div>
 
           {/* Col 2 & 3: Main Immersive View Area */}
-          <div className={activeTab === 'feed' ? "col-span-1 lg:col-span-6 h-full w-full relative min-h-0" : "lg:col-span-9 min-h-0"}>
+          <div className={activeTab === 'feed' ? "col-span-1 h-full w-full relative min-h-0" : "lg:col-span-9 min-h-0"}>
             <motion.div 
               initial={false}
               animate={{ 
@@ -2242,7 +2242,7 @@ export default function App() {
           </div>
 
           {/* Col 4: Right Discovery sidebar */}
-          <div className={activeTab === 'feed' ? "hidden lg:block lg:col-span-3 h-full border-l border-white/5 bg-black/20 p-4 overflow-y-auto" : "hidden"}>
+          <div className={activeTab === 'feed' ? "hidden lg:block h-full border-l border-white/10 bg-[#060b1b]/55 overflow-y-auto" : "hidden"}>
             <RightSidebar
               creators={(Object.values(globalUsersMap) as User[]).filter(u => u.id !== currentUser.id)}
               followingIds={followingIds}
@@ -2403,7 +2403,7 @@ export default function App() {
       <nav
         id="nexora-unified-bottom-nav"
         aria-label="Primary mobile navigation"
-        className="fixed bottom-0 inset-x-0 lg:hidden nx-glass-strong border-t border-white/10 z-40 py-1.5 px-1 flex justify-between items-center shadow-[0_-4px_20px_rgba(0,0,0,0.45)]"
+        className="nx-mobile-dock fixed bottom-0 inset-x-0 lg:hidden nx-glass-strong border-t border-white/10 z-40 py-2 px-2 flex justify-between items-center shadow-[0_-14px_32px_rgba(0,0,0,0.42)]"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 0.375rem)' }}
       >
         <button

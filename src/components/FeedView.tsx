@@ -1648,7 +1648,7 @@ export default function FeedView({
   };
 
   return (
-    <div className="flex flex-col h-full w-full relative overflow-hidden bg-transparent min-h-0">
+    <div className="nx-feed-stage flex flex-col h-full w-full relative overflow-hidden min-h-0">
       
       {/* Floating Pill for Pending background posts */}
       <AnimatePresence>
@@ -1724,27 +1724,30 @@ export default function FeedView({
           }
         }}
         onTouchEnd={handlePullEnd}
-        className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative bg-[#04020a] touch-pan-y pb-24 lg:pb-6"
+        className="w-full h-full overflow-y-auto custom-scrollbar scroll-smooth relative touch-pan-y pb-24 lg:pb-6"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* STAGE 1 — HOME FEED NAVIGATION HEADER */}
-        <div className="sticky top-0 z-30 bg-[#04020a]/95 backdrop-blur-xl border-b border-white/10">
+        <div className="nx-feed-header sticky top-0 z-30 backdrop-blur-xl border-b border-white/10">
           {/* Brand row */}
-          <div className="flex items-center justify-between gap-3 px-3 sm:px-6 pt-3 pb-0.5">
-            <div className="flex items-baseline gap-2 min-w-0">
-              <span className="text-xl sm:text-2xl font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
-              <span className="hidden sm:inline text-[11px] text-zinc-400 font-medium truncate">Your world. Your people. Your growth.</span>
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-7 pt-4 pb-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <NexoraPremiumLogo className="h-8 w-8 sm:h-9 sm:w-9 nx-brand-mark" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2"><span className="text-xl font-extrabold tracking-[-0.04em] nx-gradient-text leading-none sm:text-2xl">NEXORA</span><span className="hidden rounded-full border border-violet-300/20 bg-violet-400/10 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.14em] text-violet-200 sm:inline">For you</span></div>
+                <span className="mt-1 block truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">Your world. Your people. Your growth.</span>
+              </div>
             </div>
-            <span className="sm:hidden text-[10px] font-mono text-zinc-500 truncate">Your world. Your people.</span>
+            <span className="hidden items-center gap-1.5 text-[10px] font-semibold text-emerald-300/80 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" /> Live network</span>
           </div>
           {/* Categories + utilities row */}
           <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2">
           {/* Left: Feed Categories (Exact Order: Posts, Following, Friends, Trending, Reels) */}
-          <div role="group" aria-label="Feed categories" className="flex flex-1 min-w-0 items-center gap-1 sm:gap-8 overflow-x-auto overscroll-x-contain scrollbar-none pr-0 sm:pr-2 py-1">
+          <div role="group" aria-label="Feed categories" className="flex flex-1 min-w-0 items-center gap-1 sm:gap-7 overflow-x-auto overscroll-x-contain scrollbar-none pr-0 sm:pr-2 py-1">
             {([
-              { id: 'posts', label: 'Posts' },
+              { id: 'posts', label: 'For You' },
               { id: 'following', label: 'Following' },
-              { id: 'friends', label: 'Friends' },
+              { id: 'friends', label: 'Communities' },
               { id: 'trending', label: 'Trending' },
               { id: 'reels', label: 'Reels' }
             ] as const).map(cat => {
@@ -1759,7 +1762,7 @@ export default function FeedView({
                   }}
                   aria-label={cat.label}
                   aria-pressed={isActive}
-                  className={`relative py-2.5 px-0 sm:px-1 text-xs sm:text-base font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
+                  className={`relative py-2.5 px-1 sm:px-1 text-xs sm:text-sm font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
                     isActive ? 'text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200 font-medium'
                   }`}
                 >
@@ -1860,7 +1863,7 @@ export default function FeedView({
         </div>
 
         {/* INLINE CREATE POST COMPOSER */}
-        <div className="px-4 sm:px-6 py-4 border-b border-white/10 bg-[#04020a] transition-all">
+        <div className="nx-composer px-4 sm:px-7 py-5 border-b border-white/10 transition-all">
           <div className="flex items-center gap-3">
             <img
               src={currentUser.avatar}
@@ -1871,13 +1874,13 @@ export default function FeedView({
             />
             <button
               onClick={() => setComposerOpen(true)}
-              className="flex-1 text-left py-2.5 px-4 rounded-xl nx-field text-zinc-400 hover:text-zinc-200 text-sm font-sans transition-all cursor-pointer flex items-center justify-between group"
+              className="flex-1 text-left py-3 px-5 rounded-2xl nx-field text-slate-400 hover:text-slate-200 text-sm font-sans transition-all cursor-pointer flex items-center justify-between group"
             >
               <span>What&apos;s on your mind, {(currentUser.name || 'there').split(' ')[0]}?</span>
               <Sparkles className="w-4 h-4 text-violet-400 group-hover:scale-110 transition-transform shrink-0 ml-2" />
             </button>
           </div>
-          <div className="flex items-center justify-between pt-3 mt-3 border-t border-white/5 text-xs text-zinc-400">
+          <div className="flex items-center justify-between pt-3 mt-4 border-t border-white/5 text-xs text-slate-400">
             <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
               <button
                 onClick={() => {

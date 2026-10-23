@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { Flame, TrendingUp, Users } from 'lucide-react';
+import React from 'react';
+import { Flame, TrendingUp, Users, ArrowUpRight, Radio, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { User, Post } from '../types';
+import { User } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 
 interface RightSidebarProps {
@@ -23,147 +23,55 @@ export default function RightSidebar({
   trendingTags,
   selectedTag,
   setSelectedTag,
-  systemSpeed,
-  onViewProfile,
-  currentUserUsername
+  onViewProfile
 }: RightSidebarProps) {
   return (
-    <div id="nexora-right-panel" className="flex flex-col h-full py-6 pl-4 border-l border-current/10 space-y-8 select-none">
-      
-      {/* Premium Spacious Brand Message */}
-      <div className="p-5 rounded-2xl nx-gradient-border text-center relative overflow-hidden">
-        <p className="text-[11px] font-sans font-medium text-purple-100/90 relative z-10 leading-relaxed">
-          ⚡ Shape what’s happening by exploring high-affinity creators and trending conversations.
-        </p>
-      </div>
-
-      {/* Trending Topics Module */}
-      <div id="trending-topics-widget" className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <Flame className="w-4 h-4 text-pink-500" />
-          <h2 className="nx-eyebrow">
-            Trending Sparks
-          </h2>
-        </div>
-
-        <div className="p-3 nx-surface rounded-2xl space-y-1">
-          {selectedTag && (
-            <button
-              onClick={() => setSelectedTag(null)}
-              className="w-full text-center py-1 text-xs font-mono text-violet-400 bg-violet-400/10 rounded-lg hover:bg-violet-400/20 transition-all mb-2 border border-violet-400/20"
-            >
-              Clear filter: #{selectedTag}
-            </button>
-          )}
-
-          {trendingTags.length === 0 ? (
-            <p className="text-[11px] font-sans text-current/50 p-2 text-center leading-relaxed">
-              No trending sparks yet. Post with #hashtags to start a trend!
-            </p>
-          ) : (
-            trendingTags.map(({ tag, count }) => {
-              const isSelected = selectedTag === tag;
-              return (
-                <button
-                  key={tag}
-                  onClick={() => setSelectedTag(isSelected ? null : tag)}
-                  className={`flex items-center justify-between w-full p-2.5 rounded-xl text-left transition-all ${
-                    isSelected 
-                      ? 'bg-violet-500/20 border border-white/10 text-violet-400' 
-                      : 'hover:bg-current/5 text-current/80 hover:text-current'
-                  }`}
-                >
-                  <div className="overflow-hidden pr-3">
-                    <p className="text-xs font-bold font-sans truncate">
-                      #{tag}
-                    </p>
-                    <p className="text-[10px] font-sans text-current/50 leading-none mt-0.5">
-                      {count} posts
-                    </p>
-                  </div>
-                  <TrendingUp className="w-3.5 h-3.5 text-current/40 group-hover:text-current shrink-0" />
-                </button>
-              );
-            })
-          )}
+    <aside id="nexora-right-panel" className="flex h-full flex-col gap-5 overflow-y-auto py-6 pl-4 pr-5 custom-scrollbar">
+      <div className="relative overflow-hidden rounded-3xl border border-violet-300/15 bg-gradient-to-br from-violet-500/18 via-[#111c3b] to-cyan-400/8 p-5 shadow-[0_18px_40px_rgba(1,4,13,0.24)]">
+        <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-fuchsia-400/20 blur-2xl" />
+        <div className="relative">
+          <div className="mb-4 flex items-center justify-between"><span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-violet-200"><Sparkles className="h-3.5 w-3.5" /> Nexora pulse</span><ArrowUpRight className="h-4 w-4 text-violet-200/70" /></div>
+          <p className="max-w-[220px] text-sm font-semibold leading-relaxed text-white">The best conversations are waiting for your perspective.</p>
+          <p className="mt-2 text-[11px] leading-relaxed text-slate-300/75">Follow the people and ideas that make your world feel bigger.</p>
         </div>
       </div>
 
-      {/* Recommended Creators to Follow */}
-      <div id="creators-to-follow-widget" className="space-y-3">
-        <div className="flex items-center gap-2 px-1">
-          <Users className="w-4 h-4 text-cyan-400" />
-          <h2 className="nx-eyebrow">
-            Peer Discovery
-          </h2>
-        </div>
-
-        <div className="p-3 nx-surface rounded-2xl space-y-3">
-          {creators.length === 0 ? (
-            <p className="text-[11px] font-sans text-current/50 p-2 text-center leading-relaxed">
-              No other creators registered yet.
-            </p>
-          ) : (
-            creators.map((creator) => {
-              if (!creator) return null;
-              const isFollowing = followingIds.includes(creator.id);
+      <section className="space-y-3" aria-labelledby="trending-heading">
+        <div className="flex items-center justify-between px-1"><div className="flex items-center gap-2"><Flame className="h-4 w-4 text-fuchsia-300" /><h2 id="trending-heading" className="text-sm font-bold text-white">Trending now</h2></div><button onClick={() => setSelectedTag(null)} className="text-[10px] font-semibold text-violet-300 hover:text-white">See all</button></div>
+        <div className="nx-discovery-card rounded-3xl p-3">
+          {selectedTag && <button onClick={() => setSelectedTag(null)} className="mb-2 w-full rounded-xl border border-violet-400/20 bg-violet-500/10 py-2 text-[10px] font-semibold text-violet-200">Clear #{selectedTag}</button>}
+          {trendingTags.length === 0 ? <p className="p-3 text-center text-xs leading-relaxed text-slate-500">No trends yet. Start a conversation with a hashtag.</p> : trendingTags.map(({ tag, count }, index) => {
+            const active = selectedTag === tag;
             return (
-              <div key={creator.id} className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  <img 
-                    src={creator.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'} 
-                    alt={creator.name} 
-                    referrerPolicy="no-referrer"
-                    onClick={() => onViewProfile?.(creator.id)}
-                    className="w-9 h-9 rounded-full object-cover cursor-pointer hover:opacity-85 transition-opacity ring-2 ring-violet-500/30" 
-                  />
-                  <div className="overflow-hidden">
-                    <p 
-                      onClick={() => onViewProfile?.(creator.id)}
-                      className="text-xs font-bold leading-tight text-current hover:text-violet-400 cursor-pointer transition-colors truncate flex items-center gap-1"
-                    >
-                      <span>{creator.name}</span>
-                      {(creator.username === 'voh' || creator.isVerified) && <PurpleVerifiedBadge className="w-3.5 h-3.5" />}
-                    </p>
-                    <p 
-                      onClick={() => onViewProfile?.(creator.id)}
-                      className="text-[10px] font-mono text-current/50 cursor-pointer hover:text-violet-400 transition-colors leading-tight truncate flex items-center gap-1"
-                    >
-                      <span>@{creator.username}</span>
-                      {(creator.username === 'voh' || creator.isVerified) && <PurpleVerifiedBadge className="w-2.5 h-2.5" />}
-                    </p>
-                  </div>
-                </div>
+              <button key={tag} onClick={() => setSelectedTag(active ? null : tag)} className={`group flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all ${active ? 'bg-violet-500/15 ring-1 ring-violet-400/25' : 'hover:bg-white/[0.04]'}`}>
+                <span className={`flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-bold ${index === 0 ? 'bg-fuchsia-500/20 text-fuchsia-200' : 'bg-white/[0.06] text-slate-400'}`}>{String(index + 1).padStart(2, '0')}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-slate-100">#{tag}</span><span className="mt-0.5 block text-[10px] text-slate-500">{count.toLocaleString()} conversations</span></span>
+                <TrendingUp className="h-3.5 w-3.5 text-slate-500 transition-colors group-hover:text-violet-300" />
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-                <motion.button
-                  whileTap={{ scale: 0.9 }}
-                  onClick={() => onToggleFollow(creator.id)}
-                  className={`text-[10px] font-mono font-bold px-2.5 py-1.5 rounded-lg border transition-all duration-300 overflow-hidden relative ${
-                    isFollowing
-                      ? 'bg-current/10 border-current/20 text-current/60 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-400/30'
-                      : 'bg-violet-600 border-transparent text-white hover:brightness-110 shadow-md shadow-violet-500/20'
-                  }`}
-                >
-                  <AnimatePresence mode="wait">
-                    <motion.span
-                      key={isFollowing ? 'following' : 'follow'}
-                      initial={{ opacity: 0, y: -5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 5 }}
-                      transition={{ duration: 0.15 }}
-                      className="block"
-                    >
-                      {isFollowing ? 'FOLLOWING' : 'FOLLOW'}
-                    </motion.span>
-                  </AnimatePresence>
-                </motion.button>
+      <section className="space-y-3" aria-labelledby="people-heading">
+        <div className="flex items-center justify-between px-1"><div className="flex items-center gap-2"><Users className="h-4 w-4 text-sky-300" /><h2 id="people-heading" className="text-sm font-bold text-white">People to follow</h2></div><span className="text-[10px] text-slate-500">Curated for you</span></div>
+        <div className="nx-discovery-card rounded-3xl p-3">
+          {creators.length === 0 ? <p className="p-3 text-center text-xs text-slate-500">No new creators yet.</p> : creators.slice(0, 4).map(creator => {
+            if (!creator) return null;
+            const following = followingIds.includes(creator.id);
+            return (
+              <div key={creator.id} className="flex items-center gap-3 rounded-2xl p-2.5 transition-colors hover:bg-white/[0.04]">
+                <img src={creator.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'} alt={creator.name} referrerPolicy="no-referrer" onClick={() => onViewProfile?.(creator.id)} className="h-10 w-10 shrink-0 cursor-pointer rounded-2xl object-cover ring-2 ring-violet-400/20" />
+                <div className="min-w-0 flex-1"><p onClick={() => onViewProfile?.(creator.id)} className="flex cursor-pointer items-center gap-1 truncate text-xs font-bold text-white hover:text-violet-200"><span className="truncate">{creator.name}</span>{(creator.username === 'voh' || creator.isVerified) && <PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0" />}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">@{creator.username}</p></div>
+                <motion.button whileTap={{ scale: 0.92 }} onClick={() => onToggleFollow(creator.id)} className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-bold transition-all ${following ? 'border border-white/10 bg-white/[0.06] text-slate-400' : 'bg-violet-500 text-white shadow-[0_6px_16px_rgba(139,92,246,0.28)] hover:bg-violet-400'}`}><AnimatePresence mode="wait"><motion.span key={following ? 'following' : 'follow'} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 3 }}>{following ? 'Following' : 'Follow'}</motion.span></AnimatePresence></motion.button>
               </div>
             );
-          })
-          )}
+          })}
+          <button className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/10 py-2.5 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/10"><Radio className="h-3.5 w-3.5" /> Explore more creators</button>
         </div>
-      </div>
+      </section>
 
-    </div>
+      <div className="mt-auto px-1 pb-2 text-[10px] leading-relaxed text-slate-600">Nexora is a living network for meaningful connections. Be curious, be kind.</div>
+    </aside>
   );
 }
