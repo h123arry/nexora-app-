@@ -92,25 +92,43 @@ export class ChatEngine {
     const localCircles = JSON.parse(localStorage.getItem('nexora_db_joined_circles') || '[]');
     const localNotifications = JSON.parse(localStorage.getItem('nexora_notifications') || '[]');
 
-    const response = await fetch('/api/voh-ai/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message,
-        history,
-        context: {
-          currentUser,
-          posts: localPosts.slice(0, 10),
-          circles: localCircles,
-          notifications: localNotifications
-        }
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Server error');
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 45_000);
+    let response: Response;
+    try {
+      response = await fetch('/api/voh-ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({
+          message: message.slice(0, 4000),
+          history: history.slice(-24).map(item => ({ sender: item.sender, text: item.text.slice(0, 4000) })),
+          context: {
+            currentUser,
+            posts: localPosts.slice(0, 10),
+            circles: localCircles.slice(0, 12),
+            notifications: localNotifications.slice(0, 5)
+          }
+        })
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('VOH AI took too long to respond. Please try again.');
+      }
+      throw new Error('VOH AI is temporarily unavailable. Please check your connection and try again.');
+    } finally {
+      window.clearTimeout(timeout);
     }
 
-    return response.json();
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      throw new Error(typeof payload.error === 'string' ? payload.error : 'VOH AI could not complete that request.');
+    }
+
+    const payload = await response.json();
+    if (!payload || typeof payload.text !== 'string') {
+      throw new Error('VOH AI returned an invalid response. Please try again.');
+    }
+    return { text: payload.text, isDemo: payload.isDemo === true };
   }
 }

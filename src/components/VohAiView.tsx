@@ -493,10 +493,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
     } catch (err) {
       console.error(err);
+      const errorText = err instanceof Error ? err.message : 'Please try again in a moment.';
       const failedMessage: Message = {
         id: aiMsgId,
         sender: 'voh',
-        text: "❌ **Response Error**: We couldn't connect to VOH AI. Please try again in a moment.",
+        text: `❌ **Response Error**: ${errorText}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         isFailed: true
       };
