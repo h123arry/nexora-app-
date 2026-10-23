@@ -1,4 +1,7 @@
 export interface UserMemoryProfile {
+  /** Persistent VOH memory is disabled until the user explicitly opts in. */
+  memoryEnabled: boolean;
+  consentVersion?: string;
   preferences: {
     theme: string;
     aiTone: 'futuristic' | 'concise' | 'educational' | 'humorous';
@@ -33,25 +36,39 @@ export class MemoryEngine {
     const data = localStorage.getItem(key);
     if (!data) {
       const defaultMemory: UserMemoryProfile = {
+        memoryEnabled: false,
+        consentVersion: undefined,
         preferences: {
           theme: 'dark',
           aiTone: 'futuristic',
           voiceAutoPlay: false
         },
-        creatorGoals: ['Build open creator networks', 'Scale micro-payments in Port Harcourt', 'Design high contrast UI components'],
-        writingStyle: 'Professional with space-glass branding and technical Mono accents',
-        interests: ['AI', 'UI/UX Design', 'Systems Engineering', 'Football', 'Lagos Startups'],
-        recentHashtags: ['SpaceGlass', 'BuildInPublic', 'AIEngines', 'FutureHuman'],
-        savedPrompts: [
-          { id: '1', name: 'Summarize Daily Pulse', content: 'Scan recent posts and give me a high-intensity pulse analysis with key hashtags.' },
-          { id: '2', name: 'Optimize Creator Bio', content: 'Rewrite my bio to focus on high-reputation community building and product design.' },
-          { id: '3', name: 'Generate Thread Ideas', content: 'Create a highly scannable thread of 5 steps to build an app in Port Harcourt.' }
-        ]
+        creatorGoals: [],
+        writingStyle: '',
+        interests: [],
+        recentHashtags: [],
+        savedPrompts: []
       };
       localStorage.setItem(key, JSON.stringify(defaultMemory));
       return defaultMemory;
     }
-    return JSON.parse(data);
+    const parsed = JSON.parse(data) as Partial<UserMemoryProfile>;
+    const optedIn = parsed.memoryEnabled === true;
+    return {
+      ...parsed,
+      memoryEnabled: optedIn,
+      preferences: {
+        theme: 'dark',
+        aiTone: 'futuristic',
+        voiceAutoPlay: false,
+        ...(parsed.preferences || {})
+      },
+      creatorGoals: optedIn && Array.isArray(parsed.creatorGoals) ? parsed.creatorGoals : [],
+      writingStyle: optedIn && typeof parsed.writingStyle === 'string' ? parsed.writingStyle : '',
+      interests: optedIn && Array.isArray(parsed.interests) ? parsed.interests : [],
+      recentHashtags: optedIn && Array.isArray(parsed.recentHashtags) ? parsed.recentHashtags : [],
+      savedPrompts: optedIn && Array.isArray(parsed.savedPrompts) ? parsed.savedPrompts : []
+    } as UserMemoryProfile;
   }
 
   static saveMemory(memory: UserMemoryProfile): void {
@@ -60,9 +77,25 @@ export class MemoryEngine {
     localStorage.setItem(key, JSON.stringify(memory));
   }
 
-  // Future persistence abstraction layer hook
-  static async syncWithCloud(userId: string, memory: UserMemoryProfile): Promise<boolean> {
-    // Simulated cloud sync success
-    return true;
+  static setConsent(enabled: boolean): UserMemoryProfile {
+    const memory = this.getMemory();
+    const next = {
+      ...memory,
+      memoryEnabled: enabled,
+      consentVersion: enabled ? '2026-10' : undefined
+    };
+    this.saveMemory(next);
+    return next;
+  }
+
+  static clearMemory(): UserMemoryProfile {
+    const userId = this.getActiveUserId();
+    localStorage.removeItem(`${STORAGE_KEYS.MEMORY}_${userId}`);
+    return this.getMemory();
+  }
+
+  /** Cloud persistence is intentionally unavailable until a real authorized backend is connected. */
+  static async syncWithCloud(): Promise<boolean> {
+    return false;
   }
 }

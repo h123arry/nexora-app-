@@ -1978,7 +1978,25 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
                 {/* Memory Profile Edit */}
                 <div className="bg-white/2 border border-white/5 p-4 rounded-2xl space-y-4">
-                  <span className="text-[9.5px] font-black text-cyan-400 uppercase block">AI Tone Preference</span>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="text-[9.5px] font-black text-cyan-400 uppercase block">VOH Memory & Tone</span>
+                      <p className="text-[10px] text-current/50 leading-relaxed mt-1">
+                        Memory is stored only in this browser and is not sent to VOH unless you explicitly attach it to a request. It starts disabled.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      aria-pressed={memoryProfile.memoryEnabled}
+                      onClick={() => {
+                        setMemoryProfile(MemoryEngine.setConsent(!memoryProfile.memoryEnabled));
+                        showToast(!memoryProfile.memoryEnabled ? 'VOH memory enabled on this device.' : 'VOH memory disabled.');
+                      }}
+                      className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-mono font-bold border transition-all ${memoryProfile.memoryEnabled ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/10 text-zinc-400'}`}
+                    >
+                      {memoryProfile.memoryEnabled ? 'ENABLED' : 'DISABLED'}
+                    </button>
+                  </div>
                   
                   <div className="space-y-3">
                     <div className="flex gap-1.5 flex-wrap">
@@ -2006,6 +2024,16 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <p className="text-[10.5px] text-current/50 leading-relaxed mt-2">
                       VOH AI utilizes this preference as an active system modifier to custom align its generated layouts.
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMemoryProfile(MemoryEngine.clearMemory());
+                        showToast('VOH memory cleared from this device.');
+                      }}
+                      className="text-[10px] font-mono uppercase text-rose-300 hover:text-rose-200 border border-rose-400/20 hover:border-rose-400/40 rounded-lg px-3 py-1.5 transition-all"
+                    >
+                      Clear local VOH memory
+                    </button>
                   </div>
                 </div>
               </div>
