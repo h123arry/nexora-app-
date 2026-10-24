@@ -915,9 +915,9 @@ export default function NexoraVideoPlayer({
 
              {/* 3. RIGHT-SIDE ACTION RAIL */}
              <div 
-               className="absolute z-20 flex flex-col items-center gap-5 sm:gap-6"
+               className="nx-video-action-rail absolute z-20 flex flex-col items-center gap-5 sm:gap-6"
                style={{
-                 bottom: "calc(env(safe-area-inset-bottom, 0px) + 70px)",
+                 bottom: "calc(env(safe-area-inset-bottom, 0px) + 42px)",
                  right: 'calc(env(safe-area-inset-right, 0px) + 14px)'
                }}
              >
