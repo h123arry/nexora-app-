@@ -452,6 +452,9 @@ export default function MessagesView({
     const presenceTargets = initialChats.map(chat => ({ chatId: chat.id, userId: chat.partnerId }));
     const presenceChatIds = initialChats.map(chat => chat.id);
     updateOnlinePresence(currentUser.id, true, presenceChatIds);
+    const heartbeat = window.setInterval(() => {
+      updateOnlinePresence(currentUser.id, true, presenceChatIds);
+    }, 30_000);
     
     const unsubPresence = subscribeToOnlinePresence(presenceTargets, (presenceMap) => {
       setChatsList(prev => 
@@ -471,6 +474,7 @@ export default function MessagesView({
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
+      window.clearInterval(heartbeat);
       updateOnlinePresence(currentUser.id, false, presenceChatIds);
       unsubPresence();
       window.removeEventListener('beforeunload', handleBeforeUnload);
