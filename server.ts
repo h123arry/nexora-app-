@@ -42,13 +42,20 @@ app.get('/healthz', (_req, res) => {
   res.status(200).json({ status: 'ok', service: 'nexora-api', version: process.env.RELEASE_VERSION || 'local' });
 });
 
-app.get('/readyz', (_req, res) => {
-  const ready = getApps().length > 0 && Boolean(firebaseProjectId && firestoreDatabaseId);
-  res.status(ready ? 200 : 503).json({
-    status: ready ? 'ready' : 'not_ready',
-    firebase: ready ? 'configured' : 'missing_configuration',
-    database: firestoreDatabaseId,
-  });
+app.get('/readyz', async (_req, res) => {
+  if (!getApps().length || !firebaseProjectId || !firestoreDatabaseId) {
+    return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'missing_configuration' } });
+  }
+  try {
+    const probe = serverDb.listCollections();
+    await Promise.race([
+      probe,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('readiness timeout')), 2_000)),
+    ]);
+    return res.status(200).json({ status: 'ready', dependencies: { firebase: 'available', firestore: 'available' } });
+  } catch {
+    return res.status(503).json({ status: 'not_ready', dependencies: { firebase: 'unavailable' } });
+  }
 });
 
 const VOH_MAX_MESSAGE_LENGTH = 4000;
