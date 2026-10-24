@@ -24,6 +24,22 @@ service firebase.storage {
       allow delete: if isOwner(userId);
     }
 
+    // Chat audio is readable only by participants in the corresponding Firestore chat.
+    function chatMember(chatId) {
+      return signedIn()
+        && firestore.exists(/databases/(default)/documents/chats/$(chatId))
+        && request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participants;
+    }
+    match /chats/{chatId}/audio/{userId}/{mediaId} {
+      allow read: if chatMember(chatId);
+      allow create: if isOwner(userId) && chatMember(chatId) && validMedia()
+        && request.resource.metadata.ownerId == userId
+        && request.resource.metadata.mediaId == mediaId
+        && request.resource.metadata.chatId == chatId;
+      allow update: if false;
+      allow delete: if isOwner(userId) && chatMember(chatId);
+    }
+
     match /{allPaths=**} {
       allow read, write: if false;
     }

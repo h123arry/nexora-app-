@@ -1,13 +1,13 @@
 import { db } from '../firebase/config';
 import { handleFirestoreError, OperationType } from '../firebase/errors';
 import { auth } from '../firebase/config';
-import { 
-  doc, 
+import {
+  doc,
   setDoc,
-  collection, orderBy, limit, 
+  collection, orderBy, limit, where,
   startAfter,
-  getDocs, 
-  query, 
+  getDocs,
+  query,
   onSnapshot,
   QueryDocumentSnapshot,
   DocumentData
@@ -33,6 +33,10 @@ function normalizePosts(snapshot: { docs: Array<{ id: string; data: () => Docume
 
 export async function savePostToDbDirect(post: any) {
   const sanitizedPost = JSON.parse(JSON.stringify(post));
+  if (sanitizedPost.audience && sanitizedPost.audience !== 'public') {
+    throw new Error('Only public posts can be published until secure private-audience access is implemented.');
+  }
+  sanitizedPost.audience = 'public';
   cacheManager.setPost(post.id, sanitizedPost);
   try {
     return await setDoc(doc(db, path, post.id), sanitizedPost);
@@ -43,7 +47,7 @@ export async function savePostToDbDirect(post: any) {
 
 export async function getGlobalPosts() {
   try {
-    const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(DEFAULT_FEED_PAGE_SIZE));
+    const q = query(collection(db, path), where('audience', '==', 'public'), orderBy('timestamp', 'desc'), limit(DEFAULT_FEED_PAGE_SIZE));
     const snapshot = await getDocs(q);
     return normalizePosts(snapshot);
   } catch (error) {
@@ -67,9 +71,9 @@ export async function getGlobalPostsPage(
 ): Promise<FeedPage> {
   const safePageSize = Math.min(Math.max(1, Math.floor(pageSize)), MAX_FEED_PAGE_SIZE);
   try {
-    const constraints = [orderBy('timestamp', 'desc'), limit(safePageSize)];
+    const constraints = [where('audience', '==', 'public'), orderBy('timestamp', 'desc'), limit(safePageSize)];
     const q = cursor
-      ? query(collection(db, path), orderBy('timestamp', 'desc'), startAfter(cursor), limit(safePageSize))
+      ? query(collection(db, path), where('audience', '==', 'public'), orderBy('timestamp', 'desc'), startAfter(cursor), limit(safePageSize))
       : query(collection(db, path), ...constraints);
     const snapshot = await getDocs(q);
     return {
@@ -84,7 +88,7 @@ export async function getGlobalPostsPage(
 }
 
 export function subscribeToPosts(callback: (posts: Post[], page?: FeedPage) => void) {
-  const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(DEFAULT_FEED_PAGE_SIZE));
+  const q = query(collection(db, path), where('audience', '==', 'public'), orderBy('timestamp', 'desc'), limit(DEFAULT_FEED_PAGE_SIZE));
   return onSnapshot(q, (snapshot) => {
     const posts = normalizePosts(snapshot);
     callback(posts, {

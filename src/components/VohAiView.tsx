@@ -434,17 +434,20 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
     try {
       // Map helper formats
-      const mappedHistory = currentHistory.map(m => ({ sender: m.sender, text: m.text }));
+      const historyForModel = currentHistory.slice();
+      const latest = historyForModel[historyForModel.length - 1];
+      // The server receives the current prompt separately; exclude the optimistic user turn from prior history.
+      if (latest?.sender === 'user' && latest.text === message) historyForModel.pop();
+      const mappedHistory = historyForModel.map(m => ({ sender: m.sender, text: m.text }));
       
       // Smart dynamic context inject based on attachedContextType
       let contextualMessage = message;
       if (attachedContextType === 'feed') {
-        const feedCount = posts ? posts.length : 15;
-        contextualMessage = `[SYSTEM CONTEXT: The user is currently reading their Home Feed. There are ${feedCount} active posts in their timeline. The regional trend node is Rivers State/Port Harcourt, Niger Delta, Nigeria. Top hashtags: #SpaceGlass, #SystemsDesign.]\n\nUser query: ${message}`;
+        contextualMessage = `[SYSTEM CONTEXT: The user has attached their feed for context. Use only the recent post data included in the request; do not assume additional activity or regional trends.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'profile') {
         contextualMessage = `[SYSTEM CONTEXT: The user is checking their Creator Profile dashboard. Username: @${currentUser.username}, Display: ${currentUser.name}, Reputation Points: ${currentUser.reputationPoints} PR, Wallet: ${currentUser.nexBalance || 0} NEX, Earned This Week: ${currentUser.thisWeekEarnedNex || 0} NEX, Bio: ${currentUser.bio || 'Co-building Nexora network'}.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
-        contextualMessage = `[SYSTEM CONTEXT: The user is browsing their Direct Messages and Community Alerts. Security sync: Encrypted tunnel is ACTIVE. Active communities joined: 4 spaces.]\n\nUser query: ${message}`;
+        contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
 
       const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser);

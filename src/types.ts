@@ -226,6 +226,7 @@ export interface Message {
 
 export interface ExtendedMessage extends Message {
   voiceDuration?: string;
+  voiceAudioUrl?: string;
   isVoicePlaying?: boolean;
   videoUrl?: string;
   fileName?: string;

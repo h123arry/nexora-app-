@@ -197,6 +197,11 @@ button { -webkit-tap-highlight-color: transparent; }
   box-shadow: 0 14px 32px rgba(4, 1, 18, 0.22);
 }
 
+/* Keep desktop-only icon utilities out of the narrow feed toolbar. */
+@media (max-width: 639px) {
+  .nx-icon-button.hidden { display: none; }
+}
+
 .nx-composer {
   background: var(--nx-surface);
   border-color: var(--nx-edge) !important;

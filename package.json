@@ -10,8 +10,9 @@
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
     "functions:build": "npm --prefix functions run build",
-    "test:unit": "tsx --test tests/feed-pagination.test.ts tests/voh-memory.test.ts tests/discovery.test.ts",
-    "test:rules": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-rules \"node --test tests/firestore.rules.test.js\""
+    "test:unit": "tsx --test tests/feed-pagination.test.ts tests/voh-memory.test.ts tests/discovery.test.ts tests/media-storage-path.test.ts",
+    "test:rules": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-rules \"node --test tests/firestore.rules.test.js\"",
+    "test:storage": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore,storage --project demo-nexora-storage-rules \"node --test tests/storage.rules.test.js\""
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
@@ -38,5 +39,8 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "^1.13.6"
   }
 }

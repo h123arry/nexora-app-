@@ -249,6 +249,10 @@ async function saveUserToDbDirect(user: any) {
 async function savePostToDbDirect(post: any) {
   const path = 'posts';
   const sanitizedPost = JSON.parse(JSON.stringify(post));
+  if (sanitizedPost.audience && sanitizedPost.audience !== 'public') {
+    throw new Error('Only public posts can be published until secure private-audience access is implemented.');
+  }
+  sanitizedPost.audience = 'public';
   cacheManager.setPost(post.id, sanitizedPost);
   try {
     const { setDoc } = await import('firebase/firestore');
@@ -514,7 +518,7 @@ export async function getActivities(userId: string) {
 export async function getGlobalPosts() {
   const path = 'posts';
   try {
-    const q = query(collection(db, path), orderBy('timestamp', 'desc'), limit(150));
+    const q = query(collection(db, path), where('audience', '==', 'public'), orderBy('timestamp', 'desc'), limit(150));
     const snapshot = await getDocs(q);
     const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
     posts.forEach(p => cacheManager.setPost(p.id, p));

@@ -111,7 +111,7 @@ export default function MediaCreationEngine({
   // Form Fields
   const [caption, setCaption] = useState(() => initialAutosave?.caption || '');
   const [topics, setTopics] = useState(() => initialAutosave?.topics || '');
-  const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>(() => initialAutosave?.audience || 'public');
+  const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>(() => 'public');
   const [location, setLocation] = useState(() => initialAutosave?.location || '');
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [taggedUsernames, setTaggedUsernames] = useState(() => initialAutosave?.taggedUsernames || '');
@@ -603,7 +603,7 @@ export default function MediaCreationEngine({
   const handleSelectDraft = (draft: DraftItem) => {
     setCaption(draft.caption);
     setTopics(draft.topics);
-    setAudience(draft.audience);
+    setAudience('public');
     setActiveMode(draft.type as any);
     if (draft.images) {
       setSelectedImages(draft.images.map(img => ({ url: img, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } })));
@@ -1691,18 +1691,9 @@ export default function MediaCreationEngine({
 
                       {/* Custom options row */}
                       <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-zinc-900 rounded-2xl text-left">
-                        <div className="flex justify-between items-center text-xs text-zinc-300">
-                          <span className="font-bold">Audience Targets</span>
-                          <select 
-                            value={audience} 
-                            onChange={(e) => setAudience(e.target.value as any)}
-                            className="bg-zinc-900 border border-zinc-800 rounded-lg p-1.5 text-xs text-violet-400 cursor-pointer"
-                          >
-                            <option value="public">🌍 Public</option>
-                            <option value="circle">🔵 Close Friends</option>
-                            <option value="community">🏟️ My Community Circle</option>
-                            <option value="onlyme">🔒 Only Me</option>
-                          </select>
+                        <div className="flex flex-col gap-1.5 text-left">
+                          <span className="text-xs font-bold text-zinc-200">Audience: Public</span>
+                          <p className="text-[11px] leading-relaxed text-[var(--nx-muted)]">Private, follower-only, and community-only post permissions are not yet enforced by the backend. Publishing is limited to public posts so a restricted post is never accidentally exposed.</p>
                         </div>
                       </div>
 

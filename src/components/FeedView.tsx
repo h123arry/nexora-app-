@@ -1741,7 +1741,7 @@ export default function FeedView({
                 <span className="mt-1 block truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">The World&apos;s Living Social Network</span>
               </div>
             </div>
-            <span className="hidden items-center gap-1.5 text-[10px] font-semibold text-emerald-300/80 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" /> Live network</span>
+            <span className="hidden items-center gap-1.5 text-[10px] font-semibold text-emerald-300/80 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />{currentUser.id === 'guest_visitor_id' || currentUser.username === 'visitor' ? 'Preview feed' : 'Live network'}</span>
           </div>
           {/* Categories + utilities row */}
           <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2">
@@ -1765,7 +1765,7 @@ export default function FeedView({
                   }}
                   aria-label={cat.label}
                   aria-pressed={isActive}
-                  className={`relative py-2.5 px-1 sm:px-1 text-xs sm:text-sm font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
+                  className={`relative py-2.5 px-0.5 sm:px-1 text-xs sm:text-sm font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
                     isActive ? 'text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200 font-medium'
                   }`}
                 >
@@ -1826,7 +1826,7 @@ export default function FeedView({
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('openUniversalSearch'));
               }}
-              className="inline-flex nx-icon-button"
+              className="hidden sm:inline-flex nx-icon-button"
               title="Search"
               aria-label="Search Nexora"
             >

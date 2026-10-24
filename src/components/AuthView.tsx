@@ -942,31 +942,28 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                 </p>
               </div>
 
-              {/* Identifier Input (Intelligent Detection) */}
+              {/* Email/password login; phone OTP is a separate authentication flow. */}
               <div className="space-y-1.5">
                 <div className="flex justify-between items-center">
-                  <label className="text-xs font-bold text-zinc-300">Email, Username, or Phone</label>
-                  <span className="text-[10px] font-mono text-violet-400 uppercase font-bold flex items-center gap-1">
-                    {detectedType === 'email' && <><Mail className="w-3 h-3" /> Email</>}
-                    {detectedType === 'phone' && <><Smartphone className="w-3 h-3" /> Phone</>}
-                    {detectedType === 'username' && <><UserIcon className="w-3 h-3" /> Username</>}
-                  </span>
+                  <label htmlFor="login-email" className="text-xs font-bold text-zinc-300">Email address</label>
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold flex items-center gap-1"><Mail className="w-3 h-3" />Email + password</span>
                 </div>
                 <div className="relative flex items-center">
                   <input
-                    type="text"
+                    id="login-email"
+                    type="email"
                     value={identifierInput}
                     onChange={(e) => setIdentifierInput(e.target.value)}
-                    placeholder="e.g. name@example.com, @username, or +1..."
+                    placeholder="name@example.com"
                     required
+                    autoComplete="username"
                     className="w-full px-4 py-3.5 bg-black/40 border border-white/10 rounded-2xl text-sm font-medium text-white placeholder-zinc-600 focus:outline-none focus:border-violet-500 transition-all"
                   />
                   <div className="absolute right-3.5 text-zinc-500">
-                    {detectedType === 'email' && <Mail className="w-4 h-4 text-violet-400" />}
-                    {detectedType === 'phone' && <Smartphone className="w-4 h-4 text-violet-400" />}
-                    {detectedType === 'username' && <UserIcon className="w-4 h-4 text-violet-400" />}
+                    <Mail className="w-4 h-4 text-[var(--nx-muted)]" aria-hidden="true" />
                   </div>
                 </div>
+                <p className="text-[11px] text-[var(--nx-muted)]">Phone sign-in uses the separate verification-code option.</p>
               </div>
 
               {/* Password Input */}

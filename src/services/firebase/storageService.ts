@@ -6,11 +6,13 @@ import {
   type UploadMetadata,
 } from 'firebase/storage';
 import { storage } from './config';
+import { mediaStoragePath } from './storagePaths';
 
 export interface MediaUploadOptions {
   file: File | Blob;
   userId: string;
   mediaId?: string;
+  chatId?: string;
   fileName?: string;
   metadata?: Record<string, string>;
   onProgress?: (progress: number) => void;
@@ -33,16 +35,20 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
   if (!userId) return Promise.reject(new Error('A signed-in user is required to upload media.'));
   if (!file || file.size <= 0) return Promise.reject(new Error('The selected file is empty.'));
 
-  const mediaId = options.mediaId || crypto.randomUUID();
+  const mediaId = safeFileName(options.mediaId || crypto.randomUUID());
+  const chatId = options.chatId ? safeFileName(options.chatId) : undefined;
   const name = safeFileName(options.fileName || (file instanceof File ? file.name : 'upload'));
-  const storagePath = `users/${userId}/media/${mediaId}-${name}`;
+  // Storage rules bind customMetadata.mediaId to this exact path segment.
+  const storagePath = mediaStoragePath(userId, mediaId, chatId);
   const contentType = file.type || 'application/octet-stream';
   const uploadMetadata: UploadMetadata = {
     contentType,
     customMetadata: {
+      ...options.metadata,
       ownerId: userId,
       mediaId,
-      ...options.metadata,
+      fileName: name,
+      ...(chatId ? { chatId } : {}),
     },
   };
   const task = uploadBytesResumable(ref(storage, storagePath), file, uploadMetadata);

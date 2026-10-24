@@ -185,7 +185,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               )}
               {post.content.length > 100 && <VohSummaryButton content={post.content} />}
             </div>
-            <div className="flex items-center gap-1.5 text-[10.5px] font-mono text-violet-400/80 leading-tight">
+            <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono text-violet-400/80 leading-tight">
               <span
                 onClick={() => (post.userId || post.username) && onViewProfile?.(post.userId || post.username)}
                 className="hover:underline cursor-pointer"
@@ -195,7 +195,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               <span>•</span>
               <span><RelativeTime timestamp={post.timestamp} /></span>
               <span>•</span>
-              <span className="flex items-center gap-0.5 text-[10px] text-pink-400 bg-pink-500/5 px-1 py-0.5 rounded border border-pink-500/10">
+              <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-pink-400 bg-pink-500/5 px-1 py-0.5 rounded border border-pink-500/10">
                 <BookOpen className="w-2.5 h-2.5 shrink-0" />
                 {(() => {
                   const words = post.content.trim().split(/\s+/).length;

@@ -72,7 +72,7 @@ export default function Sidebar({
         </div>
         {!isLoggedIn && (
           <div className="mt-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3 text-center">
-            <p className="mb-2 text-[10px] font-semibold text-violet-100">You’re browsing as a visitor</p>
+            <p className="mb-2 text-[10px] font-semibold leading-relaxed text-violet-100">Visitor preview. Sample content may appear; sign in for real account actions.</p>
             <button onClick={onOpenAuth} className="nx-btn-primary min-h-9 w-full px-3 text-[10px]">Sign in to personalize</button>
           </div>
         )}

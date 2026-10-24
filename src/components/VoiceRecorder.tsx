@@ -17,6 +17,7 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
   const [isTrashAnimating, setIsTrashAnimating] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedTenthsRef = useRef(0);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -37,7 +38,8 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
   const startTimer = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
-      setTimer(prev => prev + 1);
+      recordedTenthsRef.current += 1;
+      setTimer(recordedTenthsRef.current);
     }, 100);
   };
 
@@ -56,16 +58,18 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
       };
 
       mediaRecorderRef.current.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        // Calculate seconds from tenths
-        const finalSeconds = Math.ceil(timer / 10);
-        onSendMessage(audioBlob, finalSeconds);
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorderRef.current?.mimeType || 'audio/webm' });
+        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+        const finalSeconds = Math.ceil(recordedTenthsRef.current / 10);
+        if (audioBlob.size > 0) onSendMessage(audioBlob, finalSeconds);
+        else window.dispatchEvent(new CustomEvent('toast', { detail: 'No audio was recorded. Please try again.' }));
       };
 
       mediaRecorderRef.current.start();
       setIsRecording(true);
       setIsPaused(false);
       setIsLocked(false);
+      recordedTenthsRef.current = 0;
       setTimer(0);
       setWaveform(Array.from({ length: 20 }, () => Math.floor(Math.random() * 15) + 5));
       startTimer();
@@ -73,14 +77,11 @@ export default function VoiceRecorder({ onSendMessage, onCancel }: VoiceRecorder
       // Trigger standard web haptic buzz if supported
       if (navigator.vibrate) navigator.vibrate(40);
     } catch (err) {
-      console.warn('Microphone access blocked or failed. Simulating premium audio stream instead.', err);
-      // Fallback premium simulated stream so it never crashes
-      setIsRecording(true);
+      console.warn('Microphone access blocked or failed.', err);
+      setIsRecording(false);
       setIsPaused(false);
-      setIsLocked(false);
-      setTimer(0);
-      setWaveform(Array.from({ length: 20 }, () => Math.floor(Math.random() * 15) + 5));
-      startTimer();
+      stopTimer();
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Microphone access is unavailable. Allow microphone permission and try again.' }));
     }
   };
 

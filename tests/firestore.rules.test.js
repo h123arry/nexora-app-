@@ -35,6 +35,7 @@ beforeEach(async () => env.clearFirestore());
 
 const dbFor = (uid) => env.authenticatedContext(uid, { email: `${uid}@example.test`, email_verified: true }).firestore();
 const guestDb = () => env.unauthenticatedContext().firestore();
+const unverifiedDbFor = (uid) => env.authenticatedContext(uid, { email: `${uid}@example.test`, email_verified: false, phone_number_verified: false }).firestore();
 const seed = async (callback) => env.withSecurityRulesDisabled(async (context) => callback(context.firestore()));
 
 const profile = (uid) => ({
@@ -64,6 +65,32 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { ...publicProfile('bob'), email: 'bob@example.test' }));
   });
 
+  it('rejects client-assigned public verification, reputation, and initial engagement metrics', async () => {
+    const unverifiedDb = unverifiedDbFor('unverified');
+    const unverifiedProfile = { ...publicProfile('unverified'), isVerified: false };
+    await assertSucceeds(setDoc(doc(unverifiedDb, 'publicProfiles', 'unverified'), unverifiedProfile));
+    await assertFails(setDoc(doc(unverifiedDb, 'publicProfiles', 'forged-badge'), {
+      ...publicProfile('forged-badge'), id: 'forged-badge', isVerified: true
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'publicProfiles', 'inflated-reputation'), {
+      ...publicProfile('inflated-reputation'), id: 'inflated-reputation', reputationPoints: 50000
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'publicProfiles', 'inflated-breakdown'), {
+      ...publicProfile('inflated-breakdown'), id: 'inflated-breakdown',
+      reputationBreakdown: { contributions: 10, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 }
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'publicProfiles', 'fake-followers'), {
+      ...publicProfile('fake-followers'), id: 'fake-followers', followers: 900000
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'inflated-reputation'), {
+      ...profile('inflated-reputation'), reputationPoints: 50000
+    }));
+    await assertFails(setDoc(doc(unverifiedDb, 'users', 'forged-badge'), {
+      id: 'forged-badge', email: 'unverified@example.test', username: 'unverified', name: 'Unverified', isVerified: true,
+      reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 }
+    }));
+  });
+
   it('protects canonical username claims from collisions and forged ownership', async () => {
     const claim = {
       userId: 'alice', username: 'alice_handle',
@@ -81,7 +108,7 @@ const publicProfile = (uid) => ({
 
   it('allows public posts and public profile projections without exposing private account records', async () => {
     await seed(async (db) => {
-      await setDoc(doc(db, 'posts', 'post-1'), { id: 'post-1', userId: 'alice', content: 'public' });
+      await setDoc(doc(db, 'posts', 'post-1'), { id: 'post-1', userId: 'alice', audience: 'public', content: 'public' });
       await setDoc(doc(db, 'publicProfiles', 'alice'), publicProfile('alice'));
       await setDoc(doc(db, 'users', 'alice'), profile('alice'));
     });
@@ -160,7 +187,7 @@ const publicProfile = (uid) => ({
 
   it('permits append-only comments by their author but blocks forged comment authorship and counter edits', async () => {
     await seed(async (db) => {
-      await setDoc(doc(db, 'posts', 'p-comments'), { id: 'p-comments', userId: 'alice', commentsCount: 0, comments: [] });
+      await setDoc(doc(db, 'posts', 'p-comments'), { id: 'p-comments', userId: 'alice', audience: 'public', commentsCount: 0, comments: [] });
     });
     const ownComment = { id: 'c1', postId: 'p-comments', userId: 'bob', username: 'bob', name: 'Bob', avatar: '', content: 'hello', timestamp: 'now', likes: 0 };
     await assertSucceeds(updateDoc(doc(dbFor('bob'), 'posts', 'p-comments'), { commentsCount: 1, comments: [ownComment] }));
@@ -170,13 +197,21 @@ const publicProfile = (uid) => ({
   });
 
   it('rejects unauthenticated/forged post writes while preserving legitimate public reads and owner edits', async () => {
-    const post = { id: 'p1', userId: 'alice', authorId: 'alice', content: 'hello', likes: 0 };
+    const post = { id: 'p1', userId: 'alice', authorId: 'alice', audience: 'public', content: 'hello', likes: 0 };
     await assertFails(setDoc(doc(guestDb(), 'posts', 'guest'), { ...post, userId: 'alice' }));
     await assertFails(setDoc(doc(dbFor('mallory'), 'posts', 'forged'), { ...post, userId: 'alice' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'inflated'), { ...post, id: 'inflated', likes: 500 }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'p1'), post));
     await assertSucceeds(getDoc(doc(guestDb(), 'posts', 'p1')));
+    await assertSucceeds(getDocs(query(collection(guestDb(), 'posts'), where('audience', '==', 'public'))));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'only-me'), { ...post, id: 'only-me', audience: 'onlyme' }));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'posts', 'legacy-private'), { id: 'legacy-private', userId: 'alice', audience: 'onlyme', content: 'private' });
+    });
+    await assertFails(getDoc(doc(guestDb(), 'posts', 'legacy-private')));
+    await assertFails(getDocs(query(collection(guestDb(), 'posts'), where('audience', '==', 'onlyme'))));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'posts', 'p1'), { content: 'edited by owner' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'posts', 'p1'), { audience: 'onlyme' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'posts', 'p1'), { likes: 500 }));
     await assertFails(updateDoc(doc(dbFor('mallory'), 'posts', 'p1'), { content: 'hijacked' }));
     await assertFails(deleteDoc(doc(dbFor('mallory'), 'posts', 'p1')));

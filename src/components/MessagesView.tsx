@@ -77,14 +77,11 @@ export default function MessagesView({
       if (!chat.isGroup && !chat.isBroadcast && chat.id.startsWith('chat-')) {
         users.push({
           id: chat.partnerId || chat.id,
-          username: chat.username || `@${chat.partnerName.toLowerCase().replace(/\s+/g, '_')}`,
+          username: chat.username || '',
           name: chat.partnerName,
           avatar: chat.partnerAvatar,
-          bio: chat.partnerBio || 'Active Connection.',
+          bio: chat.partnerBio || '',
           isVerified: chat.isVerified || false,
-          followers: 120,
-          following: 80,
-          reputationPoints: 2400
         });
       }
     });
@@ -118,6 +115,18 @@ export default function MessagesView({
     partnerUsername?: string;
   } | null>(null);
   const [showRequestAlert, setShowRequestAlert] = useState(false);
+  const [ignoredRequestIds, setIgnoredRequestIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem(`nexora_ignored_requests_${currentUser.id}`);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+  useEffect(() => {
+    localStorage.setItem(`nexora_ignored_requests_${currentUser.id}`, JSON.stringify(ignoredRequestIds));
+  }, [ignoredRequestIds, currentUser.id]);
+
   const [acceptedRequestIds, setAcceptedRequestIds] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(`nexora_accepted_requests_${currentUser.id}`);
@@ -1067,7 +1076,7 @@ export default function MessagesView({
       if (chatsSubTab === 'primary') return !isGeneral;
       if (chatsSubTab === 'general') return isGeneral;
     }
-    if (activeTab === 'requests') return chat.unreadCount > 3 && !archivedChats.includes(chat.id) && !chat.isBroadcast;
+    if (activeTab === 'requests') return chat.unreadCount > 3 && !archivedChats.includes(chat.id) && !ignoredRequestIds.includes(chat.id) && !chat.isBroadcast;
     if (activeTab === 'broadcasts') return chat.isBroadcast === true && !archivedChats.includes(chat.id);
     if (activeTab === 'archived') return archivedChats.includes(chat.id);
     if (activeTab === 'calls') return false; // Handled separately with CallTestingConsole in UI
@@ -1743,12 +1752,13 @@ export default function MessagesView({
                   <button
                     type="button"
                     onClick={() => {
+                      setIgnoredRequestIds(prev => prev.includes(activeChat.id) ? prev : [...prev, activeChat.id]);
                       setActiveChatId('');
-                      window.dispatchEvent(new CustomEvent('toast', { detail: "✉️ Message request ignored." }));
+                      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message request hidden from your Requests on this device.' }));
                     }}
                     className="flex-1 py-2.5 bg-white/5 hover:bg-red-500/10 hover:text-red-300 border border-white/5 rounded-xl text-[9.5px] font-mono uppercase font-black text-zinc-400 transition-all cursor-pointer"
                   >
-                    Ignore
+                    Hide request
                   </button>
                   <button
                     type="button"

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { User, Chat, Message, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
+import { uploadMediaFile } from '../services/firebase/storageService';
 import { 
   collection, 
   doc, 
@@ -273,8 +274,8 @@ export default function NewInboxView({
   };
 
   // Send message
-  const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string }) => {
-    const contentToSend = customContent || newMessageText.trim();
+  const handleSendMessage = async (customContent?: string, mediaData?: { type: string; url: string; name?: string; duration?: number }) => {
+    const contentToSend = customContent !== undefined ? customContent : newMessageText.trim();
     if (!contentToSend && !mediaData) return;
     if (!activeChatId) return;
 
@@ -297,6 +298,8 @@ export default function NewInboxView({
       replyToQuote: replyQuoteText || undefined,
       customMediaType: mediaData?.type,
       videoUrl: mediaData?.type === 'video' || mediaData?.type === 'image' ? mediaData.url : undefined,
+      voiceAudioUrl: mediaData?.type === 'voice' && mediaData.url ? mediaData.url : undefined,
+      voiceDuration: mediaData?.type === 'voice' && typeof mediaData.duration === 'number' ? `${mediaData.duration}s` : undefined,
       fileName: mediaData?.name
     };
 
@@ -419,12 +422,19 @@ export default function NewInboxView({
     });
   };
 
-  const handleDeleteMessage = (msgId: string) => {
+  const handleDeleteMessage = async (msgId: string) => {
     if (!activeChatId) return;
-    setLocalMessages(prev => ({
-      ...prev,
-      [activeChatId]: (prev[activeChatId] || []).filter(m => m.id !== msgId)
-    }));
+    const chatId = activeChatId;
+    try {
+      if (db) await deleteDoc(doc(db, `chats/${chatId}/messages`, msgId));
+      setLocalMessages(prev => ({
+        ...prev,
+        [chatId]: (prev[chatId] || []).filter(m => m.id !== msgId)
+      }));
+    } catch (error) {
+      console.warn('[Inbox] Could not delete message from Firestore:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message was not deleted. Please retry.' }));
+    }
   };
 
   return (
@@ -865,10 +875,24 @@ export default function NewInboxView({
       {/* VOICE RECORDER */}
       {showVoiceRecorder && (
         <VoiceRecorder
-          onSendMessage={(audioBlob, duration) => {
-            const audioUrl = URL.createObjectURL(audioBlob);
-            handleSendMessage('', { type: 'voice', url: audioUrl, name: `Voice Note (${duration}s)` });
-            setShowVoiceRecorder(false);
+          onSendMessage={async (audioBlob, duration) => {
+            try {
+              const uploaded = await uploadMediaFile({
+                file: audioBlob,
+                userId: currentUser.id,
+                chatId: activeChatId || undefined,
+                fileName: `voice-note-${Date.now()}.webm`,
+                metadata: { chatId: activeChatId || '' }
+              });
+              await handleSendMessage('', {
+                type: 'voice', url: uploaded.downloadUrl,
+                name: `Voice Note (${duration}s)`, duration
+              });
+              setShowVoiceRecorder(false);
+            } catch (error) {
+              console.warn('[Inbox] Voice note upload failed:', error);
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be uploaded. Check your connection and retry.' }));
+            }
           }}
           onCancel={() => setShowVoiceRecorder(false)}
         />

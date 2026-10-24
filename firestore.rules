@@ -9,6 +9,31 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/chats/$(chatId))
         && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
     }
+    function zeroInitialReputation(data) {
+      return data.get('reputationPoints', 0) == 0
+        && (!data.keys().hasAny(['reputationBreakdown'])
+          || (data.reputationBreakdown is map
+            && data.reputationBreakdown.keys().hasOnly(['contributions', 'helpfulness', 'missionsCompleted', 'skillsVerified'])
+            && data.reputationBreakdown.get('contributions', 0) == 0
+            && data.reputationBreakdown.get('helpfulness', 0) == 0
+            && data.reputationBreakdown.get('missionsCompleted', 0) == 0
+            && data.reputationBreakdown.get('skillsVerified', 0) == 0));
+    }
+    function zeroInitialEngagement(data) {
+      return data.get('followers', 0) == 0
+        && data.get('following', 0) == 0
+        && data.get('sparks', 0) == 0
+        && data.get('contributions', 0) == 0;
+    }
+    function verifiedIdentityClaim(data) {
+      return !data.keys().hasAny(['isVerified'])
+        || !data.isVerified
+        || request.auth.token.get('email_verified', false)
+        || request.auth.token.get('phone_number_verified', false);
+    }
+    function publicPost(data) {
+      return data.get('audience', '') == 'public';
+    }
     function publicProfileKeys() {
       return [
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
@@ -99,7 +124,9 @@ service cloud.firestore {
         && (!request.resource.data.keys().hasAny(['email'])
           || request.resource.data.email == request.auth.token.get('email', '')
           || request.auth.token.get('phone_number_verified', false))
-        && request.resource.data.isVerified == (request.auth.token.get('email_verified', false) || request.auth.token.get('phone_number_verified', false));
+        && request.resource.data.isVerified == (request.auth.token.get('email_verified', false) || request.auth.token.get('phone_number_verified', false))
+        && zeroInitialReputation(request.resource.data)
+        && zeroInitialEngagement(request.resource.data);
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
@@ -130,7 +157,10 @@ service cloud.firestore {
       allow get, list: if true;
       allow create: if owner(userId)
         && request.resource.data.id == userId
-        && request.resource.data.keys().hasOnly(publicProfileKeys());
+        && request.resource.data.keys().hasOnly(publicProfileKeys())
+        && verifiedIdentityClaim(request.resource.data)
+        && zeroInitialReputation(request.resource.data)
+        && zeroInitialEngagement(request.resource.data);
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
@@ -141,10 +171,11 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Posts are public, but authorship cannot be forged or transferred by the client.
+    // Shared posts must explicitly be public; private audience options are not secure or supported here.
     match /posts/{postId} {
-      allow get, list: if true;
+      allow get, list: if publicPost(resource.data);
       allow create: if signedIn()
+        && publicPost(request.resource.data)
         && request.resource.data.userId == request.auth.uid
         && (!request.resource.data.keys().hasAny(['authorId']) || request.resource.data.authorId == request.auth.uid)
         && (!request.resource.data.keys().hasAny(['isVerified'])
@@ -157,8 +188,10 @@ service cloud.firestore {
         && request.resource.data.get('views', 0) == 0
         && request.resource.data.get('saves', 0) == 0;
       allow update: if signedIn()
+        && publicPost(resource.data)
         && ((resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid)
           && request.resource.data.userId == resource.data.userId
+          && publicPost(request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'content', 'image', 'images', 'imageFilter', 'imageFilters', 'videoUrl',
           'voiceTranscript', 'voiceAudioUrl', 'tags',

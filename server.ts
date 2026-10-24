@@ -27,8 +27,9 @@ function clipText(value: unknown, maxLength: number): string {
 
 function allowVohRequest(req: express.Request): boolean {
   const now = Date.now();
-  const forwarded = req.headers['x-forwarded-for'];
-  const key = typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : req.ip || 'unknown';
+  // Do not trust raw X-Forwarded-For: clients can spoof it to evade per-IP buckets.
+  // Configure Express trust proxy only when the deployment proxy chain is explicitly known.
+  const key = req.ip || req.socket.remoteAddress || 'unknown';
   const current = vohRateBuckets.get(key);
   if (!current || now - current.startedAt >= VOH_RATE_WINDOW_MS) {
     vohRateBuckets.set(key, { startedAt: now, count: 1 });

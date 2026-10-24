@@ -194,68 +194,16 @@ export default function MessageBubble({
 
             {/* Content - Handle Voice */}
             {isVoice ? (
-              <div className="flex flex-col gap-2 min-w-[240px] max-w-[320px] p-2 bg-slate-900/40 rounded-xl border border-white/5 select-none">
-                <div className="flex items-center gap-3">
-                  {/* Play Button */}
-                  <button 
-                    onClick={() => onTogglePlayVoice(message.id)}
-                    className="w-9 h-9 rounded-full bg-violet-600 hover:bg-violet-500 flex items-center justify-center hover:scale-105 transition-all text-white shadow-md active:scale-95 cursor-pointer shrink-0"
-                  >
-                    {playingVoiceId === message.id ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-white fill-current ml-0.5" />}
-                  </button>
-
-                  {/* Waveform Visualization & Seek Support */}
-                  <div 
-                    className="flex-1 h-8 flex items-center gap-[3px] px-1 cursor-pointer select-none group/waveform relative"
-                    onClick={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      const x = e.clientX - rect.left;
-                      const ratio = Math.min(100, Math.max(0, (x / rect.width) * 100));
-                      onSeekVoice?.(message.id, ratio);
-                    }}
-                  >
-                    {/* Render standard 24 vertical bars for professional waveform */}
-                    {Array.from({ length: 24 }).map((_, barIdx) => {
-                      // Generate a predictable wave pattern based on index
-                      const height = Math.abs(Math.sin(barIdx * 0.4)) * 24 + 4;
-                      const barProgress = (barIdx / 24) * 100;
-                      const isHighlighted = barProgress <= voiceProgress;
-                      return (
-                        <div 
-                          key={barIdx} 
-                          style={{ height: `${height}px` }} 
-                          className={`w-[2.5px] rounded-full transition-all ${
-                            isHighlighted 
-                              ? 'bg-gradient-to-t from-violet-400 to-pink-500' 
-                              : 'bg-zinc-700/80'
-                          }`}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  {/* Playback Speed Control */}
-                  <button 
-                    onClick={() => onChangeSpeed?.(voicePlaybackSpeed)}
-                    className="px-1.5 py-0.5 text-[9px] font-mono font-black uppercase rounded bg-violet-950/50 hover:bg-violet-600/30 text-violet-300 border border-white/10 active:scale-95 transition-all cursor-pointer shrink-0"
-                  >
-                    {voicePlaybackSpeed}x
-                  </button>
+              message.voiceAudioUrl || message.videoUrl ? (
+                <div className="min-w-[240px] max-w-[320px] rounded-xl border border-white/10 bg-black/25 p-2">
+                  <p className="mb-1 text-[10px] font-medium text-[var(--nx-muted)]">Voice message{message.voiceDuration ? ` · ${message.voiceDuration}` : ''}</p>
+                  <audio className="w-full" controls preload="none" src={message.voiceAudioUrl || message.videoUrl} aria-label="Play voice message">
+                    Your browser does not support audio playback.
+                  </audio>
                 </div>
-
-                <div className="flex justify-between items-center px-1 text-[9px] text-zinc-400 font-mono">
-                  <span>
-                    {playingVoiceId === message.id 
-                      ? `0:${String(Math.min(12, Math.floor((voiceProgress / 100) * 12))).padStart(2, '0')}` // Live playback timer
-                      : '0:00'}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <span>HD Voice</span>
-                    <span className="w-1 h-1 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-zinc-500">{message.voiceDuration || '0:12'}</span>
-                  </span>
-                </div>
-              </div>
+              ) : (
+                <p className="rounded-lg border border-[var(--nx-edge)] bg-black/20 px-3 py-2 text-xs text-[var(--nx-muted)]">This older voice message has no stored audio file.</p>
+              )
             ) : message.customMediaType === 'share_post' && message.customMediaData ? (
               <div 
                 className="mb-1 p-3 rounded-2xl bg-black/40 hover:bg-black/60 border border-white/10 flex flex-col gap-2 cursor-pointer transition-all max-w-[280px]"
