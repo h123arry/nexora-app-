@@ -2,6 +2,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getFunctions } from 'firebase/functions';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import firebaseConfig from '../../firebase-applet-config.json';
 
@@ -20,6 +21,7 @@ export const appCheck: AppCheck | null = appCheckSiteKey
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth();
 export const storage = getStorage(app);
+export const functions = getFunctions(app, 'us-central1');
 
 async function testConnection() {
   try {

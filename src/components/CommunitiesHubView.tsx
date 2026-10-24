@@ -119,7 +119,7 @@ export default function CommunitiesHubView({
 
   // Real-time synchronization for Communities and Pages
   useEffect(() => {
-    const unsubComm = subscribeToCommunities((dbComms) => {
+    const unsubComm = subscribeToCommunities(followActorId, (dbComms) => {
       setCommunities(dbComms.map((community) => ({
         ...community,
         isJoinedByMe: isCircleJoinedDb(followActorId, community.id)

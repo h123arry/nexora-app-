@@ -1,9 +1,14 @@
-import { initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { setGlobalOptions } from 'firebase-functions/v2';
+import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
+import { getFirestore } from 'firebase-admin/firestore';
+import { setPostLike } from './postEngagement.js';
 
-initializeApp();
+const adminApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
+const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
+const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 setGlobalOptions({
   region: 'us-central1',
   maxInstances: 5,
@@ -24,3 +29,24 @@ export const processAccountLifecycleRequest = onDocumentCreated(
     await processAccountDeletion(snapshot.id, request.requesterId);
   },
 );
+
+export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to like a post.');
+  const postId = request.data?.postId;
+  const liked = request.data?.liked;
+  if (typeof postId !== 'string' || postId.length < 1 || postId.length > 150 || postId.includes('/')) {
+    throw new HttpsError('invalid-argument', 'A valid post ID is required.');
+  }
+  if (typeof liked !== 'boolean') throw new HttpsError('invalid-argument', 'A boolean like state is required.');
+  try {
+    return await setPostLike(adminDb, request.auth.uid, postId, liked);
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('unavailable')) {
+      throw new HttpsError('not-found', 'This public post is unavailable.');
+    }
+    if (error instanceof Error && error.message.includes('Invalid')) {
+      throw new HttpsError('invalid-argument', 'Invalid post interaction.');
+    }
+    throw new HttpsError('internal', 'The post interaction could not be saved. Please retry.');
+  }
+});

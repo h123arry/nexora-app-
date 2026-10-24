@@ -150,7 +150,7 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { participants: ['alice', 'mallory'] }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'hello' }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1'), {
-      id: 'm1', chatId: 'chat-1', senderId: 'alice', content: 'hello', status: 'sent'
+      id: 'm1', chatId: 'chat-1', senderId: 'alice', content: 'hello', status: 'sent', timestamp: new Date().toISOString()
     }));
     await assertSucceeds(updateDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'messages', 'm1'), { status: 'read' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1'), { status: 'read' }));
@@ -162,6 +162,22 @@ const publicProfile = (uid) => ({
     }));
     await assertFails(setDoc(doc(dbFor('mallory'), 'chats', 'chat-1', 'messages', 'm2'), {
       id: 'm2', chatId: 'chat-1', senderId: 'alice', content: 'forged', status: 'sent'
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm2'), {
+      id: 'm2', chatId: 'chat-1', senderId: 'alice', content: 'forged read', status: 'read', timestamp: new Date().toISOString()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm2'), {
+      id: 'm2', chatId: 'chat-1', senderId: 'alice', content: 'x'.repeat(10001), status: 'sent', timestamp: new Date().toISOString()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm2'), {
+      id: 'm2', chatId: 'chat-1', senderId: 'alice', content: 'forged media', status: 'sent',
+      timestamp: new Date().toISOString(),
+      voiceAudioUrl: `chats/chat-1/audio/bob/${'a'.repeat(36)}`
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm3'), {
+      id: 'm3', chatId: 'chat-1', senderId: 'alice', content: '[VOICE]', status: 'sent',
+      timestamp: new Date().toISOString(),
+      voiceAudioUrl: `chats/chat-1/audio/alice/${'a'.repeat(36)}`, voiceDuration: '3s', fileName: 'recording.webm'
     }));
     await assertFails(getDocs(collection(dbFor('mallory'), 'chats', 'chat-1', 'messages')));
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1')));
@@ -295,5 +311,42 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'accountLifecycleRequests', 'delete-2'), deletionRequest));
     await assertFails(updateDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1'), { status: 'completed' }));
     await assertFails(deleteDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1')));
+  });
+  it('limits follow-graph reads to edges involving the requesting user', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'follows', 'a-b'), { followerId: 'alice', followingId: 'bob', createdAt: new Date() });
+      await setDoc(doc(db, 'follows', 'c-d'), { followerId: 'carol', followingId: 'dave', createdAt: new Date() });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'follows', 'a-b')));
+    await assertFails(getDoc(doc(dbFor('alice'), 'follows', 'c-d')));
+    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'follows'), where('followerId', '==', 'alice'))));
+    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'follows'), where('followingId', '==', 'alice'))));
+    await assertFails(getDocs(collection(dbFor('alice'), 'follows')));
+    await assertFails(getDocs(query(collection(dbFor('alice'), 'follows'), where('followerId', '==', 'carol'))));
+  });
+  it('lets users read their own trusted like markers but never create or modify them directly', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users', 'alice', 'postLikes', 'post-1'), { postId: 'post-1', userId: 'alice' });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'users', 'alice', 'postLikes', 'post-1')));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'postLikes')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'postLikes', 'post-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'postLikes', 'forged'), { postId: 'forged', userId: 'alice' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'users', 'alice', 'postLikes', 'post-1')));
+  });
+  it('allows public community discovery but denies private/invite records to strangers and guests', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'public-community'), { id: 'public-community', ownerId: 'alice', type: 'public', name: 'Open' });
+      await setDoc(doc(db, 'communities', 'private-community'), { id: 'private-community', ownerId: 'alice', type: 'private', name: 'Private', pendingMembers: ['bob'], reports: ['private-report'] });
+      await setDoc(doc(db, 'communities', 'invite-community'), { id: 'invite-community', ownerId: 'bob', type: 'invite-only', name: 'Invite only' });
+    });
+    await assertSucceeds(getDoc(doc(guestDb(), 'communities', 'public-community')));
+    await assertFails(getDoc(doc(guestDb(), 'communities', 'private-community')));
+    await assertFails(getDoc(doc(dbFor('mallory'), 'communities', 'private-community')));
+    await assertFails(getDoc(doc(dbFor('mallory'), 'communities', 'invite-community')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'communities', 'private-community')));
+    await assertSucceeds(getDocs(query(collection(guestDb(), 'communities'), where('type', '==', 'public'))));
+    await assertFails(getDocs(collection(dbFor('mallory'), 'communities')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'bad-type'), { id: 'bad-type', ownerId: 'alice', type: 'unknown' }));
   });
 });

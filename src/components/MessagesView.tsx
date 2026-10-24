@@ -23,6 +23,7 @@ import VoiceRecorder from './VoiceRecorder';
 import ReactionBar from './ReactionBar';
 import EmojiPicker from './EmojiPicker';
 import ReactionDetailsSheet from './ReactionDetailsSheet';
+import { resolvePrivateChatAudio } from '../services/firebase/storageService';
 import NewBroadcastModal from './NewBroadcastModal';
 import BroadcastAnalyticsView from './BroadcastAnalyticsView';
 import BroadcastInfoScreen from './BroadcastInfoScreen';
@@ -1132,6 +1133,7 @@ export default function MessagesView({
             onToggleContextMenu={(id) => setActiveContextMessageId(id)}
             activeContextMessageId={activeContextMessageId}
             onTogglePlayVoice={handleTogglePlayVoice}
+            onResolveVoiceMedia={resolvePrivateChatAudio}
             onLongPress={handleLongPress}
             playingVoiceId={playingVoiceId}
             voiceProgress={playingVoiceId === msg.id ? voiceProgress : 0}

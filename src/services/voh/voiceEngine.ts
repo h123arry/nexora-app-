@@ -1,3 +1,4 @@
+import { authenticatedVohFetch } from './authenticatedVohFetch';
 export interface VoiceConfig {
   language: string;
   speed: number;
@@ -64,11 +65,11 @@ export class VoiceEngine {
     return rec;
   }
 
-  static async uploadVoice(audioBase64: string): Promise<{ transcription: string; replyText: string; isDemo: boolean }> {
-    const response = await fetch('/api/voh-ai/voice-transcribe', {
+  static async uploadVoice(audioBase64: string, mimeType = 'audio/webm'): Promise<{ transcription: string; replyText: string; isDemo: boolean }> {
+    const response = await authenticatedVohFetch('/api/voh-ai/voice-transcribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ audioBase64 })
+      body: JSON.stringify({ audioBase64, mimeType: mimeType.split(';')[0].trim().toLowerCase() })
     });
     
     if (!response.ok) {

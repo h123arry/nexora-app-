@@ -1,121 +1,60 @@
-# Nexora Infrastructure Production Setup & Audit Matrix
+# Nexora production setup and verification checklist
 
-This document provides an exhaustive production infrastructure audit and step-by-step setup guide for all authentication, messaging, transactional email, security logging, and database systems implemented in Nexora.
+This file describes the repository's current configuration. It does **not** certify that any Firebase provider, rule, function, email extension, push certificate, or hosting service is enabled in production. Repository state is not deployed state.
 
----
+## Configured Firebase resources
 
-## 📊 Infrastructure Status Matrix
+The checked-in client config points to Firebase project `evident-server-bqmt3`, named Firestore database `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`, and Storage bucket `evident-server-bqmt3.firebasestorage.app`. These values must be confirmed with the project owner before deployment. The `apiKey` in Firebase web config is a public client identifier; do not add service-account keys or other secrets to the repository.
 
-| Subsystem / Feature | Current Operational Status | Active Engine / Architecture | Action Required for Launch |
-| :--- | :--- | :--- | :--- |
-| **Firestore Persistence** | ✅ **100% Fully Connected** | Firebase Firestore (`ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`) | Already provisioned & verified. |
-| **Firestore Security Rules** | ✅ **100% Deployed** | ABAC Rules (`firestore.rules`) with `mail/` and `securityLogs` isolation | Rules deployed & active. |
-| **Google OAuth Authentication** | ✅ **Fully Functional** | `signInWithPopup` via `@google/genai` & Firebase Auth (`GoogleAuthProvider`) | Add domain to Firebase Console Authorized Domains. |
-| **Email/Password Auth** | ⚡ **Active with Fallback** | `createUserWithEmailAndPassword`, `signInWithEmailAndPassword`, `sendEmailVerification` | Enable "Email/Password" in Firebase Console. |
-| **Phone SMS Authentication** | ⚡ **Active with Recaptcha** | `signInWithPhoneNumber` & `RecaptchaVerifier` | Enable "Phone" in Firebase Console & add SMS quota/billing. |
-| **Brute-Force Rate Limiting** | ✅ **100% Active** | Local & Persistent Lockout Engine (`AuthService.recordFailedAttempt`) | Active out-of-the-box (5 attempts threshold / 5 min lockout). |
-| **Security Audit Logging** | ✅ **100% Active** | `SecurityNotificationService` + Firestore `users/{userId}/securityLogs` | Active out-of-the-box. |
-| **Transactional Email Queue** | ⚡ **Queued to Firestore** | `EmailService.sendTransactionalEmail` logging to `mail/` collection | Install "Trigger Email" Firebase Extension or SendGrid webhook. |
-| **Web Push Notifications** | ⚡ **Native OS Active** | FCM (`PushNotificationService`) with fallback to browser `Notification` API | Generate VAPID key in Firebase Console & set `VITE_FIREBASE_VAPID_KEY`. |
+The server and Cloud Functions use Firebase Admin credentials from the hosting environment's Application Default Credentials. Set and verify:
 
----
+| Variable | Purpose |
+|---|---|
+| `GCLOUD_PROJECT` or `FIREBASE_PROJECT_ID` | Firebase/GCP project ID used by the Express API. |
+| `FIRESTORE_DATABASE_ID` | Actual named Firestore database; default in source is Nexora's configured database ID. |
+| `FIREBASE_STORAGE_BUCKET` | Actual Firebase Storage bucket used by the private chat-media proxy and account cleanup. |
+| `GEMINI_API_KEY` | Server-only Gemini credential required for VOH generation; keep in the hosting secret manager. |
+| `GEMINI_MODEL` | Optional server model override; default is `gemini-2.5-flash`. |
+| `PORT` | Optional Express listening port; the host normally supplies it. |
 
-## 🛠️ Step-by-Step Production Configuration Guide
+Cloud Functions use the Node.js 22 runtime configured in `firebase.json`. Verify the target platform's supported runtime, region, service identity, Firestore access to the named database, and Storage permissions. Do not use a development service-account file in production.
 
-### 1. Firebase Authentication Setup
+## Authentication and account operations
 
-To ensure seamless Google OAuth, Email/Password, and Phone SMS authentication across web and mobile browsers:
+The source contains email/password registration and sign-in, Google popup sign-in, and phone verification methods. Enabling any provider, configuring authorized domains, reCAPTCHA, quotas, test numbers, and production phone/SMS billing is a separate Firebase Console action and was not verified here. This login form's email/password fields only support that identifier path; it should not imply that username is accepted as an email alias.
 
-1. **Enable Authentication Providers**:
-   - Go to [Firebase Console](https://console.firebase.google.com/) -> Select Project `evident-server-bqmt3`.
-   - Navigate to **Build** -> **Authentication** -> **Sign-in method**.
-   - Enable **Google** (select support email).
-   - Enable **Email/Password** (check "Email link (passwordless sign-in)" if desired).
-   - Enable **Phone** (add test phone numbers for QA, e.g. `+1 555-555-5555` with code `123456`).
+Firebase's native account-protection controls and provider rate limits must be reviewed for the real project. Do not treat a browser-local failed-attempt counter as a backend brute-force defense. App Check is initialized only when a site key is injected into `globalThis.__NEXORA_APPCHECK_SITE_KEY__`; enabling App Check enforcement requires a separately tested release.
 
-2. **Add Authorized Domains**:
-   - Under **Authentication** -> **Settings** -> **Authorized domains**, click **Add domain**.
-   - Add your Cloud Run / Applet production domain:
-     `ais-dev-2j4v4otimkkbjuf3l6dhwe-938616763502.europe-west2.run.app`
-     `ais-pre-2j4v4otimkkbjuf3l6dhwe-938616763502.europe-west2.run.app`
-   - Add any custom domain configured for your deployment.
+## Backend and private media
 
----
+Run the production API as the same Express application that serves the built frontend, or deliberately route `/api/voh-ai/*` and `/api/private-chat-media/*` to the authenticated API service. VOH and private chat-media routes require Firebase ID tokens. VOH also requires the server-only Gemini key. Chat voice upload/playback requires server access to the configured Firestore database and private Storage bucket; Storage Rules deliberately deny direct client access to `chats/**`. Playback checks that the caller is still a chat participant and that a message refers to the object, then responds with `Cache-Control: private, no-store`. Do not replace this with a public download-token URL.
 
-### 2. Firebase Cloud Messaging (FCM) & Web Push Setup
+The integration tests cover this HTTP boundary in demo emulators, not the production account, named database, bucket, IAM role, network routing, or Cloud Run/server environment. Verify those in a staging project before release.
 
-Nexora includes foreground/background push notification handling via `/public/firebase-messaging-sw.js` and native OS notification fallbacks.
+## Firebase deployment
 
-1. **Generate Web Push Certificate (VAPID Key)**:
-   - Go to **Project Settings** -> **Cloud Messaging** tab.
-   - Under **Web Configuration**, find **Web Push certificates**.
-   - Click **Generate key pair**.
-   - Copy the generated VAPID Key.
+Rules and indexes live in `firestore.rules`, `storage.rules`, and `firestore.indexes.json`. The `firebase.json` configuration includes both `(default)` and the configured named database. The Firebase Emulator currently warns that it does not model multiple Firestore databases; tests explicitly load the rules into the emulator test environment. Validate named-database rule deployment and queries in a non-production Firebase project before any production rollout.
 
-2. **Configure Environment Variable**:
-   - In `.env.example` and your production deployment environment, set:
-     ```env
-     VITE_FIREBASE_VAPID_KEY=your_generated_vapid_key_here
-     ```
+Before a release:
 
-3. **Verify Service Worker**:
-   - Ensure `/public/firebase-messaging-sw.js` is served at root level `/firebase-messaging-sw.js`. Nexora serves this static asset automatically.
+1. Confirm the Firebase project, database ID, bucket, service identity, operator, backups, and deployment window.
+2. Run `npm ci`, `npm ci --prefix functions`, `npm run lint`, `npm run functions:build`, and `npm run build`.
+3. Run `npm run test:unit`, `npm run test:rules`, `npm run test:storage`, `npm run test:migration`, `npm run test:engagement`, and `npm run test:voh-security`.
+4. Run `npm audit` and `npm audit --prefix functions --omit=dev` against the final lockfiles.
+5. Deploy indexes and reviewed Firestore rules for the intended database(s), then Storage rules and Functions. Verify index readiness before app rollout.
+6. Smoke-test both allowed and denied user paths in staging: public-only feeds, account/profile privacy, post likes/notifications, chat access and audio proxy, unauthenticated VOH rejection, and account deletion.
+7. Observe Firebase permission denials, API/function errors, index state, storage failures, quotas, and billing before expanding rollout.
 
----
+Legacy posts with missing audience are not automatically treated as public. See [`docs/FIREBASE_DEPLOYMENT_RUNBOOK.md`](docs/FIREBASE_DEPLOYMENT_RUNBOOK.md) for the reviewed-manifest, dry-run-first migration procedure and rollback guidance. Do not apply that migration or deploy rules without explicit project-owner approval and a reviewed backup.
 
-### 3. Transactional Email System Setup (SendGrid / Firebase Extension)
+## Integrations not verified or not implemented
 
-Nexora's `EmailService` outputs responsive, branded transactional HTML emails for `WELCOME`, `VERIFY_EMAIL`, `PASSWORD_RESET`, and `SECURITY_ALERT_*` directly into the Firestore `mail/` collection.
+- No deployment was performed; production Firebase configuration, provider activation, rules, indexes, and IAM remain unverified.
+- The `mail` collection is not proof that transactional email is delivered. A properly configured and verified mail extension/provider is required.
+- FCM/VAPID credentials and push delivery were not verified.
+- No trusted NEX ledger, payment processor, transfer, deposit, withdrawal, or payout backend exists. Keep financial operations unavailable.
+- No complete private audience model exists for followers, Close Friends, Circles, or member-only communities; publishing UI/rules remain public-only for shared posts.
+- VOH remains unavailable if `GEMINI_API_KEY` is not configured. Errors should remain truthful; do not show demo output as a real model response.
+- MFA, trusted-device management, production abuse controls, App Check enforcement, monitoring/alerting, retention/TTL configuration, and provider-specific compliance have not been verified.
 
-To dispatch these emails to real inbox recipients:
-
-1. **Install Firebase Extension**:
-   - Go to Firebase Console -> **Extensions** -> Explore Extensions.
-   - Search for **Trigger Email from Firestore** (by Firebase).
-   - Click **Install in Console**.
-
-2. **Configure Extension Parameters**:
-   - **Collection path**: `mail`
-   - **SMTP Connection URI** or **SendGrid API Key**: Enter your SendGrid API Key or SMTP credentials (e.g. `smtps://apikey:YOUR_SENDGRID_KEY@smtp.sendgrid.net:465`).
-   - **Default FROM address**: `noreply@nexora.app` (or verified domain address).
-
----
-
-### 4. Firestore Database & Security Rules Verification
-
-1. **Database Path**:
-   - Target Database ID: `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`
-   - Region: Provisioned automatically via AI Studio Cloud environment.
-
-2. **Security Rules Ruleset**:
-   - Rules are maintained in `/firestore.rules` and deployed via `deploy_firebase`.
-   - Validated collections: `users`, `mail`, `users/{userId}/securityLogs`, `users/{userId}/notifications`, `posts`, `drafts`, `follows`, `activities`, `notifications`, `chats`, `presence`.
-
----
-
-### 5. Android & iOS Native Mobile App Setup (When Exported)
-
-For native mobile packaging (Capacitor / React Native / Flutter):
-
-1. **SHA Fingerprints (Android)**:
-   - Obtain SHA-1 & SHA-256 hashes using `./gradlew signingReport`.
-   - Register fingerprints in **Project Settings** -> **General** -> **Android apps**.
-   - Download the generated `google-services.json` into `android/app/`.
-
-2. **APNs Push Keys (iOS)**:
-   - In Apple Developer Console, export an **APNs Key** (`.p8` file).
-   - Upload the `.p8` key in Firebase Console under **Project Settings** -> **Cloud Messaging** -> **iOS app configuration**.
-   - Download `GoogleService-Info.plist` into `ios/Runner/`.
-
----
-
-## 🛡️ Fallback & Graceful Degradation Logic
-
-Nexora includes fail-safe degradation routines across all security and auth modules:
-- **No Uncaught Exceptions**: If Firebase Auth providers are disabled, users receive explicit guidance ("⚠️ Firebase Email/Password sign-in is disabled in Firebase Console...").
-- **Offline & Local Store Resilience**: If client connectivity fluctuates, accounts fall back securely to encrypted local account registries (`loadAccounts`) and record suspicious lockout events.
-- **Native Notification Fallback**: If FCM VAPID key is omitted, `PushNotificationService` seamlessly utilizes OS Native Web Notifications so users never miss security alerts.
-
----
-
-*Last Audited: July 24, 2026*
+See [`SECURITY_HARDENING_REPORT.md`](SECURITY_HARDENING_REPORT.md) for the implementation and test record. A successful local build or emulator suite is not a production readiness certificate.

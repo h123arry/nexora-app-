@@ -9,35 +9,38 @@ service firebase.storage {
       return signedIn() && request.auth.uid == userId;
     }
 
-    function validMedia() {
+    function validImage() {
+      return request.resource.size > 0
+        && request.resource.size <= 12582912
+        && request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+    }
+    function validVideo() {
       return request.resource.size > 0
         && request.resource.size <= 262144000
-        && request.resource.contentType.matches('(image|video|audio)/.*');
+        && request.resource.contentType in ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
+    }
+    function validAudio() {
+      return request.resource.size > 0
+        && request.resource.size <= 52428800
+        && request.resource.contentType in ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/aac'];
     }
 
     match /users/{userId}/media/{mediaId} {
-      allow read: if signedIn();
-      allow create: if isOwner(userId) && validMedia()
+      // Object-path access is owner-only. Publicly shared post media is accessed
+      // only through the download-token URL intentionally created at publication.
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && (validImage() || validVideo() || validAudio())
         && request.resource.metadata.ownerId == userId
         && request.resource.metadata.mediaId == mediaId;
       allow update: if false;
       allow delete: if isOwner(userId);
     }
 
-    // Chat audio is readable only by participants in the corresponding Firestore chat.
-    function chatMember(chatId) {
-      return signedIn()
-        && firestore.exists(/databases/(default)/documents/chats/$(chatId))
-        && request.auth.uid in firestore.get(/databases/(default)/documents/chats/$(chatId)).data.participants;
-    }
+    // Chat metadata lives in a named Firestore database. Storage Rules can only
+    // look up the default database, so private chat media is served by the
+    // authenticated API after it checks membership in the actual database.
     match /chats/{chatId}/audio/{userId}/{mediaId} {
-      allow read: if chatMember(chatId);
-      allow create: if isOwner(userId) && chatMember(chatId) && validMedia()
-        && request.resource.metadata.ownerId == userId
-        && request.resource.metadata.mediaId == mediaId
-        && request.resource.metadata.chatId == chatId;
-      allow update: if false;
-      allow delete: if isOwner(userId) && chatMember(chatId);
+      allow read, write: if false;
     }
 
     match /{allPaths=**} {

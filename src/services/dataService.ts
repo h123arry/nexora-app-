@@ -620,10 +620,14 @@ export function subscribeToUsers(callback: (users: User[]) => void) {
   });
 }
 
-export function subscribeToCommunities(callback: (communities: Community[]) => void) {
-  const q = query(collection(db, 'communities'), limit(200));
-  return onSnapshot(q, (snapshot) => {
-    const communities = snapshot.docs.map((snapshotDoc) => {
+export function subscribeToCommunities(userId: string, callback: (communities: Community[]) => void) {
+  let publicDocs: any[] | null = null;
+  let ownedDocs: any[] = [];
+  const emit = () => {
+    if (!publicDocs) return;
+    const docs = new Map<string, any>();
+    [...publicDocs, ...ownedDocs].forEach((snapshotDoc) => docs.set(snapshotDoc.id, snapshotDoc));
+    const communities = [...docs.values()].map((snapshotDoc) => {
       const data = snapshotDoc.data();
       const validTypes = ['public', 'private', 'invite-only'];
       const normalized: Record<string, any> = { ...data, id: snapshotDoc.id };
@@ -653,9 +657,21 @@ export function subscribeToCommunities(callback: (communities: Community[]) => v
     });
     communities.forEach(c => cacheManager.setCommunity(c.id, c));
     callback(communities);
+  };
+  const publicQuery = query(collection(db, 'communities'), where('type', '==', 'public'), limit(200));
+  const unsubPublic = onSnapshot(publicQuery, (snapshot) => {
+    publicDocs = snapshot.docs;
+    emit();
   }, (error) => {
     handleFirestoreError(error, OperationType.LIST, 'communities', auth);
   });
+  const unsubOwned = userId
+    ? onSnapshot(query(collection(db, 'communities'), where('ownerId', '==', userId), limit(100)), (snapshot) => {
+        ownedDocs = snapshot.docs;
+        emit();
+      }, (error) => handleFirestoreError(error, OperationType.LIST, 'communities', auth))
+    : () => undefined;
+  return () => { unsubPublic(); unsubOwned(); };
 }
 
 export function subscribeToPages(callback: (pages: Page[]) => void) {

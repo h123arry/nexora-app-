@@ -1,3 +1,4 @@
+import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Globe, Map, Search, Bell, X, Brain, ArrowRight } from 'lucide-react';
@@ -33,7 +34,7 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
 
     try {
       // Fetch from the real VOH AI endpoint
-      const response = await fetch('/api/voh-ai/chat', {
+      const response = await authenticatedVohFetch('/api/voh-ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

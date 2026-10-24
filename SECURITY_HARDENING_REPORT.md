@@ -1,63 +1,50 @@
-# Nexora Security and Product Integrity Review
+# Nexora security, reliability, and product-integrity report
 
-**Review scope:** account/profile authorization, public-feed audience enforcement, media upload and voice-message delivery, inbox request behavior, VOH request handling, login affordances, and wallet claims. Work was performed against the connected repository. No production data was read or changed, and no Firebase deployment was performed.
+**Scope:** current `main` checkout, application and Functions source, Firestore/Storage rules, legacy-public-post migration tooling, VOH API, messaging media, trusted engagement, wallet claims, and the visual baseline. No production write, migration, rules deployment, Functions deployment, or application deployment was performed. The retained preview screenshots show only the public feed; no private profile, chat, or media content was accessed.
 
-## Key findings and fixes
+## Implemented protections and product corrections
 
-### Authentication, account profile, and reputation
+- Firestore profile/public-profile creation rejects forged verification, reputation, initial engagement, and privileged account claims; user updates are allowlisted. Sensitive user-owned state and message writes are bounded by explicit rules. Shared posts must carry explicit `audience: "public"`; feed queries filter to that value, with the required chronological index. Unsupported private audiences remain disabled.
+- A reviewed-ID, dry-run-first, resumable public-audience migration is implemented and tested. It never infers that an unlabelled post is public. The checked-in manifest is only a template; no production migration has run.
+- The trusted post-like operation authenticates through a callable and uses a Firestore transaction to set the caller's private like marker and update the post counter idempotently. It creates the recipient's notification only when a real like changes state; repeat requests do not duplicate events.
+- Follow/community access and public-community queries are constrained. Owner-only media writes/read/delete enforce MIME, size, and path metadata. **Private chat audio no longer uses permanent download URLs or direct client Storage access.** Authenticated API upload checks chat membership in the configured Firestore database, enforces a size/MIME limit and per-user rate quota, stores a private object path, and playback verifies membership plus a message reference before returning a no-store byte stream. Account deletion removes the user's chat audio in bounded pages before removing their participant state.
+- New browser voice notes store only the private object path. Playback requires an explicit user action, is fetched with a Firebase ID token, and uses a temporary revocable browser object URL. Simulated microphone-failure audio and fake attachment payloads were removed. Optional codec suffixes from browser `MediaRecorder` MIME strings are normalized before allow-list validation.
+- VOH endpoints require Firebase ID tokens, enforce a shared per-user Firestore rate limit and bounded payloads, and return honest unavailable errors rather than synthetic success. Local chat history and opted-in memory are isolated by authenticated account.
+- Wallet/creator screens do not claim a balance, exchange rate, payout, or transaction as real without a trusted ledger. Real transfers and payouts remain disabled; no payment provider or ledger was configured.
+- The app mark and PWA SVG now share a high-contrast white geometric N with a single restrained violet detail, without gradients or glow. The black/white/violet system and responsive feed refinements were retained.
 
-- Firestore profile creation now rejects client-supplied reputation, reputation breakdown, follower/following/Sparks counts, and contributions unless they start at zero. The public profile cannot claim verification without a verified Firebase Auth token. Regression tests also ensure unverified accounts may create an unverified profile but cannot forge a verification badge.
-- The login form now states that this form accepts email and password; it no longer advertises username/phone as identifiers for a handler that only called Firebase email/password sign-in.
+## Validation completed
 
-### Post audience privacy
-
-- Previously, shared posts were globally readable regardless of their `audience` field, while the composer implied that “Close Friends,” “My Community Circle,” and “Only Me” were private. Those options were not backed by access-control rules.
-- Shared post reads are now limited to records whose audience is explicitly `public`. Post creation and updates must remain public, and post-list queries now include an audience filter plus the required composite Firestore index. Private-audience write attempts are rejected. The composer explains why publishing is public-only until real private-audience authorization exists; it does not quietly relabel private content as public.
-- Firestore rules tests cover public reads, private direct-read denial, unsupported private creation/update denial, and public-filtered list access.
-
-### Media and messaging
-
-- Fixed the mismatch between user-media object paths and their `mediaId` metadata: the path now matches the exact ID checked by `storage.rules`.
-- Voice messages now upload durable audio instead of storing a temporary browser `blob:` URL. Chat audio is stored under a chat-specific path and Storage rules use the Firestore chat participants list to restrict reads, uploads, and deletes to participants/the uploading owner.
-- Replaced simulated recording after microphone permission failures with an explicit error. Recording duration now uses a ref-backed timer so the final audio message receives its actual duration. Voice messages use native audio controls for actual playback; legacy messages without a stored audio URL display that limitation.
-- Message deletion now awaits Firestore deletion before removing the message from the UI and reports failure rather than implying a successful delete.
-- The inbox’s “Ignore” behavior was only closing the view. It now says “Hide request,” persists the hidden ID in local storage, and tells the user that the request is hidden only on this device. A server-side reject/block workflow remains unimplemented.
-
-### VOH, wallet, and untrusted values
-
-- The visitor app now says “Preview feed” and warns that sample content may appear, instead of implying the guest sees verified live activity. The mobile feed toolbar now hides redundant desktop controls and keeps all five categories visible without clipping. Post metadata is simplified on narrow cards.
-- VOH no longer includes the just-submitted user prompt twice in the model history. It no longer invents feed counts/trends, claims an active encrypted inbox tunnel, or claims a fixed joined-community count. Inbox context explicitly states that private message contents are not included.
-- The rate limiter no longer keys directly off untrusted `X-Forwarded-For`. The backend uses Express’s `req.ip`/socket address; any future trusted-proxy configuration must match the actual deployment chain.
-- Replaced sample wallet balances, exchange rates, payouts, transaction rows, and inoperative “transfer” buttons with the values already stored on the account (or “Not available”) and an explicit notice that a trusted ledger/transfer backend is not connected.
-- Removed placeholder follower, following, reputation, and synthetic username/bio data from chat contact summaries when the source chat does not contain those values.
-
-## Validation performed
-
-| Check | Result |
+| Check | Outcome |
 |---|---|
-| `npm run lint` | Passed after installing the declared `functions` workspace dependencies |
-| `npm run build` | Passed; Vite still reports the existing large JavaScript chunk warning |
-| `npm run test:unit` | Passed: 11 tests, 0 failures |
-| `npm run test:rules` | Passed: 14 Firestore Emulator tests, 0 failures |
-| `npm run test:storage` | Passed: 2 Storage Emulator tests, including participant-bound chat audio access, 0 failures |
-| `npm audit` (root app) | Passed: 0 known advisories after compatible dependency updates and a patched gRPC override |
-| `npm audit --prefix functions --omit=dev` | 9 moderate advisories remain; remediation requires major Firebase Admin / Functions updates and was not forced |
-| `git diff --check` | Passed |
-| Desktop + 390px mobile screenshot review | Passed; all five feed categories fit at mobile width and visitor preview is labelled |
+| Root TypeScript (`npm run lint`) | Passed |
+| Firebase Functions TypeScript build (`npm run functions:build`) | Passed |
+| Unit tests (`npm run test:unit`) | 12 passed, 0 failed |
+| Firestore authorization Emulator (`npm run test:rules`) | 17 passed, 0 failed |
+| Storage authorization Emulator (`npm run test:storage`) | 2 passed, 0 failed |
+| Reviewed audience migration Emulator (`npm run test:migration`) | 4 passed, 0 failed |
+| Trusted engagement Emulator (`npm run test:engagement`) | 3 passed, 0 failed |
+| VOH/auth/private-media HTTP Emulators (`npm run test:voh-security`) | 5 passed, 0 failed; includes participant denial, no-download-URL assertion, message-reference gating, and no-store stream check |
+| Root production build (`npm run build`) | Passed after the final code-splitting change |
+| Firebase Functions build (`npm run functions:build`) | Passed after the final changes |
+| Dependency audits (`npm audit --omit=dev`; Functions production audit) | 0 known vulnerabilities in either dependency set |
+| Final UI evidence | Captured stable desktop (1440×1000) and mobile (390×844) guest-preview screenshots; files are linked below |
 
-Emulator tests use demo project IDs and synthetic users/data. No production credentials, user records, live Firebase project, or live deployment were used.
+The production build still warns that the JavaScript entry chunk exceeds 500 kB: it is 1,506.31 kB (395.95 kB gzip). Lazy-loading the 3,685-line `FeedView` moved it into its own 130.36 kB chunk and reduced the entry by 261.34 kB raw (66.59 kB gzip) versus the preceding build. Additional splitting may be worthwhile, but the warning is not fully resolved. Emulator tests use synthetic/demo projects and do not prove live deployment behavior.
 
-## Remaining constraints and rollout notes
+![Nexora desktop guest preview](artifacts/final-screenshots/nexora-desktop.png)
 
-1. **Rules and index are not deployed.** Repository changes do not change production authorization until the intended Firebase project receives reviewed `firestore.rules`, `storage.rules`, and `firestore.indexes.json` deployments.
-2. **Post audience backfill is needed before deploying the stricter rules.** Shared post queries now require `audience == 'public'`; existing public documents with no `audience` field will no longer appear in shared feeds and will fail direct-read checks. Backfill confirmed-public legacy posts to `audience: 'public'` with an authorized migration, and separately review ambiguous/private legacy records rather than blindly making them public.
-3. **Private post audiences are intentionally unavailable.** Secure follower/circle/community/only-me access and membership-aware queries still need a designed and tested authorization model. The composer blocks the unsupported options instead of exposing them as if secure.
-4. **General user-media storage remains a distinct policy.** Existing `users/{uid}/media/{id}` uploads remain readable by any authenticated user under the existing general-media rule. Voice notes now use the participant-scoped chat path. Any future private profile/document upload must receive its own owner-only storage path/rule before use.
-5. **Wallet, transfers, payouts, and transaction ledger still need trusted server infrastructure.** The UI no longer fabricates them; no monetary conversion, provider integration, or authoritative transaction path was implemented.
-6. **Other server-owned app actions remain incomplete.** Likes/share counters, recipient notifications/security events, admin/moderation claims, and server-side request rejection still require trusted backend paths; client rules reject or clearly limit those operations where covered.
-7. **Proxy-aware rate limiting needs deployment configuration.** Current keying resists spoofed forwarded headers but a reverse-proxy deployment may group multiple visitors under one remote address. Configure `trust proxy` only after verifying the exact trusted proxy chain and add a deployment-level rate-limit test.
-8. **Functions dependencies:** nine moderate npm audit findings remain in the Firebase Admin/Functions transitive tree; the available automated fix requires major runtime SDK upgrades. These were not force-upgraded. The root app dependency tree now audits clean after semver-compatible dependency refreshes and a gRPC patch override; typecheck, emulators, and build must be run on the updated lockfiles before merge.
+![Nexora mobile guest preview](artifacts/final-screenshots/nexora-mobile.png)
 
-## Git workflow
+## Deployment and remaining production work
 
-Changes are on the repository’s `main` branch in the connected checkout. No force-push or production deployment is planned. The final commit and push result will be reported after the final validation pass.
+1. **Nothing in this checkout is deployed.** Confirm the intended Firebase project, authorized operator, backed-up rules/data, indexes, and a change window before deploying. Production currently has not been modified.
+2. **Named-database boundary:** the app is configured for project `evident-server-bqmt3`, named database `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`, and bucket `evident-server-bqmt3.firebasestorage.app`. The private-media HTTP integration suite exercised the same authorization logic in emulators using `(default)` plus an emulator bucket; it did not connect to the production named database or bucket. Confirm Firestore Admin access to that database, Storage service-account permissions, and deployed environment values before rollout. Firebase Storage Rules cross-service lookup documentation uses the default Firestore database; see [`docs/FIREBASE_NAMED_DATABASE_LIMITATION.md`](docs/FIREBASE_NAMED_DATABASE_LIMITATION.md). The API proxy intentionally avoids relying on Storage Rules to resolve named-database chat membership.
+3. Firebase's local Firestore Emulator warns that it does not model multiple databases. Rules tests explicitly install and exercise the source rules in the emulator test environment, but named-database deployment behavior requires a reviewed non-production Firebase project smoke test before any production rollout.
+4. Before strict public-feed rules are deployed, an authorized reviewer must produce and independently review the confirmed-public legacy-ID manifest. Run the documented dry-run, obtain explicit change approval, apply only under the guarded production migration flow, then verify counts and a small reviewed sample. Do not promote ambiguous/restricted records.
+5. No trusted NEX monetary or non-monetary ledger, payment provider, webhook verification, settlement/reconciliation, or live transfer system exists. Keep those features unavailable until designed, implemented, tested, and reviewed.
+6. Private audiences (followers, circles, close friends, community-only) remain intentionally unavailable. General published post media still uses Firebase download-token URLs by design; keep such media public-only and do not reuse those URLs for private content.
+7. Verify production authentication-provider settings, authorized domains, Gemini secret configuration, App Check policy, Functions runtime/region, TTL cleanup, monitoring/alerts, and account-deletion behavior in the intended project. None were live-smoke-tested here.
+8. Review performance/bundle splitting and independently smoke-test feed, profile, follow, comment, and message flows against a non-production Firebase project before treating the repository as production-ready.
+
+See [`docs/FIREBASE_DEPLOYMENT_RUNBOOK.md`](docs/FIREBASE_DEPLOYMENT_RUNBOOK.md) for the migration/deployment sequence and rollback guidance. Repository validation is not a substitute for production deployment verification.

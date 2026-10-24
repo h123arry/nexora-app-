@@ -1096,79 +1096,14 @@ export default function CreatorDashboardView({
             </div>
           )}
 
-          {/* TAB 8: FUTURE MONETIZATION */}
+          {/* TAB 8: MONETIZATION AVAILABILITY */}
           {activeTab === 'monetization' && (
-            <div className="space-y-6">
-              {/* Financial Balance Summary */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="p-6 rounded-2xl bg-linear-to-br from-[#120a3a]/80 to-[#2c0f4f]/40 border border-white/10 space-y-4">
-                  <span className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-widest">NEX Balance Pool</span>
-                  <div className="space-y-1">
-                    <p className="text-3xl font-black text-white flex items-center gap-1">
-                      <DollarSign className="w-7 h-7 text-violet-400 shrink-0" />
-                      {currentUser.nexBalance ? currentUser.nexBalance.toLocaleString() : '12,500'} NEX
-                    </p>
-                    <p className="text-[10px] text-zinc-500 font-mono">1 NEX = $0.01 USD • Live rate tracking</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
-                    <div>
-                      <p className="text-[9px] text-zinc-500 uppercase font-bold">Total Earned</p>
-                      <p className="text-xs font-bold">{currentUser.totalEarnedNex ? currentUser.totalEarnedNex.toLocaleString() : '14,800'} NEX</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-zinc-500 uppercase font-bold">This Week</p>
-                      <p className="text-xs font-bold">{currentUser.thisWeekEarnedNex ? currentUser.thisWeekEarnedNex.toLocaleString() : '4,200'} NEX</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Simulated Revenue Analytics Chart */}
-                <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4 md:col-span-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-widest">Revenue Analytics</span>
-                    <span className="text-xs text-emerald-400 font-bold">+18.5% MoM</span>
-                  </div>
-                  {/* Svg line path renderer */}
-                  <div className="relative h-24 w-full">
-                    <svg className="w-full h-full" viewBox="0 0 100 20" preserveAspectRatio="none">
-                      <path d="M 0,18 Q 20,12 40,14 T 80,4 T 100,2" fill="none" stroke="#7c3aed" strokeWidth="1.5" />
-                      <path d="M 0,18 Q 20,12 40,14 T 80,4 T 100,2 L 100,20 L 0,20 Z" fill="rgba(124, 58, 237, 0.1)" />
-                    </svg>
-                    <div className="flex justify-between text-[8px] font-mono text-zinc-600 pt-1">
-                      <span>May</span>
-                      <span>Jun</span>
-                      <span>Jul (Current)</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Subsystems Setup Grid (Tips, Brand Deals, Subscriptions) */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                  { title: 'Tipping Jar Integration', desc: 'Allows viewers to send direct micro-contributions while viewing streams.', enabled: true, action: 'Configure Tip Presets' },
-                  { title: 'Premium Subscriber Tiers', desc: 'Offer locked, subscriber-only exclusive video nodes and discussion access.', enabled: false, action: 'Design Subscriber Tiers' },
-                  { title: 'Brand Collaborations Portal', desc: 'Connect directly with brands looking for sponsors. Export your media kit.', enabled: false, action: 'Configure Media Kit' }
-                ].map((syst, i) => (
-                  <div key={i} className="p-5 rounded-xl bg-white/3 border border-white/5 space-y-4 flex flex-col justify-between">
-                    <div className="space-y-1.5 text-xs">
-                      <div className="flex items-center justify-between">
-                        <h5 className="font-bold text-white">{syst.title}</h5>
-                        {syst.enabled ? (
-                          <span className="text-[9px] bg-emerald-500/10 text-emerald-400 px-2 py-0.5 rounded-full font-mono font-bold">Enabled</span>
-                        ) : (
-                          <span className="text-[9px] bg-zinc-800 text-zinc-500 px-2 py-0.5 rounded-full font-mono font-bold">Locked</span>
-                        )}
-                      </div>
-                      <p className="text-[11px] text-zinc-400 leading-relaxed">{syst.desc}</p>
-                    </div>
-                    <button className="w-full py-1.5 bg-white/5 hover:bg-white/10 rounded-lg text-xs font-bold border border-white/5 transition-all text-center cursor-pointer">
-                      {syst.action}
-                    </button>
-                  </div>
-                ))}
-              </div>
+            <div className="max-w-2xl rounded-2xl border border-white/10 bg-[#0a071f]/80 p-6 space-y-3">
+              <h3 className="text-base font-bold text-white">Monetization is not available</h3>
+              <p className="text-sm text-zinc-400 leading-relaxed">
+                Nexora does not currently provide a verified NEX balance ledger, exchange rate, earnings history, tips, subscriptions, payouts, or creator-revenue analytics. No monetary value or payment feature is represented here.
+              </p>
+              <p className="text-xs text-zinc-500">Do not treat locally displayed or sample values as an account balance or cash value.</p>
             </div>
           )}
         </motion.div>

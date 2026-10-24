@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Play, Pause, Check, CheckCheck, WifiOff, Pin, Trash2, Edit, Globe, Quote, MapPin } from 'lucide-react';
 import { ExtendedMessage } from '../types';
@@ -22,6 +22,7 @@ interface MessageBubbleProps {
   onToggleContextMenu: (msgId: string | null) => void;
   activeContextMessageId: string | null;
   onTogglePlayVoice: (msgId: string) => void;
+  onResolveVoiceMedia: (storagePath: string) => Promise<string>;
   onLongPress: (msgId: string, e: React.MouseEvent) => void;
   
   // Voice note extension
@@ -52,6 +53,7 @@ export default function MessageBubble({
   onToggleContextMenu,
   activeContextMessageId,
   onTogglePlayVoice,
+  onResolveVoiceMedia,
   onLongPress,
   playingVoiceId,
   voiceProgress,
@@ -62,6 +64,12 @@ export default function MessageBubble({
   onShowReactionDetails,
   isPinned
 }: MessageBubbleProps) {
+  const [privateVoiceUrl, setPrivateVoiceUrl] = useState('');
+  const [loadingPrivateVoice, setLoadingPrivateVoice] = useState(false);
+  const [privateVoiceError, setPrivateVoiceError] = useState('');
+  useEffect(() => () => {
+    if (privateVoiceUrl) URL.revokeObjectURL(privateVoiceUrl);
+  }, [privateVoiceUrl]);
   
   const highlightMatch = (text: string, query: string) => {
     if (!query) return <span>{text}</span>;
@@ -197,9 +205,22 @@ export default function MessageBubble({
               message.voiceAudioUrl || message.videoUrl ? (
                 <div className="min-w-[240px] max-w-[320px] rounded-xl border border-white/10 bg-black/25 p-2">
                   <p className="mb-1 text-[10px] font-medium text-[var(--nx-muted)]">Voice message{message.voiceDuration ? ` · ${message.voiceDuration}` : ''}</p>
-                  <audio className="w-full" controls preload="none" src={message.voiceAudioUrl || message.videoUrl} aria-label="Play voice message">
-                    Your browser does not support audio playback.
-                  </audio>
+                  {(message.voiceAudioUrl || message.videoUrl || '').startsWith('chats/') && !privateVoiceUrl ? (
+                    <button type="button" disabled={loadingPrivateVoice} onClick={async () => {
+                      setLoadingPrivateVoice(true);
+                      setPrivateVoiceError('');
+                      try { setPrivateVoiceUrl(await onResolveVoiceMedia(message.voiceAudioUrl || message.videoUrl || '')); }
+                      catch (error) { setPrivateVoiceError(error instanceof Error ? error.message : 'Voice note unavailable.'); }
+                      finally { setLoadingPrivateVoice(false); }
+                    }} className="min-h-11 rounded-lg border border-white/10 px-3 text-xs text-violet-200 disabled:opacity-60">
+                      {loadingPrivateVoice ? 'Loading securely…' : 'Load private voice note'}
+                    </button>
+                  ) : (
+                    <audio className="w-full" controls preload="none" src={privateVoiceUrl || message.voiceAudioUrl || message.videoUrl} aria-label="Play voice message">
+                      Your browser does not support audio playback.
+                    </audio>
+                  )}
+                  {privateVoiceError && <p role="status" className="mt-1 text-[10px] text-rose-300">{privateVoiceError}</p>}
                 </div>
               ) : (
                 <p className="rounded-lg border border-[var(--nx-edge)] bg-black/20 px-3 py-2 text-xs text-[var(--nx-muted)]">This older voice message has no stored audio file.</p>

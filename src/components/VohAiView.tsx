@@ -1,3 +1,4 @@
+import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Mic, MicOff, Volume2, VolumeX, FileText, Send, BrainCircuit, ClipboardCopy, Info, CheckCircle, TrendingUp, Award, Compass, Search, Plus, Trash2, Pin, Archive, FolderPlus, Folder, RefreshCw, HelpCircle, ShieldCheck, AlertTriangle, FileCheck, ThumbsUp, MessageSquare, Sparkle, PenSquare, Users, Settings, X, Play, Square, BookOpen, DollarSign, Cpu, Database, HardDrive, Bell, Layers, Lock, UserCheck, Activity, Eye, Forward } from 'lucide-react';
@@ -537,7 +538,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     setLoadingAi(true);
     showToast("Polishing your command...");
     try {
-      const res = await fetch('/api/voh-ai/improve-post', {
+      const res = await authenticatedVohFetch('/api/voh-ai/improve-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: query })

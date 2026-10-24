@@ -21,7 +21,6 @@ import {
   followUserDb, 
   unfollowUserDb, 
   createPostDb, 
-  addSparkDb,
   addHelpfulCommentDb,
   isFollowingDb,
   INITIAL_USER, 
@@ -44,6 +43,9 @@ import {
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
 import { db } from './lib/firebase';
+import { functions } from './lib/firebase';
+import { httpsCallable } from 'firebase/functions';
+import { collection, getDocs } from 'firebase/firestore';
 import { useFirebase } from './context/FirebaseContext';
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
@@ -52,7 +54,7 @@ import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
-import FeedView from './components/FeedView';
+const FeedView = lazy(() => import('./components/FeedView'));
 const ProfileView = lazy(() => import('./components/ProfileView'));
 const NotificationsView = lazy(() => import('./components/NotificationsView'));
 const WorldPulseView = lazy(() => import('./components/WorldPulseView'));
@@ -493,6 +495,26 @@ export default function App() {
     }
     return [];
   });
+  const likeStateReadyRef = useRef(false);
+  const pendingLikeRequestsRef = useRef(new Set<string>());
+  useEffect(() => {
+    let cancelled = false;
+    likeStateReadyRef.current = false;
+    setUserSparks([]);
+    if (!isLoggedIn || !firebaseUser) return () => { cancelled = true; };
+    getDocs(collection(db, 'users', firebaseUser.uid, 'postLikes'))
+      .then(snapshot => {
+        if (cancelled) return;
+        const ids = snapshot.docs.map(like => like.id);
+        setUserSparks(ids);
+        localStorage.setItem(`nexora_sparks_${firebaseUser.uid}`, JSON.stringify(ids));
+      })
+      .catch(() => {
+        if (!cancelled) window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not sync liked posts. Please retry before interacting.' }));
+      })
+      .finally(() => { if (!cancelled) likeStateReadyRef.current = true; });
+    return () => { cancelled = true; };
+  }, [firebaseUser?.uid, isLoggedIn]);
 
   useEffect(() => {
     let active = true;
@@ -1365,45 +1387,31 @@ export default function App() {
   // 5. Shared Post Interact Controllers
   const handleLikePost = (postId: string) => {
     requireAuth(() => {
-      const isCurrentlyLiked = userSparks.includes(postId);
-      const updatedSparks = isCurrentlyLiked
-        ? userSparks.filter(id => id !== postId)
-        : [...userSparks, postId];
-      
-      setUserSparks(updatedSparks);
-
-      setPosts(prevPosts => 
-        prevPosts.map(post => {
-          if (post.id === postId) {
-            const updatedLikes = isCurrentlyLiked ? post.likes - 1 : post.likes + 1;
-            savePostToDb({ ...post, likes: updatedLikes });
-            
-            // If liking, push interaction alert and record real spark
-            if (!isCurrentlyLiked && post.userId !== currentUser.id) {
-              addSparkDb(currentUser.id, post.userId, 'post', post.id);
-
-              const newNotif: Notification = {
-                id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-                type: 'like',
-                userId: currentUser.id,
-                username: currentUser.username,
-                avatar: currentUser.avatar,
-                targetId: post.id,
-                content: `liked your post: "${post.content.slice(0, 30)}..."`,
-                timestamp: new Date().toISOString(),
-                isRead: false
-              };
-              setNotifications(prev => [newNotif, ...prev]);
-            }
-
-            return { 
-              ...post, 
-              likes: updatedLikes
-            };
-          }
-          return post;
-        })
-      );
+      if (!firebaseUser || !likeStateReadyRef.current) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your liked-post state is still syncing. Please try again.' }));
+        return;
+      }
+      if (pendingLikeRequestsRef.current.has(postId)) return;
+      const desiredLiked = !userSparks.includes(postId);
+      pendingLikeRequestsRef.current.add(postId);
+      const setLike = httpsCallable<{ postId: string; liked: boolean }, { liked: boolean; likes: number }>(functions, 'setPublicPostLike');
+      void setLike({ postId, liked: desiredLiked }).then(({ data }) => {
+        if (typeof data.liked !== 'boolean' || !Number.isSafeInteger(data.likes) || data.likes < 0) {
+          throw new Error('The server returned an invalid interaction result.');
+        }
+        setUserSparks(previous => {
+          const next = data.liked
+            ? [...new Set([...previous, postId])]
+            : previous.filter(id => id !== postId);
+          localStorage.setItem(`nexora_sparks_${firebaseUser.uid}`, JSON.stringify(next));
+          return next;
+        });
+        setPosts(previous => previous.map(post => post.id === postId ? { ...post, likes: data.likes } : post));
+      }).catch(() => {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Nexora could not save that like. Please check your connection and retry.' }));
+      }).finally(() => {
+        pendingLikeRequestsRef.current.delete(postId);
+      });
     }, 'Join Nexora to like posts, spark conversations, and interact with creators.');
   };
 
@@ -2095,6 +2103,7 @@ export default function App() {
               className={activeTab === 'feed' ? "h-full w-full block" : "h-0 overflow-hidden pointer-events-none hidden"}
               style={{ display: activeTab === 'feed' ? 'block' : 'none' }}
             >
+              <Suspense fallback={<div className="flex min-h-[420px] items-center justify-center"><NexoraLoader size="lg" center /></div>}>
               <FeedView creators={Object.values(globalUsersMap) as User[]}
                 currentUser={getRichUser(currentUser)}
                 posts={resolvedPosts}
@@ -2121,6 +2130,7 @@ export default function App() {
                 hasMorePosts={hasMoreFeedPosts}
                 isLoadingMorePosts={isLoadingMoreFeedPosts}
               />
+              </Suspense>
             </motion.div>
             
             {activeTab !== 'feed' && (

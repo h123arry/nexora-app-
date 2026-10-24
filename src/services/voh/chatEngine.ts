@@ -1,3 +1,5 @@
+import { authenticatedVohFetch } from './authenticatedVohFetch';
+import { auth } from '../../lib/firebase';
 import { User } from '../../types';
 
 export interface Message {
@@ -26,14 +28,18 @@ export interface ChatFolder {
   color?: string;
 }
 
-const STORAGE_KEYS = {
-  SESSIONS: 'voh_ai_sessions',
-  FOLDERS: 'voh_ai_folders',
-};
+const STORAGE_KEYS = { SESSIONS: 'voh_ai_sessions', FOLDERS: 'voh_ai_folders' };
+function scopedKey(key: string): string {
+  // Older builds stored conversations globally, which could expose one browser user's history to another.
+  localStorage.removeItem(STORAGE_KEYS.SESSIONS);
+  localStorage.removeItem(STORAGE_KEYS.FOLDERS);
+  return `${key}_${auth.currentUser?.uid || 'guest'}`;
+}
 
 export class ChatEngine {
   static getSessions(): ChatSession[] {
-    const data = localStorage.getItem(STORAGE_KEYS.SESSIONS);
+    const key = scopedKey(STORAGE_KEYS.SESSIONS);
+    const data = localStorage.getItem(key);
     if (!data) {
       // Return a default session
       const defaultSession: ChatSession = {
@@ -43,7 +49,7 @@ export class ChatEngine {
           {
             id: 'welcome-msg',
             sender: 'voh',
-            text: "Hey there! I'm **VOH AI**, your highly optimized intelligent companion on Nexora. Ask me to **summarize your feed**, discover regional **World Pulse trends** in Nigeria, locate active **communities**, or find **interesting job/collaboration opportunities** near you!",
+            text: "Hey, I'm **VOH AI**. I can help you think through ideas and work with information you share in this conversation. I don't have live web access, private-message access, account controls, or live World Pulse data.",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             reactions: []
           }
@@ -54,32 +60,33 @@ export class ChatEngine {
         folderId: null
       };
       const initial = [defaultSession];
-      localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(initial));
+      localStorage.setItem(key, JSON.stringify(initial));
       return initial;
     }
     return JSON.parse(data);
   }
 
   static saveSessions(sessions: ChatSession[]): void {
-    localStorage.setItem(STORAGE_KEYS.SESSIONS, JSON.stringify(sessions));
+    localStorage.setItem(scopedKey(STORAGE_KEYS.SESSIONS), JSON.stringify(sessions));
   }
 
   static getFolders(): ChatFolder[] {
-    const data = localStorage.getItem(STORAGE_KEYS.FOLDERS);
+    const key = scopedKey(STORAGE_KEYS.FOLDERS);
+    const data = localStorage.getItem(key);
     if (!data) {
       const defaultFolders: ChatFolder[] = [
         { id: 'folder-creator', name: '🎨 Creator Brainstorming', color: '#8B5CF6' },
         { id: 'folder-code', name: '💻 System Architecture', color: '#10B981' },
         { id: 'folder-general', name: '💬 General Inquiries', color: '#3B82F6' }
       ];
-      localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(defaultFolders));
+      localStorage.setItem(key, JSON.stringify(defaultFolders));
       return defaultFolders;
     }
     return JSON.parse(data);
   }
 
   static saveFolders(folders: ChatFolder[]): void {
-    localStorage.setItem(STORAGE_KEYS.FOLDERS, JSON.stringify(folders));
+    localStorage.setItem(scopedKey(STORAGE_KEYS.FOLDERS), JSON.stringify(folders));
   }
 
   static async sendChatMessage(
@@ -96,7 +103,7 @@ export class ChatEngine {
     const timeout = window.setTimeout(() => controller.abort(), 45_000);
     let response: Response;
     try {
-      response = await fetch('/api/voh-ai/chat', {
+      response = await authenticatedVohFetch('/api/voh-ai/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Query, Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
+import { getApps, initializeApp } from 'firebase-admin/app';
 
 const PAGE_SIZE = 200;
 const LEASE_MS = 10 * 60 * 1000;
@@ -17,6 +18,8 @@ const ownedCollections: Array<{ name: string; field: string }> = [
   { name: 'moderationAppeals', field: 'userId' },
   { name: 'privacySettings', field: 'userId' },
   { name: 'presence', field: 'userId' },
+  { name: 'pages', field: 'ownerId' },
+  { name: 'communities', field: 'ownerId' },
 ];
 
 export interface LifecycleRequest {
@@ -33,7 +36,10 @@ export interface CleanupProgress {
   deletedFiles: number;
 }
 
-const db = getFirestore();
+const workerApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
+const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
+const db = getFirestore(workerApp, firestoreDatabaseId);
+const accountStorageBucket = getStorage(workerApp).bucket(process.env.FIREBASE_STORAGE_BUCKET || 'evident-server-bqmt3.firebasestorage.app');
 
 function isExpiredLease(request: LifecycleRequest): boolean {
   return !request.leaseExpiresAt || request.leaseExpiresAt.toMillis() <= Date.now();
@@ -84,7 +90,7 @@ async function deleteQuery(query: Query, onProgress: (count: number) => Promise<
 }
 
 async function deleteUserSubcollections(userId: string): Promise<number> {
-  const subcollections = ['memoryEvents', 'memoryState', 'settings', 'securityLogs', 'activityEvents', 'notifications'];
+  const subcollections = ['memoryEvents', 'memoryState', 'settings', 'securityLogs', 'activityEvents', 'notifications', 'postLikes'];
   let deleted = 0;
   for (const name of subcollections) {
     deleted += await deleteQuery(
@@ -95,27 +101,45 @@ async function deleteUserSubcollections(userId: string): Promise<number> {
   return deleted;
 }
 
-async function cleanSharedChats(userId: string): Promise<number> {
+async function deleteStoragePrefix(prefix: string): Promise<number> {
   let deleted = 0;
-  const chats = await db.collection('chats').where('participants', 'array-contains', userId).get();
-  for (const chat of chats.docs) {
-    const messages = await db.collection('chats').doc(chat.id).collection('messages').where('senderId', '==', userId).get();
-    if (messages.size) {
-      const batch = db.batch();
-      messages.docs.forEach((message) => batch.delete(message.ref));
-      await batch.commit();
-      deleted += messages.size;
+  let pageToken: string | undefined;
+  do {
+    const page = await accountStorageBucket.getFiles({ prefix, maxResults: PAGE_SIZE, pageToken }) as unknown as [Array<{ delete: () => Promise<unknown> }>, unknown, { nextPageToken?: string }?];
+    const files = page[0];
+    for (let offset = 0; offset < files.length; offset += PAGE_SIZE) {
+      const batch = files.slice(offset, offset + PAGE_SIZE);
+      await Promise.all(batch.map(file => file.delete()));
+      deleted += batch.length;
     }
-    await chat.ref.update({
-      participants: FieldValue.arrayRemove(userId),
-      [`deletedParticipants.${userId}`]: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-  }
+    pageToken = page[2]?.nextPageToken;
+  } while (pageToken);
   return deleted;
 }
 
-async function deleteOwnedDocuments(userId: string): Promise<number> {
+async function cleanSharedChats(userId: string): Promise<{ deletedDocuments: number; deletedFiles: number }> {
+  let deletedDocuments = 0;
+  let deletedFiles = 0;
+  while (true) {
+    const chats = await db.collection('chats')
+      .where('participants', 'array-contains', userId)
+      .limit(PAGE_SIZE)
+      .get();
+    if (chats.empty) return { deletedDocuments, deletedFiles };
+    for (const chat of chats.docs) {
+      const messageQuery = chat.ref.collection('messages').where('senderId', '==', userId);
+      deletedDocuments += await deleteQuery(messageQuery, async () => undefined);
+      deletedFiles += await deleteStoragePrefix(`chats/${chat.id}/audio/${userId}/`);
+      await chat.ref.update({
+        participants: FieldValue.arrayRemove(userId),
+        [`deletedParticipants.${userId}`]: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+  }
+}
+
+async function deleteOwnedDocuments(userId: string): Promise<{ deletedDocuments: number; deletedFiles: number }> {
   let deleted = 0;
   for (const collection of ownedCollections) {
     deleted += await deleteQuery(
@@ -135,18 +159,14 @@ async function deleteOwnedDocuments(userId: string): Promise<number> {
     db.collection('usernames').where('userId', '==', userId),
     async () => undefined,
   );
-  deleted += await cleanSharedChats(userId);
-  return deleted;
+  const chatCleanup = await cleanSharedChats(userId);
+  return { deletedDocuments: deleted + chatCleanup.deletedDocuments, deletedFiles: chatCleanup.deletedFiles };
 }
 
 async function deleteStorageObjects(userId: string): Promise<number> {
-  const bucket = getStorage().bucket();
   let deleted = 0;
   for (const prefix of [`users/${userId}/`, `media/${userId}/`]) {
-    const [files] = await bucket.getFiles({ prefix });
-    if (!files.length) continue;
-    await Promise.all(files.map((file) => file.delete()));
-    deleted += files.length;
+    deleted += await deleteStoragePrefix(prefix);
   }
   return deleted;
 }
@@ -157,7 +177,9 @@ export async function processAccountDeletion(requestId: string, userId: string):
   let progress: CleanupProgress = { stage: 'claimed', deletedDocuments: 0, deletedFiles: 0 };
   try {
     progress.stage = 'owned-documents';
-    progress.deletedDocuments += await deleteOwnedDocuments(userId);
+    const ownedCleanup = await deleteOwnedDocuments(userId);
+    progress.deletedDocuments += ownedCleanup.deletedDocuments;
+    progress.deletedFiles += ownedCleanup.deletedFiles;
     await updateProgress(requestId, progress);
 
     progress.stage = 'user-subcollections';

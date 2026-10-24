@@ -1,11 +1,13 @@
+import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
-import { saveMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
+import { saveMediaBlob, getMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 import { revokeObjectUrl, validateMediaFile } from '../utils/mediaValidation';
 import { uploadMediaFile } from '../services/firebase/storageService';
+import { VoiceEngine } from '../services/voh/voiceEngine';
 import NexoraLoader from './NexoraLoader';
 
 interface MediaCreationEngineProps {
@@ -474,9 +476,10 @@ export default function MediaCreationEngine({
         console.error(e);
       }
     } else {
-      setRecordedVideoUrl('https://assets.mixkit.co/videos/preview/mixkit-starry-night-sky-background-912-large.mp4');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'No video was recorded. Check camera permission and try again.' }));
+      return;
     }
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🎥 Reel recording captured!' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: 'Saving video recording…' }));
   };
 
   const startVoiceRecording = () => {
@@ -489,7 +492,7 @@ export default function MediaCreationEngine({
         setVoiceTranscript('');
 
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           if (stream) {
             const recorder = new MediaRecorder(stream);
             mediaRecorderRef.current = recorder;
@@ -504,6 +507,30 @@ export default function MediaCreationEngine({
                 return trackObjectUrl(URL.createObjectURL(blob));
               });
               setVoiceRawBlob(blob);
+              if (blob.size > 0 && blob.size <= 5 * 1024 * 1024) {
+                setLoadingTranscript(true);
+                const reader = new FileReader();
+                reader.onload = async () => {
+                  try {
+                    const dataUrl = String(reader.result || '');
+                    const audioBase64 = dataUrl.slice(dataUrl.indexOf(',') + 1);
+                    const result = await VoiceEngine.uploadVoice(audioBase64, blob.type || 'audio/webm');
+                    setVoiceTranscript(result.transcription);
+                  } catch (error) {
+                    window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'VOH could not transcribe this recording.' }));
+                  } finally {
+                    setLoadingTranscript(false);
+                  }
+                };
+                reader.onerror = () => {
+                  setLoadingTranscript(false);
+                  window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not read the voice recording. Please retry.' }));
+                };
+                reader.readAsDataURL(blob);
+              } else if (blob.size > 5 * 1024 * 1024) {
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'The voice note was saved, but it is too large for transcription.' }));
+              }
+              mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
             };
             recorder.start();
           }
@@ -521,7 +548,8 @@ export default function MediaCreationEngine({
         }, 1000);
         (window as any).voiceInterval = interval;
       } catch (err) {
-        console.error(err);
+        setVoiceIsRecording(false);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Microphone access was not granted. Please check browser permissions.' }));
       }
     });
   };
@@ -529,21 +557,17 @@ export default function MediaCreationEngine({
   const stopVoiceRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+    } else {
+      setVoiceIsRecording(false);
+      setVoiceIsPaused(false);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'No voice recording is available to save.' }));
+      return;
     }
     setVoiceIsRecording(false);
     setVoiceIsPaused(false);
     clearInterval((window as any).voiceInterval);
 
-    if (!voiceFileUrl) {
-      setVoiceFileUrl('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
-    }
-
     setLoadingTranscript(true);
-    setTimeout(() => {
-      setVoiceTranscript("This voice transmission records high fidelity metadata for Nexora. It streamlines all workflows automatically.");
-      setLoadingTranscript(false);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🎙️ Speech-to-Text completed!' }));
-    }, 1200);
   };
 
   // AI assistant simulation
@@ -551,7 +575,7 @@ export default function MediaCreationEngine({
     setLoadingTranscript(true);
     window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Nexora is polishing writing...' }));
     try {
-      const response = await fetch('/api/voh-ai/improve-post', {
+      const response = await authenticatedVohFetch('/api/voh-ai/improve-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content: caption || "Drafting system setup instructions.", action: promptType })
@@ -694,27 +718,72 @@ export default function MediaCreationEngine({
     try {
       let mainImg = selectedImages[0]?.url || undefined;
       let finalVid = videoFileUrl || recordedVideoUrl || undefined;
+      const durableImages: string[] = [];
+      for (let index = 0; index < selectedImages.length; index += 1) {
+        const imageUrl = selectedImages[index].url;
+        if (imageUrl.startsWith('data:') || imageUrl.startsWith('blob:') || imageUrl.startsWith('db-media://')) {
+          if (isOffline) throw new Error('Connect to the internet before publishing media. Your current draft is still available on this device.');
+          const imageBlob = imageUrl.startsWith('db-media://')
+            ? await getMediaBlob(imageUrl.slice('db-media://'.length))
+            : await (await fetch(imageUrl)).blob();
+          if (!imageBlob) throw new Error('A saved image draft could not be recovered. Please choose the image again.');
+          const uploaded = await uploadMediaFile({
+            file: imageBlob,
+            userId: currentUser.id,
+            fileName: `image-${index + 1}-${Date.now()}.${imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'}`,
+            onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+          });
+          durableImages.push(uploaded.downloadUrl);
+        } else {
+          durableImages.push(imageUrl);
+        }
+      }
+      if (durableImages.length) mainImg = durableImages[0];
 
-      if (videoRawBlob) {
+      let uploadVideoBlob = videoRawBlob;
+      if (!uploadVideoBlob && videoFileUrl?.startsWith('db-media://')) {
+        uploadVideoBlob = await getMediaBlob(videoFileUrl.slice('db-media://'.length));
+      }
+      if (uploadVideoBlob) {
         try {
-          const thumb = await generateVideoThumbnail(videoRawBlob);
+          const thumb = await generateVideoThumbnail(uploadVideoBlob);
           if (thumb) mainImg = thumb;
-          if (!isOffline && currentUser.id) {
-            const uploaded = await uploadMediaFile({
-              file: videoRawBlob,
-              userId: currentUser.id,
-              fileName: `video-${Date.now()}.webm`,
-              onProgress: progress => setUploadProgress(Math.max(75, progress)),
-            });
-            finalVid = uploaded.downloadUrl;
-          } else {
-            finalVid = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
+          if (isOffline) throw new Error('Connect to publish this video. Keep it as a draft and retry when online.');
+          const uploaded = await uploadMediaFile({
+            file: uploadVideoBlob,
+            userId: currentUser.id,
+            fileName: `video-${Date.now()}.webm`,
+            onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+          });
+          finalVid = uploaded.downloadUrl;
+          if (mainImg?.startsWith('data:')) {
+            const thumbnail = await (await fetch(mainImg)).blob();
+            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg` });
+            mainImg = uploadedThumbnail.downloadUrl;
           }
         } catch (e) {
           console.error('[MediaCreation] Video upload failed.', e);
-          if (!isOffline) throw new Error('Video upload failed. Check your connection and retry.');
-          finalVid = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
+          throw e instanceof Error ? e : new Error('Video upload failed. Check your connection and retry.');
         }
+      }
+
+      if (activeMode === 'voice') {
+        if (!voiceRawBlob && !voiceFileUrl?.startsWith('db-media://')) throw new Error('Record a real voice note before publishing.');
+        if (isOffline) throw new Error('Connect to publish this voice note. Keep it as a draft and retry when online.');
+      }
+      let finalVoiceUrl: string | undefined;
+      let uploadVoiceBlob = voiceRawBlob;
+      if (!uploadVoiceBlob && activeMode === 'voice' && voiceFileUrl?.startsWith('db-media://')) {
+        uploadVoiceBlob = await getMediaBlob(voiceFileUrl.slice('db-media://'.length));
+      }
+      if (uploadVoiceBlob && activeMode === 'voice') {
+        const uploadedVoice = await uploadMediaFile({
+          file: uploadVoiceBlob,
+          userId: currentUser.id,
+          fileName: `voice-${Date.now()}.webm`,
+          onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+        });
+        finalVoiceUrl = uploadedVoice.downloadUrl;
       }
 
       const activeFilters = selectedImages.map(img => img.filterStyle || 'none');
@@ -732,10 +801,10 @@ export default function MediaCreationEngine({
         caption,
         mainImg,
         topics,
-        selectedImages.length > 1 ? selectedImages.map(img => img.url) : undefined,
+        durableImages.length > 1 ? durableImages : undefined,
         finalVid,
         voiceTranscript || undefined,
-        voiceFileUrl || undefined,
+        finalVoiceUrl,
         audience,
         activeMode === 'voice',
         activeMode === 'voice' ? voiceDurationSecs : undefined,

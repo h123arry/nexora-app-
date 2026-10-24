@@ -9,6 +9,31 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/chats/$(chatId))
         && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
     }
+    function validMessageCreate(chatId, messageId) {
+      let data = request.resource.data;
+      return data.keys().hasOnly([
+          'id', 'chatId', 'senderId', 'content', 'timestamp', 'status',
+          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote'
+        ])
+        && data.id == messageId
+        && data.chatId == chatId
+        && data.senderId == request.auth.uid
+        && data.content is string
+        && data.content.size() <= 10000
+        && data.timestamp is string
+        && data.timestamp.size() <= 40
+        && data.status == 'sent'
+        && (!data.keys().hasAny(['voiceDuration'])
+          || (data.voiceDuration is string && data.voiceDuration.size() <= 24))
+        && (!data.keys().hasAny(['fileName'])
+          || (data.fileName is string && data.fileName.size() <= 255))
+        && (!data.keys().hasAny(['replyToQuote'])
+          || (data.replyToQuote is string && data.replyToQuote.size() <= 1000))
+        && (!data.keys().hasAny(['voiceAudioUrl'])
+          || (data.voiceAudioUrl is string
+            && data.voiceAudioUrl.size() <= 300
+            && data.voiceAudioUrl.matches('^chats/' + chatId + '/audio/' + request.auth.uid + '/[A-Za-z0-9_-]{1,128}$')));
+    }
     function zeroInitialReputation(data) {
       return data.get('reputationPoints', 0) == 0
         && (!data.keys().hasAny(['reputationBreakdown'])
@@ -150,6 +175,11 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isRead']);
       }
       match /activityEvents/{eventId} { allow read, write: if owner(userId); }
+      // Callable backend owns these markers and the corresponding post counter.
+      match /postLikes/{postId} {
+        allow get, list: if owner(userId);
+        allow create, update, delete: if false;
+      }
     }
 
     // Public directory contains an allowlisted projection, never private account fields.
@@ -239,11 +269,16 @@ service cloud.firestore {
     }
 
     match /follows/{followId} {
-      allow get, list: if signedIn();
+      // A user may inspect only relationship edges in which they participate.
+      // Firestore queries must constrain followerId or followingId to auth.uid.
+      allow get, list: if signedIn()
+        && (resource.data.followerId == request.auth.uid || resource.data.followingId == request.auth.uid);
       allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['followerId', 'followingId', 'createdAt'])
         && request.resource.data.followerId == request.auth.uid
         && request.resource.data.followingId is string
-        && request.resource.data.followingId != request.auth.uid;
+        && request.resource.data.followingId != request.auth.uid
+        && request.resource.data.followingId.size() > 0;
       allow update: if false;
       allow delete: if signedIn() && resource.data.followerId == request.auth.uid;
     }
@@ -287,13 +322,19 @@ service cloud.firestore {
     }
 
     match /communities/{communityId} {
-      allow get, list: if true;
+      // Private and invite-only records can include membership and moderation state.
+      // Their detailed member authorization is not implemented, so only owners may read them.
+      allow get, list: if resource.data.type == 'public'
+        || (signedIn() && resource.data.ownerId == request.auth.uid);
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
-        && request.resource.data.id == communityId;
+        && request.resource.data.id == communityId
+        && request.resource.data.type in ['public', 'private', 'invite-only'];
       allow update: if signedIn() && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
-        && request.resource.data.get('id', communityId) == communityId;
+        && request.resource.data.get('id', communityId) == communityId
+        && request.resource.data.type == resource.data.type
+        && request.resource.data.type in ['public', 'private', 'invite-only'];
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 
@@ -371,9 +412,7 @@ service cloud.firestore {
 
       match /messages/{messageId} {
         allow get, list: if chatMember(chatId);
-        allow create: if chatMember(chatId)
-          && request.resource.data.senderId == request.auth.uid
-          && request.resource.data.chatId == chatId;
+        allow create: if chatMember(chatId) && validMessageCreate(chatId, messageId);
         allow update: if chatMember(chatId)
           && resource.data.senderId != request.auth.uid
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])

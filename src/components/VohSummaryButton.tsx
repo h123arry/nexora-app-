@@ -1,3 +1,4 @@
+import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState } from 'react';
 import VohIcon from './VohIcon';
 
@@ -18,7 +19,7 @@ export default function VohSummaryButton({ content }: VohSummaryButtonProps) {
     
     setIsGenerating(true);
     try {
-      const response = await fetch('/api/voh-ai/summarize-post', {
+      const response = await authenticatedVohFetch('/api/voh-ai/summarize-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ content }),

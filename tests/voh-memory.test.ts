@@ -15,11 +15,12 @@ describe('VOH memory consent boundary', () => {
 
   beforeEach(() => {
     storage.clear();
-    storage.setItem('nexora_user', JSON.stringify({ id: 'memory-test-user' }));
+    storage.setItem('nexora_user', JSON.stringify({ id: 'spoofed-old-user' }));
     (globalThis as any).localStorage = storage;
   });
 
   it('starts disabled and does not invent personal memories', () => {
+    assert.equal(MemoryEngine.getActiveUserId(), 'guest');
     const memory = MemoryEngine.getMemory();
     assert.equal(memory.memoryEnabled, false);
     assert.deepEqual(memory.creatorGoals, []);
@@ -38,7 +39,7 @@ describe('VOH memory consent boundary', () => {
   });
 
   it('does not activate legacy profiles that lack an explicit consent flag', () => {
-    storage.setItem('voh_memory_profile_memory-test-user', JSON.stringify({
+    storage.setItem('voh_memory_profile_guest', JSON.stringify({
       interests: ['legacy-interest'],
       creatorGoals: ['legacy-goal'],
       savedPrompts: [{ id: 'legacy', name: 'Legacy', content: 'private' }]

@@ -1,3 +1,5 @@
+import { auth } from '../../lib/firebase';
+
 export interface UserMemoryProfile {
   /** Persistent VOH memory is disabled until the user explicitly opts in. */
   memoryEnabled: boolean;
@@ -20,14 +22,7 @@ const STORAGE_KEYS = {
 
 export class MemoryEngine {
   static getActiveUserId(): string {
-    const savedUser = localStorage.getItem('nexora_user');
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        if (u && u.id) return u.id;
-      } catch (e) {}
-    }
-    return 'default';
+    return auth.currentUser?.uid || 'guest';
   }
 
   static getMemory(): UserMemoryProfile {

@@ -4,47 +4,170 @@ import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { replaceTerminology } from './src/data/copyDictionary';
+import { applicationDefault, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
+import { createHash } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
+app.use(express.json({ limit: '8mb' }));
 
 const VOH_MAX_MESSAGE_LENGTH = 4000;
 const VOH_MAX_HISTORY_ITEMS = 24;
 const VOH_MAX_CONTEXT_POSTS = 10;
 const VOH_RATE_WINDOW_MS = 60_000;
-const VOH_RATE_LIMIT = 30;
-const vohRateBuckets = new Map<string, { startedAt: number; count: number }>();
+const VOH_RATE_LIMIT = 20;
+const firebaseProjectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'evident-server-bqmt3';
+const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
+const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-api')
+  || initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api');
+const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
+const mediaBucket = getStorage(firebaseAdminApp).bucket(process.env.FIREBASE_STORAGE_BUCKET || 'evident-server-bqmt3.firebasestorage.app');
+
+async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
+  if (!match) return res.status(401).json({ error: 'Sign in to access this resource.' });
+  try {
+    const decoded = await getAuth(firebaseAdminApp).verifyIdToken(match[1]);
+    res.locals.userId = decoded.uid;
+    return next();
+  } catch {
+    return res.status(401).json({ error: 'Your sign-in could not be verified. Please sign in again.' });
+  }
+}
+
+async function allowChatMediaUpload(uid: string): Promise<boolean> {
+  const windowMs = 60_000;
+  const windowStart = Math.floor(Date.now() / windowMs) * windowMs;
+  const ref = serverDb.collection('chatMediaRateLimits').doc(createHash('sha256').update(uid).digest('hex'));
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const previous = snapshot.data();
+    const count = previous?.windowStart === windowStart ? Number(previous.count) || 0 : 0;
+    if (count >= 6) return false;
+    transaction.set(ref, { windowStart, count: count + 1, expiresAt: new Date(windowStart + windowMs * 10), updatedAt: FieldValue.serverTimestamp() });
+    return true;
+  });
+}
+
+const privateChatMediaRouter = express.Router();
+privateChatMediaRouter.use(requireFirebaseUser);
+privateChatMediaRouter.post('/chat/:chatId/audio', async (req, res) => {
+  const uid = res.locals.userId as string;
+  const chatId = req.params.chatId;
+  const { audioBase64, mimeType } = req.body || {};
+  const allowed = ['audio/webm', 'audio/ogg', 'audio/wav', 'audio/mpeg', 'audio/mp4', 'audio/aac'];
+  if (!/^[A-Za-z0-9_-]{1,150}$/.test(chatId) || typeof audioBase64 !== 'string'
+    || audioBase64.length < 8 || audioBase64.length > 7_000_000 || audioBase64.length % 4 !== 0
+    || !/^[A-Za-z0-9+/]*={0,2}$/.test(audioBase64) || !allowed.includes(mimeType)) {
+    return res.status(400).json({ error: 'Invalid audio upload.' });
+  }
+  const bytes = Buffer.from(audioBase64, 'base64');
+  if (!bytes.length || bytes.length > 5 * 1024 * 1024) return res.status(413).json({ error: 'Chat audio must be 5 MiB or smaller.' });
+  const signatureMatches: Record<string, boolean> = {
+    'audio/webm': bytes.subarray(0, 4).equals(Buffer.from([0x1a, 0x45, 0xdf, 0xa3])),
+    'audio/ogg': bytes.subarray(0, 4).toString() === 'OggS',
+    'audio/wav': bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WAVE',
+    'audio/mpeg': bytes.subarray(0, 3).toString() === 'ID3' || (bytes[0] === 0xff && (bytes[1] & 0xe0) === 0xe0),
+    'audio/mp4': bytes.subarray(4, 8).toString() === 'ftyp',
+    'audio/aac': bytes[0] === 0xff && (bytes[1] & 0xf6) === 0xf0,
+  };
+  if (!signatureMatches[mimeType]) return res.status(400).json({ error: 'The audio content does not match the declared file type.' });
+  try {
+    const chatRef = serverDb.collection('chats').doc(chatId);
+    const chat = await chatRef.get();
+    if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)) {
+      return res.status(403).json({ error: 'You are not a participant in this conversation.' });
+    }
+    if (!await allowChatMediaUpload(uid)) return res.status(429).json({ error: 'Voice upload limit reached. Please wait a minute and try again.' });
+    const mediaId = randomUUID();
+    const storagePath = `chats/${chatId}/audio/${uid}/${mediaId}`;
+    await mediaBucket.file(storagePath).save(bytes, {
+      resumable: false,
+      metadata: { contentType: mimeType, cacheControl: 'private, no-store, max-age=0', metadata: { ownerId: uid, chatId, mediaId, privateChatAudio: 'true' } },
+    });
+    return res.status(201).json({ storagePath, size: bytes.length, contentType: mimeType });
+  } catch {
+    return res.status(503).json({ error: 'The voice message could not be stored. Please retry.' });
+  }
+});
+privateChatMediaRouter.get('/chat/:chatId/audio/:uploaderId/:mediaId', async (req, res) => {
+  const { chatId, uploaderId, mediaId } = req.params;
+  const uid = res.locals.userId as string;
+  const storagePath = `chats/${chatId}/audio/${uploaderId}/${mediaId}`;
+  if (!/^[A-Za-z0-9_-]{1,150}$/.test(chatId) || !/^[A-Za-z0-9_-]{1,128}$/.test(uploaderId) || !/^[A-Za-z0-9_-]{1,128}$/.test(mediaId)) return res.status(404).end();
+  try {
+    const chatRef = serverDb.collection('chats').doc(chatId);
+    const chat = await chatRef.get();
+    if (!chat.exists || !Array.isArray(chat.get('participants')) || !chat.get('participants').includes(uid)) return res.status(404).end();
+    const linkedMessage = await chatRef.collection('messages').where('voiceAudioUrl', '==', storagePath).limit(1).get();
+    if (linkedMessage.empty) return res.status(404).end();
+    const file = mediaBucket.file(storagePath);
+    const [metadata] = await file.getMetadata();
+    if (Number(metadata.size) > 5 * 1024 * 1024 || !String(metadata.contentType || '').startsWith('audio/')) return res.status(404).end();
+    const [audio] = await file.download();
+    res.set({ 'Content-Type': metadata.contentType, 'Content-Length': String(audio.length), 'Cache-Control': 'private, no-store, max-age=0', 'X-Content-Type-Options': 'nosniff', 'Content-Disposition': 'inline' });
+    return res.status(200).send(audio);
+  } catch {
+    return res.status(404).end();
+  }
+});
+app.use('/api/private-chat-media', privateChatMediaRouter);
 
 function clipText(value: unknown, maxLength: number): string {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
 }
 
-function allowVohRequest(req: express.Request): boolean {
-  const now = Date.now();
-  // Do not trust raw X-Forwarded-For: clients can spoof it to evade per-IP buckets.
-  // Configure Express trust proxy only when the deployment proxy chain is explicitly known.
-  const key = req.ip || req.socket.remoteAddress || 'unknown';
-  const current = vohRateBuckets.get(key);
-  if (!current || now - current.startedAt >= VOH_RATE_WINDOW_MS) {
-    vohRateBuckets.set(key, { startedAt: now, count: 1 });
+async function allowVohRequest(uid: string): Promise<boolean> {
+  const windowStart = Math.floor(Date.now() / VOH_RATE_WINDOW_MS) * VOH_RATE_WINDOW_MS;
+  const key = createHash('sha256').update(uid).digest('hex');
+  const ref = serverDb.collection('vohRateLimits').doc(key);
+  return serverDb.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    const current = snapshot.data();
+    const count = current?.windowStart === windowStart ? Number(current.count) || 0 : 0;
+    if (count >= VOH_RATE_LIMIT) return false;
+    transaction.set(ref, {
+      windowStart,
+      count: count + 1,
+      updatedAt: FieldValue.serverTimestamp(),
+      expiresAt: new Date(windowStart + VOH_RATE_WINDOW_MS * 10),
+    });
     return true;
-  }
-  if (current.count >= VOH_RATE_LIMIT) return false;
-  current.count += 1;
-  return true;
+  });
 }
 
-function shapeVohContext(context: any) {
+const vohRouter = express.Router();
+vohRouter.use(requireFirebaseUser, (req, res, next) => {
+  res.locals.vohUid = res.locals.userId;
+  next();
+});
+vohRouter.use(async (_req, res, next) => {
+  try {
+    if (!await allowVohRequest(res.locals.vohUid)) {
+      return res.status(429).json({ error: 'VOH AI request limit reached. Please wait and try again.' });
+    }
+    return next();
+  } catch {
+    return res.status(503).json({ error: 'VOH AI is temporarily unavailable. Please try again shortly.' });
+  }
+});
+app.use('/api/voh-ai', vohRouter);
+
+function shapeVohContext(context: any, authenticatedUid: string) {
   const currentUser = context?.currentUser;
   return {
     currentUser: currentUser ? {
-      id: clipText(currentUser.id, 128),
+      // Never allow the caller to impersonate a different account in prompt context.
+      id: authenticatedUid,
       name: clipText(currentUser.name, 120),
       username: clipText(currentUser.username, 80),
       bio: clipText(currentUser.bio, 500),
@@ -93,18 +216,15 @@ function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
 // ----------------- VOH AI API ENDPOINTS -----------------
 
 // 1. Interactive Chat Endpoint
-app.post('/api/voh-ai/chat', async (req, res) => {
+vohRouter.post('/chat', async (req, res) => {
   try {
-    if (!allowVohRequest(req)) {
-      return res.status(429).json({ error: 'VOH AI is receiving too many requests. Please wait a moment and try again.' });
-    }
     const message = clipText(req.body?.message, VOH_MAX_MESSAGE_LENGTH);
-    if (!message) return res.status(400).json({ error: 'Message is required.' });
+    if (typeof req.body?.message !== 'string' || !message || req.body.message.length > VOH_MAX_MESSAGE_LENGTH) return res.status(400).json({ error: 'Message must be no more than 4,000 characters.' });
     const history = Array.isArray(req.body?.history) ? req.body.history.slice(-VOH_MAX_HISTORY_ITEMS).map((item: any) => ({
       sender: item?.sender === 'user' ? 'user' : 'voh',
       text: clipText(item?.text, 4000),
     })) : [];
-    const context = shapeVohContext(req.body?.context || {});
+    const context = shapeVohContext(req.body?.context || {}, res.locals.vohUid);
 
     const clientInfo = getGeminiClient();
     
@@ -144,56 +264,7 @@ USER MESSAGE:
 "${message}"
 `;
 
-    if (!clientInfo) {
-      // Fallback response when API key is missing
-      console.warn('Gemini API Key is missing.');
-      
-      let replyText = '';
-      const msgLower = message.toLowerCase();
-
-      if (msgLower.includes('summarize') || msgLower.includes('feed')) {
-        replyText = `### 📋 Nexora Feed Summary (Demo Mode)
-
-Based on your active feed, here is the pulse:
-- **Community Focus**: High interest in technology, responsive UI design, and creative coding.
-- **Top Contributor**: **@voh** (Voice of Harrison) is discussing design rules and platform scaling.
-- **Opportunities**: Collab requests for creative writers and frontend designers are trending in Port Harcourt.
-
-*💡 Please ensure GEMINI_API_KEY is configured in your environment to generate real-time AI summaries!*`;
-      } else if (msgLower.includes('pulse') || msgLower.includes('trend')) {
-        replyText = `### 🌌 World Pulse Matrix (Demo Mode)
-
-The current Nexora Pulse Score is at **87/100**:
-- **Trending Topics**: #SpaceGlass, #AIEngines, and #FootballNigeria.
-- **Hub Activity**: High volume in Port Harcourt (soccer cup preparation) and Lagos (founder meetups).
-- **AI Growth Forecast**: VOH AI predicts a **+14%** rise in UI/UX discussions tonight.
-
-*💡 Please ensure GEMINI_API_KEY is configured in your environment to generate real-time predictive indices!*`;
-      } else if (msgLower.includes('opportunity') || msgLower.includes('opportunities') || msgLower.includes('job')) {
-        replyText = `### 💼 Opportunity Match (Demo Mode)
-
-I matched your profile with **1 active request**:
-- **Role**: Creative UX Designer for Street Arts Merchandise.
-- **Compensation**: Design royalty splits & project bonuses.
-- **Skills Required**: Adobe Illustrator, Figma, Brand Design.
-
-*💡 Please ensure GEMINI_API_KEY is configured in your environment for deep semantic matching!*`;
-      } else {
-        replyText = `🤖 **VOH AI Status Indicator**:
-I am currently operating in **Standby Demo Mode**.
-
-**You asked**: "${message}"
-
-To unlock my full cognitive intelligence, on-chain analytics, and real-time feed digestion, please configure your **GEMINI_API_KEY** in your environment. 
-
-In the meantime, you can ask me to:
-- **Summarize my feed**
-- **Show today's world pulse**
-- **Find collaborative opportunities**`;
-      }
-
-      return res.json({ text: replaceTerminology(replyText), isDemo: true });
-    }
+    if (!clientInfo) return res.status(503).json({ error: 'VOH AI is not configured on this server.' });
 
     // AI is fully configured! Run the actual model call
     const { ai, model } = clientInfo;
@@ -237,21 +308,13 @@ When answering:
 });
 
 // 2. Improve/Polish Post Text Endpoint
-app.post('/api/voh-ai/improve-post', async (req, res) => {
+vohRouter.post('/improve-post', async (req, res) => {
   try {
     const { content } = req.body;
-    if (!content) {
-      return res.status(400).json({ error: 'Post content is required.' });
-    }
+    if (typeof content !== 'string' || !content.trim() || content.length > 4000) return res.status(400).json({ error: 'Post content must be 1–4,000 characters.' });
 
     const clientInfo = getGeminiClient();
-    if (!clientInfo) {
-      // Fallback
-      return res.json({ 
-        text: `${content} ✨ #ImprovedByVohAi (Connect Gemini API Key for smart enhancements!)`,
-        isDemo: true 
-      });
-    }
+    if (!clientInfo) return res.status(503).json({ error: 'VOH AI is not configured on this server.' });
 
     const { ai, model } = clientInfo;
     const response = await ai.models.generateContent({
@@ -268,27 +331,21 @@ app.post('/api/voh-ai/improve-post', async (req, res) => {
     res.json({ text: response.text?.trim() || content, isDemo: false });
 
   } catch (error: any) {
-    console.error('VOH AI Post Improvement Error:', error);
-    res.status(500).json({ error: 'Failed to improve post.', details: error.message });
+    console.error('VOH AI post improvement failed:', error instanceof Error ? error.name : 'unknown');
+    res.status(500).json({ error: 'VOH AI could not improve that post. Please retry.' });
   }
 });
 
 // 3. Real-Time Audio Voice Transcription Endpoint
-app.post('/api/voh-ai/voice-transcribe', async (req, res) => {
+vohRouter.post('/voice-transcribe', async (req, res) => {
   try {
     const { audioBase64, mimeType = 'audio/webm' } = req.body;
-    if (!audioBase64) {
-      return res.status(400).json({ error: 'Audio data is required.' });
-    }
+    const normalizedMimeType = typeof mimeType === 'string' ? mimeType.split(';')[0].trim().toLowerCase() : '';
+    const acceptedAudioTypes = ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/aac'];
+    if (typeof audioBase64 !== 'string' || !audioBase64 || audioBase64.length > 7_000_000 || audioBase64.length % 4 !== 0 || !/^[A-Za-z0-9+/]*={0,2}$/.test(audioBase64) || !acceptedAudioTypes.includes(normalizedMimeType) || Buffer.from(audioBase64, 'base64').byteLength > 5 * 1024 * 1024) return res.status(400).json({ error: 'Audio must be supported audio no larger than 5 MiB.' });
 
     const clientInfo = getGeminiClient();
-    if (!clientInfo) {
-      return res.json({
-        transcription: "Beautiful sunny day in Nigeria, enjoying the vibes on Nexora!",
-        replyText: "Voice post transcribed successfully!",
-        isDemo: true
-      });
-    }
+    if (!clientInfo) return res.status(503).json({ error: 'VOH AI is not configured on this server.' });
 
     const { ai, model } = clientInfo;
 
@@ -298,7 +355,7 @@ app.post('/api/voh-ai/voice-transcribe', async (req, res) => {
       contents: [
         {
           inlineData: {
-            mimeType: mimeType,
+            mimeType: normalizedMimeType,
             data: audioBase64
           }
         },
@@ -321,27 +378,19 @@ app.post('/api/voh-ai/voice-transcribe', async (req, res) => {
     });
 
   } catch (error: any) {
-    console.error('VOH AI Voice Transcribe Error:', error);
-    res.status(500).json({ error: 'Failed to process voice recording.', details: error.message });
+    console.error('VOH AI voice transcription failed:', error instanceof Error ? error.name : 'unknown');
+    res.status(500).json({ error: 'VOH AI could not process that audio. Please retry.' });
   }
 });
 
 // 4. Summarize Post Endpoint
-app.post('/api/voh-ai/summarize-post', async (req, res) => {
+vohRouter.post('/summarize-post', async (req, res) => {
   try {
     const { content } = req.body;
-    if (!content) {
-      return res.status(400).json({ error: 'Post content is required.' });
-    }
+    if (typeof content !== 'string' || !content.trim() || content.length > 7000) return res.status(400).json({ error: 'Post content must be 1–7,000 characters.' });
 
     const clientInfo = getGeminiClient();
-    if (!clientInfo) {
-      // Fallback
-      return res.json({ 
-        text: `TL;DR: ${content.substring(0, 50)}...`,
-        isDemo: true 
-      });
-    }
+    if (!clientInfo) return res.status(503).json({ error: 'VOH AI is not configured on this server.' });
 
     const { ai, model } = clientInfo;
     const response = await ai.models.generateContent({
@@ -358,8 +407,8 @@ app.post('/api/voh-ai/summarize-post', async (req, res) => {
     res.json({ text: response.text?.trim() || 'No summary generated.', isDemo: false });
 
   } catch (error: any) {
-    console.error('VOH AI Summarize Error:', error);
-    res.status(500).json({ error: 'Failed to summarize post.', details: error.message });
+    console.error('VOH AI summarize failed:', error instanceof Error ? error.name : 'unknown');
+    res.status(500).json({ error: 'VOH AI could not summarize that post. Please retry.' });
   }
 });
 

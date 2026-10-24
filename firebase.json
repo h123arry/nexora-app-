@@ -1,15 +1,23 @@
 {
   "functions": {
     "source": "functions",
-    "runtime": "nodejs20"
+    "runtime": "nodejs22"
   },
   "storage": {
     "rules": "storage.rules"
   },
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
+  "firestore": [
+    {
+      "database": "(default)",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    },
+    {
+      "database": "ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
   "emulators": {
     "firestore": {
       "port": 8080
@@ -19,6 +27,9 @@
     },
     "storage": {
       "port": 9199
+    },
+    "auth": {
+      "port": 9099
     }
   }
 }

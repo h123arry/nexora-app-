@@ -79,7 +79,7 @@ button { -webkit-tap-highlight-color: transparent; }
   color: var(--nx-text);
 }
 
-.nx-brand-mark { filter: drop-shadow(0 0 16px rgba(167, 139, 250, 0.28)); }
+.nx-brand-mark { filter: none; }
 
 .nx-surface,
 .nx-soft-card {

@@ -8,7 +8,8 @@ import {
 } from 'lucide-react';
 import { User, Chat, Message, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
-import { uploadMediaFile } from '../services/firebase/storageService';
+import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
+import { omitUndefinedFields } from '../utils/messageSerialization';
 import { 
   collection, 
   doc, 
@@ -279,9 +280,6 @@ export default function NewInboxView({
     if (!contentToSend && !mediaData) return;
     if (!activeChatId) return;
 
-    if (!customContent) {
-      setNewMessageText('');
-    }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     void updateTypingState(activeChatId, currentUser.id, null);
 
@@ -313,6 +311,9 @@ export default function NewInboxView({
     }));
 
     const previewText = mediaData ? `Sent a ${mediaData.type}` : contentToSend;
+    const previousChat = chats.find(chat => chat.id === activeChatId);
+    const previousLastMessage = previousChat?.lastMessage || '';
+    const previousLastTimestamp = previousChat?.lastTimestamp || '';
     setChats(prev => prev.map(c => {
       if (c.id === activeChatId) {
         return {
@@ -324,31 +325,37 @@ export default function NewInboxView({
       return c;
     }));
 
-    // Firestore sync
+    // Firestore sync. Optional UI fields are intentionally omitted rather than
+    // serialized as `undefined`, which Firestore rejects by default.
+    let messagePersisted = false;
     try {
-      if (db) {
-        const msgDocRef = doc(db, `chats/${activeChatId}/messages`, messageId);
-        await setDoc(msgDocRef, { ...newMsg });
+      if (!db) throw new Error('Messaging is temporarily unavailable.');
+      const msgDocRef = doc(db, `chats/${activeChatId}/messages`, messageId);
+      await setDoc(msgDocRef, omitUndefinedFields(newMsg));
+      messagePersisted = true;
+      if (customContent === undefined) setNewMessageText('');
 
-        const chatDocRef = doc(db, 'chats', activeChatId);
-        await updateDoc(chatDocRef, {
-          lastMessage: previewText,
-          lastTimestamp: nowIso
-        }).catch(async () => {
-          await setDoc(chatDocRef, {
-            id: activeChatId,
-            lastMessage: previewText,
-            lastTimestamp: nowIso
-          }, { merge: true });
-        });
+      // A stale conversation preview must not turn a message that Firestore
+      // already accepted into a reported send failure or invite a duplicate retry.
+      try {
+        await updateDoc(doc(db, 'chats', activeChatId), { lastMessage: previewText, lastTimestamp: nowIso });
+      } catch (previewError) {
+        console.warn('[Inbox] Message persisted, but chat preview sync failed:', previewError);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Message sent. Conversation preview will refresh when data syncs.' }));
       }
     } catch (e) {
       console.warn('[Inbox] Firestore send error:', e);
-      setLocalMessages(prev => ({
-        ...prev,
-        [activeChatId]: (prev[activeChatId] || []).filter(message => message.id !== messageId),
-      }));
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Please try again.' }));
+      if (!messagePersisted) {
+        setLocalMessages(prev => ({
+          ...prev,
+          [activeChatId]: (prev[activeChatId] || []).filter(message => message.id !== messageId),
+        }));
+        setChats(prev => prev.map(chat => chat.id === activeChatId && chat.lastTimestamp === nowIso
+          ? { ...chat, lastMessage: previousLastMessage, lastTimestamp: previousLastTimestamp }
+          : chat));
+        if (customContent === undefined && contentToSend) setNewMessageText(value => value || contentToSend);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Message could not be sent. Your draft was kept; please retry.' }));
+      }
     }
   };
 
@@ -694,6 +701,7 @@ export default function NewInboxView({
                       onToggleContextMenu={() => {}}
                       activeContextMessageId={activeContextMessageId}
                       onTogglePlayVoice={() => {}}
+                      onResolveVoiceMedia={resolvePrivateChatAudio}
                       onLongPress={() => {}}
                       playingVoiceId={null}
                       voiceProgress={0}
@@ -862,13 +870,7 @@ export default function NewInboxView({
         isOpen={showAttachmentMenu}
         onClose={() => setShowAttachmentMenu(false)}
         onSelect={(id) => {
-          if (id === 'gallery' || id === 'camera') {
-            handleSendMessage('', { type: 'image', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800', name: 'attachment.jpg' });
-          } else if (id === 'audio') {
-            handleSendMessage('', { type: 'voice', url: '', name: 'voice_note.mp3' });
-          } else {
-            handleSendMessage(`[Attached Document]`);
-          }
+          window.dispatchEvent(new CustomEvent('toast', { detail: `${id} attachments are not available yet. Real voice notes can be sent with the recorder below.` }));
         }}
       />
 
@@ -877,6 +879,7 @@ export default function NewInboxView({
         <VoiceRecorder
           onSendMessage={async (audioBlob, duration) => {
             try {
+              if (!activeChatId) throw new Error('Open a conversation before sending a voice note.');
               const uploaded = await uploadMediaFile({
                 file: audioBlob,
                 userId: currentUser.id,
@@ -885,7 +888,7 @@ export default function NewInboxView({
                 metadata: { chatId: activeChatId || '' }
               });
               await handleSendMessage('', {
-                type: 'voice', url: uploaded.downloadUrl,
+                type: 'voice', url: uploaded.storagePath,
                 name: `Voice Note (${duration}s)`, duration
               });
               setShowVoiceRecorder(false);
