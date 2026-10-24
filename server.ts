@@ -11,12 +11,36 @@ import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 
-// Load environment variables
-dotenv.config();
+const isProduction = process.env.NODE_ENV === 'production';
+// Load local environment variables only outside production. Production values
+// must come from the hosting environment or its secret manager.
+if (!isProduction) dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 app.disable('x-powered-by');
+
+function resolveServerConfig(name: string, fallback: string): string {
+  const value = process.env[name]?.trim();
+  if (isProduction && !value) {
+    throw new Error(`Missing required production configuration: ${name}`);
+  }
+  return value || fallback;
+}
+
+const firebaseProjectId = resolveServerConfig(
+  'GCLOUD_PROJECT',
+  process.env.FIREBASE_PROJECT_ID?.trim() || 'evident-server-bqmt3',
+);
+const firestoreDatabaseId = resolveServerConfig(
+  'FIRESTORE_DATABASE_ID',
+  'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8',
+);
+const firebaseStorageBucket = resolveServerConfig('FIREBASE_STORAGE_BUCKET', 'evident-server-bqmt3.firebasestorage.app');
+
+if (isProduction && !process.env.RELEASE_VERSION?.trim()) {
+  throw new Error('Missing required production configuration: RELEASE_VERSION');
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '8mb' }));
@@ -35,6 +59,20 @@ app.use((req, res, next) => {
   res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
   if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
   if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    if (req.path === '/healthz' || req.path === '/readyz') return;
+    const level = res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info';
+    console[level === 'error' ? 'error' : level === 'warn' ? 'warn' : 'info'](JSON.stringify({
+      event: 'http_request',
+      requestId,
+      method: req.method,
+      path: req.path,
+      status: res.statusCode,
+      durationMs: Date.now() - startedAt,
+      environment: process.env.NODE_ENV || 'development',
+    }));
+  });
   next();
 });
 
@@ -63,12 +101,10 @@ const VOH_MAX_HISTORY_ITEMS = 24;
 const VOH_MAX_CONTEXT_POSTS = 10;
 const VOH_RATE_WINDOW_MS = 60_000;
 const VOH_RATE_LIMIT = 20;
-const firebaseProjectId = process.env.GCLOUD_PROJECT || process.env.FIREBASE_PROJECT_ID || 'evident-server-bqmt3';
-const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
 const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-api')
   || initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api');
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
-const mediaBucket = getStorage(firebaseAdminApp).bucket(process.env.FIREBASE_STORAGE_BUCKET || 'evident-server-bqmt3.firebasestorage.app');
+const mediaBucket = getStorage(firebaseAdminApp).bucket(firebaseStorageBucket);
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
@@ -340,7 +376,7 @@ When answering:
     res.json({ text: replaceTerminology(rawText), isDemo: false });
 
   } catch (error: any) {
-    console.error('VOH AI Chat Error:', error);
+    console.error('VOH AI Chat Error:', error instanceof Error ? error.name : 'unknown');
     res.status(500).json({ error: 'VOH AI could not complete that request. Please try again.' });
   }
 });
@@ -450,186 +486,17 @@ vohRouter.post('/summarize-post', async (req, res) => {
   }
 });
 
-// ----------------- SECURE PRODUCTION OTP VERIFICATION ENGINE -----------------
-
-import crypto from 'crypto';
-import { EmailService } from './src/services/firebase/emailService';
-
-interface OtpRecord {
-  email: string;
-  hashedCode: string;
-  expiresAt: number;
-  attemptsLeft: number;
-  purpose: string;
-  createdAt: number;
-  lastResendAt: number;
-}
-
-// In-memory cryptographically hashed OTP store
-const otpStore = new Map<string, OtpRecord>();
-
-// Clean up expired OTPs every 5 minutes
-setInterval(() => {
-  const now = Date.now();
-  for (const [key, record] of otpStore.entries()) {
-    if (now > record.expiresAt) {
-      otpStore.delete(key);
-    }
-  }
-}, 5 * 60 * 1000);
-
-// Helper function to hash OTP securely
-function hashOtp(code: string): string {
-  return crypto.createHash('sha256').update(code.trim()).digest('hex');
-}
-
-// 1. Endpoint: Send Email OTP (for email verification, forgot password, identity confirmation)
-app.post('/api/auth/send-email-otp', async (req, res) => {
-  try {
-    const { email, purpose = 'VERIFY_EMAIL', userName } = req.body;
-
-    if (!email || !email.includes('@')) {
-      return res.status(400).json({ error: 'A valid email address is required.' });
-    }
-
-    const cleanEmail = email.toLowerCase().trim();
-    const key = `${cleanEmail}:${purpose}`;
-    const now = Date.now();
-
-    // Check resend cooldown (60 seconds)
-    const existing = otpStore.get(key);
-    if (existing && now - existing.lastResendAt < 60000) {
-      const waitSec = Math.ceil((60000 - (now - existing.lastResendAt)) / 1000);
-      return res.status(429).json({
-        error: `Please wait ${waitSec} seconds before requesting a new verification code.`
-      });
-    }
-
-    // Generate cryptographically secure 6-digit code
-    const rawCode = crypto.randomInt(100000, 1000000).toString();
-    const hashedCode = hashOtp(rawCode);
-
-    // Expiration: 10 minutes (600,000 ms), Max 5 attempts
-    const expiresAt = now + 10 * 60 * 1000;
-    
-    otpStore.set(key, {
-      email: cleanEmail,
-      hashedCode,
-      expiresAt,
-      attemptsLeft: 5,
-      purpose,
-      createdAt: now,
-      lastResendAt: now
-    });
-
-    // Generate branded email HTML
-    const resolvedName = userName || cleanEmail.split('@')[0];
-    const templateType = purpose === 'PASSWORD_RESET' 
-      ? 'PASSWORD_RESET' 
-      : purpose === 'IDENTITY_CONFIRMATION' 
-        ? 'IDENTITY_CONFIRMATION' 
-        : 'VERIFY_EMAIL';
-
-    const emailContent = EmailService.generateEmailHTML(templateType as any, {
-      toEmail: cleanEmail,
-      userName: resolvedName,
-      verificationCode: rawCode
-    });
-
-    // Queue transactional email log to Firestore if available
-    try {
-      await EmailService.sendTransactionalEmail(templateType as any, {
-        toEmail: cleanEmail,
-        userName: resolvedName,
-        verificationCode: rawCode
-      });
-    } catch (e) {
-      console.warn('Firestore mail queue warning:', e);
-    }
-
-    console.log(`[OTP Engine] Secure ${purpose} OTP generated and dispatched to ${cleanEmail}. Expires in 10 mins.`);
-
-    // Return success to client. CRITICAL: NEVER expose rawCode in response JSON!
-    return res.json({
-      success: true,
-      message: `A secure 6-digit verification code has been dispatched to ${cleanEmail}.`,
-      expiresInSeconds: 600
-    });
-
-  } catch (error: any) {
-    console.error('Send Email OTP Error:', error);
-    return res.status(500).json({ error: 'Failed to process verification request.', details: error.message });
-  }
+// Firebase Auth owns email verification, password reset, and phone OTP flows.
+// These legacy custom endpoints are intentionally unavailable: a process-local
+// OTP store cannot provide safe delivery, replay protection, or multi-instance
+// consistency in production.
+app.post('/api/auth/send-email-otp', (_req, res) => {
+  return res.status(410).json({ error: 'Use the supported Firebase Auth verification flow.' });
 });
 
-// 2. Endpoint: Verify Email OTP
-app.post('/api/auth/verify-email-otp', async (req, res) => {
-  try {
-    const { email, code, purpose = 'VERIFY_EMAIL' } = req.body;
-
-    if (!email || !code) {
-      return res.status(400).json({ error: 'Email and verification code are required.' });
-    }
-
-    const cleanEmail = email.toLowerCase().trim();
-    const key = `${cleanEmail}:${purpose}`;
-    const record = otpStore.get(key);
-
-    if (!record) {
-      return res.status(400).json({
-        error: 'No active verification request found. Please request a new verification code.'
-      });
-    }
-
-    const now = Date.now();
-
-    // Check expiration (10 minutes)
-    if (now > record.expiresAt) {
-      otpStore.delete(key);
-      return res.status(400).json({
-        error: 'Verification code has expired. Please request a new code.'
-      });
-    }
-
-    // Check attempt limit (5 attempts max)
-    if (record.attemptsLeft <= 0) {
-      otpStore.delete(key);
-      return res.status(400).json({
-        error: 'Maximum verification attempts exceeded. Please request a new verification code.'
-      });
-    }
-
-    // Hash submitted code and compare
-    const submittedHash = hashOtp(code);
-    if (submittedHash !== record.hashedCode) {
-      record.attemptsLeft -= 1;
-      if (record.attemptsLeft <= 0) {
-        otpStore.delete(key);
-        return res.status(400).json({
-          error: 'Invalid verification code. Maximum attempts exceeded. Please request a new code.'
-        });
-      }
-      return res.status(400).json({
-        error: `Invalid verification code. ${record.attemptsLeft} attempts remaining.`
-      });
-    }
-
-    // SUCCESS! Delete record to prevent OTP reuse!
-    otpStore.delete(key);
-
-    console.log(`[OTP Engine] Verification SUCCESS for ${cleanEmail} (${purpose}). OTP invalidated to prevent reuse.`);
-
-    return res.json({
-      success: true,
-      message: 'Identity successfully verified.'
-    });
-
-  } catch (error: any) {
-    console.error('Verify Email OTP Error:', error);
-    return res.status(500).json({ error: 'Failed to verify code.', details: error.message });
-  }
+app.post('/api/auth/verify-email-otp', (_req, res) => {
+  return res.status(410).json({ error: 'Use the supported Firebase Auth verification flow.' });
 });
-
 
 
 // ----------------- VITE DEVELOPMENT / PRODUCTION MIDDLEWARE -----------------

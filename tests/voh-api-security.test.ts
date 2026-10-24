@@ -47,6 +47,7 @@ before(async () => {
     env: {
       ...process.env,
       NODE_ENV: 'production',
+      RELEASE_VERSION: 'test',
       PORT: String(port),
       FIRESTORE_DATABASE_ID: '(default)',
       GCLOUD_PROJECT: 'demo-nexora-voh',

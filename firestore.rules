@@ -137,12 +137,7 @@ service cloud.firestore {
     // Mail and security logs are trusted-server-only: clients cannot forge recipients or audit events.
     match /mail/{mailId} {
       allow read: if false;
-      allow create: if signedIn()
-        && request.auth.token.email is string
-        && request.resource.data.to is list
-        && request.resource.data.to.size() == 1
-        && request.resource.data.to[0] == request.auth.token.email;
-      allow update, delete: if false;
+      allow create, update, delete: if false;
     }
     // Clients may declare an upload intent. Trusted Functions own every
     // subsequent lifecycle transition and any derived playback metadata.

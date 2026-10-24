@@ -1,5 +1,3 @@
-import { db } from './config';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export interface EmailTemplateParams {
   toEmail: string;
@@ -281,32 +279,13 @@ export class EmailService {
   }
 
   /**
-   * Logs transaction to Firestore `mail/` collection (for SendGrid / Firestore Mail extension processing)
+   * Transactional delivery is intentionally unavailable until a trusted
+   * server-side provider is configured. Never let a browser enqueue mail or
+   * security messages into Firestore.
    */
   static async sendTransactionalEmail(type: EmailTemplateType, params: EmailTemplateParams): Promise<boolean> {
-    try {
-      const emailContent = this.generateEmailHTML(type, params);
-
-      // Attempt storing in Firestore 'mail' or 'systemEmails' collection
-      if (db) {
-        await addDoc(collection(db, 'mail'), {
-          to: [params.toEmail],
-          message: {
-            subject: emailContent.subject,
-            text: emailContent.text,
-            html: emailContent.html
-          },
-          templateType: type,
-          createdAt: serverTimestamp(),
-          status: 'pending'
-        });
-      }
-
-      console.log(`✉️ Transactional Email logged for ${params.toEmail} [${type}]:`, emailContent.subject);
-      return true;
-    } catch (err) {
-      console.warn('Failed to queue transactional email via Firestore:', err);
-      return false;
-    }
+    void type;
+    void params;
+    return false;
   }
 }

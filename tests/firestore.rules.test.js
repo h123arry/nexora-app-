@@ -189,7 +189,7 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('alice'), 'mail', 'fake'), {
       to: ['victim@example.test'], message: { subject: 'x', text: 'x' }
     }));
-    await assertSucceeds(setDoc(doc(dbFor('alice'), 'mail', 'self'), {
+    await assertFails(setDoc(doc(dbFor('alice'), 'mail', 'self'), {
       to: ['alice@example.test'], message: { subject: 'x', text: 'x' }
     }));
     await seed(async (db) => {

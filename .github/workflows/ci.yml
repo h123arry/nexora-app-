@@ -9,9 +9,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: nexora-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -21,6 +26,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            functions/package-lock.json
 
       - name: Set up Java for Firebase emulators
         uses: actions/setup-java@v4
@@ -28,14 +36,23 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install web dependencies
+        run: npm ci --no-audit --no-fund
 
-      - name: Install Firebase Functions dependencies
-        run: npm ci --prefix functions
+      - name: Install Functions dependencies
+        run: npm ci --prefix functions --no-audit --no-fund
 
-      - name: Type-check
+      - name: Validate deployment metadata
+        run: npm run validate:deployment
+
+      - name: Scan tracked files for secrets
+        run: npm run security:scan
+
+      - name: Type-check frontend
         run: npm run lint
+
+      - name: Build trusted Firebase Functions
+        run: npm run functions:build
 
       - name: Run unit tests
         run: npm run test:unit
@@ -43,8 +60,23 @@ jobs:
       - name: Run Firestore security rules tests
         run: npm run test:rules
 
+      - name: Run Storage security rules tests
+        run: npm run test:storage
+
+      - name: Run migration integration tests
+        run: npm run test:migration
+
+      - name: Run engagement integration tests
+        run: npm run test:engagement
+
+      - name: Run authenticated API security tests
+        run: npm run test:voh-security
+
+      - name: Audit web production dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Audit Functions production dependencies
+        run: npm --prefix functions audit --omit=dev --audit-level=high
+
       - name: Build production artifacts
         run: npm run build
-
-      - name: Build trusted Firebase Functions
-        run: npm run functions:build

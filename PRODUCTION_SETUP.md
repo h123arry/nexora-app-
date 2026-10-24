@@ -2,6 +2,8 @@
 
 This file describes the repository's current configuration. It does **not** certify that any Firebase provider, rule, function, email extension, push certificate, or hosting service is enabled in production. Repository state is not deployed state.
 
+For the complete handover, use [`docs/production-architecture.md`](docs/production-architecture.md), [`docs/deployment-runbook.md`](docs/deployment-runbook.md), [`docs/security-review.md`](docs/security-review.md), [`docs/operations-and-recovery.md`](docs/operations-and-recovery.md), and [`docs/production-readiness.md`](docs/production-readiness.md). The current release classification is staging verification, not production readiness.
+
 ## Configured Firebase resources
 
 The checked-in client config points to Firebase project `evident-server-bqmt3`, named Firestore database `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`, and Storage bucket `evident-server-bqmt3.firebasestorage.app`. These values must be confirmed with the project owner before deployment. The `apiKey` in Firebase web config is a public client identifier; do not add service-account keys or other secrets to the repository.
@@ -11,7 +13,7 @@ The server and Cloud Functions use Firebase Admin credentials from the hosting e
 | Variable | Purpose |
 |---|---|
 | `GCLOUD_PROJECT` or `FIREBASE_PROJECT_ID` | Firebase/GCP project ID used by the Express API. |
-| `FIRESTORE_DATABASE_ID` | Actual named Firestore database; default in source is Nexora's configured database ID. |
+| `FIRESTORE_DATABASE_ID` | Actual named Firestore database; required in production and defaulted only for local development. |
 | `FIREBASE_STORAGE_BUCKET` | Actual Firebase Storage bucket used by the private chat-media proxy and account cleanup. |
 | `GEMINI_API_KEY` | Server-only Gemini credential required for VOH generation; keep in the hosting secret manager. |
 | `GEMINI_MODEL` | Optional server model override; default is `gemini-2.5-flash`. |
@@ -50,7 +52,7 @@ Legacy posts with missing audience are not automatically treated as public. See 
 ## Integrations not verified or not implemented
 
 - No deployment was performed; production Firebase configuration, provider activation, rules, indexes, and IAM remain unverified.
-- The `mail` collection is not proof that transactional email is delivered. A properly configured and verified mail extension/provider is required.
+- Client-side writes to the `mail` collection are disabled. Native Firebase Auth verification/reset email is supported; trusted transactional/security email still requires a server-side provider.
 - FCM/VAPID credentials and push delivery were not verified.
 - No trusted NEX ledger, payment processor, transfer, deposit, withdrawal, or payout backend exists. Keep financial operations unavailable.
 - No complete private audience model exists for followers, Close Friends, Circles, or member-only communities; publishing UI/rules remain public-only for shared posts.
