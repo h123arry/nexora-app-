@@ -42,3 +42,6 @@ jobs:
 
       - name: Build production artifacts
         run: npm run build
+
+      - name: Build trusted Firebase Functions
+        run: npm run functions:build

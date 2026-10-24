@@ -16,6 +16,12 @@ import { auth, db } from './config';
 type LifecycleRequestType = 'delete_account';
 type LifecycleRequestStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
 
+export interface AccountDeletionProgress {
+  stage: string;
+  deletedDocuments: number;
+  deletedFiles: number;
+}
+
 export interface AccountDeletionRequest {
   id: string;
   type: LifecycleRequestType;
@@ -24,6 +30,8 @@ export interface AccountDeletionRequest {
   createdAt: string | null;
   updatedAt?: string | null;
   retentionNote?: string;
+  progress?: AccountDeletionProgress;
+  errorCode?: string;
 }
 
 function requireCurrentUser(userId: string) {

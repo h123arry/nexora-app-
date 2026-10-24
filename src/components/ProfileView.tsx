@@ -14,7 +14,7 @@ import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StorageDataCenterModal from './StorageDataCenterModal';
-import { exportAccountData, requestAccountDeletion } from '../services/firebase/accountLifecycleService';
+import { exportAccountData, getLatestAccountDeletionRequest, requestAccountDeletion, AccountDeletionRequest } from '../services/firebase/accountLifecycleService';
 import { 
   getFollowersCount, 
   getFollowingCount, 
@@ -356,6 +356,26 @@ export default function ProfileView({
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
   const [deleteStep, setDeleteStep] = useState(1); // 1 = warning, 2 = password enter, 3 = final delete
   const [isLifecycleBusy, setIsLifecycleBusy] = useState(false);
+  const [deletionRequest, setDeletionRequest] = useState<AccountDeletionRequest | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const refreshDeletionRequest = async () => {
+      try {
+        const latest = await getLatestAccountDeletionRequest(currentUser.id);
+        if (active) setDeletionRequest(latest);
+      } catch (error) {
+        console.warn('Unable to refresh account lifecycle status:', error);
+      }
+    };
+    void refreshDeletionRequest();
+    const shouldPoll = deletionRequest?.status === 'pending' || deletionRequest?.status === 'processing';
+    const timer = shouldPoll ? window.setInterval(() => void refreshDeletionRequest(), 15000) : undefined;
+    return () => {
+      active = false;
+      if (timer) window.clearInterval(timer);
+    };
+  }, [currentUser.id, deletionRequest?.status]);
 
   // Appearance customization
   const [accentColor, setAccentColor] = useState('violet'); // 'violet' | 'pink' | 'emerald' | 'cyan'
@@ -466,7 +486,8 @@ export default function ProfileView({
     if (isLifecycleBusy) return;
     setIsLifecycleBusy(true);
     try {
-      await requestAccountDeletion(currentUser.id);
+      const request = await requestAccountDeletion(currentUser.id);
+      setDeletionRequest(request);
       setDeleteStep(3);
       setDeleteAccountPassword('');
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Account deletion request queued for review and asynchronous cleanup.' }));
@@ -2644,8 +2665,13 @@ export default function ProfileView({
               {deleteStep === 3 && (
                 <div className="space-y-3 py-4">
                   <div className="w-10 h-10 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-xs font-mono text-red-400 font-extrabold uppercase">DELETION REQUEST QUEUED</p>
-                  <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Your request is awaiting trusted asynchronous cleanup. You remain signed in until processing is verified.</p>
+                  <p className="text-xs font-mono text-red-400 font-extrabold uppercase">DELETION REQUEST {deletionRequest?.status?.toUpperCase() || 'QUEUED'}</p>
+                  <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Your request is processed by a trusted cleanup worker. You remain signed in until processing is verified.</p>
+                  {deletionRequest?.progress && (
+                    <p className="text-[9px] text-zinc-400 font-mono" role="status" aria-live="polite">
+                      Stage: {deletionRequest.progress.stage.replace(/-/g, ' ')} · {deletionRequest.progress.deletedDocuments} records · {deletionRequest.progress.deletedFiles} files
+                    </p>
+                  )}
                   <button
                     onClick={() => setConfirmingDeleteAccount(false)}
                     className="w-full p-3 bg-zinc-900 border border-white/10 text-zinc-300 rounded-2xl font-mono text-[10px] uppercase"

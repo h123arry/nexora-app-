@@ -9,6 +9,7 @@
     "start": "node dist/server.cjs",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "functions:build": "npm --prefix functions run build",
     "test:unit": "tsx --test tests/feed-pagination.test.ts tests/voh-memory.test.ts",
     "test:rules": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-rules \"node --test tests/firestore.rules.test.js\""
   },
