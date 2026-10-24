@@ -1662,8 +1662,8 @@ export default function FeedView({
       <AnimatePresence>
         {feedTab === 'reels' && (
           <ImmersiveVideoViewer
-            initialPost={localPosts.find(p => p.videoUrl) || localPosts[0]}
-            creatorPosts={localPosts}
+            initialPost={currentDisplayList.find(p => p.videoUrl) || currentDisplayList[0]}
+            creatorPosts={currentDisplayList}
             currentUser={currentUser}
             onClose={() => setFeedTab('posts')}
             onLikePost={onLikePost}
