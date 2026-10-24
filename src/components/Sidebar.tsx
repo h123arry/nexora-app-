@@ -94,7 +94,7 @@ export default function Sidebar({
               }}
               className="nx-sidebar-nav-item group flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-all"
             >
-              <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${isActive ? 'bg-violet-500/20 text-violet-200' : 'bg-white/[0.045] text-slate-400 group-hover:text-violet-200'}`}>
+              <span className={`nx-nav-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${isActive ? 'bg-violet-500/20 text-violet-200' : 'bg-white/[0.045] text-slate-400 group-hover:text-violet-200'}`}>
                 <Icon className="h-[18px] w-[18px]" strokeWidth={isActive ? 2.2 : 1.8} />
               </span>
               <span className="min-w-0 flex-1">
@@ -114,8 +114,8 @@ export default function Sidebar({
       <div className="my-6 h-px bg-white/[0.08]" />
       <div className="mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Create & discover</div>
       <div className="space-y-1.5">
-        <button onClick={onOpenCreatePost} className="group flex w-full items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-3 py-3 text-left transition-all hover:border-violet-300/40 hover:bg-violet-500/15">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_20px_rgba(139,92,246,0.28)]"><PlusCircle className="h-[18px] w-[18px]" /></span>
+        <button onClick={onOpenCreatePost} className="nx-create-action group flex w-full items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-3 py-3 text-left transition-all hover:border-violet-300/40 hover:bg-violet-500/15">
+          <span className="nx-create-action-icon flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 text-white shadow-[0_8px_20px_rgba(139,92,246,0.28)]"><PlusCircle className="h-[18px] w-[18px]" /></span>
           <span><span className="block text-sm font-bold text-white">Create</span><span className="block text-[10px] text-violet-200/70">Share a moment</span></span>
         </button>
         <button onClick={() => setActiveTab('creator')} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]">

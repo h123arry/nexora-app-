@@ -1722,7 +1722,7 @@ export default function FeedView({
               <NexoraPremiumLogo className="h-8 w-8 sm:h-9 sm:w-9 nx-brand-mark" />
               <div className="min-w-0">
                 <div className="flex items-center gap-2"><span className="text-xl font-extrabold tracking-[-0.04em] nx-gradient-text leading-none sm:text-2xl">NEXORA</span><span className="hidden rounded-full border border-violet-300/20 bg-violet-400/10 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.14em] text-violet-200 sm:inline">For you</span></div>
-                <span className="mt-1 block truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">Your world. Your people. Your growth.</span>
+                <span className="mt-1 block truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">The World&apos;s Living Social Network</span>
               </div>
             </div>
             <span className="hidden items-center gap-1.5 text-[10px] font-semibold text-emerald-300/80 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" /> Live network</span>

@@ -5,8 +5,8 @@
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#03010a",
-  "theme_color": "#8B5CF6",
+  "background_color": "#090714",
+  "theme_color": "#4B10F2",
   "scope": "/",
   "categories": ["social", "communication", "entertainment"],
   "shortcuts": [

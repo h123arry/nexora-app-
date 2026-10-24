@@ -1946,36 +1946,16 @@ export default function App() {
   // 11. Determine specific theme CSS configurations dynamically
   const getThemeWrapperClass = (mood: ThemeMood) => {
     if (isHighContrast) {
-      return 'bg-black text-white min-h-screen';
+      return 'nx-app-shell-root nx-high-contrast text-white min-h-screen';
     }
-    switch (mood) {
-      case 'neon-cyber':
-        return 'bg-[#050409] text-purple-100 min-h-screen';
-      case 'emerald-glass':
-        return 'bg-[#010403] text-emerald-100 min-h-screen';
-      case 'platinum-light':
-        return 'bg-[#f4f6fa] text-slate-900 min-h-screen';
-      case 'stealth-dark':
-      default:
-        return 'bg-zinc-950 text-zinc-100 min-h-screen';
-    }
+    return 'nx-app-shell-root text-white min-h-screen';
   };
 
   const getCardClass = (mood: ThemeMood) => {
     if (isHighContrast) {
       return 'bg-black border-2 border-white shadow-none text-white';
     }
-    switch (mood) {
-      case 'neon-cyber':
-        return 'bg-[#0c0a15]/90 border border-white/10 shadow-md shadow-violet-500/5';
-      case 'emerald-glass':
-        return 'bg-[#040e09]/90 border border-emerald-950 shadow-md shadow-emerald-500/5';
-      case 'platinum-light':
-        return 'bg-white border border-slate-200 shadow-xs shadow-slate-100';
-      case 'stealth-dark':
-      default:
-        return 'bg-zinc-900 border border-zinc-800 shadow-md';
-    }
+    return 'nx-route-card';
   };
 
   const unreadMessagesCount = chats.reduce((acc, c) => acc + c.unreadCount, 0);
@@ -2311,7 +2291,7 @@ export default function App() {
           </main>
 
           {/* Col 4: Right Discovery sidebar */}
-          <div className={activeTab === 'feed' ? "hidden lg:block h-full border-l border-white/10 bg-[#060b1b]/55 overflow-y-auto" : "hidden"}>
+          <div className={activeTab === 'feed' ? "hidden lg:block h-full border-l border-white/10 nx-sidebar-shell overflow-y-auto" : "hidden"}>
             <RightSidebar
               creators={(Object.values(globalUsersMap) as User[]).filter(u => u.id !== currentUser.id)}
               followingIds={followingIds}
@@ -2498,7 +2478,7 @@ export default function App() {
           id="mobile-nav-communities"
         >
           <UsersIcon className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[9px] font-mono tracking-wide uppercase">Circles</span>
+          <span className="text-[9px] font-mono tracking-wide uppercase">Communities</span>
         </button>
 
         <motion.button
@@ -2510,7 +2490,7 @@ export default function App() {
               setIsCreateMenuOpen(true);
             }, 'Sign in to create and publish posts.');
           }}
-          className="relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
+          className="nx-create-dock relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
           id="nav-create-post-center"
           title="Create"
           aria-label="Create a post"
