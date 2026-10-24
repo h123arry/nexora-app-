@@ -637,7 +637,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : [];
   });
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'settings'>('feed');
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'settings'>(() => {
+    const requestedTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
+    const supportedTabs = ['feed', 'explore', 'inbox', 'pulse', 'matrix', 'activity', 'profile', 'admin', 'nida', 'creator', 'communities', 'live', 'saved', 'wallet', 'settings'];
+    return supportedTabs.includes(requestedTab || '') ? requestedTab as any : 'feed';
+  });
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
   const [historyStack, setHistoryStack] = useState<{ tab: typeof activeTab; viewedUser: User | null }[]>([]);
 
@@ -693,6 +697,15 @@ export default function App() {
   const [systemSpeed, setSystemSpeed] = useState('1.8ms');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncPending, setIsSyncPending] = useState(false);
+
+  useEffect(() => {
+    if (!isLoggedIn || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('compose') !== '1') return;
+    setIsCreatePostModalOpen(true);
+    params.delete('compose');
+    window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? `?${params}` : ''}`);
+  }, [isLoggedIn]);
 
   // Global System Hub states
   const [isSystemHubOpen, setIsSystemHubOpen] = useState(false);

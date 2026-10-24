@@ -8,6 +8,37 @@
   "background_color": "#03010a",
   "theme_color": "#8B5CF6",
   "scope": "/",
+  "categories": ["social", "communication", "entertainment"],
+  "shortcuts": [
+    {
+      "name": "Open Feed",
+      "short_name": "Feed",
+      "description": "See the latest living network updates",
+      "url": "/?tab=home",
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Create a Post",
+      "short_name": "Create",
+      "description": "Share a thought, image, or video",
+      "url": "/?compose=1",
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Open Messages",
+      "short_name": "Inbox",
+      "description": "Continue your private conversations",
+      "url": "/?tab=inbox",
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Creator Studio",
+      "short_name": "Studio",
+      "description": "Review your content and creator tools",
+      "url": "/?tab=creator",
+      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ],
   "icons": [
     {
       "src": "/logo.png",

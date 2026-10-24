@@ -1,90 +1,69 @@
-const CACHE_NAME = 'nexora-pulse-cache-v1';
+const CACHE_NAME = 'nexora-shell-cache-v2';
+const MAX_DYNAMIC_ENTRIES = 80;
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/manifest.json'
+  '/manifest.json',
+  '/logo.svg',
+  '/logo.png'
 ];
 
-// Install Service Worker
+async function trimCache(cache) {
+  const keys = await cache.keys();
+  if (keys.length <= MAX_DYNAMIC_ENTRIES) return;
+  await Promise.all(keys.slice(0, keys.length - MAX_DYNAMIC_ENTRIES).map((request) => cache.delete(request)));
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pre-caching static assets');
-      const cachePromises = ASSETS_TO_CACHE.map((url) => {
-        return cache.add(url).catch((err) => {
-          console.warn(`[Service Worker] Failed to pre-cache ${url}:`, err);
-        });
-      });
-      return Promise.all(cachePromises);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => Promise.all(ASSETS_TO_CACHE.map((url) => cache.add(url).catch(() => undefined))))
+      .then(() => self.skipWaiting())
   );
 });
 
-// Activate handler
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            console.log('[Service Worker] Clearing ancient cache nodes:', cache);
-            return caches.delete(cache);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys()
+      .then((cacheNames) => Promise.all(cacheNames.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name))))
+      .then(() => self.clients.claim())
   );
 });
 
-// Proxy network calls
+function isCacheableShellRequest(request, url) {
+  if (request.method !== 'GET' || url.origin !== self.location.origin) return false;
+  if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/uploads/')) return false;
+  if (/\.(mp4|webm|mov|mp3|wav|ogg|m4a|pdf|zip)$/i.test(url.pathname)) return false;
+  if (url.hostname.includes('firebase') || url.hostname.includes('googleapis.com') || url.hostname.includes('google.com')) return false;
+  return request.mode === 'navigate' || /\.(js|css|svg|png|jpg|jpeg|webp|woff2?)$/i.test(url.pathname) || url.pathname === '/manifest.json';
+}
+
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-  if (
-    event.request.method !== 'GET' ||
-    url.pathname.startsWith('/api/') ||
-    url.hostname.includes('firebase') ||
-    url.hostname.includes('googleapis.com') ||
-    url.hostname.includes('google.com')
-  ) {
-    return;
-  }
-
-  // Only cache GET requests
-  if (event.request.method !== 'GET') return;
+  if (!isCacheableShellRequest(event.request, url)) return;
 
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
+      const networkResponse = fetch(event.request).then((response) => {
+        if (response && response.ok && response.type === 'basic') {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then(async (cache) => {
+            await cache.put(event.request, copy);
+            await trimCache(cache);
+          });
+        }
+        return response;
+      });
+
       if (cachedResponse) {
-        // Fetch fresh copy in background to keep cache updated (stale-while-revalidate)
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-            }
-          })
-          .catch(() => { /* mute background fetch failure */ });
+        event.waitUntil(networkResponse.catch(() => undefined));
         return cachedResponse;
       }
 
-      // If not in cache, fetch from network
-      return fetch(event.request)
-        .then((response) => {
-          // If valid response, clone and cache it for future offline usage
-          if (response && response.status === 200 && response.type === 'basic') {
-            const responseToCache = response.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
-          }
-          return response;
-        })
-        .catch((err) => {
-          // Offline fallback
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          throw err;
-        });
+      return networkResponse.catch(() => {
+        if (event.request.mode === 'navigate') return caches.match('/index.html');
+        throw new Error('Offline and resource is not cached.');
+      });
     })
   );
 });
