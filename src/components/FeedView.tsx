@@ -20,6 +20,7 @@ import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
 import { Skeleton } from './Skeleton';
+import { rankReels } from '../services/reels/reelsRanking';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -1494,6 +1495,10 @@ export default function FeedView({
           remaining.splice(0, 1);
         }
         return mixed;
+      } else if (feedTab === 'reels') {
+        // Reels use short-form signals instead of the long-form media mixer.
+        // The ranking utility keeps the reasons explainable and deterministic.
+        return rankReels(sortedList, followingIds, currentUser.interestDNA).map(({ post }) => post as RefactoredPost);
       }
       return sortedList;
     })();
