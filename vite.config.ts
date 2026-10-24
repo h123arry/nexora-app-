@@ -15,6 +15,10 @@ export default defineConfig(() => {
       },
     },
     server: {
+      // Manus previews arrive through a forwarded *.us3.manus.computer host.
+      // Keep the allowlist scoped to that preview domain instead of disabling
+      // Vite host protection globally.
+      allowedHosts: ['.us3.manus.computer'],
       // HMR is disabled via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
