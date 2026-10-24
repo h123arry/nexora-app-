@@ -14,6 +14,7 @@ import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StorageDataCenterModal from './StorageDataCenterModal';
+import { exportAccountData, requestAccountDeletion } from '../services/firebase/accountLifecycleService';
 import { 
   getFollowersCount, 
   getFollowingCount, 
@@ -354,6 +355,7 @@ export default function ProfileView({
   const [confirmingDeleteAccount, setConfirmingDeleteAccount] = useState(false);
   const [deleteAccountPassword, setDeleteAccountPassword] = useState('');
   const [deleteStep, setDeleteStep] = useState(1); // 1 = warning, 2 = password enter, 3 = final delete
+  const [isLifecycleBusy, setIsLifecycleBusy] = useState(false);
 
   // Appearance customization
   const [accentColor, setAccentColor] = useState('violet'); // 'violet' | 'pink' | 'emerald' | 'cyan'
@@ -439,6 +441,41 @@ export default function ProfileView({
 
   // Profile dropdown menu state
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  const handleAccountExport = async () => {
+    if (isLifecycleBusy) return;
+    setIsLifecycleBusy(true);
+    try {
+      const payload = await exportAccountData(currentUser.id);
+      const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.href = dataStr;
+      downloadAnchor.download = `nexora-account-export-${currentUser.username}-${Date.now()}.json`;
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account export downloaded. It includes scope and retention limitations.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Account export could not be prepared.' }));
+    } finally {
+      setIsLifecycleBusy(false);
+    }
+  };
+
+  const handleAccountDeletionRequest = async () => {
+    if (isLifecycleBusy) return;
+    setIsLifecycleBusy(true);
+    try {
+      await requestAccountDeletion(currentUser.id);
+      setDeleteStep(3);
+      setDeleteAccountPassword('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account deletion request queued for review and asynchronous cleanup.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Deletion request could not be submitted.' }));
+    } finally {
+      setIsLifecycleBusy(false);
+    }
+  };
 
   // Exquisite Interactive Avatar modal editor state
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
@@ -930,16 +967,9 @@ export default function ProfileView({
                       { label: 'Creator Studio', action: () => { window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'creator' } })); setIsProfileMenuOpen(false); }, icon: BarChart2, iconColor: 'text-indigo-400' },
                       { label: 'Privacy', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('privacy'); setIsProfileMenuOpen(false); }, icon: Lock, iconColor: 'text-teal-400' },
                       { label: 'Share Profile', action: () => { setShowShareModal(true); setIsProfileMenuOpen(false); }, icon: QrCode, iconColor: 'text-indigo-400' },
-                      { label: 'Export Profile', action: () => { 
+                      { label: 'Export Account Data', action: () => {
                           setIsProfileMenuOpen(false);
-                          const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(currentUser, null, 2));
-                          const downloadAnchor = document.createElement('a');
-                          downloadAnchor.setAttribute("href", dataStr);
-                          downloadAnchor.setAttribute("download", `nexora_profile_${currentUser.username}.json`);
-                          document.body.appendChild(downloadAnchor);
-                          downloadAnchor.click();
-                          downloadAnchor.remove();
-                          window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Profile credentials exported successfully!' }));
+                          void handleAccountExport();
                         }, icon: Download, iconColor: 'text-sky-400' },
                       { label: 'View Public Profile', action: () => { 
                           setIsProfileMenuOpen(false);
@@ -2552,7 +2582,7 @@ export default function ProfileView({
                   <div className="space-y-1.5">
                     <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider text-red-400">DELETE ACCOUNT</h3>
                     <p className="text-[10px] text-zinc-300 font-mono leading-normal">
-                      WARNING: Proceeding will completely delete your account, your followers, and all of your posts. This action cannot be undone.
+                      This submits an account deletion request. A trusted cleanup process must remove owned records and media asynchronously; the account is not erased immediately.
                     </p>
                   </div>
                   <div className="grid grid-cols-2 gap-2 pt-1 font-mono text-[10px] uppercase font-black">
@@ -2577,7 +2607,7 @@ export default function ProfileView({
                   <div className="space-y-1.5">
                     <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider">Confirm Your Password</h3>
                     <p className="text-[10px] text-zinc-400 font-mono leading-normal">
-                      Please enter your password to confirm account deletion.
+                      Type your password to confirm intent; it is not sent to Nexora or verified in this browser flow. The request is queued; backups, legal records, and third-party systems may retain data temporarily.
                     </p>
                     <input 
                       type="password"
@@ -2600,18 +2630,12 @@ export default function ProfileView({
                           alert('⚠️ Please enter your password.');
                           return;
                         }
-                        setDeleteStep(3);
-                        setDeleteAccountPassword('');
-                        window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Deleting Nexora Account...' }));
-                        setTimeout(() => {
-                          setConfirmingDeleteAccount(false);
-                          onLogout?.();
-                          window.location.reload();
-                        }, 2500);
+                        void handleAccountDeletionRequest();
                       }}
-                      className="p-3 bg-red-600 hover:bg-red-500 text-white rounded-2xl"
+                      disabled={isLifecycleBusy}
+                      className="p-3 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-2xl"
                     >
-                      Delete Account
+                      {isLifecycleBusy ? 'Queueing...' : 'Request Deletion'}
                     </button>
                   </div>
                 </div>
@@ -2620,8 +2644,14 @@ export default function ProfileView({
               {deleteStep === 3 && (
                 <div className="space-y-3 py-4">
                   <div className="w-10 h-10 border-2 border-red-500 border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-xs font-mono text-red-400 font-extrabold uppercase animate-pulse">PERMANENTLY DELETING ACCOUNT...</p>
-                  <p className="text-[9px] text-zinc-500 font-mono">Thank you for being part of Nexora.</p>
+                  <p className="text-xs font-mono text-red-400 font-extrabold uppercase">DELETION REQUEST QUEUED</p>
+                  <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Your request is awaiting trusted asynchronous cleanup. You remain signed in until processing is verified.</p>
+                  <button
+                    onClick={() => setConfirmingDeleteAccount(false)}
+                    className="w-full p-3 bg-zinc-900 border border-white/10 text-zinc-300 rounded-2xl font-mono text-[10px] uppercase"
+                  >
+                    Close
+                  </button>
                 </div>
               )}
 

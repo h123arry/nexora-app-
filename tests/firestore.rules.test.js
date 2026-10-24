@@ -228,4 +228,22 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('bob'), 'moderationAppeals', 'appeal-1')));
     await assertFails(updateDoc(doc(dbFor('alice'), 'moderationAppeals', 'appeal-1'), { status: 'approved' }));
   });
+
+  it('allows an account owner to create and read a pending deletion request but never complete it client-side', async () => {
+    const deletionRequest = {
+      type: 'delete_account',
+      requesterId: 'alice',
+      status: 'pending',
+      policyVersion: '2026-10',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      retentionNote: 'Cleanup is asynchronous and may be limited by backups.'
+    };
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1'), deletionRequest));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'accountLifecycleRequests', 'delete-1')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'accountLifecycleRequests', 'delete-2'), deletionRequest));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1'), { status: 'completed' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1')));
+  });
 });
