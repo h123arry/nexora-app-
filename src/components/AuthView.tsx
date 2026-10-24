@@ -22,6 +22,7 @@ import {
   sendEmailVerification
 } from 'firebase/auth';
 import { AuthService } from '../services/firebase/authService';
+import { ProfileService } from '../services/firebase/profileService';
 import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 
@@ -541,7 +542,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   };
 
   // Onboarding Step 1: Save Username
-  const handleSaveUsername = (e: React.FormEvent) => {
+  const handleSaveUsername = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!onboardingUser) return;
 
@@ -550,13 +551,21 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       return;
     }
 
-    const updatedUser: User = {
-      ...onboardingUser,
-      username: onboardingUsername.trim().toLowerCase()
-    };
-    setOnboardingUser(updatedUser);
+    setIsPending(true);
     setErrorMsg('');
-    setOnboardingStep(2);
+    try {
+      const reservedUsername = await ProfileService.reserveUsername(onboardingUser.id, onboardingUsername);
+      const updatedUser: User = {
+        ...onboardingUser,
+        username: reservedUsername
+      };
+      setOnboardingUser(updatedUser);
+      setOnboardingStep(2);
+    } catch (error: any) {
+      setErrorMsg(error?.message || 'That username is no longer available. Please choose another handle.');
+    } finally {
+      setIsPending(false);
+    }
   };
 
   // Onboarding Step 2: Profile Photo Upload / Selection
@@ -738,10 +747,10 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
 
                 <button
                   type="submit"
-                  disabled={usernameStatus.status !== 'available'}
+                  disabled={usernameStatus.status !== 'available' || isPending}
                   className="w-full py-3.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-40 text-white font-bold rounded-2xl text-sm transition-all shadow-[0_4px_20px_rgba(139,92,246,0.3)] flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Continue</span>
+                  <span>{isPending ? 'Checking handle…' : 'Continue'}</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </form>

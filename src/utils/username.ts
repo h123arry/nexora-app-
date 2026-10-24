@@ -14,6 +14,10 @@ const RESERVED_USERNAMES = [
   'nexora_ai'
 ];
 
+export function normalizeUsername(username: string): string {
+  return username.trim().toLowerCase();
+}
+
 export function validateUsername(username: string, currentUserId?: string): string | null {
   const status = checkUsernameStatus(username, currentUserId);
   if (status.status === 'available') {
@@ -29,7 +33,7 @@ export interface UsernameStatus {
 }
 
 export function checkUsernameStatus(username: string, currentUserId?: string): UsernameStatus {
-  const clean = username.trim().toLowerCase();
+  const clean = normalizeUsername(username);
   
   if (!clean) {
     return {
@@ -90,13 +94,6 @@ export function checkUsernameStatus(username: string, currentUserId?: string): U
       message: 'This handle is reserved to prevent impersonation.',
       suggestions
     };
-  }
-
-  // Username uniqueness is validated against Firestore profiles or local state
-  try {
-    // Basic format check passed
-  } catch (err) {
-    console.error('Error checking unique username:', err);
   }
 
   return {

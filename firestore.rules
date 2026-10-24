@@ -44,6 +44,24 @@ service cloud.firestore {
     // Default-deny for every path not explicitly listed below.
     match /{document=**} { allow read, write: if false; }
 
+    // Canonical username claims prevent query-before-write races during onboarding.
+    match /usernames/{username} {
+      allow get: if signedIn();
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['userId', 'username', 'createdAt', 'updatedAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.username == username
+        && username.size() >= 3
+        && username.size() <= 20;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.username == resource.data.username
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt']);
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
     // Mail and security logs are trusted-server-only: clients cannot forge recipients or audit events.
     match /mail/{mailId} {
       allow read: if false;

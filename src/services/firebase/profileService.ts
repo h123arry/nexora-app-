@@ -1,7 +1,8 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch, runTransaction } from 'firebase/firestore';
 import { db } from './config';
 import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
+import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
 
 export class ProfileService {
   /** Public projection deliberately excludes email, phone, role, moderation flags, balances and preferences. */
@@ -74,6 +75,9 @@ export class ProfileService {
 
   static async updateProfile(uid: string, updates: Partial<User>): Promise<void> {
     if (!db) return;
+    if (updates.username) {
+      await this.reserveUsername(uid, updates.username);
+    }
     const docRef = doc(db, 'users', uid);
     await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() });
     const existing = await this.getProfile(uid);
@@ -100,9 +104,40 @@ export class ProfileService {
 
   static async checkUsernameExists(username: string): Promise<boolean> {
     if (!db) return false;
-    const clean = username.toLowerCase().trim();
+    const clean = normalizeUsername(username);
+    const claim = await getDoc(doc(db, 'usernames', clean));
+    if (claim.exists()) return true;
     const q = query(collection(db, 'publicProfiles'), where('username', '==', clean));
     const snap = await getDocs(q);
     return !snap.empty;
+  }
+
+  /** Atomically reserves a canonical username for the authenticated owner. */
+  static async reserveUsername(uid: string, username: string): Promise<string> {
+    const clean = normalizeUsername(username);
+    const status = checkUsernameStatus(clean, uid);
+    if (status.status !== 'available') {
+      throw new Error(status.message);
+    }
+    if (!db) return clean;
+
+    const claimRef = doc(db, 'usernames', clean);
+    await runTransaction(db, async (transaction) => {
+      const existing = await transaction.get(claimRef);
+      if (existing.exists() && existing.data().userId !== uid) {
+        throw new Error('This username is already taken. Please choose another handle.');
+      }
+      if (existing.exists()) {
+        transaction.update(claimRef, { updatedAt: serverTimestamp() });
+      } else {
+        transaction.set(claimRef, {
+          userId: uid,
+          username: clean,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp()
+        });
+      }
+    });
+    return clean;
   }
 }

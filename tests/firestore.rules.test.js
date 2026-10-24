@@ -64,6 +64,21 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { ...publicProfile('bob'), email: 'bob@example.test' }));
   });
 
+  it('protects canonical username claims from collisions and forged ownership', async () => {
+    const claim = {
+      userId: 'alice', username: 'alice_handle',
+      createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    };
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'usernames', 'alice_handle'), claim));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'usernames', 'alice_handle')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'usernames', 'alice_handle'), { ...claim, userId: 'bob' }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'usernames', 'other_handle'), { ...claim, username: 'wrong_handle' }));
+    await assertSucceeds(updateDoc(doc(dbFor('alice'), 'usernames', 'alice_handle'), { updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'usernames', 'alice_handle'), { username: 'renamed' }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'usernames', 'alice_handle')));
+    await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'usernames', 'alice_handle')));
+  });
+
   it('allows public posts and public profile projections without exposing private account records', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'posts', 'post-1'), { id: 'post-1', userId: 'alice', content: 'public' });
