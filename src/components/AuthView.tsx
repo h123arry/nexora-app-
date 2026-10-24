@@ -86,7 +86,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   const [signupMethod, setSignupMethod] = useState<'choose' | 'email' | 'phone'>('choose');
 
   // Login & Registration Inputs
-  const [identifierInput, setIdentifierInput] = useState(''); // Email / Username / Phone
+  const [identifierInput, setIdentifierInput] = useState(''); // Email for password login; phone uses OTP flow.
   const [detectedType, setDetectedType] = useState<'email' | 'username' | 'phone'>('username');
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -250,7 +250,11 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setErrorMsg('');
 
     if (!identifierInput.trim()) {
-      setErrorMsg('Please enter your email, username, or phone number.');
+      setErrorMsg('Please enter your email address. Phone sign-in uses verification code.');
+      return;
+    }
+    if (!/^\S+@\S+\.\S+$/.test(identifierInput.trim())) {
+      setErrorMsg('Email + password login requires a valid email address. Use phone verification for phone sign-in.');
       return;
     }
     if (!passwordInput) {

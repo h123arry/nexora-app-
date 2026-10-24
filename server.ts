@@ -16,9 +16,40 @@ dotenv.config();
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+app.disable('x-powered-by');
 
 // Body parsing middleware
 app.use(express.json({ limit: '8mb' }));
+
+// Operational boundary shared by every API and frontend request. The request
+// ID is returned to clients and logs so support, tracing, and incident review
+// can correlate one user action across Express and Cloud Functions.
+app.use((req, res, next) => {
+  const requestId = typeof req.headers['x-request-id'] === 'string' && /^[A-Za-z0-9._:-]{8,120}$/.test(req.headers['x-request-id'])
+    ? req.headers['x-request-id']
+    : randomUUID();
+  res.setHeader('X-Request-Id', requestId);
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(self), geolocation=()');
+  if (req.path.startsWith('/api/')) res.setHeader('Cache-Control', 'no-store');
+  if (process.env.NODE_ENV === 'production') res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  next();
+});
+
+app.get('/healthz', (_req, res) => {
+  res.status(200).json({ status: 'ok', service: 'nexora-api', version: process.env.RELEASE_VERSION || 'local' });
+});
+
+app.get('/readyz', (_req, res) => {
+  const ready = getApps().length > 0 && Boolean(firebaseProjectId && firestoreDatabaseId);
+  res.status(ready ? 200 : 503).json({
+    status: ready ? 'ready' : 'not_ready',
+    firebase: ready ? 'configured' : 'missing_configuration',
+    database: firestoreDatabaseId,
+  });
+});
 
 const VOH_MAX_MESSAGE_LENGTH = 4000;
 const VOH_MAX_HISTORY_ITEMS = 24;
