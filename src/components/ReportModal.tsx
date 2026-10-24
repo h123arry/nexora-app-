@@ -37,6 +37,7 @@ export default function ReportModal({
   const [comments, setComments] = useState('');
   const [isDone, setIsDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   if (!isOpen) return null;
 
@@ -55,6 +56,14 @@ export default function ReportModal({
     e.preventDefault();
     if (isSubmitting) return;
     setIsSubmitting(true);
+    setSubmitError('');
+    const reporterId = auth.currentUser?.uid;
+    if (!reporterId) {
+      setSubmitError('Sign in to send a report to Nexora moderation.');
+      setIsSubmitting(false);
+      return;
+    }
+    const normalizedReason = `${selectedReason}${comments.trim() ? `: ${comments.trim()}` : ''}`.slice(0, 500);
     
     const newReport = {
       id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -69,21 +78,15 @@ export default function ReportModal({
     };
 
     try {
+      await reportContent(reporterId, targetType, targetId, normalizedReason);
       const existingStr = localStorage.getItem('nexora_reports') || '[]';
       const existing = JSON.parse(existingStr);
-      const updated = [newReport, ...existing];
-      localStorage.setItem('nexora_reports', JSON.stringify(updated));
-    } catch (e) {
-      console.error(e);
-    }
-
-    try {
-      const reporterId = auth.currentUser?.uid;
-      if (reporterId) {
-        await reportContent(reporterId, targetType, targetId, `${selectedReason}: ${comments.trim()}`.slice(0, 500));
-      }
+      localStorage.setItem('nexora_reports', JSON.stringify([newReport, ...existing]));
     } catch (error) {
-      console.warn('Durable report queue unavailable; local report retained.', error);
+      console.warn('Durable report submission failed.', error);
+      setSubmitError('This report could not be submitted. Check your connection and try again.');
+      setIsSubmitting(false);
+      return;
     }
 
     setIsDone(true);
@@ -167,6 +170,10 @@ export default function ReportModal({
                 />
               </div>
 
+              {submitError && (
+                <p role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 px-3 py-2 text-[11px] leading-relaxed text-rose-200">{submitError}</p>
+              )}
+
               <button
                 type="submit"
                 className="w-full py-3 bg-gradient-to-r from-red-600 to-rose-600 hover:brightness-110 text-white font-mono text-xs font-black tracking-widest uppercase rounded-xl cursor-pointer shadow-lg active:scale-98 transition-all"
@@ -184,7 +191,7 @@ export default function ReportModal({
                   REPORT SUBMITTED
                 </h4>
                 <p className="text-[11px] text-zinc-400 max-w-xs mt-1 leading-normal font-sans">
-                  Thank you for reporting. Our moderation team will review this post within 5 minutes.
+                  Thank you for reporting. Your signal has been securely queued for moderation review.
                 </p>
               </div>
             </div>

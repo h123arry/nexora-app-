@@ -1,1 +1,1 @@
-{"routes":[{"path":"/","title":"Nexora Home"}]}
+{"routes":[{"path":"/","title":"Nexora Home"},{"path":"/?tab=explore","title":"Nexora Explore"},{"path":"/?tab=communities","title":"Nexora Communities"},{"path":"/?tab=inbox","title":"Nexora Messages"},{"path":"/?tab=activity","title":"Nexora Activity"},{"path":"/?tab=profile","title":"Nexora Profile"},{"path":"/?tab=settings","title":"Nexora Settings"},{"path":"/?tab=creator","title":"Nexora Creator Studio"}]}

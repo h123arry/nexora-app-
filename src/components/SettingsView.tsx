@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Check, Moon, Sun, Smartphone, Globe, Key, Eye } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
+
+const PrivacySettingsModal = lazy(() => import('./PrivacySettingsModal'));
 
 interface SettingsViewProps {
   currentUser: UserType;
@@ -17,13 +19,20 @@ export default function SettingsView({
   onUpdateProfile
 }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about'>('account');
+  const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
+  const privacyKey = `nx_privacy_summary_${currentUser.id}`;
 
   // Interactive toggle states
-  const [isPrivateAccount, setIsPrivateAccount] = useState(false);
-  const [allowDms, setAllowDms] = useState(true);
+  const [isPrivateAccount, setIsPrivateAccount] = useState(() => localStorage.getItem(`${privacyKey}_private`) === 'true');
+  const [allowDms, setAllowDms] = useState(() => localStorage.getItem(`${privacyKey}_dms`) !== 'false');
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailDigests, setEmailDigests] = useState(false);
   const [twoFactor, setTwoFactor] = useState(true);
+
+  useEffect(() => {
+    localStorage.setItem(`${privacyKey}_private`, String(isPrivateAccount));
+    localStorage.setItem(`${privacyKey}_dms`, String(allowDms));
+  }, [privacyKey, isPrivateAccount, allowDms]);
 
   const sections = [
     { id: 'account', label: 'Account', icon: User, desc: 'Profile details & account identity' },
@@ -120,9 +129,18 @@ export default function SettingsView({
           )}
 
           {activeSection === 'privacy' && (
-            <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Privacy & Safety</h3>
-              <div className="space-y-4">
+                <div className="space-y-4">
+                  <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Privacy & Safety</h3>
+                  <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-xs font-bold text-white">Full privacy controls</h4>
+                        <p className="text-[10px] text-violet-100/70">Presence, profile visibility, messaging, calls, discovery, and safety.</p>
+                      </div>
+                      <button type="button" onClick={() => setShowPrivacyDetails(true)} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2 text-[10px] font-bold uppercase text-white hover:bg-violet-500">Open</button>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/5">
                   <div>
                     <h4 className="text-xs font-bold text-white">Private Account</h4>
@@ -201,6 +219,9 @@ export default function SettingsView({
           )}
         </div>
       </div>
+      <Suspense fallback={null}>
+        <PrivacySettingsModal isOpen={showPrivacyDetails} onClose={() => setShowPrivacyDetails(false)} />
+      </Suspense>
     </div>
   );
 }

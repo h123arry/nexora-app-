@@ -89,14 +89,15 @@ export default function MediaCreationEngine({
   initialMode = null,
   initialTab = undefined
 }: MediaCreationEngineProps) {
-  const initialAutosave = useRef(() => {
+  const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
+  const initialAutosave = (() => {
     try {
-      const saved = localStorage.getItem('nexora_creation_autosave_v1');
+      const saved = localStorage.getItem(autosaveKey);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
     }
-  }).current();
+  })();
 
   // Navigation & Wizard Core
   const [activeTab, setActiveTab] = useState<'feed' | 'story' | 'drafts'>(initialTab || (isStoryModeInitially ? 'story' : 'feed'));
@@ -111,16 +112,16 @@ export default function MediaCreationEngine({
   const [caption, setCaption] = useState(() => initialAutosave?.caption || '');
   const [topics, setTopics] = useState(() => initialAutosave?.topics || '');
   const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>(() => initialAutosave?.audience || 'public');
-  const [location, setLocation] = useState('');
+  const [location, setLocation] = useState(() => initialAutosave?.location || '');
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
-  const [taggedUsernames, setTaggedUsernames] = useState('');
-  const [imageAltText, setImageAltText] = useState('');
+  const [taggedUsernames, setTaggedUsernames] = useState(() => initialAutosave?.taggedUsernames || '');
+  const [imageAltText, setImageAltText] = useState(() => initialAutosave?.imageAltText || '');
 
   // Editing parameters
-  const [brightness, setBrightness] = useState(100);
-  const [contrast, setContrast] = useState(100);
-  const [saturation, setSaturation] = useState(100);
-  const [blur, setBlur] = useState(0);
+  const [brightness, setBrightness] = useState(() => initialAutosave?.brightness ?? 100);
+  const [contrast, setContrast] = useState(() => initialAutosave?.contrast ?? 100);
+  const [saturation, setSaturation] = useState(() => initialAutosave?.saturation ?? 100);
+  const [blur, setBlur] = useState(() => initialAutosave?.blur ?? 0);
   const [stickerOverlay, setStickerOverlay] = useState<string | null>(null);
   const [textOverlay, setTextOverlay] = useState('');
   const [textOverlayColor, setTextOverlayColor] = useState('#ffffff');
@@ -271,7 +272,7 @@ export default function MediaCreationEngine({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (!caption && !activeMode && selectedImages.length === 0 && !videoFileUrl && !voiceFileUrl) {
-        localStorage.removeItem('nexora_creation_autosave_v1');
+        localStorage.removeItem(autosaveKey);
         return;
       }
       try {
@@ -285,15 +286,22 @@ export default function MediaCreationEngine({
           videoUrl: videoFileUrl,
           recordedVideoUrl,
           voiceUrl: voiceFileUrl,
-          voiceTranscript
+          voiceTranscript,
+          location,
+          taggedUsernames,
+          imageAltText,
+          brightness,
+          contrast,
+          saturation,
+          blur
         };
-        localStorage.setItem('nexora_creation_autosave_v1', JSON.stringify(draft));
+        localStorage.setItem(autosaveKey, JSON.stringify(draft));
       } catch (e) {
         console.error(e);
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript]);
+  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur]);
 
   // Camera preview management
   useEffect(() => {
@@ -589,7 +597,7 @@ export default function MediaCreationEngine({
     setDraftsList(prev => [draft, ...prev]);
     localStorage.removeItem('nexora_creation_autosave_v1');
     resetStates();
-    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved securely across devices!' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved securely on this device.' }));
   };
 
   const handleSelectDraft = (draft: DraftItem) => {
@@ -611,7 +619,7 @@ export default function MediaCreationEngine({
   };
 
   const resetStates = () => {
-    localStorage.removeItem('nexora_creation_autosave_v1');
+    localStorage.removeItem(autosaveKey);
     setCaption('');
     setTopics('');
     setAudience('public');
@@ -639,10 +647,24 @@ export default function MediaCreationEngine({
 
   // Stage progress triggers
   const triggerPublishMedia = async () => {
+    if (postingStatus !== 'idle') return;
+    const hasMedia = selectedImages.length > 0 || !!videoFileUrl || !!recordedVideoUrl || !!voiceFileUrl;
+    if (!caption.trim() && !hasMedia && !pollQuestion.trim()) {
+      setErrorMessage('Add a caption, media file, voice memo, or poll question before publishing.');
+      setPostingStatus('failed');
+      return;
+    }
+    if (isScheduled && !scheduledDateTime) {
+      setErrorMessage('Choose a date and time before scheduling this post.');
+      setPostingStatus('failed');
+      return;
+    }
+    clearInterval(uploadIntervalRef.current);
+    setErrorMessage('');
     setPostingStatus('compressing');
     setUploadProgress(5);
 
-    const runStage = (start: number, end: number, step: number, status: typeof postingStatus, duration: number) => {
+    const runStage = (start: number, end: number, step: number, status: 'compressing' | 'publishing' | 'processing', duration: number) => {
       return new Promise<boolean>((resolve) => {
         let current = start;
         setPostingStatus(status);
@@ -689,12 +711,9 @@ export default function MediaCreationEngine({
             finalVid = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
           }
         } catch (e) {
-          console.error('[MediaCreation] Remote video upload failed; keeping local fallback.', e);
-          try {
-            finalVid = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
-          } catch (fallbackError) {
-            console.error('[MediaCreation] Local video fallback failed.', fallbackError);
-          }
+          console.error('[MediaCreation] Video upload failed.', e);
+          if (!isOffline) throw new Error('Video upload failed. Check your connection and retry.');
+          finalVid = await saveMediaBlob(`vid-${Date.now()}`, videoRawBlob);
         }
       }
 
@@ -709,7 +728,7 @@ export default function MediaCreationEngine({
         };
       }
 
-      onAddPost(
+      const createdPostId = onAddPost(
         caption,
         mainImg,
         topics,
@@ -728,6 +747,7 @@ export default function MediaCreationEngine({
         isScheduled ? scheduledDateTime : undefined,
         targetBroadcastChannel
       );
+      if (!createdPostId) throw new Error('Nexora could not confirm this post. Please sign in and retry.');
 
       setPostingStatus('completed');
       window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Post Published Successfully!' }));
@@ -738,7 +758,7 @@ export default function MediaCreationEngine({
       }, 1500);
     } catch (err) {
       setPostingStatus('failed');
-      setErrorMessage('Verification failed. Server returned non-zero response.');
+      setErrorMessage(err instanceof Error ? err.message : 'Publishing failed. Your draft is still available to retry.');
     }
   };
 
@@ -756,7 +776,22 @@ export default function MediaCreationEngine({
     return 'bg-zinc-900/40 border border-zinc-800 text-zinc-500';
   };
 
+  const canAdvanceFromCurrentStep = () => {
+    if (currentStep === 1 && !activeMode) return false;
+    if (currentStep === 2) {
+      if (['photo', 'carousel'].includes(activeMode || '')) return selectedImages.length > 0;
+      if (['video', 'reel'].includes(activeMode || '')) return !!videoFileUrl || !!recordedVideoUrl;
+      if (activeMode === 'voice') return !!voiceFileUrl;
+      if (activeMode === 'poll') return !!pollQuestion.trim() && pollOptionsList.filter(option => option.trim()).length >= 2;
+    }
+    return true;
+  };
+
   const nextStep = () => {
+    if (!canAdvanceFromCurrentStep()) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Complete this step before continuing.' }));
+      return;
+    }
     if (currentStep < 6) setCurrentStep(prev => prev + 1);
   };
 
@@ -965,10 +1000,10 @@ export default function MediaCreationEngine({
               <button 
                 key={st.id}
                 onClick={() => {
-                  if (activeMode || st.id === 1) {
-                    setCurrentStep(st.id);
-                  }
+                  if (st.id <= currentStep) setCurrentStep(st.id);
+                  else if (st.id === currentStep + 1) nextStep();
                 }}
+                disabled={st.id > currentStep + 1 || (st.id === currentStep + 1 && !activeMode)}
                 className={`px-3 py-1 text-[10px] font-sans font-black uppercase rounded-lg transition-all ${getStepButtonColor(st.id)}`}
               >
                 {st.id < currentStep ? '✓' : st.id}. {st.label}
@@ -1742,9 +1777,22 @@ export default function MediaCreationEngine({
                           {postingStatus === 'completed' && '✨ Content Successfully Shared!'}
                         </span>
                         <p className="text-xs text-zinc-300 font-sans">
-                          {postingStatus === 'completed' ? 'Post shared successfully.' : 'Syncing post settings...'}
+                          {postingStatus === 'completed' ? 'Post shared successfully.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Syncing post settings...'}
                         </p>
                       </div>
+
+                      {postingStatus === 'failed' && (
+                        <div className="w-full max-w-sm rounded-2xl border border-rose-500/20 bg-rose-500/10 p-3 text-left space-y-2">
+                          <p className="text-[11px] leading-relaxed text-rose-200">{errorMessage || 'Something interrupted publishing.'}</p>
+                          <button
+                            type="button"
+                            onClick={() => { setPostingStatus('idle'); setErrorMessage(''); }}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-rose-100 hover:bg-rose-500/25"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5" /> Review and retry
+                          </button>
+                        </div>
+                      )}
 
                       {postingStatus !== 'completed' && postingStatus !== 'failed' && (
                         <div className="flex gap-2">

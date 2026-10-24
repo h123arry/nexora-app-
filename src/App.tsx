@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward } from 'lucide-react';
+import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
 
 import { Camera, Video as VideoIcon, Mic, BarChart2, FileText, Award, Users as UsersIcon, MapPin, Smile, ChevronRight, Play, Pause, Trash2, RefreshCw, Eye, WifiOff, FolderOpen } from 'lucide-react';
@@ -57,22 +57,22 @@ const ProfileView = lazy(() => import('./components/ProfileView'));
 const NotificationsView = lazy(() => import('./components/NotificationsView'));
 const WorldPulseView = lazy(() => import('./components/WorldPulseView'));
 const MatrixView = lazy(() => import('./components/MatrixView'));
-import AuthView from './components/AuthView';
+const AuthView = lazy(() => import('./components/AuthView'));
 import SlideDownMenu from './components/SlideDownMenu';
 import NexoraPremiumLogo from './components/NexoraPremiumLogo';
 import NexoraBranding from './components/NexoraBranding';
 const CreatorDashboardView = lazy(() => import('./components/CreatorDashboardView'));
 const ActivityView = lazy(() => import('./components/ActivityView'));
-import OnboardingTour from './components/OnboardingTour';
-import MediaCreationEngine from './components/MediaCreationEngine';
+const OnboardingTour = lazy(() => import('./components/OnboardingTour'));
+const MediaCreationEngine = lazy(() => import('./components/MediaCreationEngine'));
 const ExploreView = lazy(() => import('./components/ExploreView'));
 const NewInboxView = lazy(() => import('./components/NewInboxView'));
 const LiveView = lazy(() => import('./components/LiveView'));
-import SystemHubControlPanel from './components/SystemHubControlPanel';
+const SystemHubControlPanel = lazy(() => import('./components/SystemHubControlPanel'));
 const NidaView = lazy(() => import('./components/NidaView'));
 const CommunitiesHubView = lazy(() => import('./components/CommunitiesHubView'));
 const SavedView = lazy(() => import('./components/SavedView'));
-import UniversalSearchModal from './components/UniversalSearchModal';
+const UniversalSearchModal = lazy(() => import('./components/UniversalSearchModal'));
 const WalletView = lazy(() => import('./components/WalletView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
@@ -652,6 +652,13 @@ export default function App() {
     }
     setActiveTab(tab);
     setViewedUser(targetViewedUser);
+    setSelectedTag(null);
+    setSearchQuery('');
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      params.set('tab', tab);
+      window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
+    }
   };
 
   // Global scroll position memory across all destination tabs
@@ -2032,8 +2039,7 @@ export default function App() {
         onClose={() => setIsNavMenuOpen(false)}
         activeTab={activeTab}
         setActiveTab={(tab) => {
-          setActiveTab(tab);
-          setViewedUser(null);
+          navigateTo(tab);
         }}
         matrixSubTabRedirect={matrixSubTabRedirect}
         unreadMessagesCount={unreadMessagesCount}
@@ -2050,6 +2056,7 @@ export default function App() {
             <Sidebar 
               currentUser={getRichUser(currentUser)}
               activeTab={activeTab}
+              onNavigate={(tab) => navigateTo(tab as typeof activeTab)}
               setActiveTab={(tab) => {
                 setActiveTab(tab);
                 setViewedUser(null);
@@ -2140,10 +2147,11 @@ export default function App() {
                       creators={Object.values(globalUsersMap) as User[]}
                       posts={resolvedPosts}
                       setSelectedTag={setSelectedTag}
-                      setActiveTab={(t) => setActiveTab(t as any)}
+                      setActiveTab={(t) => navigateTo(t as typeof activeTab)}
                       onLikePost={handleLikePost}
                       onToggleFollow={handleToggleFollow}
                       followingIds={followingIds}
+                      onViewProfile={handleViewProfile}
                     />
                   )}
 
@@ -2300,6 +2308,7 @@ export default function App() {
               trendingTags={dynamicTrendingTags}
               selectedTag={selectedTag}
               setSelectedTag={setSelectedTag}
+              onOpenExplore={() => navigateTo('explore')}
               systemSpeed={systemSpeed}
               currentUserUsername={currentUser.username}
             />
@@ -2311,6 +2320,7 @@ export default function App() {
       {/* Create Post Global Overlay Modal Dialog */}
       <AnimatePresence>
         {isCreatePostModalOpen && (
+          <Suspense fallback={null}>
           <MediaCreationEngine
             currentUser={currentUser}
             onClose={handleCloseCreateModal}
@@ -2341,6 +2351,7 @@ export default function App() {
               });
             }}
           />
+          </Suspense>
         )}
       </AnimatePresence>
 
@@ -2457,7 +2468,7 @@ export default function App() {
       >
         <button
           type="button"
-          onClick={() => { setActiveTab('feed'); setViewedUser(null); }}
+          onClick={() => navigateTo('feed')}
           aria-label="Home feed"
           aria-current={activeTab === 'feed' ? 'page' : undefined}
           data-active={activeTab === 'feed'}
@@ -2470,7 +2481,20 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => { setActiveTab('communities'); setViewedUser(null); }}
+          onClick={() => navigateTo('explore')}
+          aria-label="Explore"
+          aria-current={activeTab === 'explore' ? 'page' : undefined}
+          data-active={activeTab === 'explore'}
+          className="nx-dock-item cursor-pointer"
+          id="mobile-nav-explore"
+        >
+          <Compass className="w-5 h-5" aria-hidden="true" />
+          <span className="text-[9px] font-mono tracking-wide uppercase">Explore</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigateTo('communities')}
           aria-label="Communities"
           aria-current={activeTab === 'communities' ? 'page' : undefined}
           data-active={activeTab === 'communities'}
@@ -2518,7 +2542,7 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => { setActiveTab('inbox'); setViewedUser(null); }}
+          onClick={() => navigateTo('inbox')}
           aria-label={unreadMessagesCount > 0 ? `Messages, ${unreadMessagesCount} unread` : 'Messages'}
           aria-current={activeTab === 'inbox' ? 'page' : undefined}
           data-active={activeTab === 'inbox'}
@@ -2536,7 +2560,20 @@ export default function App() {
 
         <button
           type="button"
-          onClick={() => { setActiveTab('profile'); setViewedUser(null); }}
+          onClick={() => navigateTo('activity')}
+          aria-label="Activity"
+          aria-current={activeTab === 'activity' ? 'page' : undefined}
+          data-active={activeTab === 'activity'}
+          className="nx-dock-item cursor-pointer"
+          id="mobile-nav-activity"
+        >
+          <Bell className="w-5 h-5" aria-hidden="true" />
+          <span className="text-[9px] font-mono tracking-wide uppercase">Activity</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => navigateTo('profile')}
           aria-label="Your profile"
           aria-current={activeTab === 'profile' ? 'page' : undefined}
           data-active={activeTab === 'profile'}
@@ -3047,6 +3084,7 @@ export default function App() {
       {/* 🔮 NEXORA SYSTEM HUB - GLOBAL UX, ACCESSIBILITY, AND PERFORMANCE CONTROL DECK */}
       <AnimatePresence>
         {isSystemHubOpen && (
+          <Suspense fallback={null}>
           <SystemHubControlPanel
             isOpen={isSystemHubOpen}
             onClose={() => setIsSystemHubOpen(false)}
@@ -3072,14 +3110,17 @@ export default function App() {
             setIsOffline={setIsOffline}
             lazyLoadImages={lazyLoadImages}
             setLazyLoadImages={setLazyLoadImages}
-          />
+            />
+          </Suspense>
         )}
       </AnimatePresence>
 
       {/* 🚀 FIRST-TIME USER ONBOARDING TOUR */}
       <AnimatePresence>
         {showOnboarding && (
-          <OnboardingTour onClose={() => setShowOnboarding(false)} />
+          <Suspense fallback={null}>
+            <OnboardingTour onClose={() => setShowOnboarding(false)} />
+          </Suspense>
         )}
       </AnimatePresence>
 
@@ -3212,14 +3253,14 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      <UniversalSearchModal
+      {isUniversalSearchOpen && <Suspense fallback={null}><UniversalSearchModal
         isOpen={isUniversalSearchOpen}
         onClose={() => setIsUniversalSearchOpen(false)}
         currentUser={getRichUser(currentUser)}
         posts={resolvedPosts}
         users={Object.values(globalUsersMap) as User[]}
         chats={resolvedChats}
-        onSelectTab={(t) => setActiveTab(t as any)}
+        onSelectTab={(t) => navigateTo(t as typeof activeTab)}
         onOpenCreatePost={(mode) => {
           requireAuth(() => {
             setCreationInitialMode(mode as any);
@@ -3227,7 +3268,7 @@ export default function App() {
           });
         }}
         onViewProfile={(u) => handleViewProfile(u.username)}
-      />
+      /></Suspense>}
 
       {showAuthModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
@@ -3242,7 +3283,7 @@ export default function App() {
               <X className="w-5 h-5" />
             </button>
             <div className="p-2">
-              <AuthView
+              <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-400">Loading secure sign-in…</div>}><AuthView
                 promptReason={authPromptReason}
                 onLoginSuccess={(loggedUser) => {
                   if (loggedUser.id === 'demo-user-1' && import.meta.env.DEV) {
@@ -3255,7 +3296,7 @@ export default function App() {
                   setCurrentUser(getRichUser(loggedUser));
                   setShowAuthModal(false);
                 }}
-              />
+              /></Suspense>
             </div>
           </div>
         </div>

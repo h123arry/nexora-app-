@@ -98,6 +98,7 @@ export default function NexoraVideoPlayer({
 
   const resolvedUrl = useResolvedUrl(videoUrl);
   const finalVideoUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
+  const posterUrl = post.image || post.images?.[0];
 
   // Connection & Speed playback status states
   const [isPlaying, setIsPlaying] = useState(false);
@@ -109,6 +110,8 @@ export default function NexoraVideoPlayer({
   const [showTapForSound, setShowTapForSound] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isReady, setIsReady] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLongPressing, setIsLongPressing] = useState(false);
   const [showLongPressMenu, setShowLongPressMenu] = useState(false);
@@ -120,6 +123,7 @@ export default function NexoraVideoPlayer({
   const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasVideoError, setHasVideoError] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
   
   // Premium Player Adjustments & HUD Telemetry
   const [brightnessLevel, setBrightnessLevel] = useState(100);
@@ -134,6 +138,7 @@ export default function NexoraVideoPlayer({
   const singleTapTimeoutRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<any>(null);
   const qualitySwitchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // Double-tap pulse effect
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
@@ -256,6 +261,17 @@ export default function NexoraVideoPlayer({
     };
   }, []);
 
+  // Keep a strict viewport signal separate from the wider preload signal.
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setIsVisible(entry.isIntersecting && entry.intersectionRatio >= 0.45),
+      { threshold: [0, 0.45, 0.7] }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
   // Observer 2: Scroll-Based Playback for standalone players (when isActive is not controlled by parent)
   useEffect(() => {
     // If isActive is explicitly controlled by parent (FeedView, ImmersiveVideoViewer), delegate to isActive effect
@@ -263,7 +279,7 @@ export default function NexoraVideoPlayer({
       return;
     }
 
-    if (!containerRef.current || !isNearby || !finalVideoUrl) {
+    if (!containerRef.current || !isNearby || !isVisible || !finalVideoUrl) {
       // If not nearby or no resolved URL yet, ensure paused
       globalVideoPlaybackManager.pause(playerId);
       setIsPlaying(false);
@@ -298,25 +314,24 @@ export default function NexoraVideoPlayer({
     return () => {
       observer.disconnect();
     };
-  }, [playerId, videoUrl, isNearby, finalVideoUrl, isActive]);
+  }, [playerId, videoUrl, isNearby, isVisible, finalVideoUrl, isActive]);
 
   // Sync playback with isActive prop to guarantee zero sound bleed from inactive/hidden tabs
   useEffect(() => {
     if (!videoRef.current) return;
-    if (isActive !== false && finalVideoUrl) {
-      if (isNearby || isActive) {
+    const shouldPlay = typeof isActive === 'boolean' ? isActive && isVisible : isNearby && isVisible;
+    if (shouldPlay && finalVideoUrl) {
         globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
           .then((played) => {
             if (played) {
               setIsPlaying(true);
             }
           });
-      }
     } else {
       globalVideoPlaybackManager.pause(playerId);
       setIsPlaying(false);
     }
-  }, [isActive, isNearby, playerId, videoUrl, finalVideoUrl]);
+  }, [isActive, isNearby, isVisible, playerId, videoUrl, finalVideoUrl]);
 
   // Intelligent Video Quality Engine: adapt background network speed
   useEffect(() => {
@@ -359,15 +374,33 @@ export default function NexoraVideoPlayer({
 
   useEffect(() => {
     setHasVideoError(false);
+    setIsReady(false);
+    setRetryCount(0);
   }, [finalVideoUrl]);
+
+  useEffect(() => {
+    if (!isBuffering) {
+      if (bufferingTimeoutRef.current) clearTimeout(bufferingTimeoutRef.current);
+      bufferingTimeoutRef.current = null;
+      return;
+    }
+    bufferingTimeoutRef.current = setTimeout(() => {
+      if (!isReady) handleVideoFailure();
+    }, 8000);
+    return () => {
+      if (bufferingTimeoutRef.current) clearTimeout(bufferingTimeoutRef.current);
+    };
+  }, [isBuffering, isReady]);
 
   // Recover gracefully after temporary network loss
   useEffect(() => {
     const handleOnline = () => {
       if (isActive && videoRef.current) {
         window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ Connection restored! Restabilizing playback stream...' }));
+        setHasVideoError(false);
+        setIsReady(false);
         videoRef.current.load();
-        videoRef.current.play().catch(() => {});
+        globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl).catch(() => {});
       }
     };
     window.addEventListener('online', handleOnline);
@@ -387,6 +420,12 @@ export default function NexoraVideoPlayer({
         setCurrentTime(savedPos);
       }
     }
+  };
+
+  const markVideoReady = () => {
+    setIsReady(true);
+    setIsBuffering(false);
+    setHasVideoError(false);
   };
 
   const lastSavedPosTimeRef = useRef<number>(0);
@@ -708,9 +747,22 @@ export default function NexoraVideoPlayer({
 
   const handleVideoFailure = () => {
     setIsBuffering(false);
+    setIsReady(false);
     setHasVideoError(true);
     globalVideoPlaybackManager.pause(playerId);
     setIsPlaying(false);
+  };
+
+  const handleRetryVideo = () => {
+    if (!videoRef.current || retryCount >= 3) return;
+    setRetryCount(count => count + 1);
+    setHasVideoError(false);
+    setIsReady(false);
+    setIsBuffering(true);
+    videoRef.current.load();
+    if (isActive !== false && isVisible) {
+      globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl).catch(() => {});
+    }
   };
 
   // Add the post URL to a bookmark collection
@@ -844,7 +896,7 @@ export default function NexoraVideoPlayer({
       onMouseDown={handleStartHold}
       onMouseUp={handleReleaseHold}
       onMouseLeave={handleReleaseHold}
-      className="relative overflow-hidden bg-black select-none group w-full h-auto flex items-center justify-center animate-fade-in touch-pan-y"
+      className="nx-video-frame relative overflow-hidden bg-black select-none group w-full flex items-center justify-center animate-fade-in touch-pan-y"
     >
        {/* Absolute Video Frame */}
        {finalVideoUrl ? (
@@ -858,6 +910,15 @@ export default function NexoraVideoPlayer({
               <div className="absolute inset-0 bg-black/40 z-20 pointer-events-none transition-opacity duration-300" />
             )}
 
+            {posterUrl && (
+              <img
+                src={posterUrl}
+                alt=""
+                aria-hidden="true"
+                className="nx-video-poster z-[1]"
+                style={{ opacity: isReady ? 0 : 1 }}
+              />
+            )}
             <video
               ref={videoRef}
               src={hasVideoError ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
@@ -866,15 +927,18 @@ export default function NexoraVideoPlayer({
               playsInline
               preload={preloadMode || ((isNearby || shouldPreload) ? "auto" : "none")}
               muted={isMuted}
+              onLoadStart={() => { setIsReady(false); setIsBuffering(true); }}
               onLoadedMetadata={handleLoadedMetadata}
+              onLoadedData={markVideoReady}
+              onCanPlay={markVideoReady}
               onTimeUpdate={handleTimeUpdate}
               onWaiting={() => setIsBuffering(true)}
-              onPlaying={() => setIsBuffering(false)}
-              onCanPlay={() => setIsBuffering(false)}
+              onPlaying={() => { markVideoReady(); setIsPlaying(true); }}
               onError={handleVideoFailure}
               onStalled={() => setIsBuffering(true)}
               onAbort={() => setIsBuffering(false)}
-              className="w-full h-full max-h-[85vh] object-contain cursor-pointer"
+              onEnded={() => setIsPlaying(false)}
+              className="relative z-[2] w-full h-full max-h-[85dvh] object-contain cursor-pointer"
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             {hasVideoError && (
@@ -883,22 +947,17 @@ export default function NexoraVideoPlayer({
                 <p className="text-sm font-bold text-white mb-1">Video unavailable</p>
                 <p className="text-xs text-zinc-400 mb-4">The video file could not be loaded or network connection failed.</p>
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setHasVideoError(false);
-                    if (videoRef.current) {
-                      videoRef.current.load();
-                    }
-                  }}
-                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md flex items-center gap-2"
+                  onClick={(e) => { e.stopPropagation(); handleRetryVideo(); }}
+                  disabled={retryCount >= 3}
+                  className="px-4 py-2 bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-700 disabled:text-zinc-400 text-white font-bold text-xs rounded-xl transition-all cursor-pointer disabled:cursor-not-allowed shadow-md flex items-center gap-2"
                 >
-                  <RotateCcw className="w-3.5 h-3.5" /> Tap to retry
+                  <RotateCcw className="w-3.5 h-3.5" /> {retryCount >= 3 ? 'Try again later' : `Tap to retry${retryCount ? ` (${retryCount}/3)` : ''}`}
                 </button>
               </div>
             )}
             {isBuffering && !hasVideoError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-xs pointer-events-none z-10 animate-fade-in">
-                <NexoraLoader size="md" center={true} />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/10 pointer-events-none z-10 animate-fade-in">
+                <div className="rounded-full bg-black/55 px-3 py-2 backdrop-blur-md"><NexoraLoader size="sm" center={true} /></div>
               </div>
             )}
 

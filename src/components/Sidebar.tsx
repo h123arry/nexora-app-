@@ -14,6 +14,7 @@ interface SidebarProps {
   theme: ThemeMood;
   setTheme: (theme: ThemeMood) => void;
   onOpenCreatePost: () => void;
+  onNavigate?: (tab: string) => void;
   onLogout?: () => void;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
@@ -28,6 +29,7 @@ export default function Sidebar({
   unreadMessagesCount,
   unreadNotificationsCount,
   onOpenCreatePost,
+  onNavigate,
   isLoggedIn = true,
   onOpenAuth
 }: SidebarProps) {
@@ -64,7 +66,7 @@ export default function Sidebar({
             </div>
             <p className="mt-0.5 truncate text-[10px] font-medium tracking-wide text-slate-400">@{currentUser.username}</p>
           </div>
-          <button className="nx-icon-button !min-h-8 !min-w-8 !rounded-xl" aria-label="Profile settings" onClick={() => setActiveTab('settings')}>
+          <button className="nx-icon-button !min-h-8 !min-w-8 !rounded-xl" aria-label="Profile settings" onClick={() => { if (onNavigate) onNavigate('settings'); else setActiveTab('settings'); }}>
             <Settings2 className="h-3.5 w-3.5" />
           </button>
         </div>
@@ -87,10 +89,10 @@ export default function Sidebar({
               data-active={isActive}
               onClick={() => {
                 if (id === 'explore') {
-                  window.dispatchEvent(new CustomEvent('openUniversalSearch'));
+                  onNavigate?.('explore');
                   return;
                 }
-                setActiveTab(id);
+                if (onNavigate) onNavigate(id); else setActiveTab(id);
               }}
               className="nx-sidebar-nav-item group flex w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition-all"
             >

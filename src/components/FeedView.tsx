@@ -19,6 +19,7 @@ import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
+import { Skeleton } from './Skeleton';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -139,6 +140,21 @@ const MOCK_MOMENTS = [
 ];
 
 const SEARCHABLE_SYSTEM_USERS: any[] = [];
+
+function FeedHydrationSkeleton() {
+  return (
+    <div aria-busy="true" aria-label="Loading Nexora feed" className="space-y-4 mx-3 sm:mx-0">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div key={index} className="nx-post-card p-4 space-y-4">
+          <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="space-y-2 flex-1"><Skeleton className="h-3 w-32" /><Skeleton className="h-2.5 w-20" /></div><Skeleton className="h-7 w-7 rounded-full" /></div>
+          <Skeleton className="h-3 w-4/5" />
+          <Skeleton className={`w-full rounded-2xl ${index === 0 ? 'aspect-[4/5]' : 'aspect-[16/10]'}`} />
+          <div className="flex gap-5"><Skeleton className="h-7 w-12" /><Skeleton className="h-7 w-12" /><Skeleton className="h-7 w-12" /><Skeleton className="h-7 w-12" /></div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface FeedViewProps {
   currentUser: User;
@@ -1957,10 +1973,7 @@ export default function FeedView({
 
         {/* Hydration / Empty feed state */}
         {!isHydrated ? (
-          <div className="p-8 rounded-3xl bg-[#09071c]/50 border border-white/10 text-center py-16 space-y-4 mx-4 md:mx-0">
-            <div className="w-8 h-8 rounded-full border-2 border-violet-500 border-t-transparent animate-spin mx-auto" />
-            <p className="text-xs font-mono text-violet-300">Hydrating feed securely...</p>
-          </div>
+          <FeedHydrationSkeleton />
         ) : filteredPosts.length === 0 && (
           <div className="p-6 md:p-8 rounded-3xl bg-[#09071c]/50 border border-white/10 text-center py-10 space-y-6 mx-4 md:mx-0 relative overflow-hidden">
             {/* Glowing aesthetic backdrop lights */}
@@ -3064,7 +3077,7 @@ export default function FeedView({
       <ReportModal
         isOpen={!!reportingPost}
         onClose={() => setReportingPost(null)}
-        targetType={reportingPost?.targetContent ? 'user' : 'post'}
+        targetType="post"
         targetId={reportingPost?.id || ''}
         targetContent={reportingPost?.content || reportingPost?.targetContent || ''}
         reporterUsername={currentUser.username}
@@ -3560,6 +3573,11 @@ export default function FeedView({
                 {/* Report post */}
                 <button
                   onClick={() => {
+                    if (currentUser.id === 'guest_visitor_id' || currentUser.username === 'visitor') {
+                      setContextualMenuPost(null);
+                      onRequireAuth?.();
+                      return;
+                    }
                     setReportingPost(contextualMenuPost);
                     setContextualMenuPost(null);
                   }}

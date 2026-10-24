@@ -13,6 +13,7 @@ interface RightSidebarProps {
   setSelectedTag: (tag: string | null) => void;
   systemSpeed: string;
   onViewProfile?: (userId: string) => void;
+  onOpenExplore?: () => void;
   currentUserUsername?: string;
 }
 
@@ -23,7 +24,8 @@ export default function RightSidebar({
   trendingTags,
   selectedTag,
   setSelectedTag,
-  onViewProfile
+  onViewProfile,
+  onOpenExplore
 }: RightSidebarProps) {
   return (
     <aside id="nexora-right-panel" className="flex h-full flex-col gap-5 overflow-y-auto py-6 pl-4 pr-5 custom-scrollbar">
@@ -37,7 +39,7 @@ export default function RightSidebar({
       </div>
 
       <section className="space-y-3" aria-labelledby="trending-heading">
-        <div className="flex items-center justify-between px-1"><div className="flex items-center gap-2"><Flame className="h-4 w-4 text-fuchsia-300" /><h2 id="trending-heading" className="text-sm font-bold text-white">Trending now</h2></div><button onClick={() => setSelectedTag(null)} className="text-[10px] font-semibold text-violet-300 hover:text-white">See all</button></div>
+        <div className="flex items-center justify-between px-1"><div className="flex items-center gap-2"><Flame className="h-4 w-4 text-fuchsia-300" /><h2 id="trending-heading" className="text-sm font-bold text-white">Trending now</h2></div><button onClick={() => onOpenExplore?.()} className="text-[10px] font-semibold text-violet-300 hover:text-white">See all</button></div>
         <div className="nx-discovery-card rounded-3xl p-3">
           {selectedTag && <button onClick={() => setSelectedTag(null)} className="mb-2 w-full rounded-xl border border-violet-400/20 bg-violet-500/10 py-2 text-[10px] font-semibold text-violet-200">Clear #{selectedTag}</button>}
           {trendingTags.length === 0 ? <p className="p-3 text-center text-xs leading-relaxed text-slate-500">No trends yet. Start a conversation with a hashtag.</p> : trendingTags.map(({ tag, count }, index) => {
@@ -67,7 +69,7 @@ export default function RightSidebar({
               </div>
             );
           })}
-          <button className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/10 py-2.5 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/10"><Radio className="h-3.5 w-3.5" /> Explore more creators</button>
+          <button onClick={() => onOpenExplore?.()} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-2xl border border-white/10 py-2.5 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/10"><Radio className="h-3.5 w-3.5" /> Explore more creators</button>
         </div>
       </section>
 

@@ -216,6 +216,16 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .nx-post-card:hover { border-color: rgba(138, 63, 252, 0.34); }
 .nx-post-card > div[class*="border-b"] { border-color: var(--nx-edge); }
+.nx-skeleton {
+  background: linear-gradient(105deg, rgba(255,255,255,0.045) 20%, rgba(138,63,252,0.16) 38%, rgba(255,255,255,0.045) 56%);
+  background-size: 220% 100%;
+  animation: nx-skeleton-shimmer 1.5s ease-in-out infinite;
+}
+@keyframes nx-skeleton-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.nx-video-frame { position: relative; min-height: min(58dvh, 560px); aspect-ratio: 9 / 16; background: #05030d; }
+.nx-video-frame > video { display: block; width: 100%; height: 100%; max-height: 85dvh; object-fit: contain; }
+.nx-video-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 220ms ease; }
+.nx-video-action-rail { bottom: max(calc(env(safe-area-inset-bottom, 0px) + 42px), 2rem) !important; right: max(calc(env(safe-area-inset-right, 0px) + 14px), 0.75rem); }
 
 .nx-discovery-card {
   background: var(--nx-surface);
@@ -310,6 +320,10 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 640px) {
   .nx-feed-header { box-shadow: 0 10px 24px rgba(4, 1, 18, 0.18); }
   .nx-post-card { border-radius: 1.1rem; }
+  .nx-video-frame { min-height: min(62dvh, 560px); aspect-ratio: 9 / 14; }
+  .nx-video-action-rail { gap: 0.85rem !important; }
+  .nx-video-action-rail > button > div,
+  .nx-video-action-rail > div > button { width: 2.75rem; height: 2.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

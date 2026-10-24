@@ -129,7 +129,15 @@ export default function ExploreView({
   }, [debouncedSearch, userCommunities]);
 
   const hasActiveSearch = debouncedSearch.trim().length > 0;
-  const totalResultsCount = filteredCreators.length + filteredPosts.length + filteredVideos.length;
+  const visibleResultCount = searchFilterType === 'users'
+    ? filteredCreators.length
+    : searchFilterType === 'posts'
+      ? filteredPosts.length
+      : searchFilterType === 'videos'
+        ? filteredVideos.length
+        : searchFilterType === 'communities'
+          ? filteredCommunities.length
+          : filteredCreators.length + filteredPosts.length + filteredVideos.length + filteredCommunities.length;
 
   return (
     <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
@@ -233,7 +241,7 @@ export default function ExploreView({
         <div className="space-y-6 text-left">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-mono text-violet-400 uppercase tracking-widest font-extrabold">
-              Found {totalResultsCount} results for "{debouncedSearch}"
+              Found {visibleResultCount} {visibleResultCount === 1 ? 'result' : 'results'} for "{debouncedSearch}"
             </h2>
             <button
               onClick={() => { setLocalSearch(''); setSearchFilterType('all'); }}
@@ -243,14 +251,14 @@ export default function ExploreView({
             </button>
           </div>
 
-          {totalResultsCount === 0 ? (
+          {visibleResultCount === 0 ? (
             <div className="p-12 rounded-3xl nx-surface text-center space-y-3 my-8">
               <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                 <Search className="w-6 h-6" />
               </div>
-              <h3 className="text-sm font-bold text-white">No users or posts found</h3>
+              <h3 className="text-sm font-bold text-white">No {searchFilterType === 'all' ? 'matches' : searchFilterType} found</h3>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto font-sans">
-                We couldn't find anything matching "{debouncedSearch}". Try checking your spelling or searching for a different keyword or hashtag.
+                We couldn't find anything matching "{debouncedSearch}". Try a different keyword, hashtag, creator, or community.
               </p>
             </div>
           ) : (
@@ -405,7 +413,7 @@ export default function ExploreView({
                           }}
                           className="px-3.5 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-300 hover:text-white text-[10px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0"
                         >
-                          Join
+                          View
                         </button>
                       </div>
                     ))}
@@ -436,7 +444,9 @@ export default function ExploreView({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <span className="text-[10px] font-mono text-zinc-500 uppercase block">🔥 Trending Hashtags</span>
-                {trendingTags.slice(0, showAllPulse ? 6 : 4).map(tag => (
+                {trendingTags.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-white/10 p-4 text-xs leading-relaxed text-zinc-500">No trending hashtags yet. Start the next conversation from your feed.</div>
+                ) : trendingTags.slice(0, showAllPulse ? 6 : 4).map(tag => (
                   <button
                     key={tag}
                     onClick={() => {
@@ -478,7 +488,9 @@ export default function ExploreView({
               <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest">Suggested Creators</h3>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-              {creators.map(user => (
+              {creators.length === 0 ? (
+                <div className="nx-surface rounded-2xl p-5 text-xs text-zinc-500">Creator suggestions will appear as Nexora learns your interests.</div>
+              ) : creators.map(user => (
                 <div
                   key={user.id}
                   onClick={() => onViewProfile?.(user.id)}
