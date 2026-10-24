@@ -302,8 +302,10 @@ export class RealTimeSyncService {
 
 // 20. Platform Analytics Engine
 export class PlatformAnalyticsService {
-  static getAggregateMetrics(): { dau: number; activeCommunities: number; videoPlaybacks: number; serverLatencyMs: number } {
-    return { dau: 45209, activeCommunities: 148, videoPlaybacks: 122480, serverLatencyMs: 24 };
+  static getAggregateMetrics(): { dau: number | null; activeCommunities: number | null; videoPlaybacks: number | null; serverLatencyMs: number | null } {
+    // Platform aggregates are now served by the protected analytics callable.
+    // This synchronous local helper cannot truthfully manufacture values.
+    return { dau: null, activeCommunities: null, videoPlaybacks: null, serverLatencyMs: null };
   }
 }
 
@@ -898,13 +900,13 @@ export const ALL_25_ENGINES: EngineDefinition[] = [
       const res = PlatformAnalyticsService.getAggregateMetrics();
       return {
         metrics: [
-          { label: 'Daily Active Users (DAU)', value: res.dau.toLocaleString(), accent: true },
-          { label: `Thematic Active ${TERMINOLOGY.communitiesCapitalized}`, value: res.activeCommunities },
-          { label: `Video ${TERMINOLOGY.loopCapitalized} Playbacks Today`, value: res.videoPlaybacks.toLocaleString() },
-          { label: 'Platform Api Latency', value: `${res.serverLatencyMs} ms` }
+          { label: 'Daily Active Users (DAU)', value: res.dau === null ? 'Unavailable' : res.dau.toLocaleString(), accent: true },
+          { label: `Thematic Active ${TERMINOLOGY.communitiesCapitalized}`, value: res.activeCommunities ?? 'Unavailable' },
+          { label: `Video ${TERMINOLOGY.loopCapitalized} Playbacks Today`, value: res.videoPlaybacks === null ? 'Unavailable' : res.videoPlaybacks.toLocaleString() },
+          { label: 'Platform API Latency', value: res.serverLatencyMs === null ? 'Unavailable' : `${res.serverLatencyMs} ms` }
         ],
-        status: 'Telemetry Metrics Active',
-        insights: `Consolidates anonymized active statistics, ${TERMINOLOGY.loops} played, and ${TERMINOLOGY.community} engagement for growth reviews.`
+        status: 'Awaiting protected aggregate source',
+        insights: 'No local estimates are shown. Platform aggregates are available only through the authorized analytics backend after observations have been collected and aggregated.'
       };
     }
   },

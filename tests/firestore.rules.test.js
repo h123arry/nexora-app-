@@ -366,4 +366,15 @@ const publicProfile = (uid) => ({
     await assertFails(getDocs(collection(dbFor('mallory'), 'communities')));
     await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'bad-type'), { id: 'bad-type', ownerId: 'alice', type: 'unknown' }));
   });
+  it('keeps raw analytics and daily aggregates behind server-owned boundaries', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'analyticsEvents', 'event-1'), { eventType: 'post_open', actorId: 'alice' });
+      await setDoc(doc(db, 'analyticsDaily', '2026-10-24'), { day: '2026-10-24', totalEvents: 4 });
+    });
+    await assertFails(getDoc(doc(dbFor('alice'), 'analyticsEvents', 'event-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'analyticsEvents', 'event-2'), { eventType: 'post_open' }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'analyticsDaily', '2026-10-24')));
+    await assertSucceeds(getDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24')));
+    await assertFails(updateDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24'), { totalEvents: 99 }));
+  });
 });

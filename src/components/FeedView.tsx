@@ -14,6 +14,7 @@ import FeedPostCard from './FeedPostCard';
 import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { recordRecommendationEvent } from '../utils/recommendations';
+import { trackClientObservation } from '../services/analyticsService';
 import { rankPosts } from '../services/discovery/discoveryService';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
@@ -661,6 +662,7 @@ export default function FeedView({
     if (searchQuery && searchQuery.trim().length > 2) {
       const delayDebounce = setTimeout(() => {
         recordRecommendationEvent('search', { keyword: searchQuery });
+        trackClientObservation({ eventType: 'search_started' });
       }, 1000); // 1s debounce to avoid over-triggering
       return () => clearTimeout(delayDebounce);
     }
@@ -1006,6 +1008,7 @@ export default function FeedView({
   // Sparks trigger handler
   const handleSpark = (postId: string) => {
     onLikePost(postId);
+    trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'spark_observed' } });
     const post = localPosts.find(p => p.id === postId);
     if (post) {
       recordRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
@@ -1104,6 +1107,7 @@ export default function FeedView({
     if (post) {
       recordRecommendationEvent('save', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
     }
+    trackClientObservation({ eventType: 'save', entityType: 'post', entityId: postId });
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
         return { ...p, isBookmarkedByUser: !p.isBookmarkedByUser };
@@ -1119,6 +1123,7 @@ export default function FeedView({
     
     // Parent Sync
     onAddComment(postId, content);
+    trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'comment_observed' } });
 
     const post = localPosts.find(p => p.id === postId);
     if (post) {
@@ -1780,6 +1785,7 @@ export default function FeedView({
                   onClick={() => {
                     setFeedTab(cat.id as any);
                     setVisibleCount(8);
+                    trackClientObservation({ eventType: 'feed_mode_selected', eventId: `feed-mode:${cat.id}`, properties: { mode: cat.id } });
                   }}
                   aria-label={cat.label}
                   aria-pressed={isActive}

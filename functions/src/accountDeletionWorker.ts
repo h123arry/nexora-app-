@@ -13,6 +13,7 @@ const ownedCollections: Array<{ name: string; field: string }> = [
   { name: 'drafts', field: 'userId' },
   { name: 'activities', field: 'userId' },
   { name: 'creatorAnalytics', field: 'userId' },
+  { name: 'analyticsEvents', field: 'actorId' },
   { name: 'notifications', field: 'userId' },
   { name: 'moderationReports', field: 'reporterId' },
   { name: 'moderationAppeals', field: 'userId' },

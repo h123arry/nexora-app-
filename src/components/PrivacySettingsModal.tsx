@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { setAnalyticsObservationConsent } from '../services/analyticsService';
 import { 
   X, Shield, ShieldCheck, Eye, EyeOff, Check, AlertCircle, HardDrive, Sparkles, 
   Search, ChevronRight, ChevronDown, User, ShieldAlert, Monitor, Info, Trash2, 
@@ -222,6 +223,7 @@ export default function PrivacySettingsModal({
   const [suspiciousActivity, setSuspiciousActivity] = useState<any[]>([
     { id: 'sa-1', type: 'Multiple Access', message: 'Simultaneous routing requests from 2 different subnets.', time: 'Jul 09, 2026' }
   ]);
+  const [analyticsObservations, setAnalyticsObservations] = useState(() => localStorage.getItem('nexora_analytics_observations_enabled') === 'true');
 
   // Sync state changes back to local storage
   useEffect(() => {
@@ -291,6 +293,7 @@ export default function PrivacySettingsModal({
   };
 
   const handleApplyChanges = () => {
+    setAnalyticsObservationConsent(analyticsObservations);
     if (onSavePrivacy) {
       // Compatibility mapping
       onSavePrivacy({
@@ -1215,6 +1218,16 @@ export default function PrivacySettingsModal({
                       <ShieldAlert className="w-4 h-4 text-violet-400" /> Decentralized Safety Center & Device Sessions
                     </h4>
                     <p className="text-[11px] text-zinc-400 mt-1">Audit active sessions, investigate alerts, and review routing records on the decentralized ledger network.</p>
+                  </div>
+
+                  <div className="p-4 bg-slate-950/70 border border-violet-500/15 rounded-2xl flex items-start justify-between gap-4">
+                    <div>
+                      <span className="text-xs font-black text-violet-300 font-mono uppercase block">Product analytics observations</span>
+                      <p className="text-[10px] text-zinc-400 mt-1 leading-relaxed">Allow minimized feed and feature observations to help Nexora measure quality. No message text, passwords, precise location, raw search text, or secret tokens are sent. Observations are optional and never block normal actions.</p>
+                    </div>
+                    <button type="button" role="switch" aria-checked={analyticsObservations} onClick={() => setAnalyticsObservations(value => !value)} className={`shrink-0 w-12 h-7 rounded-full p-1 transition-colors ${analyticsObservations ? 'bg-violet-600' : 'bg-zinc-800'}`}>
+                      <span className={`block w-5 h-5 rounded-full bg-white transition-transform ${analyticsObservations ? 'translate-x-5' : ''}`} />
+                    </button>
                   </div>
 
                   <div className="space-y-4">

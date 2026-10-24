@@ -343,10 +343,17 @@ service cloud.firestore {
 
     match /creatorAnalytics/{analyticsId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
-      allow update: if signedIn() && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId;
-      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+      // Creator analytics are derived records; clients cannot forge totals.
+      allow create, update, delete: if false;
+    }
+
+    // Raw analytics observations and aggregate metrics are server-owned.
+    match /analyticsEvents/{eventId} { allow read, write: if false; }
+    match /analyticsDaily/{dayId} {
+      allow get, list: if signedIn() && (request.auth.token.get('admin', false)
+        || request.auth.token.get('analyticsAdmin', false)
+        || request.auth.token.get('role', '') in ['admin', 'founder', 'analytics_admin']);
+      allow write: if false;
     }
 
     match /pages/{pageId} {

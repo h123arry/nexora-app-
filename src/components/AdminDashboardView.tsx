@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award } from 'lucide-react';
 import { User, Post, Report, CrashLog } from '../types';
 import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../lib/firebase';
 import { reviewModerationReport } from '../services/dataService';
 
@@ -30,6 +31,8 @@ export default function AdminDashboardView({
   
   // Analytics timeframe
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('7d');
+  const [analyticsState, setAnalyticsState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [analyticsPoints, setAnalyticsPoints] = useState<Array<{ day: string; available: boolean; totalEvents: number | null; uniqueActorsObserved: number | null; byType: Record<string, number> | null; partial: boolean | null }>>([]);
 
   // Load and refresh administrative data
   const loadData = async () => {
@@ -85,42 +88,10 @@ export default function AdminDashboardView({
         setCrashLogs(JSON.parse(savedCrashes));
       } catch (e) {
         console.error(e);
+        setCrashLogs([]);
       }
     } else {
-      const seedCrashes: CrashLog[] = [
-        {
-          id: 'err-104',
-          timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
-          errorName: 'TypeError',
-          errorMessage: 'Cannot read properties of undefined (reading "filterStyle")',
-          stack: 'at MediaCreationEngine.tsx:617:41\nat Array.map (<anonymous>)\nat handlePublishEvent (MediaCreationEngine.tsx:613:21)',
-          url: '/matrix/studio',
-          severity: 'high',
-          status: 'logged'
-        },
-        {
-          id: 'err-103',
-          timestamp: new Date(Date.now() - 42 * 60 * 1000).toISOString(),
-          errorName: 'NetworkError',
-          errorMessage: 'WebSocket handshake failed - Connection timed out (HMR disabled)',
-          stack: 'at WebSocket.connect (index.js:43:100)\nat reestablishSession (socket.ts:12:49)',
-          url: '/feed',
-          severity: 'low',
-          status: 'investigated'
-        },
-        {
-          id: 'err-102',
-          timestamp: new Date(Date.now() - 3.5 * 3600 * 1000).toISOString(),
-          errorName: 'RenderError',
-          errorMessage: 'Maximum update depth exceeded on Canvas resize listener',
-          stack: 'at scheduleUpdate (react-dom.development.js:1420)\nat updateState (react-dom.development.js:1200)',
-          url: '/pulse',
-          severity: 'medium',
-          status: 'resolved'
-        }
-      ];
-      localStorage.setItem('nexora_crash_logs', JSON.stringify(seedCrashes));
-      setCrashLogs(seedCrashes);
+      setCrashLogs([]);
     }
   };
 
@@ -132,6 +103,30 @@ export default function AdminDashboardView({
       if (granted) void loadData();
     }).catch(() => setAccessState('denied'));
   }, []);
+
+  useEffect(() => {
+    if (accessState !== 'granted') return;
+    const days = timeframe === '24h' ? 1 : timeframe === '30d' ? 30 : 7;
+    setAnalyticsState('loading');
+    void httpsCallable<{ days: number }, { points?: typeof analyticsPoints }>(getFunctions(), 'getPlatformAnalytics')({ days })
+      .then(result => {
+        setAnalyticsPoints(result.data.points || []);
+        setAnalyticsState('ready');
+      })
+      .catch(() => {
+        setAnalyticsPoints([]);
+        setAnalyticsState('unavailable');
+      });
+  }, [accessState, timeframe]);
+
+  const analyticsTotals = analyticsPoints.reduce((totals, point) => {
+    if (!point.available) return totals;
+    totals.events += point.totalEvents || 0;
+    totals.actorDays += point.uniqueActorsObserved || 0;
+    totals.impressions += point.byType?.content_impression || 0;
+    totals.engagements += point.byType?.meaningful_interaction || 0;
+    return totals;
+  }, { events: 0, actorDays: 0, impressions: 0, engagements: 0 });
 
   // Sync back to Firestore user mutations
   const syncUserChange = async (updatedUser: User) => {
@@ -526,90 +521,46 @@ export default function AdminDashboardView({
               </div>
             </div>
 
-            {/* Bento Grid Analytics Row */}
+            {analyticsState === 'unavailable' && (
+              <div className="p-4 rounded-2xl border border-amber-500/20 bg-amber-500/5 text-xs text-amber-200">
+                Platform analytics are unavailable for this account or have not been aggregated yet. No estimates are shown.
+              </div>
+            )}
+            {analyticsState === 'ready' && analyticsPoints.some(point => point.partial) && (
+              <div className="p-3 rounded-xl border border-amber-500/20 bg-amber-500/5 text-[10px] text-amber-200 font-mono">
+                Some observation windows are partial because the bounded aggregation limit was reached. Treat totals as lower bounds.
+              </div>
+            )}
+
+            {/* Bento Grid Analytics Row: client observations, never authoritative business totals */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">TOTAL SYSTEM EXPLORERS</span>
-                <span className="text-2xl font-black font-sans block text-shadow-glow text-sky-400">{(users.length * 42 + 258).toLocaleString()}</span>
-                <span className="text-[10px] text-emerald-400 font-mono block">▲ +12% vs last {timeframe}</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">OBSERVED ACTOR-DAYS</span>
+                <span className="text-2xl font-black font-sans block text-shadow-glow text-sky-400">{analyticsState === 'ready' ? analyticsTotals.actorDays.toLocaleString() : '—'}</span>
+                <span className="text-[10px] text-zinc-500 font-mono block">Client observations; not unique users</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">DAILY ACTIVE USERS (DAU)</span>
-                <span className="text-2xl font-black font-sans block text-emerald-400">{(users.length * 15 + 85).toLocaleString()}</span>
-                <span className="text-[10px] text-zinc-500 font-mono block">Node Traffic: Stable</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">OBSERVED EVENTS</span>
+                <span className="text-2xl font-black font-sans block text-emerald-400">{analyticsState === 'ready' ? analyticsTotals.events.toLocaleString() : '—'}</span>
+                <span className="text-[10px] text-zinc-500 font-mono block">Validated client-observation records</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">NEW SECURITY LOGINS</span>
-                <span className="text-2xl font-black font-sans block text-violet-400">{(users.length + 14)}</span>
-                <span className="text-[10px] text-violet-300 font-mono block">Recent registration spike</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">QUALIFIED IMPRESSIONS</span>
+                <span className="text-2xl font-black font-sans block text-violet-400">{analyticsState === 'ready' ? analyticsTotals.impressions.toLocaleString() : '—'}</span>
+                <span className="text-[10px] text-violet-300 font-mono block">Only when instrumentation is enabled</span>
               </div>
 
               <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 space-y-1 shadow-xs">
-                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">GEO WORLD PULSE LOCATIONS</span>
-                <span className="text-2xl font-black font-sans block text-pink-400">12 locations</span>
-                <span className="text-[10px] text-amber-400 font-mono block">● 2 spawning critical events</span>
+                <span className="text-[10px] text-zinc-500 font-mono font-bold uppercase block tracking-wider">MEANINGFUL INTERACTIONS</span>
+                <span className="text-2xl font-black font-sans block text-pink-400">{analyticsState === 'ready' ? analyticsTotals.engagements.toLocaleString() : '—'}</span>
+                <span className="text-[10px] text-zinc-500 font-mono block">Not likes or revenue outcomes</span>
               </div>
             </div>
 
-            {/* Top Communities and Creators Bento Section */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              
-              <div className="p-5 rounded-2xl bg-[#080612]/60 border border-white/5 space-y-3.5">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <h4 className="text-xs font-mono font-black text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <Users className="w-4 h-4 text-violet-400" />
-                    Top Active Communities
-                  </h4>
-                  <span className="text-[9px] text-zinc-500 font-mono uppercase">User Engagement</span>
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { name: 'AI Builders Syndicate', members: '14,205 members', growth: '+24% growth', color: 'text-cyan-400' },
-                    { name: 'Futbol & Esports Tactics Hub', members: '8,390 members', growth: '+15% growth', color: 'text-amber-400' },
-                    { name: 'Vaporwave Designers Circle', members: '3,212 members', growth: '+8% growth', color: 'text-pink-400' },
-                    { name: 'Dakar Creative Arts Club', members: '1,490 members', growth: '+31% growth', color: 'text-emerald-400' }
-                  ].map((comm, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2.5 bg-black/20 rounded-xl border border-white/3">
-                      <div>
-                        <span className={`text-xs font-black block ${comm.color}`}>{comm.name}</span>
-                        <span className="text-[10px] text-zinc-500 font-mono">{comm.members}</span>
-                      </div>
-                      <span className="text-[9.5px] font-mono text-emerald-400 bg-emerald-950/40 p-1 px-2 rounded-lg leading-none">{comm.growth}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="p-5 rounded-2xl bg-[#080612]/60 border border-white/5 space-y-3.5">
-                <div className="flex items-center justify-between border-b border-white/5 pb-2">
-                  <h4 className="text-xs font-mono font-black text-rose-400 uppercase tracking-widest flex items-center gap-1.5">
-                    <TrendingUp className="w-4 h-4 text-pink-400 animate-pulse" />
-                    Creators Leading by Trust DNA
-                  </h4>
-                  <span className="text-[9px] text-zinc-500 font-mono uppercase">Reputation points</span>
-                </div>
-                <div className="space-y-2.5">
-                  {[
-                    { name: 'VOICE OF HARRISON', handle: '@voh', rank: 'Founder', rep: '5.45M PR', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' },
-                    { name: 'Nexora AI', handle: '@nexora_ai', rank: 'Central Cognitive Co-Pilot', rep: '4.50M PR', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80' },
-                    { name: 'VOH AI', handle: '@voh_ai', rank: 'Intelligent VOH AI', rep: '4.20M PR', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' }
-                  ].map((creator, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2.5 bg-black/20 rounded-xl border border-white/3">
-                      <div className="flex items-center gap-2.5">
-                        <img src={creator.avatar} className="w-7 h-7 rounded-lg object-cover" />
-                        <div>
-                          <span className="text-xs font-bold block">{creator.name}</span>
-                          <span className="text-[10px] text-zinc-500 font-mono">{creator.handle} • {creator.rank}</span>
-                        </div>
-                      </div>
-                      <span className="text-xs font-bold text-violet-400 font-mono block">{creator.rep}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+            <div className="p-4 rounded-2xl bg-[#080612]/60 border border-white/5 text-[10px] text-zinc-400 font-mono">
+              Reporting definition: observed actor-days deduplicate one authenticated actor per UTC day; event totals count accepted, schema-validated client observations; impressions require explicit instrumentation consent. These are not authoritative registrations, revenue, follower totals, or unique reach.
             </div>
 
           </div>
@@ -621,7 +572,7 @@ export default function AdminDashboardView({
             <div className="p-4 rounded-2xl bg-zinc-950/60 border border-cyan-500/10 flex items-center justify-between">
               <div className="space-y-1">
                 <span className="text-[10px] text-cyan-400 font-bold block">● DIAGNOSTIC SERVICES ACTIVE</span>
-                <p className="text-xs text-zinc-300 uppercase">Average Latency: <span className="text-sky-400 font-bold">1.8ms jitters</span> | Memory: 14% heap usage</p>
+                <p className="text-xs text-zinc-300 uppercase">Latency and memory telemetry: <span className="text-amber-300 font-bold">Not tracked</span></p>
               </div>
               <Activity className="w-5 h-5 text-cyan-400 animate-pulse shrink-0" />
             </div>
