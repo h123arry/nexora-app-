@@ -5,7 +5,8 @@ import {
   uploadBytesResumable,
   type UploadMetadata,
 } from 'firebase/storage';
-import { auth, storage } from './config';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
 
 export interface MediaUploadOptions {
@@ -20,6 +21,7 @@ export interface MediaUploadOptions {
 }
 
 export interface MediaUploadResult {
+  mediaId: string;
   downloadUrl: string;
   storagePath: string;
   contentType: string;
@@ -66,7 +68,8 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(typeof result.error === 'string' ? result.error : 'The voice message could not be uploaded.');
-      return { downloadUrl: '', storagePath: result.storagePath as string, contentType: result.contentType as string, size: result.size as number };
+      const storagePath = result.storagePath as string;
+      return { mediaId: storagePath.split('/').pop() || '', downloadUrl: '', storagePath, contentType: result.contentType as string, size: result.size as number };
     })();
   }
 
@@ -76,6 +79,8 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
   // Storage rules bind customMetadata.mediaId to this exact path segment.
   const storagePath = mediaStoragePath(userId, mediaId, chatId);
   const contentType = normalizedContentType || 'application/octet-stream';
+  const kind = contentType.startsWith('image/') ? 'image' : contentType.startsWith('video/') ? 'video' : 'audio';
+  if (!db) return Promise.reject(new Error('Media storage is not configured for this environment.'));
   const uploadMetadata: UploadMetadata = {
     contentType,
     customMetadata: {
@@ -86,37 +91,49 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
       ...(chatId ? { chatId } : {}),
     },
   };
-  const task = uploadBytesResumable(ref(storage, storagePath), file, uploadMetadata);
-  const abortUpload = () => task.cancel();
-  if (signal?.aborted) task.cancel();
-  signal?.addEventListener('abort', abortUpload, { once: true });
-
   return new Promise((resolve, reject) => {
-    task.on('state_changed',
-      snapshot => {
-        const progress = snapshot.totalBytes > 0
-          ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
-          : 0;
-        onProgress?.(progress);
-      },
-      error => {
-        signal?.removeEventListener('abort', abortUpload);
-        reject(error);
-      },
-      async () => {
-        signal?.removeEventListener('abort', abortUpload);
-        try {
-          resolve({
-            downloadUrl: await getDownloadURL(task.snapshot.ref),
-            storagePath,
-            contentType,
-            size: file.size,
-          });
-        } catch (error) {
+    void setDoc(doc(db, 'mediaAssets', mediaId), {
+      id: mediaId,
+      ownerId: userId,
+      storagePath,
+      kind,
+      contentType,
+      size: file.size,
+      status: 'pending_upload',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }).then(() => {
+      const task = uploadBytesResumable(ref(storage, storagePath), file, uploadMetadata);
+      const abortUpload = () => task.cancel();
+      if (signal?.aborted) task.cancel();
+      signal?.addEventListener('abort', abortUpload, { once: true });
+      task.on('state_changed',
+        snapshot => {
+          const progress = snapshot.totalBytes > 0
+            ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100)
+            : 0;
+          onProgress?.(progress);
+        },
+        error => {
+          signal?.removeEventListener('abort', abortUpload);
           reject(error);
-        }
-      },
-    );
+        },
+        async () => {
+          signal?.removeEventListener('abort', abortUpload);
+          try {
+            resolve({
+              mediaId,
+              downloadUrl: await getDownloadURL(task.snapshot.ref),
+              storagePath,
+              contentType,
+              size: file.size,
+            });
+          } catch (error) {
+            reject(error);
+          }
+        },
+      );
+    }).catch(reject);
   });
 }
 

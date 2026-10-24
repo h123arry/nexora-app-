@@ -5,6 +5,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
+export { verifyFinalizedMedia } from './mediaLifecycle.js';
 
 const adminApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
 const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';

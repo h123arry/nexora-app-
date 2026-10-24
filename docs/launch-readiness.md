@@ -51,6 +51,7 @@ Nexora is being built as a real social platform, not a collection of demo screen
 - Firebase Auth integration and auth-gated actions.
 - Firestore and Storage rules with emulator regression suites.
 - Trusted account-deletion trigger and worker with leases, progress, shared-chat handling, Storage cleanup, and Auth deletion.
+- Owner-created `mediaAssets` upload intents, explicit lifecycle transitions, and a trusted Storage-finalize verifier that records verified object metadata without fabricating transcoding or moderation results.
 - Durable report and appeal intents.
 - Private chat-media API boundary.
 - Short-form Reels ranking, retention signals, and double-tap sparks.
@@ -58,6 +59,6 @@ Nexora is being built as a real social platform, not a collection of demo screen
 
 ## Release blockers still requiring product/provider verification
 
-MFA and trusted devices, authoritative privacy graph enforcement across every surface, distributed abuse controls, production media transcode/moderation/captions, reviewer operations and Account Status, event ingestion/aggregation/experimentation, search indexing, push delivery, live moderation, creator monetization, payments/payouts, legal/privacy policy review, backups, disaster recovery, observability alerts, and production Firebase/provider configuration.
+MFA and trusted devices, authoritative privacy graph enforcement across every surface, distributed abuse controls, production media transcode/moderation/captions and derived playback variants, reviewer operations and Account Status, event ingestion/aggregation/experimentation, search indexing, push delivery, live moderation, creator monetization, payments/payouts, legal/privacy policy review, backups, disaster recovery, observability alerts, and production Firebase/provider configuration.
 
 This contract is intentionally conservative: passing a local build is evidence of code health, not evidence that provider configuration or social-platform operations are live.

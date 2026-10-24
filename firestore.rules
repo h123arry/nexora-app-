@@ -122,6 +122,25 @@ service cloud.firestore {
         && request.resource.data.to[0] == request.auth.token.email;
       allow update, delete: if false;
     }
+    // Clients may declare an upload intent. Trusted Functions own every
+    // subsequent lifecycle transition and any derived playback metadata.
+    match /mediaAssets/{mediaId} {
+      allow get: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['id', 'ownerId', 'storagePath', 'kind', 'contentType', 'size', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.id == mediaId
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.storagePath == 'users/' + request.auth.uid + '/media/' + mediaId
+        && request.resource.data.kind in ['image', 'video', 'audio']
+        && request.resource.data.contentType is string
+        && request.resource.data.size is int
+        && request.resource.data.size > 0
+        && request.resource.data.status == 'pending_upload'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update, delete: if false;
+    }
     match /users/{userId}/securityLogs/{logId} {
       allow read: if owner(userId);
       allow create, update, delete: if false;
