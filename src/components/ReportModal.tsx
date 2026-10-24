@@ -63,25 +63,10 @@ export default function ReportModal({
       setIsSubmitting(false);
       return;
     }
-    const normalizedReason = `${selectedReason}${comments.trim() ? `: ${comments.trim()}` : ''}`.slice(0, 500);
-    
-    const newReport = {
-      id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      reporterUsername,
-      targetType,
-      targetId,
-      targetContent,
-      reason: selectedReason,
-      comment: comments.trim() || 'No additional comments provided.',
-      timestamp: new Date().toISOString(),
-      status: 'pending' as const
-    };
+    const normalizedReason = `${selectedReason}${comments.trim() ? `: ${comments.trim()}` : ''}`.slice(0, 1000);
 
     try {
       await reportContent(reporterId, targetType, targetId, normalizedReason);
-      const existingStr = localStorage.getItem('nexora_reports') || '[]';
-      const existing = JSON.parse(existingStr);
-      localStorage.setItem('nexora_reports', JSON.stringify([newReport, ...existing]));
     } catch (error) {
       console.warn('Durable report submission failed.', error);
       setSubmitError('This report could not be submitted. Check your connection and try again.');

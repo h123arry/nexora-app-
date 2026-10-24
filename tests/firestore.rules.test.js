@@ -218,6 +218,19 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('mallory'), 'posts', 'forged'), { ...post, userId: 'alice' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'inflated'), { ...post, id: 'inflated', likes: 500 }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'p1'), post));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'accountStatus', 'alice'), {
+        accountId: 'alice', postingRestricted: true, messagingRestricted: false, suspended: false,
+        expiresAt: Timestamp.fromMillis(Date.now() + 60 * 60 * 1000)
+      });
+    });
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'p2'), { ...post, id: 'p2' }));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'accountStatus', 'alice'), {
+        accountId: 'alice', postingRestricted: true, messagingRestricted: false, suspended: false,
+        expiresAt: Timestamp.fromMillis(Date.now() - 60 * 1000)
+      });
+    });
     await assertSucceeds(getDoc(doc(guestDb(), 'posts', 'p1')));
     await assertSucceeds(getDocs(query(collection(guestDb(), 'posts'), where('audience', '==', 'public'))));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'only-me'), { ...post, id: 'only-me', audience: 'onlyme' }));
@@ -279,7 +292,9 @@ const publicProfile = (uid) => ({
       reporterId: 'alice', targetType: 'post', targetId: 'post-1', reason: 'Spam: repeated links',
       status: 'pending', policyVersion: '2026-10', source: 'client-report', createdAt: serverTimestamp()
     };
-    await assertSucceeds(setDoc(doc(dbFor('alice'), 'moderationReports', 'report-1'), report));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'moderationReports', 'report-1'), report);
+    });
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'moderationReports', 'report-1')));
     await assertFails(getDoc(doc(dbFor('bob'), 'moderationReports', 'report-1')));
     await assertFails(setDoc(doc(dbFor('bob'), 'moderationReports', 'report-2'), report));
@@ -290,7 +305,9 @@ const publicProfile = (uid) => ({
       userId: 'alice', targetType: 'post', targetId: 'post-1', reason: 'This content is original and complies with the policy.',
       status: 'pending', policyVersion: '2026-10', createdAt: serverTimestamp()
     };
-    await assertSucceeds(setDoc(doc(dbFor('alice'), 'moderationAppeals', 'appeal-1'), appeal));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'moderationAppeals', 'appeal-1'), appeal);
+    });
     await assertFails(getDoc(doc(dbFor('bob'), 'moderationAppeals', 'appeal-1')));
     await assertFails(updateDoc(doc(dbFor('alice'), 'moderationAppeals', 'appeal-1'), { status: 'approved' }));
   });

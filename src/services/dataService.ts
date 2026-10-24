@@ -16,6 +16,8 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { PrivacySettings, User, Post, Circle as Community, Page, Notification, Message, Chat } from '../types';
+import { functions } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 
 // ... (rest of the file content)
 
@@ -423,22 +425,34 @@ export async function createCommunity(community: Community) {
 }
 
 export async function reportContent(reporterId: string, targetType: string, targetId: string, reason: string) {
-  await syncEngine.enqueue('report', { reporterId, targetType, targetId, reason });
+  if (!auth.currentUser || auth.currentUser.uid !== reporterId) {
+    throw new Error('Sign in to submit a report.');
+  }
+  const [category, ...explanationParts] = reason.split(':');
+  const submitReport = httpsCallable(functions, 'submitModerationReport');
+  await submitReport({
+    targetType,
+    targetId,
+    category: category.trim().toLowerCase().replaceAll(' ', '_'),
+    explanation: explanationParts.join(':').trim(),
+  });
 }
 
 export async function submitModerationAppeal(userId: string, targetType: 'post' | 'account' | 'comment', targetId: string, reason: string) {
   if (!auth.currentUser || auth.currentUser.uid !== userId) {
     throw new Error('Sign in to submit a moderation appeal.');
   }
-  await addDoc(collection(db, 'moderationAppeals'), {
-    userId,
+  const submitAppeal = httpsCallable(functions, 'submitModerationAppeal');
+  await submitAppeal({
     targetType,
     targetId: targetId.slice(0, 200),
     reason: reason.trim().slice(0, 1000),
-    status: 'pending',
-    policyVersion: '2026-10',
-    createdAt: serverTimestamp()
   });
+}
+
+export async function reviewModerationReport(reportId: string, action: 'dismiss' | 'warn' | 'restrict_posting' | 'restrict_messaging' | 'suspend' | 'ban', decisionNote = '') {
+  const reviewReport = httpsCallable(functions, 'reviewModerationReport');
+  await reviewReport({ reportId, action, decisionNote: decisionNote.trim().slice(0, 1000) });
 }
 
 export async function saveDraft(userId: string, caption: string, videoUrl: string) {

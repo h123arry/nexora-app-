@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award } from 'lucide-react';
 import { User, Post, Report, CrashLog } from '../types';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
+import { reviewModerationReport } from '../services/dataService';
 
 interface AdminDashboardViewProps {
   currentUser: User;
@@ -25,6 +26,7 @@ export default function AdminDashboardView({
   const [reports, setReports] = useState<Report[]>([]);
   const [crashLogs, setCrashLogs] = useState<CrashLog[]>([]);
   const [searchUserQuery, setSearchUserQuery] = useState('');
+  const [accessState, setAccessState] = useState<'checking' | 'granted' | 'denied'>('checking');
   
   // Analytics timeframe
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('7d');
@@ -42,28 +44,38 @@ export default function AdminDashboardView({
         if (firestoreUsers.length > 0) {
           setUsers(firestoreUsers);
         } else {
-          setUsers([currentUser]);
+          setUsers([]);
         }
       } else {
-        setUsers([currentUser]);
+        setUsers([]);
       }
     } catch (e) {
       console.error('Error loading users from Firestore:', e);
-      setUsers([currentUser]);
+      setUsers([]);
     }
     
-    // 2. Load Reports
-    const savedReports = localStorage.getItem('nexora_reports');
-    if (savedReports) {
-      try {
-        setReports(JSON.parse(savedReports));
-      } catch (e) {
-        console.error(e);
-      }
-    } else {
-      const seedReports: Report[] = [];
-      localStorage.setItem('nexora_reports', JSON.stringify(seedReports));
-      setReports(seedReports);
+    // 2. Load reports from the authoritative moderation queue. Reporter identity
+    // and private evidence are intentionally not copied into this UI model.
+    try {
+      const snap = await getDocs(query(collection(db, 'moderationReports'), where('status', 'in', ['pending', 'under_review', 'escalated'])));
+      setReports(snap.docs.map(reportDoc => {
+        const data = reportDoc.data();
+        const createdAt = data.createdAt?.toDate?.()?.toISOString?.() || '';
+        return {
+          id: reportDoc.id,
+          reporterUsername: 'protected reporter',
+          targetType: data.targetType,
+          targetId: data.targetId,
+          targetContent: 'Private evidence is available only through authorized review services.',
+          reason: data.category || 'Other',
+          comment: data.explanation || '',
+          timestamp: createdAt,
+          status: data.status,
+        } as Report;
+      }));
+    } catch (error) {
+      console.warn('Moderation queue unavailable:', error);
+      setReports([]);
     }
 
     // 3. Load Crash & Health data
@@ -113,7 +125,12 @@ export default function AdminDashboardView({
   };
 
   useEffect(() => {
-    loadData();
+    auth.currentUser?.getIdTokenResult().then(({ claims }) => {
+      const role = typeof claims.role === 'string' ? claims.role : '';
+      const granted = claims.moderator === true || claims.admin === true || ['moderator', 'senior_moderator', 'admin', 'founder'].includes(role);
+      setAccessState(granted ? 'granted' : 'denied');
+      if (granted) void loadData();
+    }).catch(() => setAccessState('denied'));
   }, []);
 
   // Sync back to Firestore user mutations
@@ -191,32 +208,13 @@ export default function AdminDashboardView({
   };
 
   // Resolve moderation reports
-  const handleResolveReport = (reportId: string, action: 'keep' | 'delete') => {
-    const savedReports = localStorage.getItem('nexora_reports') || '[]';
+  const handleResolveReport = async (reportId: string, action: 'dismiss' | 'restrict_posting') => {
     try {
-      const parsed: Report[] = JSON.parse(savedReports);
-      const target = parsed.find(r => r.id === reportId);
-      
-      if (action === 'delete' && target) {
-        if (target.targetType === 'post') {
-          onRemovePost(target.targetId);
-        }
-      }
-
-      const updated = parsed.map(r => {
-        if (r.id === reportId) {
-          return { ...r, status: 'resolved' as const };
-        }
-        return r;
-      });
-
-      localStorage.setItem('nexora_reports', JSON.stringify(updated));
-      setReports(updated);
-      window.dispatchEvent(new CustomEvent('toast', { 
-        detail: `Report resolved & target ${action === 'delete' ? '🗑️ DELETED' : '✅ KEPT'}.` 
-      }));
-    } catch (e) {
-      console.error(e);
+      await reviewModerationReport(reportId, action, action === 'dismiss' ? 'Insufficient evidence after review.' : 'Policy-backed posting restriction applied.');
+      setReports(prev => prev.map(report => report.id === reportId ? { ...report, status: action === 'dismiss' ? 'resolved' : 'resolved' } : report));
+      window.dispatchEvent(new CustomEvent('toast', { detail: action === 'dismiss' ? 'Report dismissed by authorized review.' : 'Posting restriction applied by authorized review.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Moderation action could not be completed.' }));
     }
   };
 
@@ -239,6 +237,13 @@ export default function AdminDashboardView({
     u.username.toLowerCase().includes(searchUserQuery.toLowerCase()) ||
     (u.email && u.email.toLowerCase().includes(searchUserQuery.toLowerCase()))
   );
+
+  if (accessState === 'checking') {
+    return <div className="rounded-2xl border border-white/10 bg-black/20 p-8 text-center text-sm text-zinc-400">Checking moderation permissions…</div>;
+  }
+  if (accessState === 'denied') {
+    return <div className="rounded-2xl border border-rose-500/20 bg-rose-500/5 p-8 text-center text-sm text-rose-200">Moderation access is restricted to server-authorized reviewers.</div>;
+  }
 
   return (
     <div id="admin-panel-viewport" className="space-y-6">
@@ -468,15 +473,15 @@ export default function AdminDashboardView({
                     {report.status !== 'resolved' ? (
                       <>
                         <button 
-                          onClick={() => handleResolveReport(report.id, 'delete')}
+                          onClick={() => void handleResolveReport(report.id, 'restrict_posting')}
                           className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-mono text-[10px] font-bold rounded-xl cursor-pointer shadow-md inline-flex items-center justify-center gap-1"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          Delete Target
+                          <Ban className="w-3.5 h-3.5" />
+                          Restrict Posting
                         </button>
                         
                         <button 
-                          onClick={() => handleResolveReport(report.id, 'keep')}
+                          onClick={() => void handleResolveReport(report.id, 'dismiss')}
                           className="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-white/5 font-mono text-[10px] font-bold rounded-xl cursor-pointer inline-flex items-center justify-center gap-1"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
