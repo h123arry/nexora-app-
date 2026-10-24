@@ -15,6 +15,7 @@ import CreatorDashboardView from './CreatorDashboardView';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StorageDataCenterModal from './StorageDataCenterModal';
 import { exportAccountData, getLatestAccountDeletionRequest, requestAccountDeletion, AccountDeletionRequest } from '../services/firebase/accountLifecycleService';
+import { getBillingSummary, type BillingSummary } from '../services/monetizationService';
 import { 
   getFollowersCount, 
   getFollowingCount, 
@@ -421,23 +422,26 @@ export default function ProfileView({
   // Stateful Subscriptions
 
   const [subscriptionsTab, setSubscriptionsTab] = useState<'active' | 'plans' | 'exclusive'>('active');
-  const [activeSubscriptions, setActiveSubscriptions] = useState([
-    { name: 'Dr. Jane Smith', username: 'drjane', plan: 'Gold Supporter', price: '$4.99/mo', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60' },
-    { name: 'Tech Insider', username: 'techinsider', plan: 'Premium Access', price: '$9.99/mo', avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=100&auto=format&fit=crop&q=60' }
-  ]);
-  const [mySubscriptionPlans, setMySubscriptionPlans] = useState([
-    { tier: 'Bronze Supporter', price: '$1.99', perks: 'Premium profile badge, early post access' },
-    { tier: 'Silver Supporter', price: '$4.99', perks: 'Bronze perks, exclusive chat, priority Q&A' },
-    { tier: 'Gold Supporter', price: '$9.99', perks: 'Silver perks, monthly live stream, custom emotes' }
-  ]);
-  const [exclusiveContentList, setExclusiveContentList] = useState([
-    { id: 'ex-1', title: 'Nexora AI Alpha Testing Guide', creator: 'voh', type: 'Article', date: 'Jul 5, 2026', locked: true },
-    { id: 'ex-2', title: 'Behind the Scenes of Nexora Studio v1.2', creator: 'voh', type: 'Video', date: 'Jun 28, 2026', locked: true },
-    { id: 'ex-3', title: 'Acoustic Broadcast Session (Lossless)', creator: 'drjane', type: 'Audio', date: 'Jun 15, 2026', locked: true }
-  ]);
+  const [activeSubscriptions, setActiveSubscriptions] = useState<any[]>([]);
+  const [mySubscriptionPlans, setMySubscriptionPlans] = useState<any[]>([]);
+  const [exclusiveContentList, setExclusiveContentList] = useState<any[]>([]);
+  const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
+  const [billingSummaryError, setBillingSummaryError] = useState(false);
   const [blockedUsers, setBlockedUsers] = useState<string[]>(['toxic_spammer', 'scambot_v8']);
   const [mutedUsers, setMutedUsers] = useState<string[]>(['overposter_reels', 'ad_beacon_hq']);
   const [closeFriends, setCloseFriends] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (activePanel !== 'subscriptions' || !isOwnProfile) return;
+    let cancelled = false;
+    setBillingSummaryError(false);
+    void getBillingSummary().then(summary => {
+      if (!cancelled) setBillingSummary(summary);
+    }).catch(() => {
+      if (!cancelled) setBillingSummaryError(true);
+    });
+    return () => { cancelled = true; };
+  }, [activePanel, isOwnProfile, currentUser.id]);
 
   // Edit fields live states
   const [editName, setEditName] = useState(currentUser.name);
@@ -2892,8 +2896,12 @@ export default function ProfileView({
               <div className="space-y-6">
                 {/* Header Info */}
                 <div className="p-6 bg-linear-to-tr from-violet-900/20 to-[#04020f] border border-white/10 rounded-3xl">
-                  <h2 className="text-xl font-black text-white mb-2">Creator Subscriptions</h2>
-                  <p className="text-sm text-zinc-400">Support your favorite creators, unlock exclusive content, and get premium badges.</p>
+                  <h2 className="text-xl font-black text-white mb-2">Memberships & billing</h2>
+                  <p className="text-sm text-zinc-400">Verified creator subscriptions and premium checkout are not enabled yet. Nexora will show this area only after a trusted payment provider and merchant configuration are deployed.</p>
+                  <p className="text-xs text-amber-300/80 mt-3">No subscriptions, prices, balances, or payment history are being simulated.</p>
+                  <div className="mt-4 rounded-2xl border border-white/5 bg-black/20 p-4 text-xs text-zinc-500">
+                    {billingSummaryError ? 'Billing status is temporarily unavailable. No payment state was changed.' : billingSummary?.providerConfigured ? `${billingSummary.transactions.length} verified transaction record(s)` : 'Provider status: not configured'}
+                  </div>
                 </div>
                 
                 {/* Tabs */}

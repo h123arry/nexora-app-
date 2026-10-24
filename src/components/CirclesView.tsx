@@ -25,12 +25,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
     } catch {}
   }, [circles]);
   
-  // Community Points State
-  const [currencyBalances, setCurrencyBalances] = useState<{ [key: string]: number }>({
-    'Football Points (FP)': 340,
-    'Coding Points (CP)': 120,
-    'Creative Tokens (CT)': 450
-  });
+  // Community points are not money, are not redeemable, and have no financial value.
+  const [currencyBalances, setCurrencyBalances] = useState<{ [key: string]: number }>({});
 
   // AI Community Builder States
   const [promptInput, setPromptInput] = useState('');
@@ -192,11 +188,11 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
           </p>
         </div>
 
-        {/* Community currency balance ledger HUD */}
+        {/* Community points HUD; deliberately separate from billing and fiat money. */}
         <div className="flex items-center gap-2 bg-[#0d071a] border border-pink-500/25 p-2 rounded-xl">
           <Coins className="w-4 h-4 text-pink-400" />
           <div className="flex flex-wrap gap-3 text-[10px] font-mono">
-            {Object.entries(currencyBalances).map(([key, value]) => (
+            {Object.entries(currencyBalances).length === 0 ? <span className="text-zinc-500">Community points • not money</span> : Object.entries(currencyBalances).map(([key, value]) => (
               <div key={key} className="flex items-center gap-1.5 border-r border-current/10 pr-3 last:border-none last:pr-0">
                 <span className="text-current/50 shrink-0">{key.split(' ')[0]}:</span>
                 <span className="font-extrabold text-pink-300">{value} pts</span>

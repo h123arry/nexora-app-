@@ -377,4 +377,21 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24')));
     await assertFails(updateDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24'), { totalEvents: 99 }));
   });
+  it('protects financial records from client mutation and cross-account reads', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'financialTransactions', 'txn-1'), { ownerId: 'alice', amountMinor: 1299, currency: 'USD', status: 'payment_confirmed' });
+      await setDoc(doc(db, 'subscriptions', 'sub-1'), { ownerId: 'alice', productId: 'nexora_plus', status: 'active' });
+      await setDoc(doc(db, 'entitlements', 'ent-1'), { ownerId: 'alice', key: 'nexora_plus', status: 'active' });
+      await setDoc(doc(db, 'creatorEarnings', 'earn-1'), { creatorId: 'alice', creatorShareMinor: 7200, currency: 'USD' });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'financialTransactions', 'txn-1')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'subscriptions', 'sub-1')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'entitlements', 'ent-1')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'creatorEarnings', 'earn-1')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'financialTransactions', 'txn-1')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'entitlements', 'ent-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'financialTransactions', 'forged'), { ownerId: 'alice', amountMinor: 999999, currency: 'USD', status: 'payment_confirmed' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'subscriptions', 'sub-1'), { status: 'active' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'creatorEarnings', 'earn-1')));
+  });
 });

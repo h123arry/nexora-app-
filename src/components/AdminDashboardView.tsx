@@ -20,7 +20,7 @@ export default function AdminDashboardView({
   lang
 }: AdminDashboardViewProps) {
   // Navigation tabs of Dashboard
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'moderation' | 'analytics' | 'health'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'moderation' | 'analytics' | 'finance' | 'health'>('users');
   
   // Loaded state
   const [users, setUsers] = useState<User[]>([]);
@@ -33,6 +33,8 @@ export default function AdminDashboardView({
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('7d');
   const [analyticsState, setAnalyticsState] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [analyticsPoints, setAnalyticsPoints] = useState<Array<{ day: string; available: boolean; totalEvents: number | null; uniqueActorsObserved: number | null; byType: Record<string, number> | null; partial: boolean | null }>>([]);
+  const [financeState, setFinanceState] = useState<'idle' | 'loading' | 'ready' | 'denied' | 'unavailable'>('idle');
+  const [financeSummary, setFinanceSummary] = useState<{ providerConfigured: boolean; transactions: unknown[]; checkoutAttempts: unknown[]; webhookFailures: unknown[] } | null>(null);
 
   // Load and refresh administrative data
   const loadData = async () => {
@@ -118,6 +120,20 @@ export default function AdminDashboardView({
         setAnalyticsState('unavailable');
       });
   }, [accessState, timeframe]);
+
+  useEffect(() => {
+    if (activeSubTab !== 'finance' || accessState !== 'granted') return;
+    setFinanceState('loading');
+    void httpsCallable<void, typeof financeSummary>(getFunctions(), 'getFinanceOverview')()
+      .then(result => {
+        setFinanceSummary(result.data);
+        setFinanceState('ready');
+      })
+      .catch((error: any) => {
+        setFinanceSummary(null);
+        setFinanceState(error?.code === 'functions/permission-denied' ? 'denied' : 'unavailable');
+      });
+  }, [activeSubTab, accessState]);
 
   const analyticsTotals = analyticsPoints.reduce((totals, point) => {
     if (!point.available) return totals;
@@ -294,6 +310,13 @@ export default function AdminDashboardView({
         >
           <BarChart2 className="w-3.5 h-3.5" />
           Analytics & Geo Pulse
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('finance')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'finance' ? 'bg-emerald-600 border border-emerald-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+        >
+          Finance Operations
         </button>
 
         <button 
@@ -566,7 +589,27 @@ export default function AdminDashboardView({
           </div>
         )}
 
-        {/* TAB 4: APP DIAGNOSTICS */}
+        {/* TAB 4: FINANCE OPERATIONS; protected callable, never fabricated */}
+        {activeSubTab === 'finance' && (
+          <div className="space-y-5 text-left animate-fade-in">
+            <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-5">
+              <h3 className="text-sm font-black uppercase tracking-widest text-emerald-300">Finance operations</h3>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">This panel reads only trusted backend summaries. It never exposes payment secrets, raw provider payloads, or unrestricted customer records.</p>
+            </div>
+            {financeState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading protected finance summary…</div>}
+            {financeState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Finance access requires a dedicated finance administrator claim. Moderator access alone is not sufficient.</div>}
+            {financeState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Finance provider or backend summary is unavailable. No financial state was changed.</div>}
+            {financeState === 'ready' && financeSummary && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Provider</span><p className="mt-2 text-lg font-black text-white">{financeSummary.providerConfigured ? 'Configured' : 'Not configured'}</p></div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Verified transactions</span><p className="mt-2 text-lg font-black text-white">{financeSummary.transactions.length}</p></div>
+                <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Webhook failures</span><p className="mt-2 text-lg font-black text-white">{financeSummary.webhookFailures.length}</p></div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 5: APP DIAGNOSTICS */}
         {activeSubTab === 'health' && (
           <div className="space-y-4 text-left font-mono">
             <div className="p-4 rounded-2xl bg-zinc-950/60 border border-cyan-500/10 flex items-center justify-between">

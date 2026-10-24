@@ -355,6 +355,35 @@ service cloud.firestore {
         || request.auth.token.get('role', '') in ['admin', 'founder', 'analytics_admin']);
       allow write: if false;
     }
+    // Financial state is trusted-server-owned. Users may view only their own
+    // sanitized billing records; no client write can create money, access, or earnings.
+    match /financialTransactions/{transactionId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /subscriptions/{subscriptionId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /entitlements/{entitlementId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /checkoutAttempts/{checkoutId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /refundRequests/{refundId} {
+      allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
+      allow write: if false;
+    }
+    match /creatorEarnings/{earningId} {
+      allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid;
+      allow write: if false;
+    }
+    match /financialLedger/{entryId} { allow read, write: if false; }
+    match /paymentWebhookFailures/{failureId} { allow read, write: if false; }
+    match /financeAuditEvents/{eventId} { allow read, write: if false; }
 
     match /pages/{pageId} {
       allow get, list: if true;
