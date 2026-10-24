@@ -26,6 +26,15 @@ const readSignals = (postId: string): ReelSignals => {
   }
 };
 
+export function recordReelSignal(postId: string, patch: ReelSignals): void {
+  try {
+    const next = { ...readSignals(postId), ...patch };
+    localStorage.setItem(`nexora_reel_signals_${postId}`, JSON.stringify(next));
+  } catch {
+    // Ranking remains usable in private browsing and restricted storage modes.
+  }
+}
+
 /**
  * Ranks short videos without hiding the reason each item was selected.
  * The formula is deliberately bounded so one noisy signal cannot dominate.

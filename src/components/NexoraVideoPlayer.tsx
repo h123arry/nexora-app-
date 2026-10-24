@@ -9,6 +9,7 @@ import NexoraLoader from './NexoraLoader';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
+import { recordReelSignal } from '../services/reels/reelsRanking';
 
 interface Post {
   id: string;
@@ -467,6 +468,7 @@ export default function NexoraVideoPlayer({
       if (!watchCompletedRef.current) {
         watchCompletedRef.current = true;
         recordRecommendationEvent('watch_complete', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+        recordReelSignal(post.id, { completed: true, watchedSeconds: Math.round(time) });
       }
     }
 
@@ -474,6 +476,7 @@ export default function NexoraVideoPlayer({
     if (time > 3.0 && !viewLoggedRef.current) {
       viewLoggedRef.current = true;
       logToWatchHistory();
+      recordReelSignal(post.id, { watchedSeconds: Math.round(time) });
 
       try {
         const currentUserStr = localStorage.getItem('nexora_user');
@@ -611,13 +614,26 @@ export default function NexoraVideoPlayer({
     };
   }, [isPlaying]);
 
-  // Handle single tap gesture (double-tap and long-press temporarily disabled during stability pass)
+  // Match short-form conventions: a double tap sparks, while a single tap
+  // toggles playback after the double-tap window closes.
   const handleTapOrGesture = (clientX: number, clientY: number) => {
-    if (autoplayBlocked && isMuted) {
-      handleVolumeToggle(false);
-    } else {
-      togglePlayback();
+    const now = Date.now();
+    if (now - lastTapRef.current < 280) {
+      if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
+      lastTapRef.current = 0;
+      if (!post.isLikedByUser) onSpark();
+      recordReelSignal(post.id, { liked: true });
+      setHeartPosition({ x: clientX, y: clientY });
+      setShowDoubleTapHeart(true);
+      window.setTimeout(() => setShowDoubleTapHeart(false), 700);
+      return;
     }
+    lastTapRef.current = now;
+    singleTapTimeoutRef.current = window.setTimeout(() => {
+      if (autoplayBlocked && isMuted) handleVolumeToggle(false);
+      else togglePlayback();
+      lastTapRef.current = 0;
+    }, 280);
   };
 
   // Handle quick actions from sheet / menu
