@@ -1,5 +1,5 @@
 import { doc, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch, runTransaction, limit } from 'firebase/firestore';
-import { db } from './config';
+import { auth, db } from './config';
 import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
 import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
@@ -59,7 +59,13 @@ export class ProfileService {
       joinedDate: data.joinedDate || `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
       reputationPoints: data.reputationPoints || 0,
       reputationBreakdown: data.reputationBreakdown || { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: data.interestDNA || {}, skills: data.skills || [], ...data
+      interestDNA: data.interestDNA || {}, skills: data.skills || [],
+      ...(data.statusText ? { statusText: data.statusText } : {}),
+      ...(data.statusEmoji ? { statusEmoji: data.statusEmoji } : {}),
+      ...(data.pinnedMusicSong ? { pinnedMusicSong: data.pinnedMusicSong } : {}),
+      ...(data.pinnedMusicArtist ? { pinnedMusicArtist: data.pinnedMusicArtist } : {}),
+      ...(data.pinnedMusicUrl ? { pinnedMusicUrl: data.pinnedMusicUrl } : {}),
+      ...(data.pinnedPosts ? { pinnedPosts: data.pinnedPosts } : {}),
     };
 
     if (db) {
@@ -75,6 +81,9 @@ export class ProfileService {
 
   static async updateProfile(uid: string, updates: Partial<User>): Promise<void> {
     if (!db) return;
+    if (!auth.currentUser || auth.currentUser.uid !== uid) {
+      throw new Error('Only the signed-in account owner can update this profile.');
+    }
     if (updates.username) {
       await this.reserveUsername(uid, updates.username);
     }

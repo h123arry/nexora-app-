@@ -105,8 +105,8 @@ export class SecurityNotificationService {
           iconType: 'shield'
         });
       }
-    } catch (err) {
-      console.warn('Firestore security log error:', err);
+    } catch {
+      console.warn('Firestore security notification was unavailable; authentication remains authoritative in Firebase Auth.');
     }
 
     // 2. Trigger native OS Push Notification

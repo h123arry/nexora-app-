@@ -50,7 +50,6 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("🔥 FirebaseProvider: Setting up onAuthStateChanged...");
     let sequence = 0;
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       const currentSequence = ++sequence;
@@ -62,8 +61,7 @@ export const FirebaseProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         try {
           const profile = await ProfileService.getOrCreateProfile(fbUser);
           if (currentSequence === sequence && auth.currentUser?.uid === fbUser.uid) setUser(profile);
-        } catch (e) {
-          console.error("Failed to load user profile in provider:", e);
+        } catch {
           if (currentSequence === sequence) setError('Unable to load your account profile. Please retry or sign out.');
         }
       }

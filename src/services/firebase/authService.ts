@@ -29,6 +29,13 @@ export interface RateLimitStatus {
 }
 
 export class AuthService {
+  private static publicAuthError(error: unknown): Error & { code?: string } {
+    const source = error as { code?: string } | null;
+    const wrapped = new Error(this.mapFirebaseError(error)) as Error & { code?: string };
+    if (source?.code) wrapped.code = source.code;
+    return wrapped;
+  }
+
   /**
    * Centralized Firebase Error Mapper
    */
@@ -64,14 +71,24 @@ export class AuthService {
         return 'Email/Password sign-in is not enabled in Firebase Console. Please enable Email/Password provider in your Firebase Authentication settings or use Demo Mode.';
       case 'auth/missing-phone-number':
         return 'Phone number is missing.';
+      case 'auth/unauthorized-domain':
+        return 'This website is not authorized for Firebase sign-in yet. Add the current domain in Firebase Authentication settings.';
+      case 'auth/invalid-api-key':
+      case 'auth/app-not-authorized':
+      case 'auth/configuration-not-found':
+        return 'Firebase Authentication is not configured for this application. Check the project configuration.';
+      case 'auth/invalid-action-code':
+        return 'This recovery or verification link is invalid or has already been used.';
       default:
-        return error?.message || 'An authentication error occurred. Please try again.';
+        return 'An authentication error occurred. Please try again or contact the account owner.';
     }
   }
 
   static getRateLimitStatus(identifier: string): RateLimitStatus {
     const key = `nexora_lockout_${identifier.toLowerCase().trim()}`;
-    const raw = localStorage.getItem(key);
+    const storage = typeof localStorage === 'undefined' ? null : localStorage;
+    if (!storage) return { isLocked: false, remainingSeconds: 0, attemptsCount: 0 };
+    const raw = storage.getItem(key);
     if (!raw) return { isLocked: false, remainingSeconds: 0, attemptsCount: 0 };
 
     try {
@@ -82,7 +99,7 @@ export class AuthService {
         return { isLocked: true, remainingSeconds, attemptsCount: data.attempts || MAX_FAILED_ATTEMPTS };
       }
       if (data.lockoutUntil && now >= data.lockoutUntil) {
-        localStorage.removeItem(key);
+        storage.removeItem(key);
         return { isLocked: false, remainingSeconds: 0, attemptsCount: 0 };
       }
       return { isLocked: false, remainingSeconds: 0, attemptsCount: data.attempts || 0 };
@@ -99,7 +116,9 @@ export class AuthService {
 
     if (newAttempts >= MAX_FAILED_ATTEMPTS) {
       const lockoutUntil = Date.now() + LOCKOUT_TIME_MS;
-      localStorage.setItem(key, JSON.stringify({ attempts: newAttempts, lockoutUntil }));
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(key, JSON.stringify({ attempts: newAttempts, lockoutUntil }));
+      }
       
       SecurityNotificationService.notifySecurityEvent(
         'anonymous',
@@ -112,13 +131,17 @@ export class AuthService {
       return { isLocked: true, remainingSeconds: 300, attemptsCount: newAttempts };
     }
 
-    localStorage.setItem(key, JSON.stringify({ attempts: newAttempts, lockoutUntil: 0 }));
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem(key, JSON.stringify({ attempts: newAttempts, lockoutUntil: 0 }));
+    }
     return { isLocked: false, remainingSeconds: 0, attemptsCount: newAttempts };
   }
 
   static clearFailedAttempts(identifier: string) {
     const clean = identifier.toLowerCase().trim();
-    localStorage.removeItem(`nexora_lockout_${clean}`);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem(`nexora_lockout_${clean}`);
+    }
   }
 
   /**
@@ -131,19 +154,18 @@ export class AuthService {
       throw new Error(`Account temporarily locked. Please retry in ${rateLimit.remainingSeconds} seconds.`);
     }
 
+    let credential;
     try {
-      const credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
-      const fbUser = credential.user;
-      this.clearFailedAttempts(cleanEmail);
+      credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+    } catch (error) {
+      this.recordFailedAttempt(cleanEmail);
+      throw this.publicAuthError(error);
+    }
 
-      let userProfile = await ProfileService.getProfile(fbUser.uid);
-      if (!userProfile) {
-        userProfile = await ProfileService.createProfile(fbUser.uid, {
-          name: fbUser.displayName || 'Nexora User',
-          isVerified: fbUser.emailVerified
-        }, cleanEmail);
-      }
-
+    const fbUser = credential.user;
+    this.clearFailedAttempts(cleanEmail);
+    try {
+      const userProfile = await ProfileService.getOrCreateProfile(fbUser);
       SecurityNotificationService.notifySecurityEvent(
         fbUser.uid,
         cleanEmail,
@@ -151,11 +173,10 @@ export class AuthService {
         'NEW_LOGIN',
         { browser: navigator.userAgent }
       );
-
       return { firebaseUser: fbUser, user: userProfile };
-    } catch (err: any) {
-      this.recordFailedAttempt(cleanEmail);
-      throw new Error(this.mapFirebaseError(err));
+    } catch {
+      await signOut(auth).catch(() => undefined);
+      throw new Error('Authentication succeeded, but your Nexora profile could not be loaded. Please try signing in again.');
     }
   }
 
@@ -171,14 +192,19 @@ export class AuthService {
     const cleanEmail = email.toLowerCase().trim();
     const cleanUsername = username.toLowerCase().trim();
 
+    let credential;
     try {
-      const credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
-      const fbUser = credential.user;
+      credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
+    } catch (error) {
+      throw this.publicAuthError(error);
+    }
 
+    const fbUser = credential.user;
+    try {
       try {
         await sendEmailVerification(fbUser);
-      } catch (e) {
-        console.warn('Send email verification warning:', e);
+      } catch {
+        console.warn('Email verification could not be sent; check Firebase email action configuration.');
       }
 
       const userProfile = await ProfileService.createProfile(fbUser.uid, {
@@ -201,8 +227,9 @@ export class AuthService {
       );
 
       return { firebaseUser: fbUser, user: userProfile };
-    } catch (err: any) {
-      throw new Error(this.mapFirebaseError(err));
+    } catch {
+      await signOut(auth).catch(() => undefined);
+      throw new Error('Your Firebase account was created, but Nexora could not finish the profile setup. Please sign in again to retry.');
     }
   }
 
@@ -345,8 +372,8 @@ export class AuthService {
         userName: cleanEmail.split('@')[0]
       });
       return true;
-    } catch (err: any) {
-      throw new Error(this.mapFirebaseError(err));
+    } catch (error) {
+      throw this.publicAuthError(error);
     }
   }
 

@@ -12,14 +12,8 @@ import NexoraBranding from './NexoraBranding';
 import NexoraLoader from './NexoraLoader';
 import VohIcon from './VohIcon';
 import { checkUsernameStatus, UsernameStatus } from '../utils/username';
-import { auth } from '../services/firebase/config';
 import { 
-  GoogleAuthProvider, 
-  signInWithPopup, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  ConfirmationResult,
-  sendEmailVerification
+  ConfirmationResult
 } from 'firebase/auth';
 import { AuthService } from '../services/firebase/authService';
 import { ProfileService } from '../services/firebase/profileService';
@@ -230,11 +224,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
         onLoginSuccess(user);
       }
     } catch (error: any) {
-      console.error('Google Auth Error:', {
-        code: error?.code,
-        message: error?.message,
-        stack: error?.stack
-      });
       setIsPending(false);
       if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
         setErrorMsg('Sign-in cancelled.');
@@ -245,7 +234,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   };
 
   // Handle Unified Intelligent Login
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
 
@@ -274,81 +263,27 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setIsPending(true);
     setStatusMessage('Verifying credentials via Firebase Authentication...');
 
-    const processLoginResult = async (user: User) => {
+    try {
+      const { user } = await AuthService.loginWithEmail(query, passwordInput);
       AuthService.clearFailedAttempts(query);
       if (rememberMe) {
-        localStorage.setItem('nexora_remembered_identifier', identifierInput);
+        localStorage.setItem('nexora_remembered_identifier', query);
       } else {
         localStorage.removeItem('nexora_remembered_identifier');
       }
-
-      // Notify security event
-      SecurityNotificationService.notifySecurityEvent(
-        user.id,
-        user.email || '',
-        user.name,
-        'NEW_LOGIN',
-        { browser: navigator.userAgent }
-      );
-
+      setIsPending(false);
       onLoginSuccess(user);
-    };
-
-    // Attempt Firebase Email/Password Authentication
-    signInWithEmailAndPassword(auth, query, passwordInput)
-      .then(async (userCredential) => {
-        setIsPending(false);
-        const fbUser = userCredential.user;
-        
-        // Fetch real user profile from Firestore
-        let userProfile = await AuthService.getUserProfile(fbUser.uid);
-        
-        if (!userProfile) {
-          console.warn('Profile missing for user, creating default profile:', fbUser.uid);
-          // Create default profile
-          const defaultUser: User = {
-            id: fbUser.uid,
-            username: fbUser.email?.split('@')[0] || `user_${fbUser.uid.substring(0,5)}`,
-            name: fbUser.displayName || 'Nexora User',
-            avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-            bio: '',
-            location: 'Global',
-            website: '',
-            followers: 0,
-            following: 0,
-            sparks: 0,
-            isVerified: fbUser.emailVerified,
-            coverImage: '',
-            joinedDate: `Joined ${new Date().toLocaleString('default', { month: 'long' })} ${new Date().getFullYear()}`,
-            reputationPoints: 0,
-            reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-            interestDNA: {},
-            skills: []
-          };
-          
-          // Re-create user in Firestore
-          await AuthService.createUserProfile(defaultUser, fbUser.email || '');
-          userProfile = defaultUser;
-        }
-        
-        processLoginResult(userProfile);
-      })
-      .catch((fbErr: any) => {
-        setIsPending(false);
-        console.error("Firebase Authentication Error (Email Login):", {
-          code: fbErr.code,
-          message: fbErr.message,
-          stack: fbErr.stack,
-        });
-        const lock = AuthService.recordFailedAttempt(query);
-        if (lock.isLocked) {
-          setErrorMsg(`🔒 Security limit reached. Account locked for 5 minutes.`);
-        } else if (fbErr.code === 'auth/wrong-password' || fbErr.code === 'auth/user-not-found' || fbErr.code === 'auth/invalid-credential') {
-          setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
-        } else {
-          setErrorMsg(`Authentication failed: ${fbErr.message || 'Please try again.'}`);
-        }
-      });
+    } catch (error: any) {
+      setIsPending(false);
+      const lock = AuthService.getRateLimitStatus(query);
+      if (lock.isLocked) {
+        setErrorMsg('Security limit reached. Please wait five minutes before trying again.');
+      } else if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/user-not-found' || error?.code === 'auth/wrong-password') {
+        setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
+      } else {
+        setErrorMsg(error?.message || 'Authentication failed. Please try again.');
+      }
+    }
   };
 
   // Handle Phone OTP Request (Production Firebase SMS Auth)
@@ -378,11 +313,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       setVerificationCode(''); // Never auto-fill or display OTP code
       setSuccessMsg('SMS verification code sent to your phone.');
     } catch (err: any) {
-      console.error('Firebase Phone Auth SMS error:', {
-        code: err.code,
-        message: err.message,
-        stack: err.stack,
-      });
       setIsPending(false);
       
       if (err.code === 'auth/invalid-phone-number') {
@@ -423,11 +353,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
         throw new Error('No active SMS confirmation session. Please request a new verification code.');
       }
     } catch (err: any) {
-      console.error('Phone OTP verification error:', {
-        code: err.code,
-        message: err.message,
-        stack: err.stack,
-      });
       setIsPending(false);
       if (err.code === 'auth/invalid-verification-code') {
         setErrorMsg('Invalid verification code. Please check the SMS message and enter the correct 6-digit code.');
@@ -483,11 +408,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       setOnboardingStep(1);
     } catch (firebaseErr: any) {
       setIsPending(false);
-      console.error('Firebase registration error:', {
-        code: firebaseErr.code,
-        message: firebaseErr.message,
-        stack: firebaseErr.stack,
-      });
       if (firebaseErr.code === 'auth/email-already-in-use') {
         setErrorMsg('An account with this email address already exists.');
       } else {
@@ -537,10 +457,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       }, 2500);
     } catch (err: any) {
       setIsPending(false);
-      console.error('Password reset error:', {
-        code: err?.code,
-        message: err?.message
-      });
       setErrorMsg(`Failed to send password reset email: ${err.message || 'Please check the email address and try again.'}`);
     }
   };

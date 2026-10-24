@@ -2,7 +2,7 @@
 
 This file describes the repository's current configuration. It does **not** certify that any Firebase provider, rule, function, email extension, push certificate, or hosting service is enabled in production. Repository state is not deployed state.
 
-For the complete handover, use [`docs/production-architecture.md`](docs/production-architecture.md), [`docs/deployment-runbook.md`](docs/deployment-runbook.md), [`docs/security-review.md`](docs/security-review.md), [`docs/operations-and-recovery.md`](docs/operations-and-recovery.md), and [`docs/production-readiness.md`](docs/production-readiness.md). The current release classification is staging verification, not production readiness.
+For the complete handover, use [`docs/production-architecture.md`](docs/production-architecture.md), [`docs/deployment-runbook.md`](docs/deployment-runbook.md), [`docs/security-review.md`](docs/security-review.md), [`docs/operations-and-recovery.md`](docs/operations-and-recovery.md), [`docs/production-readiness.md`](docs/production-readiness.md), and [`docs/authentication-recovery.md`](docs/authentication-recovery.md). The current release classification is staging verification, not production readiness.
 
 ## Configured Firebase resources
 
