@@ -155,10 +155,10 @@ const publicProfile = (uid) => ({
     await assertSucceeds(updateDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'messages', 'm1'), { status: 'read' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1'), { status: 'read' }));
     await assertSucceeds(setDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'typing', 'bob'), {
-      state: 'typing', updatedAt: new Date().toISOString()
+      state: 'typing', updatedAt: serverTimestamp()
     }));
     await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'typing', 'bob'), {
-      state: 'typing', updatedAt: new Date().toISOString()
+      state: 'typing', updatedAt: serverTimestamp()
     }));
     await assertFails(setDoc(doc(dbFor('mallory'), 'chats', 'chat-1', 'messages', 'm2'), {
       id: 'm2', chatId: 'chat-1', senderId: 'alice', content: 'forged', status: 'sent'

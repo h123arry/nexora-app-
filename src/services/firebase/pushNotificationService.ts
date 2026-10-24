@@ -55,7 +55,7 @@ export class PushNotificationService {
           const fcmToken = await getToken(this.messaging, { vapidKey });
           if (fcmToken) {
             this.token = fcmToken;
-            console.log('📱 FCM Device Registration Token acquired:', fcmToken);
+            console.info('FCM device registration is active.');
           }
         } catch (fcmTokenErr) {
           console.warn('FCM getToken warning (VAPID Key / SW registration issue):', fcmTokenErr);

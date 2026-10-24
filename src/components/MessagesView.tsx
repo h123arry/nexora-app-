@@ -449,9 +449,11 @@ export default function MessagesView({
 
   // 1. Online presence sync
   useEffect(() => {
-    updateOnlinePresence(currentUser.id, true);
+    const presenceTargets = initialChats.map(chat => ({ chatId: chat.id, userId: chat.partnerId }));
+    const presenceChatIds = initialChats.map(chat => chat.id);
+    updateOnlinePresence(currentUser.id, true, presenceChatIds);
     
-    const unsubPresence = subscribeToOnlinePresence((presenceMap) => {
+    const unsubPresence = subscribeToOnlinePresence(presenceTargets, (presenceMap) => {
       setChatsList(prev => 
         prev.map(c => {
           const isOnline = presenceMap[c.partnerId] !== undefined ? presenceMap[c.partnerId] : c.isPartnerOnline;
@@ -464,12 +466,12 @@ export default function MessagesView({
     });
 
     const handleBeforeUnload = () => {
-      updateOnlinePresence(currentUser.id, false);
+      updateOnlinePresence(currentUser.id, false, presenceChatIds);
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
-      updateOnlinePresence(currentUser.id, false);
+      updateOnlinePresence(currentUser.id, false, presenceChatIds);
       unsubPresence();
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };

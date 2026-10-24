@@ -438,11 +438,22 @@ service cloud.firestore {
           && request.resource.data.status in ['delivered', 'read'];
         allow delete: if chatMember(chatId) && resource.data.senderId == request.auth.uid;
       }
+      match /presence/{userId} {
+        allow get: if chatMember(chatId);
+        allow list: if false;
+        allow create, update: if chatMember(chatId)
+          && userId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['isOnline', 'lastActive'])
+          && request.resource.data.isOnline is bool
+          && request.resource.data.lastActive == request.time;
+        allow delete: if chatMember(chatId) && userId == request.auth.uid;
+      }
       match /typing/{typingId} {
         allow read, list: if chatMember(chatId);
         allow create, update: if chatMember(chatId) && typingId == request.auth.uid
           && request.resource.data.keys().hasOnly(['state', 'updatedAt'])
-          && request.resource.data.state in ['typing', 'recording', 'uploading', null];
+          && request.resource.data.state in ['typing', 'recording', 'uploading', null]
+          && request.resource.data.updatedAt == request.time;
         allow delete: if chatMember(chatId) && typingId == request.auth.uid;
       }
     }
@@ -454,7 +465,9 @@ service cloud.firestore {
       allow get: if owner(userId);
       allow list: if false;
       allow create, update: if owner(userId)
-        && request.resource.data.keys().hasOnly(['isOnline', 'lastActive']);
+        && request.resource.data.keys().hasOnly(['isOnline', 'lastActive'])
+        && request.resource.data.isOnline is bool
+        && request.resource.data.lastActive == request.time;
       allow delete: if owner(userId);
     }
   }

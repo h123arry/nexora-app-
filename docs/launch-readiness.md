@@ -54,12 +54,13 @@ Nexora is being built as a real social platform, not a collection of demo screen
 - Owner-created `mediaAssets` upload intents, explicit lifecycle transitions, and a trusted Storage-finalize verifier that records verified object metadata without fabricating transcoding or moderation results.
 - Durable report and appeal intents.
 - Private chat-media API boundary.
+- Participant-authorized chat presence records, server-timestamped expiring typing indicators, and truthful optimistic message sending/failed states in the canonical inbox.
 - Short-form Reels ranking, retention signals, and double-tap sparks.
 - Explainable For You ranking with logarithmic engagement, freshness, relationship and explicit-interest signals, blocked/hidden/repetition filters, and creator-diversity controls; existing local search now has bounded, stable relevance ordering.
 - Express request IDs, security headers, health/readiness endpoints, and a GitHub quality gate.
 
 ## Release blockers still requiring product/provider verification
 
-MFA and trusted devices, authoritative privacy graph enforcement across every surface, distributed abuse controls, production media transcode/moderation/captions and derived playback variants, reviewer operations and Account Status, trusted server-side feed/search retrieval at scale, durable search indexing, event ingestion/aggregation/experimentation, push delivery, live moderation, creator monetization, payments/payouts, legal/privacy policy review, backups, disaster recovery, observability alerts, and production Firebase/provider configuration.
+MFA and trusted devices, authoritative privacy graph enforcement across every surface, distributed abuse controls, production media transcode/moderation/captions and derived playback variants, reviewer operations and Account Status, trusted server-side feed/search retrieval at scale, durable search indexing, server-side push-token registration and delivery, event ingestion/aggregation/experimentation, live moderation, creator monetization, payments/payouts, legal/privacy policy review, backups, disaster recovery, observability alerts, and production Firebase/provider configuration.
 
 This contract is intentionally conservative: passing a local build is evidence of code health, not evidence that provider configuration or social-platform operations are live.

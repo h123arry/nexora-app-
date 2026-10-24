@@ -746,7 +746,7 @@ export async function updateTypingState(chatId: string, userId: string, state: '
     const docRef = doc(db, `chats/${chatId}/typing/${userId}`);
     await setDoc(docRef, {
       state,
-      updatedAt: new Date().toISOString()
+      updatedAt: serverTimestamp()
     });
   } catch (e) {
     console.warn('[dataService] Failed to update typing state', e);
@@ -757,8 +757,11 @@ export function subscribeToTypingState(chatId: string, callback: (states: Record
   const colRef = collection(db, `chats/${chatId}/typing`);
   return onSnapshot(colRef, (snapshot) => {
     const states: Record<string, 'typing' | 'recording' | 'uploading' | null> = {};
-    snapshot.docs.forEach(doc => {
-      states[doc.id] = doc.data().state || null;
+    const now = Date.now();
+    snapshot.docs.forEach(typingDoc => {
+      const data = typingDoc.data();
+      const updatedAt = data.updatedAt?.toMillis?.() ?? 0;
+      states[typingDoc.id] = updatedAt > 0 && now - updatedAt < 8_000 ? (data.state || null) : null;
     });
     callback(states);
   }, (error: any) => {
@@ -770,30 +773,31 @@ export function subscribeToTypingState(chatId: string, callback: (states: Record
 /**
  * Real-time user online presence
  */
-export async function updateOnlinePresence(userId: string, isOnline: boolean) {
+export async function updateOnlinePresence(userId: string, isOnline: boolean, chatIds: string[] = []) {
   try {
-    const docRef = doc(db, `presence/${userId}`);
-    await setDoc(docRef, {
+    const presence = {
       isOnline,
-      lastActive: new Date().toISOString()
-    });
+      lastActive: serverTimestamp()
+    };
+    await setDoc(doc(db, `presence/${userId}`), presence);
+    await Promise.all(Array.from(new Set(chatIds)).filter(Boolean).slice(0, 30)
+      .map(chatId => setDoc(doc(db, `chats/${chatId}/presence/${userId}`), presence)));
   } catch (e) {
     console.warn('[dataService] Failed to update presence', e);
   }
 }
 
-export function subscribeToOnlinePresence(callback: (presence: Record<string, boolean>) => void) {
-  const presenceQuery = query(collection(db, 'presence'), limit(500));
-  return onSnapshot(presenceQuery, (snapshot) => {
-    const presenceMap: Record<string, boolean> = {};
-    snapshot.docs.forEach(doc => {
-      presenceMap[doc.id] = doc.data().isOnline || false;
-    });
-    callback(presenceMap);
+export function subscribeToOnlinePresence(targets: Array<{ chatId: string; userId: string }>, callback: (presence: Record<string, boolean>) => void) {
+  const presenceMap: Record<string, boolean> = {};
+  const unsubs = targets.slice(0, 30).map(({ chatId, userId }) => onSnapshot(doc(db, `chats/${chatId}/presence/${userId}`), snapshot => {
+    const data = snapshot.data();
+    const lastActive = data?.lastActive?.toMillis?.() ?? 0;
+    presenceMap[userId] = Boolean(data?.isOnline && lastActive > 0 && Date.now() - lastActive < 90_000);
+    callback({ ...presenceMap });
   }, (error: any) => {
-    if (error?.code === 'permission-denied') return;
-    console.warn('[dataService] Presence subscription error: ', error);
-  });
+    if (error?.code !== 'permission-denied' && error?.code !== 'not-found') console.warn('[dataService] Presence subscription error:', error);
+  }));
+  return () => unsubs.forEach(unsubscribe => unsubscribe());
 }
 
 /**

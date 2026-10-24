@@ -292,7 +292,7 @@ export default function NewInboxView({
       senderId: currentUser.id,
       content: contentToSend || (mediaData ? `[${mediaData.type.toUpperCase()}]` : ''),
       timestamp: nowIso,
-      status: 'sent',
+      status: 'sending',
       replyToQuote: replyQuoteText || undefined,
       customMediaType: mediaData?.type,
       videoUrl: mediaData?.type === 'video' || mediaData?.type === 'image' ? mediaData.url : undefined,
@@ -333,6 +333,12 @@ export default function NewInboxView({
       const msgDocRef = doc(db, `chats/${activeChatId}/messages`, messageId);
       await setDoc(msgDocRef, omitUndefinedFields(newMsg));
       messagePersisted = true;
+      setLocalMessages(prev => ({
+        ...prev,
+        [activeChatId]: (prev[activeChatId] || []).map(message => message.id === messageId
+          ? { ...message, status: 'sent', isOfflineUnsent: false }
+          : message),
+      }));
       if (customContent === undefined) setNewMessageText('');
 
       // A stale conversation preview must not turn a message that Firestore
@@ -348,7 +354,9 @@ export default function NewInboxView({
       if (!messagePersisted) {
         setLocalMessages(prev => ({
           ...prev,
-          [activeChatId]: (prev[activeChatId] || []).filter(message => message.id !== messageId),
+          [activeChatId]: (prev[activeChatId] || []).map(message => message.id === messageId
+            ? { ...message, status: 'failed', isOfflineUnsent: true }
+            : message),
         }));
         setChats(prev => prev.map(chat => chat.id === activeChatId && chat.lastTimestamp === nowIso
           ? { ...chat, lastMessage: previousLastMessage, lastTimestamp: previousLastTimestamp }

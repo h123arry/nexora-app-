@@ -396,8 +396,10 @@ export default function MessageBubble({
               <span className="opacity-60"><RelativeTime timestamp={message.timestamp} /></span>
               {isMe && (
                 <div className="flex items-center">
-                  {message.isOfflineUnsent ? (
+                  {message.isOfflineUnsent || message.status === 'failed' ? (
                     <WifiOff className="w-3 h-3 text-orange-400" />
+                  ) : message.status === 'sending' ? (
+                    <Check className="w-3 h-3 text-white/30 animate-pulse" />
                   ) : message.status === 'sent' ? (
                     <Check className="w-3 h-3 text-white/40" />
                   ) : (
