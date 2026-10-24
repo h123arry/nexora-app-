@@ -1407,12 +1407,25 @@ export default function FeedView({
     // Apply Posts Engagement boost only if not strictly sorted or in specialized feeds
     const sorted = (() => {
       let sortedList = [...list];
-      if (feedTab === 'posts') {
+      if (feedTab === 'posts' || feedTab === 'trending') {
+        let viewedPostIds: string[] = [];
+        try {
+          const rawViewed = sessionStorage.getItem('nexora_viewed_posts');
+          const parsedViewed = rawViewed ? JSON.parse(rawViewed) : [];
+          viewedPostIds = Array.isArray(parsedViewed) ? parsedViewed.filter((id): id is string => typeof id === 'string') : [];
+        } catch {
+          viewedPostIds = [];
+        }
         sortedList = rankPosts(sortedList, {
           followingIds,
           interestDNA: currentUser.interestDNA,
           mutedCreatorIds,
+          blockedCreatorIds: blockedUserIds,
+          hiddenPostIds,
           notInterestedTags,
+          seenPostIds: viewedPostIds,
+          mode: feedTab === 'trending' ? 'trending' : 'forYou',
+          maxPostsPerCreator: 3,
         }).map(({ post }) => post);
       }
 

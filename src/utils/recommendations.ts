@@ -7,24 +7,45 @@ export interface RecommendationProfile {
 export function getRecommendationProfile(): RecommendationProfile {
   try {
     const saved = localStorage.getItem('nexora_recommendation_profile_v2');
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          tags: parsed.tags && typeof parsed.tags === 'object' ? parsed.tags : {},
+          creators: parsed.creators && typeof parsed.creators === 'object' ? parsed.creators : {},
+          communities: parsed.communities && typeof parsed.communities === 'object' ? parsed.communities : {},
+        };
+      }
+    }
   } catch (e) {
     console.error(e);
   }
-  // Provide some high quality default weights so the feed has rich seed content for new users
-  return { 
-    tags: { 'football': 10, 'tech': 5, 'afrobeats': 8, 'nigeria': 4, 'creative': 6 }, 
-    creators: { 'voh': 15 }, 
-    communities: { 'Afrobeats Central': 5, 'Developer Synergy': 5 } 
-  };
+  // New users start with no inferred interests. The feed falls back to
+  // eligible relationship and freshness signals until real feedback exists.
+  return { tags: {}, creators: {}, communities: {} };
 }
 
 export function saveRecommendationProfile(profile: RecommendationProfile) {
   try {
-    localStorage.setItem('nexora_recommendation_profile_v2', JSON.stringify(profile));
+    const bounded = (values: Record<string, number>) => Object.fromEntries(
+      Object.entries(values)
+        .filter(([key, value]) => key.length <= 120 && Number.isFinite(value))
+        .slice(-200)
+        .map(([key, value]) => [key, Math.max(-100, Math.min(100, value))]),
+    );
+    localStorage.setItem('nexora_recommendation_profile_v2', JSON.stringify({
+      tags: bounded(profile.tags),
+      creators: bounded(profile.creators),
+      communities: bounded(profile.communities),
+    }));
   } catch (e) {
     console.error(e);
   }
+}
+
+export function resetRecommendationProfile(): void {
+  localStorage.removeItem('nexora_recommendation_profile_v2');
+  window.dispatchEvent(new CustomEvent('nexora-recommendations-updated'));
 }
 
 export function recordRecommendationEvent(

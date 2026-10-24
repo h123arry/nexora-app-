@@ -1,10 +1,17 @@
 import { Post } from '../../types';
 
+export type FeedMode = 'forYou' | 'following' | 'latest' | 'trending';
+
 export interface RankingContext {
   followingIds?: string[];
   interestDNA?: Record<string, number>;
   mutedCreatorIds?: string[];
+  blockedCreatorIds?: string[];
   notInterestedTags?: string[];
+  hiddenPostIds?: string[];
+  seenPostIds?: string[];
+  mode?: FeedMode;
+  maxPostsPerCreator?: number;
   now?: number;
 }
 
@@ -13,6 +20,16 @@ export interface RankedPost<T extends Post = Post> {
   score: number;
   reasons: string[];
 }
+
+export const RANKING_WEIGHTS = Object.freeze({
+  follow: 24,
+  interest: 8,
+  recency: 1.6,
+  meaningfulConversation: 3,
+  verifiedTrust: 2,
+  popularity: 4,
+  unseen: 10,
+});
 
 function ageHours(timestamp: unknown, now: number): number {
   if (timestamp instanceof Date) return Math.max(0, (now - timestamp.getTime()) / 3_600_000);
@@ -25,53 +42,105 @@ function ageHours(timestamp: unknown, now: number): number {
 }
 
 function normalizedTags(post: Post): string[] {
-  return (post.tags || []).map(tag => tag.replace(/^#/, '').toLowerCase());
+  return (post.tags || []).map(tag => tag.replace(/^#/, '').trim().toLowerCase()).filter(Boolean);
+}
+
+function engagementScore(post: Post): number {
+  // Log scaling prevents a historically large account from dominating solely
+  // because of lifetime counters. Conversation and sharing carry more signal
+  // than passive likes, but all values are bounded by the logarithm.
+  const likes = Math.log1p(Math.max(0, post.likes || 0));
+  const comments = Math.log1p(Math.max(0, post.commentsCount || post.comments?.length || 0));
+  const shares = Math.log1p(Math.max(0, post.shares || 0));
+  const saves = Math.log1p(Math.max(0, post.bookmarksCount || post.saves || 0));
+  return likes + comments * RANKING_WEIGHTS.meaningfulConversation + shares * 2 + saves * 1.5;
+}
+
+function stableTieBreak<T extends Post>(a: { post: T; index: number }, b: { post: T; index: number }): number {
+  return a.index - b.index || String(a.post.id).localeCompare(String(b.post.id));
 }
 
 export function rankPosts<T extends Post>(posts: T[], context: RankingContext = {}): RankedPost<T>[] {
   const now = context.now ?? Date.now();
   const following = new Set(context.followingIds || []);
   const muted = new Set(context.mutedCreatorIds || []);
+  const blocked = new Set(context.blockedCreatorIds || []);
+  const hidden = new Set(context.hiddenPostIds || []);
+  const seen = new Set(context.seenPostIds || []);
   const notInterested = new Set((context.notInterestedTags || []).map(tag => tag.replace(/^#/, '').toLowerCase()));
   const interests = Object.entries(context.interestDNA || {}).reduce<Record<string, number>>((acc, [key, value]) => {
-    acc[key.replace(/^#/, '').toLowerCase()] = Number.isFinite(value) ? value : 0;
+    acc[key.replace(/^#/, '').toLowerCase()] = Number.isFinite(value) ? Math.max(0, value) : 0;
     return acc;
   }, {});
+  const mode = context.mode || 'forYou';
+  const maxPostsPerCreator = Math.max(1, context.maxPostsPerCreator ?? 3);
 
-  return posts
-    .filter(post => !muted.has(post.userId) && !normalizedTags(post).some(tag => notInterested.has(tag)))
-    .map(post => {
+  const candidates = posts
+    .map((post, index) => ({ post, index }))
+    .filter(({ post }) => !muted.has(post.userId) && !blocked.has(post.userId) && !hidden.has(post.id))
+    .filter(({ post }) => !normalizedTags(post).some(tag => notInterested.has(tag)))
+    .filter(({ post }) => !post.isArchived && (!post.scheduledTime || new Date(post.scheduledTime).getTime() <= now))
+    .map(({ post, index }) => {
       const tags = normalizedTags(post);
-      const interestScore = tags.reduce((sum, tag) => sum + (interests[tag] || 0), 0);
-      const engagement = (post.likes || 0) * 1.5 + (post.commentsCount || post.comments?.length || 0) * 2 + (post.shares || 0) * 3 + (post.bookmarksCount || 0) * 2.5;
-      const recency = Math.max(0, 24 - ageHours(post.timestamp, now)) * 1.2;
-      const followBoost = following.has(post.userId) ? 18 : 0;
-      const creatorTrust = post.isVerified ? 3 : 0;
-      const score = interestScore + engagement + recency + followBoost + creatorTrust;
+      const matchedTags = tags.filter(tag => interests[tag] > 0);
+      const interestScore = matchedTags.reduce((sum, tag) => sum + Math.min(3, interests[tag]), 0) * RANKING_WEIGHTS.interest;
+      const age = ageHours(post.timestamp, now);
+      const freshness = Math.max(0, 48 - age) * RANKING_WEIGHTS.recency;
+      const followBoost = following.has(post.userId) ? RANKING_WEIGHTS.follow : 0;
+      const unseenBoost = seen.has(post.id) ? 0 : RANKING_WEIGHTS.unseen;
+      const score = mode === 'latest'
+        ? Math.max(0, 7 * 24 - age)
+        : mode === 'following'
+          ? freshness + followBoost + unseenBoost
+          : mode === 'trending'
+            ? Math.min(60, engagementScore(post) * RANKING_WEIGHTS.popularity) + Math.max(0, 72 - age) * 1.8
+            : interestScore + freshness + followBoost + unseenBoost
+              + engagementScore(post) * RANKING_WEIGHTS.popularity
+              + (post.isVerified ? RANKING_WEIGHTS.verifiedTrust : 0);
       const reasons: string[] = [];
       if (followBoost) reasons.push('from an account you follow');
-      if (interestScore > 0) reasons.push('matches topics you interact with');
-      if (recency >= 12) reasons.push('recently published');
-      if (engagement >= 10) reasons.push('showing meaningful community activity');
-      if (creatorTrust) reasons.push('from a verified creator');
-      if (reasons.length === 0) reasons.push('eligible from the available post metadata');
-      return { post, score, reasons };
+      if (matchedTags.length) reasons.push(`matches topics ${matchedTags.slice(0, 2).map(tag => `#${tag}`).join(' and ')}`);
+      if (age < 24) reasons.push('recently published');
+      if (!seen.has(post.id)) reasons.push('new to your feed');
+      if (mode === 'trending') reasons.push('showing recent community activity');
+      if (reasons.length === 0) reasons.push('eligible from available post metadata');
+      return { post, index, score, reasons };
     })
-    .sort((a, b) => b.score - a.score || String(b.post.id).localeCompare(String(a.post.id)));
+    .sort((a, b) => b.score - a.score || stableTieBreak(a, b));
+
+  // Greedy author diversity is applied after scoring so relevant content stays
+  // eligible without allowing one prolific account to monopolize the page.
+  const selected: RankedPost<T>[] = [];
+  const authorCounts = new Map<string, number>();
+  const deferred: RankedPost<T>[] = [];
+  for (const candidate of candidates) {
+    const count = authorCounts.get(candidate.post.userId) || 0;
+    const ranked = { post: candidate.post, score: Math.round(candidate.score * 100) / 100, reasons: candidate.reasons };
+    if (count < maxPostsPerCreator) {
+      selected.push(ranked);
+      authorCounts.set(candidate.post.userId, count + 1);
+    } else {
+      deferred.push(ranked);
+    }
+  }
+  return selected.concat(deferred);
 }
 
 export function searchPosts<T extends Post>(posts: T[], query: string, options: { videosOnly?: boolean; limit?: number } = {}): T[] {
-  const terms = query.trim().toLowerCase().replace(/^#/, '').split(/\s+/).filter(Boolean);
-  const candidates = options.videosOnly ? posts.filter(post => Boolean(post.videoUrl)) : posts;
-  if (terms.length === 0) return candidates.slice(0, options.limit ?? 100);
+  const normalizedQuery = query.trim().toLowerCase();
+  const limit = Math.min(100, Math.max(1, options.limit ?? 100));
+  const candidates = posts.filter(post => !post.isArchived && (!options.videosOnly || Boolean(post.videoUrl)));
+  if (!normalizedQuery) return candidates.slice(0, limit);
+  if (normalizedQuery.length > 120) return [];
+  const terms = normalizedQuery.replace(/^#/, '').split(/\s+/).filter(Boolean);
   return candidates
-    .map(post => {
+    .map((post, index) => {
       const fields = [post.content, post.username, post.name, post.communityName || '', ...(post.tags || [])].map(value => String(value).toLowerCase());
       const score = terms.reduce((total, term) => total + fields.reduce((fieldScore, field) => fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0), 0);
-      return { post, score };
+      return { post, score, index };
     })
     .filter(result => result.score > 0)
-    .sort((a, b) => b.score - a.score || String(b.post.id).localeCompare(String(a.post.id)))
-    .slice(0, options.limit ?? 100)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, limit)
     .map(result => result.post);
 }
