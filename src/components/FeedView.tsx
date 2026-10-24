@@ -16,6 +16,9 @@ import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { trackClientObservation } from '../services/analyticsService';
 import { rankPosts } from '../services/discovery/discoveryService';
+import { SettingsService } from '../services/firebase/settingsService';
+import { normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
+import { auth } from '../services/firebase/config';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
@@ -512,6 +515,28 @@ export default function FeedView({
     const saved = localStorage.getItem('nexora_not_interested_tags');
     return saved ? JSON.parse(saved) : [];
   });
+  const feedPreferencesHydratedRef = useRef(false);
+
+  // Local storage is an offline fallback only. Signed-in users hydrate the
+  // authoritative feed controls from owner-scoped Firestore settings.
+  useEffect(() => {
+    feedPreferencesHydratedRef.current = false;
+    if (!currentUser.id || currentUser.id === 'guest_visitor_id' || auth.currentUser?.uid !== currentUser.id) return;
+    let cancelled = false;
+    SettingsService.getSettings(currentUser.id).then(settings => {
+      if (cancelled) return;
+      const preferences = normalizeFeedPreferences(settings.feed);
+      setFeedTab(preferences.tab);
+      setNotInterestedTags(preferences.notInterestedTags);
+      setBlockedUserIds(preferences.blockedCreatorIds);
+      setMutedCreatorIds(preferences.mutedCreatorIds);
+      setHiddenPostIds(preferences.hiddenPostIds);
+      feedPreferencesHydratedRef.current = true;
+    }).catch(() => {
+      if (!cancelled) feedPreferencesHydratedRef.current = true;
+    });
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
 
   // 2. Custom Pinterest-style collection state
   const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => {
@@ -643,6 +668,19 @@ export default function FeedView({
   useEffect(() => {
     localStorage.setItem('nexora_not_interested_tags', JSON.stringify(notInterestedTags));
   }, [notInterestedTags]);
+  useEffect(() => {
+    if (!feedPreferencesHydratedRef.current || currentUser.id === 'guest_visitor_id' || auth.currentUser?.uid !== currentUser.id) return;
+    const timer = window.setTimeout(() => {
+      void SettingsService.updateFeed(currentUser.id, {
+        tab: feedTab,
+        notInterestedTags,
+        blockedCreatorIds: blockedUserIds,
+        mutedCreatorIds,
+        hiddenPostIds,
+      }).catch(() => undefined);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [currentUser.id, feedTab, notInterestedTags, blockedUserIds, mutedCreatorIds, hiddenPostIds]);
 
   useEffect(() => {
     localStorage.setItem('nexora_saved_collections', JSON.stringify(savedCollections));
@@ -1240,6 +1278,31 @@ export default function FeedView({
     
     setLastAction(null);
     window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Successfully reverted recent recommendation preference!' }));
+  };
+
+  const handleResetRecommendations = () => {
+    const reset = resetFeedPreferences({
+      tab: feedTab,
+      notInterestedTags,
+      blockedCreatorIds: blockedUserIds,
+      mutedCreatorIds,
+      hiddenPostIds,
+      seenPostIds: [],
+    });
+    setNotInterestedTags(reset.notInterestedTags);
+    setBlockedUserIds(reset.blockedCreatorIds);
+    setMutedCreatorIds(reset.mutedCreatorIds);
+    setHiddenPostIds(reset.hiddenPostIds);
+    try {
+      sessionStorage.removeItem('nexora_viewed_posts');
+    } catch {
+      // Session storage may be disabled; durable controls are still reset.
+    }
+    setRecommendationsVersion(version => version + 1);
+    window.dispatchEvent(new CustomEvent('nexora-recommendations-updated'));
+    window.dispatchEvent(new CustomEvent('toast', {
+      detail: 'Recommendation controls reset. Your follows, posts, messages, and account were not changed.',
+    }));
   };
 
   const handlePullEnd = () => {
@@ -1855,6 +1918,16 @@ export default function FeedView({
               aria-label="Search Nexora"
             >
               <Search className="w-4.5 h-4.5 stroke-[1.75] text-zinc-300" />
+            </button>
+
+            <button
+              type="button"
+              onClick={handleResetRecommendations}
+              className="hidden sm:inline-flex nx-icon-button text-violet-300"
+              title="Reset recommendation controls"
+              aria-label="Reset recommendation controls"
+            >
+              <RefreshCw className="w-4 h-4 stroke-[1.8]" />
             </button>
 
             {/* Utility Chevron Menu */}

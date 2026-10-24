@@ -12,7 +12,7 @@
     "functions:build": "npm --prefix functions run build",
     "security:scan": "node scripts/secret-scan.mjs",
     "validate:deployment": "node scripts/validate-deployment.mjs",
-    "test:unit": "tsx --test tests/feed-pagination.test.ts tests/voh-memory.test.ts tests/discovery.test.ts tests/media-storage-path.test.ts tests/message-serialization.test.ts tests/media-lifecycle.test.ts tests/moderation-policy.test.ts tests/analytics-policy.test.ts tests/monetization-policy.test.ts tests/phase9-performance.test.ts",
+    "test:unit": "tsx --test tests/feed-pagination.test.ts tests/feed-preferences.test.ts tests/voh-memory.test.ts tests/discovery.test.ts tests/media-storage-path.test.ts tests/message-serialization.test.ts tests/media-lifecycle.test.ts tests/moderation-policy.test.ts tests/analytics-policy.test.ts tests/monetization-policy.test.ts tests/phase9-performance.test.ts",
     "test:rules": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-rules \"node --test tests/firestore.rules.test.js\"",
     "test:storage": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore,storage --project demo-nexora-storage-rules \"node --test tests/storage.rules.test.js\"",
     "test:migration": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-migration \"npx tsx --test functions/tests/backfillPublicPostAudience.test.ts\"",

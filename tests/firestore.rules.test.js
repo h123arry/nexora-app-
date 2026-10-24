@@ -341,6 +341,34 @@ const publicProfile = (uid) => ({
     await assertFails(getDocs(collection(dbFor('alice'), 'follows')));
     await assertFails(getDocs(query(collection(dbFor('alice'), 'follows'), where('followerId', '==', 'carol'))));
   });
+  it('supports deterministic follow edges and rejects relationship ownership changes', async () => {
+    const followRef = doc(dbFor('alice'), 'follows', 'alice_bob');
+    await assertSucceeds(setDoc(followRef, {
+      followerId: 'alice', followingId: 'bob', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(followRef, {
+      followerId: 'alice', followingId: 'bob', createdAt: serverTimestamp()
+    }, { merge: false }));
+    await assertFails(updateDoc(followRef, { followingId: 'mallory' }));
+    await assertFails(updateDoc(doc(dbFor('bob'), 'follows', 'alice_bob'), { createdAt: serverTimestamp() }));
+  });
+  it('allows only owner-scoped preference settings with a bounded top-level contract', async () => {
+    const preferences = {
+      privacy: { isPrivateAccount: false, allowDms: true },
+      notifications: { pushEnabled: true },
+      appearance: { theme: 'stealth-dark' },
+      content: { contentPreferences: ['AI'], sensitiveContentFilter: true },
+      feed: { tab: 'posts', notInterestedTags: ['spam'], mutedCreatorIds: [], hiddenPostIds: [], seenPostIds: [] },
+      security: { twoFactorEnabled: false },
+      updatedAt: serverTimestamp()
+    };
+    const ownerRef = doc(dbFor('alice'), 'users', 'alice', 'settings', 'preferences');
+    await assertSucceeds(setDoc(ownerRef, preferences));
+    await assertSucceeds(getDoc(ownerRef));
+    await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'settings', 'preferences')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'users', 'alice', 'settings', 'preferences'), preferences));
+    await assertFails(updateDoc(ownerRef, { injectedPrivilege: true }));
+  });
   it('lets users read their own trusted like markers but never create or modify them directly', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice', 'postLikes', 'post-1'), { postId: 'post-1', userId: 'alice' });

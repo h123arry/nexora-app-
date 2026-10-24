@@ -231,11 +231,12 @@ async function savePostToDbDirect(post: any) {
 async function addFollowDirect(followerId: string, followingId: string) {
   const path = 'follows';
   try {
-    return await addDoc(collection(db, path), {
+    const followId = `${followerId}_${followingId}`;
+    return await setDoc(doc(db, path, followId), {
       followerId,
       followingId,
       createdAt: serverTimestamp()
-    });
+    }, { merge: false });
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path, auth);
   }

@@ -203,7 +203,22 @@ service cloud.firestore {
 
       match /memoryEvents/{eventId} { allow read, write: if owner(userId); }
       match /memoryState/{stateId} { allow read, write: if owner(userId); }
-      match /settings/{settingId} { allow read, write: if owner(userId); }
+      match /settings/{settingId} {
+        allow get: if owner(userId);
+        allow list: if false;
+        allow create, update: if owner(userId)
+          && settingId == 'preferences'
+          && request.resource.data.keys().hasOnly([
+            'privacy', 'notifications', 'appearance', 'content', 'feed', 'security', 'updatedAt'
+          ])
+          && request.resource.data.privacy is map
+          && request.resource.data.notifications is map
+          && request.resource.data.appearance is map
+          && request.resource.data.content is map
+          && request.resource.data.feed is map
+          && request.resource.data.security is map;
+        allow delete: if owner(userId);
+      }
       match /notifications/{notifId} {
         allow read, list, delete: if owner(userId);
         allow create: if false;
@@ -270,9 +285,20 @@ service cloud.firestore {
 
     match /drafts/{draftId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if accountMayPost() && request.resource.data.userId == request.auth.uid;
+      allow create: if accountMayPost()
+        && request.resource.data.keys().hasOnly(['userId', 'caption', 'videoUrl', 'updatedAt'])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 10000
+        && request.resource.data.videoUrl is string
+        && request.resource.data.videoUrl.size() <= 1000;
       allow update: if signedIn() && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId;
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'videoUrl', 'updatedAt'])
+        && request.resource.data.caption is string
+        && request.resource.data.caption.size() <= 10000
+        && request.resource.data.videoUrl is string
+        && request.resource.data.videoUrl.size() <= 1000;
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
@@ -315,7 +341,11 @@ service cloud.firestore {
         && request.resource.data.followingId is string
         && request.resource.data.followingId != request.auth.uid
         && request.resource.data.followingId.size() > 0;
-      allow update: if false;
+      allow update: if signedIn()
+        && resource.data.followerId == request.auth.uid
+        && request.resource.data.followerId == resource.data.followerId
+        && request.resource.data.followingId == resource.data.followingId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['createdAt']);
       allow delete: if signedIn() && resource.data.followerId == request.auth.uid;
     }
 
