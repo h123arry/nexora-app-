@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch, runTransaction } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch, runTransaction, limit } from 'firebase/firestore';
 import { db } from './config';
 import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -107,7 +107,7 @@ export class ProfileService {
     const clean = normalizeUsername(username);
     const claim = await getDoc(doc(db, 'usernames', clean));
     if (claim.exists()) return true;
-    const q = query(collection(db, 'publicProfiles'), where('username', '==', clean));
+    const q = query(collection(db, 'publicProfiles'), where('username', '==', clean), limit(1));
     const snap = await getDocs(q);
     return !snap.empty;
   }

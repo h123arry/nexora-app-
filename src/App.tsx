@@ -30,7 +30,6 @@ import {
 } from './data/database';
 import { ActivityService } from './services/activityService';
 import { 
-  getGlobalPosts,
   getGlobalPostsPage,
   subscribeToPosts, 
   subscribeToUsers, 
@@ -45,7 +44,7 @@ import { ProfileService } from './services/firebase/profileService';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { httpsCallable } from 'firebase/functions';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { useFirebase } from './context/FirebaseContext';
 import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
@@ -502,7 +501,7 @@ export default function App() {
     likeStateReadyRef.current = false;
     setUserSparks([]);
     if (!isLoggedIn || !firebaseUser) return () => { cancelled = true; };
-    getDocs(collection(db, 'users', firebaseUser.uid, 'postLikes'))
+    getDocs(query(collection(db, 'users', firebaseUser.uid, 'postLikes'), limit(500)))
       .then(snapshot => {
         if (cancelled) return;
         const ids = snapshot.docs.map(like => like.id);

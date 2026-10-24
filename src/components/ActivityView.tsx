@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, query, where, onSnapshot, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy, limit, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { User, Notification } from '../types';
 import { Bell, Shield, Star, Award, Zap, Heart, MessageSquare, UserCheck, MoreVertical, Trash2 } from 'lucide-react';
@@ -19,7 +19,8 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
     const q = query(
       collection(db, 'notifications'),
       where('userId', '==', currentUser.id),
-      orderBy('timestamp', 'desc')
+      orderBy('timestamp', 'desc'),
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

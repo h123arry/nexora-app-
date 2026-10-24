@@ -14,6 +14,27 @@ export default defineConfig(() => {
         '@': path.resolve(__dirname, '.'),
       },
     },
+    build: {
+      rollupOptions: {
+        output: {
+          // Keep long-lived third-party code cacheable independently from the
+          // application shell and route chunks. This does not claim fewer
+          // total bytes; it avoids invalidating vendor code on app changes.
+          manualChunks: {
+            firebase: [
+              'firebase/app',
+              'firebase/auth',
+              'firebase/firestore',
+              'firebase/functions',
+              'firebase/messaging',
+              'firebase/storage',
+            ],
+            motion: ['motion'],
+            icons: ['lucide-react'],
+          },
+        },
+      },
+    },
     server: {
       // Manus previews arrive through a forwarded *.us3.manus.computer host.
       // Keep the allowlist scoped to that preview domain instead of disabling

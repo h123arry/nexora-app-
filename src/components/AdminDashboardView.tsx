@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award } from 'lucide-react';
 import { User, Post, Report, CrashLog } from '../types';
-import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where, limit } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../lib/firebase';
 import { reviewModerationReport } from '../services/dataService';
@@ -41,7 +41,7 @@ export default function AdminDashboardView({
     // 1. Load users from Firestore
     try {
       if (db) {
-        const snap = await getDocs(collection(db, 'users'));
+        const snap = await getDocs(query(collection(db, 'users'), limit(200)));
         const firestoreUsers: User[] = [];
         snap.forEach(docSnap => {
           firestoreUsers.push({ id: docSnap.id, ...docSnap.data() } as User);
@@ -62,7 +62,7 @@ export default function AdminDashboardView({
     // 2. Load reports from the authoritative moderation queue. Reporter identity
     // and private evidence are intentionally not copied into this UI model.
     try {
-      const snap = await getDocs(query(collection(db, 'moderationReports'), where('status', 'in', ['pending', 'under_review', 'escalated'])));
+      const snap = await getDocs(query(collection(db, 'moderationReports'), where('status', 'in', ['pending', 'under_review', 'escalated']), limit(100)));
       setReports(snap.docs.map(reportDoc => {
         const data = reportDoc.data();
         const createdAt = data.createdAt?.toDate?.()?.toISOString?.() || '';

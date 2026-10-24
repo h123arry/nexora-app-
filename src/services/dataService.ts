@@ -18,66 +18,18 @@ import {
 import { PrivacySettings, User, Post, Circle as Community, Page, Notification, Message, Chat } from '../types';
 import { functions } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
+import { cacheManager } from './cache/cacheService';
+import { mergePendingActions, PendingAction } from './syncQueue';
 
 // ... (rest of the file content)
 
 // ==========================================
-// 2. MULTI-LEVEL CACHE ENGINE
-// ==========================================
-class MemoryCacheManager {
-  private userCache = new Map<string, User>();
-  private postCache = new Map<string, Post>();
-  private communityCache = new Map<string, Community>();
-  private pageCache = new Map<string, Page>();
-
-  public setUser(id: string, user: User) {
-    this.userCache.set(id, user);
-  }
-  public getUser(id: string): User | null {
-    return this.userCache.get(id) || null;
-  }
-  public setPost(id: string, post: Post) {
-    this.postCache.set(id, post);
-  }
-  public getPost(id: string): Post | null {
-    return this.postCache.get(id) || null;
-  }
-  public setCommunity(id: string, community: Community) {
-    this.communityCache.set(id, community);
-  }
-  public getCommunity(id: string): Community | null {
-    return this.communityCache.get(id) || null;
-  }
-  public setPage(id: string, page: Page) {
-    this.pageCache.set(id, page);
-  }
-  public getPage(id: string): Page | null {
-    return this.pageCache.get(id) || null;
-  }
-  public clearAll() {
-    this.userCache.clear();
-    this.postCache.clear();
-    this.communityCache.clear();
-    this.pageCache.clear();
-  }
-}
-
-export const cacheManager = new MemoryCacheManager();
-
-// ==========================================
 // 3. OFFLINE QUEUE & SYNC ENGINE
 // ==========================================
-interface PendingAction {
-  id: string; // Unique transaction UUID
-  action: 'saveUser' | 'savePost' | 'addComment' | 'addFollow' | 'removeFollow' | 'addNotification' | 'createPage' | 'createCommunity' | 'report' | 'saveDraft' | 'logActivity' | 'sendMessage' | 'updatePrivacy';
-  payload: any;
-  timestamp: number;
-  retryCount: number;
-}
-
 class BackgroundSyncEngine {
   private queueKey = 'nexora_offline_sync_queue';
   private processing = false;
+  private retryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -164,8 +116,20 @@ class BackgroundSyncEngine {
       }
     }
 
-    this.saveQueue(failedActions);
+    // An action may be enqueued while the snapshot above is being flushed.
+    // Never replace those newer entries with the failed-action list.
+    const latestQueue = this.getQueue();
+    this.saveQueue(mergePendingActions(queue, failedActions, latestQueue));
     this.processing = false;
+
+    if (failedActions.length > 0 && typeof navigator !== 'undefined' && navigator.onLine && !this.retryTimer) {
+      const maxRetryCount = Math.max(...failedActions.map(item => item.retryCount));
+      const retryDelay = Math.min(30_000, 2 ** Math.max(0, maxRetryCount - 1) * 1_000);
+      this.retryTimer = setTimeout(() => {
+        this.retryTimer = null;
+        void this.processQueue();
+      }, retryDelay);
+    }
 
     // Dispatch dedicated sync complete event for the UI and toast notifications
     const syncedCount = initialCount - failedActions.length;
@@ -280,7 +244,7 @@ async function addFollowDirect(followerId: string, followingId: string) {
 async function removeFollowDirect(followerId: string, followingId: string) {
   const path = 'follows';
   try {
-    const q = query(collection(db, path), where('followerId', '==', followerId), where('followingId', '==', followingId));
+    const q = query(collection(db, path), where('followerId', '==', followerId), where('followingId', '==', followingId), limit(50));
     const snapshot = await getDocs(q);
     const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, path, d.id)));
     await Promise.all(deletePromises);
@@ -496,10 +460,17 @@ export async function logAutomationTask(taskName: string, status: string) {
 // 6. READS & FETCHERS (WITH MEMORY CACHING)
 // ==========================================
 
-export async function getFollowers(userId: string) {
+const DEFAULT_READ_LIMIT = 100;
+const MAX_READ_LIMIT = 500;
+const safeReadLimit = (requested = DEFAULT_READ_LIMIT) => Math.min(
+  MAX_READ_LIMIT,
+  Math.max(1, Math.floor(requested)),
+);
+
+export async function getFollowers(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   const path = 'follows';
   try {
-    const q = query(collection(db, path), where('followingId', '==', userId));
+    const q = query(collection(db, path), where('followingId', '==', userId), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -507,10 +478,10 @@ export async function getFollowers(userId: string) {
   }
 }
 
-export async function getFollowing(userId: string) {
+export async function getFollowing(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   const path = 'follows';
   try {
-    const q = query(collection(db, path), where('followerId', '==', userId));
+    const q = query(collection(db, path), where('followerId', '==', userId), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -518,10 +489,10 @@ export async function getFollowing(userId: string) {
   }
 }
 
-export async function getActivities(userId: string) {
+export async function getActivities(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   const path = 'activities';
   try {
-    const q = query(collection(db, path), where('userId', '==', userId));
+    const q = query(collection(db, path), where('userId', '==', userId), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -529,23 +500,10 @@ export async function getActivities(userId: string) {
   }
 }
 
-export async function getGlobalPosts() {
-  const path = 'posts';
-  try {
-    const q = query(collection(db, path), where('audience', '==', 'public'), orderBy('timestamp', 'desc'), limit(150));
-    const snapshot = await getDocs(q);
-    const posts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Post[];
-    posts.forEach(p => cacheManager.setPost(p.id, p));
-    return posts;
-  } catch (error) {
-    handleFirestoreError(error, OperationType.LIST, path, auth);
-  }
-}
-
-export async function getDrafts(userId: string) {
+export async function getDrafts(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   const path = 'drafts';
   try {
-    const q = query(collection(db, path), where('userId', '==', userId));
+    const q = query(collection(db, path), where('userId', '==', userId), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -553,10 +511,10 @@ export async function getDrafts(userId: string) {
   }
 }
 
-export async function getCreatorAnalyticsDetailed(userId: string) {
+export async function getCreatorAnalyticsDetailed(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   const path = 'creatorAnalytics';
   try {
-    const q = query(collection(db, path), where('userId', '==', userId));
+    const q = query(collection(db, path), where('userId', '==', userId), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -564,10 +522,10 @@ export async function getCreatorAnalyticsDetailed(userId: string) {
   }
 }
 
-export async function getUserContent(userId: string) {
+export async function getUserContent(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   const path = 'content';
   try {
-    const q = query(collection(db, path), where('userId', '==', userId));
+    const q = query(collection(db, path), where('userId', '==', userId), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -575,10 +533,10 @@ export async function getUserContent(userId: string) {
   }
 }
 
-export async function getNotifications(userId: string) {
+export async function getNotifications(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   const path = 'notifications';
   try {
-    const q = query(collection(db, path), where('userId', '==', userId));
+    const q = query(collection(db, path), where('userId', '==', userId), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
@@ -624,7 +582,9 @@ export function subscribeToNotifications(userId: string, callback: (notification
 }
 
 export function subscribeToUsers(callback: (users: User[]) => void) {
-  const q = query(collection(db, 'publicProfiles'), limit(500));
+  // The shell needs a bounded directory window; profile lookup remains
+  // on-demand, so a realtime listener never becomes a full user export.
+  const q = query(collection(db, 'publicProfiles'), limit(250));
   return onSnapshot(q, (snapshot) => {
     const users = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as User[];
     users.forEach(u => cacheManager.setUser(u.id, u));
@@ -672,7 +632,7 @@ export function subscribeToCommunities(userId: string, callback: (communities: C
     communities.forEach(c => cacheManager.setCommunity(c.id, c));
     callback(communities);
   };
-  const publicQuery = query(collection(db, 'communities'), where('type', '==', 'public'), limit(200));
+  const publicQuery = query(collection(db, 'communities'), where('type', '==', 'public'), limit(100));
   const unsubPublic = onSnapshot(publicQuery, (snapshot) => {
     publicDocs = snapshot.docs;
     emit();
@@ -689,7 +649,7 @@ export function subscribeToCommunities(userId: string, callback: (communities: C
 }
 
 export function subscribeToPages(callback: (pages: Page[]) => void) {
-  const q = query(collection(db, 'pages'), limit(200));
+  const q = query(collection(db, 'pages'), limit(100));
   return onSnapshot(q, (snapshot) => {
     const pages = snapshot.docs.map((snapshotDoc) => {
       const data = snapshotDoc.data();
@@ -723,7 +683,7 @@ export function subscribeToPages(callback: (pages: Page[]) => void) {
 }
 
 export function subscribeToFollows(userId: string, callback: (follows: any[]) => void) {
-  const q = query(collection(db, 'follows'), where('followerId', '==', userId), limit(500));
+  const q = query(collection(db, 'follows'), where('followerId', '==', userId), limit(250));
   return onSnapshot(q, (snapshot) => {
     const follows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     callback(follows);

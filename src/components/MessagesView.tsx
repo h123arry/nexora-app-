@@ -49,6 +49,7 @@ export default function MessagesView({
   // Navigation & Tabs
   const [activeTab, setActiveTab] = useState<'chats' | 'requests' | 'broadcasts' | 'calls' | 'archived'>('chats');
   const listContainerRef = useRef<HTMLDivElement>(null);
+  const typingStateChatRef = useRef<string | null>(null);
   const scrollPositionsRef = useRef<Record<string, number>>({
     chats: 0,
     requests: 0,
@@ -502,17 +503,29 @@ export default function MessagesView({
 
   // 3. Local typing trigger
   useEffect(() => {
+    if (typingStateChatRef.current && typingStateChatRef.current !== activeChatId) {
+      void updateTypingState(typingStateChatRef.current, currentUser.id, null);
+      typingStateChatRef.current = null;
+    }
+
     if (!activeChatId || !typedMessage.trim()) {
-      if (activeChatId) {
+      if (activeChatId && typingStateChatRef.current === activeChatId) {
         updateTypingState(activeChatId, currentUser.id, null);
+        typingStateChatRef.current = null;
       }
       return;
     }
 
-    updateTypingState(activeChatId, currentUser.id, 'typing');
+    if (typingStateChatRef.current !== activeChatId) {
+      typingStateChatRef.current = activeChatId;
+      updateTypingState(activeChatId, currentUser.id, 'typing');
+    }
 
     const delayDebounceFn = setTimeout(() => {
-      updateTypingState(activeChatId, currentUser.id, null);
+      if (typingStateChatRef.current === activeChatId) {
+        typingStateChatRef.current = null;
+        updateTypingState(activeChatId, currentUser.id, null);
+      }
     }, 2000);
 
     return () => {

@@ -103,6 +103,7 @@ export default function NewInboxView({
   const messagesScrollRef = useRef<HTMLDivElement | null>(null);
   const messageCursorsRef = useRef<Record<string, QueryDocumentSnapshot<DocumentData> | null>>({});
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingStateRef = useRef<'typing' | null>(null);
 
   // Persistence
   useEffect(() => {
@@ -177,6 +178,7 @@ export default function NewInboxView({
       unsubscribe?.();
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
       void updateTypingState(activeChatId, currentUser.id, null);
+      typingStateRef.current = null;
       setPartnerTyping(false);
     };
   }, [activeChatId, currentUser.id]);
@@ -265,10 +267,15 @@ export default function NewInboxView({
   const handleMessageInputChange = (value: string) => {
     setNewMessageText(value);
     if (!activeChatId) return;
-    void updateTypingState(activeChatId, currentUser.id, value.trim() ? 'typing' : null);
+    const nextTypingState = value.trim() ? 'typing' : null;
+    if (nextTypingState !== typingStateRef.current) {
+      typingStateRef.current = nextTypingState;
+      void updateTypingState(activeChatId, currentUser.id, nextTypingState);
+    }
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     if (value.trim()) {
       typingTimeoutRef.current = setTimeout(() => {
+        typingStateRef.current = null;
         void updateTypingState(activeChatId, currentUser.id, null);
       }, 1200);
     }
@@ -281,6 +288,7 @@ export default function NewInboxView({
     if (!activeChatId) return;
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingStateRef.current = null;
     void updateTypingState(activeChatId, currentUser.id, null);
 
     const messageId = `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`;
