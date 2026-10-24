@@ -149,6 +149,8 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('mallory'), 'chats', 'chat-1')));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { participants: ['alice', 'mallory'] }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'hello' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'x'.repeat(10001) }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { unreadCount: -1 }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1'), {
       id: 'm1', chatId: 'chat-1', senderId: 'alice', content: 'hello', status: 'sent', timestamp: new Date().toISOString()
     }));
@@ -365,6 +367,8 @@ const publicProfile = (uid) => ({
     const ownerRef = doc(dbFor('alice'), 'users', 'alice', 'settings', 'preferences');
     await assertSucceeds(setDoc(ownerRef, preferences));
     await assertSucceeds(getDoc(ownerRef));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'settings')));
+    await assertFails(getDocs(collection(dbFor('bob'), 'users', 'alice', 'settings')));
     await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'settings', 'preferences')));
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'alice', 'settings', 'preferences'), preferences));
     await assertFails(updateDoc(ownerRef, { injectedPrivilege: true }));

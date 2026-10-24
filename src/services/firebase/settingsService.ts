@@ -3,6 +3,7 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
+  runTransaction,
 } from 'firebase/firestore';
 import { db, auth } from './config';
 import type { FeedPreferences } from '../discovery/feedPreferences';
@@ -160,17 +161,29 @@ export class SettingsService {
   }
 
   static async updateFeed(uid: string, updates: Partial<FeedPreferences>): Promise<void> {
-    const current = await this.getSettings(uid);
-    const next = {
-      ...current.feed,
-      ...updates,
-      notInterestedTags: boundedStrings(updates.notInterestedTags ?? current.feed.notInterestedTags),
-      blockedCreatorIds: boundedStrings(updates.blockedCreatorIds ?? current.feed.blockedCreatorIds),
-      mutedCreatorIds: boundedStrings(updates.mutedCreatorIds ?? current.feed.mutedCreatorIds),
-      hiddenPostIds: boundedStrings(updates.hiddenPostIds ?? current.feed.hiddenPostIds),
-      seenPostIds: boundedStrings(updates.seenPostIds ?? current.feed.seenPostIds),
-    };
-    await this.updateSettings(uid, { feed: next });
+    if (!uid || auth.currentUser?.uid !== uid) throw new Error('Only the signed-in owner can update settings.');
+    const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    await runTransaction(db, async transaction => {
+      const snapshot = await transaction.get(settingsRef);
+      const current = snapshot.exists()
+        ? mergeSettings(snapshot.data() as Partial<NexoraSettings>)
+        : DEFAULT_SETTINGS;
+      const next = {
+        ...current.feed,
+        ...updates,
+        notInterestedTags: boundedStrings(updates.notInterestedTags ?? current.feed.notInterestedTags),
+        blockedCreatorIds: boundedStrings(updates.blockedCreatorIds ?? current.feed.blockedCreatorIds),
+        mutedCreatorIds: boundedStrings(updates.mutedCreatorIds ?? current.feed.mutedCreatorIds),
+        hiddenPostIds: boundedStrings(updates.hiddenPostIds ?? current.feed.hiddenPostIds),
+        seenPostIds: boundedStrings(updates.seenPostIds ?? current.feed.seenPostIds),
+      };
+      transaction.set(settingsRef, {
+        ...DEFAULT_SETTINGS,
+        ...(snapshot.exists() ? {} : current),
+        feed: next,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    });
   }
 
   static async updateSecurity(uid: string, updates: Partial<NexoraSettings['security']>): Promise<void> {

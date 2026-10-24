@@ -57,8 +57,8 @@ export class PushNotificationService {
             this.token = fcmToken;
             console.info('FCM device registration is active.');
           }
-        } catch (fcmTokenErr) {
-          console.warn('FCM getToken warning (VAPID Key / SW registration issue):', fcmTokenErr);
+        } catch {
+          console.warn('FCM token registration unavailable; verify the VAPID key and messaging service worker configuration.');
         }
       } else {
         console.info('ℹ️ FCM Web Push: VAPID Key not supplied in VITE_FIREBASE_VAPID_KEY. Operating with Native OS Web Notifications.');
@@ -66,7 +66,6 @@ export class PushNotificationService {
 
       // Listen for foreground messages
       onMessage(this.messaging, (payload) => {
-        console.log('🔔 FCM Foreground Message received:', payload);
         if (payload.notification) {
           this.displayNativeNotification({
             title: payload.notification.title || 'Nexora Alert',
@@ -79,8 +78,8 @@ export class PushNotificationService {
 
       this.isInitialized = true;
       return this.token || 'granted_native_active';
-    } catch (err) {
-      console.warn('Push Notification initialization warning:', err);
+    } catch {
+      console.warn('Push Notification initialization unavailable in this environment.');
       return null;
     }
   }
@@ -125,8 +124,8 @@ export class PushNotificationService {
         }
         notif.close();
       };
-    } catch (e) {
-      console.warn('Native notification trigger failed:', e);
+    } catch {
+      console.warn('Native notification could not be displayed.');
     }
   }
 }

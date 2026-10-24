@@ -205,7 +205,7 @@ service cloud.firestore {
       match /memoryState/{stateId} { allow read, write: if owner(userId); }
       match /settings/{settingId} {
         allow get: if owner(userId);
-        allow list: if false;
+        allow list: if owner(userId);
         allow create, update: if owner(userId)
           && settingId == 'preferences'
           && request.resource.data.keys().hasOnly([
@@ -493,7 +493,13 @@ service cloud.firestore {
       allow update: if signedIn()
         && request.auth.uid in resource.data.participants
         && request.resource.data.participants == resource.data.participants
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'lastTimestamp', 'unreadCount', 'updatedAt']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'lastTimestamp', 'unreadCount', 'updatedAt'])
+        && (!request.resource.data.keys().hasAny(['lastMessage'])
+          || (request.resource.data.lastMessage is string && request.resource.data.lastMessage.size() <= 10000))
+        && (!request.resource.data.keys().hasAny(['lastTimestamp'])
+          || (request.resource.data.lastTimestamp is string && request.resource.data.lastTimestamp.size() <= 40))
+        && (!request.resource.data.keys().hasAny(['unreadCount'])
+          || (request.resource.data.unreadCount is int && request.resource.data.unreadCount >= 0 && request.resource.data.unreadCount <= 10000));
       allow delete: if signedIn() && request.auth.uid in resource.data.participants;
 
       match /messages/{messageId} {
