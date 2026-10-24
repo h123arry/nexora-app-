@@ -3,6 +3,7 @@ import { Search, Flame, Radio, Music, ArrowRight, Play, X, UserPlus, Check, Tras
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import { searchPosts } from '../services/discovery/discoveryService';
 
 interface ExploreViewProps {
   creators: User[];
@@ -95,14 +96,7 @@ export default function ExploreView({
 
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
-    if (!debouncedSearch.trim()) return posts;
-    const q = debouncedSearch.toLowerCase();
-    return posts.filter(p => 
-      p.content.toLowerCase().includes(q) || 
-      p.username.toLowerCase().includes(q) || 
-      p.name.toLowerCase().includes(q) ||
-      (p.tags || []).some(t => t.toLowerCase().includes(q))
-    );
+    return searchPosts(posts, debouncedSearch);
   }, [posts, debouncedSearch]);
 
   const filteredCreators = useMemo(() => {
@@ -116,9 +110,7 @@ export default function ExploreView({
   }, [creators, debouncedSearch]);
 
   const filteredVideos = useMemo(() => {
-    if (!debouncedSearch.trim()) return posts.filter(p => p.videoUrl);
-    const q = debouncedSearch.toLowerCase();
-    return posts.filter(p => p.videoUrl && (p.content.toLowerCase().includes(q) || p.username.toLowerCase().includes(q) || (p.tags || []).some(t => t.toLowerCase().includes(q))));
+    return searchPosts(posts, debouncedSearch, { videosOnly: true });
   }, [posts, debouncedSearch]);
 
   const userCommunities = useMemo(() => {

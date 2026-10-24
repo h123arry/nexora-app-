@@ -13,7 +13,8 @@ import RelativeTime from './RelativeTime';
 import FeedPostCard from './FeedPostCard';
 import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { getRecommendationScore, recordRecommendationEvent } from '../utils/recommendations';
+import { recordRecommendationEvent } from '../utils/recommendations';
+import { rankPosts } from '../services/discovery/discoveryService';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
@@ -1390,33 +1391,12 @@ export default function FeedView({
     const sorted = (() => {
       let sortedList = [...list];
       if (feedTab === 'posts') {
-        sortedList.sort((a, b) => {
-          let scoreA = 0;
-          let scoreB = 0;
-
-          // 1. Recency Boost
-          if (a.timestamp === 'Just now') scoreA += 10000;
-          if (b.timestamp === 'Just now') scoreB += 10000;
-          if (a.timestamp?.includes('m ago') || a.timestamp?.includes('h ago')) scoreA += 5000;
-          if (b.timestamp?.includes('m ago') || b.timestamp?.includes('h ago')) scoreB += 5000;
-
-          // 2. Engagement score: Likes, Shares, Comments, Bookmarks/Saves
-          // Added weights for sparks, shares, and bookmarks to reflect engagement depth.
-          const engagementA = (a.likes || 0) * 3 + (a.shares || 0) * 6 + (a.comments?.length || 0) * 4 + (a.bookmarksCount || 0) * 8;
-          const engagementB = (b.likes || 0) * 3 + (b.shares || 0) * 6 + (b.comments?.length || 0) * 4 + (b.bookmarksCount || 0) * 8;
-          scoreA += engagementA;
-          scoreB += engagementB;
-
-          // 3. Creator / Verification / Authority boosts
-          if (a.userId === 'user-0' || a.username === 'voh' || a.username === 'nexora_ai') scoreA += 1500;
-          if (b.userId === 'user-0' || b.username === 'voh' || b.username === 'nexora_ai') scoreB += 1500;
-
-          // 4. Recommendation system scores
-          scoreA += getRecommendationScore(a);
-          scoreB += getRecommendationScore(b);
-
-          return scoreB - scoreA;
-        });
+        sortedList = rankPosts(sortedList, {
+          followingIds,
+          interestDNA: currentUser.interestDNA,
+          mutedCreatorIds,
+          notInterestedTags,
+        }).map(({ post }) => post);
       }
 
       if (feedTab === 'posts') {
