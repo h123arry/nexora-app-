@@ -104,7 +104,7 @@ const VOH_RATE_LIMIT = 20;
 const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-api')
   || initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api');
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
-const mediaBucket = getStorage(firebaseAdminApp).bucket(firebaseStorageBucket || undefined);
+const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
@@ -135,6 +135,7 @@ async function allowChatMediaUpload(uid: string): Promise<boolean> {
 const privateChatMediaRouter = express.Router();
 privateChatMediaRouter.use(requireFirebaseUser);
 privateChatMediaRouter.post('/chat/:chatId/audio', async (req, res) => {
+  if (!mediaBucket) return res.status(503).json({ error: 'Media storage is not configured for this environment.' });
   const uid = res.locals.userId as string;
   const chatId = req.params.chatId;
   const { audioBase64, mimeType } = req.body || {};
@@ -174,6 +175,7 @@ privateChatMediaRouter.post('/chat/:chatId/audio', async (req, res) => {
   }
 });
 privateChatMediaRouter.get('/chat/:chatId/audio/:uploaderId/:mediaId', async (req, res) => {
+  if (!mediaBucket) return res.status(503).json({ error: 'Media storage is not configured for this environment.' });
   const { chatId, uploaderId, mediaId } = req.params;
   const uid = res.locals.userId as string;
   const storagePath = `chats/${chatId}/audio/${uploaderId}/${mediaId}`;

@@ -23,11 +23,11 @@ const unresolvedConfigFields = Object.entries(resolvedConfig)
   .filter(([name, value]) => name !== 'measurementId' && (typeof value !== 'string' || !value.trim() || value.includes('<owner-')))
   .map(([name]) => name);
 if (resolvedConfig.projectId !== 'nexora-prod-voiceharrison') {
-  throw new Error('Firebase configuration targets an unexpected project. Expected nexora-prod-voiceharrison.');
+  unresolvedConfigFields.push('projectId');
 }
-if (!isEmulatorRuntime && unresolvedConfigFields.length > 0) {
-  throw new Error(`Firebase web configuration is incomplete. Provide owner-verified values for: ${unresolvedConfigFields.join(', ')}.`);
-}
+export const firebaseConfigError = !isEmulatorRuntime && unresolvedConfigFields.length > 0
+  ? `Firebase web configuration is incomplete. Provide owner-verified values for: ${[...new Set(unresolvedConfigFields)].join(', ')}.`
+  : null;
 
 const app = initializeApp(resolvedConfig);
 export { app };

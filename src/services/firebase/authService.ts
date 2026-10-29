@@ -13,7 +13,7 @@ import {
   signInWithPopup,
   signOut
 } from 'firebase/auth';
-import { auth, db } from './config';
+import { auth, db, firebaseConfigError } from './config';
 import { User } from '../../types';
 import { ProfileService } from './profileService';
 import { EmailService } from './emailService';
@@ -29,6 +29,10 @@ export interface RateLimitStatus {
 }
 
 export class AuthService {
+  private static requireConfigured(): void {
+    if (firebaseConfigError) throw new Error(firebaseConfigError);
+  }
+
   private static publicAuthError(error: unknown): Error & { code?: string } {
     const source = error as { code?: string } | null;
     const wrapped = new Error(this.mapFirebaseError(error)) as Error & { code?: string };
@@ -155,6 +159,7 @@ export class AuthService {
    * Login with Email & Password
    */
   static async loginWithEmail(email: string, password: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    this.requireConfigured();
     const cleanEmail = email.toLowerCase().trim();
     const rateLimit = this.getRateLimitStatus(cleanEmail);
     if (rateLimit.isLocked) {
@@ -196,6 +201,7 @@ export class AuthService {
     fullName: string,
     username: string
   ): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    this.requireConfigured();
     const cleanEmail = email.toLowerCase().trim();
     const cleanUsername = username.toLowerCase().trim();
 
@@ -244,6 +250,7 @@ export class AuthService {
    * Login with Google
    */
   static async loginWithGoogle(): Promise<{ firebaseUser: FirebaseUser; user: User; isNewUser: boolean }> {
+    this.requireConfigured();
     let authenticatedUser: FirebaseUser | null = null;
     try {
       const provider = new GoogleAuthProvider();
@@ -298,6 +305,7 @@ export class AuthService {
   }
 
   static async sendPhoneCode(phoneNumber: string, verifier: RecaptchaVerifier): Promise<ConfirmationResult> {
+    this.requireConfigured();
     try {
       const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
       return confirmationResult;
@@ -307,6 +315,7 @@ export class AuthService {
   }
 
   static async verifyPhoneCode(confirmationResult: ConfirmationResult, code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    this.requireConfigured();
     let authenticatedUser: FirebaseUser | null = null;
     try {
       const credential = await confirmationResult.confirm(code);
@@ -340,6 +349,7 @@ export class AuthService {
    * Send Verification Email
    */
   static async sendVerificationEmail(user?: FirebaseUser): Promise<boolean> {
+    this.requireConfigured();
     const targetUser = user || auth.currentUser;
     if (!targetUser) throw new Error('No user currently authenticated.');
     try {
@@ -360,6 +370,7 @@ export class AuthService {
    * Refresh Verification Status
    */
   static async refreshVerificationStatus(user?: FirebaseUser): Promise<boolean> {
+    if (firebaseConfigError) return false;
     const targetUser = user || auth.currentUser;
     if (!targetUser) return false;
     try {
@@ -377,6 +388,7 @@ export class AuthService {
    * Send Password Reset Email
    */
   static async sendPasswordReset(email: string): Promise<boolean> {
+    this.requireConfigured();
     const cleanEmail = email.toLowerCase().trim();
     try {
       await sendPasswordResetEmail(auth, cleanEmail);
@@ -394,6 +406,7 @@ export class AuthService {
    * Logout
    */
   static async logout(): Promise<void> {
+    this.requireConfigured();
     try {
       await signOut(auth);
     } catch (err: any) {
