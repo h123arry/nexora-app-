@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
 
-import { Camera, Video as VideoIcon, Mic, BarChart2, FileText, Award, Users as UsersIcon, MapPin, Smile, ChevronRight, Play, Pause, Trash2, RefreshCw, Eye, WifiOff, FolderOpen } from 'lucide-react';
+import { Camera, Video as VideoIcon, Mic, BarChart2, FileText, Award, MapPin, Smile, ChevronRight, Play, Pause, Trash2, RefreshCw, Eye, WifiOff, FolderOpen } from 'lucide-react';
 
 import { 
   User, 
@@ -2251,12 +2251,30 @@ export default function App() {
                   )}
 
                   {activeTab === 'inbox' && (
-                    <NewInboxView
-                      currentUser={getRichUser(currentUser)}
-                      chats={resolvedChats}
-                      messages={messages}
-                      creators={Object.values(globalUsersMap) as User[]}
-                    />
+                    <div className="space-y-3">
+                      <div className="flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => navigateTo('activity')}
+                          aria-label={unreadNotificationsCount > 0 ? `Open Activity, ${unreadNotificationsCount} unread` : 'Open Activity'}
+                          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-xs font-semibold text-violet-100 transition-colors hover:border-violet-300/40 hover:bg-violet-500/20"
+                        >
+                          <Bell className="h-4 w-4" aria-hidden="true" />
+                          Activity
+                          {unreadNotificationsCount > 0 && (
+                            <span className="min-w-5 rounded-full bg-violet-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                              {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+                      <NewInboxView
+                        currentUser={getRichUser(currentUser)}
+                        chats={resolvedChats}
+                        messages={messages}
+                        creators={Object.values(globalUsersMap) as User[]}
+                      />
+                    </div>
                   )}
 
                   {activeTab === 'activity' && (
@@ -2503,19 +2521,6 @@ export default function App() {
           <span className="text-[9px] font-mono tracking-wide uppercase">Explore</span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => navigateTo('communities')}
-          aria-label="Communities"
-          aria-current={activeTab === 'communities' ? 'page' : undefined}
-          data-active={activeTab === 'communities'}
-          className="nx-dock-item cursor-pointer"
-          id="mobile-nav-communities"
-        >
-          <UsersIcon className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[9px] font-mono tracking-wide uppercase">Communities</span>
-        </button>
-
         <motion.button
           type="button"
           onClick={() => {
@@ -2554,32 +2559,19 @@ export default function App() {
         <button
           type="button"
           onClick={() => navigateTo('inbox')}
-          aria-label={unreadMessagesCount > 0 ? `Messages, ${unreadMessagesCount} unread` : 'Messages'}
-          aria-current={activeTab === 'inbox' ? 'page' : undefined}
-          data-active={activeTab === 'inbox'}
+          aria-label={`Inbox: ${unreadMessagesCount} unread messages and ${unreadNotificationsCount} unread activities`}
+          aria-current={activeTab === 'inbox' || activeTab === 'activity' ? 'page' : undefined}
+          data-active={activeTab === 'inbox' || activeTab === 'activity'}
           className="nx-dock-item relative cursor-pointer"
           id="mobile-nav-inbox"
         >
           <MessageSquare className="w-5 h-5" aria-hidden="true" />
-          {unreadMessagesCount > 0 && (
+          {(unreadMessagesCount + unreadNotificationsCount) > 0 && (
             <span className="absolute top-1.5 right-1/4 min-w-3.5 h-3.5 px-1 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" aria-hidden="true">
-              {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+              {(unreadMessagesCount + unreadNotificationsCount) > 9 ? '9+' : unreadMessagesCount + unreadNotificationsCount}
             </span>
           )}
-          <span className="text-[9px] font-mono tracking-wide uppercase">Messages</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => navigateTo('activity')}
-          aria-label="Activity"
-          aria-current={activeTab === 'activity' ? 'page' : undefined}
-          data-active={activeTab === 'activity'}
-          className="nx-dock-item cursor-pointer"
-          id="mobile-nav-activity"
-        >
-          <Bell className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[9px] font-mono tracking-wide uppercase">Activity</span>
+          <span className="text-[9px] font-mono tracking-wide uppercase">Inbox</span>
         </button>
 
         <button

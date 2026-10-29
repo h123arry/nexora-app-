@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe } from 'lucide-react';
+import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe, Users, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -429,6 +429,25 @@ export default function ExploreView({
       ) : (
         /* DEFAULT DISCOVERY LANDING */
         <div className="space-y-6">
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setActiveTab('communities')}
+              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-violet-500/10"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Users className="h-5 w-5" aria-hidden="true" /></span>
+              <span><span className="block text-sm font-bold text-white">Communities</span><span className="mt-0.5 block text-[10px] text-zinc-400">Find your people</span></span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('pulse')}
+              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-pink-300/30 hover:bg-pink-500/10"
+            >
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-500/15 text-pink-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
+              <span><span className="block text-sm font-bold text-white">Pulse</span><span className="mt-0.5 block text-[10px] text-zinc-400">Live network signals</span></span>
+            </button>
+          </div>
 
           {/* Nexora Pulse: recent topics and communities */}
           <div className="nx-surface rounded-3xl p-5 space-y-4 shadow-sm text-left">
