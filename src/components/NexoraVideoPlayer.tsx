@@ -6,6 +6,8 @@ import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import VideoBottomSheet from './VideoBottomSheet';
 import NexoraLoader from './NexoraLoader';
+import NexoraWatermark from './branding/NexoraWatermark';
+import NexoraPostRollCard from './branding/NexoraPostRollCard';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
@@ -112,6 +114,8 @@ export default function NexoraVideoPlayer({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
+  const [showPostRoll, setShowPostRoll] = useState(false);
+  const [watermarkPosition, setWatermarkPosition] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLongPressing, setIsLongPressing] = useState(false);
@@ -140,6 +144,9 @@ export default function NexoraVideoPlayer({
   const controlsTimeoutRef = useRef<any>(null);
   const qualitySwitchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const watermarkCycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const postRollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sonicAudioRef = useRef<HTMLAudioElement | null>(null);
   
   // Double-tap pulse effect
   const [showDoubleTapHeart, setShowDoubleTapHeart] = useState(false);
@@ -206,6 +213,23 @@ export default function NexoraVideoPlayer({
       setShowTapForSound(false);
     }
   }, [isPlaying, isMuted]);
+
+  useEffect(() => {
+    if (watermarkCycleRef.current) clearInterval(watermarkCycleRef.current);
+    if (!isPlaying || showPostRoll) return;
+    watermarkCycleRef.current = setInterval(() => {
+      setWatermarkPosition(position => (position + 1) % 4);
+    }, 5000);
+    return () => {
+      if (watermarkCycleRef.current) clearInterval(watermarkCycleRef.current);
+      watermarkCycleRef.current = null;
+    };
+  }, [isPlaying, showPostRoll]);
+
+  useEffect(() => () => {
+    if (postRollTimeoutRef.current) clearTimeout(postRollTimeoutRef.current);
+    sonicAudioRef.current?.pause();
+  }, []);
 
   // Register this player instance with the global VideoPlaybackManager
   useEffect(() => {
@@ -554,6 +578,11 @@ export default function NexoraVideoPlayer({
       setIsPlaying(false);
       setShowPlayStateIndicator('pause');
     } else {
+      if (showPostRoll || videoRef.current.ended || videoRef.current.currentTime >= duration - 0.05) {
+        videoRef.current.currentTime = 0;
+        setCurrentTime(0);
+        setShowPostRoll(false);
+      }
       // If muted because of autoplay, let's unmute on user's direct play request!
       if (autoplayBlocked && isMuted) {
         handleVolumeToggle(false);
@@ -570,6 +599,18 @@ export default function NexoraVideoPlayer({
     setTimeout(() => {
       setShowPlayStateIndicator(null);
     }, 600);
+  };
+
+  const handleVideoEnded = () => {
+    setIsPlaying(false);
+    setShowPostRoll(true);
+    if (postRollTimeoutRef.current) clearTimeout(postRollTimeoutRef.current);
+    if (sonicAudioRef.current) {
+      sonicAudioRef.current.currentTime = 0;
+      sonicAudioRef.current.volume = isMuted ? 0 : 0.82;
+      sonicAudioRef.current.play().catch(() => {});
+    }
+    postRollTimeoutRef.current = setTimeout(() => setShowPostRoll(false), 5000);
   };
 
   // Gesture controls temporarily disabled during Nexora stability pass.
@@ -939,7 +980,6 @@ export default function NexoraVideoPlayer({
               ref={videoRef}
               src={hasVideoError ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
               poster={post?.image || undefined}
-              loop
               playsInline
               preload={preloadMode || ((isNearby || shouldPreload) ? "auto" : "none")}
               muted={isMuted}
@@ -953,10 +993,33 @@ export default function NexoraVideoPlayer({
               onError={handleVideoFailure}
               onStalled={() => setIsBuffering(true)}
               onAbort={() => setIsBuffering(false)}
-              onEnded={() => setIsPlaying(false)}
+              onEnded={handleVideoEnded}
               className="relative z-[2] w-full h-full max-h-[85dvh] object-contain cursor-pointer"
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
+            <audio ref={sonicAudioRef} src="/sounds/nexora-sonic-logo.mp3" preload="auto" aria-hidden="true" />
+            <AnimatePresence mode="wait">
+              {!showPostRoll && (
+                <motion.div
+                  key={`watermark-${watermarkPosition}`}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.28 }}
+                  className={`absolute z-[18] ${[
+                    'bottom-[29%] right-4 sm:right-6',
+                    'top-[23%] left-4 sm:left-6',
+                    'bottom-[23%] left-4 sm:left-6',
+                    'top-[29%] right-4 sm:right-6',
+                  ][watermarkPosition]}`}
+                >
+                  <NexoraWatermark username={post.username} isVerified={post.isVerified} size="md" />
+                </motion.div>
+              )}
+              {showPostRoll && (
+                <NexoraPostRollCard username={post.username} isVerified={post.isVerified} avatar={post.avatar} />
+              )}
+            </AnimatePresence>
             {hasVideoError && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 text-center p-6 z-20 animate-fade-in">
                 <AlertTriangle className="w-10 h-10 text-pink-500 mb-2 animate-pulse" />

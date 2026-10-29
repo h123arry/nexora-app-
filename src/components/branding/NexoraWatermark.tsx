@@ -1,4 +1,5 @@
 import React from 'react';
+import NexoraPremiumLogo from '../NexoraPremiumLogo';
 import PurpleVerifiedBadge from '../VohVerifiedBadge';
 
 interface NexoraWatermarkProps {
@@ -13,39 +14,27 @@ export default function NexoraWatermark({
   username = 'nexora_user',
   isVerified = false,
   size = 'md',
-  opacity = 0.85,
+  opacity = 0.86,
   className = ''
 }: NexoraWatermarkProps) {
   const sizeClasses = {
-    sm: 'text-[10px] py-1 px-2.5 gap-1.5',
-    md: 'text-xs py-1.5 px-3.5 gap-2',
-    lg: 'text-sm py-2 px-4 gap-2.5',
+    sm: 'text-[10px] py-1 px-2 gap-1.5',
+    md: 'text-xs py-1.5 px-2.5 gap-1.5',
+    lg: 'text-sm py-2 px-3 gap-2',
   };
-
-  const logoSizes = {
-    sm: 'w-3 h-3',
-    md: 'w-4 h-4',
-    lg: 'w-5 h-5',
-  };
-
+  const logoSizes = { sm: 'w-4 h-4', md: 'w-5 h-5', lg: 'w-6 h-6' };
+  const badgeSizes = { sm: 'w-3 h-3', md: 'w-3.5 h-3.5', lg: 'w-4 h-4' };
   const formattedUsername = username.startsWith('@') ? username : `@${username}`;
 
   return (
-    <div 
-      className={`inline-flex items-center rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white font-sans shadow-lg select-none ${sizeClasses[size]} ${className}`}
+    <div
+      className={`inline-flex items-center rounded-full bg-black/55 backdrop-blur-md border border-white/10 text-white font-sans shadow-lg select-none ${sizeClasses[size]} ${className}`}
       style={{ opacity }}
-      id="nexora-creator-watermark"
+      aria-label={`Nexora watermark for ${formattedUsername}${isVerified ? ', verified' : ''}`}
     >
-      <div className={`rounded-full overflow-hidden bg-gradient-to-tr from-violet-600 to-indigo-500 flex items-center justify-center shrink-0 ${logoSizes[size]} shadow-sm`}>
-        <span className="font-black text-[9px] text-white">N</span>
-      </div>
-      <span className="font-semibold text-zinc-200 tracking-tight">{formattedUsername}</span>
-      {isVerified && (
-        <span className="inline-flex items-center">
-          <PurpleVerifiedBadge className={size === 'sm' ? 'w-3 h-3 ml-0.5' : size === 'lg' ? 'w-5 h-5 ml-1' : 'w-4 h-4 ml-0.5'} />
-        </span>
-      )}
-      <span className="text-[9px] text-violet-300 font-bold uppercase tracking-wider pl-1 border-l border-white/15 ml-0.5">NEXORA</span>
+      <NexoraPremiumLogo className={`${logoSizes[size]} shrink-0`} />
+      <span className="font-semibold text-zinc-100 tracking-tight">{formattedUsername}</span>
+      {isVerified && <PurpleVerifiedBadge className={`${badgeSizes[size]} shrink-0`} />}
     </div>
   );
 }
