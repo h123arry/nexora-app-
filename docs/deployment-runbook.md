@@ -6,6 +6,8 @@ A repository commit is not a deployment. The release operator must record the ex
 
 ## Pre-release verification
 
+For staging setup, first follow [`staging-setup-and-verification.md`](staging-setup-and-verification.md). The repository does not assume that the checked-in Firebase target is owner-controlled or suitable for staging. Load an owner-provided non-production environment and run `npm run validate:staging` before any Firebase CLI command.
+
 From a clean checkout of the intended commit, use Node.js 22 and the lockfiles:
 
 ```sh
