@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Flame, Radio, Music, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe } from 'lucide-react';
+import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -78,20 +78,22 @@ export default function ExploreView({
     } catch {}
   };
 
-  // Compute trending hashtags from real posts
+  // Compute bounded recent topic activity from real post timestamps and tags.
   const trendingTags = useMemo(() => {
     const tagCounts: { [tag: string]: number } = {};
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
     posts.forEach(p => {
+      const timestamp = typeof p.timestamp === 'string' ? Date.parse(p.timestamp) : Number(p.timestamp);
+      if (!Number.isFinite(timestamp) || timestamp < cutoff) return;
       (p.tags || []).forEach(t => {
-        const clean = t.startsWith('#') ? t : `#${t}`;
+        const normalized = t.replace(/^#/, '').trim().toLowerCase();
+        if (!normalized) return;
+        const clean = `#${normalized}`;
         tagCounts[clean] = (tagCounts[clean] || 0) + 1;
       });
     });
     const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
-    if (sorted.length === 0) {
-      return [];
-    }
-    return sorted.slice(0, 6).map(([tag]) => tag);
+    return sorted.filter(([, count]) => count >= 2).slice(0, 6);
   }, [posts]);
 
   // Filtered lists for search
@@ -428,11 +430,11 @@ export default function ExploreView({
         /* DEFAULT DISCOVERY LANDING */
         <div className="space-y-6">
 
-          {/* Nexora Pulse: Trending Topics & Communities */}
+          {/* Nexora Pulse: recent topics and communities */}
           <div className="nx-surface rounded-3xl p-5 space-y-4 shadow-sm text-left">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
-                <Flame className="w-4 h-4 text-pink-500" /> Nexora Pulse (Trending)
+                <Flame className="w-4 h-4 text-pink-500" /> Nexora Pulse
               </h3>
               <button 
                 onClick={() => setShowAllPulse(!showAllPulse)} 
@@ -443,10 +445,10 @@ export default function ExploreView({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase block">🔥 Trending Hashtags</span>
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Recent topics · 7 days</span>
                 {trendingTags.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-white/10 p-4 text-xs leading-relaxed text-zinc-500">No trending hashtags yet. Start the next conversation from your feed.</div>
-                ) : trendingTags.slice(0, showAllPulse ? 6 : 4).map(tag => (
+                ) : trendingTags.slice(0, showAllPulse ? 6 : 4).map(([tag, count]) => (
                   <button
                     key={tag}
                     onClick={() => {
@@ -457,7 +459,7 @@ export default function ExploreView({
                     className="w-full text-left p-2.5 rounded-xl bg-white/5 hover:bg-violet-600/15 border border-white/5 text-xs text-zinc-200 font-medium transition-all flex items-center justify-between cursor-pointer"
                   >
                     <span className="font-mono text-violet-300">{tag}</span>
-                    <span className="text-[10px] font-mono text-zinc-500">Trending</span>
+                    <span className="text-[10px] font-mono text-zinc-500">{count} posts</span>
                   </button>
                 ))}
               </div>
@@ -516,71 +518,6 @@ export default function ExploreView({
                     }`}
                   >
                     {followingIds.includes(user.id) ? 'Following' : 'Follow'}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Active Live Streams */}
-          <div className="nx-surface rounded-3xl p-5 space-y-3 text-left shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-mono font-black text-rose-400 uppercase tracking-widest flex items-center gap-2">
-                <Radio className="w-3.5 h-3.5 text-rose-500 animate-ping" /> Live Streams
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="p-3.5 bg-white/5 border border-rose-500/20 rounded-2xl flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 overflow-hidden">
-                  <div className="relative shrink-0">
-                    <img src="/src/assets/images/voh_logo_avatar_1781774114050.jpg" alt="VOH" className="w-11 h-11 rounded-xl object-cover ring-2 ring-rose-500/40" />
-                    <span className="absolute -bottom-1 -right-1 bg-rose-500 text-white text-[8px] font-mono px-1 rounded-full font-bold">LIVE</span>
-                  </div>
-                  <div className="overflow-hidden">
-                    <h4 className="text-xs font-bold text-white truncate">VOICE OF HARRISON</h4>
-                    <p className="text-[10px] text-zinc-400 truncate">Quantum Networking & Zero Latency Systems</p>
-                    <span className="text-[9px] font-mono text-rose-400 font-bold block mt-0.5">👁️ 1,284 watching</span>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    window.dispatchEvent(new CustomEvent('toast', { detail: 'Opening Live stream broadcast...' }));
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0 shadow-lg shadow-rose-600/20"
-                >
-                  Watch
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Trending Audio & Sounds */}
-          <div className="nx-surface rounded-3xl p-5 space-y-3 text-left shadow-sm">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-mono font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
-                <Music className="w-4 h-4 text-amber-400" /> Trending Sounds
-              </h3>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {[
-                { id: 's-1', title: 'Midnight Vapor Drift', artist: '@nexora_ai', uses: '14.2K' },
-                { id: 's-2', title: 'Zero Latency Pulse', artist: '@voh', uses: '9.8K' }
-              ].map(sound => (
-                <div key={sound.id} className="p-3 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 overflow-hidden">
-                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 font-bold shrink-0">
-                      🎵
-                    </div>
-                    <div className="overflow-hidden">
-                      <h4 className="text-xs font-bold text-white truncate">{sound.title}</h4>
-                      <p className="text-[10px] text-zinc-400 truncate">{sound.uses} videos →</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => window.dispatchEvent(new CustomEvent('toast', { detail: `Playing sound: ${sound.title} 🎵` }))}
-                    className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-white cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
                   </button>
                 </div>
               ))}

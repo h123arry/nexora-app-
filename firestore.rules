@@ -302,14 +302,18 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
-    // Stories are public text updates. Identity comes from the owner's public profile;
-    // clients cannot write view counts or extend a story beyond its 24-hour lifetime.
+    // Stories are public, short-lived updates. Identity comes from the owner's public
+    // profile; clients cannot write view counts or extend a story beyond 24 hours.
     match /stories/{storyId} {
-      allow get, list: if signedIn() && resource.data.privacy == 'everyone';
+      allow get: if signedIn()
+        && (resource.data.userId == request.auth.uid
+          || (resource.data.privacy == 'everyone' && resource.data.expiresAt > request.time));
+      allow list: if signedIn()
+        && resource.data.privacy == 'everyone';
       allow create: if accountMayPost()
         && request.resource.data.keys().hasOnly([
           'id', 'userId', 'name', 'username', 'avatar', 'caption',
-          'mediaType', 'privacy', 'createdAt', 'expiresAt'
+          'mediaType', 'mediaUrl', 'storagePath', 'mediaId', 'privacy', 'createdAt', 'expiresAt'
         ])
         && request.resource.data.id == storyId
         && request.resource.data.userId == request.auth.uid
@@ -318,9 +322,19 @@ service cloud.firestore {
         && request.resource.data.username == get(/databases/$(database)/documents/publicProfiles/$(request.auth.uid)).data.username
         && request.resource.data.avatar == get(/databases/$(database)/documents/publicProfiles/$(request.auth.uid)).data.avatar
         && request.resource.data.caption is string
-        && request.resource.data.caption.size() > 0
         && request.resource.data.caption.size() <= 500
-        && request.resource.data.mediaType == 'text'
+        && ((request.resource.data.mediaType == 'text'
+          && request.resource.data.caption.size() > 0
+          && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath', 'mediaId']))
+          || (request.resource.data.mediaType in ['image', 'video']
+            && request.resource.data.mediaUrl is string
+            && request.resource.data.mediaUrl.size() > 0
+            && request.resource.data.mediaUrl.size() <= 2000
+            && request.resource.data.storagePath is string
+            && request.resource.data.storagePath.size() > 0
+            && request.resource.data.storagePath.size() <= 500
+            && request.resource.data.mediaId is string
+            && request.resource.data.mediaId == storyId))
         && request.resource.data.privacy == 'everyone'
         && request.resource.data.createdAt == request.time
         && request.resource.data.expiresAt is timestamp
@@ -328,6 +342,20 @@ service cloud.firestore {
         && request.resource.data.expiresAt <= request.time + duration.value(24, 'h');
       allow update: if false;
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+
+      match /views/{viewerId} {
+        allow create: if signedIn()
+          && viewerId == request.auth.uid
+          && request.resource.data.keys().hasOnly(['storyId', 'viewerId', 'createdAt'])
+          && request.resource.data.storyId == storyId
+          && request.resource.data.viewerId == request.auth.uid
+          && request.resource.data.createdAt == request.time
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.privacy == 'everyone'
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.expiresAt > request.time;
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.userId == request.auth.uid;
+        allow update, delete: if false;
+      }
     }
 
     match /follows/{followId} {

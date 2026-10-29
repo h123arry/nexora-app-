@@ -248,7 +248,7 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('mallory'), 'posts', 'p1')));
   });
 
-  it('restricts stories to authenticated readers and verified text-story authors, with owner-only deletion', async () => {
+  it('restricts stories to authenticated readers, validates media stories, expires active reads, and protects viewer records', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'publicProfiles', 'alice'), publicProfile('alice'));
     });
@@ -259,8 +259,21 @@ const publicProfile = (uid) => ({
     };
 
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'stories', 'story-1'), story));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'stories', 'story-media'), {
+      ...story,
+      id: 'story-media',
+      mediaType: 'image',
+      caption: '',
+      mediaUrl: 'https://firebasestorage.googleapis.com/v0/b/demo/o/users%2Falice%2Fmedia%2Fstory-media',
+      storagePath: 'users/alice/media/story-media',
+      mediaId: 'story-media',
+    }));
     await assertFails(setDoc(doc(dbFor('bob'), 'stories', 'spoofed'), { ...story, id: 'spoofed' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'stories', 'forged-metrics'), { ...story, id: 'forged-metrics', views: 500 }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'stories', 'forged-media-id'), {
+      ...story, id: 'forged-media-id', mediaType: 'image', caption: '',
+      mediaUrl: 'https://example.test/story', storagePath: 'users/alice/media/other', mediaId: 'other'
+    }));
     await assertFails(setDoc(doc(dbFor('alice'), 'stories', 'too-long'), { ...story, id: 'too-long', caption: 'x'.repeat(501) }));
     await assertFails(getDoc(doc(guestDb(), 'stories', 'story-1')));
     await assertSucceeds(getDocs(query(
@@ -268,6 +281,21 @@ const publicProfile = (uid) => ({
       where('privacy', '==', 'everyone'),
       where('expiresAt', '>', Timestamp.now())
     )));
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'stories', 'story-1', 'views', 'bob'), {
+      storyId: 'story-1', viewerId: 'bob', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'stories', 'story-1', 'views', 'bob')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'stories', 'story-1', 'views', 'bob')));
+    await assertFails(setDoc(doc(dbFor('mallory'), 'stories', 'story-1', 'views', 'bob'), {
+      storyId: 'story-1', viewerId: 'bob', createdAt: serverTimestamp()
+    }));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'stories', 'expired-story'), {
+        ...story, id: 'expired-story', createdAt: Timestamp.fromMillis(Date.now() - 25 * 60 * 60 * 1000), expiresAt: Timestamp.fromMillis(Date.now() - 60 * 60 * 1000)
+      });
+    });
+    await assertFails(getDoc(doc(dbFor('bob'), 'stories', 'expired-story')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'stories', 'expired-story')));
     await assertFails(deleteDoc(doc(dbFor('bob'), 'stories', 'story-1')));
     await assertFails(updateDoc(doc(dbFor('alice'), 'stories', 'story-1'), { caption: 'Changed after publishing' }));
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'stories', 'story-1')));
