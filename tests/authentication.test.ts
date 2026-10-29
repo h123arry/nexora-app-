@@ -21,8 +21,10 @@ async function cleanUp() {
 }
 
 test('maps Firebase configuration and credential failures without exposing provider details', () => {
-  assert.match(AuthService.mapFirebaseError({ code: 'auth/operation-not-allowed' }), /Email\/Password sign-in is not enabled/);
+  assert.match(AuthService.mapFirebaseError({ code: 'auth/operation-not-allowed' }), /sign-in method is not enabled/);
   assert.match(AuthService.mapFirebaseError({ code: 'auth/unauthorized-domain' }), /not authorized/);
+  assert.match(AuthService.mapFirebaseError({ code: 'auth/invalid-phone-number' }), /Invalid phone number/);
+  assert.match(AuthService.mapFirebaseError({ code: 'auth/captcha-check-failed' }), /Phone verification could not be completed/);
   assert.equal(AuthService.mapFirebaseError({ code: 'auth/internal-error', message: 'secret provider stack' }), 'An authentication error occurred. Please try again or contact the account owner.');
 });
 

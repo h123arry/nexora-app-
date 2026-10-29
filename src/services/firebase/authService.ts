@@ -63,12 +63,19 @@ export class AuthService {
         return 'Too many unsuccessful requests. Please try again later.';
       case 'auth/network-request-failed':
         return 'Network error. Please check your internet connection.';
+      case 'auth/user-disabled':
+        return 'This account has been disabled. Please contact Nexora support.';
+      case 'auth/invalid-phone-number':
+        return 'Invalid phone number format. Please check the digits and try again.';
+      case 'auth/captcha-check-failed':
+      case 'auth/invalid-app-credential':
+        return 'Phone verification could not be completed. Please refresh and try again.';
       case 'auth/invalid-verification-code':
         return 'Invalid verification code. Please check and try again.';
       case 'auth/code-expired':
         return 'Verification code has expired. Please request a new one.';
       case 'auth/operation-not-allowed':
-        return 'Email/Password sign-in is not enabled in Firebase Console. Please enable Email/Password provider in your Firebase Authentication settings or use Demo Mode.';
+        return 'This sign-in method is not enabled in Firebase Authentication. Ask the project owner to enable the required provider.';
       case 'auth/missing-phone-number':
         return 'Phone number is missing.';
       case 'auth/unauthorized-domain':
@@ -292,7 +299,7 @@ export class AuthService {
       const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
       return confirmationResult;
     } catch (err: any) {
-      throw new Error(this.mapFirebaseError(err));
+      throw this.publicAuthError(err);
     }
   }
 
@@ -319,7 +326,7 @@ export class AuthService {
 
       return { firebaseUser: fbUser, user: userProfile };
     } catch (err: any) {
-      throw new Error(this.mapFirebaseError(err));
+      throw this.publicAuthError(err);
     }
   }
 
@@ -339,7 +346,7 @@ export class AuthService {
       }
       return true;
     } catch (err: any) {
-      throw new Error(this.mapFirebaseError(err));
+      throw this.publicAuthError(err);
     }
   }
 
