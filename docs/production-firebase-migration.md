@@ -2,7 +2,7 @@
 
 ## Decision
 
-**PARTIALLY CONFIGURED — owner-supplied Web App values and the existing Firestore database ID/location are integrated. Live Authentication provider settings and production sign-up/login still require authenticated Console verification and non-production smoke tests.**
+**PARTIALLY CONFIGURED — owner-supplied Web App values and the existing Firestore database ID/location are integrated. Production sign-off is blocked by Firebase's Public Preview named-database APIs in the current web/Admin paths, and by unverified live Authentication settings and signup/login tests.**
 
 The repository's canonical Firebase target is `nexora-prod-voiceharrison`. The inaccessible project `evident-server-bqmt3` is no longer an active client, backend, Functions, deployment-alias, or environment target. Historical engineering reports that describe the former project remain unchanged as historical records.
 
@@ -105,6 +105,7 @@ Emulator tests are not live-project evidence. Do not mark any live journey as pa
 - Firebase Console access: **not yet authenticated**; the project redirected to Google sign-in.
 - Firebase CLI authorization: **not available in this environment**.
 - Firestore database ID `default` and location `europe-west1`: **owner-confirmed; no live read/write or deployment was performed from this environment**.
+- The Firebase JS and Admin SDK named-database overloads used by the current app are documented as **Public Preview** and explicitly not recommended for production. The supported Google Cloud Node client has a named-database setting, but a backend-only replacement would leave the browser preview dependency; owner architecture decision required before release. See the [JS SDK reference](https://firebase.google.com/docs/reference/js/firestore_), [Admin SDK reference](https://firebase.google.com/docs/reference/admin/node/firebase-admin.firestore), and [Google Cloud Node client settings](https://docs.cloud.google.com/nodejs/docs/reference/firestore/latest/firestore/settings).
 - Target-project Auth provider/domain/phone settings and other live resource state: **not yet verified by an authenticated Console session**.
 - Existing data in `nexora-prod-voiceharrison`: **unknown; preserve and inspect before deployment**.
 - Authentication: only existing emulator coverage can be relied upon until real target-project accounts are tested.
