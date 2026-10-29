@@ -87,16 +87,16 @@ Firebase services have separate configuration and security models:
 
 | Service | Repository usage |
 | --- | --- |
-| Firebase Authentication | Account identity and authenticated client flows. Live provider settings have not been verified. |
-| Cloud Firestore | Primary application database for the persisted paths described above, with client snapshot listeners. |
-| Firebase Storage | Media objects, including private chat voice media served through authenticated server routes. |
+| Firebase Authentication | Email/Password and Google are enabled in the Console. Phone is disabled. Authorized domains include `localhost`, `nexora-prod-voiceharrison.firebaseapp.com`, and `nexora-prod-voiceharrison.web.app`; no custom host is listed. No live signup/login flow has been tested. |
+| Cloud Firestore | Primary persistence for profiles, posts/feed, follows, communities, chats/messages, notifications, and preferences. Messaging typing and presence snapshots are Firestore-backed, not RTDB. The active `default` database is in `europe-west1`; the Console showed no read/write/realtime-read metrics for the selected last seven days, scheduled backups are disabled, and published rules are unverified. |
+| Firebase Storage | App code expects Storage for media and private chat voice media, but the Console shows Storage onboarding and requires Blaze billing. No production bucket or upload is verified. |
 | Firebase Functions | Callable, scheduled, and trusted operations. Source presence does not prove deployment. |
 | Firebase Cloud Messaging | Optional foreground/browser messaging code; end-to-end background delivery is not established. |
-| Firebase Realtime Database | **No current application initialization or use found.** No RTDB rules file or Firebase CLI deployment target is present. |
+| Firebase Realtime Database | **No current application initialization or use found**, including for messaging, typing, or presence. The Console confirms the supplied `europe-west1` instance; live rules are deny-all (`.read: false`, `.write: false`). |
 
-The owner-confirmed Firebase project is `nexora-prod-voiceharrison`. The owner-confirmed Cloud Firestore database ID is the literal `default` in `europe-west1`. This is distinct from Firestore's special `(default)` database. `FIRESTORE_DATABASE_ID` and `VITE_FIREBASE_DATABASE_ID` select a **Firestore database ID**; they are not Realtime Database URLs. The Firebase CLI config contains rules/index targets for both `(default)` and `default`; those entries do not create databases or prove that either target is deployed.
+The owner-confirmed Firebase project is `nexora-prod-voiceharrison`. Firebase Console lists the single active Cloud Firestore database as the literal `default` in `europe-west1`. This is distinct from Firestore's special `(default)` database. `FIRESTORE_DATABASE_ID` and `VITE_FIREBASE_DATABASE_ID` select a **Firestore database ID**; they are not Realtime Database URLs. The Firebase CLI config now targets only the confirmed `default` database to avoid an accidental deployment to the separate `(default)` target. No collection or document was opened during verification.
 
-The owner supplied this candidate Realtime Database URL: `https://nexora-prod-voiceharrison-default-rtdb.europe-west1.firebasedatabase.app`. Its association with the live instance has not been independently verified in Firebase Console, and the current application does not use it. No `databaseURL` was added to the app configuration. Do not treat this URL as a Firestore database ID or add RTDB reads/writes unless a feature and its access model are deliberately designed and tested.
+The Realtime Database URL `https://nexora-prod-voiceharrison-default-rtdb.europe-west1.firebasedatabase.app` was independently confirmed in Console; its location is Belgium (`europe-west1`). Its live rules deny all reads and writes. Because no application feature initializes or uses RTDB, no `databaseURL` was added to the app configuration. Do not treat this URL as a Firestore database ID or add RTDB reads/writes unless a feature and its access model are deliberately designed and tested.
 
 The current client and Admin code use Firebase named-database APIs. Firebase's official references mark the relevant named-database overloads as **Public Preview** and advise against production use: [Firebase JS Firestore reference](https://firebase.google.com/docs/reference/js/firestore_) and [Firebase Admin Firestore reference](https://firebase.google.com/docs/reference/admin/node/firebase-admin.firestore). The Firestore emulator also does not model multiple databases. This is a production architecture decision, not something CI success resolves.
 
@@ -110,7 +110,7 @@ Security-related controls present in the repository include:
 - Bounded VOH request context and per-user rate limiting; private chat media checks verify conversation access and message linkage.
 - Emulator-based Auth, Firestore Rules, Storage Rules, and API security tests, plus unit and policy tests.
 
-These are source and test artifacts—not proof of production enforcement. Firebase Authentication providers and authorized domains, deployed rules/indexes, App Check enforcement, IAM, rate limits, secrets, resource availability, backups, and live data behavior remain to be verified in the target environment. Do not disable checks or deploy broad allow rules to work around configuration failures.
+These are source and test artifacts—not proof of production enforcement. Email/Password and Google are enabled, but Phone Auth is disabled and no custom domain is listed. Published Firestore rules/indexes, App Check (Console still shows `Get started`), IAM, rate limits, secrets, backups, and live data behavior remain unverified or incomplete. Storage is not set up in the project. Do not disable checks or deploy broad allow rules to work around configuration failures.
 
 ## Getting started
 
@@ -179,7 +179,7 @@ The Firebase emulator tests use demo project IDs and do not access production da
 
 GitHub Actions runs on pushes and pull requests to `main`. The workflow installs both lockfiles, runs the secret scan, type check, Functions build, unit and emulator suites, production dependency audits, production build, and deployment metadata validation. **CI does not deploy the app or verify live Firebase resources.** A passing CI run is not proof of production registration, login, push, AI, or payment behavior.
 
-Production release is not certified. The current named-Firestore API preview limitation, staging verification, live Authentication configuration, deployed rules/resources, server environment, and provider integrations must be resolved or explicitly accepted before release. The `.firebaserc` includes the production project; always verify the target and owner approval before any deployment. Do not run an unrestricted production deploy.
+Production release is not certified. Blockers include the named-Firestore API Public Preview limitation, Storage requiring Blaze billing, App Check not configured, Phone Auth disabled, any custom production host not yet authorized, disabled Firestore scheduled backups, unverified published Firestore rules, and untested live authentication, server environment, and provider integrations. The `.firebaserc` includes the production project; always verify the target and owner approval before any deployment. Do not run an unrestricted production deploy.
 
 ## Project principles
 

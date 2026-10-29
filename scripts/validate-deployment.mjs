@@ -64,6 +64,9 @@ if (firebase && webConfig && typeof webConfig.firestoreDatabaseId === 'string'
   if (!configuredDatabaseIds.includes(webConfig.firestoreDatabaseId)) {
     failures.push('firebase.json: a Firestore database entry must match firebase-applet-config.json firestoreDatabaseId');
   }
+  if (configuredDatabaseIds.length !== 1 || configuredDatabaseIds[0] !== webConfig.firestoreDatabaseId) {
+    failures.push('firebase.json: only the owner-confirmed Firestore database ID may be configured for deployment');
+  }
 }
 
 if (rootPackage?.engines?.node !== '22') failures.push('package.json: Node engine must be 22');

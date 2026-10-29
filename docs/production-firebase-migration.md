@@ -2,11 +2,11 @@
 
 ## Decision
 
-**PARTIALLY CONFIGURED — owner-supplied Web App values and the existing Firestore database ID/location are integrated. Production sign-off is blocked by Firebase's Public Preview named-database APIs in the current web/Admin paths, and by unverified live Authentication settings and signup/login tests.**
+**PARTIALLY CONFIGURED — owner-supplied Web App values and the confirmed Firestore target are integrated. Read-only Console checks found Email/Password and Google enabled, Phone disabled, RTDB rules deny-all, Storage not set up (Blaze billing required), App Check not configured, and Firestore scheduled backups disabled. Production sign-off is blocked by named-database Public Preview APIs, unverified live Firestore rules/data paths, and the absence of real signup/login and provider-backed tests.**
 
 The repository's canonical Firebase target is `nexora-prod-voiceharrison`. The inaccessible project `evident-server-bqmt3` is no longer an active client, backend, Functions, deployment-alias, or environment target. Historical engineering reports that describe the former project remain unchanged as historical records.
 
-No Firebase project was modified, no data was copied, and no deployment was attempted because this environment has no authorized Firebase CLI account.
+Firebase Console resource metadata was inspected read-only. No project settings, rules, billing, or production data were changed; no documents or files were opened, no data was copied, and no deployment was attempted. Firebase CLI authorization is not available in this environment.
 
 ## Changes prepared in this repository
 
@@ -14,7 +14,7 @@ No Firebase project was modified, no data was copied, and no deployment was atte
 - Integrated the owner-supplied Web App ID, browser API key, Auth domain, sender ID, Analytics ID, Storage bucket, and public VAPID key through the existing config and environment-variable names. Set the owner-confirmed Firestore database ID to the literal `default` and recorded its `europe-west1` location.
 - Kept the Express server fail-closed in production and added a shared Cloud Functions guard that refuses to assume `(default)` outside the Firestore emulator.
 - Synchronized the Firebase messaging service worker with the supplied Web App values.
-- Replaced the active named-database deployment placeholder with the exact confirmed ID `default`, while retaining the existing separate `(default)` entry.
+- Restricted `firebase.json` to the only active, Console-confirmed Firestore database ID `default`; added deployment validation that rejects additional unconfirmed database targets.
 - Strengthened `npm run validate:deployment` to require the canonical project, match project-number/app/domain/bucket fields, keep the service worker synchronized, and require the web config and `firebase.json` to target the same verified database.
 - Added optional `VITE_FIREBASE_*` browser configuration overrides with a hard fail for unresolved placeholders or unexpected project IDs.
 - Added deployment validation that checks the messaging service worker's public Firebase values against the web-app configuration.
@@ -24,11 +24,11 @@ No Firebase project was modified, no data was copied, and no deployment was atte
 
 ## Owner action: verify the registered Firebase web app and Authentication settings
 
-In Firebase Console, open **NEXORA Production** (`nexora-prod-voiceharrison`) using the owner account. Under **Project settings → Your apps**, verify that the existing registered Web app matches the owner-supplied values already integrated in `firebase-applet-config.json` and `public/firebase-messaging-sw.js`. Do not register a duplicate app if the existing one is correct.
+In Firebase Console, open **NEXORA Production** (`nexora-prod-voiceharrison`) using the owner account. Under **Project settings → Your apps**, verify that the intended registered Web app matches the owner-supplied values already integrated in `firebase-applet-config.json` and `public/firebase-messaging-sw.js`. The project overview lists three Web apps; do not register a duplicate if an existing app matches. The app ID/config association has not been independently compared yet.
 
-The owner has confirmed that Nexora's existing Firestore database ID is `default` in `europe-west1`. The repository uses that exact ID in `firebase-applet-config.json`, the named-database entry in `firebase.json`, and the environment template. Firebase's special built-in `(default)` is a different database ID; do not substitute it or create another database. [Firebase documentation](https://firebase.google.com/docs/firestore/manage-databases) distinguishes named databases from `(default)`.
+The owner has confirmed, and Firebase Console lists, Nexora's existing Firestore database ID as `default` in `europe-west1`. The repository uses that exact ID in `firebase-applet-config.json`, the single named-database entry in `firebase.json`, and the environment template. Firebase's special built-in `(default)` is a different database ID; do not substitute it or create another database. [Firebase documentation](https://firebase.google.com/docs/firestore/manage-databases) distinguishes named databases from `(default)`.
 
-Also verify that the supplied Storage bucket and Analytics ID belong to this project. The deployment validator checks the supplied IDs for consistency but cannot prove that a Firebase resource exists or that the current production app uses it.
+The supplied Storage bucket name is present in client configuration, but the Firebase Storage Console currently shows onboarding and requires a Blaze billing account; a live bucket association is not verified. Confirm the intended bucket and Analytics ID before enabling billing or deploying. The deployment validator checks supplied IDs for consistency but cannot prove that a resource exists or that the current app uses it.
 
 The Firebase browser API key is client configuration, not an authorization mechanism. Never add service-account JSON, private keys, refresh tokens, passwords, or other credentials to Git or chat.
 
@@ -38,14 +38,14 @@ The service worker at `public/firebase-messaging-sw.js` must retain the same `pr
 
 In the target project, record the actual state before changing anything:
 
-1. Authentication: Email/Password and Google providers; Phone provider if the current SMS flow remains enabled; all production/local authorized domains; email action links/sender settings; phone SMS quotas, test numbers, and Firebase Phone Auth reCAPTCHA configuration; and Google OAuth consent configuration. These live settings remain unverified until an authenticated Console session is available.
-2. Firestore: existing document/data presence, the confirmed `default` database location, current rules, indexes, and any required composite-index build state.
-3. Storage: the actual bucket, existing object presence, lifecycle/retention settings, IAM, and current Storage Rules.
+1. Authentication: Email/Password and Google are enabled. Phone is disabled. Current authorized domains are `localhost` and the Firebase `firebaseapp.com`/`web.app` domains; add the real app host if a custom domain is used. If Phone Auth remains in the UI, enable the provider only after setting SMS region policy, quotas, test numbers, and reCAPTCHA configuration. Email action links/sender settings and Google OAuth client/domain behavior remain untested.
+2. Firestore: Console confirms the active `default` database in `europe-west1`; published rules and indexes were not independently verified. The Console dashboard showed no read/write/realtime-read metrics for the selected last seven days, and scheduled backups are disabled. No collections or documents were opened.
+3. Storage: Firebase Storage is not set up in Console and requires a Blaze billing account. No live bucket, object, lifecycle, IAM, or Storage Rules configuration was verified. Do not enable billing or create a bucket without the owner's approval.
 4. Functions: enabled APIs, billing/runtime support, Node.js 22 support, `us-central1` region, service accounts, schedules, and server-side environment values.
-5. App Check: registered web app/site key, enforcement mode, and whether the production domain is authorized.
+5. App Check: Console shows the `Get started` onboarding state; no app registration or enforcement configuration is visible. Register a Web provider and decide on staged enforcement after confirming the production host.
 6. External providers: FCM/VAPID, Gemini/VOH, email, SMS, payment, monitoring, and backup/export configuration. Unconfigured providers must remain disabled rather than simulated.
 
-The owner supplied the candidate Realtime Database URL `https://nexora-prod-voiceharrison-default-rtdb.europe-west1.firebasedatabase.app`, but its association with the live instance has not been independently verified in Console. A source search found no Realtime Database SDK usage, rules file, or Firebase deployment target in this codebase. Its URL and security rules were therefore left untouched; no feature currently reads or writes Realtime Database.
+Firebase Console confirms the Realtime Database URL `https://nexora-prod-voiceharrison-default-rtdb.europe-west1.firebasedatabase.app` and Belgium (`europe-west1`) location. Its live rules are `.read: false` and `.write: false`. The repository has no Realtime Database SDK use, rules file, or Firebase CLI deployment target; no feature currently reads or writes RTDB, so no `databaseURL` was added.
 
 Preserve any existing data and review the diff of rules and indexes before deployment. Do not deploy broad or temporary allow rules.
 
@@ -102,12 +102,12 @@ Emulator tests are not live-project evidence. Do not mark any live journey as pa
 
 ## Current evidence and risks
 
-- Firebase Console access: **not yet authenticated**; the project redirected to Google sign-in.
+- Firebase Console: **owner-authenticated; read-only project/resource metadata inspected**. No user documents/files were opened and no production settings or data were changed.
 - Firebase CLI authorization: **not available in this environment**.
-- Firestore database ID `default` and location `europe-west1`: **owner-confirmed; no live read/write or deployment was performed from this environment**.
+- Firestore database ID `default` and location `europe-west1`: **owner-confirmed and visible in Console as the sole active database**. No document reads/writes or deployments were performed; published Firestore rules remain unverified.
 - The Firebase JS and Admin SDK named-database overloads used by the current app are documented as **Public Preview** and explicitly not recommended for production. The supported Google Cloud Node client has a named-database setting, but a backend-only replacement would leave the browser preview dependency; owner architecture decision required before release. See the [JS SDK reference](https://firebase.google.com/docs/reference/js/firestore_), [Admin SDK reference](https://firebase.google.com/docs/reference/admin/node/firebase-admin.firestore), and [Google Cloud Node client settings](https://docs.cloud.google.com/nodejs/docs/reference/firestore/latest/firestore/settings).
-- Target-project Auth provider/domain/phone settings and other live resource state: **not yet verified by an authenticated Console session**.
-- Existing data in `nexora-prod-voiceharrison`: **unknown; preserve and inspect before deployment**.
-- Authentication: only existing emulator coverage can be relied upon until real target-project accounts are tested.
-- Rules/indexes/Storage/Functions/App Check/IAM/schedules/backups: source is present, live state is unverified.
+- Authentication: **Email/Password and Google enabled; Phone disabled; only `localhost` and Firebase-hosted domains listed**. Real signup/login has not been tested.
+- Storage: **not set up; Console requires Blaze billing**. App Check: **not configured**. Firestore scheduled backups: **disabled**. RTDB: **URL/location confirmed; live rules deny all access; no app code uses it**.
+- Existing Firestore data: **not inspected**. The Console dashboard showed no read/write/realtime-read metrics for the selected last seven days; this is not proof that the database is empty.
+- Production Firestore/Storage rules, indexes, Functions deployment/environment, IAM, schedules, FCM, Gemini/VOH, payment, and live media/message persistence: **not verified**. Emulator coverage does not establish production behavior.
 - The old project was not modified, accessed, or used as a migration source.
