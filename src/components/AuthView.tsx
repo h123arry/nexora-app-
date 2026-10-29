@@ -264,7 +264,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setStatusMessage('Verifying credentials via Firebase Authentication...');
 
     try {
-      const { user } = await AuthService.loginWithEmail(query, passwordInput);
+      const { user } = await AuthService.loginWithEmail(query, passwordInput, rememberMe);
       AuthService.clearFailedAttempts(query);
       if (rememberMe) {
         localStorage.setItem('nexora_remembered_identifier', query);

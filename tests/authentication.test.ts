@@ -6,6 +6,8 @@ import { test, after } from 'node:test';
 const { auth } = await import('../src/lib/firebase.ts');
 const { AuthService } = await import('../src/services/firebase/authService.ts');
 const {
+  browserLocalPersistence,
+  browserSessionPersistence,
   deleteUser,
   signOut,
 } = await import('firebase/auth');
@@ -26,6 +28,11 @@ test('maps Firebase configuration and credential failures without exposing provi
   assert.match(AuthService.mapFirebaseError({ code: 'auth/invalid-phone-number' }), /Invalid phone number/);
   assert.match(AuthService.mapFirebaseError({ code: 'auth/captcha-check-failed' }), /Phone verification could not be completed/);
   assert.equal(AuthService.mapFirebaseError({ code: 'auth/internal-error', message: 'secret provider stack' }), 'An authentication error occurred. Please try again or contact the account owner.');
+});
+
+test('maps the remember-device choice to local or tab-session persistence', () => {
+  assert.equal(AuthService.getLoginPersistence(true), browserLocalPersistence);
+  assert.equal(AuthService.getLoginPersistence(false), browserSessionPersistence);
 });
 
 test('registers, restores, and signs in an email account through Firebase Auth', async () => {

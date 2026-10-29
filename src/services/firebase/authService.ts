@@ -1,6 +1,8 @@
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
+  browserLocalPersistence,
+  browserSessionPersistence,
   sendEmailVerification, 
   sendPasswordResetEmail, 
   updatePassword,
@@ -11,7 +13,8 @@ import {
   reload,
   GoogleAuthProvider,
   signInWithPopup,
-  signOut
+  signOut,
+  setPersistence
 } from 'firebase/auth';
 import { auth, db, firebaseConfigError } from './config';
 import { User } from '../../types';
@@ -31,6 +34,10 @@ export interface RateLimitStatus {
 export class AuthService {
   private static requireConfigured(): void {
     if (firebaseConfigError) throw new Error(firebaseConfigError);
+  }
+
+  static getLoginPersistence(rememberDevice: boolean) {
+    return rememberDevice ? browserLocalPersistence : browserSessionPersistence;
   }
 
   private static publicAuthError(error: unknown): Error & { code?: string } {
@@ -158,12 +165,20 @@ export class AuthService {
   /**
    * Login with Email & Password
    */
-  static async loginWithEmail(email: string, password: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+  static async loginWithEmail(email: string, password: string, rememberDevice = true): Promise<{ firebaseUser: FirebaseUser; user: User }> {
     this.requireConfigured();
     const cleanEmail = email.toLowerCase().trim();
     const rateLimit = this.getRateLimitStatus(cleanEmail);
     if (rateLimit.isLocked) {
       throw new Error(`Account temporarily locked. Please retry in ${rateLimit.remainingSeconds} seconds.`);
+    }
+
+    if (typeof window !== 'undefined') {
+      try {
+        await setPersistence(auth, this.getLoginPersistence(rememberDevice));
+      } catch (error) {
+        throw this.publicAuthError(error);
+      }
     }
 
     let credential;
