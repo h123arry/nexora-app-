@@ -8,6 +8,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   collection,
+  deleteField,
   deleteDoc,
   doc,
   getDoc,
@@ -46,7 +47,7 @@ const publicProfile = (uid) => ({
   id: uid, username: uid, name: uid, avatar: '', bio: '', location: '', website: '',
   followers: 0, following: 0, sparks: 0, isVerified: false, coverImage: '', joinedDate: 'Joined 2026',
   reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-  interestDNA: {}, skills: []
+  skills: []
 });
 
  describe('Firestore authorization regression tests', () => {
@@ -63,6 +64,7 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'bob'), { ...ownPrivate, id: 'bob', email: 'alice@example.test' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'bob'), { ...ownPrivate, id: 'bob', email: 'bob@example.test', role: 'admin' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { ...publicProfile('bob'), email: 'bob@example.test' }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'publicProfiles', 'bob'), { ...publicProfile('bob'), interestDNA: { AI: 1 } }));
   });
 
   it('rejects client-assigned public verification, reputation, and initial engagement metrics', async () => {
@@ -121,7 +123,7 @@ const publicProfile = (uid) => ({
   it('allows users to update their public bio but blocks changes to protected account fields and other accounts', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice'), profile('alice'));
-      await setDoc(doc(db, 'publicProfiles', 'alice'), publicProfile('alice'));
+      await setDoc(doc(db, 'publicProfiles', 'alice'), { ...publicProfile('alice'), interestDNA: { AI: 0.9 } });
     });
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { bio: 'updated by owner' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice'), { role: 'admin' }));
@@ -129,6 +131,12 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(dbFor('bob'), 'users', 'alice'), { bio: 'intrusion' }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { bio: 'public bio' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { email: 'leak@example.test' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'publicProfiles', 'alice'), { interestDNA: { AI: 0.1 } }));
+    await assertSucceeds(setDoc(
+      doc(dbFor('alice'), 'publicProfiles', 'alice'),
+      { interestDNA: deleteField() },
+      { merge: true }
+    ));
   });
 
   it('denies cross-account user-directory queries against private account documents', async () => {
@@ -220,6 +228,28 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('mallory'), 'posts', 'forged'), { ...post, userId: 'alice' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'inflated'), { ...post, id: 'inflated', likes: 500 }));
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'p1'), post));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'private-field'), { ...post, id: 'private-field', email: 'private@example.test' }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'admin-field'), { ...post, id: 'admin-field', role: 'admin' }));
+    await assertFails(setDoc(doc(unverifiedDbFor('alice'), 'posts', 'unverified-badge'), {
+      ...post, id: 'unverified-badge', isVerified: true
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'forged-poll'), {
+      ...post, id: 'forged-poll', interactivePoll: {
+        question: 'Forged votes?', options: [
+          { id: 'yes', text: 'Yes', votes: 900 }, { id: 'no', text: 'No', votes: 0 }
+        ]
+      }
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'forged-broadcast'), {
+      ...post, id: 'forged-broadcast', broadcastReactions: { '🔥': 99 }
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'posts', 'valid-poll'), {
+      ...post, id: 'valid-poll', interactivePoll: {
+        question: 'Valid poll?', options: [
+          { id: 'yes', text: 'Yes', votes: 0 }, { id: 'no', text: 'No', votes: 0 }
+        ]
+      }
+    }));
     await seed(async (db) => {
       await setDoc(doc(db, 'accountStatus', 'alice'), {
         accountId: 'alice', postingRestricted: true, messagingRestricted: false, suspended: false,
@@ -310,10 +340,21 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(guestDb(), 'pages', page.id)));
     await assertSucceeds(getDoc(doc(guestDb(), 'communities', community.id)));
     await assertFails(setDoc(doc(dbFor('alice'), 'pages', 'mismatched-page'), page));
+    await assertFails(setDoc(doc(dbFor('alice'), 'pages', 'inflated-page'), {
+      ...page, id: 'inflated-page', followersCount: 50000
+    }));
     await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'mismatched-community'), community));
+    await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'public-report-leak'), {
+      id: 'public-report-leak', ownerId: 'alice', type: 'public', name: 'Open',
+      reports: [{ targetContent: 'private report text', status: 'pending' }]
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'public-role-injection'), {
+      id: 'public-role-injection', ownerId: 'alice', type: 'public', name: 'Open', role: 'admin'
+    }));
     await assertFails(setDoc(doc(dbFor('bob'), 'pages', 'forged-page'), { ...page, id: 'forged-page' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'pages', page.id), { isVerified: true }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'pages', page.id), { name: 'Updated Studio' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'pages', page.id), { followersCount: 50000 }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'communities', community.id), { name: 'Hijacked' }));
   });
 
@@ -400,6 +441,16 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'settings', 'preferences')));
     await assertFails(setDoc(doc(dbFor('bob'), 'users', 'alice', 'settings', 'preferences'), preferences));
     await assertFails(updateDoc(ownerRef, { injectedPrivilege: true }));
+  });
+  it('keeps legacy top-level privacy settings accessible only to their owner', async () => {
+    const ownerRef = doc(dbFor('alice'), 'privacySettings', 'alice');
+    await assertSucceeds(setDoc(ownerRef, { userId: 'alice', isPrivate: true, commentPermission: 'followers' }));
+    await assertSucceeds(getDoc(ownerRef));
+    await assertFails(getDoc(doc(dbFor('bob'), 'privacySettings', 'alice')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'privacySettings', 'alice'), {
+      userId: 'alice', isPrivate: false, commentPermission: 'everyone'
+    }));
+    await assertFails(getDoc(doc(guestDb(), 'privacySettings', 'alice')));
   });
   it('lets users read their own trusted like markers but never create or modify them directly', async () => {
     await seed(async (db) => {

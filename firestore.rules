@@ -81,6 +81,50 @@ service cloud.firestore {
     function publicPost(data) {
       return data.get('audience', '') == 'public';
     }
+    function validPollOption(option) {
+      return option is map
+        && option.keys().hasOnly(['id', 'text', 'votes'])
+        && option.id is string
+        && option.id.size() <= 80
+        && option.text is string
+        && option.text.size() <= 300
+        && option.votes is int
+        && option.votes == 0;
+    }
+    function validInitialPoll(data) {
+      return !data.keys().hasAny(['interactivePoll'])
+        || (data.interactivePoll is map
+          && data.interactivePoll.keys().hasOnly(['question', 'options'])
+          && data.interactivePoll.question is string
+          && data.interactivePoll.question.size() <= 500
+          && data.interactivePoll.options is list
+          && data.interactivePoll.options.size() >= 2
+          && data.interactivePoll.options.size() <= 5
+          && validPollOption(data.interactivePoll.options[0])
+          && validPollOption(data.interactivePoll.options[1])
+          && (data.interactivePoll.options.size() < 3 || validPollOption(data.interactivePoll.options[2]))
+          && (data.interactivePoll.options.size() < 4 || validPollOption(data.interactivePoll.options[3]))
+          && (data.interactivePoll.options.size() < 5 || validPollOption(data.interactivePoll.options[4])));
+    }
+    function validInitialBroadcastReactions(data) {
+      return !data.keys().hasAny(['broadcastReactions'])
+        || (data.broadcastReactions is map
+          && data.broadcastReactions.keys().hasOnly(['🔥', '🙌', '⚡', '🏆'])
+          && data.broadcastReactions.get('🔥', 0) == 0
+          && data.broadcastReactions.get('🙌', 0) == 0
+          && data.broadcastReactions.get('⚡', 0) == 0
+          && data.broadcastReactions.get('🏆', 0) == 0);
+    }
+    function publicCommunityKeys() {
+      return [
+        'id', 'ownerId', 'creatorId', 'type', 'name', 'description', 'bannerImage',
+        'avatarImage', 'rules', 'tags', 'moderators', 'admins', 'pinnedPosts',
+        'events', 'mediaLibrary', 'createdAt'
+      ];
+    }
+    function privateCommunityKeys() {
+      return publicCommunityKeys().concat(['bannedUsers', 'mutedUsers', 'pendingMembers', 'reports', 'activityLog']);
+    }
     function publicProfileKeys() {
       return [
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
@@ -93,7 +137,7 @@ service cloud.firestore {
     function editableProfileKeys() {
       return [
         'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage',
-        'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
+        'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
     }
@@ -239,13 +283,16 @@ service cloud.firestore {
       allow create: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
+        && !request.resource.data.keys().hasAny(['interestDNA'])
         && verifiedIdentityClaim(request.resource.data)
         && zeroInitialReputation(request.resource.data)
         && zeroInitialEngagement(request.resource.data);
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly(publicProfileKeys())
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['isVerified']))
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['isVerified', 'interestDNA']))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['interestDNA'])
+          || !request.resource.data.keys().hasAny(['interestDNA']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified'])
           || request.resource.data.isVerified == request.auth.token.get('email_verified', false)
           || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));
@@ -256,6 +303,18 @@ service cloud.firestore {
     match /posts/{postId} {
       allow get, list: if publicPost(resource.data);
       allow create: if accountMayPost()
+        && request.resource.data.keys().hasOnly([
+          'id', 'userId', 'authorId', 'username', 'name', 'avatar', 'isVerified', 'content',
+          'image', 'imageFilter', 'images', 'imageFilters', 'videoUrl', 'voiceTranscript',
+          'voiceAudioUrl', 'audience', 'communityName', 'tags', 'likes', 'commentsCount',
+          'shares', 'views', 'saves', 'bookmarksCount', 'likeCount', 'commentsDisabled',
+          'searchSuggestion', 'timestamp', 'isLikedByUser', 'isBookmarkedByUser', 'location',
+          'comments', 'isVoice', 'voiceDuration', 'videoDuration', 'media', 'opportunityType',
+          'coAuthors', 'interactivePoll', 'editHistory', 'scheduledTime', 'isDraft', 'isArchived',
+          'isBroadcastPost', 'broadcastReactions', 'discussionModeEnabled', 'discussionSideA',
+          'discussionSideB', 'discussionVotesA', 'discussionVotesB'
+        ])
+        && request.resource.data.id == postId
         && publicPost(request.resource.data)
         && request.resource.data.userId == request.auth.uid
         && (!request.resource.data.keys().hasAny(['authorId']) || request.resource.data.authorId == request.auth.uid)
@@ -267,7 +326,19 @@ service cloud.firestore {
         && request.resource.data.get('commentsCount', 0) == 0
         && request.resource.data.get('shares', 0) == 0
         && request.resource.data.get('views', 0) == 0
-        && request.resource.data.get('saves', 0) == 0;
+        && request.resource.data.get('saves', 0) == 0
+        && request.resource.data.get('bookmarksCount', 0) == 0
+        && request.resource.data.get('likeCount', 0) == 0
+        && request.resource.data.get('isLikedByUser', false) == false
+        && request.resource.data.get('isBookmarkedByUser', false) == false
+        && (!request.resource.data.keys().hasAny(['comments'])
+          || (request.resource.data.comments is list && request.resource.data.comments.size() == 0))
+        && (!request.resource.data.keys().hasAny(['discussionVotesA'])
+          || (request.resource.data.discussionVotesA is list && request.resource.data.discussionVotesA.size() == 0))
+        && (!request.resource.data.keys().hasAny(['discussionVotesB'])
+          || (request.resource.data.discussionVotesB is list && request.resource.data.discussionVotesB.size() == 0))
+        && validInitialPoll(request.resource.data)
+        && validInitialBroadcastReactions(request.resource.data);
       allow update: if accountMayPost()
         && publicPost(resource.data)
         && ((resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid)
@@ -441,13 +512,26 @@ service cloud.firestore {
     match /pages/{pageId} {
       allow get, list: if true;
       allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'id', 'ownerId', 'name', 'username', 'avatar', 'coverImage', 'category',
+          'description', 'website', 'contactInfo', 'isVerified', 'followersCount',
+          'postsCount', 'videosCount', 'sparksReceived', 'joinedDate', 'createdAt'
+        ])
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.id == pageId
-        && request.resource.data.get('isVerified', false) == false;
+        && request.resource.data.get('isVerified', false) == false
+        && request.resource.data.get('followersCount', 0) == 0
+        && request.resource.data.get('postsCount', 0) == 0
+        && request.resource.data.get('videosCount', 0) == 0
+        && request.resource.data.get('sparksReceived', 0) == 0;
       allow update: if signedIn() && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.get('id', pageId) == pageId
-        && request.resource.data.get('isVerified', false) == resource.data.get('isVerified', false);
+        && request.resource.data.get('isVerified', false) == resource.data.get('isVerified', false)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'name', 'username', 'avatar', 'coverImage', 'category', 'description',
+          'website', 'contactInfo', 'joinedDate', 'updatedAt'
+        ]);
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 
@@ -459,12 +543,20 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.id == communityId
-        && request.resource.data.type in ['public', 'private', 'invite-only'];
+        && request.resource.data.type in ['public', 'private', 'invite-only']
+        && request.resource.data.keys().hasOnly(
+          request.resource.data.type == 'public' ? publicCommunityKeys() : privateCommunityKeys()
+        );
       allow update: if signedIn() && resource.data.ownerId == request.auth.uid
         && request.resource.data.ownerId == resource.data.ownerId
         && request.resource.data.get('id', communityId) == communityId
         && request.resource.data.type == resource.data.type
-        && request.resource.data.type in ['public', 'private', 'invite-only'];
+        && request.resource.data.type in ['public', 'private', 'invite-only']
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+          resource.data.type == 'public'
+            ? ['name', 'description', 'bannerImage', 'avatarImage', 'rules', 'tags', 'pinnedPosts', 'events', 'mediaLibrary']
+            : ['name', 'description', 'bannerImage', 'avatarImage', 'rules', 'tags', 'moderators', 'admins', 'bannedUsers', 'mutedUsers', 'pendingMembers', 'pinnedPosts', 'reports', 'activityLog', 'events', 'mediaLibrary']
+        );
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 

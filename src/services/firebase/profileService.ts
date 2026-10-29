@@ -1,4 +1,4 @@
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch, runTransaction, limit } from 'firebase/firestore';
+import { doc, deleteField, getDoc, setDoc, updateDoc, serverTimestamp, query, collection, where, getDocs, writeBatch, runTransaction, limit } from 'firebase/firestore';
 import { auth, db } from './config';
 import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
@@ -10,13 +10,13 @@ export class ProfileService {
     const {
       id, username, name, avatar, bio, location, website, followers, following,
       sparks, isVerified, hasStory, coverImage, joinedDate, reputationPoints,
-      reputationBreakdown, interestDNA, skills, statusText, statusEmoji,
+      reputationBreakdown, skills, statusText, statusEmoji,
       pinnedMusicSong, pinnedMusicArtist, pinnedMusicUrl, pinnedPosts
     } = user;
     return Object.fromEntries(Object.entries({
       id, username, name, avatar, bio, location, website, followers, following,
       sparks, isVerified, hasStory, coverImage, joinedDate, reputationPoints,
-      reputationBreakdown, interestDNA, skills, statusText, statusEmoji,
+      reputationBreakdown, skills, statusText, statusEmoji,
       pinnedMusicSong, pinnedMusicArtist, pinnedMusicUrl, pinnedPosts
     }).filter(([, value]) => value !== undefined));
   }
@@ -91,7 +91,10 @@ export class ProfileService {
     await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() });
     const existing = await this.getProfile(uid);
     if (existing) {
-      await setDoc(doc(db, 'publicProfiles', uid), this.toPublicProfile({ ...existing, ...updates }), { merge: true });
+      await setDoc(doc(db, 'publicProfiles', uid), {
+        ...this.toPublicProfile({ ...existing, ...updates }),
+        interestDNA: deleteField(),
+      }, { merge: true });
     }
   }
 
@@ -106,7 +109,10 @@ export class ProfileService {
       }, firebaseUser.email || '');
     } else if (db) {
       // Existing users migrate only their own sanitized public projection at next authenticated session.
-      await setDoc(doc(db, 'publicProfiles', firebaseUser.uid), this.toPublicProfile(profile), { merge: true });
+      await setDoc(doc(db, 'publicProfiles', firebaseUser.uid), {
+        ...this.toPublicProfile(profile),
+        interestDNA: deleteField(),
+      }, { merge: true });
     }
     return profile;
   }

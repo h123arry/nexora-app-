@@ -288,6 +288,13 @@ async function createCommunityDirect(community: Community) {
     delete storedCommunity.isJoinedByMe;
     delete storedCommunity.membersCount;
     delete storedCommunity.onlineCount;
+    if (community.type === 'public') {
+      delete storedCommunity.bannedUsers;
+      delete storedCommunity.mutedUsers;
+      delete storedCommunity.pendingMembers;
+      delete storedCommunity.reports;
+      delete storedCommunity.activityLog;
+    }
     return await setDoc(doc(db, path, community.id), {
       ...storedCommunity,
       createdAt: serverTimestamp()
