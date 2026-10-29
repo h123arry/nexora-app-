@@ -38,7 +38,7 @@ Set production-only server configuration in the hosting secret/environment manag
 NODE_ENV=production
 RELEASE_VERSION=<immutable commit or release identifier>
 GCLOUD_PROJECT=<verified Firebase project ID>
-FIRESTORE_DATABASE_ID=<verified named database ID>
+FIRESTORE_DATABASE_ID=default
 FIREBASE_STORAGE_BUCKET=<verified bucket>
 PORT=<host supplied port, if required>
 ```

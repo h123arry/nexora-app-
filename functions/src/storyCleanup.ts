@@ -2,9 +2,10 @@ import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
 const adminApp = getApps().find((app) => app.name === '[DEFAULT]') || initializeApp();
-const databaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
+const databaseId = resolveFirestoreDatabaseId();
 const bucketName = process.env.FIREBASE_STORAGE_BUCKET || undefined;
 const db = getFirestore(adminApp, databaseId);
 const bucket = getStorage(adminApp).bucket(bucketName);

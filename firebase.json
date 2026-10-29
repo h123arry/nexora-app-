@@ -13,7 +13,7 @@
       "indexes": "firestore.indexes.json"
     },
     {
-      "database": "<owner-verified-firestore-database-id>",
+      "database": "default",
       "rules": "firestore.rules",
       "indexes": "firestore.indexes.json"
     }

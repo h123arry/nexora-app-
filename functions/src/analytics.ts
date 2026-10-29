@@ -3,9 +3,10 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
 const app = getApps().find(candidate => candidate.name === '[DEFAULT]') || initializeApp();
-const db = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || '(default)');
+const db = getFirestore(app, resolveFirestoreDatabaseId());
 
 export const CLIENT_EVENT_TYPES = [
   'feed_request_completed', 'feed_request_failed', 'content_impression', 'post_open',

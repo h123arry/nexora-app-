@@ -5,6 +5,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
+import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
@@ -12,7 +13,7 @@ export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFi
 export { cleanupExpiredStories } from './storyCleanup.js';
 
 const adminApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
-const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
+const firestoreDatabaseId = resolveFirestoreDatabaseId();
 const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 setGlobalOptions({
   region: 'us-central1',

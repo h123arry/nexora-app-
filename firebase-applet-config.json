@@ -1,10 +1,10 @@
 {
   "projectId": "nexora-prod-voiceharrison",
-  "appId": "<owner-provided-firebase-web-app-id>",
-  "apiKey": "<owner-provided-firebase-web-api-key>",
-  "authDomain": "<owner-provided-firebase-auth-domain>",
-  "firestoreDatabaseId": "<owner-verified-firestore-database-id>",
-  "storageBucket": "<owner-verified-storage-bucket>",
-  "messagingSenderId": "<owner-provided-messaging-sender-id>",
-  "measurementId": ""
+  "appId": "1:128918144717:web:8dc433e0a390388d3e0b84",
+  "apiKey": "AIzaSyA8RyvP6crBpI4Zg_bgLJw3U9cJBMTQ-Gk",
+  "authDomain": "nexora-prod-voiceharrison.firebaseapp.com",
+  "firestoreDatabaseId": "default",
+  "storageBucket": "nexora-prod-voiceharrison.appspot.com",
+  "messagingSenderId": "128918144717",
+  "measurementId": "G-88D4668PB4"
 }

@@ -42,9 +42,6 @@ jobs:
       - name: Install Functions dependencies
         run: npm ci --prefix functions --no-audit --no-fund
 
-      - name: Validate deployment metadata
-        run: npm run validate:deployment
-
       - name: Scan tracked files for secrets
         run: npm run security:scan
 
@@ -56,6 +53,9 @@ jobs:
 
       - name: Run unit tests
         run: npm run test:unit
+
+      - name: Run Firebase Auth regression tests
+        run: npm run test:auth
 
       - name: Run Firestore security rules tests
         run: npm run test:rules
@@ -80,3 +80,8 @@ jobs:
 
       - name: Build production artifacts
         run: npm run build
+
+      # Keep this strict release-readiness check hard-failing, but run it after
+      # independent CI checks so missing owner-verified metadata does not hide them.
+      - name: Validate deployment metadata
+        run: npm run validate:deployment

@@ -13,6 +13,8 @@ const readJson = (file) => {
 const firebase = readJson('firebase.json');
 const aliases = readJson('.firebaserc');
 const webConfig = readJson('firebase-applet-config.json');
+const expectedProjectId = 'nexora-prod-voiceharrison';
+const expectedProjectNumber = '128918144717';
 const messagingWorker = existsSync('public/firebase-messaging-sw.js')
   ? readFileSync('public/firebase-messaging-sw.js', 'utf8')
   : '';
@@ -36,13 +38,31 @@ if (aliases?.projects?.default !== 'nexora-prod-voiceharrison' || aliases?.proje
 }
 
 if (webConfig) {
-  if (webConfig.projectId !== 'nexora-prod-voiceharrison') failures.push('firebase-applet-config.json: projectId must target nexora-prod-voiceharrison');
+  if (webConfig.projectId !== expectedProjectId) failures.push(`firebase-applet-config.json: projectId must target ${expectedProjectId}`);
+  if (webConfig.messagingSenderId !== expectedProjectNumber) failures.push('firebase-applet-config.json: messagingSenderId must match the owner-provided project number');
+  if (typeof webConfig.appId !== 'string' || !webConfig.appId.startsWith(`1:${expectedProjectNumber}:web:`)) {
+    failures.push('firebase-applet-config.json: appId must be a Web App registered to the owner-provided project number');
+  }
+  if (webConfig.authDomain !== `${expectedProjectId}.firebaseapp.com`) {
+    failures.push('firebase-applet-config.json: authDomain must match the owner-provided Firebase project');
+  }
+  if (webConfig.storageBucket !== `${expectedProjectId}.appspot.com`) {
+    failures.push('firebase-applet-config.json: storageBucket must match the owner-provided bucket');
+  }
   for (const [name, value] of Object.entries(webConfig)) {
     if (typeof value === 'string' && value.includes('<owner-')) failures.push(`firebase-applet-config.json: ${name} still requires owner-provided configuration`);
   }
   const workerValue = (name) => messagingWorker.match(new RegExp(`${name}:\\s*["']([^"']+)["']`))?.[1];
   for (const name of ['projectId', 'appId', 'apiKey', 'messagingSenderId']) {
     if (workerValue(name) !== webConfig[name]) failures.push(`public/firebase-messaging-sw.js: ${name} must match firebase-applet-config.json`);
+  }
+}
+
+if (firebase && webConfig && typeof webConfig.firestoreDatabaseId === 'string'
+  && !webConfig.firestoreDatabaseId.includes('<owner-')) {
+  const configuredDatabaseIds = (firebase.firestore || []).map((database) => database.database);
+  if (!configuredDatabaseIds.includes(webConfig.firestoreDatabaseId)) {
+    failures.push('firebase.json: a Firestore database entry must match firebase-applet-config.json firestoreDatabaseId');
   }
 }
 

@@ -2,9 +2,10 @@ import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getApps, initializeApp } from 'firebase-admin/app';
+import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
 const app = getApps().find(candidate => candidate.name === '[DEFAULT]') || initializeApp();
-const db = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || '(default)');
+const db = getFirestore(app, resolveFirestoreDatabaseId());
 
 const targetTypes = new Set(['post', 'comment', 'user', 'community', 'message']);
 const categories = new Set(['spam', 'harassment', 'threats', 'impersonation', 'hate', 'sexual_safety', 'violence', 'privacy', 'fraud', 'copyright', 'misinformation', 'other']);

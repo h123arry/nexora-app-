@@ -1,9 +1,10 @@
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import { getApps, initializeApp } from 'firebase-admin/app';
+import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
 const app = getApps().find(candidate => candidate.name === '[DEFAULT]') || initializeApp();
-const databaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
+const databaseId = resolveFirestoreDatabaseId();
 const db = getFirestore(app, databaseId);
 const MAX_BYTES: Record<string, number> = {
   image: 12 * 1024 * 1024,
