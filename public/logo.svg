@@ -1,5 +1,14 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="Nexora">
-  <rect width="240" height="240" rx="46" fill="#050505"/>
-  <path d="M48 196V44h42l101 116V44h42v152h-41L90 78v118H48Z" fill="#fff"/>
-  <path d="m117 110 17 20" fill="none" stroke="#8B5CF6" stroke-width="9" stroke-linecap="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Nexora">
+  <defs>
+    <linearGradient id="violet" x1="72" y1="72" x2="440" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A78BFA"/>
+      <stop offset=".52" stop-color="#7138FF"/>
+      <stop offset="1" stop-color="#4D22BD"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="108" fill="#050505"/>
+  <ellipse cx="256" cy="256" rx="180" ry="96" transform="rotate(45 256 256)" fill="none" stroke="url(#violet)" stroke-width="48" stroke-linecap="round"/>
+  <ellipse cx="256" cy="256" rx="180" ry="96" transform="rotate(-45 256 256)" fill="none" stroke="#fff" stroke-width="48" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="48" fill="#050505" stroke="#fff" stroke-width="18"/>
+  <circle cx="256" cy="256" r="22" fill="#8B5CF6"/>
 </svg>
