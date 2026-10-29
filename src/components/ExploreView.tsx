@@ -115,21 +115,6 @@ export default function ExploreView({
     return searchPosts(posts, debouncedSearch, { videosOnly: true });
   }, [posts, debouncedSearch]);
 
-  const userCommunities = useMemo(() => {
-    try {
-      const saved = localStorage.getItem('nexora_custom_communities');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  }, []);
-
-  const filteredCommunities = useMemo(() => {
-    if (!debouncedSearch.trim()) return userCommunities;
-    const q = debouncedSearch.toLowerCase();
-    return userCommunities.filter((c: any) => (c.name || '').toLowerCase().includes(q) || (c.description || '').toLowerCase().includes(q));
-  }, [debouncedSearch, userCommunities]);
-
   const hasActiveSearch = debouncedSearch.trim().length > 0;
   const visibleResultCount = searchFilterType === 'users'
     ? filteredCreators.length
@@ -138,8 +123,8 @@ export default function ExploreView({
       : searchFilterType === 'videos'
         ? filteredVideos.length
         : searchFilterType === 'communities'
-          ? filteredCommunities.length
-          : filteredCreators.length + filteredPosts.length + filteredVideos.length + filteredCommunities.length;
+          ? 0
+          : filteredCreators.length + filteredPosts.length + filteredVideos.length;
 
   return (
     <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
@@ -253,7 +238,13 @@ export default function ExploreView({
             </button>
           </div>
 
-          {visibleResultCount === 0 ? (
+          {visibleResultCount === 0 && searchFilterType === 'communities' ? (
+            <div className="p-6 rounded-3xl nx-surface text-center space-y-3 my-8">
+              <h3 className="text-sm font-bold text-white">Community discovery lives in the Communities hub</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto font-sans">Explore uses no separate cached community results. Open the hub to search its current community directory.</p>
+              <button type="button" onClick={() => setActiveTab('communities')} className="px-4 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-200 hover:text-white text-[10px] font-mono font-bold uppercase">Open Communities</button>
+            </div>
+          ) : visibleResultCount === 0 ? (
             <div className="p-12 rounded-3xl nx-surface text-center space-y-3 my-8">
               <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                 <Search className="w-6 h-6" />
@@ -392,33 +383,13 @@ export default function ExploreView({
                 </div>
               )}
 
-              {/* Communities Section */}
-              {(searchFilterType === 'all' || searchFilterType === 'communities') && filteredCommunities.length > 0 && (
+              {/* Community discovery is owned by CommunitiesHub, which subscribes to the current community source. */}
+              {(searchFilterType === 'all' || searchFilterType === 'communities') && (
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider font-bold">Communities ({filteredCommunities.length})</h3>
-                  <div className="space-y-2">
-                    {filteredCommunities.map(circle => (
-                      <div key={circle.id} className="p-3.5 bg-[#0b081c] border border-cyan-500/20 rounded-2xl flex items-center justify-between gap-3 shadow-sm">
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <div className="w-10 h-10 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-center text-cyan-300 font-bold shrink-0">
-                            🏟️
-                          </div>
-                          <div className="overflow-hidden">
-                            <h4 className="text-xs font-bold text-white truncate">{circle.name}</h4>
-                            <p className="text-[10px] text-zinc-400 truncate">{circle.description}</p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => {
-                            setActiveTab('communities');
-                            window.dispatchEvent(new CustomEvent('toast', { detail: `Joined ${circle.name}! 🏟️` }));
-                          }}
-                          className="px-3.5 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-300 hover:text-white text-[10px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0"
-                        >
-                          View
-                        </button>
-                      </div>
-                    ))}
+                  <h3 className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider font-bold">Discover communities</h3>
+                  <div className="p-4 rounded-2xl nx-surface flex items-center justify-between gap-3">
+                    <p className="text-xs text-zinc-400">Community search and membership are managed in the Communities hub.</p>
+                    <button type="button" onClick={() => setActiveTab('communities')} className="px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
                   </div>
                 </div>
               )}
@@ -445,11 +416,11 @@ export default function ExploreView({
               className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-pink-300/30 hover:bg-pink-500/10"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-500/15 text-pink-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
-              <span><span className="block text-sm font-bold text-white">Pulse</span><span className="mt-0.5 block text-[10px] text-zinc-400">Live network signals</span></span>
+              <span><span className="block text-sm font-bold text-white">Pulse</span><span className="mt-0.5 block text-[10px] text-zinc-400">Live aggregation not connected</span></span>
             </button>
           </div>
 
-          {/* Nexora Pulse: recent topics and communities */}
+          {/* Nexora Pulse: locally observed post topics, not network-wide aggregation */}
           <div className="nx-surface rounded-3xl p-5 space-y-4 shadow-sm text-left">
             <div className="flex items-center justify-between border-b border-white/5 pb-3">
               <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
@@ -464,7 +435,7 @@ export default function ExploreView({
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Recent topics · 7 days</span>
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Topics in recent posts · 7 days</span>
                 {trendingTags.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-white/10 p-4 text-xs leading-relaxed text-zinc-500">No trending hashtags yet. Start the next conversation from your feed.</div>
                 ) : trendingTags.slice(0, showAllPulse ? 6 : 4).map(([tag, count]) => (
@@ -482,24 +453,10 @@ export default function ExploreView({
                   </button>
                 ))}
               </div>
-              {userCommunities.length > 0 && (
-                <div className="space-y-2">
-                  <span className="text-[10px] font-mono text-zinc-500 uppercase block">🌐 Featured Communities</span>
-                  {userCommunities.slice(0, showAllPulse ? 4 : 3).map((comm: any) => (
-                    <button
-                      key={comm.id}
-                      onClick={() => {
-                        setLocalSearch(comm.name);
-                        setSearchFilterType('communities');
-                      }}
-                      className="w-full text-left p-2.5 rounded-xl bg-white/5 hover:bg-cyan-600/15 border border-white/5 text-xs text-zinc-200 font-medium transition-all flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="truncate">{comm.name}</span>
-                      <span className="text-[10px] font-mono text-cyan-400">{comm.membersCount || 1} members</span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono text-zinc-500 uppercase block">Network activity</span>
+                <p className="rounded-xl border border-dashed border-white/10 p-3 text-xs leading-relaxed text-zinc-500">Live network-wide activity and community metrics are not available here yet.</p>
+              </div>
             </div>
           </div>
 

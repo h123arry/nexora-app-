@@ -300,10 +300,10 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
       <div className="p-4 rounded-3xl bg-black/40 border border-white/10 space-y-3">
         <div className="flex items-center gap-1.5">
           <Bell className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-mono uppercase tracking-widest font-black text-cyan-300">Topic preferences</span>
+          <span className="text-xs font-mono uppercase tracking-widest font-black text-cyan-300">Session topic selections</span>
         </div>
         <p className="text-[11px] text-violet-100/60 leading-relaxed">
-          Topic selections are kept for this screen session only. Alert delivery is not connected yet.
+          These selections only change this screen's selected topics for the current session. They do not subscribe you to alerts; notification delivery is not connected yet.
         </p>
 
         <div className="flex flex-wrap gap-1.5 pt-1">

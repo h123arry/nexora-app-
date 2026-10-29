@@ -56,6 +56,13 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
     return filtered;
   }, [notifications, activeTab]);
 
+  const unreadCount = notifications.filter(notification => !notification.isRead).length;
+
+  const markAllAsRead = async () => {
+    const unread = notifications.filter(notification => !notification.isRead);
+    await Promise.all(unread.map(notification => markAsRead(notification.id)));
+  };
+
   const groupedNotifications = useMemo(() => {
     const groups: Record<string, Notification[]> = {};
     const now = new Date();
@@ -106,17 +113,18 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
   return (
     <div className="flex flex-col h-full bg-[#0A0A0A] text-white">
       {/* Tabs */}
-      <div className="flex border-b border-zinc-800 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
+      <div className="flex items-center border-b border-zinc-800 sticky top-0 bg-[#0A0A0A]/80 backdrop-blur-md z-10">
         {(['All', 'Social', 'Missions', 'Rewards', 'System'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`flex-1 py-4 text-sm font-semibold transition-colors relative ${activeTab === tab ? 'text-violet-400' : 'text-zinc-500'}`}
           >
-            {tab}
+            {tab} <span className="ml-1 text-[10px] opacity-70">{tab === 'All' ? notifications.filter(n => !n.isRead).length : notifications.filter(n => !n.isRead && (tab === 'Social' ? ['like', 'comment', 'follow', 'mention', 'share'].includes(n.type) : tab === 'Missions' ? n.type === 'mission_milestone' : tab === 'Rewards' ? n.type === 'reputation_milestone' : ['system', 'pulse_alert'].includes(n.type))).length}</span>
             {activeTab === tab && <motion.div className="absolute bottom-0 left-4 right-4 h-0.5 bg-violet-400 rounded-t-full" layoutId="activeTab" />}
           </button>
         ))}
+        <button type="button" onClick={() => void markAllAsRead()} disabled={unreadCount === 0} className="px-3 py-2 text-xs font-semibold text-violet-300 hover:text-white disabled:text-zinc-600 disabled:cursor-not-allowed whitespace-nowrap">Mark all read{unreadCount > 0 ? ` (${unreadCount})` : ''}</button>
       </div>
 
       {/* List */}
@@ -127,8 +135,8 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
               <Bell className="w-10 h-10 text-zinc-700" />
             </div>
             <div className='space-y-1'>
-                <p className="text-white text-lg font-bold">Nothing new yet.</p>
-                <p className="text-zinc-500 text-sm max-w-[250px]">When people interact with you, you'll see everything here.</p>
+                <p className="text-white text-lg font-bold">{activeTab === 'All' ? 'Nothing new yet.' : `No ${activeTab.toLowerCase()} activity yet.`}</p>
+                <p className="text-zinc-500 text-sm max-w-[250px]">{activeTab === 'All' ? "When people interact with you, you'll see everything here." : `New ${activeTab.toLowerCase()} notifications will appear here.`}</p>
             </div>
           </div>
         ) : (
@@ -153,7 +161,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
                     </p>
                     <p className="text-xs text-zinc-500 mt-1">{new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                   </div>
-                  <button onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }} className="opacity-0 group-hover:opacity-100 p-2 text-zinc-600 hover:text-red-400 transition-opacity">
+                  <button onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }} aria-label="Delete notification" className="p-2 text-zinc-500 hover:text-red-400 focus:text-red-400 transition-colors">
                     <Trash2 className='w-4 h-4'/>
                   </button>
                 </motion.div>

@@ -807,7 +807,21 @@ export default function ProfileView({
     }
   };
 
+  const hasUnsavedProfileChanges =
+    editName !== currentUser.name ||
+    editUsername !== currentUser.username ||
+    editBio !== currentUser.bio ||
+    editLocation !== (currentUser.location || '') ||
+    editWebsite !== (currentUser.website || '') ||
+    editPronouns !== '' ||
+    editCategory !== 'Digital Creator' ||
+    editCreatorType !== 'Premium Node' ||
+    editSocialTwitter !== '' ||
+    editSocialInsta !== '' ||
+    editAvatar !== currentUser.avatar ||
+    editCover !== currentUser.coverImage;
   const handleCancelEditProfile = () => {
+    if (hasUnsavedProfileChanges && !window.confirm('Discard your unsaved profile changes?')) return;
     stopWebcam();
     setEditName(currentUser.name);
     setEditUsername(currentUser.username);
@@ -1136,7 +1150,7 @@ export default function ProfileView({
           )}
 
           {/* Profile Identity Header (Stage 2 Redesign) */}
-          <div className="flex flex-col space-y-2 text-left mb-1">
+          <div className="flex flex-col space-y-1.5 sm:space-y-2 text-left mb-1">
             {/* Identity & Action Bar */}
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
@@ -1146,7 +1160,7 @@ export default function ProfileView({
                   )}
                   <div 
                     onClick={() => setProfilePicExpanded(true)}
-                    className="w-20 h-20 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md"
+                    className="w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md"
                   >
                     <img 
                       src={currentUser.avatar} 
@@ -1225,7 +1239,7 @@ export default function ProfileView({
             </div>
 
             {/* Nexora 6 Statistics Grid */}
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-y-2 gap-x-1 sm:gap-x-2 text-center mt-3">
+            <div className="grid grid-cols-3 sm:grid-cols-6 gap-y-1.5 gap-x-1 sm:gap-x-2 text-center mt-2 sm:mt-3">
               {[
                 { label: 'Followers', value: formatSecondaryStat(currentUser.followers || 0) },
                 { label: 'Following', value: formatSecondaryStat(currentUser.following || 0) },
@@ -1234,15 +1248,15 @@ export default function ProfileView({
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
               ].map(stat => (
-                <div key={stat.label} className="flex flex-col gap-0.5 rounded-xl border border-white/[0.06] bg-white/[0.025] py-2">
+                <div key={stat.label} className="flex flex-col gap-0.5 rounded-lg sm:rounded-xl border border-white/[0.06] bg-white/[0.025] px-1 py-1.5 sm:py-2">
                   <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
-                  <span className="text-[11px] sm:text-xs font-medium text-zinc-300">{stat.label}</span>
+                  <span className="text-[10px] sm:text-xs font-medium text-zinc-300 leading-tight">{stat.label}</span>
                 </div>
               ))}
             </div>
 
             {/* Collapsible Bio */}
-            <div className="text-zinc-300 text-xs leading-relaxed pt-2">
+            <div className="text-zinc-300 text-xs leading-relaxed pt-1 sm:pt-2">
               <motion.div 
                 animate={{ height: isBioExpanded ? "auto" : "2.6rem" }} 
                 className="overflow-hidden relative"
@@ -1267,7 +1281,7 @@ export default function ProfileView({
 
           {/* Profile content navigation */}
           <div role="group" aria-label="Profile content views" className="sticky top-0 nx-glass z-30 border-y border-white/10 mt-4 px-0 w-full">
-            <div className="w-full max-w-4xl mx-auto grid grid-cols-3 gap-2 p-2">
+            <div className={`w-full mx-auto grid gap-2 p-2 ${isOwnProfile ? 'max-w-4xl grid-cols-3' : 'max-w-2xl grid-cols-2 sm:grid-cols-4'}`}>
               {[
                 { id: 'media', label: 'Posts', icon: Camera },
                 { id: 'voice', label: 'Voice', icon: Mic },
@@ -3065,10 +3079,11 @@ export default function ProfileView({
               
               <div className="flex items-center justify-between border-b border-white/5 pb-4">
                 <button
-                  onClick={() => { stopWebcam(); setActivePanel('profile'); }}
-                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer"
+                  onClick={handleCancelEditProfile}
+                  disabled={isSavingProfile || showSavedFeedback}
+                  className="flex items-center gap-1 text-xs font-mono text-zinc-400 hover:text-white uppercase font-black cursor-pointer disabled:opacity-50"
                 >
-                  <ArrowLeft className="w-4 h-4" /> Cancel
+                  <ArrowLeft className="w-4 h-4" /> Discard changes
                 </button>
                 <span className="text-xs font-mono text-zinc-400 font-extrabold uppercase">Edit Profile Settings</span>
               </div>
@@ -3245,7 +3260,7 @@ export default function ProfileView({
                         onClick={handleCancelEditProfile}
                         className="flex-1 py-3.5 bg-white/5 hover:bg-white/10 border border-white/5 text-zinc-300 rounded-2xl text-xs font-mono font-black uppercase tracking-widest transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                       >
-                        Cancel
+                        Discard changes
                       </button>
                       <button
                         disabled={isSavingProfile || showSavedFeedback}

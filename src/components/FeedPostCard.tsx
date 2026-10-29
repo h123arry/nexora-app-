@@ -153,28 +153,38 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
       {/* Card Header Row */}
       <div className="px-4 sm:px-6 flex items-start justify-between gap-3 mb-4">
         <div className="flex gap-3">
-          <img
-            src={post.avatar}
-            alt={post.name}
-            loading="lazy"
-            decoding="async"
-            className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40 cursor-pointer"
+          <button
+            type="button"
+            aria-label={`View ${post.name}'s profile`}
+            disabled={!onViewProfile}
+            className="shrink-0 rounded-full focus-visible:outline-2 focus-visible:outline-violet-300"
             onClick={(e) => {
               e.stopPropagation();
               onViewProfile?.(post.userId || post.username);
             }}
-          />
+          >
+            <img
+              src={post.avatar}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="w-10 h-10 rounded-full object-cover ring-2 ring-violet-500/40"
+            />
+          </button>
           <div>
             <div className="flex items-center gap-1.5 flex-wrap">
-              <span
+              <button
+                type="button"
+                aria-label={`View ${post.name}'s profile`}
+                disabled={!onViewProfile}
                 onClick={(e) => {
                   e.stopPropagation();
                   onViewProfile?.(post.userId || post.username);
                 }}
-                className="font-sans font-extrabold text-sm text-white hover:text-violet-400 transition-colors cursor-pointer"
+                className="font-sans font-extrabold text-sm text-white hover:text-violet-400 transition-colors cursor-pointer disabled:cursor-default"
               >
                 {post.name}
-              </span>
+              </button>
               {(post.username === 'voh' || post.userId === 'user-0' || post.username === 'voh_ai' || post.username === 'nexora_ai') && (
                 <CheckCircle className="w-3.5 h-3.5 text-violet-400 fill-current" />
               )}
@@ -186,12 +196,15 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               {post.content.length > 100 && <VohSummaryButton content={post.content} />}
             </div>
             <div className="flex flex-wrap items-center gap-1.5 text-[10.5px] font-mono text-violet-400/80 leading-tight">
-              <span
+              <button
+                type="button"
+                aria-label={`View @${post.username}'s profile`}
+                disabled={!onViewProfile}
                 onClick={() => (post.userId || post.username) && onViewProfile?.(post.userId || post.username)}
-                className="hover:underline cursor-pointer"
+                className="hover:underline cursor-pointer disabled:cursor-default"
               >
                 @{post.username}
-              </span>
+              </button>
               <span>•</span>
               <span><RelativeTime timestamp={post.timestamp} /></span>
               <span>•</span>
@@ -234,9 +247,14 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             {/* Three Dots Menu Button */}
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setActiveDotsMenuPostId(activeDotsMenuPostId === post.id ? null : post.id)}
-                className="p-1.5 rounded-xl hover:bg-white/10 text-violet-400 transition-colors cursor-pointer"
+                className="min-w-11 min-h-11 p-2 rounded-xl hover:bg-white/10 text-violet-400 transition-colors cursor-pointer"
                 title="Post Options"
+                aria-label={`Post options for ${post.name}`}
+                aria-haspopup="menu"
+                aria-expanded={activeDotsMenuPostId === post.id}
+                aria-controls={`post-options-${post.id}`}
               >
                 <MoreHorizontal className="w-4 h-4" />
               </button>
@@ -255,9 +273,13 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                       initial={{ opacity: 0, scale: 0.95, y: -5 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                      id={`post-options-${post.id}`}
+                      role="menu"
+                      aria-label={`Post options for ${post.name}`}
                       className="absolute right-0 mt-1 w-48 max-h-[60vh] overflow-y-auto bg-[#0c091f] border border-white/10 rounded-xl shadow-md z-50 font-sans py-1"
                     >
                     <button
+                      role="menuitem"
                       onClick={() => {
                         setNidaDiagnosticPost(post);
                         setActiveDotsMenuPostId(null);
@@ -270,6 +292,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
                     {isOwnPost && (
                       <button
+                      role="menuitem"
                         onClick={() => {
                           setAnalyticsPost(post);
                           setActiveDotsMenuPostId(null);
@@ -283,6 +306,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
                     {isOwnPost && (
                       <button
+                      role="menuitem"
                         onClick={() => {
                           const isPinned = pinnedPostIds.includes(post.id);
                           setPinnedPostIds((prev) => {
@@ -304,6 +328,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
                     {isOwnPost && (
                       <button
+                      role="menuitem"
                         onClick={() => {
                           const newCaption = prompt('Edit caption:', post.content);
                           if (newCaption !== null && newCaption.trim() !== '') {
@@ -322,6 +347,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
                     {!isOwnPost && post.userId && (
                       <button
+                      role="menuitem"
                         onClick={() => {
                           onToggleFollow?.(post.userId!);
                           setActiveDotsMenuPostId(null);
@@ -334,6 +360,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                     )}
 
                     <button
+                      role="menuitem"
                       onClick={() => {
                         setReportingPost(post);
                         setActiveDotsMenuPostId(null);
@@ -345,6 +372,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                     </button>
 
                     <button
+                      role="menuitem"
                       onClick={() => {
                         setHiddenPostIds((prev) => [...prev, post.id]);
                         setActiveDotsMenuPostId(null);
@@ -357,6 +385,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                     </button>
 
                     <button
+                      role="menuitem"
                       onClick={() => {
                         const text = `${window.location.origin}/post/${post.id}`;
                         navigator.clipboard.writeText(text);
@@ -370,6 +399,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                     </button>
 
                     <button
+                      role="menuitem"
                       onClick={() => {
                         setShowSaveToCollectionModalId(post.id);
                         setActiveDotsMenuPostId(null);
@@ -650,9 +680,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           <div className="px-4 sm:px-6 flex items-start gap-4 border-t border-white/5 pt-4 mt-2 text-white">
             {/* Spark (Zap) */}
             <button
+              type="button"
               onClick={() => onSpark(post.id)}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
+              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
               title="Spark"
+              aria-label={`${post.isLikedByUser ? 'Un-spark' : 'Spark'} post by ${post.name}; ${post.likes} sparks`}
+              aria-pressed={!!post.isLikedByUser}
             >
               <Zap className={`w-6 h-6 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
               <span className="text-[10px] font-mono font-bold">{post.likes}</span>
@@ -660,9 +693,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
             {/* Comment */}
             <button
+              type="button"
               onClick={() => onCommentToggle(post.id)}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
+              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
               title="Comment"
+              aria-label={`${isCommentsOpen ? 'Close comments' : 'Open comments'} on post by ${post.name}; ${post.comments?.length || 0} comments`}
+              aria-expanded={isCommentsOpen}
             >
               <MessageCircle className="w-6 h-6 text-white" />
               <span className="text-[10px] font-mono font-bold">{post.comments?.length || 0}</span>
@@ -670,12 +706,14 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
             {/* Repost */}
             <button
+              type="button"
               onClick={() => {
                 if (onSharePost) onSharePost(post.id);
                 window.dispatchEvent(new CustomEvent('toast', { detail: '🔁 Post reposted!' }));
               }}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
+              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
               title="Repost"
+              aria-label={`Repost by ${post.name}; ${post.shares || 0} reposts`}
             >
               <Repeat className="w-6 h-6 text-white" />
               <span className="text-[10px] font-mono font-bold">{post.shares || 0}</span>
@@ -683,14 +721,16 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
             {/* Share */}
             <button
+              type="button"
               onClick={() => {
                 try {
                   navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
                   window.dispatchEvent(new CustomEvent('toast', { detail: '📋 Link copied!' }));
                 } catch (e) {}
               }}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
+              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
               title="Share"
+              aria-label={`Copy link to post by ${post.name}`}
             >
               <Send className="w-6 h-6 text-white" />
               <span className="text-[10px] font-mono font-bold">Share</span>
@@ -698,9 +738,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
             {/* Bookmark */}
             <button
+              type="button"
               onClick={() => onSave(post.id)}
-              className="flex flex-col items-center gap-1 group cursor-pointer"
+              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
               title="Bookmark"
+              aria-label={`${post.isBookmarkedByUser ? 'Remove bookmark from' : 'Bookmark'} post by ${post.name}; ${post.bookmarksCount || 0} saves`}
+              aria-pressed={!!post.isBookmarkedByUser}
             >
               <Bookmark className={`w-6 h-6 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-white'}`} />
               <span className="text-[10px] font-mono font-bold">{post.bookmarksCount || 0}</span>

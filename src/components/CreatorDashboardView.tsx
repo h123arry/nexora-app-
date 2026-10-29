@@ -586,8 +586,8 @@ export default function CreatorDashboardView({
                 {[
                   { label: 'Recorded Views', val: formatMetric(stats.totalViews), sub: 'Total on available post records', icon: Eye, color: 'text-sky-400' },
                   { label: 'Sparks (Likes)', val: formatMetric(stats.totalSparks), sub: 'Total on available post records', icon: Sparkles, color: 'text-pink-400' },
-                  { label: 'Watch Duration', val: formatMetric(stats.totalWatchTimeHours), sub: 'Watch-time tracking unavailable', icon: Clock, color: 'text-violet-400' },
-                  { label: 'Follower Change', val: formatMetric(stats.followerChange), sub: 'Follower history is not tracked', icon: Users, color: 'text-emerald-400' }
+                  { label: 'Watch Duration', val: 'Unavailable', sub: 'Watch-time tracking is not available yet', icon: Clock, color: 'text-violet-400' },
+                  { label: 'Follower Change', val: 'Not tracked yet', sub: 'Follower history is not tracked', icon: Users, color: 'text-emerald-400' }
                 ].map((card, i) => {
                   const Icon = card.icon;
                   return (
@@ -1147,31 +1147,32 @@ export default function CreatorDashboardView({
                 ))}
               </div>
 
-              {/* Extra engagement analysis */}
+              {/* Metrics that require an analytics event source */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="p-4 rounded-xl bg-[#120a3a]/30 border border-white/10 space-y-2">
-                  <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">Engagement Efficiency</h5>
+                  <h5 className="text-xs font-extrabold text-white uppercase tracking-wider">Additional analytics unavailable</h5>
                   <div className="space-y-3 pt-1 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-zinc-400">Profile Visits generated</span>
-                      <strong className="text-white font-mono">{Math.floor((selectedPostForAnalytics.views || 100) * 0.18)}</strong>
+                      <span className="text-zinc-400">Profile visits generated</span>
+                      <strong className="text-white font-mono">Unavailable</strong>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-400">Followers gained from post</span>
-                      <strong className="text-emerald-400 font-mono">+{Math.floor((selectedPostForAnalytics.likes || 10) * 0.12)}</strong>
+                      <strong className="text-emerald-400 font-mono">Not tracked yet</strong>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-400">Unique Viewers ratio</span>
-                      <strong className="text-sky-400 font-mono">82.4%</strong>
+                      <strong className="text-sky-400 font-mono">Unavailable</strong>
                     </div>
+                    <p className="text-[10px] text-zinc-500">These metrics require persisted analytics events; no estimates are shown.</p>
                   </div>
                 </div>
 
                 <div className="p-4 rounded-xl bg-white/3 border border-white/5 flex flex-col justify-between">
                   <div className="space-y-1.5 text-xs">
-                    <span className="text-[10px] text-pink-400 font-extrabold uppercase">Content Recommendation Engine Verdict</span>
-                    <p className="font-bold text-white">Algorithm Classification: <strong className="text-pink-400">Viral Tier 2</strong></p>
-                    <p className="text-[10px] text-zinc-400 leading-relaxed">This post is performing 18% better in viewer completion rate than other posts with similar tags. High relevance score.</p>
+                    <span className="text-[10px] text-pink-400 font-extrabold uppercase">Content recommendation</span>
+                    <p className="font-bold text-white">Unavailable</p>
+                    <p className="text-[10px] text-zinc-400 leading-relaxed">No verified recommendation or comparative completion-rate data is available for this post.</p>
                   </div>
                 </div>
               </div>

@@ -1399,7 +1399,7 @@ export default function MessagesView({
               <MessageSquare className="w-8 h-8 text-zinc-700 mb-2" />
               <p className="text-zinc-400 text-sm font-bold">No conversations yet.</p>
               <p className="text-zinc-600 text-xs mt-1">Start a conversation by following someone or sending your first message.</p>
-              <button className="mt-4 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors">New Message</button>
+              <button onClick={() => setIsCreatingGroupOpen(true)} className="mt-4 px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold transition-colors">Create a group</button>
             </div>
           ) : (
             filteredChats.map(chat => {
@@ -1450,7 +1450,7 @@ export default function MessagesView({
                         e.stopPropagation();
                         toggleChatCategory(chat.id);
                       }}
-                      className="opacity-0 group-hover/item:opacity-100 p-1 hover:bg-violet-500/20 rounded-md text-zinc-400 hover:text-violet-400 transition-all cursor-pointer"
+                      className="p-2 hover:bg-violet-500/20 rounded-md text-zinc-400 hover:text-violet-400 transition-all cursor-pointer"
                       title={generalChatIds.includes(chat.id) ? "Move to Primary Tab" : "Move to General Tab"}
                     >
                       <RefreshCw className="w-2.5 h-2.5 text-violet-400" />
@@ -1889,8 +1889,8 @@ export default function MessagesView({
             <p className="font-sans text-xs text-zinc-500 mt-2 max-w-xs text-center leading-relaxed">
               When someone sends you a message, your conversations will appear here. All conversations on Nexora are fully secure.
             </p>
-            <button className="mt-6 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer">
-              Start a Conversation
+            <button onClick={() => setIsCreatingGroupOpen(true)} className="mt-6 px-5 py-2.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all cursor-pointer">
+              Create a group
             </button>
           </motion.div>
         )}

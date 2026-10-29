@@ -97,7 +97,8 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
       {index > 0 && (
         <button 
           onClick={handlePrev}
-          className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100 cursor-pointer text-xs font-bold leading-none select-none z-10"
+          aria-label="Previous image"
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/80 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer text-sm font-bold leading-none select-none z-10"
         >
           &larr;
         </button>
@@ -105,7 +106,8 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
       {index < images.length - 1 && (
         <button 
           onClick={handleNext}
-          className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-all opacity-0 group-hover:opacity-100 cursor-pointer text-xs font-bold leading-none select-none z-10"
+          aria-label="Next image"
+          className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-black/80 transition-all opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer text-sm font-bold leading-none select-none z-10"
         >
           &rarr;
         </button>
@@ -1853,24 +1855,24 @@ export default function FeedView({
         {/* STAGE 1 — HOME FEED NAVIGATION HEADER */}
         <div className="nx-feed-header sticky top-0 z-30 backdrop-blur-xl border-b border-white/10">
           {/* Brand row */}
-          <div className="flex items-center justify-between gap-3 px-4 sm:px-7 pt-4 pb-2">
-            <div className="flex min-w-0 items-center gap-3">
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-7 pt-2.5 pb-1 sm:pt-4 sm:pb-2">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <NexoraPremiumLogo className="h-10 w-10 sm:h-11 sm:w-11 nx-brand-mark drop-shadow-[0_0_6px_rgba(167,139,250,0.3)]" />
               <div className="min-w-0">
                 <div className="flex items-center gap-2"><span className="text-xl font-extrabold tracking-[-0.04em] nx-gradient-text leading-none sm:text-2xl">NEXORA</span><span className="hidden rounded-full border border-violet-300/20 bg-violet-400/10 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.14em] text-violet-200 sm:inline">For you</span></div>
-                <span className="mt-1 block truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">The World&apos;s Living Social Network</span>
+                <span className="mt-0.5 sm:mt-1 block truncate text-[11px] font-medium text-slate-500">The World&apos;s Living Social Network</span>
               </div>
             </div>
             <span className="hidden items-center gap-1.5 text-[10px] font-semibold text-emerald-300/80 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />{currentUser.id === 'guest_visitor_id' || currentUser.username === 'visitor' ? 'Preview feed' : 'Live network'}</span>
           </div>
           {/* Categories + utilities row */}
-          <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2">
+          <div className="flex items-center justify-between gap-1.5 px-3 sm:px-6 py-1 sm:gap-2 sm:py-2">
           {/* Left: Feed Categories (Exact Order: Posts, Following, Friends, Trending, Reels) */}
-          <div role="group" aria-label="Feed categories" className="flex flex-1 min-w-0 items-center gap-2 sm:gap-7 overflow-x-auto overscroll-x-contain scrollbar-none pr-0 sm:pr-2 py-1">
+          <div role="group" aria-label="Feed categories" className="relative flex flex-1 min-w-0 items-center gap-2 sm:gap-7 overflow-x-auto overscroll-x-contain scrollbar-none pr-3 sm:pr-2 py-0.5 sm:py-1 after:pointer-events-none after:content-[''] after:absolute after:right-0 after:top-0 after:bottom-0 after:w-5 after:bg-gradient-to-l after:from-zinc-950/90 after:to-transparent sm:after:hidden">
             {([
               { id: 'posts', label: 'For You' },
               { id: 'following', label: 'Following' },
-              { id: 'friends', label: 'Communities' },
+              { id: 'friends', label: 'Friends' },
               { id: 'trending', label: 'Trending' },
               { id: 'reels', label: 'Reels' }
             ] as const).map(cat => {
@@ -1886,7 +1888,7 @@ export default function FeedView({
                   }}
                   aria-label={cat.label}
                   aria-pressed={isActive}
-                  className={`relative py-2.5 px-1 sm:px-1 text-sm sm:text-base font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[48px] flex items-center justify-center ${
+                  className={`relative py-1.5 sm:py-2.5 px-1 sm:px-1 text-sm sm:text-base font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[48px] flex items-center justify-center ${
                     isActive ? 'text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200 font-medium'
                   }`}
                 >
@@ -2105,7 +2107,7 @@ export default function FeedView({
         {/* Hydration / Empty feed state */}
         {!isHydrated ? (
           <FeedHydrationSkeleton />
-        ) : filteredPosts.length === 0 && (
+        ) : currentDisplayList.length === 0 && (
           <div className="p-6 md:p-8 rounded-3xl bg-[#09071c]/50 border border-white/10 text-center py-10 space-y-6 mx-4 md:mx-0 relative overflow-hidden">
             {/* Glowing aesthetic backdrop lights */}
             <div className="absolute top-0 right-0 w-24 h-24 bg-violet-600/10 rounded-full blur-2xl" />
@@ -2115,19 +2117,34 @@ export default function FeedView({
               <div className="w-12 h-12 rounded-2xl bg-linear-to-tr from-violet-600 to-pink-500 flex items-center justify-center mx-auto shadow-lg shadow-violet-500/10">
                 <Globe className="w-6 h-6 text-white animate-pulse" />
               </div>
-              <h4 className="text-base font-sans font-extrabold text-white tracking-wide">No posts yet</h4>
+              <h4 className="text-base font-sans font-extrabold text-white tracking-wide">{localPosts.length === 0 ? 'No posts yet' : 'No posts match these filters'}</h4>
               <p className="text-xs text-violet-300/80 max-w-md mx-auto leading-relaxed">
-                There is currently no content here, and you can create something.
+                {localPosts.length === 0
+                  ? 'There is currently no content here. Create a post to get the conversation started.'
+                  : 'Try another search or clear your search, filters, or selected tag to see more posts.'}
               </p>
             </div>
 
             <div className="flex flex-wrap justify-center gap-3 relative z-10">
-              <button 
+              {localPosts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedTag(null);
+                    setSearchFilterType('all');
+                    setActiveCollectionFolder(null);
+                    setQualityFilter(false);
+                  }}
+                  className="px-5 py-2.5 border border-white/15 hover:bg-white/5 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all"
+                >Clear search & filters</button>
+              )}
+              {localPosts.length === 0 && <button
                 onClick={() => setComposerOpen(true)}
                 className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all hover:shadow-lg hover:shadow-violet-500/20 active:scale-95"
               >
                 + Create your first post
-              </button>
+              </button>}
             </div>
           </div>
         )}

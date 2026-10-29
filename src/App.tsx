@@ -912,8 +912,18 @@ export default function App() {
   // PWA Installation state variables
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPWAInstallPrompt, setShowPWAInstallPrompt] = useState(false);
+  const [pendingPWAInstallPrompt, setPendingPWAInstallPrompt] = useState(false);
   const [pwaInstallStatus, setPwaInstallStatus] = useState<'idle' | 'installing' | 'installed' | 'not-supported'>('idle');
   const [verificationModalDetail, setVerificationModalDetail] = useState<{ type: string; tooltip: string } | null>(null);
+
+  useEffect(() => {
+    if (!pendingPWAInstallPrompt || showOnboarding || pwaInstallStatus === 'installed') return;
+    const timer = window.setTimeout(() => {
+      setPendingPWAInstallPrompt(false);
+      setShowPWAInstallPrompt(true);
+    }, 45_000);
+    return () => window.clearTimeout(timer);
+  }, [pendingPWAInstallPrompt, showOnboarding, pwaInstallStatus]);
 
   useEffect(() => {
     const handleShowModal = (e: any) => {
@@ -1298,7 +1308,7 @@ export default function App() {
       const justSignedUp = localStorage.getItem('nexora_just_signed_up') === 'true';
       if (justSignedUp) {
         localStorage.removeItem('nexora_just_signed_up');
-        setShowPWAInstallPrompt(true);
+        setPendingPWAInstallPrompt(true);
         return;
       }
 
@@ -1308,11 +1318,11 @@ export default function App() {
       if (dismissed) {
         const daysDiff = (Date.now() - parseInt(dismissed, 10)) / (1000 * 60 * 60 * 24);
         if (sessionsSinceDismissed >= 3 && daysDiff >= 1) {
-          setShowPWAInstallPrompt(true);
+          setPendingPWAInstallPrompt(true);
         }
       } else {
         // No dismissal recorded yet, show prompt
-        setShowPWAInstallPrompt(true);
+        setPendingPWAInstallPrompt(true);
       }
     };
 
@@ -1320,6 +1330,7 @@ export default function App() {
       setPwaInstallStatus('installed');
       setDeferredPrompt(null);
       setShowPWAInstallPrompt(false);
+      setPendingPWAInstallPrompt(false);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Nexora App successfully installed on your device!' }));
     };
 
@@ -1343,7 +1354,7 @@ export default function App() {
     const justSignedUp = localStorage.getItem('nexora_just_signed_up') === 'true';
     if (justSignedUp && !isStandalone) {
       localStorage.removeItem('nexora_just_signed_up');
-      setShowPWAInstallPrompt(true);
+      setPendingPWAInstallPrompt(true);
     }
 
     return () => {
@@ -2055,7 +2066,7 @@ export default function App() {
         unreadNotificationsCount={unreadNotificationsCount}
       />
 
-      <div className={activeTab === 'feed' ? "w-full h-screen md:h-[100dvh] relative overflow-hidden" : "w-full min-h-screen relative overflow-hidden"}>
+      <div className={activeTab === 'feed' ? "w-full h-[100dvh] relative overflow-hidden" : "w-full min-h-screen relative overflow-hidden"}>
         
         {/* Main application Grid */}
         <div id="nexora-main-grid" className={activeTab === 'feed' ? "grid grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_320px] h-full w-full relative overflow-hidden" : "grid grid-cols-1 lg:grid-cols-12 items-start"}>
@@ -2505,7 +2516,7 @@ export default function App() {
           id="mobile-nav-home"
         >
           <Home className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[9px] font-mono tracking-wide uppercase">Home</span>
+          <span className="text-[10px] font-mono tracking-wide uppercase">Home</span>
         </button>
 
         <button
@@ -2518,7 +2529,7 @@ export default function App() {
           id="mobile-nav-explore"
         >
           <Compass className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[9px] font-mono tracking-wide uppercase">Explore</span>
+          <span className="text-[10px] font-mono tracking-wide uppercase">Explore</span>
         </button>
 
         <motion.button
@@ -2565,13 +2576,16 @@ export default function App() {
           className="nx-dock-item relative cursor-pointer"
           id="mobile-nav-inbox"
         >
-          <MessageSquare className="w-5 h-5" aria-hidden="true" />
-          {(unreadMessagesCount + unreadNotificationsCount) > 0 && (
-            <span className="absolute top-1.5 right-1/4 min-w-3.5 h-3.5 px-1 rounded-full bg-blue-500 text-white text-[8px] font-bold flex items-center justify-center" aria-hidden="true">
-              {(unreadMessagesCount + unreadNotificationsCount) > 9 ? '9+' : unreadMessagesCount + unreadNotificationsCount}
-            </span>
-          )}
-          <span className="text-[9px] font-mono tracking-wide uppercase">Inbox</span>
+          <span className="relative flex h-6 w-8 items-center justify-center">
+            <MessageSquare className="w-5 h-5" aria-hidden="true" />
+            {unreadMessagesCount > 0 && (
+              <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-blue-500 px-1 text-[8px] font-bold text-white" aria-hidden="true">
+                {unreadMessagesCount > 9 ? '9+' : unreadMessagesCount}
+              </span>
+            )}
+            {unreadNotificationsCount > 0 && <span className="absolute -left-1 -top-0.5 h-2 w-2 rounded-full border border-[#050505] bg-violet-300" aria-hidden="true" />}
+          </span>
+          <span className="text-[10px] font-mono tracking-wide uppercase">Inbox</span>
         </button>
 
         <button
@@ -2584,7 +2598,7 @@ export default function App() {
           id="mobile-nav-profile"
         >
           <UserIcon className="w-5 h-5" aria-hidden="true" />
-          <span className="text-[9px] font-mono tracking-wide uppercase">Profile</span>
+          <span className="text-[10px] font-mono tracking-wide uppercase">Profile</span>
         </button>
       </nav>
 

@@ -211,6 +211,12 @@ export default function NewInboxView({
     });
   }, [chats, searchQuery, inboxTab, archivedChats, pinnedChats, messageRequests]);
 
+  const tabCounts = useMemo(() => ({
+    chats: chats.filter(chat => !archivedChats.includes(chat.id)).length,
+    requests: messageRequests.length,
+    archived: chats.filter(chat => archivedChats.includes(chat.id)).length,
+  }), [chats, archivedChats, messageRequests]);
+
   const availableUsers = useMemo(() => {
     const q = userSearchQuery.toLowerCase();
     return creators.filter(u => {
@@ -489,21 +495,21 @@ export default function NewInboxView({
               aria-selected={inboxTab === 'chats'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'chats' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
-              Chats
+              Chats <span className="ml-1 opacity-75">{tabCounts.chats}</span>
             </button>
             <button
               onClick={() => setInboxTab('requests')}
               aria-selected={inboxTab === 'requests'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'requests' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
-              Requests
+              Requests <span className="ml-1 opacity-75">{tabCounts.requests}</span>
             </button>
             <button
               onClick={() => setInboxTab('archived')}
               aria-selected={inboxTab === 'archived'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'archived' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
-              Archived
+              Archived <span className="ml-1 opacity-75">{tabCounts.archived}</span>
             </button>
           </div>
 
@@ -526,17 +532,17 @@ export default function NewInboxView({
               <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-4 shadow-md">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <h3 className="text-sm font-bold text-white mb-1">Your inbox is empty</h3>
+              <h3 className="text-sm font-bold text-white mb-1">{searchQuery ? 'No matching conversations' : inboxTab === 'requests' ? 'No message requests' : inboxTab === 'archived' ? 'No archived conversations' : 'No conversations yet'}</h3>
               <p className="text-xs text-zinc-400 max-w-xs mb-6 font-sans">
-                No active conversations yet. Start messaging creators or contacts instantly.
+                {searchQuery ? 'Try a different name or message.' : inboxTab === 'requests' ? 'New requests will appear here.' : inboxTab === 'archived' ? 'Conversations you archive will appear here.' : 'Choose a creator or contact to start a conversation.'}
               </p>
-              <button
+              {!searchQuery && inboxTab === 'chats' && <button
                 onClick={() => setShowNewMessageModal(true)}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 New Message
-              </button>
+              </button>}
             </div>
           ) : (
             filteredChats.map(chat => {
@@ -616,6 +622,7 @@ export default function NewInboxView({
                   className="md:hidden p-2 bg-white/5 hover:bg-white/10 rounded-xl text-zinc-300 transition-all cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
+                  <span className="sr-only">Back to conversations</span>
                 </button>
 
                 <div className="relative shrink-0">
