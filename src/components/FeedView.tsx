@@ -1855,7 +1855,7 @@ export default function FeedView({
           {/* Brand row */}
           <div className="flex items-center justify-between gap-3 px-4 sm:px-7 pt-4 pb-2">
             <div className="flex min-w-0 items-center gap-3">
-              <NexoraPremiumLogo className="h-8 w-8 sm:h-9 sm:w-9 nx-brand-mark" />
+              <NexoraPremiumLogo className="h-10 w-10 sm:h-11 sm:w-11 nx-brand-mark drop-shadow-[0_0_6px_rgba(167,139,250,0.3)]" />
               <div className="min-w-0">
                 <div className="flex items-center gap-2"><span className="text-xl font-extrabold tracking-[-0.04em] nx-gradient-text leading-none sm:text-2xl">NEXORA</span><span className="hidden rounded-full border border-violet-300/20 bg-violet-400/10 px-1.5 py-0.5 text-[7px] font-bold uppercase tracking-[0.14em] text-violet-200 sm:inline">For you</span></div>
                 <span className="mt-1 block truncate text-[10px] font-medium text-slate-500 sm:text-[11px]">The World&apos;s Living Social Network</span>
@@ -1866,7 +1866,7 @@ export default function FeedView({
           {/* Categories + utilities row */}
           <div className="flex items-center justify-between gap-2 px-3 sm:px-6 py-2">
           {/* Left: Feed Categories (Exact Order: Posts, Following, Friends, Trending, Reels) */}
-          <div role="group" aria-label="Feed categories" className="flex flex-1 min-w-0 items-center gap-1 sm:gap-7 overflow-x-auto overscroll-x-contain scrollbar-none pr-0 sm:pr-2 py-1">
+          <div role="group" aria-label="Feed categories" className="flex flex-1 min-w-0 items-center gap-2 sm:gap-7 overflow-x-auto overscroll-x-contain scrollbar-none pr-0 sm:pr-2 py-1">
             {([
               { id: 'posts', label: 'For You' },
               { id: 'following', label: 'Following' },
@@ -1886,7 +1886,7 @@ export default function FeedView({
                   }}
                   aria-label={cat.label}
                   aria-pressed={isActive}
-                  className={`relative py-2.5 px-0.5 sm:px-1 text-xs sm:text-sm font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[44px] flex items-center justify-center ${
+                  className={`relative py-2.5 px-1 sm:px-1 text-sm sm:text-base font-sans transition-all duration-200 cursor-pointer whitespace-nowrap min-h-[48px] flex items-center justify-center ${
                     isActive ? 'text-white font-extrabold' : 'text-zinc-400 hover:text-zinc-200 font-medium'
                   }`}
                 >

@@ -1234,9 +1234,9 @@ export default function ProfileView({
                 { label: 'Reputation', value: getSecondaryMetric('reputation') },
                 { label: 'Contributions', value: getSecondaryMetric('contributions') },
               ].map(stat => (
-                <div key={stat.label} className="flex flex-col py-1">
+                <div key={stat.label} className="flex flex-col gap-0.5 rounded-xl border border-white/[0.06] bg-white/[0.025] py-2">
                   <span className="text-sm sm:text-base font-black text-white leading-tight">{stat.value}</span>
-                  <span className="text-[10px] sm:text-[11px] font-medium text-zinc-400">{stat.label}</span>
+                  <span className="text-[11px] sm:text-xs font-medium text-zinc-300">{stat.label}</span>
                 </div>
               ))}
             </div>
@@ -1267,7 +1267,7 @@ export default function ProfileView({
 
           {/* Profile content navigation */}
           <div role="group" aria-label="Profile content views" className="sticky top-0 nx-glass z-30 border-y border-white/10 mt-4 px-0 w-full">
-            <div className="w-full max-w-4xl mx-auto flex items-center justify-around py-0">
+            <div className="w-full max-w-4xl mx-auto grid grid-cols-3 gap-2 p-2">
               {[
                 { id: 'media', label: 'Posts', icon: Camera },
                 { id: 'voice', label: 'Voice', icon: Mic },
@@ -1288,17 +1288,14 @@ export default function ProfileView({
                     aria-label={tab.label}
                     aria-pressed={isActive}
                     title={tab.label}
-                    className={`flex-1 min-h-14 flex flex-col justify-center items-center gap-1 py-2 transition-all cursor-pointer relative ${
-                      isActive 
-                        ? 'text-white' 
-                        : 'text-zinc-500 hover:text-zinc-300'
+                    className={`min-h-12 flex justify-center items-center gap-2 rounded-xl border px-2 py-2 transition-all cursor-pointer focus-visible:outline-violet-300 ${
+                      isActive
+                        ? 'border-violet-300/40 bg-violet-500/20 text-white shadow-[inset_0_0_0_1px_rgba(167,139,250,0.12)]'
+                        : 'border-white/[0.06] bg-white/[0.025] text-zinc-300 hover:border-violet-300/25 hover:bg-white/[0.06] hover:text-white'
                     }`}
                   >
-                    <Icon className="w-4.5 h-4.5" aria-hidden="true" />
-                    <span className="text-[10px] font-mono uppercase tracking-wide">{tab.label}</span>
-                    {isActive && (
-                      <div className="absolute bottom-0 w-full h-[2px] bg-violet-500 rounded-full" />
-                    )}
+                    <Icon className={`w-5 h-5 shrink-0 ${isActive ? 'text-violet-200' : 'text-zinc-400'}`} aria-hidden="true" />
+                    <span className="text-[11px] sm:text-xs font-semibold tracking-normal">{tab.label}</span>
                   </button>
                 );
               })}
