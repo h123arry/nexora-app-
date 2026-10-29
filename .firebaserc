@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "nexora-prod-voiceharrison",
+    "production": "nexora-prod-voiceharrison"
+  }
+}

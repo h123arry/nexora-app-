@@ -38,9 +38,9 @@ export interface CleanupProgress {
 }
 
 const workerApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
-const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
+const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
 const db = getFirestore(workerApp, firestoreDatabaseId);
-const accountStorageBucket = getStorage(workerApp).bucket(process.env.FIREBASE_STORAGE_BUCKET || 'evident-server-bqmt3.firebasestorage.app');
+const accountStorageBucket = getStorage(workerApp).bucket(process.env.FIREBASE_STORAGE_BUCKET || undefined);
 
 function isExpiredLease(request: LifecycleRequest): boolean {
   return !request.leaseExpiresAt || request.leaseExpiresAt.toMillis() <= Date.now();

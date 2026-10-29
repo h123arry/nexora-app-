@@ -4,7 +4,7 @@
 
 **STAGING BLOCKED — OWNER ACTION REQUIRED.**
 
-The repository currently contains a browser configuration for project `evident-server-bqmt3` and named database `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`. Those values are repository configuration, not proof of ownership, access, deployment, provider enablement, or staging readiness.
+The repository now explicitly targets the owner-controlled production project `nexora-prod-voiceharrison`. The checked-in browser configuration is an owner-provided template, and no named database, bucket, provider, or deployment readiness is inferred.
 
 The available environment has no authenticated Firebase CLI session. No Firebase project was created, selected, modified, or deployed by this task.
 
@@ -52,7 +52,7 @@ npm run validate:staging
 
 `npm run validate:staging` checks target separation and configuration shape only. A successful result does **not** prove Firebase access or deployment.
 
-The validator refuses the checked-in project target `evident-server-bqmt3`, rejects local HTTP URLs, requires a non-empty named database, and checks that the Storage bucket belongs to the declared staging project.
+The validator refuses the canonical production target for staging, rejects local HTTP URLs, requires a non-empty owner-verified named database, and checks that the Storage bucket belongs to the declared staging project.
 
 ## Owner action 4: deploy only to staging
 

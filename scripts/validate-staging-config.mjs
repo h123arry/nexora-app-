@@ -14,7 +14,7 @@ if (missing.length > 0) {
 }
 
 const projectId = process.env.NEXORA_STAGING_PROJECT_ID.trim();
-const productionProjectId = 'evident-server-bqmt3';
+const productionProjectId = 'nexora-prod-voiceharrison';
 const databaseId = process.env.FIRESTORE_DATABASE_ID.trim();
 const bucket = process.env.FIREBASE_STORAGE_BUCKET.trim();
 const appUrl = process.env.STAGING_APP_URL.trim();

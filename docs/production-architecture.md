@@ -4,7 +4,7 @@
 
 Nexora is a Vite-built React web application served by the existing Express process in `server.ts`. In production, `npm run build` produces the browser assets in `dist/` and bundles the Express server as `dist/server.cjs`; `npm start` runs that server. The Express process is the trusted API boundary for VOH and private chat audio. Firebase resources are separate managed dependencies. Nothing in this document claims that the configured Firebase project is deployed or that provider settings have been verified.
 
-The checked-in Firebase client configuration targets project `evident-server-bqmt3`, the named Firestore database `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`, and the Storage bucket `evident-server-bqmt3.firebasestorage.app`. These values are repository configuration and must be confirmed against the authorized staging/production target before deployment.
+The canonical Firebase target is project `nexora-prod-voiceharrison`. The web-app identifiers, named Firestore database ID, and Storage bucket are owner-provided deployment inputs and must be confirmed against that project before deployment.
 
 ## Request and data flow
 

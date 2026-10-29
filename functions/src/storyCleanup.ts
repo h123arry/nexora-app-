@@ -4,8 +4,8 @@ import { getStorage } from 'firebase-admin/storage';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 
 const adminApp = getApps().find((app) => app.name === '[DEFAULT]') || initializeApp();
-const databaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
-const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'evident-server-bqmt3.firebasestorage.app';
+const databaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
+const bucketName = process.env.FIREBASE_STORAGE_BUCKET || undefined;
 const db = getFirestore(adminApp, databaseId);
 const bucket = getStorage(adminApp).bucket(bucketName);
 const PAGE_SIZE = 100;

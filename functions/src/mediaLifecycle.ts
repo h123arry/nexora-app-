@@ -3,7 +3,7 @@ import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import { getApps, initializeApp } from 'firebase-admin/app';
 
 const app = getApps().find(candidate => candidate.name === '[DEFAULT]') || initializeApp();
-const databaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
+const databaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
 const db = getFirestore(app, databaseId);
 const MAX_BYTES: Record<string, number> = {
   image: 12 * 1024 * 1024,

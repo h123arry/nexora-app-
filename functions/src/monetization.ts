@@ -4,7 +4,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { CATALOG } from './monetizationPolicy.js';
 
 const app = getApps().find(candidate => candidate.name === '[DEFAULT]') || initializeApp();
-const db = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8');
+const db = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || '(default)');
 // No provider adapter is shipped in this repository. Secrets alone never activate checkout.
 const providerConfigured = false;
 

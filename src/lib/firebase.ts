@@ -8,6 +8,9 @@ import firebaseConfig from '../../firebase-applet-config.json';
 
 const app = initializeApp(firebaseConfig);
 export { app };
+const firestoreDatabaseId = typeof process !== 'undefined' && process.env.FIRESTORE_EMULATOR_HOST
+  ? '(default)'
+  : firebaseConfig.firestoreDatabaseId;
 const appCheckSiteKey = (globalThis as typeof globalThis & {
   __NEXORA_APPCHECK_SITE_KEY__?: string;
 }).__NEXORA_APPCHECK_SITE_KEY__;
@@ -17,7 +20,7 @@ export const appCheck: AppCheck | null = appCheckSiteKey
       isTokenAutoRefreshEnabled: true,
     })
   : null;
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+export const db = getFirestore(app, firestoreDatabaseId);
 export const auth = getAuth();
 export const storage = getStorage(app);
 export const functions = getFunctions(app, 'us-central1');

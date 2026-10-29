@@ -3,10 +3,10 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-comp
 
 // Initialize the Firebase app in the service worker
 firebase.initializeApp({
-  projectId: "evident-server-bqmt3",
-  appId: "1:354472369675:web:2f0b1348b19669e794b10e",
-  apiKey: "AIzaSyBu3DO3dH6dTqbaCImVhVwnKm2VVCm7k4A",
-  messagingSenderId: "354472369675"
+  projectId: "nexora-prod-voiceharrison",
+  appId: "<owner-provided-firebase-web-app-id>",
+  apiKey: "<owner-provided-firebase-web-api-key>",
+  messagingSenderId: "<owner-provided-messaging-sender-id>"
 });
 
 // Retrieve an instance of Firebase Messaging so that it can handle background messages

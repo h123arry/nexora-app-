@@ -12,7 +12,7 @@ export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFi
 export { cleanupExpiredStories } from './storyCleanup.js';
 
 const adminApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
-const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8';
+const firestoreDatabaseId = process.env.FIRESTORE_DATABASE_ID || '(default)';
 const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 setGlobalOptions({
   region: 'us-central1',

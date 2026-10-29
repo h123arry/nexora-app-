@@ -11,6 +11,8 @@ const readJson = (file) => {
 };
 
 const firebase = readJson('firebase.json');
+const aliases = readJson('.firebaserc');
+const webConfig = readJson('firebase-applet-config.json');
 const rootPackage = readJson('package.json');
 const functionsPackage = readJson('functions/package.json');
 
@@ -22,6 +24,18 @@ if (firebase) {
   for (const database of firebase.firestore || []) {
     if (!database.rules || !existsSync(database.rules)) failures.push(`firebase.json: Firestore rules missing for ${database.database}`);
     if (!database.indexes || !existsSync(database.indexes)) failures.push(`firebase.json: Firestore indexes missing for ${database.database}`);
+    if (typeof database.database === 'string' && database.database.includes('<owner-')) failures.push('firebase.json: the owner-verified Firestore database ID is still required');
+  }
+}
+
+if (aliases?.projects?.default !== 'nexora-prod-voiceharrison' || aliases?.projects?.production !== 'nexora-prod-voiceharrison') {
+  failures.push('.firebaserc: default and production aliases must target nexora-prod-voiceharrison');
+}
+
+if (webConfig) {
+  if (webConfig.projectId !== 'nexora-prod-voiceharrison') failures.push('firebase-applet-config.json: projectId must target nexora-prod-voiceharrison');
+  for (const [name, value] of Object.entries(webConfig)) {
+    if (typeof value === 'string' && value.includes('<owner-')) failures.push(`firebase-applet-config.json: ${name} still requires owner-provided configuration`);
   }
 }
 

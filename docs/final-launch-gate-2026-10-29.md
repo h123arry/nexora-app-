@@ -4,7 +4,7 @@
 
 **BLOCKED for production release.**
 
-The repository is in a buildable, security-tested state, and the Firebase Auth client flow passes the available emulator lifecycle tests. Production release cannot be certified because this environment does not have verified access to the configured Firebase project's Authentication provider settings, authorized domains, staging deployment, provider quotas, backup/restore evidence, or real two-account end-to-end test accounts.
+The repository is in a buildable, security-tested state, and the Firebase Auth client flow passes the available emulator lifecycle tests. Production release cannot be certified because this environment does not have verified access to the canonical Firebase project `nexora-prod-voiceharrison`'s Authentication provider settings, authorized domains, staging deployment, provider quotas, backup/restore evidence, or real two-account end-to-end test accounts.
 
 This is an external verification blocker, not a claim that the application code is unusable.
 
@@ -20,7 +20,7 @@ This is an external verification blocker, not a claim that the application code 
 
 ### Verified code and emulator behavior
 
-The configured browser project is defined in `firebase-applet-config.json` and is consumed by `src/lib/firebase.ts`. The canonical authentication service is `src/services/firebase/authService.ts`; the React auth state boundary is `src/context/FirebaseContext.tsx`.
+The canonical browser project is `nexora-prod-voiceharrison`; its registered web-app values are supplied by the owner in `firebase-applet-config.json`, which is consumed by `src/lib/firebase.ts`. The canonical authentication service is `src/services/firebase/authService.ts`; the React auth state boundary is `src/context/FirebaseContext.tsx`.
 
 The available Auth emulator suite passed all four authentication tests:
 
@@ -33,7 +33,7 @@ The code already maps `auth/operation-not-allowed` to an honest provider-disable
 
 ### Production blocker
 
-The earlier `auth/operation-not-allowed` result cannot be fixed by a source-code change. The project owner must verify, in the exact Firebase project referenced by the checked-in configuration:
+The earlier `auth/operation-not-allowed` result cannot be fixed by a source-code change. The project owner must verify, in the canonical Firebase project `nexora-prod-voiceharrison` after owner-provided web configuration is installed:
 
 1. Authentication → Sign-in method → Email/Password enabled.
 2. Phone enabled only if phone sign-in is intentionally in launch scope, with SMS, reCAPTCHA, quota, billing, and abuse controls configured.
@@ -56,7 +56,7 @@ No private credentials should be shared in chat.
 
 ### Not verified in this environment
 
-- Real production/staging signup and login against the configured Firebase project.
+- Real production/staging signup and login against the canonical Firebase project `nexora-prod-voiceharrison`.
 - Two-account feed, follow, profile, privacy, messaging, typing, read-receipt, attachment, and unread-count journey.
 - Real Storage upload/retrieval against the target bucket.
 - Push delivery through configured FCM/VAPID credentials.

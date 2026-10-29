@@ -5,7 +5,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 
 const app = getApps().find(candidate => candidate.name === '[DEFAULT]') || initializeApp();
-const db = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || 'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8');
+const db = getFirestore(app, process.env.FIRESTORE_DATABASE_ID || '(default)');
 
 export const CLIENT_EVENT_TYPES = [
   'feed_request_completed', 'feed_request_failed', 'content_impression', 'post_open',

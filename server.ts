@@ -20,7 +20,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 app.disable('x-powered-by');
 
-function resolveServerConfig(name: string, fallback: string): string {
+function resolveServerConfig(name: string, fallback = ''): string {
   const value = process.env[name]?.trim();
   if (isProduction && !value) {
     throw new Error(`Missing required production configuration: ${name}`);
@@ -30,13 +30,13 @@ function resolveServerConfig(name: string, fallback: string): string {
 
 const firebaseProjectId = resolveServerConfig(
   'GCLOUD_PROJECT',
-  process.env.FIREBASE_PROJECT_ID?.trim() || 'evident-server-bqmt3',
+  process.env.FIREBASE_PROJECT_ID?.trim() || 'nexora-prod-voiceharrison',
 );
 const firestoreDatabaseId = resolveServerConfig(
   'FIRESTORE_DATABASE_ID',
-  'ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8',
+  '(default)',
 );
-const firebaseStorageBucket = resolveServerConfig('FIREBASE_STORAGE_BUCKET', 'evident-server-bqmt3.firebasestorage.app');
+const firebaseStorageBucket = resolveServerConfig('FIREBASE_STORAGE_BUCKET');
 
 if (isProduction && !process.env.RELEASE_VERSION?.trim()) {
   throw new Error('Missing required production configuration: RELEASE_VERSION');
@@ -104,7 +104,7 @@ const VOH_RATE_LIMIT = 20;
 const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-api')
   || initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api');
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
-const mediaBucket = getStorage(firebaseAdminApp).bucket(firebaseStorageBucket);
+const mediaBucket = getStorage(firebaseAdminApp).bucket(firebaseStorageBucket || undefined);
 
 async function requireFirebaseUser(req: express.Request, res: express.Response, next: express.NextFunction) {
   const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);

@@ -13,7 +13,7 @@
       "indexes": "firestore.indexes.json"
     },
     {
-      "database": "ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8",
+      "database": "<owner-verified-firestore-database-id>",
       "rules": "firestore.rules",
       "indexes": "firestore.indexes.json"
     }

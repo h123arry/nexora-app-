@@ -6,7 +6,7 @@ Date: 2026-10-24
 
 Nexora was not rebuilt and no Firebase project, account, profile, post, message, preference, or media data was deleted. The repository now has one canonical email-authentication path, safer Firebase error handling, idempotent profile recovery, browser-storage portability, and emulator-backed authentication regression coverage.
 
-The repository evidence confirms that the client targets the Firebase project `evident-server-bqmt3`, application ID `1:354472369675:web:2f0b1348b19669e794b10e`, Firebase Auth domain `evident-server-bqmt3.firebaseapp.com`, named Firestore database `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`, and Storage bucket `evident-server-bqmt3.firebasestorage.app`.
+The canonical client target is Firebase project `nexora-prod-voiceharrison`. The owner must supply the registered web-app configuration and verify the named Firestore database and Storage bucket before real authentication or data tests can be run.
 
 The available environment does not provide authenticated Firebase Console administration for that project, so this pass cannot truthfully claim that a production provider is enabled, that the deployed domain is authorized, or that an owner-controlled replacement project has been created. Those items are explicitly separated below.
 
@@ -70,14 +70,14 @@ The Firebase web API key in the web configuration is a public client identifier,
 
 ## Owner verification steps in Firebase Console
 
-1. Open the Firebase project `evident-server-bqmt3` and confirm that it is the intended existing project before changing any settings.
+1. Open the owner-controlled Firebase project `nexora-prod-voiceharrison` and confirm the registered web app, named database, Storage bucket, providers, and authorized domains.
 2. In Authentication, confirm that Email/Password is enabled.
 3. Confirm that the deployed Nexora domains and local development domains are listed under authorized domains. A missing authorized domain produces `auth/unauthorized-domain`.
 4. Confirm that Google provider configuration is complete if Google sign-in is desired.
 5. Confirm Phone provider and reCAPTCHA configuration if SMS sign-in is desired. Configure test phone numbers for non-production testing rather than using real accounts in automated tests.
 6. Configure the Firebase email action domain, templates, and sender identity for verification and password reset.
 7. Deploy the repository's Firestore rules and indexes to the intended database. Confirm that the named database is selected rather than silently using an empty default database.
-8. Deploy Storage rules and verify the configured bucket matches `evident-server-bqmt3.firebasestorage.app`.
+8. Deploy Storage rules and verify the configured bucket exactly matches the owner-verified bucket in `nexora-prod-voiceharrison`.
 9. Configure App Check only after the deployed domain has a registered reCAPTCHA Enterprise site key. Keep the key in the public `VITE_FIREBASE_APPCHECK_SITE_KEY` configuration; never place a secret key in frontend code.
 10. Configure Functions runtime secrets and the production release identifier through the hosting environment or secret manager.
 

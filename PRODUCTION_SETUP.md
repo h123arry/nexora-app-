@@ -6,7 +6,7 @@ For the complete handover, use [`docs/production-architecture.md`](docs/producti
 
 ## Configured Firebase resources
 
-The checked-in client config points to Firebase project `evident-server-bqmt3`, named Firestore database `ai-studio-nexora-29627584-4036-4cc0-b743-61fab6f219f8`, and Storage bucket `evident-server-bqmt3.firebasestorage.app`. These values must be confirmed with the project owner before deployment. The `apiKey` in Firebase web config is a public client identifier; do not add service-account keys or other secrets to the repository.
+The canonical production target is Firebase project `nexora-prod-voiceharrison`. The checked-in web configuration is an owner-supplied template until the project web app registration provides the real app ID, API key, Auth domain, messaging sender ID, named Firestore database ID, and Storage bucket. Do not deploy until those values are verified in the owner-controlled project. The `apiKey` in Firebase web config is a public client identifier; do not add service-account keys or other secrets to the repository.
 
 The server and Cloud Functions use Firebase Admin credentials from the hosting environment's Application Default Credentials. Set and verify:
 
