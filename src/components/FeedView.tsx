@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Menu } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
@@ -20,6 +20,7 @@ import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
+import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
@@ -1332,7 +1333,7 @@ export default function FeedView({
   };
 
   // Search filter options
-  const filteredPosts = localPosts.filter(post => {
+  const filteredPosts = useMemo(() => localPosts.filter(post => {
     // 0. Filter out archived posts
     if (post.isArchived) return false;
 
@@ -1421,7 +1422,23 @@ export default function FeedView({
     }
 
     return true;
-  });
+  }), [
+    localPosts,
+    hiddenPostIds,
+    blockedUserIds,
+    mutedUserIds,
+    mutedCreatorIds,
+    notInterestedTags,
+    currentUser.id,
+    followingIds,
+    feedTab,
+    activeCollectionFolder,
+    savedCollections,
+    qualityFilter,
+    searchQuery,
+    searchFilterType,
+    selectedTag,
+  ]);
 
   // Score analyzer for "For You" Feed ranking
   const getMediaTypeScore = (postItem: any) => {
@@ -1634,7 +1651,24 @@ export default function FeedView({
     });
   }, [localPosts, feedTab, sortBy, searchFilterType, searchQuery, selectedTag, activeCollectionFolder, qualityFilter]);
 
-  const currentDisplayList = orderedPosts.slice(0, visibleCount);
+  const currentDisplayList = useMemo(() => orderedPosts.slice(0, visibleCount), [orderedPosts, visibleCount]);
+  const activePostIndex = useMemo(
+    () => currentDisplayList.findIndex(post => post.id === activePostId),
+    [currentDisplayList, activePostId],
+  );
+  const videoPosts = useMemo(
+    () => currentDisplayList.filter(post => Boolean(post.videoUrl)),
+    [currentDisplayList],
+  );
+  const activeVideoIndex = useMemo(
+    () => videoPosts.findIndex(post => post.id === activePostId),
+    [videoPosts, activePostId],
+  );
+  const isConnectionSlow = useMemo(() => {
+    if (typeof navigator === 'undefined') return false;
+    const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+    return Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType));
+  }, []);
 
   // Active Post Viewport Detection using IntersectionObserver
   useEffect(() => {
@@ -2189,49 +2223,20 @@ export default function FeedView({
         {!isRefreshing && searchFilterType !== 'users' && currentDisplayList.map((post, index) => {
           const isPlaying = playingVoiceId === post.id;
           const isCommentsOpen = activeCommentsPostId === post.id;
-          const activePostIndex = currentDisplayList.findIndex(p => p.id === activePostId);
 
           // ─── INTENSE MEDIA MANAGEMENT AND PREDICTIVE BUFFERING ───
           const hasVideo = !!post.videoUrl;
-          const videoPosts = currentDisplayList.filter(p => !!p.videoUrl);
-          const activeVideoIndex = videoPosts.findIndex(p => p.id === activePostId);
           const postVideoIndex = videoPosts.findIndex(p => p.id === post.id);
-
-          // Release video player memory if not previous, current, or next video
-          const shouldPreload = hasVideo && activeVideoIndex !== -1 && (
-            postVideoIndex === activeVideoIndex - 1 || 
-            postVideoIndex === activeVideoIndex + 1 ||
-            postVideoIndex === activeVideoIndex + 2 ||
-            postVideoIndex === activeVideoIndex + 3
-          );
-
-          const isReleased = hasVideo && !shouldPreload && activePostId !== post.id && (() => {
-            if (activeVideoIndex === -1) {
-              const activeIndexInAll = currentDisplayList.findIndex(p => p.id === activePostId);
-              return Math.abs(index - activeIndexInAll) > 2;
-            }
-            return Math.abs(postVideoIndex - activeVideoIndex) > 1;
-          })();
-
-          // Connection adaptive buffering
-          const isConnectionSlow = (() => {
-            if (typeof navigator === 'undefined') return false;
-            const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-            if (!conn) return false;
-            return conn.saveData || ['slow-2g', '2g', '3g'].includes(conn.effectiveType);
-          })();
-
-          const isNextPost = activePostIndex !== -1 && currentDisplayList[activePostIndex + 1]?.id === post.id;
-          const isSecondNextPost = activePostIndex !== -1 && currentDisplayList[activePostIndex + 2]?.id === post.id;
-
-          let preloadMode: 'auto' | 'metadata' | 'none' = 'metadata';
-          if (activePostId === post.id) {
-            preloadMode = 'auto';
-          } else if (shouldPreload) {
-            preloadMode = isConnectionSlow ? 'metadata' : 'auto';
-          } else {
-            preloadMode = 'none'; // Unneeded videos have zero preload to conserve data
-          }
+          const preloadPlan = getVideoPreloadPlan({
+            isVideo: hasVideo,
+            isActive: activePostId === post.id,
+            postIndex: index,
+            activePostIndex,
+            postVideoIndex,
+            activeVideoIndex,
+            isSlowConnection: isConnectionSlow,
+          });
+          const { shouldPreload, isReleased, preloadMode } = preloadPlan;
 
 
 
