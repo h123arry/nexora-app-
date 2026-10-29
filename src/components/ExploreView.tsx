@@ -388,8 +388,19 @@ export default function ExploreView({
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider font-bold">Discover communities</h3>
                   <div className="p-4 rounded-2xl nx-surface flex items-center justify-between gap-3">
-                    <p className="text-xs text-zinc-400">Community search and membership are managed in the Communities hub.</p>
-                    <button type="button" onClick={() => setActiveTab('communities')} className="px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
+                    <p className="text-xs text-zinc-400">Community search and membership are managed in the live Communities hub. {searchFilterType === 'communities' && localSearch.trim() ? 'Your search will carry over.' : ''}</p>
+                    <button type="button" onClick={() => {
+                      try {
+                        if (searchFilterType === 'communities' && localSearch.trim()) {
+                          window.sessionStorage.setItem('nexora_community_search_handoff', localSearch.trim());
+                        } else {
+                          window.sessionStorage.removeItem('nexora_community_search_handoff');
+                        }
+                      } catch (error) {
+                        console.warn('Could not hand off community search:', error);
+                      }
+                      setActiveTab('communities');
+                    }} className="px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
                   </div>
                 </div>
               )}

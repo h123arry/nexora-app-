@@ -46,6 +46,19 @@ export default function CommunitiesHubView({
   const [searchQuery, setSearchQuery] = useState('');
   const [searchCategory, setSearchCategory] = useState<string>('all');
 
+  useEffect(() => {
+    try {
+      const handoffQuery = window.sessionStorage.getItem('nexora_community_search_handoff');
+      if (handoffQuery) {
+        setSearchQuery(handoffQuery);
+        setActiveFilter('explore');
+        window.sessionStorage.removeItem('nexora_community_search_handoff');
+      }
+    } catch (error) {
+      console.warn('Could not restore community search:', error);
+    }
+  }, []);
+
   // 4. Custom communities and pages state
   const [communities, setCommunities] = useState<Circle[]>(() => {
     const saved = localStorage.getItem(COMMUNITIES_STORAGE_KEY);
