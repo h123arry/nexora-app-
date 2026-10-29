@@ -45,7 +45,7 @@ In the target project, record the actual state before changing anything:
 5. App Check: registered web app/site key, enforcement mode, and whether the production domain is authorized.
 6. External providers: FCM/VAPID, Gemini/VOH, email, SMS, payment, monitoring, and backup/export configuration. Unconfigured providers must remain disabled rather than simulated.
 
-The project also has a confirmed Realtime Database URL, but a source search found no Realtime Database SDK usage, rules file, or Firebase deployment target in this codebase. Its URL and security rules were therefore left untouched; no feature currently reads or writes Realtime Database.
+The owner supplied the candidate Realtime Database URL `https://nexora-prod-voiceharrison-default-rtdb.europe-west1.firebasedatabase.app`, but its association with the live instance has not been independently verified in Console. A source search found no Realtime Database SDK usage, rules file, or Firebase deployment target in this codebase. Its URL and security rules were therefore left untouched; no feature currently reads or writes Realtime Database.
 
 Preserve any existing data and review the diff of rules and indexes before deployment. Do not deploy broad or temporary allow rules.
 
