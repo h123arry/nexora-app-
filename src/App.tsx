@@ -78,6 +78,7 @@ const WalletView = lazy(() => import('./components/WalletView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import OfflineBanner from './components/OfflineBanner';
+import PwaUpdatePrompt from './components/PwaUpdatePrompt';
 import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
@@ -2040,6 +2041,7 @@ export default function App() {
         Skip to main content
       </a>
       <OfflineBanner />
+      <PwaUpdatePrompt />
       {/* 🧭 Unified Navigation Menu Drawer Overlay */}
       <SlideDownMenu
         isOpen={isNavMenuOpen}
