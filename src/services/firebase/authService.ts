@@ -244,11 +244,13 @@ export class AuthService {
    * Login with Google
    */
   static async loginWithGoogle(): Promise<{ firebaseUser: FirebaseUser; user: User; isNewUser: boolean }> {
+    let authenticatedUser: FirebaseUser | null = null;
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: 'select_account' });
       const credential = await signInWithPopup(auth, provider);
       const fbUser = credential.user;
+      authenticatedUser = fbUser;
 
       let userProfile = await ProfileService.getProfile(fbUser.uid);
       let isNewUser = false;
@@ -272,6 +274,7 @@ export class AuthService {
 
       return { firebaseUser: fbUser, user: userProfile, isNewUser };
     } catch (err: any) {
+      if (authenticatedUser) await signOut(auth).catch(() => undefined);
       throw new Error(this.mapFirebaseError(err));
     }
   }
@@ -304,9 +307,11 @@ export class AuthService {
   }
 
   static async verifyPhoneCode(confirmationResult: ConfirmationResult, code: string): Promise<{ firebaseUser: FirebaseUser; user: User }> {
+    let authenticatedUser: FirebaseUser | null = null;
     try {
       const credential = await confirmationResult.confirm(code);
       const fbUser = credential.user;
+      authenticatedUser = fbUser;
 
       let userProfile = await ProfileService.getProfile(fbUser.uid);
       if (!userProfile) {
@@ -326,6 +331,7 @@ export class AuthService {
 
       return { firebaseUser: fbUser, user: userProfile };
     } catch (err: any) {
+      if (authenticatedUser) await signOut(auth).catch(() => undefined);
       throw this.publicAuthError(err);
     }
   }

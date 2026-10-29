@@ -539,19 +539,24 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       interestDNA: interestDNAObj
     };
 
+    setIsPending(true);
+    setErrorMsg('');
     try {
       await AuthService.updateUserProfile(finalUser.id, {
         username: finalUser.username,
         avatar: finalUser.avatar,
         interestDNA: finalUser.interestDNA
       });
-    } catch (e) {
-      console.warn('Update user profile warning during onboarding:', e);
+    } catch (e: any) {
+      setErrorMsg(e?.message || 'Your account was created, but profile setup could not be completed. Please retry.');
+      setIsPending(false);
+      return;
     }
 
     localStorage.setItem('nexora_just_signed_up', 'true');
 
     // Launch into home feed!
+    setIsPending(false);
     onLoginSuccess(finalUser);
   };
 

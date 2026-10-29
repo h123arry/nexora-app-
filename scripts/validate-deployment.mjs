@@ -13,6 +13,9 @@ const readJson = (file) => {
 const firebase = readJson('firebase.json');
 const aliases = readJson('.firebaserc');
 const webConfig = readJson('firebase-applet-config.json');
+const messagingWorker = existsSync('public/firebase-messaging-sw.js')
+  ? readFileSync('public/firebase-messaging-sw.js', 'utf8')
+  : '';
 const rootPackage = readJson('package.json');
 const functionsPackage = readJson('functions/package.json');
 
@@ -36,6 +39,10 @@ if (webConfig) {
   if (webConfig.projectId !== 'nexora-prod-voiceharrison') failures.push('firebase-applet-config.json: projectId must target nexora-prod-voiceharrison');
   for (const [name, value] of Object.entries(webConfig)) {
     if (typeof value === 'string' && value.includes('<owner-')) failures.push(`firebase-applet-config.json: ${name} still requires owner-provided configuration`);
+  }
+  const workerValue = (name) => messagingWorker.match(new RegExp(`${name}:\\s*["']([^"']+)["']`))?.[1];
+  for (const name of ['projectId', 'appId', 'apiKey', 'messagingSenderId']) {
+    if (workerValue(name) !== webConfig[name]) failures.push(`public/firebase-messaging-sw.js: ${name} must match firebase-applet-config.json`);
   }
 }
 

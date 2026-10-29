@@ -16,6 +16,9 @@ No Firebase project was modified, no data was copied, and no deployment was atte
 - Updated the Firebase messaging service worker target template.
 - Replaced the active named-database deployment entry with an explicit owner-verified placeholder rather than silently deploying to an arbitrary database.
 - Strengthened `npm run validate:deployment` to require the canonical aliases and to fail while the owner-provided web configuration remains incomplete.
+- Added optional `VITE_FIREBASE_*` browser configuration overrides with a hard fail for unresolved placeholders or unexpected project IDs.
+- Added deployment validation that checks the messaging service worker's public Firebase values against the web-app configuration.
+- Fixed Google and phone-auth profile failures to sign out the newly authenticated Firebase user, and fixed onboarding so a failed final profile update cannot enter the app as a successful signup.
 - Updated active setup, architecture, deployment, authentication, staging, and launch-gate documentation. Historical security evidence retains the old project identifier for provenance.
 
 ## Owner action: register or retrieve the Firebase web app

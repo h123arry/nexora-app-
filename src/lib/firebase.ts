@@ -6,11 +6,34 @@ import { getFunctions } from 'firebase/functions';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
+type FirebaseWebConfig = typeof firebaseConfig;
+const viteEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
+const resolvedConfig: FirebaseWebConfig = {
+  ...firebaseConfig,
+  projectId: viteEnv.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+  appId: viteEnv.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
+  apiKey: viteEnv.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
+  authDomain: viteEnv.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
+  firestoreDatabaseId: viteEnv.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId,
+  storageBucket: viteEnv.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
+  messagingSenderId: viteEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
+};
+const isEmulatorRuntime = typeof process !== 'undefined' && Boolean(process.env.FIRESTORE_EMULATOR_HOST);
+const unresolvedConfigFields = Object.entries(resolvedConfig)
+  .filter(([name, value]) => name !== 'measurementId' && (typeof value !== 'string' || !value.trim() || value.includes('<owner-')))
+  .map(([name]) => name);
+if (resolvedConfig.projectId !== 'nexora-prod-voiceharrison') {
+  throw new Error('Firebase configuration targets an unexpected project. Expected nexora-prod-voiceharrison.');
+}
+if (!isEmulatorRuntime && unresolvedConfigFields.length > 0) {
+  throw new Error(`Firebase web configuration is incomplete. Provide owner-verified values for: ${unresolvedConfigFields.join(', ')}.`);
+}
+
+const app = initializeApp(resolvedConfig);
 export { app };
 const firestoreDatabaseId = typeof process !== 'undefined' && process.env.FIRESTORE_EMULATOR_HOST
   ? '(default)'
-  : firebaseConfig.firestoreDatabaseId;
+  : resolvedConfig.firestoreDatabaseId;
 const appCheckSiteKey = (globalThis as typeof globalThis & {
   __NEXORA_APPCHECK_SITE_KEY__?: string;
 }).__NEXORA_APPCHECK_SITE_KEY__;
