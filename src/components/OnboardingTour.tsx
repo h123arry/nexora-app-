@@ -121,6 +121,8 @@ export default function OnboardingTour({ onClose }: OnboardingTourProps) {
             <button 
               key={i}
               onClick={() => setStep(i)}
+              aria-label={`Go to onboarding step ${i + 1}`}
+              aria-current={i === step ? 'step' : undefined}
               className={`h-1.5 rounded-full cursor-pointer transition-all duration-300 ${
                 i === step ? 'w-7 bg-gradient-to-r from-violet-500 to-fuchsia-500' : 'w-2 bg-white/20 hover:bg-white/40'
               }`}
