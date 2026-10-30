@@ -6,24 +6,19 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
-  errorInfo: ErrorInfo | null;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public override state: State = {
     hasError: false,
-    error: null,
-    errorInfo: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error, errorInfo: null };
+    return { hasError: true };
   }
 
-  public override componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Uncaught error:", error, errorInfo);
-    this.setState({ errorInfo });
+  public override componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
+    console.error('Unhandled UI exception; diagnostic details are redacted.');
   }
 
   public override render() {

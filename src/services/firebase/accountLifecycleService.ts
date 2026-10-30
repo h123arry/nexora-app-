@@ -12,6 +12,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { auth, db } from './config';
+import { AuthService } from './authService';
 
 type LifecycleRequestType = 'delete_account';
 type LifecycleRequestStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
@@ -117,6 +118,7 @@ export async function exportAccountData(userId: string) {
     },
     deviceStorage: localStorageData,
     limitations: [
+      'This is a bounded snapshot, not a complete export: each remote collection query is capped at 500 records and is not paginated.',
       'This export includes data readable by the signed-in account and allowlisted Nexora/VOH device storage.',
       'Private conversations and media binaries are not embedded in this JSON export.',
       'Uploaded media and external provider backups require separate lifecycle processing.'
@@ -124,8 +126,9 @@ export async function exportAccountData(userId: string) {
   };
 }
 
-export async function requestAccountDeletion(userId: string): Promise<AccountDeletionRequest> {
+export async function requestAccountDeletion(userId: string, password?: string): Promise<AccountDeletionRequest> {
   requireCurrentUser(userId);
+  await AuthService.reauthenticateForAccountDeletion(password);
 
   const existing = await getDocs(query(
     collection(db, 'accountLifecycleRequests'),

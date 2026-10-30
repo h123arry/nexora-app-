@@ -31,7 +31,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       setNotifications(notifs);
     }, (error: any) => {
       if (error?.code === 'permission-denied') return;
-      console.warn('[ActivityView] Notifications snapshot error:', error);
+      console.warn('[ActivityView] Notifications snapshot error; details redacted.');
     });
 
     return () => unsubscribe();

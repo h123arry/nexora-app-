@@ -35,6 +35,9 @@ after(async () => env?.cleanup());
 beforeEach(async () => env.clearFirestore());
 
 const dbFor = (uid) => env.authenticatedContext(uid, { email: `${uid}@example.test`, email_verified: true }).firestore();
+const recentlyAuthenticatedDbFor = (uid, ageSeconds = 0) => env.authenticatedContext(uid, {
+  email: `${uid}@example.test`, email_verified: true, auth_time: Math.floor(Date.now() / 1000) - ageSeconds
+}).firestore();
 const guestDb = () => env.unauthenticatedContext().firestore();
 const unverifiedDbFor = (uid) => env.authenticatedContext(uid, { email: `${uid}@example.test`, email_verified: false, phone_number_verified: false }).firestore();
 const seed = async (callback) => env.withSecurityRulesDisabled(async (context) => callback(context.firestore()));
@@ -405,8 +408,11 @@ const publicProfile = (uid) => ({
       updatedAt: serverTimestamp(),
       retentionNote: 'Cleanup is asynchronous and may be limited by backups.'
     };
-    await assertSucceeds(setDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1'), deletionRequest));
-    await assertSucceeds(getDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-no-auth-time'), deletionRequest));
+    await assertFails(setDoc(doc(recentlyAuthenticatedDbFor('alice', 301), 'accountLifecycleRequests', 'delete-stale'), deletionRequest));
+    const freshDb = recentlyAuthenticatedDbFor('alice');
+    await assertSucceeds(setDoc(doc(freshDb, 'accountLifecycleRequests', 'delete-1'), deletionRequest));
+    await assertSucceeds(getDoc(doc(freshDb, 'accountLifecycleRequests', 'delete-1')));
     await assertFails(getDoc(doc(dbFor('bob'), 'accountLifecycleRequests', 'delete-1')));
     await assertFails(setDoc(doc(dbFor('bob'), 'accountLifecycleRequests', 'delete-2'), deletionRequest));
     await assertFails(updateDoc(doc(dbFor('alice'), 'accountLifecycleRequests', 'delete-1'), { status: 'completed' }));

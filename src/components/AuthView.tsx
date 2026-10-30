@@ -228,7 +228,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
         setErrorMsg('Sign-in cancelled.');
       } else {
-        setErrorMsg(`Google Sign-In failed: ${error.message || 'Please try again.'}`);
+        setErrorMsg(AuthService.mapFirebaseError(error));
       }
     }
   };
@@ -281,7 +281,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       } else if (error?.code === 'auth/invalid-credential' || error?.code === 'auth/user-not-found' || error?.code === 'auth/wrong-password') {
         setErrorMsg(`The email or password you entered is incorrect. (${MAX_FAILED_ATTEMPTS - lock.attemptsCount} attempts remaining)`);
       } else {
-        setErrorMsg(error?.message || 'Authentication failed. Please try again.');
+        setErrorMsg(AuthService.mapFirebaseError(error));
       }
     }
   };
@@ -322,7 +322,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       } else if (err.code === 'auth/too-many-requests') {
         setErrorMsg('Too many SMS requests sent to this number. Please wait before trying again.');
       } else {
-        setErrorMsg(`Phone SMS verification failed: ${err.message || 'Please ensure Firebase Phone Authentication is enabled in your Firebase Console.'}`);
+        setErrorMsg(AuthService.mapFirebaseError(err));
       }
     }
   };
@@ -359,7 +359,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       } else if (err.code === 'auth/code-expired') {
         setErrorMsg('Verification code has expired. Please tap "Resend SMS Code" to receive a new code.');
       } else {
-        setErrorMsg(`Verification failed: ${err.message || 'Please check the code and try again.'}`);
+        setErrorMsg(AuthService.mapFirebaseError(err));
       }
     }
   };
@@ -408,11 +408,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
       setOnboardingStep(1);
     } catch (firebaseErr: any) {
       setIsPending(false);
-      if (firebaseErr.code === 'auth/email-already-in-use') {
-        setErrorMsg('An account with this email address already exists.');
-      } else {
-        setErrorMsg(`Failed to create account: ${firebaseErr.message || 'Please try again later.'}`);
-      }
+      setErrorMsg(AuthService.mapFirebaseError(firebaseErr));
     }
   };
 
@@ -443,21 +439,21 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     }
 
     setIsPending(true);
-    setStatusMessage('Sending password reset email via Firebase...');
+    setStatusMessage('If an account exists, Firebase will send reset instructions.');
 
     const targetEmail = recoveryIdentifier.trim().toLowerCase();
 
     try {
       await AuthService.sendPasswordReset(targetEmail);
       setIsPending(false);
-      setSuccessMsg(`Password reset email sent to ${targetEmail}. Please check your inbox.`);
+      setSuccessMsg('If an account exists for that email, password reset instructions will be sent. Check your inbox and spam folder.');
       setTimeout(() => {
         switchAuthMode('login');
         setIdentifierInput(targetEmail);
       }, 2500);
     } catch (err: any) {
       setIsPending(false);
-      setErrorMsg(`Failed to send password reset email: ${err.message || 'Please check the email address and try again.'}`);
+      setErrorMsg(AuthService.mapFirebaseError(err));
     }
   };
 

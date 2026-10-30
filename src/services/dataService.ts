@@ -83,7 +83,7 @@ class BackgroundSyncEngine {
     }
 
     this.saveQueue(currentQueue);
-    console.log(`[Sync Engine] Enqueued background event: ${action}`, payload);
+    console.log(`[Sync Engine] Enqueued background event: ${action}`);
 
     if (navigator.onLine) {
       this.processQueue();
@@ -105,8 +105,8 @@ class BackgroundSyncEngine {
       try {
         await this.executeAction(item);
         console.log(`[Sync Engine] Successfully executed pending action: ${item.action}`);
-      } catch (error) {
-        console.error(`[Sync Engine] Error executing pending action: ${item.action}`, error);
+      } catch {
+        console.error(`[Sync Engine] Error executing pending action: ${item.action}; details redacted.`);
         item.retryCount += 1;
         if (item.retryCount < 5) {
           failedActions.push(item); // Keep in queue for next retry
@@ -730,8 +730,8 @@ export async function updateTypingState(chatId: string, userId: string, state: '
       state,
       updatedAt: serverTimestamp()
     });
-  } catch (e) {
-    console.warn('[dataService] Failed to update typing state', e);
+  } catch {
+    console.warn('[dataService] Failed to update typing state; details redacted.');
   }
 }
 
@@ -748,7 +748,7 @@ export function subscribeToTypingState(chatId: string, callback: (states: Record
     callback(states);
   }, (error: any) => {
     if (error?.code === 'permission-denied') return;
-    console.warn('[dataService] Typing state subscription error: ', error);
+    console.warn('[dataService] Typing state subscription error; details redacted.');
   });
 }
 
@@ -764,8 +764,8 @@ export async function updateOnlinePresence(userId: string, isOnline: boolean, ch
     await setDoc(doc(db, `presence/${userId}`), presence);
     await Promise.all(Array.from(new Set(chatIds)).filter(Boolean).slice(0, 30)
       .map(chatId => setDoc(doc(db, `chats/${chatId}/presence/${userId}`), presence)));
-  } catch (e) {
-    console.warn('[dataService] Failed to update presence', e);
+  } catch {
+    console.warn('[dataService] Failed to update presence; details redacted.');
   }
 }
 
@@ -777,7 +777,7 @@ export function subscribeToOnlinePresence(targets: Array<{ chatId: string; userI
     presenceMap[userId] = Boolean(data?.isOnline && lastActive > 0 && Date.now() - lastActive < 90_000);
     callback({ ...presenceMap });
   }, (error: any) => {
-    if (error?.code !== 'permission-denied' && error?.code !== 'not-found') console.warn('[dataService] Presence subscription error:', error);
+    if (error?.code !== 'permission-denied' && error?.code !== 'not-found') console.warn('[dataService] Presence subscription error; details redacted.');
   }));
   return () => unsubs.forEach(unsubscribe => unsubscribe());
 }

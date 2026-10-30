@@ -110,7 +110,7 @@ async function requireFirebaseUser(req: express.Request, res: express.Response, 
   const match = req.headers.authorization?.match(/^Bearer ([^\s]+)$/);
   if (!match) return res.status(401).json({ error: 'Sign in to access this resource.' });
   try {
-    const decoded = await getAuth(firebaseAdminApp).verifyIdToken(match[1]);
+    const decoded = await getAuth(firebaseAdminApp).verifyIdToken(match[1], true);
     res.locals.userId = decoded.uid;
     return next();
   } catch {

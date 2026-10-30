@@ -4,6 +4,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { initializeApp as initializeAdminApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore as getAdminFirestore } from 'firebase-admin/firestore';
 import { getStorage as getAdminStorage } from 'firebase-admin/storage';
+import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 
 const port = 33771;
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -82,6 +83,7 @@ after(async () => {
   if (server && server.exitCode === null) server.kill('SIGTERM');
   await testDb.recursiveDelete(testDb.collection('chats'));
   await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app').deleteFiles({ prefix: 'chats/' }).catch(() => undefined);
+  await Promise.all([uid, nonMemberUid].filter(Boolean).map(userId => getAdminAuth(testAdminApp).deleteUser(userId).catch(() => undefined)));
   await deleteApp(testAdminApp);
 });
 
@@ -91,6 +93,17 @@ describe('VOH API security boundary', () => {
     assert.equal(missing.status, 401);
     const invalid = await fetch(`${baseUrl}/api/voh-ai/summarize-post`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer forged-token' }, body: JSON.stringify({ content: 'short text' }) });
     assert.equal(invalid.status, 401);
+  });
+
+  it('keeps retired custom email OTP endpoints disabled', async () => {
+    for (const path of ['/api/auth/send-email-otp', '/api/auth/verify-email-otp']) {
+      const response = await fetch(`${baseUrl}${path}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: 'test@example.test', code: '123456' }),
+      });
+      assert.equal(response.status, 410);
+    }
   });
 
   it('rejects malformed or oversized audio before any model call', async () => {
@@ -147,5 +160,18 @@ describe('private chat media boundary', () => {
     assert.deepEqual(Buffer.from(await playback.arrayBuffer()), audioBytes);
     const denied = await fetch(`${baseUrl}${playbackPath}`, { headers: { authorization: `Bearer ${nonMemberToken}` } });
     assert.equal(denied.status, 404);
+  });
+});
+
+describe('revoked session boundary', () => {
+  it('rejects an ID token after Firebase refresh-token revocation', async () => {
+    await getAdminAuth(testAdminApp).revokeRefreshTokens(nonMemberUid);
+    const response = await fetch(`${baseUrl}/api/voh-ai/summarize-post`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${nonMemberToken}` },
+      body: JSON.stringify({ content: 'This request must not reach the protected route.' }),
+    });
+    assert.equal(response.status, 401);
+    assert.match((await response.json() as { error: string }).error, /sign in again/i);
   });
 });

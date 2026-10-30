@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import VohIcon from './VohIcon';
+import { loadBackupDemoPreferences } from '../utils/backupDemoPreferences';
 import { 
   X, HardDrive, ShieldCheck, Cpu, Battery, Activity, Info, AlertTriangle, 
   Trash2, RefreshCw, Sparkles, Search, Sliders, Check, Download, ChevronRight, 
@@ -97,17 +98,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   });
 
   // Backup configurations
-  const [backups, setBackups] = useState(() => {
-    const saved = localStorage.getItem('nx_storage_backups');
-    return saved ? JSON.parse(saved) : {
-      enabledItems: { messages: true, media: true, stories: false, groups: true, communities: true, broadcasts: true, settings: true, aiPreferences: true },
-      schedule: 'weekly' as 'manual' | 'daily' | 'weekly' | 'monthly' | 'custom',
-      encryptionEnabled: true,
-      encryptionPassword: '••••••••••••',
-      recoveryKey: '4D8F-92B1-0E54-88A2-31C7-F002-99D1-884A-B67D-EEA2-1111-92A3-F6A2',
-      destinations: { googleDrive: true, iCloud: false, localDevice: true, nas: false, privateServer: false }
-    };
-  });
+  const [backups, setBackups] = useState<any>(() => loadBackupDemoPreferences(localStorage));
 
   // State: Active Media Explorer Target Chat
   const [selectedChatForMedia, setSelectedChatForMedia] = useState<MockConversationStorage | null>(null);
@@ -738,16 +729,11 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     }, 2000);
   };
 
-  // Backup simulation execution
+  // This interface is illustrative only; no provider backup operation is wired here.
   const triggerManualBackup = () => {
-    window.dispatchEvent(new CustomEvent('toast', { 
-      detail: "🔐 Packing encrypted transaction history logs..." 
+    window.dispatchEvent(new CustomEvent('toast', {
+      detail: 'Backups are not configured in this interface. No data was uploaded or backed up.'
     }));
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('toast', { 
-        detail: "🚀 Dispatched backup block to Google Drive & local nodes." 
-      }));
-    }, 1500);
   };
 
   // Restore simulation execution
@@ -757,8 +743,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     setTimeout(() => {
       setIsRestoring(false);
       setSelectedRestoreBackupId(null);
-      window.dispatchEvent(new CustomEvent('toast', { 
-        detail: "✨ Recovery Succeeded: All messages and media verified & restored!" 
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: 'Simulation finished only. No production data was read, changed, or restored.'
       }));
     }, 2000);
   };
@@ -834,7 +820,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 { id: 'analyzer', label: 'AI Storage Scanner', icon: Sparkles, badge: recommendations.length > 0 ? `${recommendations.length} items` : '' },
                 { id: 'conversations', label: 'Conversations Ledger', icon: Database, count: conversationsList.length },
                 { id: 'downloads', label: 'Auto-Download Control', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' },
-                { id: 'backups', label: 'Encrypted Backups', icon: ShieldCheck },
+                { id: 'backups', label: 'Backup Demo (Not Connected)', icon: ShieldCheck },
                 { id: 'network', label: 'Network & Bandwidth', icon: BarChart2 },
                 { id: 'optimization', label: 'Performance Center ⚡', icon: Cpu, badge: `${optimizationScore}%` }
               ].map(tab => {
@@ -1114,13 +1100,13 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                             </button>
                             <button 
                               onClick={() => {
-                                window.dispatchEvent(new CustomEvent('toast', { detail: '📦 Backup Dispatcher: Archiving items before purging.' }));
+                                window.dispatchEvent(new CustomEvent('toast', { detail: 'Demo only: no file was archived or backed up.' }));
                                 handleCleanupRecommendation(rec.id, rec.size);
                               }}
                               className="px-3 py-2 bg-[#121029] border border-white/10 hover:bg-zinc-800 rounded-xl text-[10px] font-mono text-zinc-400 cursor-pointer"
-                              title="Archive files to Private Server before purging"
+                              title="Simulates archiving a sample item; no upload or backup occurs"
                             >
-                              Archive & Purge
+                              Demo Archive & Purge
                             </button>
                           </div>
                         </div>
@@ -1580,14 +1566,14 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                 </div>
               )}
 
-              {/* ENCRYPTED BACKUP CENTER & RESTORATION */}
+              {/* Backup and restore demo; no production provider is connected. */}
               {activeTab === 'backups' && (
                 <div className="space-y-6 text-left">
-                  <div>
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3" role="status">
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <ShieldCheck className="w-4 h-4 text-violet-400" /> Decentralized End-to-End Encrypted Backups
+                      <ShieldCheck className="w-4 h-4 text-amber-400" /> Backup & restore demo — not connected
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Secure your transaction databases, keys, messages and media folders across multiple nodes with 64-character verification code seals.</p>
+                    <p className="text-[11px] text-zinc-300 mt-1">No production backup provider, encryption, or recovery-key management is connected. Controls below only change local demo settings; they do not back up or restore data.</p>
                   </div>
 
                   {/* Backup detail dashboard */}
@@ -1595,13 +1581,13 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                     
                     {/* Settings card */}
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl space-y-4 col-span-2">
-                      <span className="text-xs font-black text-violet-400 font-mono uppercase block">Protected Configuration Parameters</span>
+                      <span className="text-xs font-black text-violet-400 font-mono uppercase block">Local demonstration settings</span>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                         <div className="flex items-center justify-between p-2.5 bg-black/40 border border-white/5 rounded-xl">
                           <div>
-                            <span className="font-bold text-zinc-300 block">Backup Schedule</span>
-                            <span className="text-[9px] text-zinc-500 leading-none">Automated background triggers</span>
+                            <span className="font-bold text-zinc-300 block">Demo schedule (local only)</span>
+                            <span className="text-[9px] text-zinc-500 leading-none">No scheduled job is connected</span>
                           </div>
                           <select 
                             value={backups.schedule}
@@ -1617,27 +1603,16 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                         <div className="flex items-center justify-between p-2.5 bg-black/40 border border-white/5 rounded-xl">
                           <div>
-                            <span className="font-bold text-zinc-300 block">End-to-End Seal</span>
-                            <span className="text-[9px] text-zinc-500 leading-none">Password encryption seal</span>
+                            <span className="font-bold text-zinc-300 block">Encryption demo</span>
+                            <span className="text-[9px] text-zinc-500 leading-none">No encryption is applied</span>
                           </div>
-                          <button
-                            onClick={() => {
-                              const promptPass = window.prompt("Enter new Encryption Password for local backups (Do not lose this!):", backups.encryptionPassword);
-                              if (promptPass) {
-                                setBackups((prev: any) => ({ ...prev, encryptionPassword: promptPass }));
-                                window.dispatchEvent(new CustomEvent('toast', { detail: '🔑 E2E Seal Password updated successfully!' }));
-                              }
-                            }}
-                            className="px-2 py-1 bg-violet-600/20 text-violet-300 text-[10px] rounded hover:bg-violet-600/30 font-mono"
-                          >
-                            Configure Password
-                          </button>
+                          <span className="px-2 py-1 text-zinc-500 text-[10px] font-mono">Unavailable</span>
                         </div>
                       </div>
 
                       {/* Dest block */}
                       <div className="space-y-2">
-                        <span className="text-[10px] font-bold text-zinc-400 block font-mono uppercase">Simultaneous Replication Target Channels</span>
+                        <span className="text-[10px] font-bold text-zinc-400 block font-mono uppercase">Demo destination toggles (not connected)</span>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {[
                             { key: 'googleDrive', label: 'Google Drive' },
@@ -1666,7 +1641,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                       {/* Backup item checklist */}
                       <div className="space-y-1.5 pt-1">
-                        <span className="text-[10px] font-bold text-zinc-400 block font-mono uppercase">Ledger Pack Include Filter</span>
+                        <span className="text-[10px] font-bold text-zinc-400 block font-mono uppercase">Demo selection only</span>
                         <div className="flex flex-wrap gap-2">
                           {[
                             { key: 'messages', label: 'Conversations text' },
@@ -1695,26 +1670,11 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
 
                     </div>
 
-                    {/* Key box */}
-                    <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col justify-between space-y-3">
+                    <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col justify-between space-y-3" role="status">
                       <div>
-                        <span className="text-xs font-black text-rose-400 font-mono uppercase block">Recovery key</span>
-                        <p className="text-[9px] text-zinc-500 mt-1.5 leading-normal">Your 64-character master cryptographic block seal. It is required to index database backups on alternative ledger devices.</p>
+                        <span className="text-xs font-black text-rose-400 font-mono uppercase block">Recovery is not configured</span>
+                        <p className="text-[9px] text-zinc-500 mt-1.5 leading-normal">No recovery key exists here. Do not enter a password or rely on this screen to recover data.</p>
                       </div>
-
-                      <div className="p-2 bg-black/60 border border-white/5 rounded-xl font-mono text-[9px] break-all text-zinc-400 select-all select-none">
-                        {backups.recoveryKey}
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          navigator.clipboard.writeText(backups.recoveryKey);
-                          window.dispatchEvent(new CustomEvent('toast', { detail: '📋 Cryptographic key copied to clipboard' }));
-                        }}
-                        className="w-full py-2 bg-zinc-900 border border-white/10 hover:bg-zinc-800 text-zinc-300 text-[10px] font-mono rounded-lg cursor-pointer"
-                      >
-                        Copy Block Key
-                      </button>
                     </div>
 
                   </div>
@@ -1722,8 +1682,8 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                   {/* Interactive Restore Experience Simulation */}
                   <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4">
                     <div>
-                      <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Simulate Restoration & Migration</h4>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Select a historical encrypted snapshot to populate your active node database.</p>
+                      <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Restoration simulation only</h4>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">Sample snapshots are illustrative. Selecting one does not read or restore database or media data.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -1749,7 +1709,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                                 <>
                                   <RefreshCw className="w-3 h-3 animate-spin" /> Unsealing blocks...
                                 </>
-                              ) : 'Restore snap'}
+                              ) : 'Simulate restore'}
                             </button>
                           </div>
                         );

@@ -27,6 +27,7 @@ test('maps Firebase configuration and credential failures without exposing provi
   assert.match(AuthService.mapFirebaseError({ code: 'auth/unauthorized-domain' }), /not authorized/);
   assert.match(AuthService.mapFirebaseError({ code: 'auth/invalid-phone-number' }), /Invalid phone number/);
   assert.match(AuthService.mapFirebaseError({ code: 'auth/captcha-check-failed' }), /Phone verification could not be completed/);
+  assert.doesNotMatch(AuthService.mapFirebaseError({ code: 'auth/email-already-in-use' }), /already exists/i);
   assert.equal(AuthService.mapFirebaseError({ code: 'auth/internal-error', message: 'secret provider stack' }), 'An authentication error occurred. Please try again or contact the account owner.');
 });
 
@@ -51,7 +52,7 @@ test('registers, restores, and signs in an email account through Firebase Auth',
 test('rejects duplicate registration and invalid credentials without creating a second account', async () => {
   await assert.rejects(
     () => AuthService.registerWithEmail(email, password, 'Duplicate User', 'duplicate_user'),
-    (error: { code?: string; message?: string }) => error.code === 'auth/email-already-in-use' && /already exists/.test(error.message || '')
+    (error: { code?: string; message?: string }) => error.code === 'auth/email-already-in-use' && /unable to create an account/i.test(error.message || '')
   );
 
   await signOut(auth);
@@ -63,12 +64,29 @@ test('rejects duplicate registration and invalid credentials without creating a 
   );
 });
 
-test('password reset uses the real Firebase Auth provider and returns a safe unavailable state for unknown accounts', async () => {
+test('password reset returns an enumeration-safe acknowledgement for unknown accounts', async () => {
   await signOut(auth);
+  assert.equal(await AuthService.sendPasswordReset('missing-account@example.test'), true);
+});
+
+test('account deletion reauthentication rejects an incorrect current password before queuing', async () => {
+  await AuthService.loginWithEmail(email, password);
   await assert.rejects(
-    () => AuthService.sendPasswordReset('missing-account@example.test'),
-    (error: { code?: string; message?: string }) => error.code === 'auth/user-not-found' && /incorrect/.test(error.message || '')
+    () => AuthService.reauthenticateForAccountDeletion('incorrect-password'),
+    (error: { code?: string; message?: string }) =>
+      ['auth/invalid-credential', 'auth/wrong-password'].includes(error.code || '')
+      || /email or password/i.test(error.message || '')
   );
+});
+
+test('password changes require the current Firebase credential and persist through a new sign-in', async () => {
+  const updatedPassword = 'Nexora-Updated-Test-Password-43!';
+  await AuthService.loginWithEmail(email, password);
+  await assert.rejects(() => AuthService.updateAccountPassword('incorrect-password', updatedPassword));
+  await AuthService.updateAccountPassword(password, updatedPassword);
+  await signOut(auth);
+  const restored = await AuthService.loginWithEmail(email, updatedPassword);
+  assert.equal(restored.firebaseUser.email, email);
 });
 
 after(async () => {

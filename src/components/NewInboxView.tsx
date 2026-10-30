@@ -158,8 +158,8 @@ export default function NewInboxView({
       void Promise.all(msgsList
         .filter(message => message.senderId !== currentUser.id && message.status !== 'read')
         .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read')));
-    }, (error) => {
-      console.warn('[Inbox] Message snapshot error:', error);
+    }, () => {
+      console.warn('[Inbox] Message snapshot error; details redacted.');
     });
 
     return () => unsubscribe();
@@ -263,8 +263,8 @@ export default function NewInboxView({
           scrollContainer.scrollTop += scrollContainer.scrollHeight - previousScrollHeight;
         }
       });
-    } catch (error) {
-      console.warn('[Inbox] Unable to load older messages.', error);
+    } catch {
+      console.warn('[Inbox] Unable to load older messages; details redacted.');
     } finally {
       setIsLoadingOlderMessages(false);
     }
@@ -363,12 +363,12 @@ export default function NewInboxView({
       // already accepted into a reported send failure or invite a duplicate retry.
       try {
         await updateDoc(doc(db, 'chats', activeChatId), { lastMessage: previewText, lastTimestamp: nowIso });
-      } catch (previewError) {
-        console.warn('[Inbox] Message persisted, but chat preview sync failed:', previewError);
+      } catch {
+        console.warn('[Inbox] Message persisted, but chat preview sync failed; details redacted.');
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Message sent. Conversation preview will refresh when data syncs.' }));
       }
-    } catch (e) {
-      console.warn('[Inbox] Firestore send error:', e);
+    } catch {
+      console.warn('[Inbox] Firestore send error; details redacted.');
       if (!messagePersisted) {
         setLocalMessages(prev => ({
           ...prev,
@@ -423,7 +423,7 @@ export default function NewInboxView({
         lastMessage: 'Started secure conversation',
         lastTimestamp: new Date().toISOString(),
         unreadCount: 0
-      }).catch(err => console.warn('[Inbox] Firestore create chat error:', err));
+      }).catch(() => console.warn('[Inbox] Firestore create chat error; details redacted.'));
     }
   };
 
@@ -464,8 +464,8 @@ export default function NewInboxView({
         ...prev,
         [chatId]: (prev[chatId] || []).filter(m => m.id !== msgId)
       }));
-    } catch (error) {
-      console.warn('[Inbox] Could not delete message from Firestore:', error);
+    } catch {
+      console.warn('[Inbox] Could not delete message from Firestore; details redacted.');
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Message was not deleted. Please retry.' }));
     }
   };
@@ -919,8 +919,8 @@ export default function NewInboxView({
                 name: `Voice Note (${duration}s)`, duration
               });
               setShowVoiceRecorder(false);
-            } catch (error) {
-              console.warn('[Inbox] Voice note upload failed:', error);
+            } catch {
+              console.warn('[Inbox] Voice note upload failed; details redacted.');
               window.dispatchEvent(new CustomEvent('toast', { detail: 'Voice note could not be uploaded. Check your connection and retry.' }));
             }
           }}

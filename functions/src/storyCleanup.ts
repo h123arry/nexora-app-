@@ -42,7 +42,7 @@ export const cleanupExpiredStories = onSchedule(
         deleted += 1;
       } catch (error) {
         failed += 1;
-        console.error(JSON.stringify({ event: 'expired_story_cleanup_failed', storyId: story.id, error: error instanceof Error ? error.message : 'unknown' }));
+        console.error(JSON.stringify({ event: 'expired_story_cleanup_failed', errorType: error instanceof Error ? error.name : 'unknown' }));
       }
     }
 

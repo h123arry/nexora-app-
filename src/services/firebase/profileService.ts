@@ -27,8 +27,8 @@ export class ProfileService {
     try {
       const snap = await getDoc(doc(db, 'users', uid));
       return snap.exists() ? (snap.data() as User) : null;
-    } catch (e) {
-      console.warn('Error fetching private user profile:', e);
+    } catch {
+      console.warn('Error fetching private user profile; details redacted.');
       return null;
     }
   }
@@ -39,8 +39,8 @@ export class ProfileService {
     try {
       const snap = await getDoc(doc(db, 'publicProfiles', uid));
       return snap.exists() ? ({ ...snap.data(), id: uid } as User) : null;
-    } catch (e) {
-      console.warn('Error fetching public user profile:', e);
+    } catch {
+      console.warn('Error fetching public user profile; details redacted.');
       return null;
     }
   }

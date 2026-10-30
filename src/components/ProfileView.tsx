@@ -13,6 +13,7 @@ import NexoraLoader from './NexoraLoader';
 import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
+import { AuthService } from '../services/firebase/authService';
 import StorageDataCenterModal from './StorageDataCenterModal';
 import { exportAccountData, getLatestAccountDeletionRequest, requestAccountDeletion, AccountDeletionRequest } from '../services/firebase/accountLifecycleService';
 import { getBillingSummary, type BillingSummary } from '../services/monetizationService';
@@ -332,15 +333,6 @@ export default function ProfileView({
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
-  const [passkeysEnabled, setPasskeysEnabled] = useState(false);
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
-  const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
-  const [activeSessions, setActiveSessions] = useState([
-    { id: '1', device: 'MacBook Pro 16"', os: 'macOS Sequoia', browser: 'Google Chrome', location: 'Lagos, Nigeria', time: 'Active Now', current: true },
-    { id: '2', device: 'iPhone 15 Pro Max', os: 'iOS 18', browser: 'Safari Mobile', location: 'Ibadan, Nigeria', time: '2 hours ago', current: false },
-    { id: '3', device: 'Windows Desktop', os: 'Windows 11', browser: 'Firefox Developer Edition', location: 'Lekki, Nigeria', time: 'Yesterday', current: false }
-  ]);
-
   // Privacy toggles/inputs
   const [isPrivateNode, setIsPrivateNode] = useState(false);
   const [commentAudience, setCommentAudience] = useState('everyone'); // 'everyone' | 'friends' | 'none'
@@ -365,8 +357,8 @@ export default function ProfileView({
       try {
         const latest = await getLatestAccountDeletionRequest(currentUser.id);
         if (active) setDeletionRequest(latest);
-      } catch (error) {
-        console.warn('Unable to refresh account lifecycle status:', error);
+      } catch {
+        console.warn('Unable to refresh account lifecycle status; details redacted.');
       }
     };
     void refreshDeletionRequest();
@@ -474,13 +466,13 @@ export default function ProfileView({
       const dataStr = 'data:application/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(payload, null, 2));
       const downloadAnchor = document.createElement('a');
       downloadAnchor.href = dataStr;
-      downloadAnchor.download = `nexora-account-export-${currentUser.username}-${Date.now()}.json`;
+      downloadAnchor.download = `nexora-account-snapshot-${currentUser.username}-${Date.now()}.json`;
       document.body.appendChild(downloadAnchor);
       downloadAnchor.click();
       downloadAnchor.remove();
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account export downloaded. It includes scope and retention limitations.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account data snapshot downloaded. It is bounded and is not a complete export.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Account export could not be prepared.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account data snapshot could not be prepared. Please try again later.' }));
     } finally {
       setIsLifecycleBusy(false);
     }
@@ -490,13 +482,13 @@ export default function ProfileView({
     if (isLifecycleBusy) return;
     setIsLifecycleBusy(true);
     try {
-      const request = await requestAccountDeletion(currentUser.id);
+      const request = await requestAccountDeletion(currentUser.id, deleteAccountPassword);
       setDeletionRequest(request);
       setDeleteStep(3);
       setDeleteAccountPassword('');
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Account deletion request queued for review and asynchronous cleanup.' }));
     } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Deletion request could not be submitted.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error && error.message.startsWith('For your safety') ? error.message : 'Deletion request could not be submitted. Reauthenticate and try again.' }));
     } finally {
       setIsLifecycleBusy(false);
     }
@@ -543,11 +535,6 @@ export default function ProfileView({
         e.preventDefault();
         return;
       }
-      if (showTwoFactorSetup) {
-        setShowTwoFactorSetup(false);
-        e.preventDefault();
-        return;
-      }
       if (showAddAccountModal) {
         setShowAddAccountModal(false);
         e.preventDefault();
@@ -576,7 +563,6 @@ export default function ProfileView({
     isProfileMenuOpen,
     showAllContentDropdown,
     isStorageCenterOpen,
-    showTwoFactorSetup,
     showAddAccountModal,
     showReputationModal,
     activePanel
@@ -800,8 +786,8 @@ export default function ProfileView({
         setShowSavedFeedback(false);
         setActivePanel('profile');
       }, 1500);
-    } catch (err) {
-      console.error('Profile update failed:', err);
+    } catch {
+      console.error('Profile update failed; details redacted.');
       setIsSavingProfile(false);
       window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Failed to save profile updates. Please check connection.' }));
     }
@@ -1996,14 +1982,13 @@ export default function ProfileView({
                     {settingsActiveSubPanel === 'security' && (
                       <div className="space-y-4 text-left">
                         
-                        {/* Overall security status badge */}
-                        <div className="p-4 rounded-2xl bg-gradient-to-tr from-[#120e26] to-[#04120f] border border-emerald-500/20 flex items-center justify-between">
+                        <div className="p-4 rounded-2xl bg-gradient-to-tr from-[#120e26] to-[#04120f] border border-amber-500/20 flex items-center justify-between" role="status">
                           <div className="space-y-0.5">
-                            <span className="text-[8px] font-mono text-emerald-400 font-extrabold tracking-widest uppercase block">NODE STATUS</span>
-                            <h4 className="text-xs font-black text-white">🔐 Overall Security Score: 94%</h4>
-                            <p className="text-[9px] text-zinc-400 font-sans mt-0.5">Two-factor keys and biometric logs fully aligned.</p>
+                            <span className="text-[8px] font-mono text-amber-400 font-extrabold tracking-widest uppercase block">ACCOUNT SECURITY</span>
+                            <h4 className="text-xs font-black text-white">Provider-managed security</h4>
+                            <p className="text-[9px] text-zinc-400 font-sans mt-0.5">Nexora cannot verify a numeric security score or active second-factor enrollment.</p>
                           </div>
-                          <CheckCircle2 className="w-8 h-8 text-emerald-400 animate-pulse" />
+                          <Shield className="w-7 h-7 text-amber-400" />
                         </div>
 
                         {/* Rotate Password Form */}
@@ -2012,7 +1997,7 @@ export default function ProfileView({
                           
                           <div className="space-y-2 text-xs">
                             <div className="space-y-1">
-                              <label className="text-[9px] font-mono text-zinc-400 uppercase">Current Access Key</label>
+                              <label className="text-[9px] font-mono text-zinc-400 uppercase">Current account password</label>
                               <input 
                                 type="password" 
                                 placeholder="••••••••••••"
@@ -2022,7 +2007,7 @@ export default function ProfileView({
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[9px] font-mono text-zinc-400 uppercase">New Access Key</label>
+                              <label className="text-[9px] font-mono text-zinc-400 uppercase">New password</label>
                               <input 
                                 type="password" 
                                 placeholder="Minimum 8 characters"
@@ -2032,7 +2017,7 @@ export default function ProfileView({
                               />
                             </div>
                             <div className="space-y-1">
-                              <label className="text-[9px] font-mono text-zinc-400 uppercase">Verify New Access Key</label>
+                              <label className="text-[9px] font-mono text-zinc-400 uppercase">Confirm new password</label>
                               <input 
                                 type="password" 
                                 placeholder="Match new access key"
@@ -2044,138 +2029,43 @@ export default function ProfileView({
                           </div>
 
                           <button 
-                            onClick={() => {
+                            onClick={async () => {
                               if (!currentPassword || !newPassword || !confirmNewPassword) {
-                                alert('⚠️ Please fill out all access key rotation forms.');
+                                alert('Enter your current password and the new password twice.');
                                 return;
                               }
                               if (newPassword.length < 8) {
-                                alert('⚠️ Security protocol: Access key must be at least 8 characters.');
+                                alert('Choose a password with at least 8 characters.');
                                 return;
                               }
                               if (newPassword !== confirmNewPassword) {
-                                alert('⚠️ Calibration mismatch: Verify access keys do not align.');
+                                alert('The new password entries do not match.');
                                 return;
                               }
-                              setCurrentPassword('');
-                              setNewPassword('');
-                              setConfirmNewPassword('');
-                              window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Security Key successfully rotated & encrypted!' }));
+                              try {
+                                await AuthService.updateAccountPassword(currentPassword, newPassword);
+                                setCurrentPassword('');
+                                setNewPassword('');
+                                setConfirmNewPassword('');
+                                window.dispatchEvent(new CustomEvent('toast', { detail: 'Firebase updated your account password.' }));
+                              } catch (error) {
+                                window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Password could not be updated.' }));
+                              }
                             }}
                             className="w-full py-2 bg-violet-600 hover:bg-violet-500 text-white font-mono text-[9px] uppercase font-black tracking-wider rounded-lg transition-all"
                           >
-                            Update Credentials
+                            Update Password
                           </button>
                         </div>
 
-                        {/* Passkeys and 2FA */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">🛡️ Advanced Security Locks</span>
-                          
-                          <div className="flex items-center justify-between p-2 rounded-xl bg-black/20">
-                            <div className="space-y-0.5 max-w-[80%]">
-                              <p className="text-xs font-bold text-white">Passkeys Auth</p>
-                              <p className="text-[9px] text-zinc-500 leading-normal">Authenticate securely using on-device biometric thumbprints.</p>
-                            </div>
-                            <input 
-                              type="checkbox"
-                              checked={passkeysEnabled}
-                              onChange={(e) => {
-                                setPasskeysEnabled(e.target.checked);
-                                window.dispatchEvent(new CustomEvent('toast', { detail: e.target.checked ? '🔑 Biometric Passkey Enabled' : '🔑 Passkeys de-activated' }));
-                              }}
-                              className="accent-cyan-400 h-4 w-4"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between p-2 rounded-xl bg-black/20">
-                            <div className="space-y-0.5 max-w-[80%]">
-                              <p className="text-xs font-bold text-white">Two-Factor Auth (2FA)</p>
-                              <p className="text-[9px] text-zinc-500 leading-normal">Request temporary TOTP tokens during logins.</p>
-                            </div>
-                            <input 
-                              type="checkbox"
-                              checked={twoFactorEnabled}
-                              onChange={(e) => {
-                                setTwoFactorEnabled(e.target.checked);
-                                if (e.target.checked) setShowTwoFactorSetup(true);
-                                else {
-                                  setShowTwoFactorSetup(false);
-                                  window.dispatchEvent(new CustomEvent('toast', { detail: '🛡️ 2FA Key deactivated.' }));
-                                }
-                              }}
-                              className="accent-cyan-400 h-4 w-4"
-                            />
-                          </div>
-
-                          {showTwoFactorSetup && (
-                            <div className="p-3 bg-black/50 rounded-xl border border-dashed border-white/10 text-center space-y-2">
-                              <p className="text-[10px] text-zinc-300 font-mono">Scan TOTP Secret Token:</p>
-                              <div className="w-24 h-24 bg-white p-1 mx-auto rounded-lg">
-                                <svg className="w-full h-full text-black" viewBox="0 0 24 24" fill="currentColor">
-                                  <path d="M2 2h8v8H2V2zm2 2v4h4V4H4zM14 2h8v8h-8V2zm2 2v4h4V4h-4zM2 14h8v8H2v-8zm2 2v4h4v-4H4zm14-2h4v8h-4v-8z" />
-                                </svg>
-                              </div>
-                              <p className="text-[9px] text-violet-400 font-mono font-bold select-all uppercase">Secret: NEXX ORAA LAGO SSS</p>
-                              <button 
-                                onClick={() => {
-                                  setShowTwoFactorSetup(false);
-                                  window.dispatchEvent(new CustomEvent('toast', { detail: '🛡️ 2FA Code Verified successfully!' }));
-                                }}
-                                className="px-3 py-1 bg-violet-600 text-white rounded font-mono text-[9px] uppercase font-bold"
-                              >
-                                I Scanned It
-                              </button>
-                            </div>
-                          )}
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-2" role="status">
+                          <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">Advanced sign-in protections</span>
+                          <p className="text-[10px] text-zinc-400 leading-relaxed">Passkey and app-managed TOTP enrollment are not implemented in Nexora. No passkey or second factor is enabled by these settings. Check Firebase Authentication for provider-supported MFA options.</p>
                         </div>
 
-                        {/* Recent Login sessions */}
-                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
-                          <span className="text-[9px] font-mono text-amber-400 font-extrabold uppercase tracking-widest block">💻 Recent Login sessions</span>
-                          
-                          <div className="space-y-2">
-                            {activeSessions.map(sess => (
-                              <div key={sess.id} className="p-2.5 rounded-xl bg-black/20 border border-white/5 space-y-1 relative">
-                                <div className="flex items-center gap-1.5">
-                                  {sess.os.includes('mac') || sess.os.includes('Win') ? (
-                                    <Laptop className="w-3.5 h-3.5 text-zinc-400" />
-                                  ) : (
-                                    <Smartphone className="w-3.5 h-3.5 text-zinc-400" />
-                                  )}
-                                  <span className="text-xs font-bold text-white leading-none">{sess.device}</span>
-                                  {sess.current && (
-                                    <span className="text-[8px] font-mono px-1 bg-emerald-500/20 text-emerald-400 rounded">Current</span>
-                                  )}
-                                </div>
-                                <div className="text-[9px] text-zinc-500 font-mono leading-relaxed pl-5">
-                                  <p>{sess.os} • {sess.browser}</p>
-                                  <p>📍 {sess.location} • {sess.time}</p>
-                                </div>
-                                {!sess.current && (
-                                  <button
-                                    onClick={() => {
-                                      setActiveSessions(activeSessions.filter(s => s.id !== sess.id));
-                                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔌 Disconnected device node session!' }));
-                                    }}
-                                    className="absolute right-2 top-2 text-[9px] font-mono font-bold text-red-400 hover:text-red-300 uppercase"
-                                  >
-                                    Sign Out
-                                  </button>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-
-                          <button 
-                            onClick={() => {
-                              setActiveSessions(activeSessions.filter(s => s.current));
-                              window.dispatchEvent(new CustomEvent('toast', { detail: '🔌 Terminated all other active browser links.' }));
-                            }}
-                            className="w-full py-1.5 bg-red-600/15 border border-red-500/20 text-red-300 font-mono text-[9px] uppercase font-black tracking-wider rounded-lg hover:bg-red-950/20"
-                          >
-                            Sign Out Of All Other Sessions
-                          </button>
+                        <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-2" role="status">
+                          <span className="text-[9px] font-mono text-amber-400 font-extrabold uppercase tracking-widest block">Session security</span>
+                          <p className="text-[10px] text-zinc-400 leading-relaxed">Nexora does not currently maintain a device-session inventory or remote sign-out control. Sign out here to end this session. If you suspect account compromise, contact the project owner to revoke Firebase refresh tokens.</p>
                         </div>
                       </div>
                     )}
@@ -2354,7 +2244,7 @@ export default function ProfileView({
                           </div>
                           <div className="space-y-1">
                             <h4 className="text-xs font-black font-sans uppercase text-white tracking-wider">Advanced Storage & Data Center</h4>
-                            <p className="text-[10px] text-zinc-400 leading-relaxed">Access visual storage rings, duplicate media analyzers, custom bandwidth managers, encrypted backups and restore managers.</p>
+                            <p className="text-[10px] text-zinc-400 leading-relaxed">Access storage visualizations and local controls. Backup and restore screens are demonstrations only; no production backup provider is connected.</p>
                           </div>
                           <button
                             onClick={() => setIsStorageCenterOpen(true)}
@@ -2641,13 +2531,13 @@ export default function ProfileView({
               {deleteStep === 2 && (
                 <div className="space-y-4">
                   <div className="space-y-1.5">
-                    <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider">Confirm Your Password</h3>
+                    <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider">Reauthenticate to Delete</h3>
                     <p className="text-[10px] text-zinc-400 font-mono leading-normal">
-                      Type your password to confirm intent; it is not sent to Nexora or verified in this browser flow. The request is queued; backups, legal records, and third-party systems may retain data temporarily.
+                      Email/password accounts must enter the current password, which Firebase verifies. For Google or phone sign-in, sign out and sign in again within five minutes. Firestore rejects stale sessions. Cleanup is queued; backups and legal records may retain data temporarily.
                     </p>
                     <input 
                       type="password"
-                      placeholder="Password"
+                      placeholder="Current password (email/password accounts)"
                       value={deleteAccountPassword}
                       onChange={(e) => setDeleteAccountPassword(e.target.value)}
                       className="w-full px-3 py-2 bg-black border border-red-500/30 rounded-xl text-center text-white text-xs font-mono tracking-widest mt-2"
@@ -2662,10 +2552,6 @@ export default function ProfileView({
                     </button>
                     <button
                       onClick={() => {
-                        if (!deleteAccountPassword) {
-                          alert('⚠️ Please enter your password.');
-                          return;
-                        }
                         void handleAccountDeletionRequest();
                       }}
                       disabled={isLifecycleBusy}

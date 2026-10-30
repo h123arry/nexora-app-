@@ -14,7 +14,9 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signOut,
-  setPersistence
+  setPersistence,
+  EmailAuthProvider,
+  reauthenticateWithCredential
 } from 'firebase/auth';
 import { auth, db, firebaseConfigError } from './config';
 import { User } from '../../types';
@@ -58,7 +60,7 @@ export class AuthService {
       case 'auth/wrong-password':
         return 'The email or password you entered is incorrect.';
       case 'auth/email-already-in-use':
-        return 'An account with this email address already exists.';
+        return 'Unable to create an account with these details. Try signing in or recovering your account.';
       case 'auth/weak-password':
         return 'The password is too weak. Please choose a stronger password.';
       case 'auth/invalid-email':
@@ -69,9 +71,11 @@ export class AuthService {
       case 'auth/popup-blocked':
         return 'Pop-up blocked by browser. Please enable pop-ups for this site.';
       case 'auth/account-exists-with-different-credential':
-        return 'An account already exists with the same email address but different sign-in credentials.';
+        return 'Unable to use this sign-in method. Try another sign-in method or account recovery.';
       case 'auth/too-many-requests':
         return 'Too many unsuccessful requests. Please try again later.';
+      case 'auth/requires-recent-login':
+        return 'Please sign in again before changing this password.';
       case 'auth/network-request-failed':
         return 'Network error. Please check your internet connection.';
       case 'auth/user-disabled':
@@ -407,12 +411,53 @@ export class AuthService {
     const cleanEmail = email.toLowerCase().trim();
     try {
       await sendPasswordResetEmail(auth, cleanEmail);
-      await EmailService.sendTransactionalEmail('PASSWORD_RESET', {
-        toEmail: cleanEmail,
-        userName: cleanEmail.split('@')[0]
-      });
       return true;
     } catch (error) {
+      if ((error as { code?: string } | null)?.code === 'auth/user-not-found') return true;
+      throw this.publicAuthError(error);
+    }
+  }
+
+  static async updateAccountPassword(currentPassword: string, newPassword: string): Promise<void> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser?.email || !currentUser.providerData.some((provider) => provider.providerId === 'password')) {
+      throw new Error('Password changes are available only for email/password accounts.');
+    }
+    if (newPassword.length < 8) throw new Error('Choose a password with at least 8 characters.');
+    try {
+      await reauthenticateWithCredential(currentUser, EmailAuthProvider.credential(currentUser.email, currentPassword));
+      await updatePassword(currentUser, newPassword);
+    } catch (error) {
+      throw this.publicAuthError(error);
+    }
+  }
+
+  static async reauthenticateForAccountDeletion(password?: string): Promise<void> {
+    this.requireConfigured();
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error('Sign in again before requesting account deletion.');
+
+    if (currentUser.providerData.some((provider) => provider.providerId === 'password')) {
+      if (!password || !currentUser.email) throw new Error('Enter your current account password to reauthenticate.');
+      try {
+        const credential = EmailAuthProvider.credential(currentUser.email, password);
+        await reauthenticateWithCredential(currentUser, credential);
+        await currentUser.getIdToken(true);
+        return;
+      } catch (error) {
+        throw this.publicAuthError(error);
+      }
+    }
+
+    try {
+      const token = await currentUser.getIdTokenResult(true);
+      const authTime = Number(token.claims.auth_time);
+      if (!Number.isFinite(authTime) || Date.now() / 1000 - authTime > 300) {
+        throw new Error('For your safety, sign out and sign in again immediately before requesting account deletion.');
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message.startsWith('For your safety')) throw error;
       throw this.publicAuthError(error);
     }
   }

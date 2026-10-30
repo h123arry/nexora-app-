@@ -66,10 +66,8 @@ try {
 }
 
 // Setup highly robust global error handling to capture any blank screen exceptions
-const showGlobalError = (error: Error | string, errorInfo?: string) => {
-  console.error("🔥 Global Runtime Exception Caught:", error, errorInfo);
-  let errorMsg = typeof error === 'string' ? error : error.message;
-  let errorStack = typeof error === 'object' && error.stack ? error.stack : '';
+const showGlobalError = () => {
+  console.error('Global runtime exception caught; diagnostic details are redacted.');
   
   // Find or create fallback UI container
   let fallbackContainer = document.getElementById('global-error-fallback');
@@ -94,16 +92,13 @@ const showGlobalError = (error: Error | string, errorInfo?: string) => {
           ⚠️ Nexora Boot Diagnostic Crash
         </h2>
         <p style="color: #a1a1aa; font-size: 14px; margin: 0; line-height: 1.5;">
-          The application crashed during initialization or initial render. See execution diagnostic logs below:
+          The application encountered an unexpected error during initialization or rendering. Reload to try again.
         </p>
         <div style="background: rgba(0, 0, 0, 0.5); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 12px; color: #f4f4f5; overflow-x: auto; border: 1px solid rgba(255, 255, 255, 0.05);">
-          <span style="color: #f87171; font-weight: bold;">Exception:</span> ${errorMsg}
+          Detailed diagnostics are not displayed here.
         </div>
-        ${errorStack ? `
-        <pre style="background: rgba(0, 0, 0, 0.7); padding: 12px; border-radius: 8px; font-family: monospace; font-size: 10px; color: #71717a; overflow: auto; max-height: 200px; border: 1px solid rgba(255, 255, 255, 0.05); margin: 0; white-space: pre-wrap; word-break: break-all;">${errorStack}</pre>
-        ` : ''}
         <button id="global-reset-btn" style="padding: 10px 16px; background: #7c3aed; color: #ffffff; border: none; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; transition: background 0.2s; align-self: flex-start;">
-          Clear Cache & Hard Reset Application
+          Reload Application
         </button>
       </div>
     `;
@@ -113,8 +108,6 @@ const showGlobalError = (error: Error | string, errorInfo?: string) => {
     const resetBtn = fallbackContainer.querySelector('#global-reset-btn');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
-        localStorage.clear();
-        sessionStorage.clear();
         window.location.reload();
       });
     }
@@ -122,13 +115,11 @@ const showGlobalError = (error: Error | string, errorInfo?: string) => {
 };
 
 window.onerror = (message, source, lineno, colno, error) => {
-  const errorObj = error || new Error(String(message));
-  showGlobalError(errorObj, `Source: ${source}:${lineno}:${colno}`);
+  showGlobalError();
   return false;
 };
 
 window.onunhandledrejection = (event) => {
-  const reason = event.reason;
-  console.warn('Unhandled Promise Rejection (non-fatal):', reason);
+  console.warn('Unhandled Promise Rejection (non-fatal); details redacted.');
   // Do not show global crash overlay for promise rejections unless explicitly critical
 };
