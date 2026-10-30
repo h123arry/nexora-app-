@@ -9,7 +9,7 @@ import {
 import { User, Chat, Message, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
 import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
-import { omitUndefinedFields } from '../utils/messageSerialization';
+import { isSupportedOutgoingMediaType, serializeOutgoingMessage } from '../utils/messageSerialization';
 import { 
   collection, 
   doc, 
@@ -292,6 +292,10 @@ export default function NewInboxView({
     const contentToSend = customContent !== undefined ? customContent : newMessageText.trim();
     if (!contentToSend && !mediaData) return;
     if (!activeChatId) return;
+    if (mediaData && !isSupportedOutgoingMediaType(mediaData.type)) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Image and video attachments are not available in direct messages yet.' }));
+      return;
+    }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingStateRef.current = null;
@@ -345,7 +349,7 @@ export default function NewInboxView({
     try {
       if (!db) throw new Error('Messaging is temporarily unavailable.');
       const msgDocRef = doc(db, `chats/${activeChatId}/messages`, messageId);
-      await setDoc(msgDocRef, omitUndefinedFields(newMsg));
+      await setDoc(msgDocRef, serializeOutgoingMessage(newMsg));
       messagePersisted = true;
       setLocalMessages(prev => ({
         ...prev,

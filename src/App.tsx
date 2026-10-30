@@ -50,6 +50,7 @@ import { TRANSLATIONS } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
 import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
+import { isUserCacheReady, readUserScopedJson, writeUserScopedJson } from './utils/userScopedStorage';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -84,6 +85,7 @@ import { ProfileEngine } from './services/voh/profileEngine';
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, logout } = useFirebase();
   const isLoggedIn = !!firebaseUser && !firebaseUser.isAnonymous && firebaseProfile?.id === firebaseUser.uid;
+  const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
   const [isDemoMode, setIsDemoMode] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
@@ -576,88 +578,27 @@ export default function App() {
     return () => { active = false; };
   }, [posts, userSparks, userBookmarks, globalUsersMap]);
 
-  const [chats, setChats] = useState<Chat[]>(() => {
-    const savedUser = localStorage.getItem('nexora_user');
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        if (u && u.id) {
-          const saved = localStorage.getItem(`nexora_chats_${u.id}`);
-          return saved ? JSON.parse(saved) : INITIAL_CHATS;
-        }
-      } catch (e) {}
-    }
-    const saved = localStorage.getItem('nexora_chats');
-    return saved ? JSON.parse(saved) : INITIAL_CHATS;
-  });
+  const [chats, setChats] = useState<Chat[]>(() => readUserScopedJson(localStorage, 'nexora_chats', initialCacheUserId, INITIAL_CHATS));
 
-  const [messages, setMessages] = useState<{ [chatId: string]: Message[] }>(() => {
-    const savedUser = localStorage.getItem('nexora_user');
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        if (u && u.id) {
-          const saved = localStorage.getItem(`nexora_messages_${u.id}`);
-          return saved ? JSON.parse(saved) : INITIAL_MESSAGES;
-        }
-      } catch (e) {}
-    }
-    const saved = localStorage.getItem('nexora_messages');
-    return saved ? JSON.parse(saved) : INITIAL_MESSAGES;
-  });
+  const [messages, setMessages] = useState<{ [chatId: string]: Message[] }>(() =>
+    readUserScopedJson(localStorage, 'nexora_messages', initialCacheUserId, INITIAL_MESSAGES)
+  );
 
   const [notifications, setNotifications] = useState<Notification[]>(() => {
-    let saved = null;
-    const savedUser = localStorage.getItem('nexora_user');
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        if (u && u.id) {
-          saved = localStorage.getItem(`nexora_notifications_${u.id}`);
-        }
-      } catch (e) {}
-    }
-    if (!saved) {
-      saved = localStorage.getItem('nexora_notifications');
-    }
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          const seen = new Set<string>();
-          return parsed.filter((n: any) => {
-            if (!n || !n.id) return false;
-            if (seen.has(n.id)) return false;
-            seen.add(n.id);
-            return true;
-          });
-        }
-      } catch (e) {
-        console.error("Failed to parse notifications:", e);
-      }
-    }
-    return INITIAL_NOTIFICATIONS;
+    const cached = readUserScopedJson<Notification[]>(localStorage, 'nexora_notifications', initialCacheUserId, INITIAL_NOTIFICATIONS);
+    if (!Array.isArray(cached)) return INITIAL_NOTIFICATIONS;
+    const seen = new Set<string>();
+    return cached.filter((notification: any) => {
+      if (!notification || !notification.id || seen.has(notification.id)) return false;
+      seen.add(notification.id);
+      return true;
+    });
   });
 
-  const [followingIds, setFollowingIds] = useState<string[]>(() => {
-    const savedUser = localStorage.getItem('nexora_user');
-    if (savedUser) {
-      try {
-        const u = JSON.parse(savedUser);
-        if (u && u.id) {
-          const savedFollowing = localStorage.getItem(`nexora_following_ids_${u.id}`);
-          if (savedFollowing) {
-            return JSON.parse(savedFollowing);
-          } else {
-            const follows = JSON.parse(localStorage.getItem('nexora_db_follows') || '[]');
-            return follows.filter((f: any) => f.followerId === u.id).map((f: any) => f.followingId);
-          }
-        }
-      } catch (e) {}
-    }
-    const saved = localStorage.getItem('nexora_following_ids');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [followingIds, setFollowingIds] = useState<string[]>(() =>
+    readUserScopedJson(localStorage, 'nexora_following_ids', initialCacheUserId, [])
+  );
+  const [privateCacheOwnerId, setPrivateCacheOwnerId] = useState(initialCacheUserId);
 
   const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'settings'>(() => {
     const requestedTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
@@ -950,35 +891,32 @@ export default function App() {
   }, [posts]);
 
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      localStorage.setItem(`nexora_chats_${currentUser.id}`, JSON.stringify(chats));
+    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+      writeUserScopedJson(localStorage, 'nexora_chats', firebaseUser!.uid, chats);
     }
-    localStorage.setItem('nexora_chats', JSON.stringify(chats));
-  }, [chats]);
+  }, [chats, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
 
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      localStorage.setItem(`nexora_messages_${currentUser.id}`, JSON.stringify(messages));
+    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+      writeUserScopedJson(localStorage, 'nexora_messages', firebaseUser!.uid, messages);
     }
-    localStorage.setItem('nexora_messages', JSON.stringify(messages));
-  }, [messages]);
+  }, [messages, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
 
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      localStorage.setItem(`nexora_notifications_${currentUser.id}`, JSON.stringify(notifications));
+    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+      writeUserScopedJson(localStorage, 'nexora_notifications', firebaseUser!.uid, notifications);
     }
-    localStorage.setItem('nexora_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+  }, [notifications, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
 
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      localStorage.setItem(`nexora_following_ids_${currentUser.id}`, JSON.stringify(followingIds));
+    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+      writeUserScopedJson(localStorage, 'nexora_following_ids', firebaseUser!.uid, followingIds);
     }
-    localStorage.setItem('nexora_following_ids', JSON.stringify(followingIds));
-  }, [followingIds]);
+  }, [followingIds, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
 
   // Load user-scoped states whenever currentUser changes
   useEffect(() => {
+    setPrivateCacheOwnerId('');
     if (currentUser && currentUser.id) {
       const uid = currentUser.id;
 
@@ -988,41 +926,41 @@ export default function App() {
       const savedSpks = localStorage.getItem(`nexora_sparks_${uid}`);
       setUserSparks(savedSpks ? JSON.parse(savedSpks) : []);
 
-      const savedChats = localStorage.getItem(`nexora_chats_${uid}`);
-      setChats(savedChats ? JSON.parse(savedChats) : INITIAL_CHATS);
+      setChats(readUserScopedJson(localStorage, 'nexora_chats', uid, INITIAL_CHATS));
 
-      const savedMsgs = localStorage.getItem(`nexora_messages_${uid}`);
-      setMessages(savedMsgs ? JSON.parse(savedMsgs) : INITIAL_MESSAGES);
+      setMessages(readUserScopedJson(localStorage, 'nexora_messages', uid, INITIAL_MESSAGES));
 
-      const savedNotifs = localStorage.getItem(`nexora_notifications_${uid}`);
-      setNotifications(savedNotifs ? JSON.parse(savedNotifs) : INITIAL_NOTIFICATIONS);
+      const savedNotifs = readUserScopedJson<Notification[]>(localStorage, 'nexora_notifications', uid, INITIAL_NOTIFICATIONS);
+      setNotifications(Array.isArray(savedNotifs) ? savedNotifs : INITIAL_NOTIFICATIONS);
 
-      const savedFollowing = localStorage.getItem(`nexora_following_ids_${uid}`);
+      const savedFollowing = readUserScopedJson<string[] | null>(localStorage, 'nexora_following_ids', uid, null);
       if (savedFollowing) {
-        setFollowingIds(JSON.parse(savedFollowing));
+        setFollowingIds(savedFollowing);
       } else {
         const follows = JSON.parse(localStorage.getItem('nexora_db_follows') || '[]');
         const userFollowing = follows.filter((f: any) => f.followerId === uid).map((f: any) => f.followingId);
         setFollowingIds(userFollowing);
       }
+      if (isLoggedIn && firebaseUser?.uid === uid) setPrivateCacheOwnerId(uid);
     } else {
       setUserBookmarks([]);
       setUserSparks([]);
+      setPrivateCacheOwnerId('');
     }
-  }, [currentUser?.id]);
+  }, [currentUser?.id, isLoggedIn, firebaseUser?.uid]);
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      localStorage.setItem(`nexora_bookmarks_${currentUser.id}`, JSON.stringify(userBookmarks));
+    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+      localStorage.setItem(`nexora_bookmarks_${firebaseUser!.uid}`, JSON.stringify(userBookmarks));
     }
-  }, [userBookmarks]);
+  }, [userBookmarks, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
 
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      localStorage.setItem(`nexora_sparks_${currentUser.id}`, JSON.stringify(userSparks));
+    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+      localStorage.setItem(`nexora_sparks_${firebaseUser!.uid}`, JSON.stringify(userSparks));
     }
-  }, [userSparks]);
+  }, [userSparks, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
 
   useEffect(() => {
     localStorage.setItem('nexora_theme', theme);
@@ -2178,7 +2116,10 @@ export default function App() {
                   )}
 
                   {activeTab === 'pulse' && (
-                    <WorldPulseView theme={theme} />
+                    <WorldPulseView
+                      theme={theme}
+                      currentUserId={isLoggedIn && firebaseUser?.uid === currentUser.id ? firebaseUser.uid : ''}
+                    />
                   )}
 
                   {activeTab === 'matrix' && (
@@ -2280,9 +2221,10 @@ export default function App() {
                         </button>
                       </div>
                       <NewInboxView
+                        key={currentUser.id}
                         currentUser={getRichUser(currentUser)}
-                        chats={resolvedChats}
-                        messages={messages}
+                        chats={readUserScopedJson(localStorage, 'nexora_chats', currentUser.id, INITIAL_CHATS)}
+                        messages={readUserScopedJson(localStorage, 'nexora_messages', currentUser.id, INITIAL_MESSAGES)}
                         creators={Object.values(globalUsersMap) as User[]}
                       />
                     </div>

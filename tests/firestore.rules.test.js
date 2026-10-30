@@ -187,7 +187,16 @@ const publicProfile = (uid) => ({
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm3'), {
       id: 'm3', chatId: 'chat-1', senderId: 'alice', content: '[VOICE]', status: 'sent',
       timestamp: new Date().toISOString(),
-      voiceAudioUrl: `chats/chat-1/audio/alice/${'a'.repeat(36)}`, voiceDuration: '3s', fileName: 'recording.webm'
+      voiceAudioUrl: `chats/chat-1/audio/alice/${'a'.repeat(36)}`, voiceDuration: '3s', fileName: 'recording.webm',
+      customMediaType: 'voice'
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm4'), {
+      id: 'm4', chatId: 'chat-1', senderId: 'alice', content: 'still sending', status: 'sending',
+      timestamp: new Date().toISOString()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm5'), {
+      id: 'm5', chatId: 'chat-1', senderId: 'alice', content: 'unsupported attachment', status: 'sent',
+      timestamp: new Date().toISOString(), customMediaType: 'video'
     }));
     await assertFails(getDocs(collection(dbFor('mallory'), 'chats', 'chat-1', 'messages')));
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1')));
@@ -206,7 +215,10 @@ const publicProfile = (uid) => ({
       await setDoc(doc(db, 'notifications', 'n1'), { userId: 'alice', isRead: false });
     });
     await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'notifications'), where('userId', '==', 'alice'))));
+    await assertFails(getDocs(collection(dbFor('alice'), 'notifications')));
     await assertFails(getDoc(doc(dbFor('bob'), 'notifications', 'n1')));
+    await assertFails(updateDoc(doc(dbFor('bob'), 'notifications', 'n1'), { isRead: true }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'notifications', 'n1')));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'notifications', 'n1'), { isRead: true }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'notifications', 'n1'), { userId: 'bob' }));
   });

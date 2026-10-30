@@ -35,7 +35,7 @@ service cloud.firestore {
       let data = request.resource.data;
       return data.keys().hasOnly([
           'id', 'chatId', 'senderId', 'content', 'timestamp', 'status',
-          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote'
+          'voiceDuration', 'voiceAudioUrl', 'fileName', 'replyToQuote', 'customMediaType'
         ])
         && data.id == messageId
         && data.chatId == chatId
@@ -45,6 +45,7 @@ service cloud.firestore {
         && data.timestamp is string
         && data.timestamp.size() <= 40
         && data.status == 'sent'
+        && (!data.keys().hasAny(['customMediaType']) || data.customMediaType == 'voice')
         && (!data.keys().hasAny(['voiceDuration'])
           || (data.voiceDuration is string && data.voiceDuration.size() <= 24))
         && (!data.keys().hasAny(['fileName'])

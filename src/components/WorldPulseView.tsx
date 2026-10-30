@@ -3,12 +3,15 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Globe, Map, Search, Bell, X, Brain, ArrowRight } from 'lucide-react';
 import VohIcon from './VohIcon';
+import { readUserScopedJson } from '../utils/userScopedStorage';
+import { getJoinedCirclesForUser } from '../data/database';
 
 export interface WorldPulseViewProps {
   theme: string;
+  currentUserId: string;
 }
 
-export default function WorldPulseView({ theme }: WorldPulseViewProps) {
+export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewProps) {
   const [pulseSearch, setPulseSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'trending' | 'map' | 'sports' | 'business' | 'tech' | 'entertainment' | 'education' | 'local'>('trending');
   
@@ -42,8 +45,8 @@ export default function WorldPulseView({ theme }: WorldPulseViewProps) {
           history: [],
           context: {
             posts: JSON.parse(localStorage.getItem('nexora_posts') || '[]').slice(0, 5),
-            circles: JSON.parse(localStorage.getItem('nexora_db_joined_circles') || '[]'),
-            notifications: JSON.parse(localStorage.getItem('nexora_notifications') || '[]')
+            circles: getJoinedCirclesForUser(currentUserId),
+            notifications: readUserScopedJson(localStorage, 'nexora_notifications', currentUserId, [])
           }
         })
       });

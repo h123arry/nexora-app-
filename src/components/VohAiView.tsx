@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Mic, MicOff, Volume2, VolumeX, FileText, Send, BrainCircuit, ClipboardCopy, Info, CheckCircle, TrendingUp, Award, Compass, Search, Plus, Trash2, Pin, Archive, FolderPlus, Folder, RefreshCw, HelpCircle, ShieldCheck, AlertTriangle, FileCheck, ThumbsUp, MessageSquare, Sparkle, PenSquare, Users, Settings, X, Play, Square, BookOpen, DollarSign, Cpu, Database, HardDrive, Bell, Layers, Lock, UserCheck, Activity, Eye, Forward } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User, Post, Circle, Notification } from '../types';
+import { getJoinedCirclesForUser } from '../data/database';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraLoader from './NexoraLoader';
 import { 
@@ -623,7 +624,9 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const runAIsuggestedSearch = () => {
     if (!aiSearchInput.trim()) return;
     const allUsers = [currentUser]; // Expandable in real context
-    const allCircles: Circle[] = JSON.parse(localStorage.getItem('nexora_db_joined_circles') || '[]');
+    const joinedCircleIds = new Set(getJoinedCirclesForUser(currentUser.id).map((circle) => circle.circleId));
+    const allCircles: Circle[] = JSON.parse(localStorage.getItem('nexora_custom_communities') || '[]')
+      .filter((circle: Circle) => joinedCircleIds.has(circle.id));
     
     const results = SearchEngine.getSuggestions(aiSearchInput, allUsers, posts, allCircles);
     setIntelligentResults(results);

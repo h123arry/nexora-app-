@@ -1,5 +1,6 @@
 import { User, Post, SocialMission, Circle, Chat, Message, Notification } from '../types';
 import { ActivityService } from '../services/activityService';
+import { userScopedStorageKey, writeUserScopedJson } from '../utils/userScopedStorage';
 
 export let DEMO_MODE = false;
 export function setDemoMode(value: boolean) {
@@ -177,14 +178,37 @@ export function getContributionsCount(userId: string): number {
 }
 
 export function getJoinedCirclesCount(userId: string): number {
+  return getJoinedCirclesForUser(userId).length;
+}
+
+export function getJoinedCirclesForUser(userId: string): JoinedCircleRecord[] {
+  if (!userId) return [];
   initDb();
-  const circles: JoinedCircleRecord[] = JSON.parse(localStorage.getItem(KEYS.CIRCLES) || '[]');
-  return circles.filter(c => c.userId === userId).length;
+  const userKey = userScopedStorageKey(KEYS.CIRCLES, userId);
+  const saved = localStorage.getItem(userKey);
+  if (saved !== null) {
+    try {
+      const parsed = JSON.parse(saved);
+      return Array.isArray(parsed) ? parsed.filter((circle: JoinedCircleRecord) => circle?.userId === userId) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  // Legacy records include an explicit owner ID; migrate only this user's rows.
+  let legacy: JoinedCircleRecord[] = [];
+  try {
+    const parsed = JSON.parse(localStorage.getItem(KEYS.CIRCLES) || '[]');
+    if (Array.isArray(parsed)) legacy = parsed.filter((circle: JoinedCircleRecord) => circle?.userId === userId);
+  } catch {
+    legacy = [];
+  }
+  writeUserScopedJson(localStorage, KEYS.CIRCLES, userId, legacy);
+  return legacy;
 }
 
 export function isCircleJoinedDb(userId: string, circleId: string): boolean {
-  initDb();
-  const circles: JoinedCircleRecord[] = JSON.parse(localStorage.getItem(KEYS.CIRCLES) || '[]');
+  const circles = getJoinedCirclesForUser(userId);
   return circles.some(c => c.userId === userId && c.circleId === circleId);
 }
 
@@ -292,20 +316,19 @@ export function completeMissionDb(userId: string, missionId: string) {
 }
 
 export function joinCircleDb(userId: string, circleId: string) {
-  initDb();
-  const list: JoinedCircleRecord[] = JSON.parse(localStorage.getItem(KEYS.CIRCLES) || '[]');
+  if (!userId || !circleId) return;
+  const list = getJoinedCirclesForUser(userId);
   if (!list.some(c => c.userId === userId && c.circleId === circleId)) {
     list.push({ userId, circleId });
-    localStorage.setItem(KEYS.CIRCLES, JSON.stringify(list));
+    writeUserScopedJson(localStorage, KEYS.CIRCLES, userId, list);
     ActivityService.recordActivityEvent(userId, 'circle_join', circleId);
   }
 }
 
 export function leaveCircleDb(userId: string, circleId: string) {
-  initDb();
-  let list: JoinedCircleRecord[] = JSON.parse(localStorage.getItem(KEYS.CIRCLES) || '[]');
-  list = list.filter(c => !(c.userId === userId && c.circleId === circleId));
-  localStorage.setItem(KEYS.CIRCLES, JSON.stringify(list));
+  if (!userId || !circleId) return;
+  const list = getJoinedCirclesForUser(userId).filter(c => !(c.userId === userId && c.circleId === circleId));
+  writeUserScopedJson(localStorage, KEYS.CIRCLES, userId, list);
 }
 
 // Verification central manager
@@ -376,4 +399,3 @@ export function getSeededFollowers(_targetUserId: string, _targetUsername?: stri
   // Real data only: No synthetic/fake followers generated
   return [];
 }
-
