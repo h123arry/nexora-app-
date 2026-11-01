@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, getFirestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
@@ -17,6 +17,7 @@ export const CLIENT_EVENT_TYPES = [
 const eventTypes = new Set<string>(CLIENT_EVENT_TYPES);
 const sensitiveKeys = new Set(['password', 'code', 'otp', 'token', 'secret', 'message', 'transcript', 'attachment', 'location', 'voice']);
 const reviewerRoles = new Set(['admin', 'founder', 'analytics_admin']);
+const AGGREGATION_PAGE_SIZE = 5000;
 
 function requireAuth(request: { auth?: { uid: string; token: Record<string, unknown> } }): { uid: string; token: Record<string, unknown> } {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to submit analytics observations.');
@@ -62,22 +63,26 @@ export const ingestClientAnalytics = onCall({ maxInstances: 10 }, async (request
 
   const id = eventId(uid, data.eventId);
   const ref = db.collection('analyticsEvents').doc(id);
-  if ((await ref.get()).exists) return { accepted: true, duplicate: true, eventId: id };
-  await ref.create({
-    eventId: id,
-    eventType: data.eventType,
-    schemaVersion: 1,
-    source: 'client_observation',
-    actorId: uid,
-    sessionRef: typeof data.sessionRef === 'string' ? data.sessionRef : null,
-    entityType: typeof data.entityType === 'string' ? data.entityType : null,
-    entityId: typeof data.entityId === 'string' ? data.entityId : null,
-    properties: data.properties || {},
-    processingStatus: 'accepted_observation',
-    createdAt: FieldValue.serverTimestamp(),
-    retentionClass: 'analytics_observation_90d',
+  const duplicate = await db.runTransaction(async (transaction) => {
+    const existing = await transaction.get(ref);
+    if (existing.exists) return true;
+    transaction.create(ref, {
+      eventId: id,
+      eventType: data.eventType,
+      schemaVersion: 1,
+      source: 'client_observation',
+      actorId: uid,
+      sessionRef: typeof data.sessionRef === 'string' ? data.sessionRef : null,
+      entityType: typeof data.entityType === 'string' ? data.entityType : null,
+      entityId: typeof data.entityId === 'string' ? data.entityId : null,
+      properties: data.properties || {},
+      processingStatus: 'accepted_observation',
+      createdAt: FieldValue.serverTimestamp(),
+      retentionClass: 'analytics_observation_90d',
+    });
+    return false;
   });
-  return { accepted: true, duplicate: false, eventId: id };
+  return { accepted: true, duplicate, eventId: id };
 });
 
 function dayKey(date: Date): string {
@@ -85,22 +90,42 @@ function dayKey(date: Date): string {
 }
 
 export const aggregateAnalyticsDaily = onSchedule({ schedule: 'every 1 hours', timeZone: 'UTC', maxInstances: 1 }, async () => {
-  const since = Timestamp.fromMillis(Date.now() - 31 * 24 * 60 * 60 * 1000);
-  const snapshot = await db.collection('analyticsEvents').where('createdAt', '>=', since).orderBy('createdAt', 'asc').limit(5000).get();
-  const buckets = new Map<string, { total: number; byType: Record<string, number>; actors: Set<string>; partial: boolean }>();
-  for (const doc of snapshot.docs) {
-    const data = doc.data();
-    const createdAt = data.createdAt instanceof Timestamp ? data.createdAt.toDate() : null;
-    if (!createdAt || typeof data.eventType !== 'string') continue;
-    const key = dayKey(createdAt);
-    const bucket = buckets.get(key) || { total: 0, byType: {}, actors: new Set<string>(), partial: false };
-    bucket.total += 1;
-    bucket.byType[data.eventType] = (bucket.byType[data.eventType] || 0) + 1;
-    if (typeof data.actorId === 'string') bucket.actors.add(data.actorId);
-    buckets.set(key, bucket);
-  }
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const firstDay = new Date(today);
+  firstDay.setUTCDate(firstDay.getUTCDate() - 30);
   const batch = db.batch();
-  for (const [day, bucket] of buckets) {
+
+  // Aggregate one UTC day at a time and paginate every page. A single global
+  // limit silently discarded older events once the 5,000-document cap was hit.
+  for (let offset = 0; offset < 31; offset += 1) {
+    const dayStart = new Date(firstDay);
+    dayStart.setUTCDate(firstDay.getUTCDate() + offset);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setUTCDate(dayStart.getUTCDate() + 1);
+    const bucket = { total: 0, byType: {} as Record<string, number>, actors: new Set<string>() };
+    let cursor: QueryDocumentSnapshot | undefined;
+
+    while (true) {
+      let query = db.collection('analyticsEvents')
+        .where('createdAt', '>=', Timestamp.fromDate(dayStart))
+        .where('createdAt', '<', Timestamp.fromDate(dayEnd))
+        .orderBy('createdAt', 'asc')
+        .limit(AGGREGATION_PAGE_SIZE);
+      if (cursor) query = query.startAfter(cursor);
+      const page = await query.get();
+      for (const doc of page.docs) {
+        const data = doc.data();
+        if (typeof data.eventType !== 'string') continue;
+        bucket.total += 1;
+        bucket.byType[data.eventType] = (bucket.byType[data.eventType] || 0) + 1;
+        if (typeof data.actorId === 'string') bucket.actors.add(data.actorId);
+      }
+      if (page.size < AGGREGATION_PAGE_SIZE) break;
+      cursor = page.docs[page.docs.length - 1];
+    }
+
+    const day = dayKey(dayStart);
     batch.set(db.collection('analyticsDaily').doc(day), {
       day,
       schemaVersion: 1,
@@ -108,11 +133,11 @@ export const aggregateAnalyticsDaily = onSchedule({ schedule: 'every 1 hours', t
       totalEvents: bucket.total,
       uniqueActorsObserved: bucket.actors.size,
       byType: bucket.byType,
-      partial: snapshot.size >= 5000,
+      partial: false,
       aggregatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
   }
-  if (buckets.size > 0) await batch.commit();
+  await batch.commit();
 });
 
 export const getPlatformAnalytics = onCall({ maxInstances: 5 }, async (request) => {
