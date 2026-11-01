@@ -193,6 +193,21 @@ const publicProfile = (uid) => ({
       voiceAudioUrl: `chats/chat-1/audio/alice/${'a'.repeat(36)}`, voiceDuration: '3s', fileName: 'recording.webm',
       customMediaType: 'voice'
     }));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users', 'bob', 'settings', 'preferences'), {
+        privacy: {}, notifications: {}, appearance: {}, content: {}, feed: {}, security: {},
+        messaging: { mutedChatIds: [], blockedUserIds: ['alice'] }
+      });
+    });
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm-blocked'), {
+      id: 'm-blocked', chatId: 'chat-1', senderId: 'alice', content: 'blocked sender', status: 'sent',
+      timestamp: new Date().toISOString()
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'blocked sender metadata' }));
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'chats', 'chat-1', 'messages', 'm-from-blocker'), {
+      id: 'm-from-blocker', chatId: 'chat-1', senderId: 'bob', content: 'blocker can still send', status: 'sent',
+      timestamp: new Date().toISOString()
+    }));
     await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm4'), {
       id: 'm4', chatId: 'chat-1', senderId: 'alice', content: 'still sending', status: 'sending',
       timestamp: new Date().toISOString()
