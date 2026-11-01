@@ -135,8 +135,6 @@ export default function NexoraVideoPlayer({
   const [showShareSheet, setShowShareSheet] = useState(false);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [selectedQuality, setSelectedQuality] = useState<'1080p' | '720p' | '480p' | 'Auto'>('Auto');
-  const [isSwitchingQuality, setIsSwitchingQuality] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [hasVideoError, setHasVideoError] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
@@ -153,7 +151,6 @@ export default function NexoraVideoPlayer({
   });
   const singleTapTimeoutRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<any>(null);
-  const qualitySwitchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watermarkCycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const postRollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -369,44 +366,6 @@ export default function NexoraVideoPlayer({
     }
   }, [isActive, isNearby, isVisible, playerId, videoUrl, finalVideoUrl]);
 
-  // Intelligent Video Quality Engine: adapt background network speed
-  useEffect(() => {
-    if (selectedQuality !== 'Auto') return;
-    
-    const checkQuality = () => {
-      if (typeof navigator === 'undefined') return;
-      const conn = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-      
-      let speedQuality: '1080p' | '720p' | '480p' = '720p';
-      if (conn) {
-        if (conn.saveData) {
-          speedQuality = '480p';
-        } else {
-          const downlink = conn.downlink || 5; // default 5 Mbps
-          if (downlink > 6) speedQuality = '1080p';
-          else if (downlink > 2) speedQuality = '720p';
-          else speedQuality = '480p';
-        }
-      }
-      
-      // Update simulated background quality without interrupting active playback!
-      setIsSwitchingQuality(true);
-      if (qualitySwitchTimeoutRef.current) clearTimeout(qualitySwitchTimeoutRef.current);
-      qualitySwitchTimeoutRef.current = setTimeout(() => {
-        setIsSwitchingQuality(false);
-      }, 400);
-    };
-
-    checkQuality();
-    
-    // Periodically adapt quality to background bandwidth changes
-    const interval = setInterval(checkQuality, 12000);
-    return () => {
-      clearInterval(interval);
-      if (qualitySwitchTimeoutRef.current) clearTimeout(qualitySwitchTimeoutRef.current);
-      qualitySwitchTimeoutRef.current = null;
-    };
-  }, [selectedQuality]);
 
   useEffect(() => {
     setHasVideoError(false);
@@ -791,27 +750,6 @@ export default function NexoraVideoPlayer({
     setCurrentTime(seekTo);
   };
 
-  // Simulated quality switch
-  const handleQualitySelect = (quality: '1080p' | '720p' | '480p' | 'Auto') => {
-    setSelectedQuality(quality);
-    setIsSwitchingQuality(true);
-    
-    const wasPlaying = isPlaying;
-    if (videoRef.current) {
-      videoRef.current.pause();
-    }
-
-    if (qualitySwitchTimeoutRef.current) clearTimeout(qualitySwitchTimeoutRef.current);
-    qualitySwitchTimeoutRef.current = setTimeout(() => {
-      setIsSwitchingQuality(false);
-      if (wasPlaying && videoRef.current) {
-        globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl).catch(() => {});
-      }
-      window.dispatchEvent(
-        new CustomEvent('toast', { detail: `✨ Video quality updated to ${quality}!` })
-      );
-    }, 900);
-  };
 
   const handleVideoFailure = () => {
     setIsBuffering(false);
@@ -1288,13 +1226,6 @@ export default function NexoraVideoPlayer({
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Switching Quality overlay indicator */}
-      {isSwitchingQuality && (
-        <div className="absolute inset-0 bg-black/85 flex flex-col items-center justify-center z-20">
-          <NexoraLoader size="md" />
-        </div>
-      )}
 
       {/* Hold to Pause Overlay Indicator */}
       {isLongPressing && (
