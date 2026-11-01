@@ -1,58 +1,35 @@
 import { initializeApp } from 'firebase/app';
 import { connectAuthEmulator, getAuth } from 'firebase/auth';
 import { connectFirestoreEmulator, getFirestore } from 'firebase/firestore';
-import { getStorage } from 'firebase/storage';
-import { getFunctions } from 'firebase/functions';
+import { connectFunctionsEmulator, getFunctions } from 'firebase/functions';
+import { connectStorageEmulator, getStorage } from 'firebase/storage';
 import { initializeAppCheck, ReCaptchaEnterpriseProvider, type AppCheck } from 'firebase/app-check';
-import firebaseConfig from '../../firebase-applet-config.json';
+import { resolveFirebaseWebEnvironment } from './firebaseEnvironment';
 
-type FirebaseWebConfig = typeof firebaseConfig;
 const viteEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
-const resolvedConfig: FirebaseWebConfig = {
-  ...firebaseConfig,
-  projectId: viteEnv.VITE_FIREBASE_PROJECT_ID || firebaseConfig.projectId,
-  appId: viteEnv.VITE_FIREBASE_APP_ID || firebaseConfig.appId,
-  apiKey: viteEnv.VITE_FIREBASE_API_KEY || firebaseConfig.apiKey,
-  authDomain: viteEnv.VITE_FIREBASE_AUTH_DOMAIN || firebaseConfig.authDomain,
-  firestoreDatabaseId: viteEnv.VITE_FIREBASE_DATABASE_ID || firebaseConfig.firestoreDatabaseId,
-  storageBucket: viteEnv.VITE_FIREBASE_STORAGE_BUCKET || firebaseConfig.storageBucket,
-  messagingSenderId: viteEnv.VITE_FIREBASE_MESSAGING_SENDER_ID || firebaseConfig.messagingSenderId,
-};
-const isEmulatorRuntime = typeof process !== 'undefined' && Boolean(process.env.FIRESTORE_EMULATOR_HOST);
-const unresolvedConfigFields = Object.entries(resolvedConfig)
-  .filter(([name, value]) => name !== 'measurementId' && (typeof value !== 'string' || !value.trim() || value.includes('<owner-')))
-  .map(([name]) => name);
-if (resolvedConfig.projectId !== 'nexora-prod-voiceharrison') {
-  unresolvedConfigFields.push('projectId');
-}
-export const firebaseConfigError = !isEmulatorRuntime && unresolvedConfigFields.length > 0
-  ? `Firebase web configuration is incomplete. Provide owner-verified values for: ${[...new Set(unresolvedConfigFields)].join(', ')}.`
-  : null;
-
-const app = initializeApp(resolvedConfig);
+const firebaseEnvironment = resolveFirebaseWebEnvironment(viteEnv);
+const app = initializeApp(firebaseEnvironment.config);
 export { app };
-const firestoreDatabaseId = typeof process !== 'undefined' && process.env.FIRESTORE_EMULATOR_HOST
-  ? '(default)'
-  : resolvedConfig.firestoreDatabaseId;
+
+export const firebaseConfigError: string | null = null;
+export const db = getFirestore(app, firebaseEnvironment.config.firestoreDatabaseId);
+export const auth = getAuth(app);
+export const storage = getStorage(app);
+export const functions = getFunctions(app, 'us-central1');
+
 const appCheckSiteKey = (globalThis as typeof globalThis & {
   __NEXORA_APPCHECK_SITE_KEY__?: string;
 }).__NEXORA_APPCHECK_SITE_KEY__;
-export const appCheck: AppCheck | null = appCheckSiteKey
+export const appCheck: AppCheck | null = !firebaseEnvironment.useEmulators && appCheckSiteKey
   ? initializeAppCheck(app, {
       provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),
       isTokenAutoRefreshEnabled: true,
     })
   : null;
-export const db = getFirestore(app, firestoreDatabaseId);
-export const auth = getAuth();
-export const storage = getStorage(app);
-export const functions = getFunctions(app, 'us-central1');
 
-const useEmulators = (globalThis as typeof globalThis & {
-  __NEXORA_FIREBASE_EMULATORS__?: boolean;
-}).__NEXORA_FIREBASE_EMULATORS__ === true;
-
-if (useEmulators) {
-  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-  connectFirestoreEmulator(db, '127.0.0.1', 8080);
+if (firebaseEnvironment.useEmulators) {
+  connectAuthEmulator(auth, `http://${firebaseEnvironment.emulator.auth.host}:${firebaseEnvironment.emulator.auth.port}`, { disableWarnings: true });
+  connectFirestoreEmulator(db, firebaseEnvironment.emulator.firestore.host, firebaseEnvironment.emulator.firestore.port);
+  connectStorageEmulator(storage, firebaseEnvironment.emulator.storage.host, firebaseEnvironment.emulator.storage.port);
+  connectFunctionsEmulator(functions, firebaseEnvironment.emulator.functions.host, firebaseEnvironment.emulator.functions.port);
 }

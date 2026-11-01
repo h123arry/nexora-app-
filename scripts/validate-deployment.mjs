@@ -33,8 +33,11 @@ if (firebase) {
   }
 }
 
-if (aliases?.projects?.default !== 'nexora-prod-voiceharrison' || aliases?.projects?.production !== 'nexora-prod-voiceharrison') {
-  failures.push('.firebaserc: default and production aliases must target nexora-prod-voiceharrison');
+if (aliases?.projects?.default === 'nexora-prod-voiceharrison') {
+  failures.push('.firebaserc: the default alias must not target production; production requires an explicit --project target');
+}
+if (aliases?.projects?.production !== 'nexora-prod-voiceharrison') {
+  failures.push('.firebaserc: the production alias must target nexora-prod-voiceharrison');
 }
 
 if (webConfig) {

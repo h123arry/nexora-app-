@@ -1,18 +1,17 @@
-import { getApps, initializeApp } from 'firebase-admin/app';
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
-import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
 
-const adminApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
+const adminApp = getFirebaseAdminApp();
 const firestoreDatabaseId = resolveFirestoreDatabaseId();
 const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 setGlobalOptions({

@@ -1,10 +1,9 @@
 import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
-import { getApps, initializeApp } from 'firebase-admin/app';
-import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
-const app = getApps().find(candidate => candidate.name === '[DEFAULT]') || initializeApp();
+const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
 
 const targetTypes = new Set(['post', 'comment', 'user', 'community', 'message']);

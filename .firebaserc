@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "nexora-prod-voiceharrison",
+    "default": "demo-nexora-local",
     "production": "nexora-prod-voiceharrison"
   }
 }

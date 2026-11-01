@@ -1,6 +1,7 @@
 import { applicationDefault, initializeApp } from 'firebase-admin/app';
 import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { readFile, writeFile } from 'node:fs/promises';
+import { resolveFirebaseProjectId } from '../runtimeConfig.js';
 
 const MAX_BATCH_SIZE = 200;
 const MAX_CONCURRENCY = 10;
@@ -123,8 +124,7 @@ async function main(): Promise<void> {
   const apply = args.includes('--apply');
   const confirmProduction = args.includes('--confirm-production');
   if (!manifestPath) throw new Error('Usage: --manifest=/secure/path/approved-public-posts.json [--apply] [--confirm-production] [--report=/secure/path/report.json]');
-  const projectId = process.env.GCLOUD_PROJECT || process.env.GCP_PROJECT || process.env.FIREBASE_CONFIG && JSON.parse(process.env.FIREBASE_CONFIG).projectId;
-  if (!projectId) throw new Error('Project ID is missing; set GCLOUD_PROJECT or GCP_PROJECT explicitly.');
+  const projectId = resolveFirebaseProjectId();
   const emulator = Boolean(process.env.FIRESTORE_EMULATOR_HOST);
   if (apply && !emulator && !confirmProduction) {
     throw new Error('Refusing non-emulator writes without the explicit --confirm-production flag. No migration was applied.');

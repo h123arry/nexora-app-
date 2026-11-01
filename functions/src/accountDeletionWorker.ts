@@ -2,8 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Query, Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
-import { getApps, initializeApp } from 'firebase-admin/app';
-import { resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
 const PAGE_SIZE = 200;
 const LEASE_MS = 10 * 60 * 1000;
@@ -38,10 +37,10 @@ export interface CleanupProgress {
   deletedFiles: number;
 }
 
-const workerApp = getApps().find(app => app.name === '[DEFAULT]') || initializeApp();
+const workerApp = getFirebaseAdminApp();
 const firestoreDatabaseId = resolveFirestoreDatabaseId();
 const db = getFirestore(workerApp, firestoreDatabaseId);
-const accountStorageBucket = getStorage(workerApp).bucket(process.env.FIREBASE_STORAGE_BUCKET || undefined);
+const accountStorageBucket = getStorage(workerApp).bucket(resolveFirebaseStorageBucket());
 
 function isExpiredLease(request: LifecycleRequest): boolean {
   return !request.leaseExpiresAt || request.leaseExpiresAt.toMillis() <= Date.now();

@@ -10,8 +10,9 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
+import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 
-const isProduction = process.env.NODE_ENV === 'production';
+const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
 // Load local environment variables only outside production. Production values
 // must come from the hosting environment or its secret manager.
 if (!isProduction) dotenv.config();
@@ -20,23 +21,13 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 app.disable('x-powered-by');
 
-function resolveServerConfig(name: string, fallback = ''): string {
-  const value = process.env[name]?.trim();
-  if (isProduction && !value) {
-    throw new Error(`Missing required production configuration: ${name}`);
-  }
-  return value || fallback;
+const firebaseRuntime = resolveServerFirebaseConfig();
+const firebaseProjectId = firebaseRuntime.projectId;
+const firestoreDatabaseId = firebaseRuntime.firestoreDatabaseId;
+const firebaseStorageBucket = firebaseRuntime.storageBucket;
+if (firebaseRuntime.useEmulators && !process.env.STORAGE_EMULATOR_HOST && process.env.FIREBASE_STORAGE_EMULATOR_HOST) {
+  process.env.STORAGE_EMULATOR_HOST = process.env.FIREBASE_STORAGE_EMULATOR_HOST;
 }
-
-const firebaseProjectId = resolveServerConfig(
-  'GCLOUD_PROJECT',
-  process.env.FIREBASE_PROJECT_ID?.trim() || 'nexora-prod-voiceharrison',
-);
-const firestoreDatabaseId = resolveServerConfig(
-  'FIRESTORE_DATABASE_ID',
-  '(default)',
-);
-const firebaseStorageBucket = resolveServerConfig('FIREBASE_STORAGE_BUCKET');
 
 if (isProduction && !process.env.RELEASE_VERSION?.trim()) {
   throw new Error('Missing required production configuration: RELEASE_VERSION');
@@ -102,7 +93,9 @@ const VOH_MAX_CONTEXT_POSTS = 10;
 const VOH_RATE_WINDOW_MS = 60_000;
 const VOH_RATE_LIMIT = 20;
 const firebaseAdminApp = getApps().find(candidate => candidate.name === 'nexora-api')
-  || initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api');
+  || (firebaseRuntime.useEmulators
+    ? initializeApp({ projectId: firebaseProjectId }, 'nexora-api')
+    : initializeApp({ credential: applicationDefault(), projectId: firebaseProjectId }, 'nexora-api'));
 const serverDb = getFirestore(firebaseAdminApp, firestoreDatabaseId);
 const mediaBucket = firebaseStorageBucket ? getStorage(firebaseAdminApp).bucket(firebaseStorageBucket) : null;
 
