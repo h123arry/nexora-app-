@@ -1766,7 +1766,7 @@ export default function FeedView({
             onClose={() => setFeedTab('posts')}
             onLikePost={onLikePost}
             onToggleFollow={onToggleFollow}
-            isFollowing={false}
+            followingIds={followingIds}
             onAddComment={onAddComment}
           />
         )}
