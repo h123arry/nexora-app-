@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canSubmitAppeal, hasReviewerRole, isValidReportInput, restrictionProjection } from '../src/services/moderation/moderationPolicy.ts';
+import { REPORT_CATEGORIES, canSubmitAppeal, hasReviewerRole, isValidReportInput, restrictionProjection } from '../src/services/moderation/moderationPolicy.ts';
 
 test('moderation policy validates bounded report inputs and rejects forged paths', () => {
   assert.equal(isValidReportInput({ targetType: 'post', targetId: 'post-1', category: 'spam', explanation: 'Repeated links' }), true);
@@ -26,4 +26,14 @@ test('appeals require an active enforcement and deduplicate open appeals', () =>
   assert.equal(canSubmitAppeal(true, false), true);
   assert.equal(canSubmitAppeal(true, true), false);
   assert.equal(canSubmitAppeal(false, false), false);
+});
+
+test('the shared report taxonomy accepts every supported safety category', () => {
+  for (const category of REPORT_CATEGORIES) {
+    assert.equal(isValidReportInput({ targetType: 'post', targetId: 'post-1', category }), true);
+  }
+  assert.deepEqual(REPORT_CATEGORIES, [
+    'spam', 'harassment', 'threats', 'impersonation', 'hate', 'sexual_safety',
+    'violence', 'privacy', 'fraud', 'copyright', 'misinformation', 'other',
+  ]);
 });
