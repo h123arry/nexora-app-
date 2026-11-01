@@ -113,6 +113,10 @@ function mergeSettings(data: Partial<NexoraSettings>): NexoraSettings {
   };
 }
 
+export function buildFeedSettingsPatch(feed: FeedPreferences, updatedAt: unknown) {
+  return { feed, updatedAt };
+}
+
 export class SettingsService {
   static async getSettings(uid?: string): Promise<NexoraSettings> {
     const userId = uid || auth.currentUser?.uid;
@@ -177,12 +181,9 @@ export class SettingsService {
         hiddenPostIds: boundedStrings(updates.hiddenPostIds ?? current.feed.hiddenPostIds),
         seenPostIds: boundedStrings(updates.seenPostIds ?? current.feed.seenPostIds),
       };
-      transaction.set(settingsRef, {
-        ...DEFAULT_SETTINGS,
-        ...(snapshot.exists() ? {} : current),
-        feed: next,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      // Merge only the feed namespace. Writing DEFAULT_SETTINGS here would silently
+      // reset existing privacy, notification, appearance, content, and security choices.
+      transaction.set(settingsRef, buildFeedSettingsPatch(next, serverTimestamp()), { merge: true });
     });
   }
 
