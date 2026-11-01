@@ -552,14 +552,13 @@ export default function App() {
       if (cancelled) return;
       setUserBookmarks(ids);
       localStorage.setItem(`nexora_bookmarks_${uid}`, JSON.stringify(ids));
+      bookmarkStateReadyRef.current = true;
     }).catch(() => {
       if (!cancelled) {
         window.dispatchEvent(new CustomEvent('toast', {
           detail: 'Could not sync your saved posts. Please retry before bookmarking.'
         }));
       }
-    }).finally(() => {
-      if (!cancelled) bookmarkStateReadyRef.current = true;
     });
 
     return () => { cancelled = true; };
@@ -1004,7 +1003,7 @@ export default function App() {
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {
-    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+    if (bookmarkStateReadyRef.current && isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
       localStorage.setItem(`nexora_bookmarks_${firebaseUser!.uid}`, JSON.stringify(userBookmarks));
     }
   }, [userBookmarks, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
