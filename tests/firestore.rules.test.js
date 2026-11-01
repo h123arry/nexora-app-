@@ -208,6 +208,20 @@ const publicProfile = (uid) => ({
       id: 'm-from-blocker', chatId: 'chat-1', senderId: 'bob', content: 'blocker can still send', status: 'sent',
       timestamp: new Date().toISOString()
     }));
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users', 'bob', 'settings', 'preferences'), {
+        privacy: { allowDms: false }, notifications: {}, appearance: {}, content: {}, feed: {}, security: {},
+        messaging: { mutedChatIds: [], blockedUserIds: [] }
+      });
+    });
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-opted-out'), {
+      id: 'chat-opted-out', participants: ['alice', 'bob'], lastMessage: ''
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm-opted-out'), {
+      id: 'm-opted-out', chatId: 'chat-1', senderId: 'alice', content: 'recipient disabled DMs', status: 'sent',
+      timestamp: new Date().toISOString()
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'recipient disabled DMs' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm4'), {
       id: 'm4', chatId: 'chat-1', senderId: 'alice', content: 'still sending', status: 'sending',
       timestamp: new Date().toISOString()
