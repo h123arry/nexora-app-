@@ -348,18 +348,29 @@ function StoryViewer({
 
   useEffect(() => {
     setProgress(0);
-    const started = Date.now();
+    // Images and text stories advance automatically; videos control their own
+    // duration so a longer clip is never cut off after the image-story timeout.
+    if (story.mediaType === 'video' && story.mediaUrl) return;
     const duration = 5000;
-    const timer = setInterval(() => {
-      const pct = Math.min(100, ((Date.now() - started) / duration) * 100);
+    let elapsed = 0;
+    let lastTick = Date.now();
+    const timer = window.setInterval(() => {
+      if (document.hidden) {
+        lastTick = Date.now();
+        return;
+      }
+      const now = Date.now();
+      elapsed += now - lastTick;
+      lastTick = now;
+      const pct = Math.min(100, (elapsed / duration) * 100);
       setProgress(pct);
       if (pct >= 100) {
-        clearInterval(timer);
+        window.clearInterval(timer);
         onNext();
       }
     }, 50);
-    return () => clearInterval(timer);
-  }, [story.id, onNext]);
+    return () => window.clearInterval(timer);
+  }, [story.id, story.mediaType, story.mediaUrl, onNext]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -425,6 +436,7 @@ function StoryViewer({
                 muted
                 playsInline
                 preload="metadata"
+                onEnded={onNext}
                 aria-label={story.caption || `Story video from ${story.name || story.username}`}
               />
             ) : (
