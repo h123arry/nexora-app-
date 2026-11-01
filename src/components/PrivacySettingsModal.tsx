@@ -200,13 +200,32 @@ export default function PrivacySettingsModal({
 
   // 11. Hidden Chats PIN Configuration
   const [hiddenChats, setHiddenChats] = useState(() => {
-    const saved = localStorage.getItem('nx_privacy_hidden_chats');
-    return saved ? JSON.parse(saved) : {
+    const defaults = {
       protectionType: 'None' as 'PIN' | 'Password' | 'Pattern' | 'None',
       pinCode: '',
       autoHideTime: '5mins' as 'immediate' | '1min' | '5mins' | '15mins' | 'never',
-      hiddenChatIds: []
+      hiddenChatIds: [] as string[],
     };
+    try {
+      const saved = localStorage.getItem('nx_privacy_hidden_chats');
+      if (!saved) return defaults;
+      const parsed = JSON.parse(saved);
+      if (!parsed || typeof parsed !== 'object') return defaults;
+      const hiddenChatIds = Array.isArray(parsed.hiddenChatIds)
+        ? parsed.hiddenChatIds.filter((id: unknown) => typeof id === 'string' && id !== 'chat-hidden-1')
+        : [];
+      const containedDemoChat = Array.isArray(parsed.hiddenChatIds) && parsed.hiddenChatIds.includes('chat-hidden-1');
+      return {
+        ...defaults,
+        ...parsed,
+        hiddenChatIds,
+        ...(containedDemoChat && parsed.pinCode === '1337'
+          ? { pinCode: '', protectionType: 'None' as const }
+          : {}),
+      };
+    } catch {
+      return defaults;
+    }
   });
   const [enteredPIN, setEnteredPIN] = useState('');
   const [pinChangeState, setPinChangeState] = useState<'idle' | 'verify' | 'new' | 'confirm'>('idle');
