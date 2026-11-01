@@ -444,8 +444,6 @@ export default function FeedView({
   const [momentCaption, setMomentCaption] = useState('');
   const [momentMediaType, setMomentMediaType] = useState<'photo' | 'video' | 'voice' | 'text'>('photo');
   const [momentMediaUrl, setMomentMediaUrl] = useState('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80');
-  const [simulatedVoiceRecording, setSimulatedVoiceRecording] = useState(false);
-  const [simulatedVoiceSeconds, setSimulatedVoiceSeconds] = useState(0);
   const [playingVoiceMoment, setPlayingVoiceMoment] = useState(false);
 
   // Phase 6 & Phase 7 - Interactive states
@@ -876,25 +874,14 @@ export default function FeedView({
     return () => clearInterval(timer);
   }, [playingVoiceMoment, selectedMoment]);
 
-  // Voice Recording Simulator effect
-  useEffect(() => {
-    let interval: any = null;
-    if (simulatedVoiceRecording) {
-      interval = setInterval(() => {
-        setSimulatedVoiceSeconds(s => s + 1);
-      }, 1000);
-    } else {
-      setSimulatedVoiceSeconds(0);
-    }
-    return () => clearInterval(interval);
-  }, [simulatedVoiceRecording]);
-
   const handleSaveNewMoment = (e: React.FormEvent) => {
     e.preventDefault();
-    // For voice moment, prompt default title if blank
-    const defaultCaption = momentCaption.trim() || 
-      (momentMediaType === 'voice' ? "🎙️ Voice Message" : 
-       momentMediaType === 'video' ? "🎥 Video Clip" : "📸 Image Post");
+    // Voice and video publishing stay unavailable until real capture and upload are connected.
+    if (momentMediaType === 'voice' || momentMediaType === 'video') {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This story format is not available yet. Photo and text stories are ready.' }));
+      return;
+    }
+    const defaultCaption = momentCaption.trim() || (momentMediaType === 'text' ? '📝 Text Story' : '📸 Image Story');
 
     const newMoment = {
       id: `moment-${Date.now()}`,
@@ -905,7 +892,6 @@ export default function FeedView({
       quotes: [defaultCaption],
       mediaType: momentMediaType,
       mediaUrl: momentMediaType === 'text' ? '' : momentMediaUrl,
-      voiceDuration: momentMediaType === 'voice' ? (simulatedVoiceSeconds || 15) : undefined
     };
 
     const updated = [newMoment, ...momentsList];
@@ -2661,11 +2647,9 @@ export default function FeedView({
                 {/* Media Select segment */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-mono text-violet-400 block uppercase font-bold">Choose Media Type</label>
-                  <div className="grid grid-cols-4 gap-1.5">
+                  <div className="grid grid-cols-2 gap-1.5">
                     {[
                       { id: 'photo', label: '📸 Photo', defaultUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80' },
-                      { id: 'video', label: '🎥 Video', defaultUrl: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80' },
-                      { id: 'voice', label: '🎙️ Voice', defaultUrl: '' },
                       { id: 'text', label: '📝 Plain', defaultUrl: '' }
                     ].map((type) => (
                       <button
@@ -2712,32 +2696,6 @@ export default function FeedView({
                           </div>
                         </button>
                       ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Conditional Voice Recording simulator panel */}
-                {momentMediaType === 'voice' && (
-                  <div className="p-3.5 rounded-2xl bg-black/40 border border-white/10 flex flex-col items-center justify-center space-y-3 animate-fade-in">
-                    <button
-                      type="button"
-                      onClick={() => setSimulatedVoiceRecording(!simulatedVoiceRecording)}
-                      className={`h-14 w-14 rounded-full flex items-center justify-center transition-all cursor-pointer ${
-                        simulatedVoiceRecording 
-                          ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white font-black text-xs scale-105' 
-                          : 'bg-violet-600 hover:bg-violet-500 text-white'
-                      }`}
-                    >
-                      {simulatedVoiceRecording ? <span className="text-[10px] uppercase font-mono tracking-tighter col-indigo">STOP</span> : <Mic className="w-5 h-5 col-violet" />}
-                    </button>
-                    <div className="text-center">
-                      <span className="text-[9.5px] font-mono text-violet-300">
-                        {simulatedVoiceRecording 
-                          ? `🔴 Recording Wave - ${simulatedVoiceSeconds}s elapsed` 
-                          : simulatedVoiceSeconds > 0 
-                            ? `🎙️ Voice broadcast ready: ${simulatedVoiceSeconds} seconds` 
-                            : 'Click microphone to record voice wave'}
-                      </span>
                     </div>
                   </div>
                 )}
