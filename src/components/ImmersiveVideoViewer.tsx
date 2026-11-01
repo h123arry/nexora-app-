@@ -14,6 +14,7 @@ interface ImmersiveVideoViewerProps {
   onLikePost: (postId: string) => void;
   onToggleFollow?: (userId: string) => void;
   isFollowing?: boolean;
+  followingIds?: string[];
   onAddComment?: (postId: string, content: string) => void;
 }
 
@@ -25,6 +26,7 @@ export default function ImmersiveVideoViewer({
   onLikePost,
   onToggleFollow,
   isFollowing = false,
+  followingIds,
   onAddComment
 }: ImmersiveVideoViewerProps) {
   if (!initialPost) {
@@ -314,7 +316,7 @@ export default function ImmersiveVideoViewer({
                 isActive={isCurrent}
                 preloadMode={isCurrent ? "auto" : "metadata"}
                 shouldPreload={true}
-                isFollowing={isFollowing}
+                isFollowing={followingIds ? followingIds.includes(post.userId || '') : isFollowing}
                 onToggleFollow={onToggleFollow ? () => onToggleFollow(post.userId || post.id) : undefined}
                 onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
                 isCommentsOpen={isCommentsOpen}
