@@ -39,7 +39,7 @@ export default function RightSidebar({
       </div>
 
       <section className="space-y-3" aria-labelledby="trending-heading">
-        <div className="flex items-center justify-between px-1"><div className="flex items-center gap-2"><Flame className="h-4 w-4 text-violet-300" /><h2 id="trending-heading" className="text-sm font-bold text-white">Trending now</h2></div><button onClick={() => onOpenExplore?.()} className="text-[10px] font-semibold text-violet-300 hover:text-white">See all</button></div>
+        <div className="flex items-center justify-between px-1"><div className="flex items-center gap-2"><Flame className="h-4 w-4 text-violet-300" /><h2 id="trending-heading" className="text-sm font-bold text-white">Trending now</h2></div><button onClick={() => onOpenExplore?.()} className="min-h-9 rounded-lg px-2 text-[10px] font-semibold text-violet-300 hover:bg-violet-500/10 hover:text-white focus-visible:outline-2 focus-visible:outline-violet-300">See all</button></div>
         <div className="nx-discovery-card rounded-3xl p-3">
           {selectedTag && <button onClick={() => setSelectedTag(null)} className="mb-2 w-full rounded-xl border border-violet-400/20 bg-violet-500/10 py-2 text-[10px] font-semibold text-violet-200">Clear #{selectedTag}</button>}
           {trendingTags.length === 0 ? <p className="p-3 text-center text-xs leading-relaxed text-slate-500">No trends yet. Start a conversation with a hashtag.</p> : trendingTags.map(({ tag, count }, index) => {

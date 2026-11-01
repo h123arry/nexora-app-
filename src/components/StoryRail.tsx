@@ -206,7 +206,7 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
         <button
           type="button"
           onClick={openComposer}
-          className="shrink-0 w-[68px] flex flex-col items-center gap-1.5 group cursor-pointer"
+          className="shrink-0 w-[68px] flex flex-col items-center gap-1.5 group cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4 rounded-xl"
           aria-label="Add to your story"
         >
           <span className="relative grid h-14 w-14 place-items-center rounded-full border border-dashed border-violet-400/50 bg-violet-500/10 text-violet-200 group-hover:bg-violet-500/20 transition-colors">

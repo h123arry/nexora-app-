@@ -225,7 +225,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
             {pinnedPostIds.includes(post.id) && (
               <span className="text-[8.5px] font-black uppercase text-violet-200 bg-violet-500/10 border border-violet-400/20 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 tracking-wider animate-pulse">
-                <Pin className="w-2.5 h-2.5 text-pink-400 fill-current shrink-0" /> PINNED
+                <Pin className="w-2.5 h-2.5 text-violet-300 fill-current shrink-0" /> PINNED
               </span>
             )}
             {(post.userId === 'user-0' || post.username === 'voh') && (
@@ -239,7 +239,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               </span>
             )}
             {post.username === 'nexora_ai' && (
-              <span className="text-[8px] font-black uppercase text-cyan-400 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
+              <span className="text-[8px] font-black uppercase text-violet-300 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
                 NEXORA AI 🌌
               </span>
             )}
@@ -284,9 +284,9 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                         setNidaDiagnosticPost(post);
                         setActiveDotsMenuPostId(null);
                       }}
-                      className="w-full text-left px-3 py-2.5 bg-gradient-to-r from-violet-950/40 via-cyan-950/20 to-pink-950/15 text-cyan-300 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                      className="w-full text-left px-3 py-2.5 bg-gradient-to-r from-violet-950/40 via-violet-950/20 to-indigo-950/15 text-violet-200 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
                     >
-                      <Sparkles className="w-3.5 h-3.5 shrink-0 text-cyan-400 animate-pulse" />
+                      <Sparkles className="w-3.5 h-3.5 shrink-0 text-violet-300 animate-pulse" />
                       NIDA Diagnostics 🧬
                     </button>
 
@@ -297,9 +297,9 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                           setAnalyticsPost(post);
                           setActiveDotsMenuPostId(null);
                         }}
-                        className="w-full text-left px-3 py-2.5 bg-gradient-to-r from-violet-600/20 to-pink-500/20 text-violet-200 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
+                        className="w-full text-left px-3 py-2.5 bg-gradient-to-r from-violet-600/20 to-indigo-500/20 text-violet-200 font-extrabold flex items-center gap-2 text-xs transition-colors cursor-pointer border-b border-white/5"
                       >
-                        <BarChart2 className="w-3.5 h-3.5 shrink-0 text-pink-400" />
+                        <BarChart2 className="w-3.5 h-3.5 shrink-0 text-violet-300" />
                         View Analytics 📊
                       </button>
                     )}
@@ -404,7 +404,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                         setShowSaveToCollectionModalId(post.id);
                         setActiveDotsMenuPostId(null);
                       }}
-                      className="w-full text-left px-3 py-2 hover:bg-white/5 text-pink-400 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-t border-white/5"
+                      className="w-full text-left px-3 py-2 hover:bg-white/5 text-violet-300 font-bold flex items-center gap-2 text-xs transition-colors cursor-pointer border-t border-white/5"
                     >
                       <FolderPlus className="w-3.5 h-3.5 shrink-0" />
                       Save to Folder
@@ -422,8 +422,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             </span>
           )}
           {post.location && (
-            <span className="bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse">
-              <Globe className="w-2.5 h-2.5 text-cyan-300" />
+            <span className="bg-cyan-500/10 text-violet-300 border border-cyan-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse">
+              <Globe className="w-2.5 h-2.5 text-violet-200" />
               <span>🌍 Pulse Report</span>
             </span>
           )}
@@ -557,8 +557,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             </button>
             <div className="flex-1 min-w-0">
               <div className="flex justify-between items-center text-[10px] font-mono mb-1.5">
-                <span className="text-pink-400 font-extrabold flex items-center gap-1">
-                  <Volume2 className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+                <span className="text-violet-300 font-extrabold flex items-center gap-1">
+                  <Volume2 className="w-3.5 h-3.5 text-violet-300 animate-pulse" />
                   VOICE POST
                 </span>
                 <span className="text-violet-400">
@@ -745,7 +745,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               aria-label={`${post.isBookmarkedByUser ? 'Remove bookmark from' : 'Bookmark'} post by ${post.name}; ${post.bookmarksCount || 0} saves`}
               aria-pressed={!!post.isBookmarkedByUser}
             >
-              <Bookmark className={`w-6 h-6 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-cyan-400' : 'text-white'}`} />
+              <Bookmark className={`w-6 h-6 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-violet-300' : 'text-white'}`} />
               <span className="text-[10px] font-mono font-bold">{post.bookmarksCount || 0}</span>
             </button>
           </div>
