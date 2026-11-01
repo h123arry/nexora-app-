@@ -5,7 +5,7 @@ import {
   uploadBytesResumable,
   type UploadMetadata,
 } from 'firebase/storage';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
 
@@ -92,7 +92,14 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
     },
   };
   return new Promise((resolve, reject) => {
-    void setDoc(doc(db, 'mediaAssets', mediaId), {
+    const assetRef = doc(db, 'mediaAssets', mediaId);
+    const cleanupFailedUpload = async () => {
+      await Promise.allSettled([
+        deleteDoc(assetRef),
+        deleteObject(ref(storage, storagePath)),
+      ]);
+    };
+    void setDoc(assetRef, {
       id: mediaId,
       ownerId: userId,
       storagePath,
@@ -116,7 +123,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
         },
         error => {
           signal?.removeEventListener('abort', abortUpload);
-          reject(error);
+          void cleanupFailedUpload().finally(() => reject(error));
         },
         async () => {
           signal?.removeEventListener('abort', abortUpload);
@@ -129,6 +136,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
               size: file.size,
             });
           } catch (error) {
+            await cleanupFailedUpload();
             reject(error);
           }
         },
