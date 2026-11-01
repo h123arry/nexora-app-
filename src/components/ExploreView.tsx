@@ -231,7 +231,7 @@ export default function ExploreView({
                 <span>{term}</span>
                 <span 
                   onClick={(e) => removeRecentSearch(term, e)}
-                  className="text-zinc-500 hover:text-pink-400 p-0.5"
+                  className="text-zinc-500 hover:text-violet-300 p-0.5"
                 >
                   <X className="w-3 h-3" />
                 </span>
@@ -250,7 +250,7 @@ export default function ExploreView({
             </h2>
             <button
               onClick={() => { setLocalSearch(''); setSearchFilterType('all'); }}
-              className="text-[11px] font-mono text-pink-400 hover:text-pink-300 font-bold uppercase cursor-pointer"
+              className="text-[11px] font-mono text-violet-300 hover:text-violet-200 font-bold uppercase cursor-pointer"
             >
               Clear Search ✖
             </button>
@@ -404,7 +404,7 @@ export default function ExploreView({
               {/* Community discovery is owned by CommunitiesHub, which subscribes to the current community source. */}
               {(searchFilterType === 'all' || searchFilterType === 'communities') && (
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-mono text-cyan-400 uppercase tracking-wider font-bold">Discover communities</h3>
+                  <h3 className="text-[10px] font-mono text-violet-300 uppercase tracking-wider font-bold">Discover communities</h3>
                   <div className="p-4 rounded-2xl nx-surface flex items-center justify-between gap-3">
                     <p className="text-xs text-zinc-400">Community search and membership are managed in the live Communities hub. {searchFilterType === 'communities' && localSearch.trim() ? 'Your search will carry over.' : ''}</p>
                     <button type="button" onClick={() => {
@@ -418,7 +418,7 @@ export default function ExploreView({
                         console.warn('Could not hand off community search:', error);
                       }
                       setActiveTab('communities');
-                    }} className="px-3.5 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
+                    }} className="px-3.5 py-2 rounded-xl bg-violet-500/15 hover:bg-violet-600 border border-violet-400/25 text-violet-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
                   </div>
                 </div>
               )}
@@ -442,9 +442,9 @@ export default function ExploreView({
             <button
               type="button"
               onClick={() => setActiveTab('pulse')}
-              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-pink-300/30 hover:bg-pink-500/10"
+              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-pink-500/10"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-pink-500/15 text-pink-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
               <span><span className="block text-sm font-bold text-white">Pulse</span><span className="mt-0.5 block text-[10px] text-zinc-400">Live aggregation not connected</span></span>
             </button>
           </div>

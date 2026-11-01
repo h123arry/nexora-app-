@@ -459,3 +459,39 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .nx-story-track > button { transition: none; }
 }
+
+
+/* Seven-screen finish: consistent hierarchy, touch targets and restrained motion. */
+.nx-sidebar-shell { scrollbar-gutter: stable; }
+.nx-sidebar-nav-item { min-height: 3.15rem; border-color: transparent; }
+.nx-sidebar-nav-item:hover { background: rgba(113,56,255,.09); border-color: rgba(182,155,255,.16); }
+.nx-sidebar-nav-item:focus-visible,
+.nx-create-action:focus-visible,
+.nx-explore-filter:focus-visible { outline: 2px solid var(--nx-violet-bright); outline-offset: 2px; }
+#nexora-right-panel .nx-discovery-card { border: 1px solid var(--nx-edge); }
+#nexora-right-panel .nx-discovery-card > button:not(:last-child) { min-height: 3rem; }
+.nx-feed-header { box-shadow: 0 8px 26px rgba(3,1,14,.22); }
+.nx-feed-header [aria-pressed="true"] { color: #F5F0FF; }
+.nx-feed-header [aria-pressed="true"]::after { background: var(--nx-gradient); }
+.nx-story-rail { background: linear-gradient(180deg, rgba(18,14,43,.3), transparent); }
+.nx-story-track { overscroll-behavior-inline: contain; }
+.nx-story-track button:focus-visible { outline: 2px solid var(--nx-violet-bright); outline-offset: 3px; }
+#explore-view-master-panel .nx-soft-card,
+#explore-view-master-panel .nx-surface { border-color: var(--nx-edge); }
+#explore-view-master-panel button { -webkit-tap-highlight-color: transparent; }
+.nx-profile-shell .nx-page-header { box-shadow: 0 8px 24px rgba(3,1,14,.2); }
+.nx-profile-media-grid img,
+.nx-profile-media-grid video { display: block; }
+.nx-profile-media-grid > * { border-radius: 2px; }
+.nx-inbox-list { border-right: 1px solid rgba(139,111,210,.16); }
+.nx-chat-stage { min-width: 0; }
+.nx-chat-header { background: rgba(9,7,20,.88); backdrop-filter: blur(18px); }
+@media (max-width: 767px) {
+  .nx-sidebar-nav-item { min-height: 2.9rem; }
+  .nx-feed-header { padding-top: env(safe-area-inset-top, 0px); }
+  .nx-profile-media-grid > * { border-radius: 0; }
+  .nx-inbox-list { border-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-sidebar-nav-item, .nx-create-action, .nx-explore-filter { transition: none !important; }
+}
