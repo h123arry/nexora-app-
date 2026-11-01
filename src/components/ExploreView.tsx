@@ -3,7 +3,7 @@ import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Glo
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { searchCreators, searchPosts } from '../services/discovery/discoveryService';
+import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 
 interface ExploreViewProps {
   creators: User[];
@@ -13,7 +13,7 @@ interface ExploreViewProps {
   onLikePost: (postId: string) => void;
   onToggleFollow?: (creatorId: string) => void;
   followingIds: string[];
-  onViewProfile?: (userIdOrUsername: string) => void;
+  onViewProfile?: (userIdOrUsername: string) => void;\n  interestDNA?: Record<string, number>;
 }
 
 export default function ExploreView({
@@ -471,9 +471,9 @@ export default function ExploreView({
               <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest">Suggested Creators</h3>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-              {creators.length === 0 ? (
+              {suggestedCreators.length === 0 ? (
                 <div className="nx-surface rounded-2xl p-5 text-xs text-zinc-500">Creator suggestions will appear as Nexora learns your interests.</div>
-              ) : creators.map(user => (
+              ) : suggestedCreators.map(user => (
                 <div
                   key={user.id}
                   onClick={() => onViewProfile?.(user.id)}
@@ -485,7 +485,7 @@ export default function ExploreView({
                       <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
                       {user.isVerified && <PurpleVerifiedBadge />}
                     </div>
-                    <span className="text-[9px] font-mono text-violet-400 truncate block">@{user.username}</span>
+                    <span className="text-[9px] font-mono text-violet-400 truncate block">@{user.username}</span>\n                    {Object.keys(interestDNA).some(tag => (user.interestDNA || {})[tag] > 0) && <span className="text-[9px] text-zinc-500">Shared interests</span>}
                   </div>
                   <button
                     onClick={(e) => {

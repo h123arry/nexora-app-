@@ -2131,6 +2131,7 @@ export default function App() {
                       onToggleFollow={handleToggleFollow}
                       followingIds={followingIds}
                       onViewProfile={handleViewProfile}
+                      interestDNA={currentUser.interestDNA}
                     />
                   )}
 
