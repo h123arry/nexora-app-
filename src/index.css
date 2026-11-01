@@ -495,3 +495,89 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .nx-sidebar-nav-item, .nx-create-action, .nx-explore-filter { transition: none !important; }
 }
+
+
+/* Final polish layer: accessible, consistent interaction feedback across the product. */
+:root {
+  --nx-focus-ring: 0 0 0 3px rgba(138, 63, 252, .24);
+  --nx-card-hover-edge: rgba(182, 155, 255, .42);
+}
+.nx-surface,
+.nx-soft-card,
+.nx-post-card,
+.nx-route-card,
+.nx-discovery-card {
+  color: var(--nx-text);
+}
+.nx-post-card,
+.nx-discovery-card,
+.nx-route-card,
+.nx-soft-card {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+.nx-post-card:focus-within,
+.nx-discovery-card:focus-within,
+.nx-route-card:focus-within {
+  border-color: var(--nx-card-hover-edge);
+}
+.nx-field:focus-visible,
+.nx-btn-primary:focus-visible,
+.nx-btn-ghost:focus-visible,
+.nx-icon-button:focus-visible,
+.nx-dock-item:focus-visible {
+  outline: 2px solid var(--nx-violet-bright);
+  outline-offset: 3px;
+  box-shadow: var(--nx-focus-ring);
+}
+.nx-field:disabled,
+.nx-btn-primary:disabled,
+.nx-btn-ghost:disabled,
+.nx-icon-button:disabled {
+  cursor: not-allowed;
+  opacity: .52;
+}
+.nx-app-shell img,
+.nx-page-shell img {
+  color: var(--nx-muted);
+}
+.nx-app-shell a,
+.nx-page-shell a {
+  text-underline-offset: .2em;
+}
+.nx-app-shell a:focus-visible,
+.nx-page-shell a:focus-visible {
+  border-radius: .25rem;
+  outline: 2px solid var(--nx-violet-bright);
+  outline-offset: 3px;
+}
+.nx-profile-media-grid > button:focus-visible {
+  z-index: 1;
+  outline: 2px solid var(--nx-violet-bright);
+  outline-offset: -3px;
+}
+.nx-chat-stage,
+.nx-inbox-list,
+.nx-main-grid,
+.nx-feed-stage {
+  min-width: 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .nx-post-card:hover,
+  .nx-discovery-card:hover,
+  .nx-route-card:hover {
+    border-color: var(--nx-card-hover-edge);
+    box-shadow: 0 18px 42px rgba(3, 1, 14, .34);
+  }
+}
+@media (max-width: 640px) {
+  .nx-field { font-size: 16px; }
+  .nx-post-card { margin-inline: 8px; }
+  .nx-page-header { padding-inline: max(1rem, env(safe-area-inset-left, 0px)); }
+  .nx-mobile-dock { padding-bottom: env(safe-area-inset-bottom, 0px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-post-card,
+  .nx-discovery-card,
+  .nx-route-card,
+  .nx-soft-card { transition: none !important; }
+}

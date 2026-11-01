@@ -1151,17 +1151,19 @@ export default function ProfileView({
                   {currentUser.hasStory && (
                     <div className="absolute -inset-1 bg-gradient-to-tr from-violet-600 via-fuchsia-500 to-pink-500 rounded-full blur-[2px] opacity-80" />
                   )}
-                  <div 
+                  <button
+                    type="button"
                     onClick={() => setProfilePicExpanded(true)}
-                    className="w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md"
+                    aria-label="View profile photo"
+                    className="w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4"
                   >
-                    <img 
-                      src={currentUser.avatar} 
-                      className="w-full h-full object-cover" 
-                      alt="User Avatar"
+                    <img
+                      src={currentUser.avatar}
+                      className="w-full h-full object-cover"
+                      alt=""
                       referrerPolicy="no-referrer"
                     />
-                  </div>
+                  </button>
                 </div>
 
                 <div className="min-w-0 flex-1">
