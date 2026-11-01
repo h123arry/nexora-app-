@@ -1127,6 +1127,32 @@ export default function NexoraVideoPlayer({
                </div>
              </div>
 
+             {/* Creator identity and direct follow action */}
+             <div className="absolute z-30 flex items-center gap-2.5 max-w-[78%] pointer-events-auto"
+               style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 142px)", left: "calc(env(safe-area-inset-left, 0px) + 16px)" }}>
+               <button type="button"
+                 onClick={(e) => { e.stopPropagation(); if (post.userId) onViewProfile?.(post.userId); }}
+                 aria-label={`Open ${post.name}'s profile`}
+                 className="flex min-w-0 items-center gap-2 text-left">
+                 <img src={post.avatar} alt="" className="h-9 w-9 shrink-0 rounded-full border border-white/50 object-cover shadow-lg" loading="lazy" />
+                 <span className="min-w-0">
+                   <span className="flex items-center gap-1 text-xs font-bold text-white drop-shadow-md">
+                     <span className="truncate">{post.name || post.username}</span>
+                     {post.isVerified && <VerificationBadge />}
+                   </span>
+                   <span className="block truncate text-[10px] text-white/75">@{post.username}</span>
+                 </span>
+               </button>
+               {!isOwnPost && onToggleFollow && (
+                 <button type="button" onClick={(e) => { e.stopPropagation(); onToggleFollow(); }}
+                   aria-pressed={isFollowing}
+                   aria-label={isFollowing ? `Following ${post.username}. Unfollow` : `Follow ${post.username}`}
+                   className={`shrink-0 rounded-full border px-3.5 py-1.5 text-[10px] font-bold shadow-md transition active:scale-95 ${isFollowing ? "border-white/40 bg-black/45 text-white" : "border-violet-300/60 bg-violet-600 text-white hover:bg-violet-500"}`}>
+                   {isFollowing ? "Following" : "Follow"}
+                 </button>
+               )}
+             </div>
+
              {/* 4. BOTTOM-LEFT INFORMATION OVERLAY */}
              <div 
                className="absolute z-20 flex flex-col items-start gap-1.5 text-left pointer-events-auto max-w-[70%] sm:max-w-[75%]"
