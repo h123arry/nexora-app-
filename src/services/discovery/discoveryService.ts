@@ -257,7 +257,7 @@ export function recommendCreators<T extends User>(
     const score = Math.round(overlap + (creator.isVerified ? 3 : 0) + Math.min(5, Math.log1p(Math.max(0, creator.followers || 0))));
     return { creator, score, sharedTopics, reason: sharedTopics.length ? `Shares your interest in ${sharedTopics.map(tag => `#${tag}`).join(', ')}` : 'A creator to discover', index };
   })
-    .filter(item => item.score > 0)
+    .filter(item => item.score > 0 && (Object.keys(interests).length === 0 || item.sharedTopics.length > 0))
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, limit)
     .map(({ index: _index, ...item }) => item);
