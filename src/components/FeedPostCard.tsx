@@ -208,7 +208,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               <span>•</span>
               <span><RelativeTime timestamp={post.timestamp} /></span>
               <span>•</span>
-              <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-pink-400 bg-pink-500/5 px-1 py-0.5 rounded border border-pink-500/10">
+              <span className="hidden sm:inline-flex items-center gap-0.5 text-[10px] text-violet-300 bg-violet-500/8 px-1 py-0.5 rounded border border-violet-400/15">
                 <BookOpen className="w-2.5 h-2.5 shrink-0" />
                 {(() => {
                   const words = post.content.trim().split(/\s+/).length;
@@ -224,7 +224,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
         <div className="flex flex-col items-end gap-1.5 text-[9.5px] font-mono shrink-0">
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
             {pinnedPostIds.includes(post.id) && (
-              <span className="text-[8.5px] font-black uppercase text-pink-400 bg-pink-500/10 border border-pink-500/20 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 tracking-wider animate-pulse">
+              <span className="text-[8.5px] font-black uppercase text-violet-200 bg-violet-500/10 border border-violet-400/20 px-1.5 py-0.5 rounded-md flex items-center gap-0.5 tracking-wider animate-pulse">
                 <Pin className="w-2.5 h-2.5 text-pink-400 fill-current shrink-0" /> PINNED
               </span>
             )}
