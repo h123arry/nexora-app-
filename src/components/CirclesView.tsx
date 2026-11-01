@@ -3,32 +3,41 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Download, Award } from 'lucide-react';
 import { Circle, User } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
-import { joinCircleDb, leaveCircleDb } from '../data/database';
+import { CommunityService } from '../services/firebase/communityService';
 
 interface CirclesViewProps {
   currentUser: User;
 }
 
 export default function CirclesView({ currentUser }: CirclesViewProps) {
-  const [circles, setCircles] = useState<Circle[]>(() => {
-    try {
-      const saved = localStorage.getItem('nexora_custom_communities');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [circles, setCircles] = useState<Circle[]>([]);
+  const [isLoadingCircles, setIsLoadingCircles] = useState(true);
+  const [circlesError, setCirclesError] = useState<string | null>(null);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('nexora_custom_communities', JSON.stringify(circles));
-    } catch {}
-  }, [circles]);
+    let cancelled = false;
+    setIsLoadingCircles(true);
+    CommunityService.listPublicCommunities(currentUser.id)
+      .then(items => {
+        if (!cancelled) {
+          setCircles(items);
+          setCirclesError(null);
+        }
+      })
+      .catch(error => {
+        console.error('Circle discovery load failed:', error);
+        if (!cancelled) setCirclesError('Circles could not be loaded. Check your connection and try again.');
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingCircles(false);
+      });
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
   
   // Community points are not money, are not redeemable, and have no financial value.
   const [currencyBalances, setCurrencyBalances] = useState<{ [key: string]: number }>({});
 
-  // AI Community Builder States
+  // Circle Builder States
   const [promptInput, setPromptInput] = useState('');
   const [isBuilding, setIsBuilding] = useState(false);
   const [buildSteps, setBuildSteps] = useState<string[]>([]);
@@ -56,91 +65,61 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   // Sound simulation state
   const [isMuted, setIsMuted] = useState(false);
 
-  const handleJoinCircle = (circleId: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation(); // don't open modal when clicking join button
-    }
-    const target = circles.find(c => c.id === circleId);
-    if (target && !target.isJoinedByMe) {
-      recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
-      joinCircleDb(currentUser.id, circleId);
-    } else if (target && target.isJoinedByMe) {
-      leaveCircleDb(currentUser.id, circleId);
-    }
-    setCircles(prev => prev.map(c => {
-      if (c.id === circleId) {
-        const joined = !c.isJoinedByMe;
-        return { 
-          ...c, 
-          isJoinedByMe: joined
-        };
-      }
-      return c;
-    }));
-  };
-
-  // Run AI Community Builder wizard
-  const handleAICommunityBuild = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!promptInput.trim()) return;
-
-    setIsBuilding(true);
-    setCurrentBuildStep(0);
-    
-    // Normal language, clean human descriptions
-    const steps = [
-      'Creating clean community database records...',
-      'Synthesizing beautiful header banner templates...',
-      'Drafting friendly community rules and onboarding guidelines...',
-      'Optimizing recommended categories matching across global channels...',
-      'Publishing the new digital community lounge online...'
-    ];
-    setBuildSteps(steps);
-
-    let progress = 0;
-    const interval = setInterval(() => {
-      if (progress < steps.length - 1) {
-        progress++;
-        setCurrentBuildStep(progress);
+  const handleJoinCircle = async (circleId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation();
+    const target = circles.find(circle => circle.id === circleId);
+    if (!target) return;
+    try {
+      if (target.isJoinedByMe) {
+        await CommunityService.leaveCommunity(currentUser.id, circleId);
       } else {
-        clearInterval(interval);
-        
-        // Finalize Community Circle Creation
-        const circleName = promptInput.charAt(0).toUpperCase() + promptInput.slice(1).replace(/create a |make a /g, '');
-        const safeName = circleName.length > 30 ? circleName.slice(0, 30) : circleName;
-        
-        let banner = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
-        if (promptInput.toLowerCase().includes('soccer') || promptInput.toLowerCase().includes('football') || promptInput.toLowerCase().includes('sport')) {
-          banner = 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80';
-        } else if (promptInput.toLowerCase().includes('code') || promptInput.toLowerCase().includes('rust') || promptInput.toLowerCase().includes('developer')) {
-          banner = 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80';
-        } else if (promptInput.toLowerCase().includes('photo') || promptInput.toLowerCase().includes('art') || promptInput.toLowerCase().includes('visual')) {
-          banner = 'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=800&auto=format&fit=crop&q=80';
-        }
-
-        const newCircle: Circle = {
-          id: `circle-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-          name: safeName.includes("Club") || safeName.includes("Lounge") || safeName.includes("Hub") ? safeName : `${safeName} Hub`,
-          description: `An immersive community built autonomously via NEXORA AI companion targeting: "${promptInput}"`,
-          bannerImage: banner,
-          creatorId: currentUser.id,
-          rules: [
-            'Be respectful, professional, and helpful',
-            'Track contributions on shared quests cleanly',
-            'No spam or low-effort generic updates'
-          ],
-          membersCount: 1,
-          tags: [promptInput.split(' ').slice(-1)[0].replace(/[^a-zA-Z]/g, '') || 'Creative', 'NEXORA'],
-          isJoinedByMe: true
-        };
-
-        setCircles(prev => [newCircle, ...prev]);
-        setIsBuilding(false);
-        setPromptInput('');
+        await CommunityService.joinCommunity(currentUser.id, circleId);
+        recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
       }
-    }, 1000);
+      setCircles(prev => prev.map(circle => circle.id === circleId
+        ? { ...circle, isJoinedByMe: !target.isJoinedByMe }
+        : circle));
+    } catch (error) {
+      console.error('Circle membership update failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'Your Circle membership could not be updated. Please retry.',
+      }));
+    }
   };
 
+  // Circle creation is persisted to Firestore. The name and description are user-provided;
+  // no AI generation is claimed until a real generation service is connected.
+  const handleAICommunityBuild = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const idea = promptInput.trim();
+    if (!idea || isBuilding) return;
+    setIsBuilding(true);
+    setCirclesError(null);
+    const circleName = idea.replace(/^(create|make) (a |an )?/i, '').trim().slice(0, 60);
+    const banner = /soccer|football|sport/i.test(idea)
+      ? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80'
+      : /code|developer|program/i.test(idea)
+        ? 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80'
+        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
+    try {
+      const created = await CommunityService.createPublicCommunity({
+        ownerId: currentUser.id,
+        name: circleName,
+        description: 'A public Circle for people interested in ' + circleName + '.',
+        bannerImage: banner,
+        rules: ['Be respectful and constructive', 'Do not spam or harass members', 'Respect the Circle rules and moderators'],
+        tags: [idea.split(' ').slice(-1)[0].replace(/[^a-zA-Z0-9]/g, '').slice(0, 40) || 'Community', 'NEXORA'],
+      });
+      setCircles(prev => [created, ...prev]);
+      setPromptInput('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Circle has been created.' }));
+    } catch (error) {
+      console.error('Circle creation failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Your Circle could not be created. Please retry.' }));
+    } finally {
+      setIsBuilding(false);
+    }
+  };
   const handleGroupChatSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -215,7 +194,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         </div>
 
         <p className="text-xs text-violet-200/80 mb-4 leading-normal font-sans text-left">
-          Input your community idea. The NEXORA AI engine will automatically define structure, curate rules, render themed banners, and auto-match relevant community groups.
+          Input your community idea. Create a public Circle with saved rules and topic tags. AI-assisted setup will be connected when its generation service is ready.
         </p>
 
         <form onSubmit={handleAICommunityBuild} className="space-y-3 relative z-10">
@@ -250,7 +229,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               className="mt-4 pt-3 border-t border-white/10 space-y-2 text-left"
             >
               <div className="flex items-center justify-between text-[10px] font-mono text-violet-400/60 mb-1">
-                <span>NEXORA AI GENERATING COMMUNITY...</span>
+                <span>SAVING YOUR CIRCLE...</span>
                 <span>{Math.round(((currentBuildStep + 1) / buildSteps.length) * 100)}%</span>
               </div>
               
@@ -397,7 +376,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 {/* Creator/Members count */}
                 <div className="flex items-center gap-2 text-violet-400">
                   <Users className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-mono">Member total not tracked</span>
+                  <span className="text-[10px] font-mono">Member count unavailable</span>
                 </div>
 
                 {/* Toggle Button */}
