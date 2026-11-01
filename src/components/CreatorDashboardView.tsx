@@ -9,6 +9,7 @@ import {
   getDocs, query, where, serverTimestamp, limit 
 } from 'firebase/firestore';
 import { submitModerationAppeal } from '../services/dataService';
+import { uploadMediaFile } from '../services/firebase/storageService';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -54,6 +55,8 @@ export default function CreatorDashboardView({
   const [draftTags, setDraftTags] = useState('');
   const [draftType, setDraftType] = useState<'video' | 'image' | 'text'>('video');
   const [draftUrl, setDraftUrl] = useState('');
+  const [isUploadingDraftMedia, setIsUploadingDraftMedia] = useState(false);
+  const [draftUploadProgress, setDraftUploadProgress] = useState(0);
   
   // Recovery Unsaved Draft Notice
   const [recoveredDraft, setRecoveredDraft] = useState<any | null>(null);
@@ -218,7 +221,31 @@ export default function CreatorDashboardView({
     }
   };
 
+  const handleUploadDraftMedia = async (file: File) => {
+    if (!file) return;
+    setIsUploadingDraftMedia(true);
+    setDraftUploadProgress(0);
+    try {
+      const uploaded = await uploadMediaFile({
+        file,
+        userId: currentUser.id,
+        fileName: file.name,
+        onProgress: setDraftUploadProgress,
+      });
+      setDraftUrl(uploaded.downloadUrl);
+      setDraftType(uploaded.contentType.startsWith('image/') ? 'image' : 'video');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Media uploaded securely to your Nexora account.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'Media upload failed. Please try again.'
+      }));
+    } finally {
+      setIsUploadingDraftMedia(false);
+    }
+  };
+
   const handleSaveDraft = async () => {
+    if (isUploadingDraftMedia) return;
     const tags = draftTags.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30);
     const payload = { userId: currentUser.id, caption: draftCaption.trim().slice(0, 10000), videoUrl: draftUrl.trim().slice(0, 1000), type: draftType, tags, updatedAt: serverTimestamp() };
     try {
@@ -250,6 +277,7 @@ export default function CreatorDashboardView({
   };
 
   const handlePublishDraft = async (draft: any) => {
+    if (isUploadingDraftMedia) return;
     const caption = draftCaption.trim();
     const mediaUrl = draftUrl.trim();
     if (!caption && draftType === 'text') {
@@ -1232,12 +1260,42 @@ export default function CreatorDashboardView({
                   </div>
                 </div>
 
+                <div className="space-y-2 rounded-xl border border-white/5 bg-black/20 p-3">
+                  <label className="text-zinc-300 font-bold block">Upload media from your device</label>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,video/ogg"
+                    disabled={isUploadingDraftMedia}
+                    onChange={(event) => {
+                      const selectedFile = event.currentTarget.files?.[0];
+                      if (selectedFile) void handleUploadDraftMedia(selectedFile);
+                      event.currentTarget.value = '';
+                    }}
+                    className="block w-full text-[11px] text-zinc-400 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-600/20 file:px-3 file:py-2 file:text-xs file:font-bold file:text-violet-200 disabled:opacity-50"
+                  />
+                  {isUploadingDraftMedia && (
+                    <div className="space-y-1.5" role="status" aria-live="polite">
+                      <div className="flex justify-between text-[10px] text-zinc-400">
+                        <span>Uploading to secure media storage</span>
+                        <span>{draftUploadProgress}%</span>
+                      </div>
+                      <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                        <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${draftUploadProgress}%` }} />
+                      </div>
+                    </div>
+                  )}
+                  {draftUrl && !isUploadingDraftMedia && (
+                    <p className="text-[10px] text-emerald-300">Media attached. You can save this draft or publish it.</p>
+                  )}
+                </div>
+
                 <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Publishing sends this post through Nexora's authenticated post pipeline. Automatic scheduling is not enabled yet.</div>
 
                 <div className="flex gap-2 pt-4 justify-between border-t border-white/5">
                   <button 
                     type="button"
                     onClick={handleSaveDraft}
+                    disabled={isUploadingDraftMedia}
                     className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1"
                   >
                     Save to Drafts
@@ -1253,6 +1311,7 @@ export default function CreatorDashboardView({
                     <button 
                       type="button"
                       onClick={() => handlePublishDraft({ id: currentDraftId || 'temp' })}
+                      disabled={isUploadingDraftMedia}
                       className="px-4 py-2 rounded-xl bg-linear-to-r from-violet-600 to-pink-600 hover:opacity-90 text-xs font-black tracking-wide shadow-lg"
                     >
                       Publish to Nexora
