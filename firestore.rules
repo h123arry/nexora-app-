@@ -607,6 +607,36 @@ service cloud.firestore {
             : ['name', 'description', 'bannerImage', 'avatarImage', 'rules', 'tags', 'moderators', 'admins', 'bannedUsers', 'mutedUsers', 'pendingMembers', 'pinnedPosts', 'reports', 'activityLog', 'events', 'mediaLibrary']
         );
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
+
+      // Membership is a per-user record. Members can read only their own record;
+      // owners can review the member list. Clients cannot assign elevated roles.
+      match /members/{memberId} {
+        function parentCommunity() {
+          return get(/databases/$(database)/documents/communities/$(communityId)).data;
+        }
+        function parentCommunityAfterWrite() {
+          return getAfter(/databases/$(database)/documents/communities/$(communityId)).data;
+        }
+        allow get: if signedIn()
+          && (request.auth.uid == memberId || parentCommunity().ownerId == request.auth.uid);
+        allow list: if signedIn() && parentCommunity().ownerId == request.auth.uid;
+        allow create: if signedIn()
+          && request.auth.uid == memberId
+          && request.resource.data.keys().hasOnly(['userId', 'role', 'status', 'joinedAt'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.status == 'active'
+          && request.resource.data.joinedAt == request.time
+          && (
+            (request.resource.data.role == 'member' && parentCommunity().type == 'public')
+            || (request.resource.data.role == 'owner' && parentCommunityAfterWrite().ownerId == request.auth.uid)
+          );
+        allow update: if false;
+        allow delete: if signedIn()
+          && (
+            (request.auth.uid == memberId && resource.data.role != 'owner')
+            || parentCommunity().ownerId == request.auth.uid
+          );
+      }
     }
 
     match /automationLogs/{logId} { allow read, write: if false; }
