@@ -49,7 +49,7 @@ describe('discovery service', () => {
     assert.deepEqual(ranked.map(item => item.post.id), ['eligible', 'seen']);
   });
 
-  it('limits a prolific creator without using raw lifetime engagement as the whole score', () => {
+  it('limits a prolific creator and interleaves other creators for feed variety', () => {
     const ranked = rankPosts([
       post({ id: 'a1', userId: 'same', likes: 1000000 }),
       post({ id: 'a2', userId: 'same', likes: 999999 }),
@@ -57,7 +57,7 @@ describe('discovery service', () => {
       post({ id: 'a4', userId: 'same', likes: 999997 }),
       post({ id: 'b1', userId: 'other', likes: 2, tags: ['AI'] }),
     ], { interestDNA: { ai: 10 }, maxPostsPerCreator: 2 });
-    assert.deepEqual(ranked.slice(0, 2).map(item => item.post.userId), ['same', 'same']);
+    assert.deepEqual(ranked.slice(0, 3).map(item => item.post.userId), ['same', 'other', 'same']);
     assert.ok(ranked.some(item => item.post.userId === 'other'));
   });
 });
