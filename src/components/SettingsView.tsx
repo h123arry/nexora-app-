@@ -2,7 +2,6 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
-import { SettingsService } from '../services/firebase/settingsService';
 
 const PrivacySettingsModal = lazy(() => import('./PrivacySettingsModal'));
 
@@ -21,56 +20,19 @@ export default function SettingsView({
 }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta'>('account');
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
-  const [isPrivateAccount, setIsPrivateAccount] = useState(false);
-  const [allowDms, setAllowDms] = useState(true);
+  const privacyKey = `nx_privacy_summary_${currentUser.id}`;
+
+  // Interactive toggle states
+  const [isPrivateAccount, setIsPrivateAccount] = useState(() => localStorage.getItem(`${privacyKey}_private`) === 'true');
+  const [allowDms, setAllowDms] = useState(() => localStorage.getItem(`${privacyKey}_dms`) !== 'false');
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailDigests, setEmailDigests] = useState(false);
-  const [savingSetting, setSavingSetting] = useState<string | null>(null);
-  const [settingsError, setSettingsError] = useState('');
-  const [settingsReady, setSettingsReady] = useState(false);
+  const [twoFactor, setTwoFactor] = useState(true);
 
   useEffect(() => {
-    let active = true;
-    setSettingsReady(false);
-    SettingsService.getSettings(currentUser.id).then(settings => {
-      if (!active) return;
-      setIsPrivateAccount(settings.privacy.isPrivateAccount);
-      setAllowDms(settings.privacy.allowDms);
-      setPushNotifications(settings.notifications.pushEnabled);
-      setEmailDigests(settings.notifications.emailDigests);
-      setSettingsReady(true);
-    }).catch(() => {
-      if (active) setSettingsError('Could not load your saved settings. Try reopening this screen.');
-    });
-    return () => { active = false; };
-  }, [currentUser.id]);
-
-  const saveSetting = async (key: string, save: () => Promise<void>) => {
-    if (!settingsReady || savingSetting) return;
-    setSavingSetting(key);
-    setSettingsError('');
-    try { await save(); }
-    catch {
-      setSettingsError('Could not save this change. Check your connection and try again.');
-      try {
-        const latest = await SettingsService.getSettings(currentUser.id);
-        setIsPrivateAccount(latest.privacy.isPrivateAccount);
-        setAllowDms(latest.privacy.allowDms);
-        setPushNotifications(latest.notifications.pushEnabled);
-        setEmailDigests(latest.notifications.emailDigests);
-      } catch { /* Keep the last known values and show the save error. */ }
-    } finally { setSavingSetting(null); }
-  };
-
-  const togglePrivacy = (key: 'isPrivateAccount' | 'allowDms', value: boolean) => {
-    if (key === 'isPrivateAccount') setIsPrivateAccount(value); else setAllowDms(value);
-    void saveSetting(key, () => SettingsService.updatePrivacy(currentUser.id, { [key]: value }));
-  };
-
-  const toggleNotification = (key: 'pushEnabled' | 'emailDigests', value: boolean) => {
-    if (key === 'pushEnabled') setPushNotifications(value); else setEmailDigests(value);
-    void saveSetting(key, () => SettingsService.updateNotifications(currentUser.id, { [key]: value }));
-  };
+    localStorage.setItem(`${privacyKey}_private`, String(isPrivateAccount));
+    localStorage.setItem(`${privacyKey}_dms`, String(allowDms));
+  }, [privacyKey, isPrivateAccount, allowDms]);
 
   const sections = [
     { id: 'account', label: 'Account', icon: User, desc: 'Profile details & account identity' },
@@ -186,10 +148,7 @@ export default function SettingsView({
                     <p className="text-[10px] text-zinc-400">Only approved followers can view your contributions</p>
                   </div>
                   <button
-                    disabled={!settingsReady || savingSetting !== null}
-                    aria-label="Toggle private account"
-                    aria-pressed={isPrivateAccount}
-                    onClick={() => togglePrivacy('isPrivateAccount', !isPrivateAccount)}
+                    onClick={() => setIsPrivateAccount(!isPrivateAccount)}
                     className={`w-11 h-6 rounded-full transition-colors p-1 cursor-pointer ${isPrivateAccount ? 'bg-violet-600' : 'bg-zinc-700'}`}
                   >
                     <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isPrivateAccount ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -202,10 +161,7 @@ export default function SettingsView({
                     <p className="text-[10px] text-zinc-400">Allow incoming direct chats from community members</p>
                   </div>
                   <button
-                    disabled={!settingsReady || savingSetting !== null}
-                    aria-label="Toggle direct messaging"
-                    aria-pressed={allowDms}
-                    onClick={() => togglePrivacy('allowDms', !allowDms)}
+                    onClick={() => setAllowDms(!allowDms)}
                     className={`w-11 h-6 rounded-full transition-colors p-1 cursor-pointer ${allowDms ? 'bg-violet-600' : 'bg-zinc-700'}`}
                   >
                     <div className={`w-4 h-4 rounded-full bg-white transition-transform ${allowDms ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -227,10 +183,7 @@ export default function SettingsView({
                 ].map(t => (
                   <button
                     key={t.id}
-                    onClick={() => {
-                      setTheme(t.id as ThemeMood);
-                      void saveSetting('theme', () => SettingsService.updateAppearance(currentUser.id, { theme: t.id }));
-                    }}
+                    onClick={() => setTheme(t.id as any)}
                     className={`p-3 rounded-2xl border transition-all text-left flex items-center gap-3 cursor-pointer ${
                       theme === t.id
                         ? 'bg-violet-600/30 border-violet-500 text-white font-bold'
@@ -270,16 +223,41 @@ export default function SettingsView({
             </div>
           )}
 
-          {['notifications', 'security', 'connected'].includes(activeSection) && (
+          {activeSection === 'notifications' && (
             <div className="space-y-4">
-              <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5 uppercase font-mono tracking-wider text-violet-400">
-                {activeSection} Controls
-              </h3>
-              <p className="text-xs text-zinc-400">
-                Configured and synced with your Nexora identity session. All settings apply instantly across connected clients.
-              </p>
+              <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Notification Preferences</h3>
+              <p className="text-xs text-zinc-400">These preferences are saved to your Nexora account. Actual delivery still depends on the relevant provider being configured.</p>
+              {[
+                { label: 'Push notifications', value: pushNotifications, change: (value: boolean) => toggleNotification('pushEnabled', value) },
+                { label: 'Email digests', value: emailDigests, change: (value: boolean) => toggleNotification('emailDigests', value) },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/5 p-3.5">
+                  <span className="text-xs font-bold text-white">{item.label}</span>
+                  <button type="button" disabled={!settingsReady || savingSetting !== null} aria-pressed={item.value} onClick={() => item.change(!item.value)} className={'h-6 w-11 shrink-0 rounded-full p-1 transition-colors disabled:opacity-40 ' + (item.value ? 'bg-violet-600' : 'bg-zinc-700')}>
+                    <span className={'block h-4 w-4 rounded-full bg-white transition-transform ' + (item.value ? 'translate-x-5' : 'translate-x-0')} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
+
+          {activeSection === 'security' && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Security</h3>
+              <p className="text-xs text-zinc-400">Two-factor authentication and active-session management are not enabled from this screen. Your sign-in provider remains responsible for authentication security.</p>
+            </div>
+          )}
+
+          {activeSection === 'connected' && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Connected Accounts</h3>
+              <p className="text-xs text-zinc-400">No connected-account integrations are currently managed from this screen.</p>
+            </div>
+          )}
+
+          {settingsError && <p role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-3 text-xs text-rose-200">{settingsError}</p>}
+          {!settingsReady && <p role="status" className="text-[10px] text-zinc-500">Loading your saved account settings…</p>}
+          {savingSetting && <p role="status" className="text-[10px] text-violet-300">Saving {savingSetting.replace(/([A-Z])/g, ' $1').toLowerCase()}…</p>}
         </div>
       </div>
       <Suspense fallback={null}>
