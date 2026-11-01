@@ -400,8 +400,6 @@ export default function ProfileView({
     ];
   });
   const [showAddAccountModal, setShowAddAccountModal] = useState(false);
-  const [newAccUsername, setNewAccUsername] = useState('');
-  const [newAccName, setNewAccName] = useState('');
 
   // Reputation breakdown view
   const [showReputationModal, setShowReputationModal] = useState(false);
@@ -835,14 +833,6 @@ export default function ProfileView({
     if (acc.id === currentUser.id || acc.username === currentUser.username) return;
     window.dispatchEvent(new CustomEvent('toast', {
       detail: 'For security, sign out and authenticate with that account. Saved profile labels cannot switch Firebase sessions.'
-    }));
-  };
-
-  const handleAddNewAccount = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowAddAccountModal(false);
-    window.dispatchEvent(new CustomEvent('toast', {
-      detail: 'Account creation and sign-in must happen through Firebase Authentication, not the local profile vault.'
     }));
   };
 
