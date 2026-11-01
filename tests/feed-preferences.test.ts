@@ -5,7 +5,7 @@ import {
   normalizeFeedPreferences,
   resetFeedPreferences,
 } from '../src/services/discovery/feedPreferences';
-import { buildFeedSettingsPatch } from '../src/services/firebase/settingsService';
+import { buildFeedSettingsPatch } from '../src/services/discovery/feedPreferences';
 
 test('normalizes feed controls, removes duplicates, and bounds persisted values', () => {
   const result = normalizeFeedPreferences({
