@@ -37,9 +37,9 @@ function readPrivacyList(key: string, demoIds: string[] = []): any[] {
     const parsed: unknown = JSON.parse(saved);
     if (!Array.isArray(parsed)) return [];
     const demoIdSet = new Set(demoIds);
-    return parsed.filter(item => item && typeof item === 'object'
-      && typeof (item as { id?: unknown }).id === 'string'
-      && !demoIdSet.has((item as { id: string }).id));
+    return parsed.filter(item => !item || typeof item !== 'object'
+      || typeof (item as { id?: unknown }).id !== 'string'
+      || !demoIdSet.has((item as { id: string }).id));
   } catch {
     return [];
   }
