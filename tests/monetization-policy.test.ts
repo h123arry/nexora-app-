@@ -6,6 +6,7 @@ import {
   calculateRevenueShare,
   canRequestRefund,
   canTransitionTransaction,
+  reconcileSettlementTotals,
   validateCheckoutRequest,
   validateMoney,
 } from '../functions/src/monetizationPolicy.ts';
@@ -31,7 +32,7 @@ test('refund eligibility prevents duplicate or excessive refunds', () => {
   assert.equal(canRequestRefund('payment_pending', 0, 2500), false);
 });
 
-test('creator revenue sharing uses integer minor units and preserves rule version', () => {
+test('creator revenue sharing uses exact integer minor-unit arithmetic and preserves rule version', () => {
   const share = calculateRevenueShare({ grossMinor: 10000, providerFeeMinor: 500, taxMinor: 500, platformCommissionBps: 2000, ruleVersion: 'creator-v1' });
   assert.deepEqual(share, {
     grossMinor: 10000,
@@ -41,7 +42,29 @@ test('creator revenue sharing uses integer minor units and preserves rule versio
     creatorShareMinor: 7200,
     ruleVersion: 'creator-v1',
   });
-  assert.throws(() => calculateRevenueShare({ grossMinor: 100, providerFeeMinor: 0, taxMinor: 0, platformCommissionBps: 10001, ruleVersion: 'bad' }), /invalid/);
+  assert.throws(() => calculateRevenueShare({ grossMinor: 100, providerFeeMinor: 60, taxMinor: 50, platformCommissionBps: 2000, ruleVersion: 'bad' }), /exceed gross/);
+  assert.throws(() => calculateRevenueShare({ grossMinor: 100, providerFeeMinor: 0, taxMinor: 0, platformCommissionBps: 1, ruleVersion: ' ' }), /invalid/);
+  const large = calculateRevenueShare({ grossMinor: Number.MAX_SAFE_INTEGER, providerFeeMinor: 0, taxMinor: 0, platformCommissionBps: 3333, ruleVersion: 'large-v1' });
+  assert.equal(large.platformCommissionMinor, Number((BigInt(Number.MAX_SAFE_INTEGER) * 3333n) / 10000n));
+});
+
+test('settlement reconciliation matches currency, gross minor units and transaction count', () => {
+  assert.deepEqual(reconcileSettlementTotals(
+    { currency: 'NGN', grossMinor: 125000, transactionCount: 12 },
+    { currency: 'NGN', grossMinor: 125000, transactionCount: 12 },
+  ), { status: 'matched', amountVarianceMinor: 0, transactionCountVariance: 0 });
+  assert.deepEqual(reconcileSettlementTotals(
+    { currency: 'NGN', grossMinor: 125000, transactionCount: 12 },
+    { currency: 'NGN', grossMinor: 124000, transactionCount: 11 },
+  ), { status: 'mismatch', amountVarianceMinor: -1000, transactionCountVariance: -1 });
+  assert.throws(() => reconcileSettlementTotals(
+    { currency: 'NGN', grossMinor: 1, transactionCount: 1 },
+    { currency: 'USD', grossMinor: 1, transactionCount: 1 },
+  ), /currency mismatch/);
+  assert.throws(() => reconcileSettlementTotals(
+    { currency: 'NGN', grossMinor: -1, transactionCount: 1 },
+    { currency: 'NGN', grossMinor: 1, transactionCount: 1 },
+  ), /invalid/);
 });
 
 test('currency mismatches are rejected rather than coerced', () => {
