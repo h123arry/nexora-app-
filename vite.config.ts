@@ -21,14 +21,16 @@ export default defineConfig(() => {
           // application shell and route chunks. This does not claim fewer
           // total bytes; it avoids invalidating vendor code on app changes.
           manualChunks: {
-            firebase: [
-              'firebase/app',
-              'firebase/auth',
-              'firebase/firestore',
-              'firebase/functions',
-              'firebase/messaging',
-              'firebase/storage',
-            ],
+            // Keep Firebase services independently cacheable. Messaging is
+            // loaded only after an authenticated user enables notifications;
+            // it should not be part of the initial mobile shell.
+            'firebase-app': ['firebase/app'],
+            'firebase-auth': ['firebase/auth'],
+            'firebase-firestore': ['firebase/firestore'],
+            'firebase-functions': ['firebase/functions'],
+            'firebase-messaging': ['firebase/messaging'],
+            'firebase-storage': ['firebase/storage'],
+            'firebase-app-check': ['firebase/app-check'],
             motion: ['motion'],
             icons: ['lucide-react'],
           },

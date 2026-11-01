@@ -14,8 +14,6 @@ import {
   ThemeMood 
 } from './types';
 
-import { PushNotificationService } from './services/firebase/pushNotificationService';
-
 import { 
   getRichUser, 
   followUserDb, 
@@ -855,10 +853,16 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (currentUser && currentUser.id) {
-      PushNotificationService.init().catch(err => console.warn('Push notification init:', err));
-    }
-  }, [currentUser]);
+    if (!isLoggedIn || !currentUser?.id) return;
+    let cancelled = false;
+    import('./services/firebase/pushNotificationService')
+      .then(({ PushNotificationService }) => {
+        if (!cancelled) return PushNotificationService.init();
+        return undefined;
+      })
+      .catch(err => console.warn('Push notification init:', err));
+    return () => { cancelled = true; };
+  }, [currentUser?.id, isLoggedIn]);
 
   // Global VOH AI Command Center overlay state variables
   const [isAiCommandCenterOpen, setIsAiCommandCenterOpen] = useState(false);

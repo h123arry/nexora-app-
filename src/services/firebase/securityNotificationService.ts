@@ -1,7 +1,6 @@
 import { db } from './config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { EmailService, EmailTemplateType } from './emailService';
-import { PushNotificationService } from './pushNotificationService';
 
 export type SecurityEventType = 
   | 'NEW_LOGIN'
@@ -109,15 +108,21 @@ export class SecurityNotificationService {
       console.warn('Firestore security notification was unavailable; authentication remains authoritative in Firebase Auth.');
     }
 
-    // 2. Trigger native OS Push Notification
-    PushNotificationService.displayNativeNotification({
-      title,
-      body,
-      data: {
-        type: 'security',
-        url: 'https://nexora.app/security'
-      }
-    });
+    // 2. Trigger native OS Push Notification without loading Firebase
+    // Messaging on the initial authentication path.
+    try {
+      const { PushNotificationService } = await import('./pushNotificationService');
+      PushNotificationService.displayNativeNotification({
+        title,
+        body,
+        data: {
+          type: 'security',
+          url: 'https://nexora.app/security'
+        }
+      });
+    } catch {
+      console.warn('Native push notification was unavailable for this security event.');
+    }
 
     // 3. Trigger Transactional Email
     if (userEmail) {
