@@ -236,8 +236,18 @@ export default function CreatorDashboardView({
         fileName: file.name,
         onProgress: setDraftUploadProgress,
       });
+      const uploadedType = uploaded.contentType.startsWith('image/') ? 'image' : 'video';
+      setUploadedMedia(prev => [{
+        id: `asset-${uploaded.mediaId}`,
+        url: uploaded.downloadUrl,
+        caption: file.name,
+        type: uploadedType,
+        views: null,
+        sparks: null,
+        date: new Date().toISOString(),
+      }, ...prev.filter(media => media.id !== `asset-${uploaded.mediaId}`)]);
       setDraftUrl(uploaded.downloadUrl);
-      setDraftType(uploaded.contentType.startsWith('image/') ? 'image' : 'video');
+      setDraftType(uploadedType);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Media uploaded securely to your Nexora account.' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', {
@@ -403,7 +413,7 @@ export default function CreatorDashboardView({
         ));
         const assets = await Promise.all(snapshot.docs.map(async assetDoc => {
           const asset = assetDoc.data();
-          if (!['image', 'video'].includes(asset.kind) || asset.status !== 'uploaded' || typeof asset.storagePath !== 'string') return null;
+          if (!['image', 'video'].includes(asset.kind) || !['uploaded', 'pending_upload'].includes(asset.status) || typeof asset.storagePath !== 'string') return null;
           try {
             const url = await getDownloadURL(ref(storage, asset.storagePath));
             return {
