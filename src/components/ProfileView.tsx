@@ -997,10 +997,7 @@ export default function ProfileView({
                   >
                     {[
                       { label: 'Profile Settings', action: () => { setActivePanel('edit-profile'); setIsProfileMenuOpen(false); }, icon: Edit3, iconColor: 'text-violet-400' },
-                      { label: 'Analytics', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('storage'); setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '📊 Loading Profile Analytics...' })); }, icon: BarChart2, iconColor: 'text-pink-400' },
-                      { label: 'Achievements', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🏆 You earned: "Founders Genesis" achievement!' })); }, icon: Award, iconColor: 'text-amber-400' },
                       { label: 'Saved Posts', action: () => { window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'saved' } })); setIsProfileMenuOpen(false); }, icon: Bookmark, iconColor: 'text-yellow-400' },
-                      { label: 'Account Status', action: () => { setIsProfileMenuOpen(false); window.dispatchEvent(new CustomEvent('toast', { detail: '🟢 Secure Account Status: Optimal.' })); }, icon: Shield, iconColor: 'text-emerald-400' },
                       { label: 'Creator Studio', action: () => { window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'creator' } })); setIsProfileMenuOpen(false); }, icon: BarChart2, iconColor: 'text-indigo-400' },
                       { label: 'Privacy', action: () => { setActivePanel('menu'); setSettingsActiveSubPanel('privacy'); setIsProfileMenuOpen(false); }, icon: Lock, iconColor: 'text-teal-400' },
                       { label: 'Share Profile', action: () => { setShowShareModal(true); setIsProfileMenuOpen(false); }, icon: QrCode, iconColor: 'text-indigo-400' },
@@ -1008,10 +1005,6 @@ export default function ProfileView({
                           setIsProfileMenuOpen(false);
                           void handleAccountExport();
                         }, icon: Download, iconColor: 'text-sky-400' },
-                      { label: 'View Public Profile', action: () => { 
-                          setIsProfileMenuOpen(false);
-                          window.dispatchEvent(new CustomEvent('toast', { detail: '🌐 Switched to public guest mode preview.' }));
-                        }, icon: Eye, iconColor: 'text-purple-400' },
                     ].map(item => {
                       const IconComponent = item.icon;
                       return (
