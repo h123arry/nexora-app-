@@ -123,10 +123,14 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
   const authorCounts = new Map<string, number>();
   while (remaining.length > 0) {
     const previousAuthor = selected[selected.length - 1]?.post.userId;
+    let consecutiveRun = 0;
+    for (let index = selected.length - 1; index >= 0; index -= 1) {
+      if (selected[index].post.userId !== previousAuthor) break;
+      consecutiveRun += 1;
+    }
     let nextIndex = remaining.findIndex(item =>
       (authorCounts.get(item.post.userId) || 0) < maxPostsPerCreator &&
-      (item.post.userId !== previousAuthor ||
-        selected.slice(-maxConsecutive).some(previous => previous.post.userId !== item.post.userId))
+      (item.post.userId !== previousAuthor || consecutiveRun < maxConsecutive)
     );
     if (nextIndex < 0) {
       nextIndex = remaining.findIndex(item => (authorCounts.get(item.post.userId) || 0) < maxPostsPerCreator);
