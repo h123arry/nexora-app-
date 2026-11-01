@@ -6,7 +6,7 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db, auth } from './config';
-import type { FeedPreferences } from '../discovery/feedPreferences';
+import { buildFeedSettingsPatch, type FeedPreferences } from '../discovery/feedPreferences';
 
 export interface NexoraSettings {
   privacy: {
@@ -111,10 +111,6 @@ function mergeSettings(data: Partial<NexoraSettings>): NexoraSettings {
     security: { ...DEFAULT_SETTINGS.security, ...(data.security || {}) },
     updatedAt: data.updatedAt,
   };
-}
-
-export function buildFeedSettingsPatch(feed: FeedPreferences, updatedAt: unknown) {
-  return { feed, updatedAt };
 }
 
 export class SettingsService {
