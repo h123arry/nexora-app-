@@ -104,7 +104,7 @@ export default function Sidebar({
                 <span className="mt-0.5 block truncate text-[10px] text-slate-500 group-hover:text-slate-400">{hint}</span>
               </span>
               {!!count && count > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-fuchsia-500 px-1.5 text-[9px] font-bold text-white shadow-[0_0_14px_rgba(217,70,239,0.45)]">
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-violet-600 px-1.5 text-[9px] font-bold text-white shadow-[0_0_14px_rgba(113,56,255,0.35)]">
                   {count > 9 ? '9+' : count}
                 </span>
               )}
@@ -121,17 +121,17 @@ export default function Sidebar({
           <span><span className="block text-sm font-bold text-white">Create</span><span className="block text-[10px] text-violet-200/70">Share a moment</span></span>
         </button>
         <button onClick={() => setActiveTab('creator')} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-400/10 text-cyan-300"><BarChart2 className="h-[18px] w-[18px]" /></span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-200"><BarChart2 className="h-[18px] w-[18px]" /></span>
           <span><span className="block text-sm font-semibold text-slate-300 group-hover:text-white">Creator Studio</span><span className="block text-[10px] text-slate-500">Grow your signal</span></span>
         </button>
         <button onClick={() => window.dispatchEvent(new CustomEvent('open-system-hub'))} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-400/10 text-sky-300"><Sparkles className="h-[18px] w-[18px]" /></span>
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-200"><Sparkles className="h-[18px] w-[18px]" /></span>
           <span><span className="block text-sm font-semibold text-slate-300 group-hover:text-white">System Hub</span><span className="block text-[10px] text-slate-500">Settings & accessibility</span></span>
         </button>
       </div>
 
       <div className="mt-auto pt-8">
-        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-transparent to-cyan-400/5 p-3">
+        <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-violet-500/12 via-transparent to-indigo-500/8 p-3">
           <div className="flex items-center gap-2"><NexoraPremiumLogo className="h-7 w-7" /><span className="text-xs font-bold text-slate-200">Nexora Network</span></div>
           <p className="mt-2 text-[10px] leading-relaxed text-slate-500">A more intentional place to connect, create, and belong.</p>
         </div>
