@@ -10,25 +10,25 @@
 /* Nexora design tokens — Midnight Indigo × Electric Violet            */
 /* ------------------------------------------------------------------ */
 :root {
-  --nx-canvas: #050505;
-  --nx-canvas-deep: #050505;
-  --nx-surface: #101010;
-  --nx-surface-2: #181818;
-  --nx-surface-3: #202020;
-  --nx-edge: #262626;
-  --nx-edge-strong: #3a3a3a;
+  --nx-canvas: #090714;
+  --nx-canvas-deep: #070511;
+  --nx-surface: #120E2B;
+  --nx-surface-2: #19143A;
+  --nx-surface-3: #211B49;
+  --nx-edge: #292244;
+  --nx-edge-strong: #44376F;
   --nx-violet: #7138FF;
-  --nx-violet-bright: #A78BFA;
-  --nx-violet-deep: #4d22bd;
-  --nx-muted: #A1A1AA;
+  --nx-violet-bright: #B69BFF;
+  --nx-violet-deep: #3B16B8;
+  --nx-muted: #A39BBF;
   --nx-text: #FFFFFF;
   --nx-success: #53d39a;
   --nx-warning: #f1bd72;
   --nx-danger: #f07e9f;
-  --nx-gradient: linear-gradient(135deg, #7138FF, #A78BFA);
-  --nx-gradient-soft: linear-gradient(135deg, rgba(113, 56, 255, 0.10), rgba(167, 139, 250, 0.035));
-  --nx-shadow: 0 18px 48px rgba(0, 0, 0, 0.42);
-  --nx-shadow-soft: 0 10px 28px rgba(0, 0, 0, 0.28);
+  --nx-gradient: linear-gradient(135deg, #8A3FFC 0%, #4B10F2 58%, #1600A3 100%);
+  --nx-gradient-soft: linear-gradient(135deg, rgba(138, 63, 252, 0.16), rgba(22, 0, 163, 0.08));
+  --nx-shadow: 0 22px 60px rgba(2, 0, 16, 0.48);
+  --nx-shadow-soft: 0 12px 32px rgba(2, 0, 16, 0.32);
   --nx-radius-card: 1rem;
   --nx-radius-control: 0.75rem;
 }
@@ -98,23 +98,23 @@ button { -webkit-tap-highlight-color: transparent; }
   -webkit-backdrop-filter: blur(18px) saturate(125%);
 }
 
-.nx-glass-strong { background: rgba(5, 5, 5, 0.96); }
+.nx-glass-strong { background: rgba(9, 7, 20, 0.96); }
 
 .nx-field {
   min-height: 44px;
   border: 1px solid var(--nx-edge);
   border-radius: 999px;
-  background: #101010;
+  background: #120E2B;
   color: var(--nx-text);
   transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
 }
 
 .nx-field::placeholder { color: var(--nx-muted); }
-.nx-field:hover { border-color: rgba(167, 139, 250, 0.52); background: #181818; }
+.nx-field:hover { border-color: rgba(167, 139, 250, 0.52); background: #19143A; }
 .nx-field:focus {
   outline: none;
   border-color: #A78BFA;
-  background: #181818;
+  background: #19143A;
   box-shadow: 0 0 0 3px rgba(113, 56, 255, 0.2);
 }
 
@@ -148,7 +148,7 @@ button { -webkit-tap-highlight-color: transparent; }
   min-height: 44px;
   border: 1px solid var(--nx-edge);
   border-radius: var(--nx-radius-control);
-  background: #101010;
+  background: #120E2B;
   color: var(--nx-muted);
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
@@ -173,7 +173,7 @@ button { -webkit-tap-highlight-color: transparent; }
 }
 
 .nx-sidebar-shell {
-  background: #090909;
+  background: #0C091C;
   border-color: var(--nx-edge) !important;
   box-shadow: 12px 0 36px rgba(4, 1, 18, 0.18);
 }
@@ -193,7 +193,7 @@ button { -webkit-tap-highlight-color: transparent; }
 
 .nx-feed-header,
 .nx-page-header {
-  background: rgba(5, 5, 5, 0.94);
+  background: rgba(9, 7, 20, 0.94);
   border-color: var(--nx-edge) !important;
   box-shadow: 0 14px 32px rgba(4, 1, 18, 0.22);
 }
@@ -224,7 +224,7 @@ button { -webkit-tap-highlight-color: transparent; }
   animation: nx-skeleton-shimmer 1.5s ease-in-out infinite;
 }
 @keyframes nx-skeleton-shimmer { from { background-position: 120% 0; } to { background-position: -120% 0; } }
-.nx-video-frame { position: relative; min-height: min(58dvh, 560px); aspect-ratio: 9 / 16; background: #050505; }
+.nx-video-frame { position: relative; min-height: min(58dvh, 560px); aspect-ratio: 9 / 16; background: #090714; }
 .nx-video-frame > video { display: block; width: 100%; height: 100%; max-height: 85dvh; object-fit: contain; }
 .nx-video-poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; transition: opacity 220ms ease; }
 .nx-video-action-rail { bottom: max(calc(env(safe-area-inset-bottom, 0px) + 42px), 2rem) !important; right: max(calc(env(safe-area-inset-right, 0px) + 14px), 0.75rem); }
@@ -260,7 +260,7 @@ button { -webkit-tap-highlight-color: transparent; }
 .nx-segmented > button[aria-selected="true"] { color: #fff; background: var(--nx-violet); box-shadow: 0 6px 14px rgba(113, 56, 255, 0.28); }
 
 .nx-mobile-dock {
-  background: rgba(5, 5, 5, 0.96);
+  background: rgba(9, 7, 20, 0.96);
   border-color: var(--nx-edge) !important;
   backdrop-filter: blur(20px) saturate(130%);
   -webkit-backdrop-filter: blur(20px) saturate(130%);
@@ -334,28 +334,102 @@ button { -webkit-tap-highlight-color: transparent; }
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }
 
-/* Midnight system refinements: quiet surfaces, clear hierarchy, restrained signature violet. */
-.nx-post-card:hover, .nx-discovery-card:hover { border-color: #3b3156; }
-.nx-pulse-card { background: #101010 !important; border-color: var(--nx-edge) !important; }
-.nx-sidebar-nav-item[data-active="true"] { background: rgba(113,56,255,.09); border-color: rgba(113,56,255,.2); box-shadow: inset 2px 0 0 var(--nx-violet); }
-.nx-nav-icon { background: transparent !important; }
-.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon { background: rgba(113,56,255,.14) !important; color: var(--nx-violet-bright); }
-.nx-create-action { border-color: var(--nx-edge) !important; background: #181818 !important; }
-.nx-create-action:hover { border-color: #4b3a70 !important; background: #202020 !important; }
-.nx-create-action-icon { background: var(--nx-violet) !important; box-shadow: none !important; }
-.nx-segmented > button[aria-selected="true"] { background: #25202f; color: #d9ccff; box-shadow: inset 0 0 0 1px rgba(113,56,255,.28); }
-.nx-dock-item[data-active="true"] { color: #d9ccff; background: rgba(113,56,255,.09); }
-.nx-dock-item[data-active="true"] svg { color: var(--nx-violet-bright); filter: none; }
-.nx-create-dock { background: var(--nx-violet) !important; box-shadow: none !important; }
-.nx-gradient-border { border: 1px solid var(--nx-edge); background: var(--nx-surface); }
-.nx-glow-violet, .nx-glow-pink { box-shadow: 0 0 32px -24px rgba(113,56,255,.4); }
-.nx-sidebar-shell { box-shadow: 8px 0 32px rgba(0,0,0,.25); }
-.nx-field:hover { border-color: #4b3a70; }
-.nx-field:focus { box-shadow: 0 0 0 3px rgba(113,56,255,.16); }
-.nx-btn-primary { background: var(--nx-violet); border-color: transparent; box-shadow: none; }
-.nx-btn-primary:hover { box-shadow: 0 6px 20px rgba(113,56,255,.2); }
-.nx-btn-ghost:hover, .nx-icon-button:hover { color: #fff; background: #1b1b1b; border-color: #444; }
-.nx-story-ring { background: var(--nx-violet); }
-.nx-story-ring-seen { background: #3a3a3a; }
-:focus-visible { outline-color: var(--nx-violet-bright); }
-@media (max-width: 640px) { .nx-post-card { border-radius: .875rem; } }
+/* Nexora Violet visual system: consistent midnight canvas, dimensional indigo surfaces, and a restrained electric-violet signal. */
+:root {
+  color-scheme: dark;
+  --nx-canvas: #090714;
+  --nx-canvas-deep: #070511;
+  --nx-surface: #120E2B;
+  --nx-surface-2: #19143A;
+  --nx-surface-3: #211B49;
+  --nx-edge: #292244;
+  --nx-edge-strong: #44376F;
+  --nx-violet: #7138FF;
+  --nx-violet-bright: #B69BFF;
+  --nx-violet-deep: #3B16B8;
+  --nx-muted: #A39BBF;
+  --nx-gradient: linear-gradient(135deg, #8A3FFC 0%, #4B10F2 58%, #1600A3 100%);
+  --nx-gradient-soft: linear-gradient(135deg, rgba(138,63,252,.16), rgba(22,0,163,.08));
+}
+html, body, #root { background: var(--nx-canvas); }
+body {
+  background:
+    radial-gradient(ellipse at 50% -18%, rgba(75,16,242,.13), transparent 44%),
+    var(--nx-canvas);
+}
+.nx-app-shell, .nx-app-shell-root, .nx-feed-stage, .nx-page-shell { background-color: var(--nx-canvas); }
+.nx-sidebar-shell {
+  background: linear-gradient(180deg, #0D0A20 0%, #090714 70%);
+  border-color: rgba(139,111,210,.18) !important;
+}
+.nx-surface, .nx-soft-card, .nx-post-card, .nx-route-card, .nx-discovery-card {
+  background-color: var(--nx-surface);
+  border-color: var(--nx-edge);
+  box-shadow: var(--nx-shadow-soft);
+}
+.nx-post-card { border-radius: 1.15rem; }
+.nx-post-card:hover, .nx-discovery-card:hover { border-color: rgba(138,63,252,.48); }
+.nx-glass, .nx-glass-strong, .nx-mobile-dock {
+  background: rgba(13,10,32,.88);
+  border-color: rgba(139,111,210,.2) !important;
+  backdrop-filter: blur(22px) saturate(135%);
+  -webkit-backdrop-filter: blur(22px) saturate(135%);
+}
+.nx-field, .nx-btn-ghost, .nx-icon-button {
+  background: #171235;
+  border-color: #302653;
+}
+.nx-field:hover, .nx-btn-ghost:hover, .nx-icon-button:hover {
+  background: #21194A;
+  border-color: rgba(182,155,255,.55);
+}
+.nx-field:focus { background: #19143A; border-color: var(--nx-violet-bright); }
+.nx-feed-header, .nx-page-header {
+  background: rgba(9,7,20,.92);
+  border-color: rgba(139,111,210,.18) !important;
+  backdrop-filter: blur(18px);
+}
+.nx-composer { background: linear-gradient(145deg, #151033, #100C25); border-color: #302653 !important; }
+.nx-pulse-card {
+  background: linear-gradient(145deg, rgba(75,16,242,.2), #151033 68%, #100C25) !important;
+  border-color: rgba(138,63,252,.3) !important;
+}
+.nx-sidebar-nav-item[data-active="true"] {
+  background: linear-gradient(100deg, rgba(113,56,255,.2), rgba(75,16,242,.07));
+  border-color: rgba(182,155,255,.28);
+  box-shadow: inset 3px 0 0 #8A3FFC;
+}
+.nx-nav-icon { color: #A39BBF; }
+.nx-sidebar-nav-item[data-active="true"] .nx-nav-icon { color: #D7C9FF; background: rgba(113,56,255,.25) !important; }
+.nx-create-action { background: rgba(113,56,255,.12) !important; border-color: rgba(138,63,252,.28) !important; }
+.nx-create-action:hover { background: rgba(113,56,255,.2) !important; border-color: rgba(182,155,255,.5) !important; }
+.nx-create-action-icon, .nx-create-dock { background: var(--nx-gradient) !important; }
+.nx-btn-primary { background: var(--nx-gradient); box-shadow: 0 8px 24px rgba(75,16,242,.26); }
+.nx-btn-primary:hover { box-shadow: 0 12px 30px rgba(75,16,242,.36); }
+.nx-story-ring { background: conic-gradient(from 210deg, #4B10F2, #B69BFF, #8A3FFC, #4B10F2); }
+.nx-story-ring-seen { background: #40385D; }
+.nx-segmented > button[aria-selected="true"] { background: linear-gradient(135deg, rgba(138,63,252,.3), rgba(75,16,242,.18)); color: #F5F0FF; box-shadow: inset 0 0 0 1px rgba(182,155,255,.3); }
+.nx-dock-item[data-active="true"] { color: #E5DAFF; background: rgba(113,56,255,.16); }
+.nx-dock-item[data-active="true"] svg { color: #B69BFF; }
+.nx-gradient-border {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--nx-surface), var(--nx-surface)) padding-box, var(--nx-gradient) border-box;
+}
+.nx-glow-violet { box-shadow: 0 0 42px -22px rgba(113,56,255,.55); }
+.nx-glow-pink { box-shadow: 0 0 34px -24px rgba(138,63,252,.36); }
+.nx-skeleton { background: linear-gradient(105deg, rgba(255,255,255,.035) 20%, rgba(138,63,252,.17) 38%, rgba(255,255,255,.035) 56%); background-size: 220% 100%; }
+.nx-video-frame { background: #070511; }
+.nx-app-shell .text-slate-500, .nx-app-shell .text-zinc-500, .nx-app-shell .text-zinc-400 { color: #9189AE; }
+.nx-app-shell .border-white\/10 { border-color: rgba(139,111,210,.18); }
+:focus-visible { outline-color: #B69BFF; }
+@media (min-width: 1024px) {
+  .nx-main-grid { max-width: 1720px; }
+}
+@media (max-width: 1023px) {
+  .nx-app-shell { padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .nx-feed-stage { padding-bottom: 76px; }
+}
+@media (max-width: 640px) {
+  .nx-post-card { border-radius: 1rem; margin-inline: 8px; }
+  .nx-mobile-dock { border-radius: 1.25rem 1.25rem 0 0; }
+}
