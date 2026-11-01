@@ -43,6 +43,7 @@ import {
 import { ProfileService } from './services/firebase/profileService';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
+import { mergeRealtimePosts } from './services/posts/postCollection';
 import { httpsCallable } from 'firebase/functions';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { useFirebase } from './context/FirebaseContext';
@@ -459,6 +460,19 @@ export default function App() {
     } finally {
       feedLoadingRef.current = false;
       setIsLoadingMoreFeedPosts(false);
+    }
+  };
+  const refreshFeedPosts = async () => {
+    if (feedLoadingRef.current) throw new Error('Feed is still loading. Try again in a moment.');
+    feedLoadingRef.current = true;
+    try {
+      const page = await getGlobalPostsPage(null);
+      feedCursorRef.current = page.nextCursor;
+      feedHasMoreRef.current = page.hasMore;
+      setHasMoreFeedPosts(page.hasMore);
+      setPosts(previousPosts => page.posts.length > 0 ? mergeRealtimePosts(previousPosts, page.posts) : []);
+    } finally {
+      feedLoadingRef.current = false;
     }
   };
 
@@ -2078,6 +2092,7 @@ export default function App() {
                 onRequireAuth={() => { setAuthPromptReason('Sign in to view and share stories.'); setShowAuthModal(true); }}
                 onLoadMorePosts={loadMoreFeedPosts}
                 hasMorePosts={hasMoreFeedPosts}
+                onRefreshFeed={refreshFeedPosts}
                 isLoadingMorePosts={isLoadingMoreFeedPosts}
               />
               </Suspense>

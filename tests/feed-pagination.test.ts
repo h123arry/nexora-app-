@@ -29,4 +29,10 @@ describe('feed post collection helpers', () => {
     assert.deepEqual(result.map(item => item.id), ['d', 'b', 'c', 'a']);
     assert.equal(result[1].content, 'fresh');
   });
+  it('merges a refreshed first page without duplicating loaded posts', () => {
+    const result = mergeRealtimePosts([post('c'), post('b'), post('a')], [post('d'), post('c', 'updated')]);
+    assert.deepEqual(result.map(item => item.id), ['d', 'c', 'b', 'a']);
+    assert.equal(result[1].content, 'updated');
+    assert.equal(new Set(result.map(item => item.id)).size, result.length);
+  });
 });

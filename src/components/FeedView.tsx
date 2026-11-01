@@ -188,6 +188,7 @@ interface FeedViewProps {
   isHydrated?: boolean;
   onRequireAuth?: () => void;
   onLoadMorePosts?: () => Promise<void>;
+  onRefreshFeed?: () => Promise<void>;
   hasMorePosts?: boolean;
   isLoadingMorePosts?: boolean;
 }
@@ -216,6 +217,7 @@ export default function FeedView({
   isHydrated = true,
   onRequireAuth,
   onLoadMorePosts,
+  onRefreshFeed,
   hasMorePosts = false,
   isLoadingMorePosts = false
 }: FeedViewProps) {
@@ -719,6 +721,7 @@ export default function FeedView({
     const seeded = seedWorldFeed(posts);
     
     setLocalPosts(currentLocalPosts => {
+      if (seeded.length === 0) return [];
       if (currentLocalPosts.length === 0) {
         // Initial load
         return seeded;
@@ -1016,34 +1019,27 @@ export default function FeedView({
     }
   };
 
-  // Pull-down refresh simulator
+  // Pull-to-refresh fetches persisted content; it never reorders or fabricates posts.
   const triggerRefresh = () => {
+    if (isRefreshing) return;
     setIsRefreshing(true);
-    setTimeout(() => {
-      setIsRefreshing(false);
-      
-      if (pendingPosts.length > 0) {
-        // Apply background posts immediately on pull refresh
-        setLocalPosts(prev => [...pendingPosts, ...prev]);
-        setPendingPosts([]);
-      } else {
-        // Shuffle posts gently or add new generated ones if no pending ones
-        setLocalPosts(prev => {
-          const copy = [...prev];
-          // Shift a few posts for fresh layout
-          if (copy.length > 5) {
-            const first = copy.shift();
-            if (first) copy.splice(3, 0, first);
-          }
-          return copy;
-        });
+    void (async () => {
+      try {
+        if (!onRefreshFeed) throw new Error('Feed refresh is unavailable.');
+        await onRefreshFeed();
+        setVisibleCount(8);
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTo({ top: 0, behavior: 'auto' });
+        }
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Feed refreshed.' }));
+      } catch {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not refresh the feed. Your current posts are still here. Please retry.' }));
+      } finally {
+        setIsRefreshing(false);
+        setPullState('idle');
+        setPullY(0);
       }
-      
-      setVisibleCount(8);
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTop = 0;
-      }
-    }, 1200);
+    })();
   };
 
   // Sparks trigger handler
@@ -1214,11 +1210,6 @@ export default function FeedView({
     setComposerOpen(false);
   };
 
-  // Re-sync posts on pull-to-refresh
-  const addNewFreshSimulatedPost = () => {
-    // Re-sync posts from actual parent posts
-    setLocalPosts(posts.map(p => ({ ...p, isVerified: p.isVerified || false, tags: p.tags || [], likes: p.likes || 0, commentsCount: p.commentsCount || (p.comments ? p.comments.length : 0), shares: p.shares || 0, comments: p.comments || [] })));
-  };
 
   // Recommendation Explanation
   const getRecommendationExplanation = (postItem: RefactoredPost) => {
@@ -1314,18 +1305,8 @@ export default function FeedView({
       if (pullY > 50) {
         setPullState('refreshing');
         setPullY(50);
-        setIsRefreshing(true);
         if (navigator.vibrate) navigator.vibrate([30]);
-        
-        setTimeout(() => {
-          setIsRefreshing(false);
-          setPullState('idle');
-          setPullY(0);
-          
-          // Prepend a beautiful simulated post
-          addNewFreshSimulatedPost();
-          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Feed updated!' }));
-        }, 1200);
+        triggerRefresh();
       } else {
         setPullState('idle');
         setPullY(0);
@@ -1863,7 +1844,7 @@ export default function FeedView({
                 <span className="mt-0.5 sm:mt-1 block truncate text-[11px] font-medium text-slate-500">The World&apos;s Living Social Network</span>
               </div>
             </div>
-            <span className="hidden items-center gap-1.5 text-[10px] font-semibold text-emerald-300/80 sm:flex"><span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]" />{currentUser.id === 'guest_visitor_id' || currentUser.username === 'visitor' ? 'Preview feed' : 'Live network'}</span>
+            <span className={`hidden items-center gap-1.5 text-[10px] font-semibold sm:flex ${isOffline ? 'text-amber-300/80' : 'text-emerald-300/80'}`}><span className={`h-1.5 w-1.5 rounded-full ${isOffline ? 'bg-amber-400' : 'bg-emerald-400'}`} />{isOffline ? 'Offline' : currentUser.id === 'guest_visitor_id' || currentUser.username === 'visitor' ? 'Preview feed' : 'Online'}</span>
           </div>
           {/* Categories + utilities row */}
           <div className="flex items-center justify-between gap-1.5 px-3 sm:px-6 py-1 sm:gap-2 sm:py-2">
@@ -2146,6 +2127,30 @@ export default function FeedView({
                 + Create your first post
               </button>}
             </div>
+            {localPosts.length === 0 && creators.filter(creator => creator?.id && creator.id !== currentUser.id && !followingIds.includes(creator.id)).length > 0 && (
+              <section className="relative z-10 mx-auto max-w-xl space-y-3 text-left" aria-label="Suggested creators to follow">
+                <div>
+                  <h5 className="text-sm font-bold text-white">Find people to follow</h5>
+                  <p className="mt-1 text-xs text-zinc-400">These are registered Nexora accounts. Follow someone to personalize your feed.</p>
+                </div>
+                <div className="space-y-2">
+                  {creators.filter(creator => creator?.id && creator.id !== currentUser.id && !followingIds.includes(creator.id)).slice(0, 3).map(creator => (
+                    <div key={creator.id} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/20 p-3">
+                      <button type="button" onClick={() => onViewProfile?.(creator.id)} className="flex min-w-0 flex-1 items-center gap-3 text-left" aria-label={`View ${creator.name}'s profile`}>
+                        <img src={creator.avatar} alt="" loading="lazy" className="h-10 w-10 rounded-full border border-white/10 object-cover" referrerPolicy="no-referrer" />
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-semibold text-white">{creator.name}</span>
+                          <span className="block truncate text-xs text-violet-300">@{creator.username}</span>
+                        </span>
+                      </button>
+                      <button type="button" onClick={() => onToggleFollow?.(creator.id)} className="min-h-11 shrink-0 rounded-lg border border-violet-400/40 px-3 text-xs font-bold text-violet-200 hover:bg-violet-500/15 focus-visible:outline focus-visible:outline-2 focus-visible:outline-violet-300" aria-label={`Follow ${creator.name}`}>
+                        Follow
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
           </div>
         )}
 

@@ -522,10 +522,10 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     );
   };
 
-  const handleCompleteOnboarding = async () => {
+  const handleCompleteOnboarding = async (interests = selectedInterests) => {
     if (!onboardingUser) return;
 
-    const interestDNAObj = selectedInterests.reduce((acc, topic) => {
+    const interestDNAObj = interests.reduce((acc, topic) => {
       acc[topic.toLowerCase()] = 99;
       return acc;
     }, {} as Record<string, number>);
@@ -757,7 +757,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                     What would you like to discover on Nexora?
                   </h2>
                   <p className="text-xs text-zinc-400 mt-1">
-                    Select topics that help shape your first experience. You can always change these later.
+                    Select a few topics to shape your first experience, or skip and choose them later.
                   </p>
                 </div>
 
@@ -785,14 +785,24 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                   })}
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleCompleteOnboarding}
-                  className="w-full py-4 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600 hover:opacity-90 text-white font-black rounded-2xl text-sm uppercase tracking-wider transition-all shadow-[0_4px_25px_rgba(139,92,246,0.4)] flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <VohIcon size={18} animated />
-                  <span>Welcome to Nexora • Enter Home Feed</span>
-                </button>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => { void handleCompleteOnboarding(); }}
+                    disabled={isPending}
+                    className="min-h-12 w-full py-3 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-violet-600 hover:opacity-90 disabled:opacity-60 text-white font-black rounded-2xl text-sm uppercase tracking-wider transition-all shadow-[0_4px_25px_rgba(139,92,246,0.4)] flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <VohIcon size={18} animated />
+                    <span>{isPending ? 'Saving your profile…' : 'Enter Home Feed'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { void handleCompleteOnboarding([]); }}
+                    disabled={isPending}
+                    className="min-h-11 w-full rounded-xl border border-white/10 text-xs font-semibold text-zinc-300 hover:bg-white/5 disabled:opacity-60"
+                  >Skip for now
+                  </button>
+                </div>
               </div>
             )}
           </motion.div>

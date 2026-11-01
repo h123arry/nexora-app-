@@ -83,7 +83,7 @@ export async function getGlobalPostsPage(
     };
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path, auth);
-    return { posts: [], nextCursor: null, hasMore: false };
+    throw error;
   }
 }
 
