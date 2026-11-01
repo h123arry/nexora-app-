@@ -34,7 +34,8 @@ This tranche improves existing surfaces without presenting unconfigured provider
 ### NEXORA Economy
 - The current wallet does not have a trusted NEX ledger. Profile balance fields are not a transaction ledger.
 - Financial billing records are server-owned; checkout is disabled until a real payment provider adapter and merchant configuration exist.
-- Do not enable transfers, redemptions, cash conversion, creator payouts, or rewards that mint value until an immutable ledger, idempotent posting rules, authorization, reconciliation, abuse controls, and owner-approved economic policy are implemented.
+- A tested NEX ledger policy module now defines balanced debit/credit transfer entries, stable idempotency references, safe integer arithmetic, and overdraft prevention. It is not yet wired to a trusted persistent ledger or wallet API.
+- Do not enable transfers, redemptions, cash conversion, creator payouts, or rewards that mint value until the immutable ledger is persisted atomically by trusted server code, with authorization, reconciliation, abuse controls, and owner-approved economic policy.
 
 ## Launch-readiness checks still requiring owner/provider action
 
