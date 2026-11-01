@@ -1,6 +1,6 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Check, Moon, Sun, Smartphone, Globe, Key, Eye } from 'lucide-react';
+import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
 
 const PrivacySettingsModal = lazy(() => import('./PrivacySettingsModal'));
@@ -18,7 +18,7 @@ export default function SettingsView({
   setTheme,
   onUpdateProfile
 }: SettingsViewProps) {
-  const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about'>('account');
+  const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta'>('account');
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
   const privacyKey = `nx_privacy_summary_${currentUser.id}`;
 
@@ -41,7 +41,8 @@ export default function SettingsView({
     { id: 'appearance', label: 'Appearance', icon: Palette, desc: 'Theme, contrast & font sizing' },
     { id: 'security', label: 'Security', icon: ShieldCheck, desc: 'Two-factor & active sessions' },
     { id: 'connected', label: 'Connected Accounts', icon: Link2, desc: 'OAuth & Workspace integrations' },
-    { id: 'about', label: 'About Nexora', icon: Info, desc: 'Platform version & legal info' }
+    { id: 'about', label: 'About Nexora', icon: Info, desc: 'Platform version & legal info' },
+    { id: 'beta', label: 'Beta feedback', icon: Bug, desc: 'Report issues with useful context' }
   ];
 
   return (
@@ -200,9 +201,24 @@ export default function SettingsView({
           {activeSection === 'about' && (
             <div className="space-y-4">
               <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">About Nexora Platform</h3>
+              <div className="space-y-3 text-xs text-zinc-300">
+                <p><strong className="text-white">Environment:</strong> Beta preparation; staging activation is still owner-controlled.</p>
+                <p><strong className="text-white">Service status:</strong> Individual features show their own verified or unavailable state. This screen does not claim that unverified backends are live.</p>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'beta' && (
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-white pb-3 border-b border-white/5">Beta feedback</h3>
+              <div className="rounded-2xl border border-violet-400/20 bg-violet-500/10 p-4 space-y-2">
+                <p className="text-xs font-semibold text-white">Help us reproduce the problem</p>
+                <p className="text-[11px] leading-relaxed text-violet-100/80">For a bug report, include the screen, exact steps, what you expected, what happened, your browser/device, viewport width, and whether the network was offline. Never include passwords, tokens, or private messages.</p>
+              </div>
               <div className="space-y-2 text-xs text-zinc-300">
-                <p><strong className="text-white">Mesh Network:</strong> Operational & Node Verified</p>
-                <p><strong className="text-white">AI Engine:</strong> VOH AI Multimodal Assistant Connected</p>
+                <p><strong className="text-white">Content or account safety:</strong> Use the in-product Report or Block controls on the relevant content or profile.</p>
+                <p><strong className="text-white">Unavailable service:</strong> Record the exact message and time; do not treat a placeholder, simulation, or unavailable card as a successful operation.</p>
+                <p><strong className="text-white">Owner triage:</strong> Keep the report linked to the beta build/commit and mark it as reproduction-ready only after another tester can follow the same steps.</p>
               </div>
             </div>
           )}

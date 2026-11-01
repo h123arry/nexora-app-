@@ -201,7 +201,7 @@ export default function UniversalSearchModal({
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSaveSearch(query);
               }}
-              placeholder="Search people, posts, World Pulse, communities, opportunities, AI chats & more..."
+              placeholder="Search loaded people, posts, communities, chats, and saved content..."
               className="w-full bg-white/5 border border-white/15 focus:border-violet-500 rounded-2xl pl-13 pr-12 py-3.5 text-base sm:text-lg text-white placeholder-zinc-400 outline-none transition-all shadow-inner font-sans"
             />
             {query && (
@@ -335,7 +335,7 @@ export default function UniversalSearchModal({
                     <span>Nexora Unified Search & Command Center</span>
                   </h4>
                   <p className="text-xs text-zinc-300 font-sans leading-relaxed max-w-xl">
-                    Search across people, posts, World Pulse, trusted circles, communities, private messages, opportunities, and VOH AI conversation logs instantly.
+                    Searches the people, posts, communities, circles, loaded chat summaries, saved content, opportunities, and local VOH AI history currently available in this browser. It does not query an unconfigured server index or invent missing results.
                   </p>
                 </div>
               </div>
@@ -353,7 +353,7 @@ export default function UniversalSearchModal({
                   </div>
                   <h3 className="text-lg font-sans font-bold text-white">No results found for "{query}"</h3>
                   <p className="text-sm text-zinc-400 font-sans max-w-sm mx-auto">
-                    Try searching for different keywords, usernames, hashtags (#), or platform features.
+                    Try a different keyword, username, hashtag (#), or community name. Search only covers data currently loaded for this account and browser.
                   </p>
                 </div>
               ) : (

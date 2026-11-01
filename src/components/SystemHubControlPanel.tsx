@@ -300,20 +300,20 @@ export default function SystemHubControlPanel({
             isHighContrast ? 'border border-white bg-black' : 'bg-black/35 border border-white/5'
           } hidden md:block`}>
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500">
-              <span>MESH NODE STATE</span>
+              <span>LOCAL DEVICE STATUS</span>
               <span className={`flex items-center gap-1 ${isOffline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-red-400' : 'bg-emerald-400 animate-ping'}`} />
-                {isOffline ? 'OFFLINE' : 'LIVE'}
+                {isOffline ? 'OFFLINE' : 'ONLINE'}
               </span>
             </div>
             
             <div className="grid grid-cols-2 gap-1 mt-2.5 pt-2 border-t border-white/5 font-mono text-[10px]">
               <div>
-                <span className="block text-zinc-600 text-[8px] uppercase">Telemetry</span>
+                <span className="block text-zinc-600 text-[8px] uppercase">Local frame sample</span>
                 <span className="font-bold text-white text-xs">{fps} FPS</span>
               </div>
               <div>
-                <span className="block text-zinc-600 text-[8px] uppercase">Latency</span>
+                <span className="block text-zinc-600 text-[8px] uppercase">Local timing sample</span>
                 <span className="font-bold text-violet-400 text-xs">{latency}ms</span>
               </div>
             </div>
