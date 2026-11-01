@@ -604,6 +604,38 @@ const publicProfile = (uid) => ({
     await assertFails(getDocs(collection(dbFor('mallory'), 'communities')));
     await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'bad-type'), { id: 'bad-type', ownerId: 'alice', type: 'unknown' }));
   });
+  it('enforces self-scoped Circle membership and prevents client-assigned elevated roles', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'member-circle'), {
+        id: 'member-circle', ownerId: 'alice', creatorId: 'alice', type: 'public', name: 'Members'
+      });
+    });
+
+    const aliceMembers = collection(dbFor('alice'), 'communities', 'member-circle', 'members');
+    const bobMember = doc(dbFor('bob'), 'communities', 'member-circle', 'members', 'bob');
+    const malloryMember = doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'bob');
+
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'communities', 'member-circle', 'members', 'alice'), {
+      userId: 'alice', role: 'owner', status: 'active', joinedAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(bobMember, {
+      userId: 'bob', role: 'member', status: 'active', joinedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(bobMember));
+    await assertFails(getDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'bob')));
+    await assertSucceeds(getDocs(aliceMembers));
+    await assertFails(getDocs(collection(dbFor('bob'), 'communities', 'member-circle', 'members')));
+    await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'mallory'), {
+      userId: 'mallory', role: 'admin', status: 'active', joinedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'members', 'alice'), {
+      userId: 'alice', role: 'member', status: 'active', joinedAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(bobMember, { role: 'admin' }));
+    await assertSucceeds(deleteDoc(bobMember));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'communities', 'member-circle', 'members', 'alice')));
+  });
+
   it('keeps raw analytics and daily aggregates behind server-owned boundaries', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'analyticsEvents', 'event-1'), { eventType: 'post_open', actorId: 'alice' });
