@@ -956,6 +956,8 @@ export default function ProfileView({
               onClick={onCloseProfile}
               className="p-1.5 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
               title="Return to Feed"
+              aria-label="Return to feed"
+              className="min-h-10 min-w-10 p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -965,7 +967,9 @@ export default function ProfileView({
             {isOwnProfile ? (
               <button 
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-white/5 text-xs font-mono font-bold tracking-wider text-zinc-200 uppercase transition-all cursor-pointer select-none border border-white/10 bg-white/3"
+                aria-expanded={isProfileMenuOpen}
+                aria-haspopup="menu"
+                className="min-h-10 flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-white/5 text-xs font-mono font-bold tracking-wider text-zinc-200 uppercase transition-all cursor-pointer select-none border border-white/10 bg-white/3"
               >
                 <span>My Profile</span>
                 <ChevronDown className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-300 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
@@ -1013,7 +1017,7 @@ export default function ProfileView({
                         <button
                           key={item.label}
                           onClick={item.action}
-                          className="w-full text-left px-3.5 py-2 hover:bg-white/5 rounded-xl transition-all flex items-center gap-2.5 text-xs font-sans text-zinc-300 hover:text-white cursor-pointer"
+                          className="w-full min-h-10 text-left px-3.5 py-2 hover:bg-white/5 rounded-xl transition-all flex items-center gap-2.5 text-xs font-sans text-zinc-300 hover:text-white cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
                         >
                           <IconComponent className={`w-4 h-4 ${item.iconColor}`} />
                           <span className="font-semibold">{item.label}</span>
@@ -1033,16 +1037,18 @@ export default function ProfileView({
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setShowShareModal(true)}
-                className="p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
+                className="min-h-10 min-w-10 p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
                 title="Share Profile"
+                aria-label="Share profile"
               >
                 <QrCode className="w-4.5 h-4.5" />
               </motion.button>
               <motion.button
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setActivePanel('menu')}
-                className="p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
+                className="min-h-10 min-w-10 p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
                 title="Menu"
+                aria-label="Open profile menu"
                 id="nexora-advanced-hamburger-trigger"
               >
                 <Menu className="w-5 h-5" />
