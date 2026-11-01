@@ -7,28 +7,6 @@ const post = (overrides: Partial<Post>): Post => ({
   id: 'post', userId: 'creator', username: 'creator', name: 'Creator', avatar: '', isVerified: false,
   content: 'A thoughtful post', tags: [], likes: 0, commentsCount: 0, shares: 0, timestamp: new Date().toISOString(), comments: [],
   ...overrides,
-  it('requires every search term to match a post instead of returning partial matches', () => {
-    const posts = [
-      post({ id: 'complete', content: 'AI creator tools' }),
-      post({ id: 'partial', content: 'AI tools only' }),
-    ];
-    assert.deepEqual(searchPosts(posts, 'AI creator').map(item => item.id), ['complete']);
-  });
-
-  it('requires every search term to match a creator', () => {
-    const creator = (id: string, username: string, name: string, bio: string) => ({
-      id, username, name, avatar: '', bio, location: '', website: '', followers: 0, following: 0,
-      isVerified: false, coverImage: '', joinedDate: '', reputationPoints: 0,
-      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: {}, skills: [],
-    });
-    const results = searchCreators([
-      creator('complete', 'ai_creator', 'AI Creator', 'Builds tools'),
-      creator('partial', 'ai_tools', 'AI Tools', 'Developer'),
-    ], 'ai creator');
-    assert.deepEqual(results.map(user => user.id), ['complete']);
-  });
-
 });
 
 describe('discovery service', () => {
@@ -148,6 +126,28 @@ describe('discovery service', () => {
     const firstRun = rankPosts(input, { now: Date.now() }).map(item => item.post.id);
     const secondRun = rankPosts(input, { now: Date.now() }).map(item => item.post.id);
     assert.deepEqual(firstRun, secondRun);
+  });
+
+  it('requires every search term to match a post instead of returning partial matches', () => {
+    const posts = [
+      post({ id: 'complete', content: 'AI creator tools' }),
+      post({ id: 'partial', content: 'AI tools only' }),
+    ];
+    assert.deepEqual(searchPosts(posts, 'AI creator').map(item => item.id), ['complete']);
+  });
+
+  it('requires every search term to match a creator', () => {
+    const creator = (id: string, username: string, name: string, bio: string) => ({
+      id, username, name, avatar: '', bio, location: '', website: '', followers: 0, following: 0,
+      isVerified: false, coverImage: '', joinedDate: '', reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {}, skills: [],
+    });
+    const results = searchCreators([
+      creator('complete', 'ai_creator', 'AI Creator', 'Builds tools'),
+      creator('partial', 'ai_tools', 'AI Tools', 'Developer'),
+    ], 'ai creator');
+    assert.deepEqual(results.map(user => user.id), ['complete']);
   });
 
 });
