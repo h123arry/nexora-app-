@@ -26,6 +26,7 @@ import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
 import { Skeleton } from './Skeleton';
 import { rankReels } from '../services/reels/reelsRanking';
+import { buildPostAnalytics } from '../services/analytics/postAnalytics';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -463,6 +464,7 @@ export default function FeedView({
     return saved ? JSON.parse(saved) : [];
   });
   const [analyticsPost, setAnalyticsPost] = useState<RefactoredPost | null>(null);
+  const analyticsSnapshot = analyticsPost ? buildPostAnalytics(analyticsPost) : null;
 
   const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
   const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => {
@@ -3524,23 +3526,20 @@ export default function FeedView({
 
       {/* 9. CREATOR PERFORMANCE ANALYTICS MODAL */}
       <AnimatePresence>
-        {analyticsPost && (
+        {analyticsPost && analyticsSnapshot && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
             <motion.div
               initial={{ scale: 0.95, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 15 }}
-              className="bg-gradient-to-b from-[#110e2e]/95 to-[#070519]/95 border border-pink-500/30 rounded-3xl p-5 md:p-6 w-full max-w-md shadow-md relative overflow-hidden text-left"
+              className="bg-gradient-to-b from-[#110e2e]/95 to-[#070519]/95 border border-violet-500/30 rounded-3xl p-5 md:p-6 w-full max-w-md shadow-md relative overflow-hidden text-left"
             >
-              {/* Glowing background highlights */}
-              <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/10 rounded-full blur-3xl pointer-events-none"></div>
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-600/10 rounded-full blur-3xl pointer-events-none"></div>
-
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl pointer-events-none"></div>
               <div className="flex items-center justify-between border-b border-white/5 pb-3.5 mb-4 relative z-10">
-                <span className="text-xs font-mono text-pink-400 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-                  <BarChart2 className="w-4 h-4 text-pink-400 animate-pulse" /> CREATOR PERFORMANCE INDEX
+                <span className="text-xs font-mono text-violet-300 font-extrabold uppercase tracking-widest flex items-center gap-1.5">
+                  <BarChart2 className="w-4 h-4" /> POST INSIGHTS
                 </span>
-                <button 
+                <button
                   onClick={() => setAnalyticsPost(null)}
                   className="p-1 px-2.5 bg-white/5 hover:bg-white/10 rounded-lg text-zinc-400 hover:text-white transition-colors cursor-pointer text-xs font-mono border border-white/5"
                 >
@@ -3548,72 +3547,49 @@ export default function FeedView({
                 </button>
               </div>
 
-              {/* Post brief preview snippet */}
               <div className="p-3 bg-white/3 rounded-xl border border-white/5 space-y-1 mb-5 relative z-10">
-                <span className="text-[8.5px] font-mono text-violet-400">INDEX TARGET POST</span>
+                <span className="text-[8.5px] font-mono text-violet-400">SELECTED POST</span>
                 <p className="text-xs text-zinc-300 font-sans leading-relaxed line-clamp-2 italic">
-                  "{analyticsPost.content}"
+                  "{analyticsPost.content || 'Untitled post'}"
+                </p>
+                <p className="text-[9px] text-zinc-500">
+                  Published {new Date(analyticsPost.timestamp).toLocaleString()}
                 </p>
               </div>
 
-              {/* Analytics metrics grid */}
               <div className="grid grid-cols-2 gap-3 relative z-10">
-                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Estimated Reach</span>
-                  <div className="text-lg font-black text-white font-sans">
-                    {analyticsPost.likes * 12 + analyticsPost.comments.length * 28 + 152}
+                {[
+                  { label: 'Recorded views', value: analyticsSnapshot.views === null ? 'Not recorded' : analyticsSnapshot.views.toLocaleString() },
+                  { label: 'Likes', value: analyticsSnapshot.likes.toLocaleString() },
+                  { label: 'Comments', value: analyticsSnapshot.comments.toLocaleString() },
+                  { label: 'Shares', value: analyticsSnapshot.shares.toLocaleString() },
+                  { label: 'Saves', value: analyticsSnapshot.saves.toLocaleString() },
+                  { label: 'Total interactions', value: analyticsSnapshot.totalInteractions.toLocaleString() },
+                ].map((metric) => (
+                  <div key={metric.label} className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
+                    <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">{metric.label}</span>
+                    <div className="text-lg font-black text-white font-sans">{metric.value}</div>
                   </div>
-                  <div className="text-[8.5px] font-mono text-emerald-400 flex items-center gap-0.5">
-                    <span>↑ 14.5%</span> <span className="text-zinc-500">vs benchmark</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Engagement Rate</span>
-                  <div className="text-lg font-black text-pink-400 font-sans">
-                    {analyticsPost.likes > 0 ? (12.4 + (analyticsPost.comments.length * 1.5)).toFixed(1) : '8.2'}%
-                  </div>
-                  <div className="text-[8.5px] font-mono text-violet-400 flex items-center gap-0.5">
-                    <span>⚡ High</span> <span className="text-zinc-500">engagement</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">Profile Visits</span>
-                  <div className="text-lg font-black text-white font-sans">
-                    {analyticsPost.likes * 2 + 5}
-                  </div>
-                  <div className="text-[8.5px] font-mono text-emerald-400 flex items-center gap-0.5">
-                    <span>↑ 18.2%</span> <span className="text-zinc-500">profile conversion</span>
-                  </div>
-                </div>
-
-                <div className="p-3.5 bg-[#0d0a26] border border-white/5 rounded-2xl space-y-1">
-                  <span className="text-[9px] font-mono text-zinc-400 uppercase tracking-wider block">{TERMINOLOGY.followersCapitalized} Gained</span>
-                  <div className="text-lg font-black text-cyan-400 font-sans">
-                    +{Math.floor(analyticsPost.likes * 0.1) + 1}
-                  </div>
-                  <div className="text-[8.5px] font-mono text-cyan-400 flex items-center gap-0.5">
-                    <span>🚀 Fast Grow</span> <span className="text-zinc-500">organic reach</span>
-                  </div>
-                </div>
+                ))}
               </div>
 
-              {/* Progress and tips bar */}
-              <div className="mt-5 p-3.5 bg-violet-600/10 border border-white/10 rounded-2xl space-y-2 relative z-10">
+              <div className="mt-4 p-3.5 bg-violet-600/10 border border-white/10 rounded-2xl space-y-2 relative z-10">
                 <span className="text-[9px] font-mono text-violet-300 font-black uppercase tracking-widest block">
-                  💡 NEXORA AUDIENCE INSIGHT
+                  RECORDED ENGAGEMENT RATE
                 </span>
-                <p className="text-[11px] text-violet-200 font-sans leading-relaxed">
-                  Your content has been indexed inside Nigeria & surrounding networks! Post another item targeting <strong className="text-pink-400">#{analyticsPost.tags[0] || 'Nexora'}</strong> within the next 4 hours to maximize your viral multiplier.
+                <p className="text-xl font-black text-white">
+                  {analyticsSnapshot.engagementRate === null ? 'Not available' : `${analyticsSnapshot.engagementRate.toFixed(2)}%`}
+                </p>
+                <p className="text-[10px] text-zinc-400 leading-relaxed">
+                  {analyticsSnapshot.engagementRate === null
+                    ? 'A rate is shown only when this post has a positive recorded view count.'
+                    : 'Calculated as recorded likes, comments, shares and saves divided by recorded views. One person may contribute more than one interaction.'}
                 </p>
               </div>
 
-              <div className="mt-4 text-center">
-                <span className="text-[8.5px] font-mono text-zinc-500 uppercase tracking-wider">
-                  Verified by Nexora Security
-                </span>
-              </div>
+              <p className="mt-4 text-[10px] text-zinc-500 leading-relaxed text-center">
+                These figures come from counters stored on this post. Unique reach, profile visits, follower gains, audience demographics and historical comparisons are not available from this record.
+              </p>
             </motion.div>
           </div>
         )}
