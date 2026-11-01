@@ -154,6 +154,24 @@ export default function MessagesView({
   const [blockedChats, setBlockedChats] = useState<string[]>([]);
   const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
   const [chatPreferencesLoaded, setChatPreferencesLoaded] = useState(false);
+  const blockedAccounts = useMemo(() => {
+    const seen = new Set<string>();
+    return chatsList
+      .filter(chat => !chat.isGroup && !chat.isBroadcast && blockedUserIds.includes(chat.partnerId))
+      .filter(chat => {
+        if (seen.has(chat.partnerId)) return false;
+        seen.add(chat.partnerId);
+        return true;
+      })
+      .map(chat => ({
+        id: chat.partnerId,
+        name: chat.partnerName,
+        username: chat.username || chat.partnerName,
+        avatar: chat.partnerAvatar || '',
+        reason: 'Blocked from direct messages',
+      }));
+  }, [chatsList, blockedUserIds]);
+
   const [archivedChats, setArchivedChats] = useState<string[]>([]);
   const [disappearingMode, setDisappearingMode] = useState(false);
   const [pinnedMessageInChat, setPinnedMessageInChat] = useState<ExtendedMessage | null>(null);
@@ -1009,6 +1027,27 @@ export default function MessagesView({
 
   const handleToggleArchive = (chatId: string) => {
     setArchivedChats(prev => prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]);
+  };
+
+  const handleUnblockBlockedAccount = async (userId: string) => {
+    const next = blockedUserIds.filter(id => id !== userId);
+    try {
+      await SettingsService.updateMessagingPreferences(currentUser.id, { blockedUserIds: next });
+      setBlockedUserIds(next);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account unblocked.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not unblock this account. Please try again.' }));
+    }
+  };
+
+  const handleClearBlockedAccounts = async () => {
+    try {
+      await SettingsService.updateMessagingPreferences(currentUser.id, { blockedUserIds: [] });
+      setBlockedUserIds([]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'All blocked accounts have been unblocked.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not clear blocked accounts. Please try again.' }));
+    }
   };
 
   const handleToggleBlock = async (chatId: string) => {
@@ -2014,6 +2053,9 @@ export default function MessagesView({
           isOpen={isPrivacyOpen}
           onClose={() => setIsPrivacyOpen(false)}
           privacy={privacySettings}
+          blockedUsers={blockedAccounts}
+          onUnblockUser={handleUnblockBlockedAccount}
+          onBulkUnblock={handleClearBlockedAccounts}
           onSavePrivacy={(next) => setPrivacySettings(next)}
         />
 

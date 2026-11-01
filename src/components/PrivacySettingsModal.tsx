@@ -19,6 +19,9 @@ interface PrivacySettingsModalProps {
     readReceipts: boolean;
     mediaQuality: 'hd' | 'saver';
   };
+  blockedUsers?: Array<{ id: string; name: string; username: string; avatar: string; reason?: string }>;
+  onUnblockUser?: (id: string) => void;
+  onBulkUnblock?: () => void;
   onSavePrivacy?: (next: {
     visibility: 'everyone' | 'contacts' | 'nobody';
     lastSeen: 'everyone' | 'contacts' | 'nobody';
@@ -49,6 +52,9 @@ export default function PrivacySettingsModal({
   isOpen, 
   onClose, 
   privacy, 
+  blockedUsers: syncedBlockedUsers,
+  onUnblockUser,
+  onBulkUnblock,
   onSavePrivacy 
 }: PrivacySettingsModalProps) {
   // --- STATE PERSISTENCE & INITIALIZATION ---
@@ -192,6 +198,9 @@ export default function PrivacySettingsModal({
 
   // 9. Blocked Users Ledger
   const [blockedUsers, setBlockedUsers] = useState<any[]>(() => readPrivacyList('nx_privacy_blocked', ['b-1', 'b-2', 'b-3']));
+  useEffect(() => {
+    if (syncedBlockedUsers) setBlockedUsers(syncedBlockedUsers);
+  }, [syncedBlockedUsers]);
   const [blockedSearchQuery, setBlockedSearchQuery] = useState('');
   const [selectedBlockedId, setSelectedBlockedId] = useState<string | null>(null);
 
@@ -272,8 +281,8 @@ export default function PrivacySettingsModal({
   }, [discoverability]);
 
   useEffect(() => {
-    localStorage.setItem('nx_privacy_blocked', JSON.stringify(blockedUsers));
-  }, [blockedUsers]);
+    if (!onUnblockUser) localStorage.setItem('nx_privacy_blocked', JSON.stringify(blockedUsers));
+  }, [blockedUsers, onUnblockUser]);
 
   useEffect(() => {
     localStorage.setItem('nx_privacy_restricted', JSON.stringify(restrictedUsers));
@@ -361,11 +370,19 @@ export default function PrivacySettingsModal({
 
   // Bulk unblock
   const handleBulkUnblock = () => {
+    if (onBulkUnblock) {
+      onBulkUnblock();
+      return;
+    }
     setBlockedUsers([]);
     window.dispatchEvent(new CustomEvent('toast', { detail: "🟢 All connections unblocked!" }));
   };
 
   const handleUnblockUser = (id: string) => {
+    if (onUnblockUser) {
+      onUnblockUser(id);
+      return;
+    }
     setBlockedUsers(prev => prev.filter(u => u.id !== id));
     window.dispatchEvent(new CustomEvent('toast', { detail: "🟢 Connection successfully re-established on network!" }));
   };
