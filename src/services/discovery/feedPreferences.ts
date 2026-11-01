@@ -64,3 +64,9 @@ export function mergeFeedPreferencePatch(
 ): FeedPreferences {
   return normalizeFeedPreferences({ ...current, ...patch });
 }
+
+
+/** Build a narrow Firestore merge so feed changes cannot overwrite other settings namespaces. */
+export function buildFeedSettingsPatch(feed: FeedPreferences, updatedAt: unknown) {
+  return { feed, updatedAt };
+}
