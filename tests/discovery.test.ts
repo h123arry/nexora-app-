@@ -49,6 +49,27 @@ describe('discovery service', () => {
     assert.deepEqual(ranked.map(item => item.post.id), ['eligible', 'seen']);
   });
 
+  it('honours a configurable consecutive-creator limit', () => {
+    const ranked = rankPosts([
+      post({ id: 'a1', userId: 'same', likes: 1000 }),
+      post({ id: 'a2', userId: 'same', likes: 900 }),
+      post({ id: 'a3', userId: 'same', likes: 800 }),
+      post({ id: 'a4', userId: 'same', likes: 700 }),
+      post({ id: 'b1', userId: 'other', likes: 10 }),
+    ], { maxPostsPerCreator: 4, maxConsecutivePostsPerCreator: 2 });
+    assert.deepEqual(ranked.slice(0, 5).map(item => item.post.userId), ['same', 'same', 'other', 'same', 'same']);
+  });
+
+  it('keeps a single creator feed usable while respecting the per-creator cap', () => {
+    const ranked = rankPosts([
+      post({ id: 'a1', userId: 'only', likes: 100 }),
+      post({ id: 'a2', userId: 'only', likes: 90 }),
+      post({ id: 'a3', userId: 'only', likes: 80 }),
+      post({ id: 'a4', userId: 'only', likes: 70 }),
+    ], { maxPostsPerCreator: 2 });
+    assert.deepEqual(ranked.map(item => item.post.id), ['a1', 'a2', 'a3', 'a4']);
+  });
+
   it('limits a prolific creator and interleaves other creators for feed variety', () => {
     const ranked = rankPosts([
       post({ id: 'a1', userId: 'same', likes: 1000000 }),
