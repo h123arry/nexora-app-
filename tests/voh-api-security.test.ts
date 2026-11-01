@@ -48,12 +48,15 @@ before(async () => {
     env: {
       ...process.env,
       NODE_ENV: 'production',
+      // Exercise production middleware while keeping Firebase isolated on emulators.
+      NEXORA_ENV: 'local',
       RELEASE_VERSION: 'test',
       PORT: String(port),
       FIRESTORE_DATABASE_ID: '(default)',
       GCLOUD_PROJECT: 'demo-nexora-voh',
       FIREBASE_STORAGE_BUCKET: 'demo-nexora-voh.firebasestorage.app',
-      STORAGE_EMULATOR_HOST: process.env.STORAGE_EMULATOR_HOST || '127.0.0.1:9199',
+      FIREBASE_STORAGE_EMULATOR_HOST: process.env.FIREBASE_STORAGE_EMULATOR_HOST || '127.0.0.1:9199',
+      STORAGE_EMULATOR_HOST: process.env.STORAGE_EMULATOR_HOST || process.env.FIREBASE_STORAGE_EMULATOR_HOST || '127.0.0.1:9199',
       GEMINI_API_KEY: '',
     },
     stdio: 'ignore',
