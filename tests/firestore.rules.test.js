@@ -636,6 +636,36 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('alice'), 'communities', 'member-circle', 'members', 'alice')));
   });
 
+  it('allows only active Circle members to read and send bounded messages', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'chat-circle'), {
+        id: 'chat-circle', ownerId: 'alice', creatorId: 'alice', type: 'public', name: 'Chat'
+      });
+      await setDoc(doc(db, 'communities', 'chat-circle', 'members', 'alice'), {
+        userId: 'alice', role: 'owner', status: 'active', joinedAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'communities', 'chat-circle', 'members', 'bob'), {
+        userId: 'bob', role: 'member', status: 'active', joinedAt: Timestamp.now()
+      });
+    });
+
+    const bobMessages = collection(dbFor('bob'), 'communities', 'chat-circle', 'messages');
+    const bobMessage = doc(bobMessages, 'message-1');
+    await assertSucceeds(setDoc(bobMessage, {
+      id: 'message-1', senderId: 'bob', content: 'Hello Circle', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'communities', 'chat-circle', 'messages', 'message-1')));
+    await assertSucceeds(getDocs(collection(dbFor('bob'), 'communities', 'chat-circle', 'messages')));
+    await assertFails(getDocs(collection(dbFor('mallory'), 'communities', 'chat-circle', 'messages')));
+    await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'chat-circle', 'messages', 'forged'), {
+      id: 'forged', senderId: 'bob', content: 'Impersonation', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'chat-circle', 'messages', 'too-long'), {
+      id: 'too-long', senderId: 'bob', content: 'x'.repeat(2001), createdAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(bobMessage, { content: 'Edited without policy' }));
+    await assertFails(deleteDoc(bobMessage));
+  });
   it('keeps raw analytics and daily aggregates behind server-owned boundaries', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'analyticsEvents', 'event-1'), { eventType: 'post_open', actorId: 'alice' });
