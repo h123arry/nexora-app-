@@ -2,6 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe, Users, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
+import { SettingsService } from '../services/firebase/settingsService';
+import { normalizeFeedPreferences } from '../services/discovery/feedPreferences';
+import { auth } from '../services/firebase/config';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 
@@ -15,6 +18,7 @@ interface ExploreViewProps {
   followingIds: string[];
   onViewProfile?: (userIdOrUsername: string) => void;
   interestDNA?: Record<string, number>;
+  currentUserId?: string;
 }
 
 export default function ExploreView({
@@ -26,12 +30,35 @@ export default function ExploreView({
   onToggleFollow,
   followingIds,
   onViewProfile,
-  interestDNA = {}
+  interestDNA = {},
+  currentUserId = ''
 }: ExploreViewProps) {
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities'>('all');
   const [showAllPulse, setShowAllPulse] = useState(false);
+  const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => {
+    try { const value = JSON.parse(localStorage.getItem('nexora_blocked_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
+  });
+  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
+    try { const value = JSON.parse(localStorage.getItem('nexora_muted_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
+  });
+
+  // Use the same owner-scoped relationship preferences as For You. Local
+  // storage is only the offline/guest fallback, never the signed-in source.
+  useEffect(() => {
+    if (!currentUserId || auth.currentUser?.uid !== currentUserId) return;
+    let cancelled = false;
+    SettingsService.getSettings(currentUserId).then(settings => {
+      if (cancelled) return;
+      const preferences = normalizeFeedPreferences(settings.feed);
+      setBlockedCreatorIds(preferences.blockedCreatorIds);
+      setMutedCreatorIds(preferences.mutedCreatorIds);
+    }).catch(() => {
+      // Keep the existing local fallback if the preference read is unavailable.
+    });
+    return () => { cancelled = true; };
+  }, [currentUserId]);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('nexora_recent_searches');
@@ -87,9 +114,11 @@ export default function ExploreView({
   // Personalize creator suggestions using the signed-in user's interest profile.
   const suggestedCreators = useMemo(() => recommendCreators(creators, {
     followingIds,
+    blockedCreatorIds,
+    mutedCreatorIds,
     interests: interestDNA,
     limit: 12,
-  }).map(item => item.creator), [creators, followingIds, interestDNA]);
+  }).map(item => item.creator), [creators, followingIds, blockedCreatorIds, mutedCreatorIds, interestDNA]);
 
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
