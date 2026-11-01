@@ -50,6 +50,7 @@ import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
 import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 import { isUserCacheReady, readUserScopedJson, writeUserScopedJson } from './utils/userScopedStorage';
+import { migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase/bookmarkService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -530,6 +531,39 @@ export default function App() {
     return () => { cancelled = true; };
   }, [firebaseUser?.uid, isLoggedIn]);
 
+  const bookmarkStateReadyRef = useRef(false);
+  const pendingBookmarkRequestsRef = useRef(new Set<string>());
+  useEffect(() => {
+    let cancelled = false;
+    bookmarkStateReadyRef.current = false;
+    setUserBookmarks([]);
+    if (!isLoggedIn || !firebaseUser) return () => { cancelled = true; };
+
+    const uid = firebaseUser.uid;
+    let legacyIds: string[] = [];
+    try {
+      const cached = JSON.parse(localStorage.getItem(`nexora_bookmarks_${uid}`) || '[]');
+      if (Array.isArray(cached)) legacyIds = cached;
+    } catch {
+      legacyIds = [];
+    }
+
+    migrateLegacyPostBookmarks(uid, legacyIds).then(ids => {
+      if (cancelled) return;
+      setUserBookmarks(ids);
+      localStorage.setItem(`nexora_bookmarks_${uid}`, JSON.stringify(ids));
+      bookmarkStateReadyRef.current = true;
+    }).catch(() => {
+      if (!cancelled) {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: 'Could not sync your saved posts. Please retry before bookmarking.'
+        }));
+      }
+    });
+
+    return () => { cancelled = true; };
+  }, [firebaseUser?.uid, isLoggedIn]);
+
   useEffect(() => {
     let active = true;
     const resolveAll = async () => {
@@ -969,7 +1003,7 @@ export default function App() {
 
   // Sync userBookmarks and userSparks changes
   useEffect(() => {
-    if (isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
+    if (bookmarkStateReadyRef.current && isLoggedIn && isUserCacheReady(firebaseUser?.uid, currentUser.id, privateCacheOwnerId)) {
       localStorage.setItem(`nexora_bookmarks_${firebaseUser!.uid}`, JSON.stringify(userBookmarks));
     }
   }, [userBookmarks, currentUser.id, privateCacheOwnerId, firebaseUser?.uid, isLoggedIn]);
@@ -1384,17 +1418,26 @@ export default function App() {
 
   const handleBookmarkPost = (postId: string) => {
     requireAuth(() => {
-      const isCurrentlyBookmarked = userBookmarks.includes(postId);
-      const updatedBookmarks = isCurrentlyBookmarked
-        ? userBookmarks.filter(id => id !== postId)
-        : [...userBookmarks, postId];
-      
-      setUserBookmarks(updatedBookmarks);
-      
-      // Also dispatch update collections event
-      setTimeout(() => {
+      if (!firebaseUser || !bookmarkStateReadyRef.current) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your saved-post list is still syncing. Please try again.' }));
+        return;
+      }
+      if (pendingBookmarkRequestsRef.current.has(postId)) return;
+
+      const shouldBookmark = !userBookmarks.includes(postId);
+      pendingBookmarkRequestsRef.current.add(postId);
+      void setPostBookmark(firebaseUser.uid, postId, shouldBookmark).then(() => {
+        setUserBookmarks(previous => shouldBookmark
+          ? [...new Set([...previous, postId])]
+          : previous.filter(id => id !== postId));
         window.dispatchEvent(new CustomEvent('update-collections'));
-      }, 100);
+      }).catch(() => {
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: 'Nexora could not update your saved posts. Please check your connection and retry.'
+        }));
+      }).finally(() => {
+        pendingBookmarkRequestsRef.current.delete(postId);
+      });
     }, 'Join Nexora to save and bookmark posts to your collections.');
   };
 

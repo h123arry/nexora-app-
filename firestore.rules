@@ -305,6 +305,18 @@ service cloud.firestore {
         allow get, list: if owner(userId);
         allow create, update, delete: if false;
       }
+      // Saved-post records are private to their owner. Only public posts can be bookmarked.
+      match /postBookmarks/{postId} {
+        allow get, list: if owner(userId);
+        allow create: if owner(userId)
+          && request.resource.data.keys().hasOnly(['postId', 'createdAt'])
+          && request.resource.data.postId == postId
+          && request.resource.data.createdAt == request.time
+          && exists(/databases/$(database)/documents/posts/$(postId))
+          && publicPost(get(/databases/$(database)/documents/posts/$(postId)).data);
+        allow update: if false;
+        allow delete: if owner(userId);
+      }
     }
 
     // Public directory contains an allowlisted projection, never private account fields.
