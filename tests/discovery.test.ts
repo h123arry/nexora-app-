@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { rankPosts, searchPosts } from '../src/services/discovery/discoveryService';
+import { rankPosts, searchCreators, searchPosts } from '../src/services/discovery/discoveryService';
 import { Post } from '../src/types';
 
 const post = (overrides: Partial<Post>): Post => ({
@@ -60,4 +60,32 @@ describe('discovery service', () => {
     assert.deepEqual(ranked.slice(0, 3).map(item => item.post.userId), ['same', 'other', 'same']);
     assert.ok(ranked.some(item => item.post.userId === 'other'));
   });
+  it('ranks creator search by exact username, then name, and excludes unavailable accounts', () => {
+    const creator = (overrides: Partial<import('../src/types').User>) => ({
+      id: 'creator', username: 'creator', name: 'Creator', avatar: '', bio: 'A person',
+      location: '', website: '', followers: 0, following: 0, isVerified: false,
+      coverImage: '', joinedDate: '', reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {}, skills: [], ...overrides,
+    });
+    const results = searchCreators([
+      creator({ id: 'bio-match', username: 'writer', name: 'Writer', bio: 'creator community' }),
+      creator({ id: 'name-match', username: 'harrison', name: 'Creator' }),
+      creator({ id: 'username-match', username: 'creator', name: 'Harrison' }),
+      creator({ id: 'suspended', username: 'creator_two', isSuspended: true }),
+      creator({ id: 'banned', username: 'creator_three', isBanned: true }),
+    ], '@creator', { limit: 3 });
+    assert.deepEqual(results.map(user => user.id), ['username-match', 'name-match', 'bio-match']);
+  });
+
+  it('returns bounded and de-duplicated creators for an empty query', () => {
+    const creator = (id: string) => ({
+      id, username: id, name: id, avatar: '', bio: '', location: '', website: '',
+      followers: 0, following: 0, isVerified: false, coverImage: '', joinedDate: '',
+      reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA: {}, skills: [],
+    });
+    assert.deepEqual(searchCreators([creator('a'), creator('a'), creator('b')], '', { limit: 1 }).map(user => user.id), ['a']);
+  });
+
 });
