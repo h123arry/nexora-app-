@@ -30,6 +30,21 @@ interface PrivacySettingsModalProps {
 // Sub-interfaces for complete control
 type VisibilityAudience = 'everyone' | 'followers' | 'following' | 'mutual_friends' | 'contacts' | 'close_friends' | 'nobody' | 'custom';
 
+function readPrivacyList(key: string, demoIds: string[] = []): any[] {
+  try {
+    const saved = localStorage.getItem(key);
+    if (!saved) return [];
+    const parsed: unknown = JSON.parse(saved);
+    if (!Array.isArray(parsed)) return [];
+    const demoIdSet = new Set(demoIds);
+    return parsed.filter(item => item && typeof item === 'object'
+      && typeof (item as { id?: unknown }).id === 'string'
+      && !demoIdSet.has((item as { id: string }).id));
+  } catch {
+    return [];
+  }
+}
+
 export default function PrivacySettingsModal({ 
   isOpen, 
   onClose, 
@@ -176,33 +191,21 @@ export default function PrivacySettingsModal({
   });
 
   // 9. Blocked Users Ledger
-  const [blockedUsers, setBlockedUsers] = useState<any[]>(() => {
-    const saved = localStorage.getItem('nx_privacy_blocked');
-    return saved ? JSON.parse(saved) : [
-      { id: 'b-1', name: 'Zane Malicious', username: '@zane_mal', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100', reason: 'Spam advertising and phishing links', date: 'May 12, 2026' },
-      { id: 'b-2', name: 'Tracker Bot 99', username: '@track_bot_99', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100', reason: 'Automated data scraper', date: 'Jun 20, 2026' },
-      { id: 'b-3', name: 'Noxious Node', username: '@noxious_node', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100', reason: 'Abusive language in community chat', date: 'Jul 02, 2026' }
-    ];
-  });
+  const [blockedUsers, setBlockedUsers] = useState<any[]>(() => readPrivacyList('nx_privacy_blocked', ['b-1', 'b-2', 'b-3']));
   const [blockedSearchQuery, setBlockedSearchQuery] = useState('');
   const [selectedBlockedId, setSelectedBlockedId] = useState<string | null>(null);
 
   // 10. Restricted Accounts
-  const [restrictedUsers, setRestrictedUsers] = useState<any[]>(() => {
-    const saved = localStorage.getItem('nx_privacy_restricted');
-    return saved ? JSON.parse(saved) : [
-      { id: 'r-1', name: 'Chatty Colin', username: '@colin_chatty', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100', reason: 'Spamming direct messages', date: 'Jul 01, 2026' }
-    ];
-  });
+  const [restrictedUsers, setRestrictedUsers] = useState<any[]>(() => readPrivacyList('nx_privacy_restricted', ['r-1']));
 
   // 11. Hidden Chats PIN Configuration
   const [hiddenChats, setHiddenChats] = useState(() => {
     const saved = localStorage.getItem('nx_privacy_hidden_chats');
     return saved ? JSON.parse(saved) : {
-      protectionType: 'PIN' as 'PIN' | 'Password' | 'Pattern' | 'None',
-      pinCode: '1337',
+      protectionType: 'None' as 'PIN' | 'Password' | 'Pattern' | 'None',
+      pinCode: '',
       autoHideTime: '5mins' as 'immediate' | '1min' | '5mins' | '15mins' | 'never',
-      hiddenChatIds: ['chat-hidden-1']
+      hiddenChatIds: []
     };
   });
   const [enteredPIN, setEnteredPIN] = useState('');
@@ -210,19 +213,10 @@ export default function PrivacySettingsModal({
   const [tempPIN, setTempPIN] = useState('');
 
   // 12. Safety Center (Mutes, Reports, Device Log)
-  const [mutedUsers, setMutedUsers] = useState<any[]>([
-    { id: 'm-1', name: 'Alert Broadcasting', username: '@alerts_all', avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=100', mutedUntil: 'Indefinitely' }
-  ]);
-  const [reportedLogs, setReportedLogs] = useState<any[]>([
-    { id: 'rep-1', target: 'Zane Malicious', type: 'Spam', status: 'Approved (Blocked)', date: 'May 12, 2026' }
-  ]);
-  const [loginHistory, setLoginHistory] = useState<any[]>([
-    { id: 'lh-1', device: 'Nexora Web Client (Chrome)', location: 'London, UK', ip: '82.165.12.98', status: 'Active Now', date: 'Jul 10, 2026 13:33' },
-    { id: 'lh-2', device: 'Nexora Mobile App (iOS 19)', location: 'Paris, France', ip: '193.56.24.11', status: 'Authorized Session', date: 'Jul 08, 2026 10:15' }
-  ]);
-  const [suspiciousActivity, setSuspiciousActivity] = useState<any[]>([
-    { id: 'sa-1', type: 'Multiple Access', message: 'Simultaneous routing requests from 2 different subnets.', time: 'Jul 09, 2026' }
-  ]);
+  const [mutedUsers, setMutedUsers] = useState<any[]>([]);
+  const [reportedLogs, setReportedLogs] = useState<any[]>([]);
+  const [loginHistory, setLoginHistory] = useState<any[]>([]);
+  const [suspiciousActivity, setSuspiciousActivity] = useState<any[]>([]);
   const [analyticsObservations, setAnalyticsObservations] = useState(() => localStorage.getItem('nexora_analytics_observations_enabled') === 'true');
 
   // Sync state changes back to local storage
