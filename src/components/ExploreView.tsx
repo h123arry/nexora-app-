@@ -80,23 +80,16 @@ export default function ExploreView({
     } catch {}
   };
 
-  // Compute bounded recent topic activity from real post timestamps and tags.
-  const trendingTags = useMemo(() => {
-    const tagCounts: { [tag: string]: number } = {};
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    posts.forEach(p => {
-      const timestamp = typeof p.timestamp === 'string' ? Date.parse(p.timestamp) : Number(p.timestamp);
-      if (!Number.isFinite(timestamp) || timestamp < cutoff) return;
-      (p.tags || []).forEach(t => {
-        const normalized = t.replace(/^#/, '').trim().toLowerCase();
-        if (!normalized) return;
-        const clean = `#${normalized}`;
-        tagCounts[clean] = (tagCounts[clean] || 0) + 1;
-      });
-    });
-    const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
-    return sorted.filter(([, count]) => count >= 2).slice(0, 6);
-  }, [posts]);
+  // Recent topic momentum is based on real loaded posts from multiple creators.
+  const trendingTags = useMemo(() => rankTrendingTopics(posts, { windowHours: 168, minPosts: 2, limit: 6 })
+    .map(topic => [`#${topic.tag}`, topic.postCount] as [string, number]), [posts]);
+
+  // Personalize creator suggestions using the signed-in user's interest profile.
+  const suggestedCreators = useMemo(() => recommendCreators(creators, {
+    followingIds,
+    interests: interestDNA,
+    limit: 12,
+  }).map(item => item.creator), [creators, followingIds, interestDNA]);
 
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
