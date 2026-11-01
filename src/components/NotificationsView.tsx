@@ -402,23 +402,16 @@ export default function NotificationsView({
     }
   };
 
-  // Refresh trigger (Pull-To-Refresh simulator)
+  // Notifications arrive through the app's realtime subscription.
+  // This control explains the live behavior instead of simulating a network refresh.
   const handlePullToRefresh = () => {
-    setIsRefreshing(true);
-    addToast("♻️ Syncing notification center...");
-    setTimeout(() => {
-      setIsRefreshing(false);
-      addToast("🟢 Notifications updated! All caught up.");
-    }, 1500);
+    addToast("Notifications update automatically when new activity arrives.");
   };
 
+  // All currently subscribed notifications are already in memory; reveal the next batch.
   const handleLoadMore = () => {
-    setLoadingMore(true);
-    setTimeout(() => {
-      setLoadingMore(false);
-      setVisibleCount(prev => prev + 5);
-      addToast("📥 Loaded older archived notification indices.");
-    }, 1200);
+    setVisibleCount(prev => prev + 5);
+    addToast("Showing more of your notifications.");
   };
 
   // ---------------------------------------------------------------------------
@@ -654,7 +647,7 @@ export default function NotificationsView({
             onClick={handlePullToRefresh}
             disabled={isRefreshing}
             className="nx-icon-button inline-flex text-violet-300"
-            title="Refresh Notification Sync"
+            title="Notifications update automatically"
           >
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
           </button>
