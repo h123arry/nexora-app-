@@ -12,6 +12,7 @@ export interface RankingContext {
   seenPostIds?: string[];
   mode?: FeedMode;
   maxPostsPerCreator?: number;
+  maxConsecutivePostsPerCreator?: number;
   now?: number;
 }
 
@@ -108,22 +109,36 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
     })
     .sort((a, b) => b.score - a.score || stableTieBreak(a, b));
 
-  // Greedy author diversity is applied after scoring so relevant content stays
-  // eligible without allowing one prolific account to monopolize the page.
+  // Diversify the visible sequence after scoring. A creator can still appear
+  // more than once, but a different eligible creator is preferred between
+  // consecutive posts. This is a presentation rule, not a popularity penalty.
+  const rankedCandidates = candidates.map(candidate => ({
+    post: candidate.post,
+    score: Math.round(candidate.score * 100) / 100,
+    reasons: candidate.reasons,
+  }));
+  const maxConsecutive = Math.max(1, context.maxConsecutivePostsPerCreator ?? 1);
+  const remaining = [...rankedCandidates];
   const selected: RankedPost<T>[] = [];
   const authorCounts = new Map<string, number>();
-  const deferred: RankedPost<T>[] = [];
-  for (const candidate of candidates) {
-    const count = authorCounts.get(candidate.post.userId) || 0;
-    const ranked = { post: candidate.post, score: Math.round(candidate.score * 100) / 100, reasons: candidate.reasons };
-    if (count < maxPostsPerCreator) {
-      selected.push(ranked);
-      authorCounts.set(candidate.post.userId, count + 1);
-    } else {
-      deferred.push(ranked);
+  while (remaining.length > 0) {
+    const previousAuthor = selected[selected.length - 1]?.post.userId;
+    let nextIndex = remaining.findIndex(item =>
+      (authorCounts.get(item.post.userId) || 0) < maxPostsPerCreator &&
+      (item.post.userId !== previousAuthor ||
+        selected.slice(-maxConsecutive).some(previous => previous.post.userId !== item.post.userId))
+    );
+    if (nextIndex < 0) {
+      nextIndex = remaining.findIndex(item => (authorCounts.get(item.post.userId) || 0) < maxPostsPerCreator);
     }
+    if (nextIndex < 0) break;
+    const [next] = remaining.splice(nextIndex, 1);
+    selected.push(next);
+    authorCounts.set(next.post.userId, (authorCounts.get(next.post.userId) || 0) + 1);
   }
-  return selected.concat(deferred);
+  // Keep over-limit candidates available after all eligible authors, rather
+  // than silently dropping otherwise valid posts from the loaded page.
+  return selected.concat(remaining);
 }
 
 export function searchPosts<T extends Post>(posts: T[], query: string, options: { videosOnly?: boolean; limit?: number } = {}): T[] {
