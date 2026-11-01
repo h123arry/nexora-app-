@@ -637,6 +637,24 @@ service cloud.firestore {
             || (parentCommunity().ownerId == request.auth.uid && memberId != request.auth.uid)
           );
       }
+
+      match /messages/{messageId} {
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCircleMember();
+        allow create: if activeCircleMember()
+          && request.resource.data.keys().hasOnly(['id', 'senderId', 'content', 'createdAt'])
+          && request.resource.data.id == messageId
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.content is string
+          && request.resource.data.content.size() > 0
+          && request.resource.data.content.size() <= 2000
+          && request.resource.data.createdAt == request.time;
+        allow update, delete: if false;
+      }
     }
 
     match /automationLogs/{logId} { allow read, write: if false; }
