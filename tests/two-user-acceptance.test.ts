@@ -72,6 +72,7 @@ test('two emulator accounts retain separate identities and exercise public socia
   const followRef = doc(db, 'follows', `${alice.uid}_${bob.uid}`);
   const postRef = doc(db, 'posts', postId);
   const chatRef = doc(db, 'chats', chatId);
+  const bobBookmarkRef = doc(db, 'users', bob.uid, 'postBookmarks', postId);
 
   try {
     await login(alice);
@@ -122,6 +123,8 @@ test('two emulator accounts retain separate identities and exercise public socia
     await setDoc(doc(db, `chats/${chatId}/messages`, aliceMessage.id), aliceMessage);
 
     await login(bob);
+    await setDoc(bobBookmarkRef, { postId, createdAt: serverTimestamp() });
+    assert.equal((await getDoc(bobBookmarkRef)).exists(), true);
     assert.equal((await getDoc(followRef)).exists(), true);
     assert.equal((await getDoc(doc(db, 'chats', chatId))).exists(), true);
     assert.equal((await getDoc(doc(db, `chats/${chatId}/messages`, 'alice-message'))).exists(), true);
@@ -168,6 +171,7 @@ test('two emulator accounts retain separate identities and exercise public socia
     assert.equal(updatedPost.data()?.commentsCount, 1);
     assert.equal(updatedPost.data()?.comments?.[0]?.userId, bob.uid);
     assert.equal((await getDoc(doc(db, `chats/${chatId}/messages`, 'bob-message'))).exists(), true);
+    await assert.rejects(getDoc(bobBookmarkRef), isPermissionDenied);
     await updateDoc(doc(db, `chats/${chatId}/messages`, 'bob-message'), { status: 'read' });
     await deleteDoc(followRef);
     const remainingOutgoingFollows = await getDocs(query(collection(db, 'follows'), where('followerId', '==', alice.uid)));
@@ -189,6 +193,7 @@ test('two emulator accounts retain separate identities and exercise public socia
     const bobCredential = await signInWithEmailAndPassword(auth, bob.email, testPassword).catch(() => null);
     if (bobCredential) {
       await deleteDoc(doc(db, `chats/${chatId}/messages`, 'bob-message')).catch(() => undefined);
+      await deleteDoc(bobBookmarkRef).catch(() => undefined);
     }
     await signOut(auth).catch(() => undefined);
     const aliceAgain = await signInWithEmailAndPassword(auth, alice.email, testPassword).catch(() => null);
