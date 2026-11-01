@@ -65,28 +65,35 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
   if (typeof category !== 'string' || !categories.has(category)) throw new HttpsError('invalid-argument', 'A supported report category is required.');
   if (explanation !== undefined && (typeof explanation !== 'string' || explanation.trim().length > 1000)) throw new HttpsError('invalid-argument', 'The explanation is too long.');
 
-  const reportId = stableReportId(reporterId, targetType, targetId);
+  const normalizedTargetId = targetId.trim();
+  const reportId = stableReportId(reporterId, targetType, normalizedTargetId);
   const reportRef = db.collection('moderationReports').doc(reportId);
-  const existing = await reportRef.get();
-  if (existing.exists && ['pending', 'under_review', 'escalated'].includes(String(existing.data()?.status))) {
-    return { accepted: true, duplicate: true, reportId };
-  }
-  await reportRef.create({
-    reporterId,
-    targetType,
-    targetId: targetId.trim(),
-    category,
-    explanation: typeof explanation === 'string' ? explanation.trim() : '',
-    status: 'pending',
-    policyVersion: '2026-10',
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
+  const duplicate = await db.runTransaction(async (transaction) => {
+    const existing = await transaction.get(reportRef);
+    // One report per reporter/target pair, even after closure. This keeps retries
+    // idempotent and prevents concurrent submissions from creating duplicate work.
+    if (existing.exists) return true;
+
+    const now = FieldValue.serverTimestamp();
+    transaction.create(reportRef, {
+      reporterId,
+      targetType,
+      targetId: normalizedTargetId,
+      category,
+      explanation: typeof explanation === 'string' ? explanation.trim() : '',
+      status: 'pending',
+      policyVersion: '2026-10',
+      createdAt: now,
+      updatedAt: now,
+    });
+    const auditRef = db.collection('moderationAuditEvents').doc();
+    transaction.create(auditRef, {
+      type: 'report_created', reportId, actorId: reporterId, targetType, targetId: normalizedTargetId,
+      createdAt: now,
+    });
+    return false;
   });
-  await db.collection('moderationAuditEvents').add({
-    type: 'report_created', reportId, actorId: reporterId, targetType, targetId: targetId.trim(),
-    createdAt: FieldValue.serverTimestamp(),
-  });
-  return { accepted: true, duplicate: false, reportId };
+  return { accepted: true, duplicate, reportId };
 });
 
 export const reviewModerationReport = onCall({ maxInstances: 10 }, async (request) => {
