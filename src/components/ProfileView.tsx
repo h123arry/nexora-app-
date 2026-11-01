@@ -1562,34 +1562,40 @@ export default function ProfileView({
                           {savedAccounts.map(acc => {
                             const isActive = acc.id === currentUser.id || acc.username === currentUser.username;
                             return (
-                              <div 
+                              <div
                                 key={acc.id}
-                                onClick={() => !isActive && handleSwitchAccount(acc)}
-                                className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer ${
-                                  isActive 
-                                    ? 'bg-violet-600/10 border-white/10' 
+                                className={`flex items-center gap-2 p-1.5 rounded-xl border transition-all ${
+                                  isActive
+                                    ? 'bg-violet-600/10 border-white/10'
                                     : 'bg-black/30 border-transparent hover:border-white/10'
                                 }`}
                               >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <img src={acc.avatar} alt={acc.name} className="w-7 h-7 rounded-lg object-cover" />
-                                  <div className="min-w-0 leading-none">
-                                    <p className="text-xs font-bold text-white truncate">{acc.name}</p>
-                                    <p className="text-[9px] font-mono text-zinc-500 mt-0.5">@{acc.username}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  disabled={isActive}
+                                  onClick={() => handleSwitchAccount(acc)}
+                                  aria-label={`Switch to ${acc.name} (@${acc.username})`}
+                                  aria-current={isActive ? 'true' : undefined}
+                                  className="flex-1 min-w-0 min-h-11 flex items-center gap-2 text-left rounded-lg px-1 focus-visible:outline-2 focus-visible:outline-violet-300 disabled:cursor-default"
+                                >
+                                  <img src={acc.avatar} alt="" className="w-7 h-7 rounded-lg object-cover shrink-0" />
+                                  <span className="min-w-0 flex-1 leading-none">
+                                    <span className="block text-xs font-bold text-white truncate">{acc.name}</span>
+                                    <span className="block text-[9px] font-mono text-zinc-500 mt-1">@{acc.username}</span>
+                                  </span>
                                   {isActive && <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" />}
-                                  {savedAccounts.length > 1 && !isActive && (
-                                    <button 
-                                      onClick={(e) => removeSavedAccount(acc.id, e)}
-                                      className="p-1 text-zinc-500 hover:text-red-400"
-                                      title="Remove credential log"
-                                    >
-                                      <X className="w-3.5 h-3.5" />
-                                    </button>
-                                  )}
-                                </div>
+                                </button>
+                                {savedAccounts.length > 1 && !isActive && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => removeSavedAccount(acc.id, e)}
+                                    className="min-h-10 min-w-10 inline-flex items-center justify-center rounded-lg p-1 text-zinc-500 hover:text-red-400 focus-visible:outline-2 focus-visible:outline-violet-300"
+                                    title="Remove saved account"
+                                    aria-label={`Remove ${acc.name} from saved accounts`}
+                                  >
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
                               </div>
                             );
                           })}
