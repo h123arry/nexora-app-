@@ -442,7 +442,7 @@ export default function ExploreView({
             <button
               type="button"
               onClick={() => setActiveTab('pulse')}
-              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-pink-500/10"
+              className="group flex min-h-20 items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:border-violet-300/30 hover:bg-violet-500/10"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Radio className="h-5 w-5" aria-hidden="true" /></span>
               <span><span className="block text-sm font-bold text-white">Pulse</span><span className="mt-0.5 block text-[10px] text-zinc-400">Live aggregation not connected</span></span>
