@@ -936,7 +936,7 @@ export default function CreatorDashboardView({
                       )}
                       
                       {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 space-y-1.5">
+                      <div className="absolute inset-0 bg-black/60 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 space-y-1.5">
                         <p className="text-[11px] font-bold text-white line-clamp-1">{media.caption}</p>
                         <div className="flex justify-between items-center text-[9px] font-mono text-zinc-400">
                           <span>{media.type.toUpperCase()}</span>
