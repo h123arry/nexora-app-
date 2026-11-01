@@ -293,8 +293,8 @@ export default function CreatorDashboardView({
   const handleOpenDraftEdit = (draft: any) => {
     setCurrentDraftId(draft.id);
     setDraftCaption(draft.caption);
-    setDraftTags(draft.tags);
-    setDraftType(draft.type);
+    setDraftTags(Array.isArray(draft.tags) ? draft.tags.join(', ') : (draft.tags || ''));
+    setDraftType(draft.type || 'text');
     setDraftUrl(draft.videoUrl || '');
     setShowDraftModal(true);
   };
@@ -311,7 +311,7 @@ export default function CreatorDashboardView({
     if (!recoveredDraft) return;
     setDraftCaption(recoveredDraft.caption);
     setDraftTags(recoveredDraft.tags);
-    setDraftType(recoveredDraft.type);
+    setDraftType(recoveredDraft.type || 'text');
     setDraftUrl(recoveredDraft.videoUrl || '');
     setShowDraftModal(true);
     setRecoveredDraft(null);
