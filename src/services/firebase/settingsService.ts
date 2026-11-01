@@ -8,6 +8,7 @@ import {
 import { db, auth } from './config';
 import { buildFeedSettingsPatch, type FeedPreferences } from '../discovery/feedPreferences';
 import { normalizeChatPreferences, type ChatPreferences } from '../messaging/chatPreferences';
+import { mergeSettingsNamespace } from './settingsPatches';
 
 export interface NexoraSettings {
   privacy: {
@@ -144,24 +145,41 @@ export class SettingsService {
     }, { merge: true });
   }
 
-  static async updatePrivacy(uid: string, privacyUpdates: Partial<NexoraSettings['privacy']>): Promise<void> {
-    const current = await this.getSettings(uid);
-    await this.updateSettings(uid, { privacy: { ...current.privacy, ...privacyUpdates } });
+  private static async updateNamespace<K extends 'privacy' | 'notifications' | 'appearance' | 'content' | 'security'>(
+    uid: string,
+    namespace: K,
+    updates: Partial<NexoraSettings[K]>,
+  ): Promise<void> {
+    if (!uid || auth.currentUser?.uid !== uid) throw new Error('Only the signed-in owner can update settings.');
+    const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    await runTransaction(db, async transaction => {
+      const snapshot = await transaction.get(settingsRef);
+      const current = snapshot.exists()
+        ? mergeSettings(snapshot.data() as Partial<NexoraSettings>)
+        : DEFAULT_SETTINGS;
+      // Read and merge inside the transaction so simultaneous updates to different
+      // fields in this namespace cannot overwrite one another with stale snapshots.
+      transaction.set(settingsRef, {
+        ...mergeSettingsNamespace(current, namespace, updates),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    });
+  }
+
+  static async updatePrivacy(uid: string, updates: Partial<NexoraSettings['privacy']>): Promise<void> {
+    await this.updateNamespace(uid, 'privacy', updates);
   }
 
   static async updateNotifications(uid: string, updates: Partial<NexoraSettings['notifications']>): Promise<void> {
-    const current = await this.getSettings(uid);
-    await this.updateSettings(uid, { notifications: { ...current.notifications, ...updates } });
+    await this.updateNamespace(uid, 'notifications', updates);
   }
 
   static async updateAppearance(uid: string, updates: Partial<NexoraSettings['appearance']>): Promise<void> {
-    const current = await this.getSettings(uid);
-    await this.updateSettings(uid, { appearance: { ...current.appearance, ...updates } });
+    await this.updateNamespace(uid, 'appearance', updates);
   }
 
   static async updateContent(uid: string, updates: Partial<NexoraSettings['content']>): Promise<void> {
-    const current = await this.getSettings(uid);
-    await this.updateSettings(uid, { content: { ...current.content, ...updates } });
+    await this.updateNamespace(uid, 'content', updates);
   }
 
   static async updateFeed(uid: string, updates: Partial<FeedPreferences>): Promise<void> {
@@ -207,7 +225,6 @@ export class SettingsService {
   }
 
   static async updateSecurity(uid: string, updates: Partial<NexoraSettings['security']>): Promise<void> {
-    const current = await this.getSettings(uid);
-    await this.updateSettings(uid, { security: { ...current.security, ...updates } });
+    await this.updateNamespace(uid, 'security', updates);
   }
 }
