@@ -1,7 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { rankPosts, searchCreators, searchPosts } from '../src/services/discovery/discoveryService';
-import { Post } from '../src/types';
+import { rankPosts, recommendCreators, rankTrendingTopics, searchCreators, searchPosts } from '../src/services/discovery/discoveryService';
+import { Post, User } from '../src/types';
+import { rankReels } from '../src/services/reels/reelsRanking';
 
 const post = (overrides: Partial<Post>): Post => ({
   id: 'post', userId: 'creator', username: 'creator', name: 'Creator', avatar: '', isVerified: false,
@@ -148,6 +149,46 @@ describe('discovery service', () => {
       creator('partial', 'ai_tools', 'AI Tools', 'Developer'),
     ], 'ai creator');
     assert.deepEqual(results.map(user => user.id), ['complete']);
+  });
+
+  it('recommends only eligible creators with shared interests and grounded reasons', () => {
+    const creator = (id: string, interestDNA: Record<string, number>, overrides: Partial<User> = {}) => ({
+      id, username: id, name: id, avatar: '', bio: '', location: '', website: '', followers: 10, following: 0,
+      isVerified: false, coverImage: '', joinedDate: '', reputationPoints: 0,
+      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+      interestDNA, skills: [], ...overrides,
+    } as User);
+    const results = recommendCreators([
+      creator('followed', { ai: 90 }), creator('match', { ai: 80, design: 50 }),
+      creator('unrelated', { sport: 90 }), creator('blocked', { ai: 99 }),
+      creator('suspended', { ai: 99 }, { isSuspended: true }),
+    ], { viewerId: 'viewer', followingIds: ['followed'], blockedCreatorIds: ['blocked'], interests: { AI: 90, design: 40 } });
+    assert.deepEqual(results.map(item => item.creator.id), ['match']);
+    assert.match(results[0].reason, /#ai/);
+  });
+
+  it('trends topics using recent posts from distinct creators, excluding stale and single-author spikes', () => {
+    const now = Date.now();
+    const topics = rankTrendingTopics([
+      post({ id: 'a', userId: 'one', tags: ['AI'], timestamp: now - 1000, likes: 10 }),
+      post({ id: 'b', userId: 'two', tags: ['#ai'], timestamp: now - 2000, commentsCount: 4 }),
+      post({ id: 'c', userId: 'one', tags: ['solo'], timestamp: now - 3000 }),
+      post({ id: 'old', userId: 'three', tags: ['AI'], timestamp: now - 30 * 24 * 3600 * 1000 }),
+    ], { now, windowHours: 24, minPosts: 2 });
+    assert.deepEqual(topics.map(item => item.tag), ['ai']);
+    assert.equal(topics[0].creatorCount, 2);
+    assert.equal(topics[0].postCount, 2);
+  });
+
+  it('filters reels using privacy and topic controls and handles invalid timestamps deterministically', () => {
+    const reels = [
+      post({ id: 'allowed', userId: 'creator-a', videoUrl: 'https://example.test/a.mp4', tags: ['AI'], timestamp: 'invalid' }),
+      post({ id: 'blocked', userId: 'blocked', videoUrl: 'https://example.test/b.mp4' }),
+      post({ id: 'hidden', userId: 'creator-b', videoUrl: 'https://example.test/c.mp4' }),
+      post({ id: 'topic', userId: 'creator-c', videoUrl: 'https://example.test/d.mp4', tags: ['politics'] }),
+    ];
+    const ranked = rankReels(reels, [], {}, { blockedCreatorIds: ['blocked'], hiddenPostIds: ['hidden'], notInterestedTags: ['politics'], now: Date.now() });
+    assert.deepEqual(ranked.map(item => item.post.id), ['allowed']);
   });
 
 });

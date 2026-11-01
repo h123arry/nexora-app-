@@ -39,14 +39,24 @@ export function recordReelSignal(postId: string, patch: ReelSignals): void {
  * Ranks short videos without hiding the reason each item was selected.
  * The formula is deliberately bounded so one noisy signal cannot dominate.
  */
-export function rankReels(posts: Post[], followingIds: string[], interests: Record<string, number> = {}): ReelRankedPost[] {
-  const now = Date.now();
+export function rankReels(
+  posts: Post[],
+  followingIds: string[],
+  interests: Record<string, number> = {},
+  context: { blockedCreatorIds?: string[]; mutedCreatorIds?: string[]; hiddenPostIds?: string[]; notInterestedTags?: string[]; now?: number } = {},
+): ReelRankedPost[] {
+  const now = context.now ?? Date.now();
+  const blocked = new Set(context.blockedCreatorIds || []);
+  const muted = new Set(context.mutedCreatorIds || []);
+  const hidden = new Set(context.hiddenPostIds || []);
+  const notInterested = new Set((context.notInterestedTags || []).map(tag => tag.replace(/^#/, '').toLowerCase()));
   return posts
-    .filter(post => Boolean(post.videoUrl))
+    .filter(post => Boolean(post.videoUrl) && !blocked.has(post.userId) && !muted.has(post.userId) && !hidden.has(post.id) && !(post.tags || []).some(tag => notInterested.has(tag.replace(/^#/, '').toLowerCase())))
     .map(post => {
       const signals = readSignals(post.id);
       if (signals.notInterested) return { post, score: -Infinity, reasons: ['Marked not interested'] };
-      const ageHours = Math.max(0, (now - new Date(post.timestamp || now).getTime()) / 3_600_000);
+      const parsedTimestamp = post.timestamp instanceof Date ? post.timestamp.getTime() : typeof post.timestamp === 'number' ? post.timestamp : Date.parse(String(post.timestamp || ''));
+      const ageHours = Number.isFinite(parsedTimestamp) ? Math.max(0, (now - parsedTimestamp) / 3_600_000) : 24;
       const freshness = Math.max(0, 24 - ageHours) * 1.5;
       const completion = signals.completed ? 28 : Math.min(18, (signals.watchedSeconds || 0) * 2);
       const social = (signals.liked ? 10 : 0) + (signals.shared ? 16 : 0) + (signals.saved ? 12 : 0);
@@ -65,5 +75,5 @@ export function rankReels(posts: Post[], followingIds: string[], interests: Reco
       return { post, score, reasons };
     })
     .filter(item => item.score !== -Infinity)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score - a.score || String(a.post.id).localeCompare(String(b.post.id)));
 }
