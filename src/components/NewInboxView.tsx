@@ -474,7 +474,7 @@ export default function NewInboxView({
     <div className="nx-page-shell flex flex-col md:flex-row h-full w-full text-white font-sans overflow-hidden relative">
       
       {/* LEFT COLUMN: Conversation List */}
-      <div className={`w-full md:w-96 border-r border-[#1b2940] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`w-full md:w-96 border-r border-[var(--nx-edge)] flex flex-col h-full bg-[var(--nx-surface)] ${activeChatId ? 'hidden md:flex' : 'flex'}`}>
         
         {/* Header */}
         <div className="nx-page-header p-4 border-b flex items-center justify-between backdrop-blur-md">
@@ -561,7 +561,7 @@ export default function NewInboxView({
                   key={chat.id}
                   onClick={() => setActiveChatId(chat.id)}
                   className={`flex items-center gap-3 p-3.5 cursor-pointer transition-all relative group ${
-                    isSelected ? 'bg-violet-950/50 border-l-4 border-violet-500' : 'hover:bg-white/5'
+                    isSelected ? 'bg-violet-500/12 border-l-4 border-violet-400' : 'hover:bg-violet-500/[0.06]'
                   }`}
                 >
                   {/* Avatar */}
@@ -615,11 +615,11 @@ export default function NewInboxView({
       </div>
 
       {/* RIGHT COLUMN: Active Chat Screen */}
-      <div className={`flex-1 flex flex-col h-full bg-[#080614] ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
+      <div className={`flex-1 flex flex-col h-full bg-[var(--nx-canvas)] ${!activeChatId ? 'hidden md:flex' : 'flex'}`}>
         {activeChat ? (
           <>
             {/* Chat Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-black/70 backdrop-blur-md z-10">
+            <div className="p-4 border-b border-white/10 flex items-center justify-between bg-[#0D0A20]/90 backdrop-blur-md z-10">
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => setActiveChatId(null)}
