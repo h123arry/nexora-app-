@@ -661,6 +661,11 @@ export default function ProfileView({
 
   // Social Stats follow action toggle
   const [isFollowing, setIsFollowing] = useState(isFollowingField);
+  // Keep the displayed relationship state authoritative when the viewed profile or
+  // the parent-owned follow relationship changes while this view remains mounted.
+  useEffect(() => {
+    setIsFollowing(isFollowingField);
+  }, [currentUser.id, isFollowingField]);
   const [profilePicExpanded, setProfilePicExpanded] = useState(false);
 
   // Analytics tab options
