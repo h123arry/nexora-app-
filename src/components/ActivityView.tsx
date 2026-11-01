@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { collection, query, where, onSnapshot, orderBy, limit, doc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, onSnapshot, orderBy, limit, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { User, Notification } from '../types';
 import { Bell, Shield, Star, Award, Zap, Heart, MessageSquare, UserCheck, MoreVertical, Trash2 } from 'lucide-react';
 
@@ -14,11 +14,14 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
   const [activeTab, setActiveTab] = useState<'All' | 'Social' | 'Missions' | 'Rewards' | 'System'>('All');
 
   useEffect(() => {
-    if (!db) return;
+    const uid = auth.currentUser?.uid;
+    if (!db || !uid || uid !== currentUser.id) {
+      setNotifications([]);
+      return;
+    }
 
     const q = query(
-      collection(db, 'notifications'),
-      where('userId', '==', currentUser.id),
+      collection(db, 'users', uid, 'notifications'),
       orderBy('timestamp', 'desc'),
       limit(100)
     );
@@ -103,12 +106,22 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
   };
 
   const deleteNotification = async (id: string) => {
-      await deleteDoc(doc(db, 'notifications', id));
-  }
+    if (!auth.currentUser || auth.currentUser.uid !== currentUser.id) return;
+    try {
+      await deleteDoc(doc(db, 'users', currentUser.id, 'notifications', id));
+    } catch {
+      console.warn('[ActivityView] Notification delete failed.');
+    }
+  };
 
   const markAsRead = async (id: string) => {
-      await updateDoc(doc(db, 'notifications', id), { isRead: true });
-  }
+    if (!auth.currentUser || auth.currentUser.uid !== currentUser.id) return;
+    try {
+      await updateDoc(doc(db, 'users', currentUser.id, 'notifications', id), { isRead: true });
+    } catch {
+      console.warn('[ActivityView] Notification read update failed.');
+    }
+  };
 
   return (
     <div className="flex flex-col h-full bg-[#0A0A0A] text-white">

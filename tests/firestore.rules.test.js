@@ -525,6 +525,25 @@ const publicProfile = (uid) => ({
     }));
     await assertFails(getDoc(doc(guestDb(), 'privacySettings', 'alice')));
   });
+  it('scopes notification reads, read-state updates, and deletion to the owning account', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users', 'alice', 'notifications', 'notice-1'), {
+        userId: 'alice', type: 'system', username: 'NEXORA', content: 'Welcome', isRead: false,
+        timestamp: new Date().toISOString()
+      });
+    });
+    const ownNotification = doc(dbFor('alice'), 'users', 'alice', 'notifications', 'notice-1');
+    await assertSucceeds(getDoc(ownNotification));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'notifications')));
+    await assertSucceeds(updateDoc(ownNotification, { isRead: true }));
+    await assertFails(updateDoc(ownNotification, { content: 'tampered' }));
+    await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'notifications', 'notice-1')));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'users', 'alice', 'notifications', 'notice-1')));
+    await assertSucceeds(deleteDoc(ownNotification));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'notifications', 'forged'), {
+      userId: 'alice', type: 'system', content: 'Forged', isRead: false
+    }));
+  });
   it('lets users read their own trusted like markers but never create or modify them directly', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice', 'postLikes', 'post-1'), { postId: 'post-1', userId: 'alice' });

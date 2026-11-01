@@ -542,11 +542,14 @@ export async function getUserContent(userId: string, limitCount = DEFAULT_READ_L
 }
 
 export async function getNotifications(userId: string, limitCount = DEFAULT_READ_LIMIT) {
-  const path = 'notifications';
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('You can only read your own notifications.');
+  }
+  const path = `users/${userId}/notifications`;
   try {
-    const q = query(collection(db, path), where('userId', '==', userId), limit(safeReadLimit(limitCount)));
+    const q = query(collection(db, 'users', userId, 'notifications'), orderBy('timestamp', 'desc'), limit(safeReadLimit(limitCount)));
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    return snapshot.docs.map(snapshotDoc => ({ id: snapshotDoc.id, ...snapshotDoc.data() }));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path, auth);
   }
@@ -580,12 +583,17 @@ export function subscribeToPosts(callback: (posts: Post[], page?: FeedPage) => v
 }
 
 export function subscribeToNotifications(userId: string, callback: (notifications: Notification[]) => void) {
-  const q = query(collection(db, 'notifications'), where('userId', '==', userId), limit(100));
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    callback([]);
+    return () => undefined;
+  }
+  const path = `users/${userId}/notifications`;
+  const q = query(collection(db, 'users', userId, 'notifications'), orderBy('timestamp', 'desc'), limit(100));
   return onSnapshot(q, (snapshot) => {
-    const notifications = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as Notification[];
+    const notifications = snapshot.docs.map(snapshotDoc => ({ id: snapshotDoc.id, ...snapshotDoc.data() })) as Notification[];
     callback(notifications);
   }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'notifications', auth);
+    handleFirestoreError(error, OperationType.LIST, path, auth);
   });
 }
 
