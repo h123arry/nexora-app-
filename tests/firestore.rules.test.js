@@ -247,6 +247,41 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('bob'), 'mediaAssets', 'alice-media')));
   });
 
+  it('lets owners clean up only abandoned pending media upload intents', async () => {
+    const pendingRef = doc(dbFor('alice'), 'mediaAssets', 'alice-pending');
+    await assertSucceeds(setDoc(pendingRef, {
+      id: 'alice-pending',
+      ownerId: 'alice',
+      storagePath: 'users/alice/media/alice-pending',
+      kind: 'image',
+      contentType: 'image/png',
+      size: 1024,
+      status: 'pending_upload',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(pendingRef));
+    await assertFails(getDoc(doc(dbFor('bob'), 'mediaAssets', 'alice-pending')));
+    await assertFails(updateDoc(pendingRef, { status: 'ready' }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'mediaAssets', 'alice-pending')));
+    await assertSucceeds(deleteDoc(pendingRef));
+
+    await seed(async (db) => {
+      await setDoc(doc(db, 'mediaAssets', 'alice-uploaded'), {
+        id: 'alice-uploaded',
+        ownerId: 'alice',
+        storagePath: 'users/alice/media/alice-uploaded',
+        kind: 'image',
+        contentType: 'image/png',
+        size: 1024,
+        status: 'uploaded',
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now()
+      });
+    });
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'mediaAssets', 'alice-uploaded')));
+  });
+
   it('stores creator drafts per account and validates draft metadata', async () => {
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'drafts', 'draft-1'), {
       userId: 'alice', caption: 'A creator draft', videoUrl: '', type: 'text', tags: ['nexora'], updatedAt: serverTimestamp()
