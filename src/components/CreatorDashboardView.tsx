@@ -1063,16 +1063,16 @@ export default function CreatorDashboardView({
                     <span className="text-[10px] text-zinc-500 font-extrabold uppercase tracking-widest">Automatic Upload Scans</span>
                     <div className="space-y-2">
                       {[
-                        { title: 'Audio Fingerprint Analysis', desc: 'Checks background music matches with royalty libraries.', status: 'Clear / Passed' },
-                        { title: 'Duplication Detection', desc: 'Cross-checks files content hashes with platform index.', status: 'Original Content (100%)' },
-                        { title: 'Guideline Audit Compliance', desc: 'Automated scanning for visual safety compliance.', status: 'Approved' }
+                        { title: 'Audio Fingerprint Analysis', desc: 'Provider-backed royalty matching is not connected.', status: 'Not connected' },
+                        { title: 'Duplication Detection', desc: 'A platform-wide media fingerprint index is not connected.', status: 'Not verified' },
+                        { title: 'Guideline Audit Compliance', desc: 'Automated media safety scanning is not connected.', status: 'Not scanned' }
                       ].map((scan, i) => (
                         <div key={i} className="flex justify-between items-center p-3 bg-white/3 border border-white/5 rounded-xl text-xs">
                           <div>
                             <p className="font-bold text-white">{scan.title}</p>
                             <p className="text-[10px] text-zinc-500 mt-0.5">{scan.desc}</p>
                           </div>
-                          <span className="text-[10px] font-mono text-emerald-400 font-bold">{scan.status}</span>
+                          <span className="text-[10px] font-mono text-zinc-400 font-bold">{scan.status}</span>
                         </div>
                       ))}
                     </div>
@@ -1084,7 +1084,7 @@ export default function CreatorDashboardView({
                   <h4 className="text-sm font-extrabold text-white tracking-tight uppercase flex items-center gap-1.5">
                     <AlertTriangle className="w-4 h-4 text-pink-400" /> Resolution Center
                   </h4>
-                  <p className="text-xs text-zinc-400 leading-relaxed">If any of your media assets have been mistakenly flagged for duplication or copyright, you can appeal them immediately through our automated legal review pipeline.</p>
+                  <p className="text-xs text-zinc-400 leading-relaxed">If a moderation decision affects your content, you can submit an appeal for review. Submission does not guarantee approval or an automated legal review.</p>
                   <button 
                     onClick={() => { setAppealPostId(''); setAppealModalOpen(true); }}
                     className="w-full py-2 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold border border-white/5 transition-all text-center cursor-pointer"
@@ -1260,8 +1260,8 @@ export default function CreatorDashboardView({
                 <img src={previewMediaUrl} className="max-w-full max-h-[70vh] rounded-2xl border border-white/10 shadow-md object-contain" />
               )}
               <div className="flex gap-4 text-xs font-mono text-zinc-500 bg-black/40 px-4 py-2 border border-white/5 rounded-full">
-                <span>Scan Check: <strong className="text-emerald-400 font-bold">Passed</strong></span>
-                <span>Copyright Check: <strong className="text-emerald-400 font-bold">Clear</strong></span>
+                <span>Safety scan: <strong className="text-zinc-300 font-bold">Not verified</strong></span>
+                <span>Copyright: <strong className="text-zinc-300 font-bold">Not verified</strong></span>
               </div>
             </div>
           </div>
