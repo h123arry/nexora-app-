@@ -109,4 +109,23 @@ describe('discovery service', () => {
     assert.deepEqual(searchCreators([creator('a'), creator('a'), creator('b')], '', { limit: 1 }).map(user => user.id), ['a']);
   });
 
+  it('respects the configurable creator sequence window and preserves eligible overflow', () => {
+    const ranked = rankPosts([
+      post({ id: 'a1', userId: 'a', likes: 10000 }),
+      post({ id: 'a2', userId: 'a', likes: 9000 }),
+      post({ id: 'a3', userId: 'a', likes: 8000 }),
+      post({ id: 'a4', userId: 'a', likes: 7000 }),
+      post({ id: 'b1', userId: 'b', likes: 1 }),
+    ], { maxPostsPerCreator: 3, maxConsecutivePostsPerCreator: 2 });
+    assert.deepEqual(ranked.slice(0, 4).map(item => item.post.userId), ['a', 'b', 'a', 'a']);
+    assert.equal(ranked.length, 5);
+  });
+
+  it('keeps deterministic order when multiple posts have equal ranking scores', () => {
+    const input = [post({ id: 'first', userId: 'one' }), post({ id: 'second', userId: 'two' })];
+    const firstRun = rankPosts(input, { now: Date.now() }).map(item => item.post.id);
+    const secondRun = rankPosts(input, { now: Date.now() }).map(item => item.post.id);
+    assert.deepEqual(firstRun, secondRun);
+  });
+
 });
