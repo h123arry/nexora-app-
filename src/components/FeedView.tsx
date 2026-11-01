@@ -283,6 +283,7 @@ export default function FeedView({
   const [pullY, setPullY] = useState(0);
   const [pullState, setPullState] = useState<'idle' | 'pulling' | 'refreshing'>('idle');
   const pullStartYRef = useRef<number | null>(null);
+  const pullStartXRef = useRef<number | null>(null);
   const isMouseDownRef = useRef(false);
 
   // Double tap floating hearts feedback
@@ -1300,6 +1301,7 @@ export default function FeedView({
   };
 
   const handlePullEnd = () => {
+    pullStartXRef.current = null;
     if (pullStartYRef.current !== null) {
       pullStartYRef.current = null;
       if (pullY > 50) {
@@ -1818,16 +1820,29 @@ export default function FeedView({
         onTouchStart={(e) => {
           if (scrollContainerRef.current && scrollContainerRef.current.scrollTop === 0 && pullState === 'idle') {
             pullStartYRef.current = e.touches[0].clientY;
+            pullStartXRef.current = e.touches[0].clientX;
           }
         }}
         onTouchMove={(e) => {
           if (pullStartYRef.current !== null) {
             const diffY = e.touches[0].clientY - pullStartYRef.current;
-            if (diffY > 0) {
+            const diffX = e.touches[0].clientX - (pullStartXRef.current ?? e.touches[0].clientX);
+
+            // Let horizontal gestures and tiny finger movements remain native.
+            // Only claim the gesture once it is clearly a downward pull.
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+              pullStartYRef.current = null;
+              pullStartXRef.current = null;
+              return;
+            }
+            if (diffY >= 12) {
               const elasticY = Math.min(100, diffY * 0.4);
               setPullY(elasticY);
               setPullState('pulling');
               if (e.cancelable) e.preventDefault();
+            } else if (diffY < 0) {
+              pullStartYRef.current = null;
+              pullStartXRef.current = null;
             }
           }
         }}
