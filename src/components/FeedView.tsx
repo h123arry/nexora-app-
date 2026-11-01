@@ -141,12 +141,7 @@ function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
   return blended;
 }
 
-// Active moments structure
-const MOCK_MOMENTS = [
-  { id: 'm-0', name: 'VOICE OF HARRISON', username: 'voh', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg', active: true, quotes: ["Building the future of social networks with clean designs.", "Great seeing our community grow so rapidly!", "Continuous listening and iterating with you guys."] },
-  { id: 'm-1', name: 'Official', username: 'official', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["Official platform account 🌟 Keeping you posted with community updates!", "Super excited to share our latest developments today.", "Always working to bring you the best experience!"] },
-  { id: 'm-2', name: 'AI Assistant', username: 'ai_assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80', active: true, quotes: ["The Intelligent AI assistant.", "Connected and ready to assist you anytime.", "Analyzing daily trends."] }
-];
+// Moments are populated only from saved or user-created content. Never fabricate story authors or activity.
 
 const SEARCHABLE_SYSTEM_USERS: any[] = [];
 
@@ -437,7 +432,7 @@ export default function FeedView({
         if (parsed && parsed.length > 0) return parsed;
       } catch (e) {}
     }
-    return MOCK_MOMENTS;
+    return [];
   });
 
   // Moments Overlay Viewer state
