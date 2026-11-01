@@ -327,16 +327,16 @@ export default function ExploreView({
                     {filteredPosts.map(post => (
                       <div key={post.id} className="p-4 rounded-2xl nx-surface space-y-2.5 shadow-sm">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => onViewProfile?.(post.userId || post.username)}>
-                            <img src={post.avatar} alt={post.username} className="w-8 h-8 rounded-lg object-cover" />
-                            <div>
-                              <div className="flex items-center gap-1">
-                                <h4 className="text-xs font-bold text-white">{post.name}</h4>
+                          <button type="button" onClick={() => onViewProfile?.(post.userId || post.username)} aria-label={`View @${post.username}'s profile`} className="flex min-h-11 items-center gap-2.5 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
+                            <img src={post.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                            <span>
+                              <span className="flex items-center gap-1">
+                                <span className="text-xs font-bold text-white">{post.name}</span>
                                 {post.isVerified && <PurpleVerifiedBadge />}
-                              </div>
-                              <span className="text-[9px] font-mono text-zinc-400">@{post.username}</span>
-                            </div>
-                          </div>
+                              </span>
+                              <span className="block text-[9px] font-mono text-zinc-400">@{post.username}</span>
+                            </span>
+                          </button>
                           <span className="text-[9px] font-mono text-violet-400 bg-violet-600/10 px-2 py-0.5 rounded-full border border-white/10">Post</span>
                         </div>
                         <p className="text-xs text-zinc-200 leading-relaxed font-sans">{post.content}</p>

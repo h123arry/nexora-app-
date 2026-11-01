@@ -2346,13 +2346,13 @@ export default function FeedView({
                         {post.comments.map((c, commentIndex) => (
                           <div key={c.id} className="p-3 rounded-2xl bg-slate-950/40 border border-white/5 space-y-2.5">
                             <div className="flex items-start justify-between gap-2 text-xs">
-                              <div className="flex gap-2 cursor-pointer items-center" onClick={() => onViewProfile?.(c.userId || c.username)}>
-                                <img src={c.avatar} alt={c.name} className="w-7 h-7 rounded-lg object-cover" />
-                                <div>
+                              <button type="button" onClick={() => onViewProfile?.(c.userId || c.username)} aria-label={`View @${c.username}'s profile`} className="flex min-h-11 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
+                                <img src={c.avatar} alt="" className="w-7 h-7 rounded-lg object-cover" />
+                                <span>
                                   <span className="font-sans font-bold text-violet-200 hover:underline">{c.name}</span>
-                                  <span className="text-[10px] font-mono text-violet-400/60 block hover:underline">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
-                                </div>
-                              </div>
+                                  <span className="block text-[10px] font-mono text-violet-400/60 hover:underline">@{c.username} • <RelativeTime timestamp={c.timestamp} /></span>
+                                </span>
+                              </button>
                               <div className="flex items-center gap-1.5 shrink-0">
                                 <button 
                                   onClick={() => handleSparkComment(post.id, c.id)}
@@ -2384,13 +2384,13 @@ export default function FeedView({
                               <div className="pl-9 space-y-2.5 pt-1.5 border-l border-white/10 ml-3.5">
                                 {c.replies.map(rep => (
                                   <div key={rep.id} className="text-xs bg-white/2 p-2 rounded-xl border border-white/3">
-                                    <div className="flex items-center gap-2 mb-1 cursor-pointer" onClick={() => onViewProfile?.(rep.userId || rep.username)}>
-                                      <img src={rep.avatar} alt={rep.name} className="w-5 h-5 rounded-md object-cover" />
-                                      <div>
+                                    <button type="button" onClick={() => onViewProfile?.(rep.userId || rep.username)} aria-label={`View @${rep.username}'s profile`} className="mb-1 flex min-h-10 items-center gap-2 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-2">
+                                      <img src={rep.avatar} alt="" className="h-5 w-5 rounded-md object-cover" />
+                                      <span>
                                         <span className="font-sans font-black text-violet-200 text-[11px] hover:underline">{rep.name}</span>
-                                        <span className="text-[9px] font-mono text-violet-400/50 block hover:underline">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
-                                      </div>
-                                    </div>
+                                        <span className="block text-[9px] font-mono text-violet-400/50 hover:underline">@{rep.username} • <RelativeTime timestamp={rep.timestamp} /></span>
+                                      </span>
+                                    </button>
                                     <p className="text-violet-200 pl-7 text-[11.5px] leading-relaxed">{rep.content}</p>
                                   </div>
                                 ))}
