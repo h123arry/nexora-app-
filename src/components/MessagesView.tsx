@@ -24,6 +24,7 @@ import ReactionBar from './ReactionBar';
 import EmojiPicker from './EmojiPicker';
 import ReactionDetailsSheet from './ReactionDetailsSheet';
 import { resolvePrivateChatAudio } from '../services/firebase/storageService';
+import { SettingsService } from '../services/firebase/settingsService';
 import NewBroadcastModal from './NewBroadcastModal';
 import BroadcastAnalyticsView from './BroadcastAnalyticsView';
 import BroadcastInfoScreen from './BroadcastInfoScreen';
@@ -151,6 +152,8 @@ export default function MessagesView({
   const [pinnedChats, setPinnedChats] = useState<string[]>(['chat-1']); 
   const [mutedChats, setMutedChats] = useState<string[]>([]);
   const [blockedChats, setBlockedChats] = useState<string[]>([]);
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>([]);
+  const [chatPreferencesLoaded, setChatPreferencesLoaded] = useState(false);
   const [archivedChats, setArchivedChats] = useState<string[]>([]);
   const [disappearingMode, setDisappearingMode] = useState(false);
   const [pinnedMessageInChat, setPinnedMessageInChat] = useState<ExtendedMessage | null>(null);
@@ -423,6 +426,31 @@ export default function MessagesView({
     }, 100);
     return () => clearInterval(interval);
   }, [playingVoiceId, voicePlaybackSpeed]);
+
+  // Account-level chat preferences are synchronized through the signed-in user's settings document.
+  useEffect(() => {
+    let cancelled = false;
+    setChatPreferencesLoaded(false);
+    SettingsService.getSettings(currentUser.id).then(settings => {
+      if (cancelled) return;
+      setMutedChats(settings.messaging.mutedChatIds);
+      setBlockedUserIds(settings.messaging.blockedUserIds);
+      setChatPreferencesLoaded(true);
+    }).catch(() => {
+      if (!cancelled) {
+        setChatPreferencesLoaded(true);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not load synced chat preferences. Try again when connected.' }));
+      }
+    });
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    if (!chatPreferencesLoaded) return;
+    setBlockedChats(chatsList.filter(chat =>
+      !chat.isGroup && !chat.isBroadcast && blockedUserIds.includes(chat.partnerId)
+    ).map(chat => chat.id));
+  }, [chatPreferencesLoaded, chatsList, blockedUserIds]);
 
   // Persistence Engine - local state recovery on startup
   useEffect(() => {
@@ -964,8 +992,15 @@ export default function MessagesView({
   };
 
   // Interaction handlers
-  const handleToggleMute = (chatId: string) => {
-    setMutedChats(prev => prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]);
+  const handleToggleMute = async (chatId: string) => {
+    if (!chatPreferencesLoaded) return;
+    const next = mutedChats.includes(chatId) ? mutedChats.filter(id => id !== chatId) : [...mutedChats, chatId];
+    try {
+      await SettingsService.updateMessagingPreferences(currentUser.id, { mutedChatIds: next });
+      setMutedChats(next);
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Mute setting could not be saved. Please try again.' }));
+    }
   };
 
   const handleTogglePin = (chatId: string) => {
@@ -976,8 +1011,22 @@ export default function MessagesView({
     setArchivedChats(prev => prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]);
   };
 
-  const handleToggleBlock = (chatId: string) => {
-    setBlockedChats(prev => prev.includes(chatId) ? prev.filter(id => id !== chatId) : [...prev, chatId]);
+  const handleToggleBlock = async (chatId: string) => {
+    if (!chatPreferencesLoaded) return;
+    const targetChat = chatsList.find(chat => chat.id === chatId);
+    if (!targetChat?.partnerId || targetChat.isGroup || targetChat.isBroadcast) return;
+    const next = blockedUserIds.includes(targetChat.partnerId)
+      ? blockedUserIds.filter(id => id !== targetChat.partnerId)
+      : [...blockedUserIds, targetChat.partnerId];
+    try {
+      await SettingsService.updateMessagingPreferences(currentUser.id, { blockedUserIds: next });
+      setBlockedUserIds(next);
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: next.includes(targetChat.partnerId) ? 'Account blocked. New direct messages from this account will be rejected.' : 'Account unblocked.'
+      }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Block setting could not be saved. Please try again.' }));
+    }
   };
 
   // Bubble context actions

@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from './config';
 import { buildFeedSettingsPatch, type FeedPreferences } from '../discovery/feedPreferences';
+import { normalizeChatPreferences, type ChatPreferences } from '../messaging/chatPreferences';
 
 export interface NexoraSettings {
   privacy: {
@@ -40,6 +41,7 @@ export interface NexoraSettings {
   security: {
     twoFactorEnabled: boolean;
   };
+  messaging: ChatPreferences;
   updatedAt?: unknown;
 }
 
@@ -82,6 +84,7 @@ export const DEFAULT_SETTINGS: NexoraSettings = {
   security: {
     twoFactorEnabled: false,
   },
+  messaging: { mutedChatIds: [], blockedUserIds: [] },
 };
 
 const MAX_FEED_ITEMS = 500;
@@ -109,6 +112,7 @@ function mergeSettings(data: Partial<NexoraSettings>): NexoraSettings {
       seenPostIds: boundedStrings(feed.seenPostIds),
     },
     security: { ...DEFAULT_SETTINGS.security, ...(data.security || {}) },
+    messaging: normalizeChatPreferences(data.messaging as Partial<ChatPreferences> | undefined),
     updatedAt: data.updatedAt,
   };
 }
@@ -180,6 +184,25 @@ export class SettingsService {
       // Merge only the feed namespace. Writing DEFAULT_SETTINGS here would silently
       // reset existing privacy, notification, appearance, content, and security choices.
       transaction.set(settingsRef, buildFeedSettingsPatch(next, serverTimestamp()), { merge: true });
+    });
+  }
+
+
+  static async updateMessagingPreferences(uid: string, updates: Partial<ChatPreferences>): Promise<void> {
+    if (!uid || auth.currentUser?.uid !== uid) throw new Error('Only the signed-in owner can update messaging preferences.');
+    const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    await runTransaction(db, async transaction => {
+      const snapshot = await transaction.get(settingsRef);
+      const current = snapshot.exists()
+        ? mergeSettings(snapshot.data() as Partial<NexoraSettings>)
+        : DEFAULT_SETTINGS;
+      const next = normalizeChatPreferences({
+        mutedChatIds: updates.mutedChatIds ?? current.messaging.mutedChatIds,
+        blockedUserIds: updates.blockedUserIds ?? current.messaging.blockedUserIds,
+      });
+      transaction.set(settingsRef, snapshot.exists()
+        ? { messaging: next, updatedAt: serverTimestamp() }
+        : { ...DEFAULT_SETTINGS, messaging: next, updatedAt: serverTimestamp() }, { merge: true });
     });
   }
 
