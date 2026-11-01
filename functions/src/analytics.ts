@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, getFirestore, type QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
@@ -104,7 +104,7 @@ export const aggregateAnalyticsDaily = onSchedule({ schedule: 'every 1 hours', t
     const dayEnd = new Date(dayStart);
     dayEnd.setUTCDate(dayStart.getUTCDate() + 1);
     const bucket = { total: 0, byType: {} as Record<string, number>, actors: new Set<string>() };
-    let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+    let cursor: QueryDocumentSnapshot | undefined;
 
     while (true) {
       let query = db.collection('analyticsEvents')
