@@ -170,10 +170,10 @@ describe('discovery service', () => {
   it('trends topics using recent posts from distinct creators, excluding stale and single-author spikes', () => {
     const now = Date.now();
     const topics = rankTrendingTopics([
-      post({ id: 'a', userId: 'one', tags: ['AI'], timestamp: now - 1000, likes: 10 }),
-      post({ id: 'b', userId: 'two', tags: ['#ai'], timestamp: now - 2000, commentsCount: 4 }),
-      post({ id: 'c', userId: 'one', tags: ['solo'], timestamp: now - 3000 }),
-      post({ id: 'old', userId: 'three', tags: ['AI'], timestamp: now - 30 * 24 * 3600 * 1000 }),
+      post({ id: 'a', userId: 'one', tags: ['AI'], timestamp: new Date(now - 1000).toISOString(), likes: 10 }),
+      post({ id: 'b', userId: 'two', tags: ['#ai'], timestamp: new Date(now - 2000).toISOString(), commentsCount: 4 }),
+      post({ id: 'c', userId: 'one', tags: ['solo'], timestamp: new Date(now - 3000).toISOString() }),
+      post({ id: 'old', userId: 'three', tags: ['AI'], timestamp: new Date(now - 30 * 24 * 3600 * 1000).toISOString() }),
     ], { now, windowHours: 24, minPosts: 2 });
     assert.deepEqual(topics.map(item => item.tag), ['ai']);
     assert.equal(topics[0].creatorCount, 2);

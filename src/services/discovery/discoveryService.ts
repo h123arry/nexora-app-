@@ -283,7 +283,7 @@ export function rankTrendingTopics(
   const topics = new Map<string, { postIds: Set<string>; creators: Set<string>; engagement: number; newest: number }>();
   for (const post of posts) {
     if (post.isArchived || (post.scheduledTime && Date.parse(post.scheduledTime) > now)) continue;
-    const timestamp = post.timestamp instanceof Date ? post.timestamp.getTime() : typeof post.timestamp === 'number' ? post.timestamp : Date.parse(String(post.timestamp || ''));
+    const timestamp = Date.parse(String(post.timestamp || ''));
     if (!Number.isFinite(timestamp) || timestamp < cutoff || timestamp > now) continue;
     for (const tag of normalizedTags(post)) {
       const entry = topics.get(tag) || { postIds: new Set<string>(), creators: new Set<string>(), engagement: 0, newest: 0 };

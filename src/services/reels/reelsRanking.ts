@@ -55,7 +55,7 @@ export function rankReels(
     .map(post => {
       const signals = readSignals(post.id);
       if (signals.notInterested) return { post, score: -Infinity, reasons: ['Marked not interested'] };
-      const parsedTimestamp = post.timestamp instanceof Date ? post.timestamp.getTime() : typeof post.timestamp === 'number' ? post.timestamp : Date.parse(String(post.timestamp || ''));
+      const parsedTimestamp = Date.parse(String(post.timestamp || ''));
       const ageHours = Number.isFinite(parsedTimestamp) ? Math.max(0, (now - parsedTimestamp) / 3_600_000) : 24;
       const freshness = Math.max(0, 24 - ageHours) * 1.5;
       const completion = signals.completed ? 28 : Math.min(18, (signals.watchedSeconds || 0) * 2);
