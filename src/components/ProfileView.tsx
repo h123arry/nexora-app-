@@ -49,7 +49,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
   }
 
   return (
-    <div className="grid grid-cols-3 gap-[1px] w-full bg-black">
+    <div className="nx-profile-media-grid grid grid-cols-3 gap-[2px] w-full bg-[var(--nx-canvas)]">
       {gridPosts.map(post => {
         const isVoice = post.isVoice || post.content.includes('🎙') || post.voiceDuration;
         const isVideo = !!post.videoUrl;
@@ -945,7 +945,7 @@ export default function ProfileView({
   };
 
   return (
-    <div className="nx-page-shell relative w-full min-h-screen text-white font-sans overflow-x-hidden pb-24">
+    <div className="nx-page-shell nx-profile-shell relative w-full min-h-screen text-white font-sans overflow-x-hidden pb-24">
       
       {/* 1. TOP NAVIGATION ACTION BAR */}
       <div className="nx-page-header sticky top-0 z-40 py-2 px-4 flex items-center justify-between border-b">
