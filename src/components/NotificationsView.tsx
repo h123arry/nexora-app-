@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
+import { getNotificationTimeSection } from '../utils/notificationTime';
 import { 
   triggerTestSparkPop, 
   triggerTestCommentPop, 
@@ -169,15 +170,15 @@ export default function NotificationsView({
   useEffect(() => {
     const seedMockNotifications = () => {
       // Convert propNotifications to RichNotifications if any are supplied by the app
-      const resolvedProps = (propNotifications || []).map((n, i) => ({
+      const resolvedProps = (propNotifications || []).map(n => ({
         ...n,
-        timeSection: (i < 2 ? 'today' : i < 5 ? 'yesterday' : 'this_week') as any,
+        timeSection: getNotificationTimeSection(n.timestamp),
         priorityLevel: (n.type === 'mention' || n.type === 'system' ? 'high' : 'medium') as any,
         isRead: n.isRead
       }));
 
       const finalSet = resolvedProps.filter((notification, index, all) =>
-        all.findIndex(candidate => candidate.id === notification.id || candidate.content === notification.content) === index
+        all.findIndex(candidate => candidate.id === notification.id) === index
       );
       setNotificationsList(finalSet);
     };
