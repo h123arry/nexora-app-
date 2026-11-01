@@ -3,7 +3,7 @@ import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Glo
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { searchPosts } from '../services/discovery/discoveryService';
+import { searchCreators, searchPosts } from '../services/discovery/discoveryService';
 
 interface ExploreViewProps {
   creators: User[];
@@ -102,13 +102,7 @@ export default function ExploreView({
   }, [posts, debouncedSearch]);
 
   const filteredCreators = useMemo(() => {
-    if (!debouncedSearch.trim()) return creators;
-    const q = debouncedSearch.toLowerCase();
-    return creators.filter(c => 
-      c.name.toLowerCase().includes(q) || 
-      c.username.toLowerCase().includes(q) ||
-      (c.bio || '').toLowerCase().includes(q)
-    );
+    return searchCreators(creators, debouncedSearch, { limit: 50 });
   }, [creators, debouncedSearch]);
 
   const filteredVideos = useMemo(() => {
