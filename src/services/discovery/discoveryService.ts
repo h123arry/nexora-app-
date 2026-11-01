@@ -155,10 +155,11 @@ export function searchPosts<T extends Post>(posts: T[], query: string, options: 
   return candidates
     .map((post, index) => {
       const fields = [post.content, post.username, post.name, post.communityName || '', ...(post.tags || [])].map(value => String(value).toLowerCase());
-      const score = terms.reduce((total, term) => total + fields.reduce((fieldScore, field) => fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0), 0);
-      return { post, score, index };
+      const termScores = terms.map(term => fields.reduce((fieldScore, field) => fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0));
+      const score = termScores.reduce((total, value) => total + value, 0);
+      return { post, score, matchedAllTerms: termScores.every(value => value > 0), index };
     })
-    .filter(result => result.score > 0)
+    .filter(result => result.matchedAllTerms)
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, limit)
     .map(result => result.post);
@@ -193,17 +194,18 @@ export function searchCreators<T extends User>(
       const skills = (creator.skills || []).map(skill => String(skill).toLowerCase());
       const interestTags = Object.keys(creator.interestDNA || {}).map(tag => tag.toLowerCase());
       const fields = [username, name, bio, ...skills, ...interestTags];
-      const score = terms.reduce((total, term) => {
-        if (username === term) return total + 12;
-        if (username.startsWith(term)) return total + 8;
-        if (name === term) return total + 10;
-        if (name.startsWith(term)) return total + 7;
-        return total + fields.reduce((fieldScore, field) =>
+      const termScores = terms.map(term => {
+        if (username === term) return 12;
+        if (username.startsWith(term)) return 8;
+        if (name === term) return 10;
+        if (name.startsWith(term)) return 7;
+        return fields.reduce((fieldScore, field) =>
           fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0);
-      }, 0);
-      return { creator, score, index };
+      });
+      const score = termScores.reduce((total, value) => total + value, 0);
+      return { creator, score, matchedAllTerms: termScores.every(value => value > 0), index };
     })
-    .filter(result => result.score > 0)
+    .filter(result => result.matchedAllTerms)
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, limit)
     .map(result => result.creator);
