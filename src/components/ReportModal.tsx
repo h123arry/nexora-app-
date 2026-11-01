@@ -3,6 +3,7 @@ import { AlertTriangle, X, ShieldAlert, CheckCircle, Flame } from 'lucide-react'
 import { Post, User } from '../types';
 import { auth } from '../services/firebase/config';
 import { reportContent } from '../services/dataService';
+import { REPORT_CATEGORIES, type ReportCategory } from '../services/moderation/moderationPolicy';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -14,15 +15,7 @@ interface ReportModalProps {
   onSubmitSuccess?: () => void;
 }
 
-export type ReportReason = 
-  | 'Spam' 
-  | 'Harassment' 
-  | 'Hate' 
-  | 'Violence' 
-  | 'Impersonation' 
-  | 'Copyright' 
-  | 'Misinformation' 
-  | 'Other';
+export type ReportReason = ReportCategory;
 
 export default function ReportModal({
   isOpen,
@@ -33,7 +26,7 @@ export default function ReportModal({
   reporterUsername,
   onSubmitSuccess
 }: ReportModalProps) {
-  const [selectedReason, setSelectedReason] = useState<ReportReason>('Spam');
+  const [selectedReason, setSelectedReason] = useState<ReportReason>('spam');
   const [comments, setComments] = useState('');
   const [isDone, setIsDone] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -41,16 +34,11 @@ export default function ReportModal({
 
   if (!isOpen) return null;
 
-  const reasons: ReportReason[] = [
-    'Spam',
-    'Harassment',
-    'Hate',
-    'Violence',
-    'Impersonation',
-    'Copyright',
-    'Misinformation',
-    'Other'
-  ];
+  const reasons: ReportReason[] = [...REPORT_CATEGORIES];
+  const formatReason = (reason: ReportReason) => reason
+    .split('_')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,7 +67,7 @@ export default function ReportModal({
     
     // Dispatch a global event so any active screens can update
     window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🛡️ Security Alert logged! Reported target for ${selectedReason}.` 
+      detail: `Your ${formatReason(selectedReason)} report has been submitted for review.` 
     }));
     window.dispatchEvent(new CustomEvent('reports-updated'));
 
@@ -87,7 +75,7 @@ export default function ReportModal({
       onClose();
       setIsDone(false);
       setComments('');
-      setSelectedReason('Spam');
+      setSelectedReason('spam');
       setIsSubmitting(false);
       if (onSubmitSuccess) onSubmitSuccess();
     }, 1500);
@@ -118,7 +106,7 @@ export default function ReportModal({
               </div>
 
               <div className="p-3 bg-red-950/20 border border-red-500/10 rounded-2xl">
-                <span className="text-[10px] uppercase font-mono text-rose-400 font-bold block mb-1">Target to Moderate Category:</span>
+                <span className="text-[10px] uppercase font-mono text-rose-400 font-bold block mb-1">Content being reported:</span>
                 <p className="text-xs text-zinc-300 italic max-h-16 overflow-y-auto font-sans leading-relaxed">
                   "{targetContent || targetId}"
                 </p>
@@ -136,7 +124,7 @@ export default function ReportModal({
                       onClick={() => setSelectedReason(reason)}
                       className={`px-3 py-2 rounded-xl text-left border font-sans font-semibold transition-all cursor-pointer ${selectedReason === reason ? 'bg-red-900/30 text-red-200 border-red-500/40 font-bold shadow-md shadow-red-500/5' : 'bg-black/30 border-white/5 text-zinc-400 hover:text-zinc-200 hover:border-white/10'}`}
                     >
-                      {reason}
+                      {formatReason(reason)}
                     </button>
                   ))}
                 </div>
@@ -144,7 +132,7 @@ export default function ReportModal({
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-zinc-300 block font-mono">
-                  Synthesize additional comments (Optional):
+                  Add context (Optional):
                 </label>
                 <textarea
                   value={comments}
@@ -176,7 +164,7 @@ export default function ReportModal({
                   REPORT SUBMITTED
                 </h4>
                 <p className="text-[11px] text-zinc-400 max-w-xs mt-1 leading-normal font-sans">
-                  Thank you for reporting. Your signal has been securely queued for moderation review.
+                  Thank you for reporting. Our moderation team will review your submission.
                 </p>
               </div>
             </div>

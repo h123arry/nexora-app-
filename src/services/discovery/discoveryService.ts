@@ -1,4 +1,4 @@
-import { Post } from '../../types';
+import { User, Post } from '../../types';
 
 export type FeedMode = 'forYou' | 'following' | 'latest' | 'trending';
 
@@ -12,6 +12,7 @@ export interface RankingContext {
   seenPostIds?: string[];
   mode?: FeedMode;
   maxPostsPerCreator?: number;
+  maxConsecutivePostsPerCreator?: number;
   now?: number;
 }
 
@@ -108,22 +109,40 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
     })
     .sort((a, b) => b.score - a.score || stableTieBreak(a, b));
 
-  // Greedy author diversity is applied after scoring so relevant content stays
-  // eligible without allowing one prolific account to monopolize the page.
+  // Diversify the visible sequence after scoring. A creator can still appear
+  // more than once, but a different eligible creator is preferred between
+  // consecutive posts. This is a presentation rule, not a popularity penalty.
+  const rankedCandidates = candidates.map(candidate => ({
+    post: candidate.post,
+    score: Math.round(candidate.score * 100) / 100,
+    reasons: candidate.reasons,
+  }));
+  const maxConsecutive = Math.max(1, context.maxConsecutivePostsPerCreator ?? 1);
+  const remaining = [...rankedCandidates];
   const selected: RankedPost<T>[] = [];
   const authorCounts = new Map<string, number>();
-  const deferred: RankedPost<T>[] = [];
-  for (const candidate of candidates) {
-    const count = authorCounts.get(candidate.post.userId) || 0;
-    const ranked = { post: candidate.post, score: Math.round(candidate.score * 100) / 100, reasons: candidate.reasons };
-    if (count < maxPostsPerCreator) {
-      selected.push(ranked);
-      authorCounts.set(candidate.post.userId, count + 1);
-    } else {
-      deferred.push(ranked);
+  while (remaining.length > 0) {
+    const previousAuthor = selected[selected.length - 1]?.post.userId;
+    let consecutiveRun = 0;
+    for (let index = selected.length - 1; index >= 0; index -= 1) {
+      if (selected[index].post.userId !== previousAuthor) break;
+      consecutiveRun += 1;
     }
+    let nextIndex = remaining.findIndex(item =>
+      (authorCounts.get(item.post.userId) || 0) < maxPostsPerCreator &&
+      (item.post.userId !== previousAuthor || consecutiveRun < maxConsecutive)
+    );
+    if (nextIndex < 0) {
+      nextIndex = remaining.findIndex(item => (authorCounts.get(item.post.userId) || 0) < maxPostsPerCreator);
+    }
+    if (nextIndex < 0) break;
+    const [next] = remaining.splice(nextIndex, 1);
+    selected.push(next);
+    authorCounts.set(next.post.userId, (authorCounts.get(next.post.userId) || 0) + 1);
   }
-  return selected.concat(deferred);
+  // Keep over-limit candidates available after all eligible authors, rather
+  // than silently dropping otherwise valid posts from the loaded page.
+  return selected.concat(remaining);
 }
 
 export function searchPosts<T extends Post>(posts: T[], query: string, options: { videosOnly?: boolean; limit?: number } = {}): T[] {
@@ -136,11 +155,152 @@ export function searchPosts<T extends Post>(posts: T[], query: string, options: 
   return candidates
     .map((post, index) => {
       const fields = [post.content, post.username, post.name, post.communityName || '', ...(post.tags || [])].map(value => String(value).toLowerCase());
-      const score = terms.reduce((total, term) => total + fields.reduce((fieldScore, field) => fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0), 0);
-      return { post, score, index };
+      const termScores = terms.map(term => fields.reduce((fieldScore, field) => fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0));
+      const score = termScores.reduce((total, value) => total + value, 0);
+      return { post, score, matchedAllTerms: termScores.every(value => value > 0), index };
     })
-    .filter(result => result.score > 0)
+    .filter(result => result.matchedAllTerms)
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, limit)
     .map(result => result.post);
+}
+
+/**
+ * Search creators already loaded by the client. This is bounded local search,
+ * not a claim that NEXORA has a global server-side people index.
+ */
+export function searchCreators<T extends User>(
+  creators: T[],
+  query: string,
+  options: { limit?: number } = {},
+): T[] {
+  const normalizedQuery = query.trim().toLowerCase().replace(/^@/, '');
+  const limit = Math.min(100, Math.max(1, options.limit ?? 50));
+  const uniqueCreators = creators.filter((creator, index, all) =>
+    !creator.isBanned &&
+    !creator.isSuspended &&
+    all.findIndex(candidate => candidate.id === creator.id) === index
+  );
+
+  if (!normalizedQuery) return uniqueCreators.slice(0, limit);
+  if (normalizedQuery.length > 120) return [];
+
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+  return uniqueCreators
+    .map((creator, index) => {
+      const username = String(creator.username || '').toLowerCase().replace(/^@/, '');
+      const name = String(creator.name || '').toLowerCase();
+      const bio = String(creator.bio || '').toLowerCase();
+      const skills = (creator.skills || []).map(skill => String(skill).toLowerCase());
+      const interestTags = Object.keys(creator.interestDNA || {}).map(tag => tag.toLowerCase());
+      const fields = [username, name, bio, ...skills, ...interestTags];
+      const termScores = terms.map(term => {
+        if (username === term) return 12;
+        if (username.startsWith(term)) return 8;
+        if (name === term) return 10;
+        if (name.startsWith(term)) return 7;
+        return fields.reduce((fieldScore, field) =>
+          fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0);
+      });
+      const score = termScores.reduce((total, value) => total + value, 0);
+      return { creator, score, matchedAllTerms: termScores.every(value => value > 0), index };
+    })
+    .filter(result => result.matchedAllTerms)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, limit)
+    .map(result => result.creator);
+}
+
+
+export interface CreatorRecommendation<T extends User = User> {
+  creator: T;
+  score: number;
+  sharedTopics: string[];
+  reason: string;
+}
+
+/** Recommend creators using explicit interest overlap, never synthetic global popularity. */
+export function recommendCreators<T extends User>(
+  creators: T[],
+  options: {
+    viewerId?: string;
+    followingIds?: string[];
+    blockedCreatorIds?: string[];
+    mutedCreatorIds?: string[];
+    interests?: Record<string, number>;
+    limit?: number;
+  } = {},
+): CreatorRecommendation<T>[] {
+  const following = new Set(options.followingIds || []);
+  const blocked = new Set(options.blockedCreatorIds || []);
+  const muted = new Set(options.mutedCreatorIds || []);
+  const interests = Object.entries(options.interests || {}).reduce<Record<string, number>>((out, [tag, value]) => {
+    const key = tag.replace(/^#/, '').trim().toLowerCase();
+    if (key && Number.isFinite(value)) out[key] = Math.max(0, Math.min(100, value));
+    return out;
+  }, {});
+  const limit = Math.min(50, Math.max(1, options.limit ?? 12));
+  const unique = creators.filter((creator, index, all) =>
+    creator.id !== options.viewerId && !following.has(creator.id) &&
+    !blocked.has(creator.id) && !muted.has(creator.id) &&
+    !creator.isBanned && !creator.isSuspended &&
+    all.findIndex(item => item.id === creator.id) === index
+  );
+  return unique.map((creator, index) => {
+    const sharedTopics = Object.keys(creator.interestDNA || {})
+      .map(tag => tag.replace(/^#/, '').trim().toLowerCase())
+      .filter((tag, tagIndex, all) => Boolean(tag) && all.indexOf(tag) === tagIndex && interests[tag] > 0)
+      .sort((a, b) => (interests[b] || 0) - (interests[a] || 0))
+      .slice(0, 3);
+    const overlap = sharedTopics.reduce((sum, tag) =>
+      sum + Math.min(interests[tag] || 0, Math.max(0, Math.min(100, Number(creator.interestDNA[tag] || creator.interestDNA[`#${tag}`] || 0)))), 0);
+    const score = Math.round(overlap + (creator.isVerified ? 3 : 0) + Math.min(5, Math.log1p(Math.max(0, creator.followers || 0))));
+    return { creator, score, sharedTopics, reason: sharedTopics.length ? `Shares your interest in ${sharedTopics.map(tag => `#${tag}`).join(', ')}` : 'A creator to discover', index };
+  })
+    .filter(item => item.score > 0 && (Object.keys(interests).length === 0 || item.sharedTopics.length > 0))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, limit)
+    .map(({ index: _index, ...item }) => item);
+}
+
+export interface TrendingTopic {
+  tag: string;
+  postCount: number;
+  creatorCount: number;
+  engagement: number;
+  score: number;
+}
+
+/** Rank topics from recent loaded posts, requiring activity from multiple creators. */
+export function rankTrendingTopics(
+  posts: Post[],
+  options: { now?: number; windowHours?: number; minPosts?: number; limit?: number } = {},
+): TrendingTopic[] {
+  const now = options.now ?? Date.now();
+  const windowHours = Math.max(1, Math.min(24 * 30, options.windowHours ?? 24 * 7));
+  const minPosts = Math.max(1, options.minPosts ?? 2);
+  const cutoff = now - windowHours * 3_600_000;
+  const topics = new Map<string, { postIds: Set<string>; creators: Set<string>; engagement: number; newest: number }>();
+  for (const post of posts) {
+    if (post.isArchived || (post.scheduledTime && Date.parse(post.scheduledTime) > now)) continue;
+    const timestamp = Date.parse(String(post.timestamp || ''));
+    if (!Number.isFinite(timestamp) || timestamp < cutoff || timestamp > now) continue;
+    for (const tag of normalizedTags(post)) {
+      const entry = topics.get(tag) || { postIds: new Set<string>(), creators: new Set<string>(), engagement: 0, newest: 0 };
+      entry.postIds.add(post.id);
+      entry.creators.add(post.userId);
+      entry.engagement += Math.log1p(Math.max(0, post.likes || 0)) + Math.log1p(Math.max(0, post.commentsCount || 0)) * 2 + Math.log1p(Math.max(0, post.shares || 0)) * 2;
+      entry.newest = Math.max(entry.newest, timestamp);
+      topics.set(tag, entry);
+    }
+  }
+  return [...topics.entries()]
+    .filter(([, item]) => item.postIds.size >= minPosts && item.creators.size >= 2)
+    .map(([tag, item]) => {
+      const freshness = Math.max(0, 1 - (now - item.newest) / (windowHours * 3_600_000));
+      const score = Math.round((item.postIds.size * 2 + item.creators.size * 3 + item.engagement + freshness * 5) * 100) / 100;
+      return { tag, postCount: item.postIds.size, creatorCount: item.creators.size, engagement: Math.round(item.engagement * 100) / 100, score };
+    })
+    .sort((a, b) => b.score - a.score || a.tag.localeCompare(b.tag))
+    .slice(0, Math.min(30, Math.max(1, options.limit ?? 10)));
 }

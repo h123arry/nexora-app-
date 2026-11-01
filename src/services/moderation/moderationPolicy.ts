@@ -3,6 +3,8 @@ export const REPORT_CATEGORIES = [
   'violence', 'privacy', 'fraud', 'copyright', 'misinformation', 'other',
 ] as const;
 
+export type ReportCategory = typeof REPORT_CATEGORIES[number];
+
 export const MODERATION_ACTIONS = [
   'dismiss', 'warn', 'restrict_posting', 'restrict_messaging', 'suspend', 'ban',
 ] as const;

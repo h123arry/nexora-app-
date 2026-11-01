@@ -2131,6 +2131,8 @@ export default function App() {
                       onToggleFollow={handleToggleFollow}
                       followingIds={followingIds}
                       onViewProfile={handleViewProfile}
+                      interestDNA={currentUser.interestDNA}
+                      currentUserId={isLoggedIn && firebaseUser?.uid === currentUser.id ? firebaseUser.uid : ''}
                     />
                   )}
 

@@ -2,8 +2,11 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe, Users, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
+import { SettingsService } from '../services/firebase/settingsService';
+import { normalizeFeedPreferences } from '../services/discovery/feedPreferences';
+import { auth } from '../services/firebase/config';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { searchPosts } from '../services/discovery/discoveryService';
+import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 
 interface ExploreViewProps {
   creators: User[];
@@ -14,6 +17,8 @@ interface ExploreViewProps {
   onToggleFollow?: (creatorId: string) => void;
   followingIds: string[];
   onViewProfile?: (userIdOrUsername: string) => void;
+  interestDNA?: Record<string, number>;
+  currentUserId?: string;
 }
 
 export default function ExploreView({
@@ -24,12 +29,36 @@ export default function ExploreView({
   onLikePost,
   onToggleFollow,
   followingIds,
-  onViewProfile
+  onViewProfile,
+  interestDNA = {},
+  currentUserId = ''
 }: ExploreViewProps) {
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities'>('all');
   const [showAllPulse, setShowAllPulse] = useState(false);
+  const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => {
+    try { const value = JSON.parse(localStorage.getItem('nexora_blocked_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
+  });
+  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
+    try { const value = JSON.parse(localStorage.getItem('nexora_muted_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
+  });
+
+  // Use the same owner-scoped relationship preferences as For You. Local
+  // storage is only the offline/guest fallback, never the signed-in source.
+  useEffect(() => {
+    if (!currentUserId || auth.currentUser?.uid !== currentUserId) return;
+    let cancelled = false;
+    SettingsService.getSettings(currentUserId).then(settings => {
+      if (cancelled) return;
+      const preferences = normalizeFeedPreferences(settings.feed);
+      setBlockedCreatorIds(preferences.blockedCreatorIds);
+      setMutedCreatorIds(preferences.mutedCreatorIds);
+    }).catch(() => {
+      // Keep the existing local fallback if the preference read is unavailable.
+    });
+    return () => { cancelled = true; };
+  }, [currentUserId]);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('nexora_recent_searches');
@@ -78,23 +107,18 @@ export default function ExploreView({
     } catch {}
   };
 
-  // Compute bounded recent topic activity from real post timestamps and tags.
-  const trendingTags = useMemo(() => {
-    const tagCounts: { [tag: string]: number } = {};
-    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    posts.forEach(p => {
-      const timestamp = typeof p.timestamp === 'string' ? Date.parse(p.timestamp) : Number(p.timestamp);
-      if (!Number.isFinite(timestamp) || timestamp < cutoff) return;
-      (p.tags || []).forEach(t => {
-        const normalized = t.replace(/^#/, '').trim().toLowerCase();
-        if (!normalized) return;
-        const clean = `#${normalized}`;
-        tagCounts[clean] = (tagCounts[clean] || 0) + 1;
-      });
-    });
-    const sorted = Object.entries(tagCounts).sort((a, b) => b[1] - a[1]);
-    return sorted.filter(([, count]) => count >= 2).slice(0, 6);
-  }, [posts]);
+  // Recent topic momentum is based on real loaded posts from multiple creators.
+  const trendingTags = useMemo(() => rankTrendingTopics(posts, { windowHours: 168, minPosts: 2, limit: 6 })
+    .map(topic => [`#${topic.tag}`, topic.postCount] as [string, number]), [posts]);
+
+  // Personalize creator suggestions using the signed-in user's interest profile.
+  const suggestedCreators = useMemo(() => recommendCreators(creators, {
+    followingIds,
+    blockedCreatorIds,
+    mutedCreatorIds,
+    interests: interestDNA,
+    limit: 12,
+  }).map(item => item.creator), [creators, followingIds, blockedCreatorIds, mutedCreatorIds, interestDNA]);
 
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
@@ -102,13 +126,7 @@ export default function ExploreView({
   }, [posts, debouncedSearch]);
 
   const filteredCreators = useMemo(() => {
-    if (!debouncedSearch.trim()) return creators;
-    const q = debouncedSearch.toLowerCase();
-    return creators.filter(c => 
-      c.name.toLowerCase().includes(q) || 
-      c.username.toLowerCase().includes(q) ||
-      (c.bio || '').toLowerCase().includes(q)
-    );
+    return searchCreators(creators, debouncedSearch, { limit: 50 });
   }, [creators, debouncedSearch]);
 
   const filteredVideos = useMemo(() => {
@@ -477,9 +495,9 @@ export default function ExploreView({
               <h3 className="text-xs font-mono font-black text-violet-400 uppercase tracking-widest">Suggested Creators</h3>
             </div>
             <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
-              {creators.length === 0 ? (
+              {suggestedCreators.length === 0 ? (
                 <div className="nx-surface rounded-2xl p-5 text-xs text-zinc-500">Creator suggestions will appear as Nexora learns your interests.</div>
-              ) : creators.map(user => (
+              ) : suggestedCreators.map(user => (
                 <div
                   key={user.id}
                   onClick={() => onViewProfile?.(user.id)}
@@ -492,6 +510,7 @@ export default function ExploreView({
                       {user.isVerified && <PurpleVerifiedBadge />}
                     </div>
                     <span className="text-[9px] font-mono text-violet-400 truncate block">@{user.username}</span>
+                    {Object.keys(interestDNA).some(tag => (user.interestDNA || {})[tag] > 0) && <span className="text-[9px] text-zinc-500">Shared interests</span>}
                   </div>
                   <button
                     onClick={(e) => {
