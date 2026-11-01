@@ -2267,6 +2267,7 @@ export default function App() {
                     <CreatorDashboardView
                       currentUser={getRichUser(currentUser)}
                       posts={resolvedPosts}
+                      onAddPost={handleAddPost}
                     />
                   )}
 

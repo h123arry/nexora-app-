@@ -220,6 +220,19 @@ const publicProfile = (uid) => ({
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1')));
   });
 
+  it('stores creator drafts per account and validates draft metadata', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'drafts', 'draft-1'), {
+      userId: 'alice', caption: 'A creator draft', videoUrl: '', type: 'text', tags: ['nexora'], updatedAt: serverTimestamp()
+    }));
+    await assertFails(getDoc(doc(dbFor('bob'), 'drafts', 'draft-1')));
+    await assertSucceeds(updateDoc(doc(dbFor('alice'), 'drafts', 'draft-1'), {
+      caption: 'Updated draft', tags: ['nexora', 'creator'], updatedAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'drafts', 'draft-1'), { type: 'scheduled' }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'drafts', 'draft-1')));
+    await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'drafts', 'draft-1')));
+  });
+
   it('does not allow clients to forge notification recipients, security logs, or cross-account mail', async () => {
     await assertFails(setDoc(doc(dbFor('alice'), 'notifications', 'fake'), { userId: 'victim', content: 'fake' }));
     await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'securityLogs', 'fake'), { eventType: 'ADMIN_GRANTED' }));
