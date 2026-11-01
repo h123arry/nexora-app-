@@ -220,6 +220,19 @@ const publicProfile = (uid) => ({
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1')));
   });
 
+  it('allows creators to list only their own uploaded media assets', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'mediaAssets', 'alice-media'), {
+        id: 'alice-media', ownerId: 'alice', storagePath: 'users/alice/media/alice-media',
+        kind: 'image', contentType: 'image/png', size: 1024, status: 'uploaded',
+        createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+    });
+    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'mediaAssets'), where('ownerId', '==', 'alice'))));
+    await assertFails(getDocs(query(collection(dbFor('alice'), 'mediaAssets'), where('ownerId', '==', 'bob'))));
+    await assertFails(getDoc(doc(dbFor('bob'), 'mediaAssets', 'alice-media')));
+  });
+
   it('stores creator drafts per account and validates draft metadata', async () => {
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'drafts', 'draft-1'), {
       userId: 'alice', caption: 'A creator draft', videoUrl: '', type: 'text', tags: ['nexora'], updatedAt: serverTimestamp()

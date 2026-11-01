@@ -202,7 +202,7 @@ service cloud.firestore {
     // subsequent lifecycle transition and any derived playback metadata.
     match /mediaAssets/{mediaId} {
       allow get: if signedIn() && resource.data.ownerId == request.auth.uid;
-      allow list: if false;
+      allow list: if signedIn() && resource.data.ownerId == request.auth.uid;
       allow create: if signedIn()
         && request.resource.data.keys().hasOnly(['id', 'ownerId', 'storagePath', 'kind', 'contentType', 'size', 'status', 'createdAt', 'updatedAt'])
         && request.resource.data.id == mediaId

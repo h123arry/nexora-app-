@@ -4,6 +4,8 @@ import NexoraLoader from './NexoraLoader';
 import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
+import { getDownloadURL, ref } from 'firebase/storage';
+import { storage } from '../services/firebase/config';
 import { 
   doc, updateDoc, deleteDoc, addDoc, collection, 
   getDocs, query, where, serverTimestamp, limit 
@@ -47,6 +49,8 @@ export default function CreatorDashboardView({
   const [mediaSearch, setMediaSearch] = useState('');
   const [mediaTypeFilter, setMediaTypeFilter] = useState<'all' | 'video' | 'image'>('all');
   const [previewMediaUrl, setPreviewMediaUrl] = useState<string | null>(null);
+  const [uploadedMedia, setUploadedMedia] = useState<any[]>([]);
+  const [isMediaLibraryLoading, setIsMediaLibraryLoading] = useState(false);
   
   // Draft Editor
   const [showDraftModal, setShowDraftModal] = useState(false);
@@ -232,8 +236,18 @@ export default function CreatorDashboardView({
         fileName: file.name,
         onProgress: setDraftUploadProgress,
       });
+      const uploadedType = uploaded.contentType.startsWith('image/') ? 'image' : 'video';
+      setUploadedMedia(prev => [{
+        id: `asset-${uploaded.mediaId}`,
+        url: uploaded.downloadUrl,
+        caption: file.name,
+        type: uploadedType,
+        views: null,
+        sparks: null,
+        date: new Date().toISOString(),
+      }, ...prev.filter(media => media.id !== `asset-${uploaded.mediaId}`)]);
       setDraftUrl(uploaded.downloadUrl);
-      setDraftType(uploaded.contentType.startsWith('image/') ? 'image' : 'video');
+      setDraftType(uploadedType);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Media uploaded securely to your Nexora account.' }));
     } catch (error) {
       window.dispatchEvent(new CustomEvent('toast', {
@@ -386,29 +400,70 @@ export default function CreatorDashboardView({
     });
   }, [localPosts, searchQuery, contentTypeFilter, performanceFilter]);
 
-  // Unified Media Library Aggregator
+  // Load this creator's verified media assets from their owner-scoped library.
+  useEffect(() => {
+    let cancelled = false;
+    setIsMediaLibraryLoading(true);
+    const loadMediaLibrary = async () => {
+      try {
+        const snapshot = await getDocs(query(
+          collection(db, 'mediaAssets'),
+          where('ownerId', '==', currentUser.id),
+          limit(100)
+        ));
+        const assets = await Promise.all(snapshot.docs.map(async assetDoc => {
+          const asset = assetDoc.data();
+          if (!['image', 'video'].includes(asset.kind) || !['uploaded', 'pending_upload'].includes(asset.status) || typeof asset.storagePath !== 'string') return null;
+          try {
+            const url = await getDownloadURL(ref(storage, asset.storagePath));
+            return {
+              id: `asset-${assetDoc.id}`,
+              url,
+              caption: assetDoc.id,
+              type: asset.kind,
+              views: null,
+              sparks: null,
+              date: asset.uploadedAt?.toDate?.()?.toISOString?.() || asset.createdAt?.toDate?.()?.toISOString?.() || '',
+            };
+          } catch {
+            return null;
+          }
+        }));
+        if (!cancelled) setUploadedMedia(assets.filter(Boolean));
+      } catch {
+        if (!cancelled) window.dispatchEvent(new CustomEvent('toast', {
+          detail: 'Your uploaded media library could not be loaded. Try again when connected.'
+        }));
+      } finally {
+        if (!cancelled) setIsMediaLibraryLoading(false);
+      }
+    };
+    void loadMediaLibrary();
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
+
+  // Combine actual uploaded assets with media already published in the creator's posts.
   const mediaLibrary = useMemo(() => {
     const postsMedia = localPosts
-      .filter(p => p.videoUrl || p.image || p.images)
-      .map(p => ({
-        id: `media-${p.id}`,
-        postId: p.id,
-        url: p.videoUrl || p.image || p.images?.[0] || '',
-        caption: p.content,
-        type: p.videoUrl ? 'video' : 'image',
-        views: p.views || 0,
-        sparks: p.likes || 0,
-        date: p.timestamp,
-        copyrightStatus: 'Clear',
-        guidelinesCheck: 'Passed'
+      .filter(post => post.videoUrl || post.image || post.images)
+      .map(post => ({
+        id: `media-${post.id}`,
+        postId: post.id,
+        url: post.videoUrl || post.image || post.images?.[0] || '',
+        caption: post.content,
+        type: post.videoUrl ? 'video' : 'image',
+        views: post.views || 0,
+        sparks: post.likes || 0,
+        date: post.timestamp,
       }));
-
-    return postsMedia.filter(m => {
-      const matchesSearch = m.caption.toLowerCase().includes(mediaSearch.toLowerCase());
-      const matchesType = mediaTypeFilter === 'all' ? true : m.type === mediaTypeFilter;
+    const publishedUrls = new Set(postsMedia.map(media => media.url));
+    const unpostedAssets = uploadedMedia.filter((media: any) => media.url && !publishedUrls.has(media.url));
+    return [...postsMedia, ...unpostedAssets].filter(media => {
+      const matchesSearch = media.caption.toLowerCase().includes(mediaSearch.toLowerCase());
+      const matchesType = mediaTypeFilter === 'all' || media.type === mediaTypeFilter;
       return matchesSearch && matchesType;
     });
-  }, [localPosts, mediaSearch, mediaTypeFilter]);
+  }, [localPosts, uploadedMedia, mediaSearch, mediaTypeFilter]);
 
   // Creator Achievement criteria solver
   const achievementsList = useMemo(() => {
@@ -875,7 +930,7 @@ export default function CreatorDashboardView({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {mediaLibrary.length === 0 ? (
                   <div className="col-span-full py-12 text-center text-xs text-zinc-500 font-mono">
-                    No uploads logged in your Nexora Studio library.
+                    {isMediaLibraryLoading ? 'Loading your uploaded media…' : 'No uploads logged in your Nexora Studio library.'}
                   </div>
                 ) : (
                   mediaLibrary.map(media => (
@@ -891,12 +946,27 @@ export default function CreatorDashboardView({
                       )}
                       
                       {/* Hover Overlay */}
-                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 space-y-1.5">
+                      <div className="absolute inset-0 bg-black/60 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-3 space-y-1.5">
                         <p className="text-[11px] font-bold text-white line-clamp-1">{media.caption}</p>
                         <div className="flex justify-between items-center text-[9px] font-mono text-zinc-400">
                           <span>{media.type.toUpperCase()}</span>
-                          <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" /> {media.views}</span>
+                          {media.views === null ? <span>Unpublished asset</span> : <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" /> {media.views}</span>}
                         </div>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setCurrentDraftId(null);
+                            setDraftCaption('');
+                            setDraftTags('');
+                            setDraftType(media.type);
+                            setDraftUrl(media.url);
+                            setShowDraftModal(true);
+                          }}
+                          className="mt-1 w-full rounded-lg bg-violet-600/90 px-2 py-1.5 text-[10px] font-bold text-white"
+                        >
+                          Use in a post
+                        </button>
                       </div>
                     </div>
                   ))
