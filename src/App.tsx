@@ -50,7 +50,7 @@ import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
 import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 import { isUserCacheReady, readUserScopedJson, writeUserScopedJson } from './utils/userScopedStorage';
-import { getPostBookmarks, migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase/bookmarkService';
+import { migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase/bookmarkService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
