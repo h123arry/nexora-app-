@@ -954,7 +954,6 @@ export default function ProfileView({
           {onCloseProfile && (
             <button 
               onClick={onCloseProfile}
-              className="p-1.5 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer"
               title="Return to Feed"
               aria-label="Return to feed"
               className="min-h-10 min-w-10 p-2 rounded-xl hover:bg-white/5 text-zinc-400 hover:text-white transition-all cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
