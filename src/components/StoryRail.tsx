@@ -227,7 +227,7 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
               setViewerSelection({ authorIndex: index, storyIndex });
               rememberViewed(storyGroups[index][storyIndex]);
             }}
-            className="shrink-0 w-[68px] flex flex-col items-center gap-1.5 group cursor-pointer"
+            className="shrink-0 w-[68px] flex min-h-[92px] flex-col items-center gap-1.5 group cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4"
             aria-label={`View ${story.name || story.username}'s story`}
           >
             <span className={`${isUnviewed ? 'nx-story-ring' : 'nx-story-ring-seen'} group-hover:scale-[1.03] transition-transform`}>

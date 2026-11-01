@@ -239,7 +239,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               </span>
             )}
             {post.username === 'nexora_ai' && (
-              <span className="text-[8px] font-black uppercase text-violet-300 bg-cyan-500/10 border border-cyan-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
+              <span className="text-[8px] font-black uppercase text-violet-300 bg-violet-500/10 border border-violet-500/20 px-1.5 py-0.5 rounded-md tracking-wider flex items-center gap-0.5">
                 NEXORA AI 🌌
               </span>
             )}
@@ -422,7 +422,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             </span>
           )}
           {post.location && (
-            <span className="bg-cyan-500/10 text-violet-300 border border-cyan-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse">
+            <span className="bg-violet-500/10 text-violet-300 border border-violet-500/20 px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse">
               <Globe className="w-2.5 h-2.5 text-violet-200" />
               <span>🌍 Pulse Report</span>
             </span>
@@ -452,7 +452,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               </button>
               <button
                 onClick={() => handleSaveEditPost(post.id)}
-                className="px-3 py-1.5 bg-gradient-to-r from-violet-600 to-pink-500 hover:brightness-110 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg cursor-pointer"
+                className="px-3 py-1.5 bg-gradient-to-r from-violet-600 to-indigo-700 hover:brightness-110 text-white font-bold text-[10px] uppercase tracking-wider rounded-lg cursor-pointer"
               >
                 Save Changes 💾
               </button>
@@ -550,7 +550,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                 }
               }}
               className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-90 cursor-pointer ${
-                isPlaying ? 'bg-gradient-to-r from-violet-600 to-pink-500 text-white' : 'bg-violet-500/20 text-violet-300'
+                isPlaying ? 'bg-gradient-to-r from-violet-600 to-indigo-700 text-white' : 'bg-violet-500/20 text-violet-300'
               }`}
             >
               {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-violet-300 ml-0.5" />}
@@ -570,7 +570,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                   <div
                     key={idx}
                     className={`w-[2.5px] rounded-full transition-all duration-300 ${
-                      isPlaying ? 'bg-gradient-to-t from-violet-500 via-pink-400 to-cyan-300' : 'bg-violet-500/20'
+                      isPlaying ? 'bg-gradient-to-t from-violet-500 via-violet-300 to-indigo-300' : 'bg-violet-500/20'
                     }`}
                     style={{
                       height: isPlaying ? `${Math.floor(20 + Math.sin(idx * 1.5 + voiceSeconds) * 60 + Math.random() * 20)}%` : '15%'
@@ -687,7 +687,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               aria-label={`${post.isLikedByUser ? 'Un-spark' : 'Spark'} post by ${post.name}; ${post.likes} sparks`}
               aria-pressed={!!post.isLikedByUser}
             >
-              <Zap className={`w-6 h-6 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : 'text-white'}`} />
+              <Zap className={`w-6 h-6 ${post.isLikedByUser ? 'fill-violet-400 text-violet-300' : 'text-white'}`} />
               <span className="text-[10px] font-mono font-bold">{post.likes}</span>
             </button>
 
@@ -745,7 +745,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               aria-label={`${post.isBookmarkedByUser ? 'Remove bookmark from' : 'Bookmark'} post by ${post.name}; ${post.bookmarksCount || 0} saves`}
               aria-pressed={!!post.isBookmarkedByUser}
             >
-              <Bookmark className={`w-6 h-6 ${post.isBookmarkedByUser ? 'fill-cyan-400 text-violet-300' : 'text-white'}`} />
+              <Bookmark className={`w-6 h-6 ${post.isBookmarkedByUser ? 'fill-violet-400 text-violet-300' : 'text-white'}`} />
               <span className="text-[10px] font-mono font-bold">{post.bookmarksCount || 0}</span>
             </button>
           </div>
