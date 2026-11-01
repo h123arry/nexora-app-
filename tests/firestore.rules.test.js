@@ -597,4 +597,31 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(dbFor('alice'), 'subscriptions', 'sub-1'), { status: 'active' }));
     await assertFails(deleteDoc(doc(dbFor('alice'), 'creatorEarnings', 'earn-1')));
   });
+
+  it('persists bookmarks privately and permits only owner bookmarks of public posts', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'posts', 'bookmark-public'), {
+        id: 'bookmark-public', userId: 'author', audience: 'public', content: 'Public post', likes: 0, commentsCount: 0
+      });
+      await setDoc(doc(db, 'posts', 'bookmark-private'), {
+        id: 'bookmark-private', userId: 'author', audience: 'followers', content: 'Restricted post'
+      });
+    });
+
+    const aliceBookmark = doc(dbFor('alice'), 'users', 'alice', 'postBookmarks', 'bookmark-public');
+    await assertSucceeds(setDoc(aliceBookmark, {
+      postId: 'bookmark-public', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(aliceBookmark));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'postBookmarks')));
+    await assertFails(getDocs(collection(dbFor('bob'), 'users', 'alice', 'postBookmarks')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'users', 'alice', 'postBookmarks', 'forged'), {
+      postId: 'forged', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'postBookmarks', 'bookmark-private'), {
+      postId: 'bookmark-private', createdAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(aliceBookmark, { postId: 'bookmark-private' }));
+    await assertSucceeds(deleteDoc(aliceBookmark));
+  });
 });
