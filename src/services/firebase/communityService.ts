@@ -1,11 +1,13 @@
 import {
   collection,
   doc,
+  deleteDoc,
   getDoc,
   getDocs,
   limit,
   query,
   serverTimestamp,
+  setDoc,
   where,
   writeBatch,
 } from 'firebase/firestore';
@@ -122,12 +124,12 @@ export const CommunityService = {
     }
     if (community.data().bannedUsers?.includes?.(userId)) throw new Error('You cannot join this Circle.');
     if (membership.exists() && membership.data().status === 'active') return;
-    await import('firebase/firestore').then(({ setDoc }) => setDoc(memberRef, {
+    await setDoc(memberRef, {
       userId,
       role: 'member',
       status: 'active',
       joinedAt: serverTimestamp(),
-    }));
+    });
   },
 
   async leaveCommunity(userId: string, communityId: string): Promise<void> {
@@ -136,7 +138,6 @@ export const CommunityService = {
     const membership = await getDoc(memberRef);
     if (!membership.exists()) return;
     if (membership.data().role === 'owner') throw new Error('Circle owners must transfer ownership before leaving.');
-    const { deleteDoc } = await import('firebase/firestore');
     await deleteDoc(memberRef);
   },
 };
