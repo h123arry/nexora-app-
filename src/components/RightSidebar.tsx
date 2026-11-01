@@ -45,7 +45,7 @@ export default function RightSidebar({
           {trendingTags.length === 0 ? <p className="p-3 text-center text-xs leading-relaxed text-slate-500">No trends yet. Start a conversation with a hashtag.</p> : trendingTags.map(({ tag, count }, index) => {
             const active = selectedTag === tag;
             return (
-              <button key={tag} onClick={() => setSelectedTag(active ? null : tag)} className={`group flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all ${active ? 'bg-violet-500/15 ring-1 ring-violet-400/25' : 'hover:bg-white/[0.04]'}`}>
+              <button key={tag} type="button" aria-pressed={active} onClick={() => setSelectedTag(active ? null : tag)} className={`group flex min-h-14 w-full items-center gap-3 rounded-2xl p-3 text-left transition-all focus-visible:outline-2 focus-visible:outline-violet-300 ${active ? 'bg-violet-500/15 ring-1 ring-violet-400/25' : 'hover:bg-white/[0.04]'}`}>
                 <span className={`flex h-8 w-8 items-center justify-center rounded-xl text-[11px] font-bold ${index === 0 ? 'bg-violet-500/20 text-violet-200' : 'bg-white/[0.06] text-slate-400'}`}>{String(index + 1).padStart(2, '0')}</span>
                 <span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-slate-100">#{tag}</span><span className="mt-0.5 block text-[10px] text-slate-500">{count.toLocaleString()} conversations</span></span>
                 <TrendingUp className="h-3.5 w-3.5 text-slate-500 transition-colors group-hover:text-violet-300" />
@@ -63,9 +63,14 @@ export default function RightSidebar({
             const following = followingIds.includes(creator.id);
             return (
               <div key={creator.id} className="flex items-center gap-3 rounded-2xl p-2.5 transition-colors hover:bg-white/[0.04]">
-                <img src={creator.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'} alt={creator.name} referrerPolicy="no-referrer" onClick={() => onViewProfile?.(creator.id)} className="h-10 w-10 shrink-0 cursor-pointer rounded-2xl object-cover ring-2 ring-violet-400/20" />
-                <div className="min-w-0 flex-1"><p onClick={() => onViewProfile?.(creator.id)} className="flex cursor-pointer items-center gap-1 truncate text-xs font-bold text-white hover:text-violet-200"><span className="truncate">{creator.name}</span>{(creator.username === 'voh' || creator.isVerified) && <PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0" />}</p><p className="mt-0.5 truncate text-[10px] text-slate-500">@{creator.username}</p></div>
-                <motion.button whileTap={{ scale: 0.92 }} onClick={() => onToggleFollow(creator.id)} className={`shrink-0 rounded-full px-3 py-1.5 text-[9px] font-bold transition-all ${following ? 'border border-white/10 bg-white/[0.06] text-slate-400' : 'bg-violet-500 text-white shadow-[0_6px_16px_rgba(139,92,246,0.28)] hover:bg-violet-400'}`}><AnimatePresence mode="wait"><motion.span key={following ? 'following' : 'follow'} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 3 }}>{following ? 'Following' : 'Follow'}</motion.span></AnimatePresence></motion.button>
+                <button type="button" onClick={() => onViewProfile?.(creator.id)} aria-label={`View ${creator.name}'s profile`} className="shrink-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-violet-300">
+                  <img src={creator.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'} alt="" referrerPolicy="no-referrer" className="h-10 w-10 rounded-2xl object-cover ring-2 ring-violet-400/20" />
+                </button>
+                <div className="min-w-0 flex-1">
+                  <button type="button" onClick={() => onViewProfile?.(creator.id)} className="flex min-h-9 max-w-full items-center gap-1 rounded-lg text-left text-xs font-bold text-white hover:text-violet-200 focus-visible:outline-2 focus-visible:outline-violet-300"><span className="truncate">{creator.name}</span>{(creator.username === 'voh' || creator.isVerified) && <PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0" />}</button>
+                  <p className="mt-0.5 truncate text-[10px] text-slate-500">@{creator.username}</p>
+                </div>
+                <motion.button type="button" whileTap={{ scale: 0.96 }} onClick={() => onToggleFollow(creator.id)} aria-pressed={following} className={`min-h-10 min-w-[5.25rem] shrink-0 rounded-full px-3 py-2 text-[10px] font-bold transition-all focus-visible:outline-2 focus-visible:outline-violet-300 ${following ? 'border border-white/10 bg-white/[0.06] text-slate-300' : 'bg-violet-500 text-white shadow-[0_6px_16px_rgba(139,92,246,0.28)] hover:bg-violet-400'}`}><AnimatePresence mode="wait"><motion.span key={following ? 'following' : 'follow'} initial={{ opacity: 0, y: -3 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 3 }}>{following ? 'Following' : 'Follow'}</motion.span></AnimatePresence></motion.button>
               </div>
             );
           })}
