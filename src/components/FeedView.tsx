@@ -152,7 +152,7 @@ const SEARCHABLE_SYSTEM_USERS: any[] = [];
 
 function FeedHydrationSkeleton() {
   return (
-    <div aria-busy="true" aria-label="Loading Nexora feed" className="space-y-4 mx-3 sm:mx-0">
+    <div aria-busy="true" aria-label="Loading Nexora feed" className="nx-feed-list space-y-4 mx-3 sm:mx-0">
       {Array.from({ length: 3 }).map((_, index) => (
         <div key={index} className="nx-post-card p-4 space-y-4">
           <div className="flex items-center gap-3"><Skeleton className="h-10 w-10 rounded-full" /><div className="space-y-2 flex-1"><Skeleton className="h-3 w-32" /><Skeleton className="h-2.5 w-20" /></div><Skeleton className="h-7 w-7 rounded-full" /></div>
@@ -2537,7 +2537,7 @@ export default function FeedView({
                   placeholder="What's on your mind? Share an update, media, or opportunity..."
                   value={composerText}
                   onChange={(e) => setComposerText(e.target.value)}
-                  className="w-full bg-slate-950/50 border border-white/5 focus:border-white/10 text-xs text-white rounded-xl p-3 focus:outline-hidden placeholder:text-violet-400/30 resize-none font-sans"
+                  className="nx-composer-field w-full bg-[#120E2B] border border-[#302653] focus:border-violet-300/60 text-sm text-white rounded-xl p-3 focus:outline-hidden placeholder:text-[#8E86AA] resize-none font-sans"
                 />
               </div>
 
