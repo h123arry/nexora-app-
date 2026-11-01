@@ -30,3 +30,18 @@ A discovery feed should help people find more than one creator. TikTok's own exp
 
 ## Verification
 The discovery unit test was updated to assert creator interleaving. This GitHub API edit has not been run locally in this environment; run `npm run lint` and `npm run test:unit` before relying on the behavior in a release. Staging and Android verification remain separate owner-controlled steps.
+
+## Creator search refinement
+
+- Added deterministic relevance ordering for loaded creator results: exact username, username prefix, exact display name, display-name prefix, then biography, skills and interest metadata.
+- Supports `@username` queries.
+- De-duplicates by account ID and excludes accounts marked banned or suspended from this client-side discovery result.
+- Limits results to 50 in Explore (with a hard upper bound of 100 in the helper).
+- Search remains limited to creators already loaded in the browser; this does not claim global indexed people search.
+- Added regression coverage for ranking, bounded results, duplicate accounts, and unavailable accounts.
+
+## Additional ranking regression coverage
+
+- Tests configurable creator sequence diversity.
+- Tests that eligible overflow posts are retained rather than silently lost.
+- Tests deterministic ordering for equal scores.
