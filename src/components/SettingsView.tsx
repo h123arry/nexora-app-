@@ -2,6 +2,7 @@ import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
+import { SettingsService } from '../services/firebase/settingsService';
 
 const PrivacySettingsModal = lazy(() => import('./PrivacySettingsModal'));
 
@@ -20,19 +21,56 @@ export default function SettingsView({
 }: SettingsViewProps) {
   const [activeSection, setActiveSection] = useState<'account' | 'privacy' | 'notifications' | 'appearance' | 'security' | 'connected' | 'about' | 'beta'>('account');
   const [showPrivacyDetails, setShowPrivacyDetails] = useState(false);
-  const privacyKey = `nx_privacy_summary_${currentUser.id}`;
-
-  // Interactive toggle states
-  const [isPrivateAccount, setIsPrivateAccount] = useState(() => localStorage.getItem(`${privacyKey}_private`) === 'true');
-  const [allowDms, setAllowDms] = useState(() => localStorage.getItem(`${privacyKey}_dms`) !== 'false');
+  const [isPrivateAccount, setIsPrivateAccount] = useState(false);
+  const [allowDms, setAllowDms] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
   const [emailDigests, setEmailDigests] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(true);
+  const [savingSetting, setSavingSetting] = useState<string | null>(null);
+  const [settingsError, setSettingsError] = useState('');
+  const [settingsReady, setSettingsReady] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(`${privacyKey}_private`, String(isPrivateAccount));
-    localStorage.setItem(`${privacyKey}_dms`, String(allowDms));
-  }, [privacyKey, isPrivateAccount, allowDms]);
+    let active = true;
+    setSettingsReady(false);
+    SettingsService.getSettings(currentUser.id).then(settings => {
+      if (!active) return;
+      setIsPrivateAccount(settings.privacy.isPrivateAccount);
+      setAllowDms(settings.privacy.allowDms);
+      setPushNotifications(settings.notifications.pushEnabled);
+      setEmailDigests(settings.notifications.emailDigests);
+      setSettingsReady(true);
+    }).catch(() => {
+      if (active) setSettingsError('Could not load your saved settings. Try reopening this screen.');
+    });
+    return () => { active = false; };
+  }, [currentUser.id]);
+
+  const saveSetting = async (key: string, save: () => Promise<void>) => {
+    if (!settingsReady || savingSetting) return;
+    setSavingSetting(key);
+    setSettingsError('');
+    try { await save(); }
+    catch {
+      setSettingsError('Could not save this change. Check your connection and try again.');
+      try {
+        const latest = await SettingsService.getSettings(currentUser.id);
+        setIsPrivateAccount(latest.privacy.isPrivateAccount);
+        setAllowDms(latest.privacy.allowDms);
+        setPushNotifications(latest.notifications.pushEnabled);
+        setEmailDigests(latest.notifications.emailDigests);
+      } catch { /* Keep the last known values and show the save error. */ }
+    } finally { setSavingSetting(null); }
+  };
+
+  const togglePrivacy = (key: 'isPrivateAccount' | 'allowDms', value: boolean) => {
+    if (key === 'isPrivateAccount') setIsPrivateAccount(value); else setAllowDms(value);
+    void saveSetting(key, () => SettingsService.updatePrivacy(currentUser.id, { [key]: value }));
+  };
+
+  const toggleNotification = (key: 'pushEnabled' | 'emailDigests', value: boolean) => {
+    if (key === 'pushEnabled') setPushNotifications(value); else setEmailDigests(value);
+    void saveSetting(key, () => SettingsService.updateNotifications(currentUser.id, { [key]: value }));
+  };
 
   const sections = [
     { id: 'account', label: 'Account', icon: User, desc: 'Profile details & account identity' },
@@ -148,7 +186,10 @@ export default function SettingsView({
                     <p className="text-[10px] text-zinc-400">Only approved followers can view your contributions</p>
                   </div>
                   <button
-                    onClick={() => setIsPrivateAccount(!isPrivateAccount)}
+                    disabled={!settingsReady || savingSetting !== null}
+                    aria-label="Toggle private account"
+                    aria-pressed={isPrivateAccount}
+                    onClick={() => togglePrivacy('isPrivateAccount', !isPrivateAccount)}
                     className={`w-11 h-6 rounded-full transition-colors p-1 cursor-pointer ${isPrivateAccount ? 'bg-violet-600' : 'bg-zinc-700'}`}
                   >
                     <div className={`w-4 h-4 rounded-full bg-white transition-transform ${isPrivateAccount ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -161,7 +202,10 @@ export default function SettingsView({
                     <p className="text-[10px] text-zinc-400">Allow incoming direct chats from community members</p>
                   </div>
                   <button
-                    onClick={() => setAllowDms(!allowDms)}
+                    disabled={!settingsReady || savingSetting !== null}
+                    aria-label="Toggle direct messaging"
+                    aria-pressed={allowDms}
+                    onClick={() => togglePrivacy('allowDms', !allowDms)}
                     className={`w-11 h-6 rounded-full transition-colors p-1 cursor-pointer ${allowDms ? 'bg-violet-600' : 'bg-zinc-700'}`}
                   >
                     <div className={`w-4 h-4 rounded-full bg-white transition-transform ${allowDms ? 'translate-x-5' : 'translate-x-0'}`} />
@@ -183,7 +227,10 @@ export default function SettingsView({
                 ].map(t => (
                   <button
                     key={t.id}
-                    onClick={() => setTheme(t.id as any)}
+                    onClick={() => {
+                      setTheme(t.id as ThemeMood);
+                      void saveSetting('theme', () => SettingsService.updateAppearance(currentUser.id, { theme: t.id }));
+                    }}
                     className={`p-3 rounded-2xl border transition-all text-left flex items-center gap-3 cursor-pointer ${
                       theme === t.id
                         ? 'bg-violet-600/30 border-violet-500 text-white font-bold'
