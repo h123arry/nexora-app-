@@ -87,19 +87,44 @@ export function calculateRevenueShare(input: {
   ruleVersion: string;
 }): RevenueShare {
   const values = [input.grossMinor, input.providerFeeMinor, input.taxMinor, input.platformCommissionBps];
-  if (!values.every(Number.isSafeInteger) || input.grossMinor < 0 || input.providerFeeMinor < 0 || input.taxMinor < 0 || input.platformCommissionBps < 0 || input.platformCommissionBps > 10000) {
+  if (!values.every(Number.isSafeInteger) || input.grossMinor < 0 || input.providerFeeMinor < 0 || input.taxMinor < 0 || input.platformCommissionBps < 0 || input.platformCommissionBps > 10000 || !input.ruleVersion.trim() || input.ruleVersion.length > 64) {
     throw new Error('Revenue inputs are invalid.');
   }
-  const commissionBase = Math.max(0, input.grossMinor - input.providerFeeMinor - input.taxMinor);
-  const platformCommissionMinor = Math.floor((commissionBase * input.platformCommissionBps) / 10000);
+  const commissionBase = input.grossMinor - input.providerFeeMinor - input.taxMinor;
+  if (commissionBase < 0) throw new Error('Fees and taxes cannot exceed gross settlement.');
+  const platformCommissionMinor = Number((BigInt(commissionBase) * BigInt(input.platformCommissionBps)) / 10000n);
   return {
     grossMinor: input.grossMinor,
     providerFeeMinor: input.providerFeeMinor,
     taxMinor: input.taxMinor,
     platformCommissionMinor,
-    creatorShareMinor: Math.max(0, commissionBase - platformCommissionMinor),
+    creatorShareMinor: commissionBase - platformCommissionMinor,
     ruleVersion: input.ruleVersion,
   };
+}
+
+export interface SettlementTotals {
+  currency: Currency;
+  grossMinor: number;
+  transactionCount: number;
+}
+
+export type SettlementReconciliation =
+  | { status: 'matched'; amountVarianceMinor: 0; transactionCountVariance: 0 }
+  | { status: 'mismatch'; amountVarianceMinor: number; transactionCountVariance: number };
+
+export function reconcileSettlementTotals(expected: SettlementTotals, actual: SettlementTotals): SettlementReconciliation {
+  const valid = (value: SettlementTotals) =>
+    ['USD', 'EUR', 'GBP', 'NGN'].includes(value.currency)
+    && Number.isSafeInteger(value.grossMinor) && value.grossMinor >= 0
+    && Number.isSafeInteger(value.transactionCount) && value.transactionCount >= 0;
+  if (!valid(expected) || !valid(actual)) throw new Error('Settlement totals are invalid.');
+  if (expected.currency !== actual.currency) throw new Error('Settlement currency mismatch.');
+  const amountVarianceMinor = actual.grossMinor - expected.grossMinor;
+  const transactionCountVariance = actual.transactionCount - expected.transactionCount;
+  return amountVarianceMinor === 0 && transactionCountVariance === 0
+    ? { status: 'matched', amountVarianceMinor: 0, transactionCountVariance: 0 }
+    : { status: 'mismatch', amountVarianceMinor, transactionCountVariance };
 }
 
 export function assertCurrencyMatch(expected: Currency, actual: unknown): asserts actual is Currency {
