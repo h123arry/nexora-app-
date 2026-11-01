@@ -201,6 +201,7 @@ interface ProfileViewProps {
   onUpdateProfile: (updatedData: Partial<User>) => void;
   onLikePost: (postId: string) => void;
   onAddComment?: (postId: string, text: string) => void;
+  onAddPost?: (content: string, imageUrl?: string, tagsString?: string, images?: string[], videoUrl?: string) => string;
   isOwnProfile?: boolean;
   onCloseProfile?: () => void;
   onToggleFollow?: (creatorId: string) => void;
@@ -221,6 +222,7 @@ export default function ProfileView({
   onUpdateProfile,
   onLikePost,
   onAddComment,
+  onAddPost,
   isOwnProfile = true,
   onCloseProfile,
   onToggleFollow,
@@ -2601,6 +2603,7 @@ export default function ProfileView({
               <CreatorDashboardView
                 currentUser={currentUser}
                 posts={posts}
+                onAddPost={onAddPost || (() => '')}
                 onClose={() => setActivePanel('profile')}
                 onUpdateProfile={onUpdateProfile}
               />

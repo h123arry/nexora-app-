@@ -6,13 +6,14 @@ import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
 import { 
   doc, updateDoc, deleteDoc, addDoc, collection, 
-  getDocs, query, where, serverTimestamp 
+  getDocs, query, where, serverTimestamp, limit 
 } from 'firebase/firestore';
 import { submitModerationAppeal } from '../services/dataService';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
   posts: Post[];
+  onAddPost: (content: string, imageUrl?: string, tagsString?: string, images?: string[], videoUrl?: string) => string;
   onClose?: () => any;
   onUpdateProfile?: (updatedData: Partial<User>) => void;
 }
@@ -20,6 +21,7 @@ interface CreatorDashboardViewProps {
 export default function CreatorDashboardView({
   currentUser,
   posts,
+  onAddPost,
   onClose,
   onUpdateProfile
 }: CreatorDashboardViewProps) {
@@ -29,7 +31,7 @@ export default function CreatorDashboardView({
   // Real Local state for Optimistic UI and responsiveness
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [drafts, setDrafts] = useState<any[]>([]);
-  const [scheduledPosts, setScheduledPosts] = useState<any[]>([]);
+  const [isDraftsLoading, setIsDraftsLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   
   // Modals & Sub-states
@@ -52,9 +54,6 @@ export default function CreatorDashboardView({
   const [draftTags, setDraftTags] = useState('');
   const [draftType, setDraftType] = useState<'video' | 'image' | 'text'>('video');
   const [draftUrl, setDraftUrl] = useState('');
-  const [publishMode, setPublishMode] = useState<'immediate' | 'schedule'>('immediate');
-  const [scheduleDate, setScheduleDate] = useState('');
-  const [scheduleTime, setScheduleTime] = useState('');
   
   // Recovery Unsaved Draft Notice
   const [recoveredDraft, setRecoveredDraft] = useState<any | null>(null);
@@ -63,96 +62,64 @@ export default function CreatorDashboardView({
   const [appealPostId, setAppealPostId] = useState('');
 
   // Local storage auto-save ref
-  const lastDraftSaveRef = useRef<{ caption: string; tags: string } | null>(null);
+  const lastDraftSaveRef = useRef<{ caption: string; tags: string; type: 'video' | 'image' | 'text'; url: string } | null>(null);
 
-  // Filter & Synchronize Creator's Posts
   useEffect(() => {
-    const userUploaded = posts.filter(p => p.userId === currentUser.id);
-    setLocalPosts(userUploaded);
-    
-    // Simulate initial studio loads
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 600);
+    setLocalPosts(posts.filter(post => post.userId === currentUser.id));
+  }, [posts, currentUser.id]);
 
-    // Read stored autosaved draft
-    const saved = localStorage.getItem('nexora_unsaved_draft');
+  useEffect(() => {
+    let cancelled = false;
+    setDrafts([]);
+    setIsDraftsLoading(true);
+    setIsLoading(true);
+    const loadDrafts = async () => {
+      try {
+        const snapshot = await getDocs(query(collection(db, 'drafts'), where('userId', '==', currentUser.id), limit(100)));
+        if (cancelled) return;
+        const loaded = snapshot.docs.map(item => ({ id: item.id, ...item.data() }))
+          .sort((left: any, right: any) => {
+            const leftTime = left.updatedAt?.toMillis?.() ?? new Date(left.updatedAt || 0).getTime();
+            const rightTime = right.updatedAt?.toMillis?.() ?? new Date(right.updatedAt || 0).getTime();
+            return rightTime - leftTime;
+          });
+        setDrafts(loaded);
+      } catch {
+        if (!cancelled) window.dispatchEvent(new CustomEvent('toast', { detail: 'Creator drafts could not be loaded. Check your connection and try again.' }));
+      } finally {
+        if (!cancelled) {
+          setIsDraftsLoading(false);
+          setIsLoading(false);
+        }
+      }
+    };
+    void loadDrafts();
+    const saved = localStorage.getItem(`nexora_unsaved_draft_${currentUser.id}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (parsed && (parsed.caption || parsed.tags) && parsed.userId === currentUser.id) {
-          setRecoveredDraft(parsed);
-        }
-      } catch (e) {}
-    }
-
-    // Load drafts & scheduled posts from LocalStorage / Mock db
-    const savedDrafts = localStorage.getItem(`nexora_drafts_${currentUser.id}`);
-    if (savedDrafts) {
-      setDrafts(JSON.parse(savedDrafts));
+        if (parsed && (parsed.caption || parsed.tags || parsed.videoUrl) && parsed.userId === currentUser.id) setRecoveredDraft(parsed);
+      } catch {
+        localStorage.removeItem(`nexora_unsaved_draft_${currentUser.id}`);
+      }
     } else {
-      const initialDrafts = [
-        { id: 'draft-1', caption: 'Editing the new tech breakdown!', tags: 'tech,ai', type: 'video', videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-matrix-style-code-digital-falling-40114-large.mp4', updatedAt: new Date(Date.now() - 3600000).toISOString() },
-        { id: 'draft-2', caption: 'Sunday vibes in the city setup 🌆', tags: 'city,vibes', type: 'image', videoUrl: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=500', updatedAt: new Date(Date.now() - 86400000).toISOString() }
-      ];
-      setDrafts(initialDrafts);
-      localStorage.setItem(`nexora_drafts_${currentUser.id}`, JSON.stringify(initialDrafts));
+      setRecoveredDraft(null);
     }
-
-    const savedScheduled = localStorage.getItem(`nexora_scheduled_${currentUser.id}`);
-    if (savedScheduled) {
-      setScheduledPosts(JSON.parse(savedScheduled));
-    }
-
-    return () => clearTimeout(timer);
-  }, [posts, currentUser.id]);
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
 
   // Draft Continuous Auto-Save Trigger
   useEffect(() => {
     if (!showDraftModal) return;
     const interval = setInterval(() => {
-      if (draftCaption === lastDraftSaveRef.current?.caption && draftTags === lastDraftSaveRef.current?.tags) return;
-      
-      const unsaved = {
-        userId: currentUser.id,
-        caption: draftCaption,
-        tags: draftTags,
-        type: draftType,
-        videoUrl: draftUrl,
-        savedAt: new Date().toISOString()
-      };
-      localStorage.setItem('nexora_unsaved_draft', JSON.stringify(unsaved));
-      lastDraftSaveRef.current = { caption: draftCaption, tags: draftTags };
+      if (draftCaption === lastDraftSaveRef.current?.caption && draftTags === lastDraftSaveRef.current?.tags && draftType === lastDraftSaveRef.current?.type && draftUrl === lastDraftSaveRef.current?.url) return;
+      const unsaved = { userId: currentUser.id, caption: draftCaption, tags: draftTags, type: draftType, videoUrl: draftUrl, savedAt: new Date().toISOString() };
+      localStorage.setItem(`nexora_unsaved_draft_${currentUser.id}`, JSON.stringify(unsaved));
+      lastDraftSaveRef.current = { caption: draftCaption, tags: draftTags, type: draftType, url: draftUrl };
     }, 2500);
 
     return () => clearInterval(interval);
   }, [draftCaption, draftTags, draftType, draftUrl, showDraftModal, currentUser.id]);
-
-  // Automated scheduled publishing countdown worker
-  useEffect(() => {
-    const checkSchedule = setInterval(() => {
-      if (scheduledPosts.length === 0) return;
-      const now = new Date();
-      const toPublish = scheduledPosts.filter(p => new Date(p.publishTime) <= now);
-      
-      if (toPublish.length > 0) {
-        // Publish them!
-        toPublish.forEach(p => {
-          // Simulate feed post dispatch
-          const customPostEvent = new CustomEvent('toast', { detail: `🚀 Published scheduled post: "${p.caption.slice(0, 20)}..."` });
-          window.dispatchEvent(customPostEvent);
-
-          // Remove from scheduled list
-          setScheduledPosts(prev => {
-            const updated = prev.filter(sp => sp.id !== p.id);
-            localStorage.setItem(`nexora_scheduled_${currentUser.id}`, JSON.stringify(updated));
-            return updated;
-          });
-        });
-      }
-    }, 5000);
-    return () => clearInterval(checkSchedule);
-  }, [scheduledPosts, currentUser.id]);
 
   // Only aggregate counters present on the user's stored post records.
   const stats = useMemo(() => {
@@ -251,113 +218,84 @@ export default function CreatorDashboardView({
     }
   };
 
-  // Draft Management Operations
-  const handleSaveDraft = () => {
-    const newDraft = {
-      id: currentDraftId || `draft-${Date.now()}`,
-      caption: draftCaption,
-      tags: draftTags,
-      type: draftType,
-      videoUrl: draftUrl || 'https://assets.mixkit.co/videos/preview/mixkit-matrix-style-code-digital-falling-40114-large.mp4',
-      updatedAt: new Date().toISOString()
-    };
-
-    let updatedDrafts;
-    if (currentDraftId) {
-      updatedDrafts = drafts.map(d => d.id === currentDraftId ? newDraft : d);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft changes updated!' }));
-    } else {
-      updatedDrafts = [newDraft, ...drafts];
-      window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved in studio memory!' }));
+  const handleSaveDraft = async () => {
+    const tags = draftTags.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30);
+    const payload = { userId: currentUser.id, caption: draftCaption.trim().slice(0, 10000), videoUrl: draftUrl.trim().slice(0, 1000), type: draftType, tags, updatedAt: serverTimestamp() };
+    try {
+      if (currentDraftId) {
+        await updateDoc(doc(db, 'drafts', currentDraftId), payload);
+        setDrafts(prev => prev.map(item => item.id === currentDraftId ? { id: currentDraftId, ...payload, updatedAt: new Date().toISOString() } : item));
+      } else {
+        const created = await addDoc(collection(db, 'drafts'), payload);
+        setDrafts(prev => [{ id: created.id, ...payload, updatedAt: new Date().toISOString() }, ...prev]);
+      }
+      localStorage.removeItem(`nexora_unsaved_draft_${currentUser.id}`);
+      setRecoveredDraft(null);
+      setShowDraftModal(false);
+      clearDraftForm();
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Draft saved to your Nexora account.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Draft could not be saved. Please try again.' }));
     }
-
-    setDrafts(updatedDrafts);
-    localStorage.setItem(`nexora_drafts_${currentUser.id}`, JSON.stringify(updatedDrafts));
-    localStorage.removeItem('nexora_unsaved_draft');
-    setRecoveredDraft(null);
-    setShowDraftModal(false);
-    clearDraftForm();
   };
 
-  const handleDeleteDraft = (draftId: string) => {
-    const updated = drafts.filter(d => d.id !== draftId);
-    setDrafts(updated);
-    localStorage.setItem(`nexora_drafts_${currentUser.id}`, JSON.stringify(updated));
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Draft discarded.' }));
+  const handleDeleteDraft = async (draftId: string) => {
+    try {
+      await deleteDoc(doc(db, 'drafts', draftId));
+      setDrafts(prev => prev.filter(item => item.id !== draftId));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Draft deleted.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Draft could not be deleted. Please try again.' }));
+    }
   };
 
-  const handlePublishDraft = (draft: any) => {
-    if (publishMode === 'schedule') {
-      if (!scheduleDate || !scheduleTime) {
-        alert('Please specify a scheduled publish date and time.');
+  const handlePublishDraft = async (draft: any) => {
+    const caption = draftCaption.trim();
+    const mediaUrl = draftUrl.trim();
+    if (!caption && draftType === 'text') {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Add a caption before publishing.' }));
+      return;
+    }
+    if (draftType !== 'text') {
+      if (!mediaUrl) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Add a media URL before publishing.' }));
         return;
       }
-      const schedTime = `${scheduleDate}T${scheduleTime}`;
-      const newSched = {
-        id: `sched-${Date.now()}`,
-        caption: draftCaption,
-        tags: draftTags,
-        type: draftType,
-        videoUrl: draftUrl,
-        publishTime: schedTime
-      };
-      const updated = [newSched, ...scheduledPosts];
-      setScheduledPosts(updated);
-      localStorage.setItem(`nexora_scheduled_${currentUser.id}`, JSON.stringify(updated));
-      
-      // Remove original draft
-      handleDeleteDraft(draft.id);
-      setShowDraftModal(false);
-      clearDraftForm();
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📅 Post scheduled successfully!' }));
-    } else {
-      // Publish Immediately
-      const mockPostEvent = new CustomEvent('add-post', {
-        detail: {
-          content: draftCaption,
-          tags: draftTags,
-          videoUrl: draftUrl,
-          audience: 'public'
+      try {
+        const parsedUrl = new URL(mediaUrl);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) throw new Error('Unsupported media URL');
+      } catch {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Enter a valid HTTP or HTTPS media URL.' }));
+        return;
+      }
+    }
+    try {
+      const postId = onAddPost(caption, draftType === 'image' ? mediaUrl : undefined, draftTags, undefined, draftType === 'video' ? mediaUrl : undefined);
+      if (!postId) return;
+      if (draft?.id && draft.id !== 'temp') {
+        try {
+          await deleteDoc(doc(db, 'drafts', draft.id));
+          setDrafts(prev => prev.filter(item => item.id !== draft.id));
+        } catch {
+          window.dispatchEvent(new CustomEvent('toast', { detail: 'Post submitted, but its saved draft could not be removed.' }));
         }
-      });
-      window.dispatchEvent(mockPostEvent);
-      
-      // Force instant local add for UI feel
-      const newPost: Post = {
-        id: `post-gen-${Date.now()}`,
-        userId: currentUser.id,
-        username: currentUser.username,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        isVerified: currentUser.isVerified,
-        content: draftCaption,
-        videoUrl: draftUrl || undefined,
-        tags: draftTags.split(',').map(t => t.trim().replace('#', '')).filter(Boolean),
-        likes: 0,
-        commentsCount: 0,
-        shares: 0,
-        views: 0,
-        saves: 0,
-        timestamp: new Date().toISOString(),
-        comments: []
-      };
-      setLocalPosts(prev => [newPost, ...prev]);
-
-      // Remove from drafts
-      handleDeleteDraft(draft.id);
+      }
+      localStorage.removeItem(`nexora_unsaved_draft_${currentUser.id}`);
+      setRecoveredDraft(null);
       setShowDraftModal(false);
       clearDraftForm();
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🚀 Post published immediately!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Post submitted to Nexora.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Post could not be submitted. Your draft has been kept.' }));
     }
   };
 
   const handleOpenDraftEdit = (draft: any) => {
     setCurrentDraftId(draft.id);
     setDraftCaption(draft.caption);
-    setDraftTags(draft.tags);
-    setDraftType(draft.type);
+    setDraftTags(Array.isArray(draft.tags) ? draft.tags.join(', ') : (draft.tags || ''));
+    setDraftType(draft.type || 'text');
     setDraftUrl(draft.videoUrl || '');
-    setPublishMode('immediate');
     setShowDraftModal(true);
   };
 
@@ -367,20 +305,17 @@ export default function CreatorDashboardView({
     setDraftTags('');
     setDraftType('video');
     setDraftUrl('');
-    setScheduleDate('');
-    setScheduleTime('');
-    setPublishMode('immediate');
   };
 
   const handleRecoverUnsaved = () => {
     if (!recoveredDraft) return;
     setDraftCaption(recoveredDraft.caption);
     setDraftTags(recoveredDraft.tags);
-    setDraftType(recoveredDraft.type);
+    setDraftType(recoveredDraft.type || 'text');
     setDraftUrl(recoveredDraft.videoUrl || '');
     setShowDraftModal(true);
     setRecoveredDraft(null);
-    localStorage.removeItem('nexora_unsaved_draft');
+    localStorage.removeItem(`nexora_unsaved_draft_${currentUser.id}`);
     window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Auto-saved draft successfully recovered!' }));
   };
 
@@ -515,7 +450,7 @@ export default function CreatorDashboardView({
             </div>
             <div className="flex gap-2">
               <button 
-                onClick={() => { setRecoveredDraft(null); localStorage.removeItem('nexora_unsaved_draft'); }}
+                onClick={() => { setRecoveredDraft(null); localStorage.removeItem(`nexora_unsaved_draft_${currentUser.id}`); }}
                 className="px-2.5 py-1 text-[10px] font-mono text-zinc-400 hover:text-white"
               >
                 Discard
@@ -833,7 +768,7 @@ export default function CreatorDashboardView({
                 </div>
                 <div className="space-y-3">
                   {drafts.length === 0 ? (
-                    <p className="text-xs text-zinc-500 font-mono text-center py-8">Your draft inbox is empty.</p>
+                    <p className="text-xs text-zinc-500 font-mono text-center py-8">{isDraftsLoading ? 'Loading saved drafts…' : 'Your draft inbox is empty.'}</p>
                   ) : (
                     drafts.map(draft => (
                       <div key={draft.id} className="p-4 bg-white/3 border border-white/5 rounded-xl flex items-center justify-between gap-3 text-xs">
@@ -849,7 +784,7 @@ export default function CreatorDashboardView({
                           )}
                           <div>
                             <p className="font-bold text-white line-clamp-1">{draft.caption || 'No caption specified'}</p>
-                            <p className="text-[9px] text-zinc-500 font-mono">Last saved: {new Date(draft.updatedAt).toLocaleTimeString()}</p>
+                            <p className="text-[9px] text-zinc-500 font-mono">Last saved: {new Date(draft.updatedAt?.toDate?.() || draft.updatedAt || 0).toLocaleString()}</p>
                           </div>
                         </div>
                         <div className="flex gap-1">
@@ -872,53 +807,9 @@ export default function CreatorDashboardView({
                 </div>
               </div>
 
-              {/* Scheduled Posts lists */}
-              <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Releases</h4>
-                  <span className="text-[10px] font-mono bg-pink-500/20 text-pink-300 border border-pink-500/20 px-2 py-0.5 rounded-full">{scheduledPosts.length} queued</span>
-                </div>
-                <div className="space-y-3">
-                  {scheduledPosts.length === 0 ? (
-                    <p className="text-xs text-zinc-500 font-mono text-center py-8">No scheduled releases queued in scheduling pipeline.</p>
-                  ) : (
-                    scheduledPosts.map(post => (
-                      <div key={post.id} className="p-4 bg-white/3 border border-white/5 rounded-xl space-y-2.5 text-xs">
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex gap-2 items-center">
-                            <Clock className="w-4 h-4 text-pink-500 shrink-0" />
-                            <div>
-                              <p className="font-bold text-white line-clamp-1">{post.caption}</p>
-                              <p className="text-[9px] text-pink-400 font-mono font-bold">Release: {new Date(post.publishTime).toLocaleString()}</p>
-                            </div>
-                          </div>
-                          <button 
-                            onClick={() => {
-                              const updated = scheduledPosts.filter(p => p.id !== post.id);
-                              setScheduledPosts(updated);
-                              localStorage.setItem(`nexora_scheduled_${currentUser.id}`, JSON.stringify(updated));
-                              window.dispatchEvent(new CustomEvent('toast', { detail: '📅 Scheduled release cancelled.' }));
-                            }}
-                            className="p-1 hover:bg-white/5 text-zinc-400 hover:text-white rounded-lg"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                        <div className="flex gap-1.5 justify-end">
-                          <button 
-                            onClick={() => {
-                              // Publish immediately
-                              handlePublishDraft({ id: post.id });
-                            }}
-                            className="px-2.5 py-1 bg-violet-600/20 border border-white/10 text-violet-300 text-[10px] font-bold rounded-lg hover:bg-violet-600/30 transition-colors"
-                          >
-                            Publish Now
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
+              <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-3">
+                <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-zinc-400" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Publishing</h4></div>
+                <p className="text-xs text-zinc-400 leading-relaxed">Automatic scheduled publishing is not enabled yet. Save a draft and publish it manually when you're ready. Nexora will not show a scheduled post as published unless the server confirms it.</p>
               </div>
             </div>
           )}
@@ -1341,62 +1232,7 @@ export default function CreatorDashboardView({
                   </div>
                 </div>
 
-                {/* Publishing Mode */}
-                <div className="space-y-2 pt-2 border-t border-white/5">
-                  <label className="text-zinc-400 font-bold block">Publishing Mode</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setPublishMode('immediate')}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-colors ${
-                        publishMode === 'immediate' 
-                          ? 'bg-violet-600/10 border-white/10 text-violet-300' 
-                          : 'bg-transparent border-white/5 text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      Publish Immediately
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPublishMode('schedule')}
-                      className={`py-2 rounded-xl text-xs font-bold border transition-colors ${
-                        publishMode === 'schedule' 
-                          ? 'bg-pink-500/10 border-pink-500/30 text-pink-300' 
-                          : 'bg-transparent border-white/5 text-zinc-400 hover:text-white'
-                      }`}
-                    >
-                      Schedule Publishing
-                    </button>
-                  </div>
-                </div>
-
-                {/* Scheduled details inputs */}
-                {publishMode === 'schedule' && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="grid grid-cols-2 gap-3 pt-2 overflow-hidden"
-                  >
-                    <div className="space-y-1">
-                      <label className="text-zinc-400 text-[10px] block">Date</label>
-                      <input
-                        type="date"
-                        value={scheduleDate}
-                        onChange={(e) => setScheduleDate(e.target.value)}
-                        className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-zinc-400 text-[10px] block">Time</label>
-                      <input
-                        type="time"
-                        value={scheduleTime}
-                        onChange={(e) => setScheduleTime(e.target.value)}
-                        className="w-full bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
-                      />
-                    </div>
-                  </motion.div>
-                )}
+                <div className="rounded-xl border border-white/5 bg-white/3 p-3 text-[11px] text-zinc-400">Publishing sends this post through Nexora's authenticated post pipeline. Automatic scheduling is not enabled yet.</div>
 
                 <div className="flex gap-2 pt-4 justify-between border-t border-white/5">
                   <button 
@@ -1419,7 +1255,7 @@ export default function CreatorDashboardView({
                       onClick={() => handlePublishDraft({ id: currentDraftId || 'temp' })}
                       className="px-4 py-2 rounded-xl bg-linear-to-r from-violet-600 to-pink-600 hover:opacity-90 text-xs font-black tracking-wide shadow-lg"
                     >
-                      {publishMode === 'schedule' ? 'Schedule Post' : 'Publish Live Now'}
+                      Publish to Nexora
                     </button>
                   </div>
                 </div>

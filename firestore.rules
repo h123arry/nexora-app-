@@ -379,19 +379,23 @@ service cloud.firestore {
     match /drafts/{draftId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
       allow create: if accountMayPost()
-        && request.resource.data.keys().hasOnly(['userId', 'caption', 'videoUrl', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['userId', 'caption', 'videoUrl', 'type', 'tags', 'updatedAt'])
         && request.resource.data.userId == request.auth.uid
         && request.resource.data.caption is string
         && request.resource.data.caption.size() <= 10000
         && request.resource.data.videoUrl is string
-        && request.resource.data.videoUrl.size() <= 1000;
+        && request.resource.data.videoUrl.size() <= 1000
+        && (!request.resource.data.keys().hasAny(['type']) || request.resource.data.type in ['video', 'image', 'text'])
+        && (!request.resource.data.keys().hasAny(['tags']) || (request.resource.data.tags is list && request.resource.data.tags.size() <= 30));
       allow update: if signedIn() && resource.data.userId == request.auth.uid
         && request.resource.data.userId == resource.data.userId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'videoUrl', 'updatedAt'])
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['caption', 'videoUrl', 'type', 'tags', 'updatedAt'])
         && request.resource.data.caption is string
         && request.resource.data.caption.size() <= 10000
         && request.resource.data.videoUrl is string
-        && request.resource.data.videoUrl.size() <= 1000;
+        && request.resource.data.videoUrl.size() <= 1000
+        && (!request.resource.data.keys().hasAny(['type']) || request.resource.data.type in ['video', 'image', 'text'])
+        && (!request.resource.data.keys().hasAny(['tags']) || (request.resource.data.tags is list && request.resource.data.tags.size() <= 30));
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
