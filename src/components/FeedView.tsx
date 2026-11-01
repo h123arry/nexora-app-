@@ -1579,7 +1579,9 @@ export default function FeedView({
       } else if (feedTab === 'reels') {
         // Reels use short-form signals instead of the long-form media mixer.
         // The ranking utility keeps the reasons explainable and deterministic.
-        return rankReels(sortedList, followingIds, currentUser.interestDNA, {\n          mutedCreatorIds, blockedCreatorIds: blockedUserIds, hiddenPostIds, notInterestedTags,\n        }).map(({ post }) => post as RefactoredPost);
+        return rankReels(sortedList, followingIds, currentUser.interestDNA, {
+          mutedCreatorIds, blockedCreatorIds: blockedUserIds, hiddenPostIds, notInterestedTags,
+        }).map(({ post }) => post as RefactoredPost);
       }
       return sortedList;
     })();

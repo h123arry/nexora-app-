@@ -13,7 +13,8 @@ interface ExploreViewProps {
   onLikePost: (postId: string) => void;
   onToggleFollow?: (creatorId: string) => void;
   followingIds: string[];
-  onViewProfile?: (userIdOrUsername: string) => void;\n  interestDNA?: Record<string, number>;
+  onViewProfile?: (userIdOrUsername: string) => void;
+  interestDNA?: Record<string, number>;
 }
 
 export default function ExploreView({
@@ -24,7 +25,8 @@ export default function ExploreView({
   onLikePost,
   onToggleFollow,
   followingIds,
-  onViewProfile
+  onViewProfile,
+  interestDNA = {}
 }: ExploreViewProps) {
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -485,7 +487,8 @@ export default function ExploreView({
                       <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
                       {user.isVerified && <PurpleVerifiedBadge />}
                     </div>
-                    <span className="text-[9px] font-mono text-violet-400 truncate block">@{user.username}</span>\n                    {Object.keys(interestDNA).some(tag => (user.interestDNA || {})[tag] > 0) && <span className="text-[9px] text-zinc-500">Shared interests</span>}
+                    <span className="text-[9px] font-mono text-violet-400 truncate block">@{user.username}</span>
+                    {Object.keys(interestDNA).some(tag => (user.interestDNA || {})[tag] > 0) && <span className="text-[9px] text-zinc-500">Shared interests</span>}
                   </div>
                   <button
                     onClick={(e) => {
