@@ -433,3 +433,29 @@ body {
   .nx-post-card { border-radius: 1rem; margin-inline: 8px; }
   .nx-mobile-dock { border-radius: 1.25rem 1.25rem 0 0; }
 }
+
+
+/* Core social surfaces: story rail, feed composer, profile grid and inbox. */
+.nx-story-rail { border-bottom: 1px solid rgba(139,111,210,.14); }
+.nx-story-track { scroll-padding-inline: 1rem; }
+.nx-story-track > button { transition: transform 180ms ease, opacity 180ms ease; }
+.nx-story-track > button:hover { transform: translateY(-2px); }
+.nx-explore-filter { min-height: 38px; background: rgba(18,14,43,.62); border-color: rgba(139,111,210,.22); }
+.nx-explore-filter[aria-selected="true"] { background: rgba(113,56,255,.18); border-color: rgba(182,155,255,.5); color: #F5F0FF; }
+.nx-feed-list { padding-bottom: 1rem; }
+.nx-composer-field { width: 100%; color: var(--nx-text); caret-color: var(--nx-violet-bright); transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease; }
+.nx-composer-field::placeholder { color: #8E86AA; }
+.nx-composer-field:focus { outline: none; border-color: rgba(182,155,255,.65); box-shadow: 0 0 0 3px rgba(113,56,255,.16); background: #19143A; }
+.nx-profile-media-grid { overflow: hidden; }
+.nx-profile-media-grid > * { min-width: 0; }
+.nx-inbox-list { background: linear-gradient(180deg, #120E2B 0%, #0E0A22 100%); }
+.nx-chat-stage { background: radial-gradient(ellipse at 50% 0%, rgba(75,16,242,.07), transparent 46%), var(--nx-canvas); }
+.nx-chat-header { border-color: rgba(139,111,210,.2); }
+@media (max-width: 767px) {
+  .nx-story-rail { padding-bottom: .15rem; }
+  .nx-story-track { gap: .8rem; }
+  .nx-profile-media-grid { gap: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nx-story-track > button { transition: none; }
+}
