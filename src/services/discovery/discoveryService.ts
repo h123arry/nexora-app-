@@ -1,4 +1,4 @@
-import { Post } from '../../types';
+import { User, Post } from '../../types';
 
 export type FeedMode = 'forYou' | 'following' | 'latest' | 'trending';
 
@@ -158,4 +158,49 @@ export function searchPosts<T extends Post>(posts: T[], query: string, options: 
     .sort((a, b) => b.score - a.score || a.index - b.index)
     .slice(0, limit)
     .map(result => result.post);
+}
+
+/**
+ * Search creators already loaded by the client. This is bounded local search,
+ * not a claim that NEXORA has a global server-side people index.
+ */
+export function searchCreators<T extends User>(
+  creators: T[],
+  query: string,
+  options: { limit?: number } = {},
+): T[] {
+  const normalizedQuery = query.trim().toLowerCase().replace(/^@/, '');
+  const limit = Math.min(100, Math.max(1, options.limit ?? 50));
+  const uniqueCreators = creators.filter((creator, index, all) =>
+    !creator.isBanned &&
+    !creator.isSuspended &&
+    all.findIndex(candidate => candidate.id === creator.id) === index
+  );
+
+  if (!normalizedQuery) return uniqueCreators.slice(0, limit);
+  if (normalizedQuery.length > 120) return [];
+
+  const terms = normalizedQuery.split(/\s+/).filter(Boolean);
+  return uniqueCreators
+    .map((creator, index) => {
+      const username = String(creator.username || '').toLowerCase().replace(/^@/, '');
+      const name = String(creator.name || '').toLowerCase();
+      const bio = String(creator.bio || '').toLowerCase();
+      const skills = (creator.skills || []).map(skill => String(skill).toLowerCase());
+      const interestTags = Object.keys(creator.interestDNA || {}).map(tag => tag.toLowerCase());
+      const fields = [username, name, bio, ...skills, ...interestTags];
+      const score = terms.reduce((total, term) => {
+        if (username === term) return total + 12;
+        if (username.startsWith(term)) return total + 8;
+        if (name === term) return total + 10;
+        if (name.startsWith(term)) return total + 7;
+        return total + fields.reduce((fieldScore, field) =>
+          fieldScore + (field === term ? 5 : field.includes(term) ? 1 : 0), 0);
+      }, 0);
+      return { creator, score, index };
+    })
+    .filter(result => result.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .slice(0, limit)
+    .map(result => result.creator);
 }
