@@ -1525,15 +1525,15 @@ export default function NotificationsView({
                   className="bg-black/40 border border-white/5 rounded-2xl p-3 flex flex-col justify-between hover:border-white/10 transition-all group relative overflow-hidden text-left"
                 >
                   <div className="space-y-2.5">
-                    {/* Simulated video wrapper */}
+                    {/* Saved watch-progress preview; playback controls are not connected yet. */}
                     <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10">
                       <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
-                        <button
-                          onClick={() => addToast(`▶️ Opening resumed watch state at ${Math.floor(item.progress)}s`)}
-                          className="w-9 h-9 rounded-xl bg-purple-600/90 text-white flex items-center justify-center hover:bg-purple-500 hover:scale-105 transition-all cursor-pointer"
+                        <span
+                          aria-hidden="true"
+                          className="w-9 h-9 rounded-xl bg-white/10 text-zinc-300 flex items-center justify-center"
                         >
-                          <Play className="w-4 h-4 fill-current ml-0.5 text-white" />
-                        </button>
+                          <Play className="w-4 h-4 fill-current ml-0.5" />
+                        </span>
                       </div>
 
                       <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[9px] font-mono text-zinc-300 bg-black/75 px-2 py-1 rounded-md">
@@ -1556,13 +1556,9 @@ export default function NotificationsView({
                         style={{ width: `${progressPercentage}%` }}
                       />
                     </div>
-                    <button
-                      onClick={() => addToast(`Resume state initiated: ${item.postId}`)}
-                      className="w-full py-1.5 bg-violet-600/10 hover:bg-violet-600 text-violet-300 hover:text-white border border-white/10 rounded-xl text-[10px] font-mono tracking-wider font-extrabold uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Tv className="w-3 h-3" />
-                      <span>Resume Playback ⏯️</span>
-                    </button>
+                    <p className="text-[9px] text-zinc-500 text-center font-mono">
+                      Watch progress saved locally. Resume playback is not available yet.
+                    </p>
                   </div>
                 </div>
               );
