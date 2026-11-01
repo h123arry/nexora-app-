@@ -5,6 +5,7 @@ import { Globe, Map, Search, Bell, X, Brain, ArrowRight } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { readUserScopedJson } from '../utils/userScopedStorage';
 import { getJoinedCirclesForUser } from '../data/database';
+import { SettingsService } from '../services/firebase/settingsService';
 
 export interface WorldPulseViewProps {
   theme: string;
@@ -22,7 +23,19 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
 
   // User interactive states
   const [followedAlerts, setFollowedAlerts] = useState<string[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setTopicsLoading(true);
+    void SettingsService.getSettings(currentUserId).then(settings => {
+      if (!cancelled) setFollowedAlerts(settings.content.contentPreferences);
+    }).finally(() => {
+      if (!cancelled) setTopicsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [currentUserId]);
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -66,13 +79,21 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
   };
 
   // World Pulse Alert toggler
-  const handleToggleAlert = (topic: string) => {
-    if (followedAlerts.includes(topic)) {
-      setFollowedAlerts(prev => prev.filter(t => t !== topic));
-      triggerToast(`Removed ${topic} from this session's topic preferences. No alerts are delivered yet.`);
-    } else {
-      setFollowedAlerts(prev => [...prev, topic]);
-      triggerToast(`Selected ${topic} for this session. Alert delivery is not connected yet.`);
+  const handleToggleAlert = async (topic: string) => {
+    if (topicsLoading) return;
+    const next = followedAlerts.includes(topic)
+      ? followedAlerts.filter(item => item !== topic)
+      : [...followedAlerts, topic];
+    try {
+      const settings = await SettingsService.getSettings(currentUserId);
+      await SettingsService.updateSettings(currentUserId, {
+        content: { ...settings.content, contentPreferences: next },
+      });
+      setFollowedAlerts(next);
+      triggerToast(`${followedAlerts.includes(topic) ? 'Removed' : 'Saved'} ${topic} in your account topic preferences. Alerts are not delivered yet.`);
+    } catch (error) {
+      console.error('World Pulse topic preference update failed:', error);
+      triggerToast('Your topic preferences could not be saved. Please try again.');
     }
   };
 
@@ -101,7 +122,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           <span className="text-xl">🌍</span> World Pulse
         </h2>
         <p className="text-xs text-violet-300/60 mt-0.5">
-          Live activity aggregation is not connected yet. No sample events or metrics are shown.
+          Live activity is not connected yet. Your topic preferences sync with your account.
         </p>
       </div>
 
@@ -303,10 +324,10 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       <div className="p-4 rounded-3xl bg-black/40 border border-white/10 space-y-3">
         <div className="flex items-center gap-1.5">
           <Bell className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-mono uppercase tracking-widest font-black text-cyan-300">Session topic selections</span>
+          <span className="text-xs font-mono uppercase tracking-widest font-black text-cyan-300">Saved topic preferences</span>
         </div>
         <p className="text-[11px] text-violet-100/60 leading-relaxed">
-          These selections only change this screen's selected topics for the current session. They do not subscribe you to alerts; notification delivery is not connected yet.
+          These topics are saved to your account and can guide content preferences. Push alerts and live topic activity are not connected yet.
         </p>
 
         <div className="flex flex-wrap gap-1.5 pt-1">
@@ -315,7 +336,8 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
             return (
               <button
                 key={topic}
-                onClick={() => handleToggleAlert(topic)}
+                onClick={() => void handleToggleAlert(topic)}
+                disabled={topicsLoading}
                 className={`px-3 py-1.5 rounded-xl border text-[11px] font-sans font-bold transition-all cursor-pointer ${
                   isFollowed 
                     ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 font-extrabold' 

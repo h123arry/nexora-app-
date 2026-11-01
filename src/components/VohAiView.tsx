@@ -100,7 +100,12 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
   // Attached Context Awareness States
   const [attachedContextType, setAttachedContextType] = useState<'feed' | 'profile' | 'inbox' | 'none'>('feed');
-  const [memoryDNA, setMemoryDNA] = useState<string[]>(['Systems Design', 'Port Harcourt startup nodes', 'Figma SVG layout tokens', 'Wizkid vs Davido football discussions', 'Fira Code typography']);
+  const [memoryDNA, setMemoryDNA] = useState<string[]>(() => {
+    const memory = MemoryEngine.getMemory();
+    return memory.memoryEnabled
+      ? [...memory.interests, ...memory.creatorGoals].filter(Boolean).slice(0, 20)
+      : [];
+  });
 
   // UI state indicators
   const [loadingAi, setLoadingAi] = useState(false);
