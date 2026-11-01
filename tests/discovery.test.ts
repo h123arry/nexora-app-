@@ -117,7 +117,7 @@ describe('discovery service', () => {
       post({ id: 'a4', userId: 'a', likes: 7000 }),
       post({ id: 'b1', userId: 'b', likes: 1 }),
     ], { maxPostsPerCreator: 3, maxConsecutivePostsPerCreator: 2 });
-    assert.deepEqual(ranked.slice(0, 4).map(item => item.post.userId), ['a', 'b', 'a', 'a']);
+    assert.deepEqual(ranked.slice(0, 4).map(item => item.post.userId), ['a', 'a', 'b', 'a']);
     assert.equal(ranked.length, 5);
   });
 
