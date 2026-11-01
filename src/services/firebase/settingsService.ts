@@ -6,7 +6,7 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db, auth } from './config';
-import type { FeedPreferences } from '../discovery/feedPreferences';
+import { buildFeedSettingsPatch, type FeedPreferences } from '../discovery/feedPreferences';
 
 export interface NexoraSettings {
   privacy: {
@@ -177,12 +177,9 @@ export class SettingsService {
         hiddenPostIds: boundedStrings(updates.hiddenPostIds ?? current.feed.hiddenPostIds),
         seenPostIds: boundedStrings(updates.seenPostIds ?? current.feed.seenPostIds),
       };
-      transaction.set(settingsRef, {
-        ...DEFAULT_SETTINGS,
-        ...(snapshot.exists() ? {} : current),
-        feed: next,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      // Merge only the feed namespace. Writing DEFAULT_SETTINGS here would silently
+      // reset existing privacy, notification, appearance, content, and security choices.
+      transaction.set(settingsRef, buildFeedSettingsPatch(next, serverTimestamp()), { merge: true });
     });
   }
 

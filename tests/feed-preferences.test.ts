@@ -5,6 +5,7 @@ import {
   normalizeFeedPreferences,
   resetFeedPreferences,
 } from '../src/services/discovery/feedPreferences';
+import { buildFeedSettingsPatch } from '../src/services/discovery/feedPreferences';
 
 test('normalizes feed controls, removes duplicates, and bounds persisted values', () => {
   const result = normalizeFeedPreferences({
@@ -56,4 +57,22 @@ test('reset removes recommendation controls while retaining the selected feed ta
   assert.deepEqual(reset.hiddenPostIds, []);
   assert.deepEqual(reset.seenPostIds, []);
   assert.equal(reset.recommendationResetAt, '2026-10-24T00:00:00.000Z');
+});
+
+
+test('feed settings transaction writes only the feed namespace and timestamp', () => {
+  const feed = normalizeFeedPreferences({
+    tab: 'friends',
+    blockedCreatorIds: ['blocked-1'],
+    mutedCreatorIds: ['muted-1'],
+  });
+  const updatedAt = { marker: 'server-timestamp' };
+  const patch = buildFeedSettingsPatch(feed, updatedAt);
+
+  assert.deepEqual(patch, { feed, updatedAt });
+  assert.equal('privacy' in patch, false);
+  assert.equal('notifications' in patch, false);
+  assert.equal('appearance' in patch, false);
+  assert.equal('content' in patch, false);
+  assert.equal('security' in patch, false);
 });
