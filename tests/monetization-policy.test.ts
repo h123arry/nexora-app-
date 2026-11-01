@@ -43,8 +43,9 @@ test('creator revenue sharing uses exact integer minor-unit arithmetic and prese
     ruleVersion: 'creator-v1',
   });
   assert.throws(() => calculateRevenueShare({ grossMinor: 100, providerFeeMinor: 60, taxMinor: 50, platformCommissionBps: 2000, ruleVersion: 'bad' }), /exceed gross/);
-  assert.throws(() => calculateRevenueShare({ grossMinor: Number.MAX_SAFE_INTEGER, providerFeeMinor: 0, taxMinor: 0, platformCommissionBps: 10000, ruleVersion: 'x' }), /invalid/);
   assert.throws(() => calculateRevenueShare({ grossMinor: 100, providerFeeMinor: 0, taxMinor: 0, platformCommissionBps: 1, ruleVersion: ' ' }), /invalid/);
+  const large = calculateRevenueShare({ grossMinor: Number.MAX_SAFE_INTEGER, providerFeeMinor: 0, taxMinor: 0, platformCommissionBps: 3333, ruleVersion: 'large-v1' });
+  assert.equal(large.platformCommissionMinor, Number((BigInt(Number.MAX_SAFE_INTEGER) * 3333n) / 10000n));
 });
 
 test('settlement reconciliation matches currency, gross minor units and transaction count', () => {
