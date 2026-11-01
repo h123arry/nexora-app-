@@ -155,61 +155,69 @@ export default function CreatorDashboardView({
   // Optimistic Post Management Functions (Firestore Sync in background)
   const handleEditPostSave = async () => {
     if (!editingPost) return;
+    const postId = editingPost.id;
     const updatedCaption = editCaption;
     const updatedTags = editTags.split(',').map(t => t.trim().replace('#', '')).filter(Boolean);
-    
-    // Optimistic Update
-    setLocalPosts(prev => prev.map(p => p.id === editingPost.id ? { ...p, content: updatedCaption, tags: updatedTags } : p));
-    setEditingPost(null);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Post metadata updated successfully!' }));
 
     try {
-      await updateDoc(doc(db, 'posts', editingPost.id), {
+      await updateDoc(doc(db, 'posts', postId), {
         content: updatedCaption,
-        tags: updatedTags
+        tags: updatedTags,
+        updatedAt: serverTimestamp(),
       });
-    } catch (e) {
-      console.error('Error updating post in Firestore: ', e);
+      setLocalPosts(prev => prev.map(p => p.id === postId ? { ...p, content: updatedCaption, tags: updatedTags } : p));
+      setEditingPost(null);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Post changes saved.' }));
+    } catch (error) {
+      console.error('Creator post update failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Post changes were not saved. Check your connection and try again.' }));
     }
   };
 
   const handleArchivePost = async (postId: string, archiveState: boolean) => {
-    setLocalPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: archiveState } : p));
-    window.dispatchEvent(new CustomEvent('toast', { 
-      detail: archiveState ? '📥 Post sent to studio archives.' : '📤 Post restored to live feed!' 
-    }));
-
     try {
       await updateDoc(doc(db, 'posts', postId), {
-        isArchived: archiveState
+        isArchived: archiveState,
+        updatedAt: serverTimestamp(),
       });
-    } catch (e) {
-      console.error(e);
+      setLocalPosts(prev => prev.map(p => p.id === postId ? { ...p, isArchived: archiveState } : p));
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: archiveState ? 'Post moved to Studio archives.' : 'Post restored to your feed.',
+      }));
+    } catch (error) {
+      console.error('Creator post archive update failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'The post was not changed. Check your connection and try again.' }));
     }
   };
 
   const handleDeletePost = async (postId: string) => {
     if (!confirm('Are you sure you want to permanently delete this post? This cannot be undone.')) return;
-    setLocalPosts(prev => prev.filter(p => p.id !== postId));
-    setBulkSelectedIds(prev => prev.filter(id => id !== postId));
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Post permanently removed.' }));
-
     try {
       await deleteDoc(doc(db, 'posts', postId));
-    } catch (e) {
-      console.error(e);
+      setLocalPosts(prev => prev.filter(p => p.id !== postId));
+      setBulkSelectedIds(prev => prev.filter(id => id !== postId));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Post permanently deleted.' }));
+    } catch (error) {
+      console.error('Creator post deletion failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'The post could not be deleted. Check your connection and try again.' }));
     }
   };
 
-  // Bulk actions
+  // Bulk actions are committed only after every selected write succeeds.
   const handleBulkArchive = async () => {
     if (bulkSelectedIds.length === 0) return;
     const targets = [...bulkSelectedIds];
-    setLocalPosts(prev => prev.map(p => targets.includes(p.id) ? { ...p, isArchived: true } : p));
-    setBulkSelectedIds([]);
-    window.dispatchEvent(new CustomEvent('toast', { detail: `📥 Archived ${targets.length} posts.` }));
-    for (const id of targets) {
-      updateDoc(doc(db, 'posts', id), { isArchived: true }).catch(console.error);
+    try {
+      await Promise.all(targets.map(id => updateDoc(doc(db, 'posts', id), {
+        isArchived: true,
+        updatedAt: serverTimestamp(),
+      })));
+      setLocalPosts(prev => prev.map(p => targets.includes(p.id) ? { ...p, isArchived: true } : p));
+      setBulkSelectedIds([]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Archived ${targets.length} posts.` }));
+    } catch (error) {
+      console.error('Creator bulk archive failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Some posts could not be archived. Your selection was kept so you can retry.' }));
     }
   };
 
@@ -217,11 +225,14 @@ export default function CreatorDashboardView({
     if (bulkSelectedIds.length === 0) return;
     if (!confirm(`Are you absolutely sure you want to delete ${bulkSelectedIds.length} posts?`)) return;
     const targets = [...bulkSelectedIds];
-    setLocalPosts(prev => prev.filter(p => !targets.includes(p.id)));
-    setBulkSelectedIds([]);
-    window.dispatchEvent(new CustomEvent('toast', { detail: `🗑️ Deleted ${targets.length} posts.` }));
-    for (const id of targets) {
-      deleteDoc(doc(db, 'posts', id).withConverter(null)).catch(console.error);
+    try {
+      await Promise.all(targets.map(id => deleteDoc(doc(db, 'posts', id))));
+      setLocalPosts(prev => prev.filter(p => !targets.includes(p.id)));
+      setBulkSelectedIds([]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Deleted ${targets.length} posts.` }));
+    } catch (error) {
+      console.error('Creator bulk deletion failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Some posts could not be deleted. Your selection was kept so you can retry.' }));
     }
   };
 
