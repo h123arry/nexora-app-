@@ -2163,6 +2163,7 @@ export default function App() {
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
+                      onAddPost={handleAddPost}
                       isOwnProfile={!viewedUser || viewedUser.id === currentUser.id}
                       onCloseProfile={viewedUser ? () => setViewedUser(null) : undefined}
                       onToggleFollow={handleToggleFollow}
