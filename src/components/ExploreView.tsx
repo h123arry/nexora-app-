@@ -192,9 +192,9 @@ export default function ExploreView({
               key={f.id}
               onClick={() => setSearchFilterType(f.id as any)}
                 aria-selected={searchFilterType === f.id}
-                className={`px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer border ${
+                className={`nx-explore-filter px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer border ${
                   searchFilterType === f.id
-                  ? 'bg-violet-600 text-white border-violet-400/30'
+                  ? 'bg-violet-600/20 text-violet-100 border-violet-300/40 shadow-[inset_0_0_0_1px_rgba(182,155,255,0.08)]'
                   : 'bg-transparent text-zinc-400 hover:text-white border-[#1b2940]'
               }`}
             >
@@ -260,7 +260,7 @@ export default function ExploreView({
             <div className="p-6 rounded-3xl nx-surface text-center space-y-3 my-8">
               <h3 className="text-sm font-bold text-white">Community discovery lives in the Communities hub</h3>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto font-sans">Explore uses no separate cached community results. Open the hub to search its current community directory.</p>
-              <button type="button" onClick={() => setActiveTab('communities')} className="px-4 py-2 rounded-xl bg-cyan-600/20 hover:bg-cyan-600 border border-cyan-500/30 text-cyan-200 hover:text-white text-[10px] font-mono font-bold uppercase">Open Communities</button>
+              <button type="button" onClick={() => setActiveTab('communities')} className="px-4 py-2 rounded-xl bg-violet-600/15 hover:bg-violet-600 border border-violet-400/30 text-violet-200 hover:text-white text-[10px] font-mono font-bold uppercase">Open Communities</button>
             </div>
           ) : visibleResultCount === 0 ? (
             <div className="p-12 rounded-3xl nx-surface text-center space-y-3 my-8">

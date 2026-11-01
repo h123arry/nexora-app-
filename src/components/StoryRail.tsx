@@ -185,7 +185,7 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
   };
 
   return (
-    <section aria-label="Stories" className="relative">
+    <section aria-label="Stories" className="nx-story-rail relative">
       <div className="flex items-center justify-between px-4 sm:px-6 pt-4 pb-2">
         <div className="flex items-center gap-2">
           <span className="nx-eyebrow">Stories</span>
@@ -201,7 +201,7 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
         </div>
       </div>
 
-      <div ref={railRef} className="flex gap-3.5 overflow-x-auto scrollbar-none px-4 sm:px-6 pb-4">
+      <div ref={railRef} className="nx-story-track flex gap-3.5 overflow-x-auto scrollbar-none px-4 sm:px-6 pb-4">
         {/* Create story tile */}
         <button
           type="button"
