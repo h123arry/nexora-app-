@@ -2132,6 +2132,7 @@ export default function App() {
                       followingIds={followingIds}
                       onViewProfile={handleViewProfile}
                       interestDNA={currentUser.interestDNA}
+                      currentUserId={isLoggedIn && firebaseUser?.uid === currentUser.id ? firebaseUser.uid : ''}
                     />
                   )}
 
