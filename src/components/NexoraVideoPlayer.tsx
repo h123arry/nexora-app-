@@ -85,6 +85,17 @@ export default function NexoraVideoPlayer({
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Release the media element itself when this reel is outside the active preload window.
+  // Removing the source and reloading drops its buffered resource on constrained devices.
+  useEffect(() => {
+    if (!isReleased || !videoRef.current) return;
+    videoRef.current.pause();
+    videoRef.current.removeAttribute('src');
+    videoRef.current.load();
+    setIsPlaying(false);
+    setIsBuffering(false);
+  }, [isReleased]);
+
   // Generate a unique player ID for this player instance to avoid any collisions
   const playerId = useRef(`player-${post.id}-${Math.random().toString(36).substring(2, 11)}`).current;
   const [isNearby, setIsNearby] = useState(false);
@@ -978,10 +989,10 @@ export default function NexoraVideoPlayer({
             )}
             <video
               ref={videoRef}
-              src={hasVideoError ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
+              src={hasVideoError || isReleased ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
               poster={post?.image || undefined}
               playsInline
-              preload={preloadMode || ((isNearby || shouldPreload) ? "auto" : "none")}
+              preload={isReleased ? "none" : (preloadMode || ((isNearby || shouldPreload) ? "auto" : "none"))}
               muted={isMuted}
               onLoadStart={() => { setIsReady(false); setIsBuffering(true); }}
               onLoadedMetadata={handleLoadedMetadata}
