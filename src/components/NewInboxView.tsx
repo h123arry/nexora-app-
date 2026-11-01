@@ -869,10 +869,12 @@ export default function NewInboxView({
                   </div>
                 ) : (
                   availableUsers.map(user => (
-                    <div
+                    <button
+                      type="button"
                       key={user.id}
                       onClick={() => handleStartChatWithUser(user)}
-                      className="flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all"
+                      aria-label={`Start a conversation with ${user.name}`}
+                      className="w-full text-left flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]"
                     >
                       <img
                         src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
@@ -887,7 +889,7 @@ export default function NewInboxView({
                         </div>
                         <p className="text-[10px] text-zinc-500 font-mono truncate">@{user.username}</p>
                       </div>
-                    </div>
+                    </button>
                   ))
                 )}
               </div>

@@ -56,14 +56,16 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
         const isPinned = pinnedPostIds.includes(post.id);
         
         return (
-          <motion.div
+          <motion.button
+            type="button"
             layout
             key={post.id}
             onClick={() => onSelectPost(post)}
+            aria-label={`Open post: ${post.content?.trim().slice(0, 100) || (isVideo ? 'Video post' : 'Photo post')}`}
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.98 }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
-            className="group aspect-[2/3] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between"
+            className="group aspect-[2/3] overflow-hidden relative cursor-pointer bg-[#050314]/90 rounded-none flex flex-col justify-between text-left focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-3px]"
           >
             {/* Thumbnail Container */}
             <div className="absolute inset-0 w-full h-full z-0">
@@ -188,7 +190,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
                 <span>{post.comments?.length || 0}</span>
               </div>
             </div>
-          </motion.div>
+          </motion.button>
         );
       })}
     </div>
