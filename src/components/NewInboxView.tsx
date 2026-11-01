@@ -486,6 +486,7 @@ export default function NewInboxView({
             onClick={() => setShowNewMessageModal(true)}
             className="nx-icon-button inline-flex bg-violet-600 text-white hover:bg-violet-500"
             title="New Message"
+            aria-label="Start a new message"
           >
             <Plus className="w-4 h-4" />
           </button>
@@ -557,10 +558,13 @@ export default function NewInboxView({
               const isPinned = pinnedChats.includes(chat.id);
 
               return (
-                <div
+                <button
+                  type="button"
                   key={chat.id}
                   onClick={() => setActiveChatId(chat.id)}
-                  className={`flex items-center gap-3 p-3.5 cursor-pointer transition-all relative group ${
+                  aria-pressed={isSelected}
+                  aria-label={`Open conversation with ${chat.partnerName}${chat.unreadCount > 0 ? `, ${chat.unreadCount} unread messages` : ''}`}
+                  className={`flex w-full items-center gap-3 p-3.5 text-left focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-violet-300 transition-all relative group ${
                     isSelected ? 'bg-violet-500/12 border-l-4 border-violet-400' : 'hover:bg-violet-500/[0.06]'
                   }`}
                 >
@@ -607,7 +611,7 @@ export default function NewInboxView({
                       )}
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })
           )}
