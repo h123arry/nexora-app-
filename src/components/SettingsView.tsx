@@ -182,8 +182,8 @@ export default function SettingsView({
                   <div className="space-y-4">
                 <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/5">
                   <div>
-                    <h4 className="text-xs font-bold text-white">Private Account</h4>
-                    <p className="text-[10px] text-zinc-400">Only approved followers can view your contributions</p>
+                    <h4 className="text-xs font-bold text-white">Private account preference</h4>
+                    <p className="text-[10px] text-zinc-400">Saved to your account. Posts remain public until private-audience access is implemented.</p>
                   </div>
                   <button
                     disabled={!settingsReady || savingSetting !== null}
