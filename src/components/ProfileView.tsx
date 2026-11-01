@@ -829,31 +829,21 @@ export default function ProfileView({
     window.dispatchEvent(new CustomEvent('toast', { detail: '❌ Re-calibration cancelled. No changes saved.' }));
   };
 
-  // Switch accounts action
+  // A saved profile label is not an authenticated Firebase session.
+  // Never simulate account switching by changing a local user ID or reloading.
   const handleSwitchAccount = (acc: any) => {
-    window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Switching account to @${acc.username}...` }));
-    localStorage.setItem('nexora_active_user_id', acc.id);
-    window.location.reload(); // Refresh to boot with new session index
+    if (acc.id === currentUser.id || acc.username === currentUser.username) return;
+    window.dispatchEvent(new CustomEvent('toast', {
+      detail: 'For security, sign out and authenticate with that account. Saved profile labels cannot switch Firebase sessions.'
+    }));
   };
 
   const handleAddNewAccount = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newAccUsername) return;
-    const cleanUsername = newAccUsername.trim().toLowerCase().replace('@', '');
-    const id = `user-switch-${Date.now()}`;
-    const newAcc = {
-      id,
-      username: cleanUsername,
-      name: newAccName || `@${cleanUsername}`,
-      avatar: getDefaultAvatar(newAccName || cleanUsername)
-    };
-    const updated = [...savedAccounts, newAcc];
-    setSavedAccounts(updated);
-    localStorage.setItem('nexora_saved_accounts', JSON.stringify(updated));
     setShowAddAccountModal(false);
-    setNewAccUsername('');
-    setNewAccName('');
-    window.dispatchEvent(new CustomEvent('toast', { detail: `✨ Added @${cleanUsername} to device vault.` }));
+    window.dispatchEvent(new CustomEvent('toast', {
+      detail: 'Account creation and sign-in must happen through Firebase Authentication, not the local profile vault.'
+    }));
   };
 
   const removeSavedAccount = (id: string, e: React.MouseEvent) => {
@@ -3566,37 +3556,18 @@ export default function ProfileView({
                 </button>
               </div>
 
-              <form onSubmit={handleAddNewAccount} className="space-y-4">
-                <div className="space-y-1 text-xs">
-                  <label className="text-zinc-400 font-mono text-[9px] uppercase">New Username ID</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. nexora_fan"
-                    value={newAccUsername}
-                    onChange={(e) => setNewAccUsername(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white font-mono focus:outline-hidden focus:border-violet-500"
-                  />
-                </div>
-
-                <div className="space-y-1 text-xs">
-                  <label className="text-zinc-400 font-mono text-[9px] uppercase">Display Name (Optional)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Nexora Fan"
-                    value={newAccName}
-                    onChange={(e) => setNewAccName(e.target.value)}
-                    className="w-full px-3 py-2 bg-black/40 border border-white/10 rounded-xl text-white focus:outline-hidden focus:border-violet-500"
-                  />
-                </div>
-
+              <div className="space-y-3 text-sm text-zinc-300">
+                <p>Saved profile labels do not contain login credentials and cannot switch your Firebase session.</p>
+                <p>To use another account, sign out and authenticate with that account through Nexora's secure sign-in screen.</p>
                 <button
-                  type="submit"
-                  className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white font-mono font-black text-xs uppercase rounded-xl"
+                  type="button"
+                  disabled={!onLogout}
+                  onClick={() => onLogout?.()}
+                  className="nx-btn-primary min-h-11 w-full px-4 disabled:opacity-50"
                 >
-                  Store Credential in Switch Vault
+                  Sign out to use another account
                 </button>
-              </form>
+              </div>
             </motion.div>
           </div>
         )}
