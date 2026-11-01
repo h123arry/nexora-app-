@@ -131,7 +131,7 @@ describe('discovery service', () => {
   it('requires every search term to match a post instead of returning partial matches', () => {
     const posts = [
       post({ id: 'complete', content: 'AI creator tools' }),
-      post({ id: 'partial', content: 'AI tools only' }),
+      post({ id: 'partial', username: 'someone', name: 'Someone', content: 'AI tools only' }),
     ];
     assert.deepEqual(searchPosts(posts, 'AI creator').map(item => item.id), ['complete']);
   });
