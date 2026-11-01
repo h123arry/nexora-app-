@@ -5,6 +5,7 @@ import { Post, User } from '../types';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraImagePlayer from './NexoraImagePlayer';
 import RelativeTime from './RelativeTime';
+import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 
 interface ImmersiveVideoViewerProps {
   initialPost: Post;
@@ -300,6 +301,21 @@ export default function ImmersiveVideoViewer({
           const isCurrent = idx === currentIndex;
           const isNearby = idx >= currentIndex - 1 && idx <= currentIndex + 3;
           if (!isNearby) return null;
+          const connection = typeof navigator !== 'undefined'
+            ? (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection
+            : undefined;
+          const isSlowConnection = Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType || ''));
+          const postVideoIndex = postsToShow.slice(0, idx + 1).filter(item => Boolean(item.videoUrl)).length - 1;
+          const activeVideoIndex = postsToShow.slice(0, currentIndex + 1).filter(item => Boolean(item.videoUrl)).length - 1;
+          const preloadPlan = getVideoPreloadPlan({
+            isVideo: Boolean(post.videoUrl),
+            isActive: isCurrent,
+            postIndex: idx,
+            activePostIndex: currentIndex,
+            postVideoIndex,
+            activeVideoIndex,
+            isSlowConnection,
+          });
 
           return (
             <div 
@@ -314,8 +330,9 @@ export default function ImmersiveVideoViewer({
                 onSpark={handleLike}
                 isProcessing={isProcessing}
                 isActive={isCurrent}
-                preloadMode={isCurrent ? "auto" : "metadata"}
-                shouldPreload={true}
+                preloadMode={preloadPlan.preloadMode}
+                isReleased={preloadPlan.isReleased}
+                shouldPreload={preloadPlan.shouldPreload}
                 isFollowing={followingIds ? followingIds.includes(post.userId || '') : isFollowing}
                 onToggleFollow={onToggleFollow ? () => onToggleFollow(post.userId || post.id) : undefined}
                 onCommentToggle={() => setIsCommentsOpen(!isCommentsOpen)}
