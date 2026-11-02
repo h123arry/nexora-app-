@@ -213,6 +213,7 @@ export default function MediaCreationEngine({
   const audioChunksRef = useRef<Blob[]>([]);
   const loopTimerRef = useRef<any>(null);
   const createdObjectUrlsRef = useRef<Set<string>>(new Set());
+  const uploadAbortControllerRef = useRef<AbortController | null>(null);
 
   const trackObjectUrl = (url: string) => {
     createdObjectUrlsRef.current.add(url);
@@ -659,37 +660,11 @@ export default function MediaCreationEngine({
       setPostingStatus('failed');
       return;
     }
-    clearInterval(uploadIntervalRef.current);
+    const uploadController = new AbortController();
+    uploadAbortControllerRef.current = uploadController;
     setErrorMessage('');
-    setPostingStatus('compressing');
-    setUploadProgress(5);
-
-    const runStage = (start: number, end: number, step: number, status: 'compressing' | 'publishing' | 'processing', duration: number) => {
-      return new Promise<boolean>((resolve) => {
-        let current = start;
-        setPostingStatus(status);
-        const interval = setInterval(() => {
-          current += step;
-          if (current >= end) {
-            clearInterval(interval);
-            setUploadProgress(end);
-            resolve(true);
-          } else {
-            setUploadProgress(current);
-          }
-        }, duration / ((end - start) / step));
-        uploadIntervalRef.current = interval;
-      });
-    };
-
-    let ok = await runStage(5, 35, 5, 'compressing', 800);
-    if (!ok) return;
-
-    ok = await runStage(35, 75, 5, 'publishing', 900);
-    if (!ok) return;
-
-    ok = await runStage(75, 100, 5, 'processing', 700);
-    if (!ok) return;
+    setPostingStatus('publishing');
+    setUploadProgress(0);
 
     try {
       let mainImg = selectedImages[0]?.url || undefined;
@@ -707,7 +682,8 @@ export default function MediaCreationEngine({
             file: imageBlob,
             userId: currentUser.id,
             fileName: `image-${index + 1}-${Date.now()}.${imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'}`,
-            onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+            signal: uploadController.signal,
+            onProgress: progress => setUploadProgress(progress),
           });
           durableImages.push(uploaded.downloadUrl);
         } else {
@@ -729,12 +705,13 @@ export default function MediaCreationEngine({
             file: uploadVideoBlob,
             userId: currentUser.id,
             fileName: `video-${Date.now()}.${videoFileExtension(uploadVideoBlob.type) || 'video'}`,
-            onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+            signal: uploadController.signal,
+            onProgress: progress => setUploadProgress(progress),
           });
           finalVid = uploaded.downloadUrl;
           if (mainImg?.startsWith('data:')) {
             const thumbnail = await (await fetch(mainImg)).blob();
-            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg` });
+            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
             mainImg = uploadedThumbnail.downloadUrl;
           }
         } catch (e) {
@@ -757,7 +734,8 @@ export default function MediaCreationEngine({
           file: uploadVoiceBlob,
           userId: currentUser.id,
           fileName: `voice-${Date.now()}.webm`,
-          onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+          signal: uploadController.signal,
+          onProgress: progress => setUploadProgress(progress),
         });
         finalVoiceUrl = uploadedVoice.downloadUrl;
       }
@@ -794,6 +772,7 @@ export default function MediaCreationEngine({
       );
       if (!createdPostId) throw new Error('Nexora could not confirm this post. Please sign in and retry.');
 
+      setUploadProgress(100);
       setPostingStatus('completed');
       window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Post Published Successfully!' }));
       setTimeout(() => {
@@ -802,8 +781,16 @@ export default function MediaCreationEngine({
         resetStates();
       }, 1500);
     } catch (err) {
-      setPostingStatus('failed');
-      setErrorMessage(err instanceof Error ? err.message : 'Publishing failed. Your draft is still available to retry.');
+      if (uploadController.signal.aborted) {
+        setPostingStatus('idle');
+        setUploadProgress(0);
+        setErrorMessage('Upload canceled. Your draft is still available.');
+      } else {
+        setPostingStatus('failed');
+        setErrorMessage(err instanceof Error ? err.message : 'Publishing failed. Your draft is still available to retry.');
+      }
+    } finally {
+      if (uploadAbortControllerRef.current === uploadController) uploadAbortControllerRef.current = null;
     }
   };
 
@@ -950,9 +937,7 @@ export default function MediaCreationEngine({
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-              {postingStatus === 'compressing' && '⚙️ Compressing Media'}
-              {postingStatus === 'publishing' && '📤 Sharing Post'}
-              {postingStatus === 'processing' && '🧠 AI Processing'}
+              {postingStatus === 'publishing' && '📤 Uploading and publishing'}
               {postingStatus === 'completed' && '✨ Shared!'}
             </span>
             <button 
@@ -1798,9 +1783,7 @@ export default function MediaCreationEngine({
 
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono text-zinc-500 uppercase block tracking-wider">
-                          {postingStatus === 'compressing' && '⚙️ Compressing media quality...'}
-                          {postingStatus === 'publishing' && '📤 Sharing your creation...'}
-                          {postingStatus === 'processing' && '🧠 AI formatting and checking...'}
+                          {postingStatus === 'publishing' && '📤 Uploading media and publishing your post...'}
                           {postingStatus === 'completed' && '✨ Content Successfully Shared!'}
                         </span>
                         <p className="text-xs text-zinc-300 font-sans">
@@ -1824,7 +1807,7 @@ export default function MediaCreationEngine({
                       {postingStatus !== 'completed' && postingStatus !== 'failed' && (
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => { clearInterval(uploadIntervalRef.current); setPostingStatus('idle'); }} 
+                            onClick={() => uploadAbortControllerRef.current?.abort()} 
                             className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 rounded-lg text-xs"
                           >
                             Cancel Publish
