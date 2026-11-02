@@ -204,7 +204,6 @@ export default function MediaCreationEngine({
   const [errorMessage, setErrorMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
 
-  // Auto-Cut Studio (CapCut mode)
   // Refs
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
@@ -213,7 +212,6 @@ export default function MediaCreationEngine({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const loopTimerRef = useRef<any>(null);
-  const uploadIntervalRef = useRef<any>(null);
   const createdObjectUrlsRef = useRef<Set<string>>(new Set());
 
   const trackObjectUrl = (url: string) => {
@@ -234,7 +232,6 @@ export default function MediaCreationEngine({
 
   useEffect(() => () => {
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
-    if (uploadIntervalRef.current) clearInterval(uploadIntervalRef.current);
     videoStreamRef.current?.getTracks().forEach(track => track.stop());
     if (mediaRecorderVideoRef.current?.state !== 'inactive') mediaRecorderVideoRef.current?.stop();
     if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
