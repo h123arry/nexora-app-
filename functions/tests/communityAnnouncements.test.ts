@@ -36,7 +36,7 @@ describe('trusted Circle announcements', () => {
     await assert.rejects(createCircleAnnouncement(db, 'alice', 'announcement-circle', 'Too long', 'x'.repeat(2001)), /character limits/);
   });
 
-  it('allows only the active owner to pin or unpin an existing announcement', async () => {
+  it('allows active Circle managers to pin or unpin an existing announcement', async () => {
     const created = await createCircleAnnouncement(db, 'alice', 'announcement-circle', 'Pinned notice', 'Important update.');
     assert.deepEqual(await setCircleAnnouncementPinned(db, 'alice', 'announcement-circle', created.announcementId, true), { pinned: true });
     assert.equal((await db.doc(`communities/announcement-circle/announcements/${created.announcementId}`).get()).get('pinned'), true);
