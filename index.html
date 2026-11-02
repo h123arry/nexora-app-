@@ -2,11 +2,13 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="description" content="NEXORA is the world's living social network. Connect with people, communities and creators." />
     <title>NEXORA</title>
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#090714" />
+    <meta name="color-scheme" content="dark" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" />
@@ -14,16 +16,50 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Nexora" />
     <link rel="apple-touch-icon" href="/logo.png" />
+    <meta property="og:title" content="NEXORA | The World's Living Social Network" />
+    <meta property="og:description" content="Connect with people, communities and creators on NEXORA." />
     <meta property="og:image" content="/logo.png" />
     <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="NEXORA | The World's Living Social Network" />
+    <meta name="twitter:description" content="Connect with people, communities and creators on NEXORA." />
     <meta name="twitter:image" content="/logo.png" />
     <style>
-      body { background-color: #050505 !important; }
+      :root { color-scheme: dark; background: #090714; }
+      * { box-sizing: border-box; }
+      html, body, #root { min-height: 100%; margin: 0; }
+      body { min-height: 100vh; background: #090714; }
+      .nexora-startup {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: grid;
+        place-content: center;
+        justify-items: center;
+        gap: 18px;
+        padding: 24px;
+        color: #F5F3FF;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        background: radial-gradient(ellipse at 50% 44%, rgba(75, 16, 242, .16), transparent 42%), #090714;
+      }
+      .nexora-startup img {
+        width: 76px;
+        height: 76px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 26px rgba(113, 56, 255, .3));
+        animation: nexora-breathe 1.8s ease-in-out infinite;
+      }
+      .nexora-startup strong { font-size: 15px; letter-spacing: .24em; }
+      .nexora-startup span { color: #8E8AA7; font-size: 12px; }
+      @keyframes nexora-breathe { 50% { transform: scale(1.045); opacity: .82; } }
+      @media (prefers-reduced-motion: reduce) { .nexora-startup img { animation: none; } }
     </style>
   </head>
   <body>
-    <div id="root">
-      <div style="color: white; padding: 20px;">Loading... (If you see this, the app is starting)</div>
+    <div id="root" aria-busy="true">
+      <main class="nexora-startup" aria-label="Loading NEXORA">
+        <img src="/logo.svg" alt="NEXORA" fetchpriority="high" />
+        <strong>NEXORA</strong>
+        <span>The World's Living Social Network</span>
+      </main>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
