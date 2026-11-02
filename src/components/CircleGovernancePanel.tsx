@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ShieldCheck, UserCog } from 'lucide-react';
+import { ShieldCheck, UserCog, Link2, Copy, Ban } from 'lucide-react';
 import { CommunityService } from '../services/firebase/communityService';
 
 type CircleMember = {
@@ -26,6 +26,9 @@ export default function CircleGovernancePanel({
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [inviteLink, setInviteLink] = useState('');
+  const [inviteToken, setInviteToken] = useState('');
+  const [inviteBusy, setInviteBusy] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -36,6 +39,40 @@ export default function CircleGovernancePanel({
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [communityId]);
+
+  const createInvite = async () => {
+    if (!isOwner || inviteBusy) return;
+    setInviteBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const invite = await CommunityService.createInvite(communityId, 7, 25);
+      const link = `${window.location.origin}/?circleInvite=${encodeURIComponent(invite.token)}`;
+      setInviteToken(invite.token);
+      setInviteLink(link);
+      setNotice('Invitation created. Copy and share this link; the token is shown only once.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The invitation could not be created.');
+    } finally {
+      setInviteBusy(false);
+    }
+  };
+
+  const revokeInvite = async () => {
+    if (!inviteToken || inviteBusy) return;
+    setInviteBusy(true);
+    setError('');
+    try {
+      await CommunityService.revokeInvite(inviteToken);
+      setInviteLink('');
+      setInviteToken('');
+      setNotice('Invitation revoked.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The invitation could not be revoked.');
+    } finally {
+      setInviteBusy(false);
+    }
+  };
 
   const saveRole = async (member: CircleMember) => {
     const role = roleByUser[member.userId] || 'member';
@@ -66,6 +103,22 @@ export default function CircleGovernancePanel({
       </div>
       {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-950/20 p-3 text-xs text-rose-200">{error}</p>}
       {notice && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-950/20 p-3 text-xs text-emerald-200">{notice}</p>}
+      {isOwner && (
+        <div className="rounded-2xl border border-violet-400/20 bg-violet-950/10 p-4 space-y-3">
+          <div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-violet-300" /><p className="text-xs font-bold text-white">Circle invitations</p></div>
+          <p className="text-[11px] text-violet-200/60">Create a single-use-token link that expires after 7 days or 25 successful joins. You can revoke it at any time.</p>
+          <button type="button" onClick={() => void createInvite()} disabled={inviteBusy} className="rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">{inviteBusy ? 'Working...' : 'Create invite link'}</button>
+          {inviteLink && (
+            <div className="space-y-2">
+              <input readOnly value={inviteLink} aria-label="Circle invitation link" className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-[10px] text-violet-100" />
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { void navigator.clipboard.writeText(inviteLink).then(() => setNotice('Invitation link copied.')).catch(() => setError('Copy failed. Select and copy the link manually.')); }} className="flex items-center gap-1 rounded-lg border border-white/10 px-3 py-2 text-xs text-white"><Copy className="h-3 w-3" /> Copy link</button>
+                <button type="button" onClick={() => void revokeInvite()} disabled={inviteBusy} className="flex items-center gap-1 rounded-lg border border-rose-400/20 px-3 py-2 text-xs text-rose-200 disabled:opacity-40"><Ban className="h-3 w-3" /> Revoke</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {loading ? <p className="text-xs text-violet-200/50">Loading active members...</p> : members.length === 0 ? (
         <p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-violet-200/50">No active members found.</p>
       ) : (
