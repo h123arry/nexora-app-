@@ -9,11 +9,11 @@ function validId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= ID_LIMIT && !value.includes('/');
 }
 
-async function requireCircleOwner(db: Firestore, communityId: string, uid: string): Promise<void> {
-  const [community, member] = await Promise.all([
-    db.collection('communities').doc(communityId).get(),
-    db.collection('communities').doc(communityId).collection('members').doc(uid).get(),
-  ]);
+function requireOwnerState(
+  community: FirebaseFirestore.DocumentSnapshot,
+  member: FirebaseFirestore.DocumentSnapshot,
+  uid: string,
+): void {
   if (!community.exists || community.get('ownerId') !== uid
     || !member.exists || member.get('status') !== 'active' || member.get('role') !== 'owner') {
     throw new Error('Only the active Circle owner can manage announcements.');
@@ -33,17 +33,26 @@ export async function createCircleAnnouncement(
   if (!cleanTitle || cleanTitle.length > TITLE_LIMIT || !cleanBody || cleanBody.length > BODY_LIMIT) {
     throw new Error('Add an announcement title and message within the character limits.');
   }
-  await requireCircleOwner(db, communityId, uid);
+  const communityRef = db.collection('communities').doc(communityId);
+  const memberRef = communityRef.collection('members').doc(uid);
   const announcementId = randomUUID();
-  await db.collection('communities').doc(communityId).collection('announcements').doc(announcementId).create({
-    id: announcementId,
-    communityId,
-    title: cleanTitle,
-    body: cleanBody,
-    createdBy: uid,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    pinned: false,
+  const announcementRef = communityRef.collection('announcements').doc(announcementId);
+  await db.runTransaction(async transaction => {
+    const [community, member] = await Promise.all([
+      transaction.get(communityRef),
+      transaction.get(memberRef),
+    ]);
+    requireOwnerState(community, member, uid);
+    transaction.create(announcementRef, {
+      id: announcementId,
+      communityId,
+      title: cleanTitle,
+      body: cleanBody,
+      createdBy: uid,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      pinned: false,
+    });
   });
   return { announcementId };
 }
@@ -58,10 +67,18 @@ export async function setCircleAnnouncementPinned(
   if (!uid || !validId(communityId) || !validId(announcementId) || typeof pinned !== 'boolean') {
     throw new Error('A valid announcement and pin state are required.');
   }
-  await requireCircleOwner(db, communityId, uid);
-  const ref = db.collection('communities').doc(communityId).collection('announcements').doc(announcementId);
-  const snapshot = await ref.get();
-  if (!snapshot.exists) throw new Error('This announcement is unavailable.');
-  await ref.update({ pinned, updatedAt: new Date() });
+  const communityRef = db.collection('communities').doc(communityId);
+  const memberRef = communityRef.collection('members').doc(uid);
+  const ref = communityRef.collection('announcements').doc(announcementId);
+  await db.runTransaction(async transaction => {
+    const [community, member, announcement] = await Promise.all([
+      transaction.get(communityRef),
+      transaction.get(memberRef),
+      transaction.get(ref),
+    ]);
+    requireOwnerState(community, member, uid);
+    if (!announcement.exists) throw new Error('This announcement is unavailable.');
+    transaction.update(ref, { pinned, updatedAt: new Date() });
+  });
   return { pinned };
 }
