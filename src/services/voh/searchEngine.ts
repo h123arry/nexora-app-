@@ -8,39 +8,31 @@ export interface IntelligentSearchSuggestions {
 
 export class SearchEngine {
   static getSuggestions(query: string, users: User[], posts: Post[], circles: Circle[]): IntelligentSearchSuggestions {
-    const q = query.toLowerCase();
-    const suggestions: string[] = [];
+    const q = query.trim().toLowerCase();
+    if (!q) return { suggestions: [], suggestedUsers: [], suggestedCircles: [] };
 
-    // Filter matching usernames/names
     const suggestedUsers = users
-      .filter(u => u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q))
+      .filter(user => user.username.toLowerCase().includes(q) || user.name.toLowerCase().includes(q))
       .slice(0, 3);
 
-    // Filter matching circles
     const suggestedCircles = circles
-      .filter(c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q)))
+      .filter(circle => circle.name.toLowerCase().includes(q) || circle.tags.some(tag => tag.toLowerCase().includes(q)))
       .slice(0, 3);
 
-    // Dynamic autocomplete suggestion chips
-    if (q.includes('fo') || q.includes('sp')) {
-      suggestions.push('Football predictions WAT', 'Sports activities Port Harcourt');
-    }
-    if (q.includes('ai') || q.includes('co')) {
-      suggestions.push('AI builders guild', 'Code compiler memory serialization');
-    }
-    if (q.includes('de') || q.includes('ui')) {
-      suggestions.push('Design tokens & space-glass styles', 'UI responsive grid frameworks');
-    }
-
-    // Default suggestions if none
-    if (suggestions.length === 0) {
-      suggestions.push('Lagos startup founders alliance', 'Premium creative writing communities', '#SpaceGlass aesthetic guides');
-    }
+    const actualTags = new Set<string>();
+    posts.forEach(post => (post.tags || []).forEach(tag => {
+      const normalized = tag.trim().replace(/^#/, '');
+      if (normalized && normalized.toLowerCase().includes(q)) actualTags.add(normalized);
+    }));
+    circles.forEach(circle => circle.tags.forEach(tag => {
+      const normalized = tag.trim().replace(/^#/, '');
+      if (normalized && normalized.toLowerCase().includes(q)) actualTags.add(normalized);
+    }));
 
     return {
-      suggestions,
+      suggestions: [...actualTags].slice(0, 6).map(tag => `#${tag}`),
       suggestedUsers,
-      suggestedCircles
+      suggestedCircles,
     };
   }
 }
