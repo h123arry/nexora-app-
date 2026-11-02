@@ -678,6 +678,20 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24'), { totalEvents: 99 }));
   });
 
+
+  it('allows active Circle members to list the member directory without exposing it to strangers', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'directory-circle'), { id: 'directory-circle', ownerId: 'alice', type: 'public', name: 'Directory' });
+      await setDoc(doc(db, 'communities', 'directory-circle', 'members', 'alice'), { userId: 'alice', role: 'owner', status: 'active', joinedAt: Timestamp.now() });
+      await setDoc(doc(db, 'communities', 'directory-circle', 'members', 'bob'), { userId: 'bob', role: 'member', status: 'active', joinedAt: Timestamp.now() });
+    });
+    const directory = query(collection(dbFor('bob'), 'communities', 'directory-circle', 'members'), where('status', '==', 'active'));
+    const members = await assertSucceeds(getDocs(directory));
+    assert.equal(members.size, 2);
+    await assertFails(getDocs(query(collection(dbFor('mallory'), 'communities', 'directory-circle', 'members'), where('status', '==', 'active'))));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'communities', 'directory-circle', 'members')));
+  });
+
   it('allows active Circle members to read events and only their own RSVP marker', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'communities', 'event-circle'), { id: 'event-circle', ownerId: 'alice', type: 'public', name: 'Events' });
