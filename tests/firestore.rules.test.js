@@ -800,4 +800,23 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(aliceBookmark, { postId: 'bookmark-private' }));
     await assertSucceeds(deleteDoc(aliceBookmark));
   });
+  it('keeps notification inbox records private and server-created', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users', 'alice', 'notifications', 'like-1'), {
+        id: 'like-1', type: 'like', userId: 'alice', content: 'liked your post',
+        timestamp: new Date().toISOString(), isRead: false
+      });
+    });
+    const aliceNotification = doc(dbFor('alice'), 'users', 'alice', 'notifications', 'like-1');
+    await assertSucceeds(getDoc(aliceNotification));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'notifications')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'notifications', 'like-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'notifications', 'forged'), {
+      id: 'forged', type: 'like', userId: 'alice', content: 'forged notification',
+      timestamp: new Date().toISOString(), isRead: false
+    }));
+    await assertSucceeds(updateDoc(aliceNotification, { isRead: true }));
+    await assertFails(updateDoc(aliceNotification, { content: 'tampered notification' }));
+  });
+
 });
