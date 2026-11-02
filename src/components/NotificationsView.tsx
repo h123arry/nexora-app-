@@ -1191,8 +1191,6 @@ export default function NotificationsView({
                               )}
 
                               
-                              )}
-
                               {/* Event registration action */}
                               {notif.type === 'community' && notif.eventStatus === 'unregistered' && (
                                 <button
