@@ -5,6 +5,8 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
+  orderBy,
   query,
   serverTimestamp,
   setDoc,
@@ -129,6 +131,51 @@ export const CommunityService = {
       role: 'member',
       status: 'active',
       joinedAt: serverTimestamp(),
+    });
+  },
+
+
+  watchMessages(
+    communityId: string,
+    currentUserId: string,
+    onMessages: (messages: Array<{ id: string; senderId: string; content: string; time: string }>) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    if (!communityId || !currentUserId) {
+      onError(new Error('Join this Circle to read its messages.'));
+      return () => undefined;
+    }
+    const messagesQuery = query(
+      collection(db, 'communities', communityId, 'messages'),
+      orderBy('createdAt', 'desc'),
+      limit(50),
+    );
+    return onSnapshot(messagesQuery, snapshot => {
+      const messages = snapshot.docs.map(message => {
+        const data = message.data();
+        const createdAt = data.createdAt?.toDate?.();
+        return {
+          id: message.id,
+          senderId: String(data.senderId || ''),
+          content: String(data.content || ''),
+          time: createdAt instanceof Date ? createdAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+        };
+      }).reverse();
+      onMessages(messages);
+    }, error => onError(error));
+  },
+
+  async sendMessage(communityId: string, senderId: string, content: string): Promise<void> {
+    const text = content.trim();
+    if (!communityId || communityId.includes('/') || !senderId || !text || text.length > 2000) {
+      throw new Error('Messages must contain 1 to 2,000 characters.');
+    }
+    const messageRef = doc(collection(db, 'communities', communityId, 'messages'));
+    await setDoc(messageRef, {
+      id: messageRef.id,
+      senderId,
+      content: text,
+      createdAt: serverTimestamp(),
     });
   },
 

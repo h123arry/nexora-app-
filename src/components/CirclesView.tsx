@@ -53,10 +53,29 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   // Interactive state helpers for sub-tabs in Community Portal
   const [votedPollId, setVotedPollId] = useState<string | null>(null);
   const [pollVotes, setPollVotes] = useState({ opt1: 24, opt2: 12, opt3: 8 });
-  const [chatMessages, setChatMessages] = useState<Array<{ sender: string; avatar: string; text: string; time: string }>>([
-    { sender: 'David Sterling', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150', text: 'Stoked to be part of this community space! Let\'s go!', time: '10 mins ago' },
-    { sender: 'Chioma Adebayo', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150', text: 'Matches schedule is up for review under the Events tab!', time: '6 mins ago' },
-  ]);
+  const [chatMessages, setChatMessages] = useState<Array<{ sender: string; avatar: string; text: string; time: string }>>([]);
+  const [chatError, setChatError] = useState<string | null>(null);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+
+  useEffect(() => {
+    if (!selectedCircle || !selectedCircle.isJoinedByMe) {
+      setChatMessages([]);
+      setChatError('Join this Circle to view its messages.');
+      return;
+    }
+    setChatError(null);
+    return CommunityService.watchMessages(
+      selectedCircle.id,
+      currentUser.id,
+      messages => setChatMessages(messages.map(message => ({
+        sender: message.senderId === currentUser.id ? currentUser.name : 'Circle member',
+        avatar: message.senderId === currentUser.id ? currentUser.avatar : '/logo.svg',
+        text: message.content,
+        time: message.time,
+      }))),
+      error => setChatError(error.message || 'Circle messages could not be loaded.'),
+    );
+  }, [selectedCircle?.id, selectedCircle?.isJoinedByMe, currentUser.id, currentUser.name, currentUser.avatar]);
   const [chatInput, setChatInput] = useState('');
   const [isJoinedVoice, setIsJoinedVoice] = useState(false);
   const [rsvpedEvents, setRsvpedEvents] = useState<string[]>([]);
@@ -120,19 +139,20 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       setIsBuilding(false);
     }
   };
-  const handleGroupChatSubmit = (e: React.FormEvent) => {
+  const handleGroupChatSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!chatInput.trim()) return;
-    setChatMessages(prev => [
-      ...prev,
-      {
-        sender: currentUser.name,
-        avatar: currentUser.avatar,
-        text: chatInput,
-        time: 'Just now'
-      }
-    ]);
-    setChatInput('');
+    if (!selectedCircle || !selectedCircle.isJoinedByMe || !chatInput.trim() || isSendingMessage) return;
+    setIsSendingMessage(true);
+    try {
+      await CommunityService.sendMessage(selectedCircle.id, currentUser.id, chatInput);
+      setChatInput('');
+      setChatError(null);
+    } catch (error) {
+      console.error('Circle message send failed:', error);
+      setChatError(error instanceof Error ? error.message : 'Your message could not be sent. Please retry.');
+    } finally {
+      setIsSendingMessage(false);
+    }
   };
 
   const handleVote = (option: 'opt1' | 'opt2' | 'opt3') => {
@@ -682,8 +702,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     <h3 className="text-xs font-mono uppercase tracking-wider text-[#A78BFA] font-bold">Community Group Chat Chatroom</h3>
                     
                     <div className="bg-[#03010b]/80 border border-white/10 rounded-2xl p-3 h-52 overflow-y-auto space-y-3 flex flex-col">
-                      <div className="text-[9px] font-mono text-center text-violet-400/40 select-none pb-2">Inaugurating encrypted lounge session...</div>
-                      {chatMessages.map((msg, i) => (
+                      <div className="text-[9px] font-mono text-center text-violet-400/40 select-none pb-2">Messages are visible to Circle members. They are not end-to-end encrypted.</div>
+                      {chatError && <p className="text-[10px] text-rose-300">{chatError}</p>}{chatMessages.length === 0 && !chatError && <p className="text-xs text-violet-300/60 text-center py-6">No messages yet. Start the conversation.</p>}{chatMessages.map((msg, i) => (
                         <div key={i} className="flex gap-2.5 items-start">
                           <img src={msg.avatar} alt={msg.sender} className="w-8 h-8 rounded-xl object-cover shrink-0" />
                           <div className="bg-white/5 border border-white/5 rounded-2xl p-2.5 max-w-md">
@@ -701,6 +721,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                       <input 
                         type="text" 
                         required
+                        maxLength={2000}
+                        disabled={!selectedCircle?.isJoinedByMe || isSendingMessage}
                         placeholder="Say something to the lounge..." 
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
@@ -708,6 +730,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                       />
                       <button 
                         type="submit"
+                        disabled={!selectedCircle?.isJoinedByMe || isSendingMessage || !chatInput.trim()}
                         className="p-2 bg-[#8b5cf6] hover:bg-violet-500 border border-white/10 text-white rounded-xl transition-colors cursor-pointer"
                       >
                         <Send className="w-4 h-4" />
