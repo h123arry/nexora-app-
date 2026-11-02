@@ -3,7 +3,7 @@ import { CommunityService } from '../services/firebase/communityService';
 
 type CircleEvent = { id: string; title: string; startsAt: string; location: string; attendeeCount: number; createdBy: string; myRsvp: boolean };
 
-export default function CircleEventsPanel({ communityId }: { communityId: string }) {
+export default function CircleEventsPanel({ communityId, currentUserId }: { communityId: string; currentUserId: string }) {
   const [events, setEvents] = useState<CircleEvent[]>([]);
   const [error, setError] = useState('');
   const [title, setTitle] = useState('');
@@ -12,7 +12,7 @@ export default function CircleEventsPanel({ communityId }: { communityId: string
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState('');
 
-  useEffect(() => CommunityService.watchEvents(communityId, 'current-user', setEvents, err => setError(err.message)), [communityId]);
+  useEffect(() => CommunityService.watchEvents(communityId, currentUserId, setEvents, err => setError(err.message)), [communityId, currentUserId];
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault();
