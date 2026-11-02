@@ -95,7 +95,7 @@ export default function UniversalSearchModal({
   const trimmedQ = query.trim().toLowerCase();
 
   // 1. People
-  const matchedUsers = users.filter(u => 
+  const matchedUsers = users.filter(u => !u.isBanned && !u.isSuspended).filter(u => 
     u.name.toLowerCase().includes(trimmedQ) || 
     u.username.toLowerCase().includes(trimmedQ) || 
     u.bio?.toLowerCase().includes(trimmedQ)
