@@ -142,7 +142,6 @@ export const CommunityService = {
     const members = await getDocs(query(
       collection(db, 'communities', communityId, 'members'),
       where('status', '==', 'active'),
-      orderBy('joinedAt', 'asc'),
       limit(100),
     ));
     return Promise.all(members.docs.map(async member => {
