@@ -113,7 +113,7 @@ export const setCommunityAnnouncementPinned = onCall({ maxInstances: 10 }, async
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('valid announcement')) throw new HttpsError('invalid-argument', message);
-    if (message.includes('Only the active Circle owner')) throw new HttpsError('permission-denied', message);
+    if (message.includes('Only active Circle owners, admins, or moderators')) throw new HttpsError('permission-denied', message);
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     throw new HttpsError('internal', 'The announcement could not be updated. Please retry.');
   }
