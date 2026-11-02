@@ -233,6 +233,54 @@ export const CommunityService = {
     await vote({ communityId, pollId, optionId });
   },
 
+
+  watchEvents(
+    communityId: string,
+    currentUserId: string,
+    onEvents: (events: Array<{ id: string; title: string; startsAt: string; location: string; attendeeCount: number; createdBy: string; myRsvp: boolean }>) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    if (!communityId || !currentUserId) {
+      onError(new Error('Join this Circle to view its events.'));
+      return () => undefined;
+    }
+    return onSnapshot(
+      query(collection(db, 'communities', communityId, 'events'), orderBy('startsAt', 'asc'), limit(30)),
+      async snapshot => {
+        try {
+          const events = await Promise.all(snapshot.docs.map(async item => {
+            const data = item.data();
+            const rsvp = await getDoc(doc(db, 'communities', communityId, 'events', item.id, 'rsvps', currentUserId));
+            const date = data.startsAt?.toDate?.();
+            return {
+              id: item.id,
+              title: String(data.title || ''),
+              startsAt: date instanceof Date ? date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Date unavailable',
+              location: String(data.location || ''),
+              attendeeCount: Number.isSafeInteger(data.attendeeCount) && Number(data.attendeeCount) >= 0 ? Number(data.attendeeCount) : 0,
+              createdBy: String(data.createdBy || ''),
+              myRsvp: rsvp.exists() && rsvp.data().attending === true,
+            };
+          }));
+          onEvents(events);
+        } catch (error) {
+          onError(error instanceof Error ? error : new Error('Circle events could not be loaded.'));
+        }
+      },
+      error => onError(error),
+    );
+  },
+
+  async createEvent(communityId: string, title: string, startsAt: string, location: string): Promise<void> {
+    const create = httpsCallable(functions, 'createCommunityEvent');
+    await create({ communityId, title, startsAt, location });
+  },
+
+  async rsvpEvent(communityId: string, eventId: string, attending: boolean): Promise<void> {
+    const respond = httpsCallable(functions, 'respondToCommunityEvent');
+    await respond({ communityId, eventId, attending });
+  },
+
   async leaveCommunity(userId: string, communityId: string): Promise<void> {
     if (!userId || !communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const memberRef = doc(db, 'communities', communityId, 'members', userId);
