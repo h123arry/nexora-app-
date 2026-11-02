@@ -7,6 +7,7 @@ import { CommunityService } from '../services/firebase/communityService';
 import CircleEventsPanel from './CircleEventsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
 import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
+import CircleGovernancePanel from './CircleGovernancePanel';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -742,22 +743,11 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 )}
 
                 {activePortalTab === 'mods' && (
-                  <div className="space-y-3.5 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-[#A78BFA] font-bold">Community Moderators</h3>
-                    <p className="text-xs text-violet-300/60 font-sans">These users have management capabilities to verify challenges compliance and delete irregular content:</p>
-                    <div className="p-4 rounded-2xl bg-[#03010b]/50 border border-white/10 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">👑</span>
-                          <div>
-                            <p className="text-xs font-bold text-white">VOICE OF HARRISON (voh)</p>
-                            <p className="text-[10px] text-violet-300/50">Founder & Chief Ombudsman</p>
-                          </div>
-                        </div>
-                        <span className="text-[8.5px] font-mono bg-violet-600/30 text-white border border-white/10 px-2 py-0.5 rounded uppercase font-black">Founder</span>
-                      </div>
-                    </div>
-                  </div>
+                  <CircleGovernancePanel
+                    communityId={selectedCircle.id}
+                    currentUserId={currentUser.id}
+                    isOwner={selectedCircle.ownerId === currentUser.id}
+                  />
                 )}
 
                 {activePortalTab === 'rules' && (
