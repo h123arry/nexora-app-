@@ -12,7 +12,7 @@ export default function CircleEventsPanel({ communityId, currentUserId }: { comm
   const [saving, setSaving] = useState(false);
   const [pending, setPending] = useState('');
 
-  useEffect(() => CommunityService.watchEvents(communityId, currentUserId, setEvents, err => setError(err.message)), [communityId, currentUserId];
+  useEffect(() => CommunityService.watchEvents(communityId, currentUserId, setEvents, err => setError(err.message)), [communityId, currentUserId]);
 
   const create = async (event: React.FormEvent) => {
     event.preventDefault();
