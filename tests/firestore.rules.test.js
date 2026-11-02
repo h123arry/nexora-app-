@@ -693,6 +693,35 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDocs(collection(dbFor('alice'), 'communities', 'directory-circle', 'members')));
   });
 
+  it('allows active Circle members to read announcements but reserves all writes for trusted callables', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'announcement-circle'), {
+        id: 'announcement-circle', ownerId: 'alice', type: 'public', name: 'Announcements'
+      });
+      await setDoc(doc(db, 'communities', 'announcement-circle', 'members', 'alice'), {
+        userId: 'alice', role: 'owner', status: 'active', joinedAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'communities', 'announcement-circle', 'members', 'bob'), {
+        userId: 'bob', role: 'member', status: 'active', joinedAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'communities', 'announcement-circle', 'announcements', 'notice-1'), {
+        id: 'notice-1', communityId: 'announcement-circle', title: 'Welcome',
+        body: 'Read the Circle rules.', createdBy: 'alice', createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(), pinned: true
+      });
+    });
+    const announcementPath = ['communities', 'announcement-circle', 'announcements', 'notice-1'];
+    await assertSucceeds(getDoc(doc(dbFor('alice'), ...announcementPath)));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), ...announcementPath)));
+    await assertSucceeds(getDocs(collection(dbFor('bob'), 'communities', 'announcement-circle', 'announcements')));
+    await assertFails(getDoc(doc(dbFor('mallory'), ...announcementPath)));
+    await assertFails(setDoc(doc(dbFor('alice'), 'communities', 'announcement-circle', 'announcements', 'forged'), {
+      id: 'forged', title: 'Client-forged', body: 'Not allowed', createdBy: 'alice', createdAt: serverTimestamp(), pinned: true
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), ...announcementPath), { pinned: false }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), ...announcementPath)));
+  });
+
   it('allows active Circle members to read events and only their own RSVP marker', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'communities', 'event-circle'), { id: 'event-circle', ownerId: 'alice', type: 'public', name: 'Events' });
