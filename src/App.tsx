@@ -178,11 +178,10 @@ export default function App() {
 
   useEffect(() => {
     if (!isLoggedIn || !currentUser.id || typeof window === 'undefined') return;
-    const url = new URL(window.location.href);
-    const inviteToken = url.searchParams.get('circleInvite');
+    const inviteParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    const inviteToken = inviteParams.get('circleInvite');
     if (!inviteToken) return;
-    url.searchParams.delete('circleInvite');
-    window.history.replaceState({}, '', url.toString());
+    window.history.replaceState({}, '', window.location.pathname + window.location.search);
     let active = true;
     CommunityService.redeemInvite(inviteToken)
       .then(result => {
