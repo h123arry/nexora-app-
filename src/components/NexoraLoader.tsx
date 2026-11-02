@@ -52,11 +52,15 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
           </svg>
         </motion.div>
 
-        {/* Center glowing core dot */}
-        <motion.div
-          className="w-1.5 h-1.5 bg-violet-400 rounded-full shadow-[0_0_8px_rgba(167,139,250,0.8)]"
-          animate={{ scale: [0.8, 1.2, 0.8], opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.2, repeat: Infinity, ease: "easeInOut" }}
+        {/* Keep the approved NEXORA mark at the center of the loading indicator. */}
+        <img
+          src="/logo.svg"
+          alt=""
+          aria-hidden="true"
+          className="relative z-10 h-3.5 w-3.5 rounded-[3px] object-contain"
+          loading="eager"
+          decoding="async"
+          draggable={false}
         />
       </div>
 
