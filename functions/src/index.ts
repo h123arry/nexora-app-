@@ -7,6 +7,7 @@ import { setPostLike } from './postEngagement.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
+import { setCircleMemberRole } from './communityGovernance.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -136,5 +137,30 @@ export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) =>
       throw new HttpsError('invalid-argument', 'Invalid post interaction.');
     }
     throw new HttpsError('internal', 'The post interaction could not be saved. Please retry.');
+  }
+});
+
+
+export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Circle roles.');
+  try {
+    return await setCircleMemberRole(
+      adminDb,
+      request.auth.uid,
+      request.data?.communityId,
+      request.data?.targetUid,
+      request.data?.role,
+      request.data?.reason,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid member') || message.includes('valid Circle')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    if (message.includes('Only the active Circle owner')) {
+      throw new HttpsError('permission-denied', message);
+    }
+    if (message.includes('active Circle member')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The Circle role could not be updated. Please retry.');
   }
 });
