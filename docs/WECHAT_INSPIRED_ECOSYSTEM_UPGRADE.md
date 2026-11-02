@@ -65,6 +65,19 @@ The table distinguishes inspiration from implementation status. “Existing foun
 | Lightweight app shell | Fast startup, lazy loading, offline-safe read surfaces and graceful recovery | Existing PWA/performance work; continue measurement |
 | Developer ecosystem | Documented APIs, webhooks, app directory and permission review | Not present as a public platform |
 
+## Implementation ledger — 2 November 2026 (continued)
+
+The existing `main` branch now includes the first usable Circle invitation lifecycle:
+
+- Trusted callable creation restricted to active Circle owners, admins and moderators.
+- Cryptographically random invite tokens; Firestore stores only a SHA-256 token hash.
+- Server-side expiry and bounded-use enforcement, transactional redemption, ban checks and revocation.
+- Governance UI can create, copy and revoke an invitation link.
+- The app consumes `?circleInvite=...` after authentication and redeems it through the trusted callable.
+- Emulator tests cover successful redemption, existing membership, banned users, revocation, non-manager denial and invalid settings; the engagement test command includes this suite.
+
+This is a Circle invitation implementation, not yet a universal QR/deep-link framework for profiles, events and channels. The remaining capability portfolio below is still a roadmap; it must not be represented as shipped until implemented and verified.
+
 ## Recommended build order
 
 ### Track A — ecosystem foundations (P0)
