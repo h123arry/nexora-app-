@@ -47,7 +47,7 @@ export default function CircleGovernancePanel({
     setNotice('');
     try {
       const invite = await CommunityService.createInvite(communityId, 7, 25);
-      const link = `${window.location.origin}/?circleInvite=${encodeURIComponent(invite.token)}`;
+      const link = `${window.location.origin}/#circleInvite=${encodeURIComponent(invite.token)}`;
       setInviteToken(invite.token);
       setInviteLink(link);
       setNotice('Invitation created. Copy and share this link; the token is shown only once.');
