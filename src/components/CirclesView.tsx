@@ -738,7 +738,11 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
 
                 {activePortalTab === 'announcements' && (
                   selectedCircle.isJoinedByMe
-                    ? <CircleAnnouncementsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} isOwner={selectedCircle.ownerId === currentUser.id} />
+                    ? <CircleAnnouncementsPanel
+                      communityId={selectedCircle.id}
+                      currentUserId={currentUser.id}
+                      canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
+                    />
                     : <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-xs text-violet-200/50">Join this Circle to read its announcements.</p>
                 )}
 
