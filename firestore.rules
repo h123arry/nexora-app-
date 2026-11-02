@@ -624,7 +624,7 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
             && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
         }
-        allow list: if signedIn() && (parentCommunity().ownerId == request.auth.uid || activeCircleMember());
+        allow list: if signedIn() && (parentCommunity().ownerId == request.auth.uid || (activeCircleMember() && resource.data.status == 'active'));
         allow create: if signedIn()
           && request.auth.uid == memberId
           && request.resource.data.keys().hasOnly(['userId', 'role', 'status', 'joinedAt'])
