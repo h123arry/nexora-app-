@@ -6,6 +6,7 @@ import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
 import CircleEventsPanel from './CircleEventsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
+import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -735,19 +736,9 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 )}
 
                 {activePortalTab === 'announcements' && (
-                  <div className="space-y-3.5 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Sticky Announcements</h3>
-                    <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs sm:text-sm text-amber-200 leading-relaxed font-sans space-y-1.5">
-                      <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-                        <Megaphone className="w-4 h-4" />
-                        <span>IMPORTANT BULLETIN</span>
-                      </div>
-                      <p>
-                        All members of {selectedCircle.name} must agree to upstanding community respect. Disruptive behavior will result in a temporary block of community points usage on our marketplace list.
-                      </p>
-                      <cite className="block text-[10px] text-amber-400/60 font-mono not-italic pt-1 text-right">— Administrative Team</cite>
-                    </div>
-                  </div>
+                  selectedCircle.isJoinedByMe
+                    ? <CircleAnnouncementsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} isOwner={selectedCircle.ownerId === currentUser.id} />
+                    : <p className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-xs text-violet-200/50">Join this Circle to read its announcements.</p>
                 )}
 
                 {activePortalTab === 'mods' && (
