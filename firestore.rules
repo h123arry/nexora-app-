@@ -619,7 +619,12 @@ service cloud.firestore {
         }
         allow get: if signedIn()
           && (request.auth.uid == memberId || parentCommunity().ownerId == request.auth.uid);
-        allow list: if signedIn() && parentCommunity().ownerId == request.auth.uid;
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow list: if signedIn() && (parentCommunity().ownerId == request.auth.uid || activeCircleMember());
         allow create: if signedIn()
           && request.auth.uid == memberId
           && request.resource.data.keys().hasOnly(['userId', 'role', 'status', 'joinedAt'])
