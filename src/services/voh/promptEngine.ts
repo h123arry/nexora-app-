@@ -14,14 +14,14 @@ export class PromptEngine {
         category: 'creator',
         name: '📈 Creator Growth Tips',
         description: 'Actionable tips and trends to boost subscriber engagement.',
-        promptTemplate: 'Analyze current Nexora trends and recommend 3 tactical subscriber growth ideas.'
+        promptTemplate: 'Using only recent NEXORA posts and verified engagement data included in the conversation, recommend 3 practical creator growth experiments. If current trend data is missing, say so.'
       },
       {
         id: 'creator-ideas',
         category: 'creator',
         name: '💡 Video / Post Ideas',
         description: 'Fresh video formats, stories, and post layouts.',
-        promptTemplate: 'Generate 5 unique content ideas focusing on tech developers building in Port Harcourt.'
+        promptTemplate: 'Generate 5 original content ideas for the creator's stated niche. Do not assume a city, audience, or interest that the creator has not provided.'
       },
       {
         id: 'writing-polish',
@@ -49,7 +49,7 @@ export class PromptEngine {
         category: 'analytics',
         name: '📊 Growth Analysis',
         description: 'Synthesize performance and offer action items.',
-        promptTemplate: 'Based on Nexora metrics, outline 3 actionable recommendations to improve subscriber retention.'
+        promptTemplate: 'Use only the verified NEXORA metrics included in context. If retention or audience metrics are unavailable, say they are not tracked and offer general experiments separately.'
       },
       {
         id: 'profile-bio',
@@ -63,7 +63,7 @@ export class PromptEngine {
         category: 'hashtag',
         name: '🏷️ Niche & Trending Hashtags',
         description: 'Discover relevant hashtags for discoverability.',
-        promptTemplate: 'Suggest the top 8 viral hashtags for a post about building Web3 and AI frameworks in Lagos.'
+        promptTemplate: 'Suggest up to 8 relevant hashtags for the topic supplied by the creator. Do not call them trending, viral, or top-ranked unless current trend evidence is provided.'
       }
     ];
   }
