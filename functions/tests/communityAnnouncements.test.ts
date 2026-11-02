@@ -14,6 +14,7 @@ before(async () => {
   await db.doc('communities/announcement-circle').set({ id: 'announcement-circle', ownerId: 'alice', type: 'public' });
   await db.doc('communities/announcement-circle/members/alice').set({ userId: 'alice', role: 'owner', status: 'active' });
   await db.doc('communities/announcement-circle/members/bob').set({ userId: 'bob', role: 'member', status: 'active' });
+  await db.doc('communities/announcement-circle/members/carol').set({ userId: 'carol', role: 'moderator', status: 'active' });
 });
 
 after(async () => {
@@ -28,7 +29,9 @@ describe('trusted Circle announcements', () => {
     assert.equal(item.get('title'), 'Read this first');
     assert.equal(item.get('body'), 'Welcome to the Circle.');
     assert.equal(item.get('pinned'), false);
-    await assert.rejects(createCircleAnnouncement(db, 'bob', 'announcement-circle', 'Member post', 'Not allowed.'), /Only the active Circle owner/);
+    const delegated = await createCircleAnnouncement(db, 'carol', 'announcement-circle', 'Moderator update', 'A moderator can publish.');
+    assert.equal((await db.doc(`communities/announcement-circle/announcements/${delegated.announcementId}`).get()).get('createdBy'), 'carol');
+    await assert.rejects(createCircleAnnouncement(db, 'bob', 'announcement-circle', 'Member post', 'Not allowed.'), /Only active Circle owners, admins, or moderators/);
     await assert.rejects(createCircleAnnouncement(db, 'alice', 'announcement-circle', '', 'Missing title'), /character limits/);
     await assert.rejects(createCircleAnnouncement(db, 'alice', 'announcement-circle', 'Too long', 'x'.repeat(2001)), /character limits/);
   });
@@ -37,7 +40,8 @@ describe('trusted Circle announcements', () => {
     const created = await createCircleAnnouncement(db, 'alice', 'announcement-circle', 'Pinned notice', 'Important update.');
     assert.deepEqual(await setCircleAnnouncementPinned(db, 'alice', 'announcement-circle', created.announcementId, true), { pinned: true });
     assert.equal((await db.doc(`communities/announcement-circle/announcements/${created.announcementId}`).get()).get('pinned'), true);
-    await assert.rejects(setCircleAnnouncementPinned(db, 'bob', 'announcement-circle', created.announcementId, false), /Only the active Circle owner/);
+    assert.deepEqual(await setCircleAnnouncementPinned(db, 'carol', 'announcement-circle', created.announcementId, false), { pinned: false });
+    await assert.rejects(setCircleAnnouncementPinned(db, 'bob', 'announcement-circle', created.announcementId, false), /Only active Circle owners, admins, or moderators/);
     await assert.rejects(setCircleAnnouncementPinned(db, 'alice', 'announcement-circle', 'missing', true), /unavailable/);
   });
 });
