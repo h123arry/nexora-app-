@@ -78,7 +78,7 @@ export async function setCircleAnnouncementPinned(
       transaction.get(memberRef),
       transaction.get(ref),
     ]);
-    requireOwnerState(community, member, uid);
+    requireAnnouncementManager(community, member, uid);
     if (!announcement.exists) throw new Error('This announcement is unavailable.');
     transaction.update(ref, { pinned, updatedAt: new Date() });
   });
