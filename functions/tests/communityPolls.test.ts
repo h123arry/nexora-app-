@@ -10,7 +10,7 @@ const db = getFirestore(app);
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Circle poll tests require the Firestore Emulator.');
-  await db.recursiveDelete(db.collection('communities'));
+  await db.recursiveDelete(db.doc('communities/poll-circle'));
   await db.doc('communities/poll-circle').set({ id: 'poll-circle', ownerId: 'alice', type: 'public' });
   await db.doc('communities/poll-circle/members/alice').set({ userId: 'alice', role: 'owner', status: 'active' });
   await db.doc('communities/poll-circle/members/bob').set({ userId: 'bob', role: 'member', status: 'active' });
