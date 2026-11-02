@@ -5,6 +5,7 @@ import { Circle, User } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
 import CircleEventsPanel from './CircleEventsPanel';
+import CircleMembersPanel from './CircleMembersPanel';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -562,31 +563,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                   </div>
                 )}
 
-                {activePortalTab === 'members' && (
-                  <div className="space-y-3 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Active Community Members</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {[
-                        { name: 'VOICE OF HARRISON', username: 'voh', role: 'Founder Admin', avatar: '/src/assets/images/voh_logo_avatar_1781774114050.jpg' },
-                        { name: 'Nexora Official ✓', username: 'nexora_official', role: 'Official Platform Account', avatar: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80' },
-                        { name: 'VOH AI', username: 'voh_ai', role: 'AI Assistant', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' }
-                      ].map((mbr, i) => (
-                        <div key={i} className="p-3 bg-white/[0.01] border border-white/5 rounded-2xl flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <img src={mbr.avatar} alt={mbr.name} className="w-8 h-8 rounded-xl object-cover" />
-                            <div>
-                              <p className="text-xs font-bold text-white">@{mbr.username}</p>
-                              <p className="text-[10px] text-violet-300/60">{mbr.name}</p>
-                            </div>
-                          </div>
-                          <span className="text-[8px] font-mono font-bold bg-violet-600/20 text-violet-300 border border-white/10 px-2 py-0.5 rounded uppercase">
-                            {mbr.role}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {activePortalTab === 'members' && <CircleMembersPanel communityId={selectedCircle.id} />}
 
                 {activePortalTab === 'events' && <CircleEventsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 
