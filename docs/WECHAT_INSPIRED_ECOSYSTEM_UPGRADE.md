@@ -256,3 +256,18 @@ Continue with the highest leverage, lowest duplication work:
 6. Audit group messaging lifecycle, media controls and moderation operations.
 
 Do not start mini-program execution, payments custody, reservations or arbitrary bot execution in this tranche. Those require separate security, legal and operational designs.
+
+
+## Implementation ledger — 2 November 2026
+
+The following Circle governance tranche is now implemented in the existing application:
+
+- Circle owners can assign or revoke the admin and moderator roles for active members, or return them to member.
+- Role changes run through a trusted callable and a Firestore transaction. The actor must be the active canonical Circle owner; the target must already be an active member; ownership cannot be changed through this operation.
+- Every role change writes an append-only communities/{circleId}/auditEvents/{eventId} record containing actor, target, previous role, new role, reason and timestamp.
+- The community's admins and moderators projection arrays are maintained for existing client views, while the membership document remains the authorization source.
+- The Circle portal's former static moderator placeholder is replaced by a live governance panel. It loads active members, supports role selection and requires a reason before saving.
+- Announcement publishing and pinning now accept active owners, admins and moderators. Membership and role are checked again inside the trusted transaction; client-side visibility is not treated as authorization.
+- Emulator tests cover owner delegation, demotion, audit events, non-owner denial, invalid targets/roles, moderator announcement publishing and pinning, and ordinary-member denial.
+
+This tranche does not mean the full WeChat-inspired portfolio is complete. QR invite lifecycle, unified service directory, official channel subscriptions/fan-out, inbox unification, booking/commerce, translation and a secure partner mini-service platform remain separate workstreams. They must not be represented as shipped until implemented and tested.
