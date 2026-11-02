@@ -607,7 +607,7 @@ const publicProfile = (uid) => ({
   it('enforces self-scoped Circle membership and prevents client-assigned elevated roles', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'communities', 'member-circle'), {
-        id: 'member-circle', ownerId: 'alice', creatorId: 'alice', type: 'public', name: 'Members'
+        id: 'member-circle', ownerId: 'alice', creatorId: 'alice', type: 'public', name: 'Members', bannedUsers: ['mallory']
       });
     });
 
@@ -628,6 +628,9 @@ const publicProfile = (uid) => ({
     await assertFails(getDocs(collection(dbFor('bob'), 'communities', 'member-circle', 'members')));
     await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'mallory'), {
       userId: 'mallory', role: 'admin', status: 'active', joinedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'mallory'), {
+      userId: 'mallory', role: 'member', status: 'active', joinedAt: serverTimestamp()
     }));
     await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'members', 'alice'), {
       userId: 'alice', role: 'member', status: 'active', joinedAt: serverTimestamp()
