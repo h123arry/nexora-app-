@@ -199,7 +199,7 @@ Build this only after permission, moderation, and platform security foundations 
 The highest-value first tranche is not Mini Programs yet. It is:
 1. Complete Circle membership and private authorization end-to-end.
 2. Add Circle role/permission enforcement and durable join/invite flows.
-3. Add a real broadcast/announcement mode to existing community infrastructure.
+3. Extend the newly implemented owner-published Circle announcement mode with moderator delegation, read acknowledgements, expiry, and channel-style subscriber delivery.
 4. Add shareable QR/deep links for profiles, Circles, and events using expiring/revocable tokens.
 5. Add ACL-safe unified search coverage for existing public profiles, posts, communities, and events.
 6. Add share-to-chat cards for existing posts, profiles, events, and Circles.
@@ -207,7 +207,20 @@ The highest-value first tranche is not Mini Programs yet. It is:
 
 This sequence gives users meaningful WeChat-inspired value while strengthening the product they already have. Mini Services remain a later platform milestone, not a rushed iframe/plugin feature.
 
-## 7. Research references
+## 7. Implementation progress — 2 November 2026
+
+The first Circle announcement slice has been implemented in the existing app and committed to `main`:
+
+- Owners can publish persistent Circle announcements.
+- Active members receive live updates through Firestore subscriptions.
+- Owners can pin and unpin announcements.
+- Trusted callable Functions validate content and enforce owner membership on the server.
+- Firestore rules allow active-member reads and deny client-side create/update/delete.
+- Emulator coverage was added for owner/member permissions, bounded content, pinning and member-only access.
+
+This is an initial release slice, not the complete WeChat-style channel system. Moderator delegation, read acknowledgements, expiry, notification preferences, fan-out delivery and channel analytics remain future work. The GitHub CI workflow is responsible for validating the latest commits; do not describe the full suite as passing until that run completes.
+
+## 8. Research references
 
 - Tencent Weixin/WeChat product overview: https://www.tencent.com/products/weixin-wechat/
 - Tencent WeUI (official WeChat design-team UI library): https://github.com/Tencent/weui
