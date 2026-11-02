@@ -6,6 +6,9 @@ import VohIcon from './VohIcon';
 import { readUserScopedJson } from '../utils/userScopedStorage';
 import { getJoinedCirclesForUser } from '../data/database';
 import { SettingsService } from '../services/firebase/settingsService';
+import { getGlobalPostsPage } from '../services/posts/postService';
+import { rankTrendingTopics } from '../services/discovery/discoveryService';
+import type { Post } from '../types';
 
 export interface WorldPulseViewProps {
   theme: string;
@@ -25,6 +28,12 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
   const [followedAlerts, setFollowedAlerts] = useState<string[]>([]);
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [pulsePosts, setPulsePosts] = useState<Post[]>([]);
+  const [activityLoading, setActivityLoading] = useState(true);
+  const [activityLoadingMore, setActivityLoadingMore] = useState(false);
+  const [activityError, setActivityError] = useState(false);
+  const [activityHasMore, setActivityHasMore] = useState(false);
+  const pulseCursorRef = React.useRef<Awaited<ReturnType<typeof getGlobalPostsPage>>['nextCursor']>(null);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -36,6 +45,69 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
     });
     return () => { cancelled = true; };
   }, [currentUserId]);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    setActivityLoading(true);
+    setActivityError(false);
+    void getGlobalPostsPage(null, 30).then(page => {
+      if (cancelled) return;
+      setPulsePosts(page.posts);
+      pulseCursorRef.current = page.nextCursor;
+      setActivityHasMore(page.hasMore);
+    }).catch(error => {
+      console.error('World Pulse public activity could not be loaded:', error);
+      if (!cancelled) setActivityError(true);
+    }).finally(() => {
+      if (!cancelled) setActivityLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [currentUserId]);
+
+  const pulseTopics = React.useMemo(() => rankTrendingTopics(pulsePosts, {
+    windowHours: 24 * 7, minPosts: 2, limit: 10,
+  }), [pulsePosts]);
+
+  const categoryTerms: Record<string, string[]> = {
+    sports: ['football', 'soccer', 'basketball', 'tennis', 'sports', 'match', 'goal'],
+    business: ['business', 'startup', 'finance', 'entrepreneur', 'market', 'company'],
+    tech: ['technology', 'tech', 'ai', 'software', 'developer', 'coding', 'digital'],
+    entertainment: ['music', 'film', 'movie', 'entertainment', 'artist', 'celebrity'],
+    education: ['education', 'learning', 'school', 'university', 'study', 'course'],
+  };
+  const visiblePulsePosts = React.useMemo(() => {
+    const query = pulseSearch.trim().toLowerCase().replace(/^#/, '');
+    return pulsePosts.filter(post => {
+      if (activeTab === 'local' && !post.location?.trim()) return false;
+      if (categoryTerms[activeTab]) {
+        const terms = categoryTerms[activeTab];
+        const searchable = `${post.content} ${(post.tags || []).join(' ')}`.toLowerCase();
+        if (!terms.some(term => searchable.includes(term))) return false;
+      }
+      if (!query) return true;
+      const searchable = `${post.content} ${post.username} ${post.name} ${(post.tags || []).join(' ')}`.toLowerCase();
+      return searchable.includes(query);
+    });
+  }, [pulsePosts, pulseSearch, activeTab]);
+
+  const loadMorePulse = async () => {
+    if (!pulseCursorRef.current || activityLoadingMore) return;
+    setActivityLoadingMore(true);
+    try {
+      const page = await getGlobalPostsPage(pulseCursorRef.current, 30);
+      setPulsePosts(current => {
+        const existing = new Set(current.map(post => post.id));
+        return [...current, ...page.posts.filter(post => !existing.has(post.id))];
+      });
+      pulseCursorRef.current = page.nextCursor;
+      setActivityHasMore(page.hasMore);
+    } catch (error) {
+      console.error('World Pulse could not load more public posts:', error);
+      triggerToast('More activity could not be loaded. Please try again.');
+    } finally {
+      setActivityLoadingMore(false);
+    }
+  };
 
   const triggerToast = (msg: string) => {
     setToastMessage(msg);
@@ -57,7 +129,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           message: query,
           history: [],
           context: {
-            posts: JSON.parse(localStorage.getItem('nexora_posts') || '[]').slice(0, 5),
+            posts: pulsePosts.slice(0, 5).map(post => ({ id: post.id, username: post.username, content: post.content, tags: post.tags, likes: post.likes, commentsCount: post.commentsCount, timestamp: post.timestamp })),
             circles: getJoinedCirclesForUser(currentUserId),
             notifications: readUserScopedJson(localStorage, 'nexora_notifications', currentUserId, [])
           }
@@ -122,7 +194,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           <span className="text-xl">🌍</span> World Pulse
         </h2>
         <p className="text-xs text-violet-300/60 mt-0.5">
-          Live activity is not connected yet. Your topic preferences sync with your account.
+          Recent public posts and topic activity from NEXORA, with no synthetic trends.
         </p>
       </div>
 
@@ -150,7 +222,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
         {/* Quick Clicking Tag Examples */}
         <div className="flex flex-wrap items-center gap-1.5 px-0.5">
           <span className="text-[10px] font-mono text-violet-400/60 uppercase mr-1">Explore topics:</span>
-          {['Football', 'Nigeria', 'AI', 'Elections', 'Music', 'Startups'].map((tag) => (
+          {pulseTopics.length === 0 ? <span className="text-[10px] text-violet-300/40">Topics appear as multiple creators discuss them.</span> : pulseTopics.slice(0, 6).map(({ tag }) => (
             <button
               key={tag}
               onClick={() => {
@@ -172,8 +244,9 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           { id: 'sports', label: '⚽ Sports' },
           { id: 'business', label: '💼 Business' },
           { id: 'tech', label: '🧠 Technology' },
-          { id: 'entertainment', label: '🎵 Entertainment' },
-          { id: 'local', label: '📍 Local' }
+          { id: 'entertainment', label: 'Entertainment' },
+          { id: 'education', label: 'Education' },
+          { id: 'local', label: 'Local posts' }
         ].map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -184,7 +257,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               }}
               className={`min-h-11 flex items-center gap-1.5 px-3.5 py-2 text-xs font-sans font-bold rounded-xl border transition-all shrink-0 cursor-pointer ${
                 isActive 
-                  ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 font-extrabold' 
+                  ? 'bg-violet-500/15 border-violet-400/40 text-violet-200 font-extrabold' 
                   : 'bg-transparent border-transparent text-violet-400/60 hover:text-white hover:bg-violet-500/5'
               }`}
             >
@@ -205,7 +278,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
             </div>
             <div>
               <span className="text-xs font-mono uppercase tracking-widest font-black text-violet-300">VOH AI assistant</span>
-              <p className="text-[10px] text-violet-300/40">VOH does not receive live World Pulse activity data.</p>
+              <p className="text-[10px] text-violet-300/50">VOH can use recent public posts loaded in this view as context.</p>
             </div>
           </div>
           <span className="text-[9px] font-mono bg-violet-500/10 text-violet-300 border border-white/10 px-2 py-0.5 rounded-md uppercase font-black tracking-tight">AI service</span>
@@ -215,7 +288,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
         <div className="flex items-center gap-2">
           <input 
             type="text"
-            placeholder="Ask VOH AI about a topic (not live activity)..."
+            placeholder="Ask VOH AI about recent NEXORA topics or a new idea..."
             value={vohSearch}
             onChange={(e) => setVohSearch(e.target.value)}
             onKeyDown={(e) => {
@@ -310,28 +383,64 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       )}
 
       {activeTab !== 'map' && (
-        <section className="nx-surface space-y-3 rounded-3xl p-8 text-center">
-          <Globe className="mx-auto h-8 w-8 text-violet-400/40" />
-          <h3 className="text-sm font-semibold text-white">No live activity to show yet</h3>
-          <p className="mx-auto max-w-md text-xs leading-relaxed text-zinc-400">World Pulse will show real activity when a trusted aggregation service is connected. No sample events, rankings, or pulse scores are displayed.</p>
-          {pulseSearch && (
-            <button type="button" onClick={() => setPulseSearch('')} className="min-h-11 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white hover:bg-violet-500">Clear search</button>
+        <section className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-white">{activeTab === 'trending' ? 'Recent public activity' : `${activeTab[0].toUpperCase()}${activeTab.slice(1)} posts`}</h3>
+              <p className="mt-1 text-[10px] text-violet-300/50">Loaded from public NEXORA posts. Engagement figures reflect stored post data.</p>
+            </div>
+            <span className="shrink-0 text-[10px] text-violet-300/50">{visiblePulsePosts.length} loaded</span>
+          </div>
+          {activityLoading ? (
+            <div className="nx-surface rounded-2xl p-6 text-center text-xs text-violet-200/60">Loading recent public activity...</div>
+          ) : activityError ? (
+            <div className="nx-surface rounded-2xl p-6 text-center space-y-2">
+              <p className="text-sm font-semibold text-white">Activity could not be loaded</p>
+              <p className="text-xs text-violet-200/60">Check your connection and try again. No placeholder activity is shown.</p>
+              <button type="button" onClick={() => { setActivityError(false); setActivityLoading(true); void getGlobalPostsPage(null, 30).then(page => { setPulsePosts(page.posts); pulseCursorRef.current = page.nextCursor; setActivityHasMore(page.hasMore); }).catch(() => setActivityError(true)).finally(() => setActivityLoading(false)); }} className="min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-semibold text-white hover:bg-violet-500">Try again</button>
+            </div>
+          ) : visiblePulsePosts.length === 0 ? (
+            <div className="nx-surface rounded-2xl p-7 text-center">
+              <Globe className="mx-auto h-7 w-7 text-violet-400/50" />
+              <p className="mt-3 text-sm font-semibold text-white">{pulsePosts.length ? 'No matching public posts' : 'No public posts yet'}</p>
+              <p className="mt-1 text-xs text-violet-200/50">{pulseSearch ? 'Try another search or clear the filter.' : 'New public posts will appear here as creators publish.'}</p>
+              {(pulseSearch || activeTab !== 'trending') && <button type="button" onClick={() => { setPulseSearch(''); setActiveTab('trending'); }} className="mt-3 min-h-10 rounded-xl border border-violet-400/20 px-4 text-xs font-semibold text-violet-200">Clear filters</button>}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {visiblePulsePosts.map(post => (
+                <article key={post.id} className="nx-surface rounded-2xl border border-white/5 p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-white">{post.name || post.username || 'NEXORA creator'}</p>
+                      <p className="truncate text-[10px] text-violet-300/50">@{post.username || 'creator'} · {Number.isFinite(Date.parse(String(post.timestamp))) ? new Date(post.timestamp).toLocaleString() : 'Date unavailable'}</p>
+                    </div>
+                    {post.videoUrl && <span className="rounded-lg bg-violet-500/15 px-2 py-1 text-[9px] font-bold uppercase text-violet-200">Video</span>}
+                  </div>
+                  {post.content && <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-violet-50/90">{post.content}</p>}
+                  {(post.image || post.images?.length) && <div className="text-[10px] text-violet-300/60">Photo attached to this post</div>}
+                  {!!post.tags?.length && <div className="flex flex-wrap gap-1.5">{post.tags.slice(0, 8).map(tag => <button key={tag} type="button" onClick={() => setPulseSearch(tag.replace(/^#/, ''))} className="rounded-lg border border-violet-400/15 bg-violet-500/5 px-2 py-1 text-[10px] text-violet-200">#{tag.replace(/^#/, '')}</button>)}</div>}
+                  <div className="flex items-center gap-4 border-t border-white/5 pt-2 text-[10px] text-violet-200/55"><span>{Math.max(0, post.likes || 0)} likes</span><span>{Math.max(0, post.commentsCount || 0)} comments</span><span>{Math.max(0, post.shares || 0)} shares</span></div>
+                </article>
+              ))}
+            </div>
           )}
+          {activityHasMore && !activityLoading && !activityError && <div className="text-center"><button type="button" onClick={() => void loadMorePulse()} disabled={activityLoadingMore} className="min-h-11 rounded-xl border border-violet-400/20 px-5 text-xs font-semibold text-violet-200 hover:bg-violet-500/10 disabled:opacity-50">{activityLoadingMore ? 'Loading...' : 'Load more activity'}</button></div>}
         </section>
       )}
 
       {/* WORLD PULSE ALERTS CONFIG BOX */}
       <div className="p-4 rounded-3xl bg-black/40 border border-white/10 space-y-3">
         <div className="flex items-center gap-1.5">
-          <Bell className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-mono uppercase tracking-widest font-black text-cyan-300">Saved topic preferences</span>
+          <Bell className="w-4 h-4 text-violet-300" />
+          <span className="text-xs font-mono uppercase tracking-widest font-black text-violet-200">Saved topic preferences</span>
         </div>
         <p className="text-[11px] text-violet-100/60 leading-relaxed">
-          These topics are saved to your account and can guide content preferences. Push alerts and live topic activity are not connected yet.
+Choose topics from actual recent posts or keep topics already saved to your account. Push notifications for topics are not connected yet.
         </p>
 
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {['⚽ Football', '🧠 AI', '💼 Business', '🎮 Gaming', '🎵 Music'].map((topic) => {
+          {[...new Set([...followedAlerts, ...pulseTopics.map(item => item.tag)])].slice(0, 12).map((topic) => {
             const isFollowed = followedAlerts.includes(topic);
             return (
               <button
@@ -340,7 +449,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
                 disabled={topicsLoading}
                 className={`px-3 py-1.5 rounded-xl border text-[11px] font-sans font-bold transition-all cursor-pointer ${
                   isFollowed 
-                    ? 'bg-cyan-500/10 border-cyan-500/30 text-cyan-300 font-extrabold' 
+                    ? 'bg-violet-500/15 border-violet-400/40 text-violet-200 font-extrabold' 
                     : 'bg-transparent border-white/10 text-violet-400/40 hover:text-white'
                 }`}
               >
