@@ -31,7 +31,7 @@ export async function setPostLike(
     const authorId = String(postSnapshot.get('userId') || postSnapshot.get('authorId') || '');
     const notificationId = `like_${randomUUID()}`;
     const notificationRef = authorId && desiredLiked && authorId !== uid
-      ? db.collection('notifications').doc(notificationId)
+      ? db.collection('users').doc(authorId).collection('notifications').doc(notificationId)
       : null;
     const actorProfileRef = authorId && desiredLiked && authorId !== uid
       ? db.collection('publicProfiles').doc(uid)
