@@ -101,7 +101,7 @@ export const createCommunityAnnouncement = onCall({ maxInstances: 10 }, async (r
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('valid Circle') || message.includes('character limits')) throw new HttpsError('invalid-argument', message);
-    if (message.includes('Only the active Circle owner')) throw new HttpsError('permission-denied', message);
+    if (message.includes('Only active Circle owners, admins, or moderators')) throw new HttpsError('permission-denied', message);
     throw new HttpsError('internal', 'The announcement could not be published. Please retry.');
   }
 });
