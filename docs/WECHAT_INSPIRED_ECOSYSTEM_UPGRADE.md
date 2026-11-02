@@ -274,3 +274,31 @@ This tranche does not mean the full WeChat-inspired portfolio is complete. QR in
 
 - Firestore membership creation now independently rejects banned users joining public Circles, even if a client bypasses the UI-level ban check; a rules emulator regression test covers this.
 - Announcement pinning was corrected to use the same delegated owner/admin/moderator authorization policy as publishing, and the test suite covers moderator pinning.
+
+
+## Eight-track execution programme (2 November 2026)
+
+This is the active implementation scope requested for the next ecosystem tranche. The following status is based on repository inspection, not on UI assumptions. Existing foundations are retained; a visible component or local-storage record is not treated as proof of a secure, production-ready capability.
+
+| Track | Existing foundation verified | Remaining implementation gate |
+|---|---|---|
+| 1. Revocable QR invitations and deep links | Profile has a QR panel state; App already supports query-based tab selection. | Add server-generated opaque tokens, hash-only persistence, expiry/use limits, revocation, preview-before-join, banned-user checks and actual route consumption. Do not encode private account identifiers or long-lived credentials. |
+| 2. Official creator and organisation channels | Broadcast metadata, broadcast UI, page identities and creator profiles exist. | Replace sample-ID recipient classification and local-only channel creation with canonical channel records, verified owner/staff roles, follower subscriptions, server-authorised publishing, notification preferences and analytics. |
+| 3. Unified service and content directory | Universal search already groups people, posts, Pulse, communities, Circles, chats and opportunities. | Move beyond browser-local caches; add permission-aware indexed results for channels, events, organisations, approved services and mini-services. Keep private entities out of autocomplete and search projections. |
+| 4. Group messaging and unified inbox | NewInboxView reads live Firestore messages, paginates history and has typing/read-receipt integrations. | Audit every group read/write against active membership and account restrictions; persist archive/pin/mute/category preferences per user in Firestore; unify service/channel/Circle activity without inventing message delivery states. |
+| 5. Saved collections | Firestore post bookmarks and SavedView exist; User has a savedCollections type field. | Implement private named collections with canonical Firestore records, membership-safe references to posts/channels/events/services, migration, export and deletion. Avoid treating the current post-only view as cross-surface collections. |
+| 6. Business services, bookings and commerce | Page identities and monetization/checkout foundations exist. | Add verified business profiles and listings first. Booking requires server-side capacity and idempotent reservation transactions, time-zone handling and cancellation policy. Commerce must use provider-authoritative payment state, receipts, refunds and dispute handling; no wallet-custody shortcut. |
+| 7. Translation and accessibility | Four UI locales exist; reduced-motion CSS and some high-contrast/font-size controls exist in messaging. | Add on-demand content translation with original-text visibility and user language preference; audit captions/transcripts, screen-reader names, focus order, contrast and scalable text across all major surfaces. Never silently overwrite source content. |
+| 8. Curated mini-services | Existing app modules can serve as first-party service destinations. | Start with a reviewed first-party directory and tightly scoped integrations. No arbitrary third-party JavaScript in the app origin. Require owner, permission manifest, data-access scope, review state, reporting and revocation before external services are listed. |
+
+### First verified implementation in this tranche
+
+- Universal people search now excludes accounts marked banned or suspended before producing matching user results. This is a defence-in-depth discovery filter; server-side privacy and account-status rules remain authoritative.
+
+### Delivery and verification rules
+
+- Each track must be integrated into existing navigation and persistence; a design-only screen does not count as delivery.
+- Privileged writes must go through trusted server operations or rules that independently enforce authorization.
+- Add emulator or unit regression coverage for every new permission boundary and state transition.
+- Do not mark a track complete until its user flow, persistence, security rules, failure states and tests are verified.
+- Keep payments, bookings, translation and third-party integrations honest about external dependencies and operational readiness.
