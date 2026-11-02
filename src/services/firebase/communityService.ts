@@ -255,6 +255,48 @@ export const CommunityService = {
   },
 
 
+
+  watchAnnouncements(
+    communityId: string,
+    currentUserId: string,
+    onAnnouncements: (items: Array<{ id: string; title: string; body: string; createdAt: string; pinned: boolean }>) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    if (!communityId || !currentUserId || communityId.includes('/')) {
+      onError(new Error('Join this Circle to view announcements.'));
+      return () => undefined;
+    }
+    return onSnapshot(
+      query(collection(db, 'communities', communityId, 'announcements'), orderBy('createdAt', 'desc'), limit(20)),
+      snapshot => {
+        const items = snapshot.docs.map(item => {
+          const data = item.data();
+          const date = data.createdAt?.toDate?.();
+          return {
+            id: item.id,
+            title: String(data.title || ''),
+            body: String(data.body || ''),
+            createdAt: date instanceof Date ? date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Recently',
+            pinned: data.pinned === true,
+          };
+        }).sort((a, b) => Number(b.pinned) - Number(a.pinned));
+        onAnnouncements(items);
+      },
+      error => onError(error),
+    );
+  },
+
+  async publishAnnouncement(communityId: string, title: string, body: string): Promise<void> {
+    const publish = httpsCallable(functions, 'createCommunityAnnouncement');
+    await publish({ communityId, title, body });
+  },
+
+  async setAnnouncementPinned(communityId: string, announcementId: string, pinned: boolean): Promise<void> {
+    const update = httpsCallable(functions, 'setCommunityAnnouncementPinned');
+    await update({ communityId, announcementId, pinned });
+  },
+
+
   watchEvents(
     communityId: string,
     currentUserId: string,
