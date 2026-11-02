@@ -6,6 +6,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
+import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -89,6 +90,31 @@ export const respondToCommunityEvent = onCall({ maxInstances: 10 }, async (reque
     if (message.includes('Join this Circle')) throw new HttpsError('permission-denied', message);
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     throw new HttpsError('internal', 'Your RSVP could not be saved. Please retry.');
+  }
+});
+
+export const createCommunityAnnouncement = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a Circle announcement.');
+  try {
+    return await createCircleAnnouncement(adminDb, request.auth.uid, request.data?.communityId, request.data?.title, request.data?.body);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Circle') || message.includes('character limits')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the active Circle owner')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The announcement could not be published. Please retry.');
+  }
+});
+
+export const setCommunityAnnouncementPinned = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Circle announcements.');
+  try {
+    return await setCircleAnnouncementPinned(adminDb, request.auth.uid, request.data?.communityId, request.data?.announcementId, request.data?.pinned);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid announcement')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the active Circle owner')) throw new HttpsError('permission-denied', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'The announcement could not be updated. Please retry.');
   }
 });
 
