@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import NexoraLoader from './NexoraLoader';
-import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown } from 'lucide-react';
+import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
 import { getDownloadURL, ref } from 'firebase/storage';
@@ -11,6 +11,7 @@ import {
   getDocs, query, where, serverTimestamp, limit 
 } from 'firebase/firestore';
 import { submitModerationAppeal } from '../services/dataService';
+import { buildPostAnalytics } from '../services/analytics/postAnalytics';
 import { uploadMediaFile } from '../services/firebase/storageService';
 
 interface CreatorDashboardViewProps {
@@ -130,18 +131,17 @@ export default function CreatorDashboardView({
 
   // Only aggregate counters present on the user's stored post records.
   const stats = useMemo(() => {
-    const active = localPosts.filter(p => !p.isArchived);
-    const totalViews = active.reduce((sum, p) => sum + (p.views || 0), 0);
-    const totalSparks = active.reduce((sum, p) => sum + (p.likes || 0), 0);
-    const totalComments = active.reduce((sum, p) => sum + (p.commentsCount || p.comments?.length || 0), 0);
-    const totalShares = active.reduce((sum, p) => sum + (p.shares || 0), 0);
-    const totalBookmarks = active.reduce((sum, p) => sum + (p.saves || 0), 0);
+    const active = localPosts.filter(post => !post.isArchived);
+    const postMetrics = active.map(buildPostAnalytics);
+    const recordedViews = postMetrics.filter(metric => metric.views !== null);
     return {
-      totalViews,
-      totalSparks,
-      totalComments,
-      totalShares,
-      totalBookmarks,
+      totalViews: recordedViews.length
+        ? recordedViews.reduce((sum, metric) => sum + (metric.views || 0), 0)
+        : null as number | null,
+      totalSparks: postMetrics.reduce((sum, metric) => sum + metric.likes, 0),
+      totalComments: postMetrics.reduce((sum, metric) => sum + metric.comments, 0),
+      totalShares: postMetrics.reduce((sum, metric) => sum + metric.shares, 0),
+      totalBookmarks: postMetrics.reduce((sum, metric) => sum + metric.saves, 0),
       followerChange: null as number | null,
       profileViews: null as number | null,
       totalWatchTimeHours: null as number | null,
@@ -150,6 +150,9 @@ export default function CreatorDashboardView({
     };
   }, [localPosts]);
 
+  const selectedPostAnalytics = selectedPostForAnalytics
+    ? buildPostAnalytics(selectedPostForAnalytics)
+    : null;
   const formatMetric = (value: number | null) => value === null ? 'Not tracked' : value.toLocaleString();
 
   // Optimistic Post Management Functions (Firestore Sync in background)
@@ -613,10 +616,10 @@ export default function CreatorDashboardView({
               {/* Bento Grid Analytics */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { label: 'Recorded Views', val: formatMetric(stats.totalViews), sub: 'Total on available post records', icon: Eye, color: 'text-sky-400' },
-                  { label: 'Sparks (Likes)', val: formatMetric(stats.totalSparks), sub: 'Total on available post records', icon: Sparkles, color: 'text-pink-400' },
-                  { label: 'Watch Duration', val: 'Unavailable', sub: 'Watch-time tracking is not available yet', icon: Clock, color: 'text-violet-400' },
-                  { label: 'Follower Change', val: 'Not tracked yet', sub: 'Follower history is not tracked', icon: Users, color: 'text-emerald-400' }
+                  { label: 'Recorded Views', val: formatMetric(stats.totalViews), sub: 'Recorded on available post records', icon: Eye, color: 'text-violet-300' },
+                  { label: 'Sparks', val: formatMetric(stats.totalSparks), sub: 'Stored post counters', icon: Sparkles, color: 'text-violet-300' },
+                  { label: 'Comments', val: formatMetric(stats.totalComments), sub: 'Stored post counters', icon: MessageSquare, color: 'text-violet-300' },
+                  { label: 'Shares', val: formatMetric(stats.totalShares), sub: 'Stored post counters', icon: ArrowRight, color: 'text-violet-300' }
                 ].map((card, i) => {
                   const Icon = card.icon;
                   return (
@@ -1135,10 +1138,12 @@ export default function CreatorDashboardView({
               {/* Individual Bento Stats */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
-                  { label: 'Impressions', val: (selectedPostForAnalytics.views || 0).toLocaleString(), icon: Eye, color: 'text-sky-400' },
-                  { label: 'Sparks Received', val: (selectedPostForAnalytics.likes || 0).toLocaleString(), icon: Sparkles, color: 'text-pink-400' },
-                  { label: 'Bookmarks Saved', val: (selectedPostForAnalytics.saves || 0).toLocaleString(), icon: Bookmark, color: 'text-violet-400' },
-                  { label: 'Comments Posted', val: (selectedPostForAnalytics.commentsCount || selectedPostForAnalytics.comments?.length || 0).toLocaleString(), icon: MessageSquare, color: 'text-emerald-400' }
+                  { label: 'Recorded Views', val: formatMetric(selectedPostAnalytics?.views ?? null), icon: Eye, color: 'text-violet-300' },
+                  { label: 'Sparks Received', val: formatMetric(selectedPostAnalytics?.likes ?? null), icon: Sparkles, color: 'text-violet-300' },
+                  { label: 'Bookmarks Saved', val: formatMetric(selectedPostAnalytics?.saves ?? null), icon: Bookmark, color: 'text-violet-300' },
+                  { label: 'Comments Posted', val: formatMetric(selectedPostAnalytics?.comments ?? null), icon: MessageSquare, color: 'text-violet-300' },
+                  { label: 'Shares', val: formatMetric(selectedPostAnalytics?.shares ?? null), icon: ArrowRight, color: 'text-violet-300' },
+                  { label: 'Engagement Rate', val: selectedPostAnalytics?.engagementRate === null || selectedPostAnalytics?.engagementRate === undefined ? 'Not tracked' : `${selectedPostAnalytics.engagementRate}%`, icon: TrendingUp, color: 'text-violet-300' }
                 ].map((c, idx) => (
                   <div key={idx} className="p-4 rounded-xl bg-white/3 border border-white/5 text-xs space-y-1">
                     <span className="text-[9px] text-zinc-500 uppercase font-bold tracking-wider">{c.label}</span>
