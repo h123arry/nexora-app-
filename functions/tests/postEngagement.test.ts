@@ -48,7 +48,7 @@ describe('trusted post engagement', () => {
   });
 
   it('serializes concurrent users without lost counter updates', async () => {
-    await db.recursiveDelete(db.collection('notifications'));
+    await db.recursiveDelete(db.collection('users').doc('author').collection('notifications'));
     const results = await Promise.all(Array.from({ length: 12 }, (_, index) => setPostLike(db, `user-${index}`, 'public-post', true)));
     assert.equal(results.filter(result => result.changed).length, 12);
     assert.equal((await db.doc('posts/public-post').get()).get('likes'), 12);
