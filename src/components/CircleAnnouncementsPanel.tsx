@@ -13,11 +13,11 @@ type Announcement = {
 export default function CircleAnnouncementsPanel({
   communityId,
   currentUserId,
-  isOwner,
+  canManage,
 }: {
   communityId: string;
   currentUserId: string;
-  isOwner: boolean;
+  canManage: boolean;
 }) {
   const [items, setItems] = useState<Announcement[]>([]);
   const [title, setTitle] = useState('');
@@ -30,7 +30,7 @@ export default function CircleAnnouncementsPanel({
 
   const publish = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!isOwner || saving) return;
+    if (!canManage || saving) return;
     setSaving(true);
     setError('');
     try {
@@ -45,7 +45,7 @@ export default function CircleAnnouncementsPanel({
   };
 
   const togglePin = async (item: Announcement) => {
-    if (!isOwner || updatingId) return;
+    if (!canManage || updatingId) return;
     setUpdatingId(item.id);
     setError('');
     try {
@@ -63,13 +63,13 @@ export default function CircleAnnouncementsPanel({
         <Megaphone className="h-4 w-4 text-violet-400" />
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle announcements</h3>
-          <p className="text-[11px] text-violet-200/50">Important updates from the Circle owner.</p>
+          <p className="text-[11px] text-violet-200/50">Important updates from Circle leadership.</p>
         </div>
       </div>
 
       {error && <p role="status" className="rounded-xl border border-rose-400/20 bg-rose-950/20 p-3 text-xs text-rose-200">{error}</p>}
 
-      {isOwner && (
+      {canManage && (
         <form onSubmit={publish} className="space-y-3 rounded-2xl border border-violet-400/20 bg-violet-950/10 p-4">
           <label htmlFor="circle-announcement-title" className="block text-xs font-bold text-white">Publish an update</label>
           <input id="circle-announcement-title" value={title} onChange={event => setTitle(event.target.value)} maxLength={120} required placeholder="Announcement title" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs text-white outline-none focus:border-violet-500" />
