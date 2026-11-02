@@ -1,27 +1,35 @@
 import { User } from '../../types';
 
+function safeNex(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0
+    ? Math.floor(value)
+    : 0;
+}
+
 export class CreatorEngine {
   static getMonetizationRecommendations(user: User): string {
-    const currentBalance = user.nexBalance || 0;
-    const earnedThisWeek = user.thisWeekEarnedNex || 0;
-    
-    return `### 🪙 VOH AI NEX-Economy Insights
-- **Current Real Balance**: **${currentBalance.toLocaleString()} NEX**
-- **Earned This Week**: **${earnedThisWeek.toLocaleString()} NEX**
-- **Monetization Status**: Eligible for Creator Pool Dividends
+    const currentBalance = safeNex(user.nexBalance);
+    const earnedThisWeek = safeNex(user.thisWeekEarnedNex);
 
-#### 🚀 Optimization Roadmap
-1. **NEX Spark Supercharging**: Promote a custom community challenge. High reputation participants will automatically trigger direct micro-transfers.
-2. **Premium Circles**: Lock specialized system design communities behind a 5 NEX monthly subscription to build recurring rewards.
-3. **Verified Knowledge Contributions**: Contribute system solutions or rules to trending circles to receive direct developer payouts.`;
+    return `### NEX Creator Account Snapshot
+- **Recorded balance:** ${currentBalance.toLocaleString()} NEX
+- **Recorded this-week earnings:** ${earnedThisWeek.toLocaleString()} NEX
+
+### Monetization guidance
+NEXORA's creator monetization and payout availability must be checked against the live account ledger and configured payment provider. This account snapshot does not prove eligibility for a creator pool, automatic transfers, subscriptions, or cash withdrawals.
+
+1. Review your recorded earnings and transaction history before making payout decisions.
+2. Build a consistent publishing schedule and use verified post engagement counters to compare content.
+3. Treat any reward, subscription, or payout as confirmed only after NEXORA records the corresponding trusted transaction.`;
   }
 
   static getEarningsExplanations(user: User): string {
-    return `### 💸 Earnings & Rewards breakdown
-Your NEX earnings are calculated based on your **Living Reputation Score (${user.reputationPoints} PR)** and total social engagement:
-- **Reputation Pool Splits**: 40% of rewards are distributed via on-chain contribution checkpoints.
-- **Creator Sparks**: 60% of earnings are triggered directly by user-given sparks.
+    const currentBalance = safeNex(user.nexBalance);
+    const earnedThisWeek = safeNex(user.thisWeekEarnedNex);
+    return `### NEX Earnings Summary
+- **Current recorded balance:** ${currentBalance.toLocaleString()} NEX
+- **Recorded this-week earnings:** ${earnedThisWeek.toLocaleString()} NEX
 
-*No artificial adjustments or mock balances are used; all figures represent your actual Nexora account state.*`;
+Your account ledger is the source of truth for NEX transactions. NEXORA does not confirm a fixed 40/60 revenue split, on-chain contribution checkpoints, or automatic creator micro-transfers here. If a payout or reward is not present in your transaction history, treat it as unconfirmed.`;
   }
 }
