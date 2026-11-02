@@ -73,7 +73,7 @@ The existing `main` branch now includes the first usable Circle invitation lifec
 - Cryptographically random invite tokens; Firestore stores only a SHA-256 token hash.
 - Server-side expiry and bounded-use enforcement, transactional redemption, ban checks and revocation.
 - Governance UI can create, copy and revoke an invitation link.
-- The app consumes `?circleInvite=...` after authentication and redeems it through the trusted callable.
+- The app consumes a fragment-based `#circleInvite=...` link after authentication (keeping the token out of ordinary HTTP request URLs) and redeems it through the trusted callable.
 - Emulator tests cover successful redemption, existing membership, banned users, revocation, non-manager denial and invalid settings; the engagement test command includes this suite.
 
 This is a Circle invitation implementation, not yet a universal QR/deep-link framework for profiles, events and channels. The remaining capability portfolio below is still a roadmap; it must not be represented as shipped until implemented and verified.
