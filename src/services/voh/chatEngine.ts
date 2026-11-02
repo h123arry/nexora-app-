@@ -1,8 +1,6 @@
 import { authenticatedVohFetch } from './authenticatedVohFetch';
 import { auth } from '../../lib/firebase';
-import { User } from '../../types';
-import { readUserScopedJson } from '../../utils/userScopedStorage';
-import { getJoinedCirclesForUser } from '../../data/database';
+import { Post, User } from '../../types';
 
 export interface Message {
   id: string;
@@ -94,12 +92,9 @@ export class ChatEngine {
   static async sendChatMessage(
     message: string,
     history: { sender: 'user' | 'voh'; text: string }[],
-    currentUser: User
+    currentUser: User,
+    posts: Post[]
   ): Promise<{ text: string; isDemo: boolean }> {
-    // Dynamic context integration
-    const localPosts = JSON.parse(localStorage.getItem('nexora_posts') || '[]');
-    const localCircles = getJoinedCirclesForUser(currentUser.id);
-    const localNotifications = readUserScopedJson(localStorage, 'nexora_notifications', currentUser.id, []);
 
     const controller = new AbortController();
     const timeout = window.setTimeout(() => controller.abort(), 45_000);
@@ -114,9 +109,9 @@ export class ChatEngine {
           history: history.slice(-24).map(item => ({ sender: item.sender, text: item.text.slice(0, 4000) })),
           context: {
             currentUser,
-            posts: localPosts.slice(0, 10),
-            circles: localCircles.slice(0, 12),
-            notifications: localNotifications.slice(0, 5)
+            posts: (Array.isArray(posts) ? posts : []).filter(post => !post.isArchived).slice(0, 10),
+            circles: [],
+            notifications: []
           }
         })
       });
