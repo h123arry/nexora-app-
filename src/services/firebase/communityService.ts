@@ -344,6 +344,23 @@ export const CommunityService = {
     await respond({ communityId, eventId, attending });
   },
 
+  async createInvite(communityId: string, expiresInDays = 7, maxUses = 25): Promise<{ token: string; expiresAt: string; maxUses: number }> {
+    const create = httpsCallable(functions, 'createCommunityInvite');
+    const result = await create({ communityId, expiresInDays, maxUses });
+    return result.data as { token: string; expiresAt: string; maxUses: number };
+  },
+
+  async revokeInvite(token: string): Promise<void> {
+    const revoke = httpsCallable(functions, 'revokeCommunityInvite');
+    await revoke({ token });
+  },
+
+  async redeemInvite(token: string): Promise<{ communityId: string; joined: boolean }> {
+    const redeem = httpsCallable(functions, 'redeemCommunityInvite');
+    const result = await redeem({ token });
+    return result.data as { communityId: string; joined: boolean };
+  },
+
   async setMemberRole(communityId: string, targetUid: string, role: 'admin' | 'moderator' | 'member', reason: string): Promise<void> {
     if (!communityId || communityId.includes('/') || !targetUid || targetUid.includes('/')) {
       throw new Error('A valid Circle member is required.');
