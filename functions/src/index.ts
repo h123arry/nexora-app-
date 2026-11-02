@@ -8,6 +8,7 @@ import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
 import { setCircleMemberRole } from './communityGovernance.js';
+import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -162,5 +163,43 @@ export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (reques
     }
     if (message.includes('active Circle member')) throw new HttpsError('failed-precondition', message);
     throw new HttpsError('internal', 'The Circle role could not be updated. Please retry.');
+  }
+});
+
+
+export const createCommunityInvite = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to invite people to a Circle.');
+  try {
+    return await createCircleInvite(adminDb, request.auth.uid, request.data?.communityId, request.data?.expiresInDays, request.data?.maxUses);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Invalid Circle')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only active Circle managers')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The Circle invitation could not be created. Please retry.');
+  }
+});
+
+export const redeemCommunityInvite = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to accept a Circle invitation.');
+  try {
+    return await redeemCircleInvite(adminDb, request.auth.uid, request.data?.token);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Invalid or expired')) throw new HttpsError('not-found', message);
+    if (message.includes('cannot join')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The Circle invitation could not be redeemed. Please retry.');
+  }
+});
+
+export const revokeCommunityInvite = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to revoke a Circle invitation.');
+  try {
+    await revokeCircleInvite(adminDb, request.auth.uid, request.data?.token);
+    return { revoked: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Invalid Circle invitation')) throw new HttpsError('not-found', message);
+    if (message.includes('Only active Circle managers')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The Circle invitation could not be revoked. Please retry.');
   }
 });
