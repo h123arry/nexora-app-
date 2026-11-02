@@ -17,7 +17,7 @@ before(async () => {
 });
 
 after(async () => {
-  await db.recursiveDelete(db.collection('communities'));
+  await db.recursiveDelete(db.doc('communities/poll-circle'));
   await deleteApp(app);
 });
 
