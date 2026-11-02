@@ -41,6 +41,9 @@ function safeFileName(name: string): string {
 export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploadResult> {
   const { file, userId, onProgress, signal } = options;
   if (!userId) return Promise.reject(new Error('A signed-in user is required to upload media.'));
+  if (!options.chatId && (!auth.currentUser || auth.currentUser.uid !== userId)) {
+    return Promise.reject(new Error('Sign in to the same account before uploading media.'));
+  }
   if (!file || file.size <= 0) return Promise.reject(new Error('The selected file is empty.'));
   const normalizedContentType = file.type.split(';')[0].trim().toLowerCase();
   const policy = options.chatId

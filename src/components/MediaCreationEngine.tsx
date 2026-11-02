@@ -1,9 +1,10 @@
 import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
+import { videoFileExtension } from '../services/media/videoFileExtension';
 import { saveMediaBlob, getMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 import { revokeObjectUrl, validateMediaFile } from '../utils/mediaValidation';
 import { uploadMediaFile } from '../services/firebase/storageService';
@@ -197,34 +198,11 @@ export default function MediaCreationEngine({
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Background Publish simulation
-  const [postingStatus, setPostingStatus] = useState<'idle' | 'compressing' | 'publishing' | 'processing' | 'completed' | 'failed'>('idle');
+  // Publish state; upload progress is reported by Firebase Storage callbacks.
+  const [postingStatus, setPostingStatus] = useState<'idle' | 'publishing' | 'completed' | 'failed'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
-
-  // Auto-Cut Studio (CapCut mode)
-  const [isAutoCutModalOpen, setIsAutoCutModalOpen] = useState(false);
-  const [autoCutPreset, setAutoCutPreset] = useState<'beats' | 'highlights' | 'cinematic' | 'tiktok'>('beats');
-  const [isAutoCutting, setIsAutoCutting] = useState(false);
-  const [autoCutProgress, setAutoCutProgress] = useState(0);
-
-  const runAutoCutStudio = () => {
-    setIsAutoCutting(true);
-    setAutoCutProgress(0);
-    const interval = setInterval(() => {
-      setAutoCutProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsAutoCutting(false);
-          setIsAutoCutModalOpen(false);
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ CapCut Auto-Cut completed! Timeline beat-synced & optimized.' }));
-          return 100;
-        }
-        return prev + 25;
-      });
-    }, 350);
-  };
 
   // Refs
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
@@ -234,8 +212,8 @@ export default function MediaCreationEngine({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const loopTimerRef = useRef<any>(null);
-  const uploadIntervalRef = useRef<any>(null);
   const createdObjectUrlsRef = useRef<Set<string>>(new Set());
+  const uploadAbortControllerRef = useRef<AbortController | null>(null);
 
   const trackObjectUrl = (url: string) => {
     createdObjectUrlsRef.current.add(url);
@@ -255,7 +233,6 @@ export default function MediaCreationEngine({
 
   useEffect(() => () => {
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
-    if (uploadIntervalRef.current) clearInterval(uploadIntervalRef.current);
     videoStreamRef.current?.getTracks().forEach(track => track.stop());
     if (mediaRecorderVideoRef.current?.state !== 'inactive') mediaRecorderVideoRef.current?.stop();
     if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
@@ -683,37 +660,11 @@ export default function MediaCreationEngine({
       setPostingStatus('failed');
       return;
     }
-    clearInterval(uploadIntervalRef.current);
+    const uploadController = new AbortController();
+    uploadAbortControllerRef.current = uploadController;
     setErrorMessage('');
-    setPostingStatus('compressing');
-    setUploadProgress(5);
-
-    const runStage = (start: number, end: number, step: number, status: 'compressing' | 'publishing' | 'processing', duration: number) => {
-      return new Promise<boolean>((resolve) => {
-        let current = start;
-        setPostingStatus(status);
-        const interval = setInterval(() => {
-          current += step;
-          if (current >= end) {
-            clearInterval(interval);
-            setUploadProgress(end);
-            resolve(true);
-          } else {
-            setUploadProgress(current);
-          }
-        }, duration / ((end - start) / step));
-        uploadIntervalRef.current = interval;
-      });
-    };
-
-    let ok = await runStage(5, 35, 5, 'compressing', 800);
-    if (!ok) return;
-
-    ok = await runStage(35, 75, 5, 'publishing', 900);
-    if (!ok) return;
-
-    ok = await runStage(75, 100, 5, 'processing', 700);
-    if (!ok) return;
+    setPostingStatus('publishing');
+    setUploadProgress(0);
 
     try {
       let mainImg = selectedImages[0]?.url || undefined;
@@ -731,7 +682,8 @@ export default function MediaCreationEngine({
             file: imageBlob,
             userId: currentUser.id,
             fileName: `image-${index + 1}-${Date.now()}.${imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'}`,
-            onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+            signal: uploadController.signal,
+            onProgress: progress => setUploadProgress(progress),
           });
           durableImages.push(uploaded.downloadUrl);
         } else {
@@ -752,13 +704,14 @@ export default function MediaCreationEngine({
           const uploaded = await uploadMediaFile({
             file: uploadVideoBlob,
             userId: currentUser.id,
-            fileName: `video-${Date.now()}.webm`,
-            onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+            fileName: `video-${Date.now()}.${videoFileExtension(uploadVideoBlob.type) || 'video'}`,
+            signal: uploadController.signal,
+            onProgress: progress => setUploadProgress(progress),
           });
           finalVid = uploaded.downloadUrl;
           if (mainImg?.startsWith('data:')) {
             const thumbnail = await (await fetch(mainImg)).blob();
-            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg` });
+            const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
             mainImg = uploadedThumbnail.downloadUrl;
           }
         } catch (e) {
@@ -781,7 +734,8 @@ export default function MediaCreationEngine({
           file: uploadVoiceBlob,
           userId: currentUser.id,
           fileName: `voice-${Date.now()}.webm`,
-          onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
+          signal: uploadController.signal,
+          onProgress: progress => setUploadProgress(progress),
         });
         finalVoiceUrl = uploadedVoice.downloadUrl;
       }
@@ -818,6 +772,7 @@ export default function MediaCreationEngine({
       );
       if (!createdPostId) throw new Error('Nexora could not confirm this post. Please sign in and retry.');
 
+      setUploadProgress(100);
       setPostingStatus('completed');
       window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Post Published Successfully!' }));
       setTimeout(() => {
@@ -826,8 +781,17 @@ export default function MediaCreationEngine({
         resetStates();
       }, 1500);
     } catch (err) {
-      setPostingStatus('failed');
-      setErrorMessage(err instanceof Error ? err.message : 'Publishing failed. Your draft is still available to retry.');
+      if (uploadController.signal.aborted) {
+        setPostingStatus('idle');
+        setUploadProgress(0);
+        setErrorMessage('Upload canceled. Your draft is still available.');
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Upload canceled. Your draft is still available.' }));
+      } else {
+        setPostingStatus('failed');
+        setErrorMessage(err instanceof Error ? err.message : 'Publishing failed. Your draft is still available to retry.');
+      }
+    } finally {
+      if (uploadAbortControllerRef.current === uploadController) uploadAbortControllerRef.current = null;
     }
   };
 
@@ -974,9 +938,7 @@ export default function MediaCreationEngine({
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
-              {postingStatus === 'compressing' && '⚙️ Compressing Media'}
-              {postingStatus === 'publishing' && '📤 Sharing Post'}
-              {postingStatus === 'processing' && '🧠 AI Processing'}
+              {postingStatus === 'publishing' && '📤 Uploading and publishing'}
               {postingStatus === 'completed' && '✨ Shared!'}
             </span>
             <button 
@@ -1434,15 +1396,6 @@ export default function MediaCreationEngine({
 
                     {/* Editor controls list */}
                     <div className="space-y-3.5 bg-zinc-950/40 p-4 rounded-2xl border border-zinc-900/60">
-                      {/* CapCut Auto-Cut Studio Trigger */}
-                      <button
-                        onClick={() => setIsAutoCutModalOpen(true)}
-                        className="w-full py-3 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 hover:opacity-95 text-white rounded-full font-bold text-xs shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-all mb-1"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        ⚡ Launch CapCut Auto-Cut Studio
-                      </button>
-
                       <span className="text-[10px] font-mono text-zinc-400 uppercase block tracking-wider pt-1">Adjustment Panel</span>
                       
                       {/* Interactive CSS filters row */}
@@ -1831,13 +1784,11 @@ export default function MediaCreationEngine({
 
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono text-zinc-500 uppercase block tracking-wider">
-                          {postingStatus === 'compressing' && '⚙️ Compressing media quality...'}
-                          {postingStatus === 'publishing' && '📤 Sharing your creation...'}
-                          {postingStatus === 'processing' && '🧠 AI formatting and checking...'}
+                          {postingStatus === 'publishing' && '📤 Uploading media and publishing your post...'}
                           {postingStatus === 'completed' && '✨ Content Successfully Shared!'}
                         </span>
                         <p className="text-xs text-zinc-300 font-sans">
-                          {postingStatus === 'completed' ? 'Post shared successfully.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Syncing post settings...'}
+                          {postingStatus === 'completed' ? 'Post shared successfully.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Uploading media or saving your post...'}
                         </p>
                       </div>
 
@@ -1857,10 +1808,10 @@ export default function MediaCreationEngine({
                       {postingStatus !== 'completed' && postingStatus !== 'failed' && (
                         <div className="flex gap-2">
                           <button 
-                            onClick={() => { clearInterval(uploadIntervalRef.current); setPostingStatus('idle'); }} 
+                            onClick={() => uploadAbortControllerRef.current?.abort()} 
                             className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 rounded-lg text-xs"
                           >
-                            Cancel Publish
+                            Cancel Upload
                           </button>
                           <button 
                             onClick={() => setIsMinimized(true)}
@@ -1924,84 +1875,7 @@ export default function MediaCreationEngine({
 
       </motion.div>
 
-      {/* CAPCUT AUTO-CUT STUDIO MODAL */}
-      <AnimatePresence>
-        {isAutoCutModalOpen && (
-          <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md bg-[#0e0c24] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5 text-left"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-violet-600 to-pink-500 flex items-center justify-center text-white">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-sans font-black text-sm text-white">CapCut Auto-Cut Studio</h3>
-                    <p className="text-[10px] text-zinc-400 font-mono">AI Beat-Synced Montage Engine</p>
-                  </div>
-                </div>
-                <button onClick={() => setIsAutoCutModalOpen(false)} className="p-2 rounded-full bg-white/5 text-zinc-400 hover:text-white cursor-pointer">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
-              {isAutoCutting ? (
-                <div className="py-8 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-violet-600/20 border border-violet-500/40 flex items-center justify-center mx-auto text-violet-400 animate-spin">
-                    <Sparkles className="w-8 h-8" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-mono font-bold text-white">Analyzing beats & extracting highlights...</p>
-                    <p className="text-[10px] text-zinc-400 font-mono">{autoCutProgress}% completed</p>
-                  </div>
-                  <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-300" style={{ width: `${autoCutProgress}%` }} />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-mono text-zinc-400 uppercase">Select Auto-Cut Template</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'beats', title: 'Beat-Synced Montage', desc: 'Fast transitions matching audio drops' },
-                        { id: 'highlights', title: 'AI Smart Highlights', desc: 'Auto-detects motion and action peaks' },
-                        { id: 'cinematic', title: 'Cinematic Slowmo', desc: 'Smooth grade with dramatic pans' },
-                        { id: 'tiktok', title: 'TikTok Trending Cut', desc: 'Dynamic pop cuts with zoom pulses' }
-                      ].map(preset => (
-                        <div
-                          key={preset.id}
-                          onClick={() => setAutoCutPreset(preset.id as any)}
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                            autoCutPreset === preset.id 
-                              ? 'bg-violet-600/20 border-violet-500 text-white shadow-md' 
-                              : 'bg-black/30 border-white/5 text-zinc-400 hover:border-white/10'
-                          }`}
-                        >
-                          <p className="text-xs font-bold text-white">{preset.title}</p>
-                          <p className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{preset.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={runAutoCutStudio}
-                    className="w-full py-3.5 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 text-white font-bold text-xs rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-all hover:opacity-95"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Apply Auto-Cut Montage ⚡
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
