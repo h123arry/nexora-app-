@@ -136,6 +136,28 @@ export const CommunityService = {
   },
 
 
+
+  async listActiveMembers(communityId: string): Promise<Array<{ userId: string; name: string; username: string; avatar: string; role: string }>> {
+    if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
+    const members = await getDocs(query(
+      collection(db, 'communities', communityId, 'members'),
+      where('status', '==', 'active'),
+      orderBy('joinedAt', 'asc'),
+      limit(100),
+    ));
+    return Promise.all(members.docs.map(async member => {
+      const profile = await getDoc(doc(db, 'publicProfiles', member.id));
+      const data = profile.exists() ? profile.data() : {};
+      return {
+        userId: member.id,
+        name: typeof data.name === 'string' && data.name ? data.name : 'NEXORA member',
+        username: typeof data.username === 'string' && data.username ? data.username : '',
+        avatar: typeof data.avatar === 'string' ? data.avatar : '',
+        role: String(member.data().role || 'member'),
+      };
+    }));
+  },
+
   watchMessages(
     communityId: string,
     currentUserId: string,
