@@ -457,7 +457,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
 
-      const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser);
+      const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser, posts);
       setIsDemoMode(!!response.isDemo);
 
       const responseText = response.text;
