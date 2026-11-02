@@ -39,6 +39,7 @@ import {
   removeFollow
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
+import { CommunityService } from './services/firebase/communityService';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { mergeRealtimePosts } from './services/posts/postCollection';
@@ -174,6 +175,30 @@ export default function App() {
     action();
     return true;
   };
+
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser.id || typeof window === 'undefined') return;
+    const url = new URL(window.location.href);
+    const inviteToken = url.searchParams.get('circleInvite');
+    if (!inviteToken) return;
+    url.searchParams.delete('circleInvite');
+    window.history.replaceState({}, '', url.toString());
+    let active = true;
+    CommunityService.redeemInvite(inviteToken)
+      .then(result => {
+        if (!active) return;
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: result.joined ? 'You joined the Circle from your invitation.' : 'You are already a member of this Circle.',
+        }));
+      })
+      .catch(error => {
+        if (!active) return;
+        window.dispatchEvent(new CustomEvent('toast', {
+          detail: error instanceof Error ? error.message : 'This Circle invitation could not be redeemed.',
+        }));
+      });
+    return () => { active = false; };
+  }, [isLoggedIn, currentUser.id]);
 
   useEffect(() => {
     if (authInitializing) return;
