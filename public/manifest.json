@@ -1,12 +1,12 @@
 {
-  "name": "NEXORA Network",
-  "short_name": "Nexora",
-  "description": "Premium, zero-noise, high-craft social network for creators, tech elite, developers, and builders.",
+  "name": "NEXORA — The World's Living Social Network",
+  "short_name": "NEXORA",
+  "description": "Connect with people, communities and creators on the world's living social network.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "background_color": "#050505",
-  "theme_color": "#050505",
+  "background_color": "#090714",
+  "theme_color": "#090714",
   "scope": "/",
   "categories": ["social", "communication", "entertainment"],
   "shortcuts": [
@@ -15,28 +15,28 @@
       "short_name": "Feed",
       "description": "See the latest living network updates",
       "url": "/?tab=home",
-      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/logo.png", "sizes": "512x512", "type": "image/png" }]
     },
     {
       "name": "Create a Post",
       "short_name": "Create",
       "description": "Share a thought, image, or video",
       "url": "/?compose=1",
-      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/logo.png", "sizes": "512x512", "type": "image/png" }]
     },
     {
       "name": "Open Messages",
       "short_name": "Inbox",
       "description": "Continue your private conversations",
       "url": "/?tab=inbox",
-      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/logo.png", "sizes": "512x512", "type": "image/png" }]
     },
     {
       "name": "Creator Studio",
       "short_name": "Studio",
       "description": "Review your content and creator tools",
       "url": "/?tab=creator",
-      "icons": [{ "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml" }]
+      "icons": [{ "src": "/logo.png", "sizes": "512x512", "type": "image/png" }]
     }
   ],
   "icons": [
