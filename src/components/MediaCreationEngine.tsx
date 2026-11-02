@@ -1,9 +1,10 @@
 import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, Sparkles, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
+import { videoFileExtension } from '../services/media/videoFileExtension';
 import { saveMediaBlob, getMediaBlob, generateVideoThumbnail } from '../utils/indexedDbStorage';
 import { revokeObjectUrl, validateMediaFile } from '../utils/mediaValidation';
 import { uploadMediaFile } from '../services/firebase/storageService';
@@ -204,28 +205,6 @@ export default function MediaCreationEngine({
   const [isMinimized, setIsMinimized] = useState(false);
 
   // Auto-Cut Studio (CapCut mode)
-  const [isAutoCutModalOpen, setIsAutoCutModalOpen] = useState(false);
-  const [autoCutPreset, setAutoCutPreset] = useState<'beats' | 'highlights' | 'cinematic' | 'tiktok'>('beats');
-  const [isAutoCutting, setIsAutoCutting] = useState(false);
-  const [autoCutProgress, setAutoCutProgress] = useState(0);
-
-  const runAutoCutStudio = () => {
-    setIsAutoCutting(true);
-    setAutoCutProgress(0);
-    const interval = setInterval(() => {
-      setAutoCutProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsAutoCutting(false);
-          setIsAutoCutModalOpen(false);
-          window.dispatchEvent(new CustomEvent('toast', { detail: '⚡ CapCut Auto-Cut completed! Timeline beat-synced & optimized.' }));
-          return 100;
-        }
-        return prev + 25;
-      });
-    }, 350);
-  };
-
   // Refs
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
@@ -752,7 +731,7 @@ export default function MediaCreationEngine({
           const uploaded = await uploadMediaFile({
             file: uploadVideoBlob,
             userId: currentUser.id,
-            fileName: `video-${Date.now()}.webm`,
+            fileName: `video-${Date.now()}.${videoFileExtension(uploadVideoBlob.type) || 'video'}`,
             onProgress: progress => setUploadProgress(Math.max(75, Math.round(progress * 0.2) + 75)),
           });
           finalVid = uploaded.downloadUrl;
@@ -1434,15 +1413,6 @@ export default function MediaCreationEngine({
 
                     {/* Editor controls list */}
                     <div className="space-y-3.5 bg-zinc-950/40 p-4 rounded-2xl border border-zinc-900/60">
-                      {/* CapCut Auto-Cut Studio Trigger */}
-                      <button
-                        onClick={() => setIsAutoCutModalOpen(true)}
-                        className="w-full py-3 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 hover:opacity-95 text-white rounded-full font-bold text-xs shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-all mb-1"
-                      >
-                        <Sparkles className="w-4 h-4" />
-                        ⚡ Launch CapCut Auto-Cut Studio
-                      </button>
-
                       <span className="text-[10px] font-mono text-zinc-400 uppercase block tracking-wider pt-1">Adjustment Panel</span>
                       
                       {/* Interactive CSS filters row */}
@@ -1924,84 +1894,7 @@ export default function MediaCreationEngine({
 
       </motion.div>
 
-      {/* CAPCUT AUTO-CUT STUDIO MODAL */}
-      <AnimatePresence>
-        {isAutoCutModalOpen && (
-          <div className="fixed inset-0 z-55 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="w-full max-w-md bg-[#0e0c24] border border-white/15 rounded-3xl p-6 shadow-2xl space-y-5 text-left"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-violet-600 to-pink-500 flex items-center justify-center text-white">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-sans font-black text-sm text-white">CapCut Auto-Cut Studio</h3>
-                    <p className="text-[10px] text-zinc-400 font-mono">AI Beat-Synced Montage Engine</p>
-                  </div>
-                </div>
-                <button onClick={() => setIsAutoCutModalOpen(false)} className="p-2 rounded-full bg-white/5 text-zinc-400 hover:text-white cursor-pointer">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
 
-              {isAutoCutting ? (
-                <div className="py-8 text-center space-y-4">
-                  <div className="w-16 h-16 rounded-full bg-violet-600/20 border border-violet-500/40 flex items-center justify-center mx-auto text-violet-400 animate-spin">
-                    <Sparkles className="w-8 h-8" />
-                  </div>
-                  <div className="space-y-1">
-                    <p className="text-xs font-mono font-bold text-white">Analyzing beats & extracting highlights...</p>
-                    <p className="text-[10px] text-zinc-400 font-mono">{autoCutProgress}% completed</p>
-                  </div>
-                  <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-300" style={{ width: `${autoCutProgress}%` }} />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-mono text-zinc-400 uppercase">Select Auto-Cut Template</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { id: 'beats', title: 'Beat-Synced Montage', desc: 'Fast transitions matching audio drops' },
-                        { id: 'highlights', title: 'AI Smart Highlights', desc: 'Auto-detects motion and action peaks' },
-                        { id: 'cinematic', title: 'Cinematic Slowmo', desc: 'Smooth grade with dramatic pans' },
-                        { id: 'tiktok', title: 'TikTok Trending Cut', desc: 'Dynamic pop cuts with zoom pulses' }
-                      ].map(preset => (
-                        <div
-                          key={preset.id}
-                          onClick={() => setAutoCutPreset(preset.id as any)}
-                          className={`p-3 rounded-2xl border transition-all cursor-pointer ${
-                            autoCutPreset === preset.id 
-                              ? 'bg-violet-600/20 border-violet-500 text-white shadow-md' 
-                              : 'bg-black/30 border-white/5 text-zinc-400 hover:border-white/10'
-                          }`}
-                        >
-                          <p className="text-xs font-bold text-white">{preset.title}</p>
-                          <p className="text-[9px] text-zinc-500 mt-0.5 leading-normal">{preset.desc}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={runAutoCutStudio}
-                    className="w-full py-3.5 bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 text-white font-bold text-xs rounded-full shadow-[0_0_20px_rgba(139,92,246,0.4)] flex items-center justify-center gap-2 cursor-pointer transition-all hover:opacity-95"
-                  >
-                    <Sparkles className="w-4 h-4" />
-                    Apply Auto-Cut Montage ⚡
-                  </button>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
