@@ -52,7 +52,14 @@ export async function setCircleMemberRole(
     }
 
     const previousRole = String(target.get('role') || 'member');
+    const admins = Array.isArray(community.get('admins')) ? community.get('admins') as string[] : [];
+    const moderators = Array.isArray(community.get('moderators')) ? community.get('moderators') as string[] : [];
+    const nextAdmins = admins.filter(uid => uid !== targetUid);
+    const nextModerators = moderators.filter(uid => uid !== targetUid);
+    if (role === 'admin') nextAdmins.push(targetUid);
+    if (role === 'moderator') nextModerators.push(targetUid);
     transaction.update(targetRef, { role });
+    transaction.update(communityRef, { admins: nextAdmins, moderators: nextModerators });
     transaction.create(auditRef, {
       id: auditRef.id,
       actorUid,
