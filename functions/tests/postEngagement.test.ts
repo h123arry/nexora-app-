@@ -42,19 +42,19 @@ describe('trusted post engagement', () => {
     assert.deepEqual(await setPostLike(db, 'alice', 'public-post', false), { liked: false, likes: 0, changed: false });
     assert.equal((await db.doc('posts/public-post').get()).get('likes'), 0);
     assert.equal((await db.doc('users/alice/postLikes/public-post').get()).exists, false);
-    const notifications = await db.collection('notifications').where('userId', '==', 'author').get();
+    const notifications = await db.collection('users').doc('author').collection('notifications').get();
     assert.equal(notifications.size, 1);
     assert.equal(notifications.docs[0].get('username'), 'alice');
   });
 
   it('serializes concurrent users without lost counter updates', async () => {
-    await db.recursiveDelete(db.collection('notifications'));
+    await db.recursiveDelete(db.collection('users').doc('author').collection('notifications'));
     const results = await Promise.all(Array.from({ length: 12 }, (_, index) => setPostLike(db, `user-${index}`, 'public-post', true)));
     assert.equal(results.filter(result => result.changed).length, 12);
     assert.equal((await db.doc('posts/public-post').get()).get('likes'), 12);
     const markers = await Promise.all(Array.from({ length: 12 }, (_, index) => db.doc(`users/user-${index}/postLikes/public-post`).get()));
     assert.equal(markers.filter(marker => marker.exists).length, 12);
-    const notifications = await db.collection('notifications').where('userId', '==', 'author').get();
+    const notifications = await db.collection('users').doc('author').collection('notifications').get();
     assert.equal(notifications.size, 12);
   });
 
