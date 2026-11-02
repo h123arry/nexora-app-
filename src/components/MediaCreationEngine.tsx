@@ -198,8 +198,8 @@ export default function MediaCreationEngine({
     return saved ? JSON.parse(saved) : [];
   });
 
-  // Background Publish simulation
-  const [postingStatus, setPostingStatus] = useState<'idle' | 'compressing' | 'publishing' | 'processing' | 'completed' | 'failed'>('idle');
+  // Publish state; upload progress is reported by Firebase Storage callbacks.
+  const [postingStatus, setPostingStatus] = useState<'idle' | 'publishing' | 'completed' | 'failed'>('idle');
   const [uploadProgress, setUploadProgress] = useState(0);
   const [errorMessage, setErrorMessage] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
@@ -785,6 +785,7 @@ export default function MediaCreationEngine({
         setPostingStatus('idle');
         setUploadProgress(0);
         setErrorMessage('Upload canceled. Your draft is still available.');
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Upload canceled. Your draft is still available.' }));
       } else {
         setPostingStatus('failed');
         setErrorMessage(err instanceof Error ? err.message : 'Publishing failed. Your draft is still available to retry.');
@@ -1787,7 +1788,7 @@ export default function MediaCreationEngine({
                           {postingStatus === 'completed' && '✨ Content Successfully Shared!'}
                         </span>
                         <p className="text-xs text-zinc-300 font-sans">
-                          {postingStatus === 'completed' ? 'Post shared successfully.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Syncing post settings...'}
+                          {postingStatus === 'completed' ? 'Post shared successfully.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Uploading media or saving your post...'}
                         </p>
                       </div>
 
@@ -1810,7 +1811,7 @@ export default function MediaCreationEngine({
                             onClick={() => uploadAbortControllerRef.current?.abort()} 
                             className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 rounded-lg text-xs"
                           >
-                            Cancel Publish
+                            Cancel Upload
                           </button>
                           <button 
                             onClick={() => setIsMinimized(true)}
