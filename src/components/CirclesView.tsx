@@ -51,8 +51,12 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   const [activePortalTab, setActivePortalTab] = useState<string>('feed');
 
   // Interactive state helpers for sub-tabs in Community Portal
-  const [votedPollId, setVotedPollId] = useState<string | null>(null);
-  const [pollVotes, setPollVotes] = useState({ opt1: 24, opt2: 12, opt3: 8 });
+  const [circlePolls, setCirclePolls] = useState<Array<{ id: string; question: string; options: Array<{ id: string; text: string; votes: number }>; createdBy: string; status: string; myVote: string | null; createdAt: string }>>([]);
+  const [pollError, setPollError] = useState<string | null>(null);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptionInputs, setPollOptionInputs] = useState(['', '']);
+  const [isCreatingPoll, setIsCreatingPoll] = useState(false);
+  const [votingPollId, setVotingPollId] = useState<string | null>(null);
   const [chatMessages, setChatMessages] = useState<Array<{ sender: string; avatar: string; text: string; time: string }>>([]);
   const [chatError, setChatError] = useState<string | null>(null);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
@@ -76,6 +80,20 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       error => setChatError(error.message || 'Circle messages could not be loaded.'),
     );
   }, [selectedCircle?.id, selectedCircle?.isJoinedByMe, currentUser.id, currentUser.name, currentUser.avatar]);
+  useEffect(() => {
+    if (!selectedCircle || !selectedCircle.isJoinedByMe) {
+      setCirclePolls([]);
+      setPollError('Join this Circle to view and vote in polls.');
+      return;
+    }
+    setPollError(null);
+    return CommunityService.watchPolls(
+      selectedCircle.id,
+      currentUser.id,
+      setCirclePolls,
+      error => setPollError(error.message || 'Circle polls could not be loaded.'),
+    );
+  }, [selectedCircle?.id, selectedCircle?.isJoinedByMe, currentUser.id]);
   const [chatInput, setChatInput] = useState('');
   const [isJoinedVoice, setIsJoinedVoice] = useState(false);
   const [rsvpedEvents, setRsvpedEvents] = useState<string[]>([]);
@@ -155,13 +173,34 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
     }
   };
 
-  const handleVote = (option: 'opt1' | 'opt2' | 'opt3') => {
-    if (votedPollId) return;
-    setVotedPollId(option);
-    setPollVotes(prev => ({
-      ...prev,
-      [option]: prev[option] + 1
-    }));
+  const handleCreatePoll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCircle || !selectedCircle.isJoinedByMe || isCreatingPoll) return;
+    const options = pollOptionInputs.map(option => option.trim()).filter(Boolean);
+    setIsCreatingPoll(true);
+    setPollError(null);
+    try {
+      await CommunityService.createPoll(selectedCircle.id, pollQuestion, options);
+      setPollQuestion('');
+      setPollOptionInputs(['', '']);
+    } catch (error) {
+      setPollError(error instanceof Error ? error.message : 'The poll could not be created. Please retry.');
+    } finally {
+      setIsCreatingPoll(false);
+    }
+  };
+
+  const handleVote = async (pollId: string, optionId: string) => {
+    if (!selectedCircle || !selectedCircle.isJoinedByMe || votingPollId) return;
+    setVotingPollId(pollId);
+    setPollError(null);
+    try {
+      await CommunityService.votePoll(selectedCircle.id, pollId, optionId);
+    } catch (error) {
+      setPollError(error instanceof Error ? error.message : 'Your vote could not be saved. Please retry.');
+    } finally {
+      setVotingPollId(null);
+    }
   };
 
   const filteredCircles = circles.filter(c => {
@@ -613,38 +652,51 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 )}
 
                 {activePortalTab === 'polls' && (
-                  <div className="space-y-3.5 text-left max-w-md">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Community Interest Poll</h3>
-                    <div className="p-4 rounded-2xl bg-[#03010b]/50 border border-white/10 space-y-4">
-                      <p className="text-xs sm:text-sm font-black text-violet-100">Which region should Host our next physical gathering?</p>
-                      <div className="space-y-2">
-                        {[
-                          { id: 'opt1', label: 'Lagos Gateway Centre', votes: pollVotes.opt1 },
-                          { id: 'opt2', label: 'Port Harcourt Zone B', votes: pollVotes.opt2 },
-                          { id: 'opt3', label: 'Abuja Virtual Lounge', votes: pollVotes.opt3 }
-                        ].map((opt) => {
-                          const total = pollVotes.opt1 + pollVotes.opt2 + pollVotes.opt3;
-                          const pct = Math.round((opt.votes / total) * 100);
-                          const isMyVote = votedPollId === opt.id;
-                          return (
-                            <button
-                              key={opt.id}
-                              onClick={() => handleVote(opt.id as any)}
-                              className={`w-full p-3.5 rounded-xl border text-left relative overflow-hidden transition-all flex items-center justify-between text-xs font-sans cursor-pointer ${
-                                isMyVote ? 'border-[#8b5cf6] bg-violet-950/20' : 'border-white/5 bg-white/[0.01]'
-                              }`}
-                            >
-                              <div style={{ width: `${pct}%` }} className="absolute left-0 top-0 bottom-0 bg-violet-500/10" />
-                              <span className="relative z-10 font-bold text-white">{opt.label}</span>
-                              <span className="relative z-10 font-mono font-bold text-violet-300">{opt.votes} ({pct}%)</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                      <p className="text-[10px] text-violet-300/40 font-mono text-center">
-                        {votedPollId ? 'Thank you for contributing! Your input is locked.' : 'Choose an option to submit your ballot in the workspace.'}
-                      </p>
+                  <div className="space-y-4 text-left max-w-2xl">
+                    <div>
+                      <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle polls</h3>
+                      <p className="mt-1 text-[11px] text-violet-200/50">Votes are saved securely. Each member gets one vote per poll.</p>
                     </div>
+                    {pollError && <p role="status" className="rounded-xl border border-rose-400/20 bg-rose-950/20 p-3 text-xs text-rose-200">{pollError}</p>}
+                    <form onSubmit={handleCreatePoll} className="rounded-2xl border border-white/10 bg-[#03010b]/50 p-4 space-y-3">
+                      <label className="block text-xs font-bold text-white" htmlFor="circle-poll-question">Create a poll</label>
+                      <input id="circle-poll-question" value={pollQuestion} onChange={e => setPollQuestion(e.target.value)} maxLength={240} required placeholder="Ask your Circle a question" className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs text-white outline-none focus:border-violet-500" />
+                      {pollOptionInputs.map((option, index) => (
+                        <input key={index} value={option} onChange={e => setPollOptionInputs(prev => prev.map((item, i) => i === index ? e.target.value : item))} maxLength={80} required={index < 2} placeholder={`Option ${index + 1}`} className="w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs text-white outline-none focus:border-violet-500" />
+                      ))}
+                      <div className="flex flex-wrap gap-2">
+                        {pollOptionInputs.length < 5 && <button type="button" onClick={() => setPollOptionInputs(prev => [...prev, ''])} className="rounded-lg border border-white/10 px-3 py-2 text-[11px] text-violet-200">Add option</button>}
+                        {pollOptionInputs.length > 2 && <button type="button" onClick={() => setPollOptionInputs(prev => prev.slice(0, -1))} className="rounded-lg border border-white/10 px-3 py-2 text-[11px] text-violet-200">Remove last option</button>}
+                        <button type="submit" disabled={isCreatingPoll || !pollQuestion.trim() || pollOptionInputs.slice(0, 2).some(option => !option.trim())} className="ml-auto rounded-lg bg-violet-600 px-4 py-2 text-[11px] font-bold text-white disabled:opacity-50">{isCreatingPoll ? 'Saving...' : 'Publish poll'}</button>
+                      </div>
+                    </form>
+                    {circlePolls.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-xs text-violet-200/50">No polls yet. Start the first conversation.</div>
+                    ) : circlePolls.map(poll => {
+                      const total = poll.options.reduce((sum, option) => sum + option.votes, 0);
+                      return (
+                        <section key={poll.id} className="rounded-2xl border border-white/10 bg-[#03010b]/50 p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <h4 className="text-sm font-bold text-white">{poll.question}</h4>
+                            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] uppercase text-violet-200/70">{poll.status}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {poll.options.map(option => {
+                              const pct = total > 0 ? Math.round(option.votes / total * 100) : 0;
+                              const selected = poll.myVote === option.id;
+                              return (
+                                <button key={option.id} type="button" disabled={Boolean(poll.myVote) || poll.status !== 'open' || votingPollId === poll.id} onClick={() => handleVote(poll.id, option.id)} className={`relative flex w-full items-center justify-between overflow-hidden rounded-xl border p-3 text-left text-xs ${selected ? 'border-violet-400 bg-violet-950/30' : 'border-white/10 bg-white/[0.02]'} disabled:cursor-default`}>
+                                  <span style={{ width: `${pct}%` }} className="absolute inset-y-0 left-0 bg-violet-500/10" />
+                                  <span className="relative z-10 font-semibold text-white">{option.text}</span>
+                                  <span className="relative z-10 font-mono text-violet-200">{option.votes} · {pct}%</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <p className="text-[10px] text-violet-200/45">{poll.myVote ? 'Your vote is recorded.' : poll.status === 'open' ? 'Select one option. Your vote cannot be changed.' : 'Voting is closed.'} {total} vote{total === 1 ? '' : 's'} · {poll.createdAt}</p>
+                        </section>
+                      );
+                    })}
                   </div>
                 )}
 
