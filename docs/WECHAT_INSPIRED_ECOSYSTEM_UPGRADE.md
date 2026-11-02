@@ -42,7 +42,7 @@ The table distinguishes inspiration from implementation status. “Existing foun
 | QR connections | Scan-to-open profiles, Circles, events and verified service pages | Profile QR UI exists; deep links/invites need audit |
 | Group chats | Reliable group messaging, roles, moderation, mentions and media | Existing messaging foundation; verify scale and policy |
 | Community groups | Public, private and invite-only Circles with clear access states | Existing Circles foundation |
-| Group announcements | Owner/moderator-only pinned announcements with read state | Broadcast primitives exist; Circle announcement lifecycle needs implementation |
+| Group announcements | Owner/moderator-only pinned announcements with read state | Initial owner-published, live, pinnable Circle announcements implemented; moderator delegation, read acknowledgements and expiry remain |
 | Channels | One-to-many creator and organisation publishing | Partial broadcast foundation |
 | Service discovery | Searchable directory of trusted services, creators, communities and tools | Search/discovery foundation; unified directory missing |
 | Payments | Safe checkout, receipts, refunds and creator/business payouts | Monetization foundation; do not introduce wallet custody casually |
@@ -237,13 +237,22 @@ A capability is not “done” because a screen exists. Each release must includ
 
 ## First implementation tranche
 
-Start with the highest leverage, lowest duplication work:
+The first announcement slice has now been added to the existing application and committed to `main`:
 
-1. Audit and close Circle messaging authorization gaps.
-2. Build server-authoritative Circle role management and audit events.
-3. Add Circle announcements with pin/expiry/read acknowledgement.
-4. Extend QR sharing into revocable, expiring Circle/event/channel invitations.
-5. Unify directory search across current entity types.
-6. Add channel subscription/delivery semantics on top of existing broadcast foundations.
+- Circle owners can publish persistent announcements.
+- Active members receive live announcement updates.
+- Owners can pin and unpin announcements.
+- Trusted callable Functions enforce ownership and validate content.
+- Firestore rules allow active-member reads and deny client-side writes.
+- Emulator tests cover owner permissions, content bounds, pinning and member-only access.
+
+Continue with the highest leverage, lowest duplication work:
+
+1. Build server-authoritative Circle role management and audit events so moderators can be safely delegated.
+2. Add read acknowledgements, expiry and notification preferences to announcements.
+3. Extend existing QR sharing into revocable, expiring Circle/event/channel invitations.
+4. Unify directory search across current entity types.
+5. Add channel subscription/delivery semantics on top of existing broadcast foundations.
+6. Audit group messaging lifecycle, media controls and moderation operations.
 
 Do not start mini-program execution, payments custody, reservations or arbitrary bot execution in this tranche. Those require separate security, legal and operational designs.
