@@ -271,3 +271,6 @@ The following Circle governance tranche is now implemented in the existing appli
 - Emulator tests cover owner delegation, demotion, audit events, non-owner denial, invalid targets/roles, moderator announcement publishing and pinning, and ordinary-member denial.
 
 This tranche does not mean the full WeChat-inspired portfolio is complete. QR invite lifecycle, unified service directory, official channel subscriptions/fan-out, inbox unification, booking/commerce, translation and a secure partner mini-service platform remain separate workstreams. They must not be represented as shipped until implemented and tested.
+
+- Firestore membership creation now independently rejects banned users joining public Circles, even if a client bypasses the UI-level ban check; a rules emulator regression test covers this.
+- Announcement pinning was corrected to use the same delegated owner/admin/moderator authorization policy as publishing, and the test suite covers moderator pinning.
