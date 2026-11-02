@@ -624,6 +624,7 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(bobMember));
     await assertFails(getDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'bob')));
     await assertSucceeds(getDocs(aliceMembers));
+    await assertSucceeds(getDocs(query(collection(dbFor('bob'), 'communities', 'member-circle', 'members'), where('status', '==', 'active'))));
     await assertFails(getDocs(collection(dbFor('bob'), 'communities', 'member-circle', 'members')));
     await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'mallory'), {
       userId: 'mallory', role: 'admin', status: 'active', joinedAt: serverTimestamp()
