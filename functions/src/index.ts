@@ -5,6 +5,7 @@ import { processAccountDeletion } from './accountDeletionWorker.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
+import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -62,6 +63,32 @@ export const voteInCommunityPoll = onCall({ maxInstances: 10 }, async (request) 
     }
     if (message.includes('closed or unavailable')) throw new HttpsError('not-found', message);
     throw new HttpsError('internal', 'Your vote could not be saved. Please retry.');
+  }
+});
+
+
+export const createCommunityEvent = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a Circle event.');
+  try {
+    return await createCircleEvent(adminDb, request.auth.uid, request.data?.communityId, request.data?.title, request.data?.startsAt, request.data?.location);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Circle') || message.includes('event title')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Join this Circle')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The event could not be created. Please retry.');
+  }
+});
+
+export const respondToCommunityEvent = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to RSVP.');
+  try {
+    return await setCircleEventRsvp(adminDb, request.auth.uid, request.data?.communityId, request.data?.eventId, request.data?.attending);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid event')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Join this Circle')) throw new HttpsError('permission-denied', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'Your RSVP could not be saved. Please retry.');
   }
 });
 

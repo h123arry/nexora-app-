@@ -638,6 +638,25 @@ service cloud.firestore {
           );
       }
 
+
+      // Circle events and RSVP records are written only by trusted callables.
+      // Active members can read event listings and only their own RSVP marker.
+      match /events/{eventId} {
+        function activeCircleMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCircleMember();
+        allow create, update, delete: if false;
+        match /rsvps/{userId} {
+          allow get: if signedIn() && request.auth.uid == userId
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+          allow list, create, update, delete: if false;
+        }
+      }
+
       match /messages/{messageId} {
         function activeCircleMember() {
           return signedIn()

@@ -677,6 +677,33 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24')));
     await assertFails(updateDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24'), { totalEvents: 99 }));
   });
+
+  it('allows active Circle members to read events and only their own RSVP marker', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'event-circle'), { id: 'event-circle', ownerId: 'alice', type: 'public', name: 'Events' });
+      await setDoc(doc(db, 'communities', 'event-circle', 'members', 'alice'), { userId: 'alice', role: 'owner', status: 'active', joinedAt: Timestamp.now() });
+      await setDoc(doc(db, 'communities', 'event-circle', 'members', 'bob'), { userId: 'bob', role: 'member', status: 'active', joinedAt: Timestamp.now() });
+      await setDoc(doc(db, 'communities', 'event-circle', 'events', 'event-1'), {
+        id: 'event-1', communityId: 'event-circle', title: 'Member meetup',
+        startsAt: Timestamp.fromDate(new Date(Date.now() + 86400000)), location: '',
+        createdBy: 'alice', attendeeCount: 1, status: 'scheduled', createdAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'communities', 'event-circle', 'events', 'event-1', 'rsvps', 'alice'), {
+        userId: 'alice', attending: true, createdAt: Timestamp.now()
+      });
+    });
+    const eventPath = ['communities', 'event-circle', 'events', 'event-1'];
+    await assertSucceeds(getDoc(doc(dbFor('bob'), ...eventPath)));
+    await assertSucceeds(getDocs(collection(dbFor('bob'), 'communities', 'event-circle', 'events')));
+    await assertFails(getDoc(doc(dbFor('mallory'), ...eventPath)));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), ...eventPath, 'rsvps', 'alice')));
+    await assertFails(getDoc(doc(dbFor('bob'), ...eventPath, 'rsvps', 'alice')));
+    await assertFails(getDocs(collection(dbFor('alice'), ...eventPath, 'rsvps')));
+    await assertFails(setDoc(doc(dbFor('bob'), ...eventPath), { id: 'forged', title: 'Forged event' }));
+    await assertFails(setDoc(doc(dbFor('bob'), ...eventPath, 'rsvps', 'bob'), { userId: 'bob', attending: true }));
+    await assertFails(updateDoc(doc(dbFor('alice'), ...eventPath), { attendeeCount: 999 }));
+  });
+
   it('allows active Circle members to read polls and only their own vote marker', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'communities', 'poll-circle'), {

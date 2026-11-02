@@ -4,6 +4,7 @@ import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, S
 import { Circle, User } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
+import CircleEventsPanel from './CircleEventsPanel';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -96,7 +97,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   }, [selectedCircle?.id, selectedCircle?.isJoinedByMe, currentUser.id]);
   const [chatInput, setChatInput] = useState('');
   const [isJoinedVoice, setIsJoinedVoice] = useState(false);
-  const [rsvpedEvents, setRsvpedEvents] = useState<string[]>([]);
+
   const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
 
   // Sound simulation state
@@ -587,42 +588,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                   </div>
                 )}
 
-                {activePortalTab === 'events' && (
-                  <div className="space-y-3 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Upcoming Group Events</h3>
-                    {[
-                      { id: 'evt1', title: 'Weekend Local Meetup & Sports Match', date: 'Sunday, June 21, 2026', time: '4:00 PM', loc: 'Port Harcourt Hub Center' },
-                      { id: 'evt2', title: 'Open Q&A Core Development Hack', date: 'Wednesday, June 24, 2026', time: '8:00 PM', loc: 'Nexora Audio Voice Lounge' }
-                    ].map((evt) => {
-                      const isRsvped = rsvpedEvents.includes(evt.id);
-                      return (
-                        <div key={evt.id} className="p-4 rounded-2xl bg-white/[0.01] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                          <div className="space-y-1">
-                            <h4 className="text-sm font-bold text-white">{evt.title}</h4>
-                            <p className="text-[10.5px] text-violet-300/80">{evt.date} • {evt.time}</p>
-                            <p className="text-[9.5px] text-violet-300/40 font-mono">📍 {evt.loc}</p>
-                          </div>
-                          <button
-                            onClick={() => {
-                              if (isRsvped) {
-                                setRsvpedEvents(prev => prev.filter(id => id !== evt.id));
-                              } else {
-                                setRsvpedEvents(prev => [...prev, evt.id]);
-                              }
-                            }}
-                            className={`px-3 py-1.5 rounded-lg text-[9.5px] font-mono font-bold uppercase transition-all shrink-0 cursor-pointer ${
-                              isRsvped 
-                                ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/30' 
-                                : 'bg-[#8b5cf6] hover:bg-violet-500 text-white'
-                            }`}
-                          >
-                            {isRsvped ? 'Registered ✓' : 'Register'}
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                {activePortalTab === 'events' && <CircleEventsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 
                 {activePortalTab === 'files' && (
                   <div className="space-y-3 text-left">
