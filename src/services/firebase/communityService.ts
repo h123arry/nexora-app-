@@ -344,6 +344,14 @@ export const CommunityService = {
     await respond({ communityId, eventId, attending });
   },
 
+  async setMemberRole(communityId: string, targetUid: string, role: 'admin' | 'moderator' | 'member', reason: string): Promise<void> {
+    if (!communityId || communityId.includes('/') || !targetUid || targetUid.includes('/')) {
+      throw new Error('A valid Circle member is required.');
+    }
+    const update = httpsCallable(functions, 'setCommunityMemberRole');
+    await update({ communityId, targetUid, role, reason });
+  },
+
   async leaveCommunity(userId: string, communityId: string): Promise<void> {
     if (!userId || !communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const memberRef = doc(db, 'communities', communityId, 'members', userId);
