@@ -12,7 +12,7 @@ const circle = db.doc('communities/governance-circle');
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Circle governance tests require the Firestore Emulator.');
   await db.recursiveDelete(circle);
-  await circle.set({ id: 'governance-circle', ownerId: 'alice', type: 'public' });
+  await circle.set({ id: 'governance-circle', ownerId: 'alice', type: 'public', admins: [], moderators: [] });
   await circle.collection('members').doc('alice').set({ userId: 'alice', role: 'owner', status: 'active' });
   await circle.collection('members').doc('bob').set({ userId: 'bob', role: 'member', status: 'active' });
   await circle.collection('members').doc('carol').set({ userId: 'carol', role: 'moderator', status: 'active' });
@@ -30,6 +30,8 @@ describe('trusted Circle role delegation', () => {
       { userId: 'bob', role: 'moderator' },
     );
     assert.equal((await circle.collection('members').doc('bob').get()).get('role'), 'moderator');
+    assert.deepEqual((await circle.get()).get('moderators'), ['bob']);
+    assert.deepEqual((await circle.get()).get('admins'), []);
     const events = await circle.collection('auditEvents').where('targetUid', '==', 'bob').get();
     assert.equal(events.size, 1);
     assert.equal(events.docs[0].get('previousRole'), 'member');
@@ -38,6 +40,7 @@ describe('trusted Circle role delegation', () => {
 
     await setCircleMemberRole(db, 'alice', 'governance-circle', 'bob', 'member', 'Role delegation ended');
     assert.equal((await circle.collection('members').doc('bob').get()).get('role'), 'member');
+    assert.deepEqual((await circle.get()).get('moderators'), []);
     assert.equal((await circle.collection('auditEvents').where('targetUid', '==', 'bob').get()).size, 2);
   });
 
