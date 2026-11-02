@@ -677,6 +677,43 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24')));
     await assertFails(updateDoc(doc(env.authenticatedContext('admin', { admin: true }).firestore(), 'analyticsDaily', '2026-10-24'), { totalEvents: 99 }));
   });
+  it('allows active Circle members to read polls and only their own vote marker', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'poll-circle'), {
+        id: 'poll-circle', ownerId: 'alice', creatorId: 'alice', type: 'public', name: 'Polls'
+      });
+      await setDoc(doc(db, 'communities', 'poll-circle', 'members', 'alice'), {
+        userId: 'alice', role: 'owner', status: 'active', joinedAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'communities', 'poll-circle', 'members', 'bob'), {
+        userId: 'bob', role: 'member', status: 'active', joinedAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'communities', 'poll-circle', 'polls', 'poll-1'), {
+        id: 'poll-1', communityId: 'poll-circle', question: 'Which topic next?',
+        options: [{ id: 'a', text: 'Design', votes: 0 }, { id: 'b', text: 'Engineering', votes: 0 }],
+        createdBy: 'alice', status: 'open', createdAt: Timestamp.now()
+      });
+      await setDoc(doc(db, 'communities', 'poll-circle', 'polls', 'poll-1', 'votes', 'alice'), {
+        userId: 'alice', optionId: 'a', createdAt: Timestamp.now()
+      });
+    });
+
+    const pollPath = ['communities', 'poll-circle', 'polls', 'poll-1'];
+    await assertSucceeds(getDoc(doc(dbFor('bob'), ...pollPath)));
+    await assertSucceeds(getDocs(collection(dbFor('bob'), 'communities', 'poll-circle', 'polls')));
+    await assertFails(getDoc(doc(dbFor('mallory'), ...pollPath)));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), ...pollPath, 'votes', 'alice')));
+    await assertFails(getDoc(doc(dbFor('bob'), ...pollPath, 'votes', 'alice')));
+    await assertFails(getDocs(collection(dbFor('alice'), ...pollPath, 'votes')));
+    await assertFails(setDoc(doc(dbFor('alice'), ...pollPath), {
+      id: 'poll-2', question: 'Forged poll', options: [], createdBy: 'alice', status: 'open'
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), ...pollPath, 'votes', 'bob'), {
+      userId: 'bob', optionId: 'a', createdAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), ...pollPath), { status: 'closed' }));
+  });
+
   it('protects financial records from client mutation and cross-account reads', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'financialTransactions', 'txn-1'), { ownerId: 'alice', amountMinor: 1299, currency: 'USD', status: 'payment_confirmed' });
