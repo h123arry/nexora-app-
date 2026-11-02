@@ -9,14 +9,16 @@ function validId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= ID_LIMIT && !value.includes('/');
 }
 
-function requireOwnerState(
+function requireAnnouncementManager(
   community: FirebaseFirestore.DocumentSnapshot,
   member: FirebaseFirestore.DocumentSnapshot,
   uid: string,
 ): void {
-  if (!community.exists || community.get('ownerId') !== uid
-    || !member.exists || member.get('status') !== 'active' || member.get('role') !== 'owner') {
-    throw new Error('Only the active Circle owner can manage announcements.');
+  const role = member.exists ? member.get('role') : null;
+  const isOwner = community.exists && community.get('ownerId') === uid && role === 'owner';
+  const isDelegate = role === 'admin' || role === 'moderator';
+  if (!community.exists || !member.exists || member.get('status') !== 'active' || (!isOwner && !isDelegate)) {
+    throw new Error('Only active Circle owners, admins, or moderators can manage announcements.');
   }
 }
 
@@ -42,7 +44,7 @@ export async function createCircleAnnouncement(
       transaction.get(communityRef),
       transaction.get(memberRef),
     ]);
-    requireOwnerState(community, member, uid);
+    requireAnnouncementManager(community, member, uid);
     transaction.create(announcementRef, {
       id: announcementId,
       communityId,
