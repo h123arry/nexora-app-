@@ -5,15 +5,10 @@ import { Notification, User } from '../types';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
-import { 
-  triggerTestSparkPop, 
-  triggerTestCommentPop, 
-  triggerTestFollowPop, 
-  triggerTestProfileViewPop,
+import {
   requestPushPermission,
   isPushPermissionGranted,
   playNotificationSound,
-  NETWORK_CREATORS
 } from '../services/notificationService';
 
 interface NotificationsViewProps {
@@ -78,12 +73,6 @@ export default function NotificationsView({
   // Confetti / Celebration active state
   const [confettiParticles, setConfettiParticles] = useState<{ id: number; x: number; y: number; color: string; size: number; rotation: number; speedY: number; speedX: number }[]>([]);
   const confettiIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Simulated Live Streaming overlay
-  const [activeLiveStream, setActiveLiveStream] = useState<{ username: string; avatar: string; viewers: string; title: string } | null>(null);
-  const [liveHearts, setLiveHearts] = useState<{ id: number; left: number }[]>([]);
-  const [liveChat, setLiveChat] = useState<{ username: string; text: string }[]>([]);
-  const [liveInput, setLiveInput] = useState('');
 
   // Watch History (reused from existing template specs)
   const [watchHistory, setWatchHistory] = useState<any[]>([]);
@@ -346,17 +335,7 @@ export default function NotificationsView({
         addToast(`Viewing profile of @${notif.username}`);
       }
     } else if (notif.type === 'pulse_alert') {
-      if (notif.id === 'notif-live-1') {
-        // Trigger live stream
-        setActiveLiveStream({
-          username: notif.username,
-          avatar: notif.avatar,
-          viewers: "1.2K",
-          title: "Framer Motion Drag Gestures Masterclass 🔮"
-        });
-      } else {
-        window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'pulse' } }));
-      }
+      window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'pulse' } }));
     } else if (notif.type === 'reputation_milestone' && notif.reputationAwarded) {
       triggerConfetti();
     }
@@ -913,61 +892,6 @@ export default function NotificationsView({
           </div>
         </div>
 
-        {/* Instant test trigger buttons */}
-        <div className="pt-3 flex items-center gap-2 flex-wrap">
-          <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">Test Pops:</span>
-          
-          <button
-            type="button"
-            onClick={() => triggerTestSparkPop()}
-            className="px-3 py-1.5 rounded-xl bg-pink-600/20 hover:bg-pink-600/30 border border-pink-500/30 text-pink-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
-          >
-            <Flame className="w-3.5 h-3.5 text-rose-400" />
-            <span>Spark Pop</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => triggerTestCommentPop()}
-            className="px-3 py-1.5 rounded-xl bg-violet-600/20 hover:bg-violet-600/30 border border-violet-500/30 text-violet-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
-          >
-            <MessageSquare className="w-3.5 h-3.5 text-violet-400" />
-            <span>Comment Pop</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => triggerTestFollowPop()}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
-          >
-            <UserPlus className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Follow Pop</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => triggerTestProfileViewPop(currentUser)}
-            className="px-3 py-1.5 rounded-xl bg-cyan-600/20 hover:bg-cyan-600/30 border border-cyan-500/30 text-cyan-300 text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer shadow-xs"
-          >
-            <Eye className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Profile View Pop</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              triggerTestSparkPop();
-              setTimeout(() => triggerTestCommentPop(), 1500);
-              setTimeout(() => triggerTestProfileViewPop(currentUser), 3200);
-              setTimeout(() => triggerTestFollowPop(), 4800);
-              addToast("🌊 Triggered 4-wave live social interaction wave!");
-            }}
-            className="px-3 py-1.5 rounded-xl bg-linear-to-r from-violet-600 to-pink-600 hover:brightness-110 text-white text-xs font-bold font-sans flex items-center gap-1.5 active:scale-95 transition-all cursor-pointer ml-auto shadow-xs"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-            <span>Simulate Engagement Wave</span>
-          </button>
-        </div>
       </div>
 
       {/* ----------------------------------------------------------------------- */}
@@ -1266,25 +1190,7 @@ export default function NotificationsView({
                                 </span>
                               )}
 
-                              {/* Live Stream Play action */}
-                              {notif.type === 'pulse_alert' && notif.content.includes('LIVE') && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveLiveStream({
-                                      username: notif.username,
-                                      avatar: notif.avatar,
-                                      viewers: "1.2K",
-                                      title: "Framer Motion Masterclass master level!"
-                                    });
-                                  }}
-                                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-[10px] font-sans font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-1 animate-pulse"
-                                >
-                                  <Play className="w-3 h-3 fill-current text-white" />
-                                  <span>Join Stream</span>
-                                </button>
-                              )}
-
+                              
                               {/* Event registration action */}
                               {notif.type === 'community' && notif.eventStatus === 'unregistered' && (
                                 <button
@@ -1578,160 +1484,6 @@ export default function NotificationsView({
         )}
       </div>
 
-      {/* ----------------------------------------------------------------------- */}
-      {/* FULL SCREEN INTERACTIVE SIMULATED LIVE STREAM OVERLAY */}
-      {/* ----------------------------------------------------------------------- */}
-      <AnimatePresence>
-        {activeLiveStream && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 backdrop-blur-md"
-          >
-            <div className="bg-[#0b0821] w-full max-w-4xl rounded-3xl border border-white/10 overflow-hidden shadow-md relative flex flex-col md:flex-row h-[85vh]">
-              
-              {/* Live Video canvas on left */}
-              <div className="flex-1 bg-black relative flex items-center justify-center h-1/2 md:h-full">
-                {/* Visual live simulator graphics */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-purple-950/20 via-black to-pink-950/20" />
-                
-                {/* Stream visual placeholder */}
-                <div className="text-center space-y-4 z-10 p-6">
-                  <div className="w-20 h-20 rounded-full bg-red-600/10 border border-red-500/40 flex items-center justify-center mx-auto animate-pulse">
-                    <Radio className="w-10 h-10 text-red-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-extrabold text-white uppercase tracking-wider animate-pulse">
-                      Simulated Live Stream
-                    </h3>
-                    <p className="text-xs text-zinc-400 mt-1">
-                      Stream source: RTMP Encrypted Feed • 1080p 60fps
-                    </p>
-                  </div>
-                </div>
-
-                {/* Live stream stats overlays */}
-                <div className="absolute top-4 left-4 flex items-center gap-2 z-20">
-                  <span className="px-2.5 py-1 bg-red-600 text-white font-mono text-[9px] font-black rounded-lg uppercase tracking-widest animate-pulse flex items-center gap-1">
-                    <span className="h-1.5 w-1.5 rounded-full bg-white animate-ping" />
-                    <span>LIVE NOW</span>
-                  </span>
-                  <span className="px-2.5 py-1 bg-black/70 text-zinc-300 font-mono text-[9px] rounded-lg backdrop-blur-md flex items-center gap-1">
-                    <Users className="w-3 h-3 text-violet-400" />
-                    <span>{activeLiveStream.viewers} watching</span>
-                  </span>
-                </div>
-
-                <div className="absolute top-4 right-4 z-20">
-                  <button 
-                    onClick={() => setActiveLiveStream(null)}
-                    className="p-1.5 rounded-xl bg-black/50 hover:bg-black/80 border border-white/10 text-zinc-400 hover:text-white transition-all cursor-pointer"
-                  >
-                    <Maximize2 className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Heart float animation canvas inside video stream */}
-                <div className="absolute bottom-4 right-4 z-20 w-16 h-48 pointer-events-none relative">
-                  <AnimatePresence>
-                    {liveHearts.map(h => (
-                      <motion.div
-                        key={h.id}
-                        initial={{ opacity: 1, y: 0, scale: 0.8, x: h.left }}
-                        animate={{ opacity: 0, y: -150, scale: 1.4, x: h.left + Math.sin(h.id) * 20 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 2.2 }}
-                        className="absolute bottom-0 text-red-500 text-xl"
-                      >
-                        ❤️
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-
-                <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
-                  <img src={activeLiveStream.avatar} alt="" className="w-10 h-10 rounded-xl object-cover border border-white/10" />
-                  <div className="text-left">
-                    <span className="text-xs text-white font-black block">@{activeLiveStream.username}</span>
-                    <span className="text-[10px] text-zinc-400 block line-clamp-1">{activeLiveStream.title}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat column on right */}
-              <div className="w-full md:w-80 border-t md:border-t-0 md:border-l border-white/10 flex flex-col justify-between bg-[#04020c] h-1/2 md:h-full text-left">
-                
-                {/* Chat header */}
-                <div className="p-3.5 border-b border-white/10 flex items-center justify-between">
-                  <span className="text-xs font-mono font-black text-violet-300 uppercase tracking-widest">Live Chat Stream</span>
-                  <button onClick={() => setActiveLiveStream(null)} className="p-1 text-zinc-500 hover:text-white transition-all">
-                    <X className="w-4.5 h-4.5" />
-                  </button>
-                </div>
-
-                {/* Chat scroll */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                  {liveChat.map((msg, i) => (
-                    <div key={i} className="text-xs font-sans">
-                      <span className="font-extrabold text-violet-400 mr-1.5">@{msg.username}:</span>
-                      <span className="text-zinc-200">{msg.text}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Chat controls & Reactions launcher */}
-                <div className="p-3 bg-black/40 border-t border-white/10 space-y-3">
-                  <div className="flex items-center gap-1 bg-[#09071c] p-1.5 rounded-xl border border-white/10">
-                    <input
-                      type="text"
-                      placeholder="Comment on live feed..."
-                      value={liveInput}
-                      onChange={(e) => setLiveInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && liveInput.trim()) {
-                          setLiveChat(prev => [...prev, { username: currentUser.username, text: liveInput }]);
-                          setLiveInput('');
-                          // Auto trigger hearts on chat
-                          setLiveHearts(prev => [...prev, { id: Date.now(), left: Math.random() * 20 }]);
-                        }
-                      }}
-                      className="flex-1 px-2.5 py-1.5 bg-transparent text-xs text-white placeholder-zinc-600 focus:outline-none"
-                    />
-                    <button
-                      onClick={() => {
-                        if (liveInput.trim()) {
-                          setLiveChat(prev => [...prev, { username: currentUser.username, text: liveInput }]);
-                          setLiveInput('');
-                          setLiveHearts(prev => [...prev, { id: Date.now(), left: Math.random() * 20 }]);
-                        }
-                      }}
-                      className="p-1.5 bg-violet-600 hover:bg-violet-500 rounded-lg text-white"
-                    >
-                      <Send className="w-3 h-3" />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center justify-between text-xs font-mono text-zinc-500 pt-1">
-                    <span>Press ❤️ to send Sparks</span>
-                    <button
-                      onClick={() => {
-                        setLiveHearts(prev => [...prev, { id: Date.now(), left: Math.random() * 20 }]);
-                      }}
-                      className="p-2 bg-red-500/10 hover:bg-red-500/20 rounded-full text-red-400 hover:scale-110 active:scale-95 transition-all"
-                      title="Double Tap Spark"
-                    >
-                      ❤️ Love
-                    </button>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
     </div>
   );
