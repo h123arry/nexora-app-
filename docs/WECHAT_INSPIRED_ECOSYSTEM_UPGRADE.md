@@ -215,7 +215,7 @@ Every new collection must have a documented owner, read/write policy, retention 
 Use upstream projects as references and verify the exact license/version before copying any code:
 
 - Tencent WeUI: https://github.com/Tencent/weui — study mobile interaction patterns and component consistency; adapt concepts, not visual branding.
-- WeUI for WeChat Mini Program: https://github.com/Tencent/weui-miniprogram — study compact component APIs and mini-program interaction conventions; it is not a drop-in React component library.
+- WeUI for WeChat Mini Program: https://github.com/Tencent/weui-wxss — study compact component APIs and mini-program interaction conventions; it is not a drop-in React component library.
 - Wechaty: https://github.com/wechaty/wechaty — study bot abstractions and adapter architecture; do not assume it is an official WeChat API or use it to automate personal accounts in ways that violate platform terms.
 - Wechaty Puppet ecosystem: https://github.com/wechaty — inspect adapter boundaries, event models and plugin separation; treat third-party adapters as untrusted dependencies.
 
