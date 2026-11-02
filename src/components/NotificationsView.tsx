@@ -1486,8 +1486,6 @@ export default function NotificationsView({
         )}
       </div>
 
-      {/* ----------------------------------------------------------------------- */}
-sence>
 
     </div>
   );
