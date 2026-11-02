@@ -13,7 +13,8 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { db, functions } from '../../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import type { Circle } from '../../types';
 
 const COMMUNITY_NAME_LIMIT = 60;
@@ -177,6 +178,59 @@ export const CommunityService = {
       content: text,
       createdAt: serverTimestamp(),
     });
+  },
+
+
+  watchPolls(
+    communityId: string,
+    currentUserId: string,
+    onPolls: (polls: Array<{ id: string; question: string; options: Array<{ id: string; text: string; votes: number }>; createdBy: string; status: string; myVote: string | null; createdAt: string }>) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    if (!communityId || !currentUserId) {
+      onError(new Error('Join this Circle to view its polls.'));
+      return () => undefined;
+    }
+    const pollsQuery = query(
+      collection(db, 'communities', communityId, 'polls'),
+      orderBy('createdAt', 'desc'),
+      limit(20),
+    );
+    return onSnapshot(pollsQuery, async snapshot => {
+      try {
+        const polls = await Promise.all(snapshot.docs.map(async poll => {
+          const data = poll.data();
+          const vote = await getDoc(doc(db, 'communities', communityId, 'polls', poll.id, 'votes', currentUserId));
+          const createdAt = data.createdAt?.toDate?.();
+          return {
+            id: poll.id,
+            question: String(data.question || ''),
+            options: Array.isArray(data.options) ? data.options.map((option: Record<string, unknown>) => ({
+              id: String(option.id || ''),
+              text: String(option.text || ''),
+              votes: Number.isSafeInteger(option.votes) && Number(option.votes) >= 0 ? Number(option.votes) : 0,
+            })) : [],
+            createdBy: String(data.createdBy || ''),
+            status: String(data.status || 'closed'),
+            myVote: vote.exists() ? String(vote.data().optionId || '') : null,
+            createdAt: createdAt instanceof Date ? createdAt.toLocaleDateString() : 'Recently',
+          };
+        }));
+        onPolls(polls);
+      } catch (error) {
+        onError(error instanceof Error ? error : new Error('Circle polls could not be loaded.'));
+      }
+    }, error => onError(error));
+  },
+
+  async createPoll(communityId: string, question: string, options: string[]): Promise<void> {
+    const create = httpsCallable(functions, 'createCommunityPoll');
+    await create({ communityId, question, options });
+  },
+
+  async votePoll(communityId: string, pollId: string, optionId: string): Promise<void> {
+    const vote = httpsCallable(functions, 'voteInCommunityPoll');
+    await vote({ communityId, pollId, optionId });
   },
 
   async leaveCommunity(userId: string, communityId: string): Promise<void> {
