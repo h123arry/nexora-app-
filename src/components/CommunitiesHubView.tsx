@@ -9,6 +9,7 @@ import { ActivityService } from '../services/activityService';
 import { auth } from '../services/firebase/config';
 import { getPageFollowerCount } from '../services/firebase/pageChannelService';
 import BusinessServicesPanel from './BusinessServicesPanel';
+import PageChannelPanel from './PageChannelPanel';
 
 const hideUnavailableImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
   event.currentTarget.style.display = 'none';
@@ -1509,7 +1510,7 @@ export default function CommunitiesHubView({
                   ))}
                 </section>
 
-                {selectedPage.category === 'Business' && <BusinessServicesPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} />}
+                <PageChannelPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} isFollowing={followedPageIds.includes(selectedPage.id)} />\n\n                {selectedPage.category === 'Business' && <BusinessServicesPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} />}
 
                 <div className="space-y-2 text-xs font-mono text-current/60">
                   {selectedPage.website && (

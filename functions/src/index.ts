@@ -12,6 +12,7 @@ import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './co
 import { createPageBookingRequest, respondToPageBookingRequest } from './pageBookings.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
 import { searchPublicDirectory } from './directorySearch.js';
+import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -290,5 +291,32 @@ export const searchNexoraDirectory = onCall({ maxInstances: 10 }, async (request
       throw new HttpsError('invalid-argument', message);
     }
     throw new HttpsError('internal', 'Directory search is temporarily unavailable.');
+  }
+});
+
+
+export const publishPageChannelUpdate = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a Page channel update.');
+  try {
+    return await publishPageChannelUpdateRecord(adminDb, request.auth.uid, request.data?.pageId, request.data?.content);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('1 to 2,000')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the owning')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The Page channel update could not be published. Please retry.');
+  }
+});
+
+export const deletePageChannelUpdate = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Page channel updates.');
+  try {
+    await deletePageChannelUpdateRecord(adminDb, request.auth.uid, request.data?.pageId, request.data?.updateId);
+    return { deleted: true };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Page update')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the owning')) throw new HttpsError('permission-denied', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'The Page channel update could not be deleted. Please retry.');
   }
 });
