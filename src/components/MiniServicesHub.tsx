@@ -1,4 +1,5 @@
 import React from 'react';
+import { getTranslations } from '../utils/translations';
 import { Activity, Bookmark, BriefcaseBusiness, CalendarDays, CircleDot, MessageCircle, RadioTower, Sparkles, Users } from 'lucide-react';
 
 export type NexoraMiniServiceId =
@@ -27,27 +28,32 @@ const SERVICE_ROUTES: Record<NexoraMiniServiceId, string> = {
   events: 'matrix',
 };
 
-const SERVICES: Array<{ id: NexoraMiniServiceId; title: string; description: string; category: string }> = [
-  { id: 'world-pulse', title: 'World Pulse', description: 'Explore live topics and what is happening across NEXORA.', category: 'Discover' },
-  { id: 'circles', title: 'Circles', description: 'Find your people, join discussions and take part in Circle life.', category: 'Connect' },
-  { id: 'creator-channel', title: 'Creator channels', description: 'Follow Pages and read official updates from creators and organisations.', category: 'Creators' },
-  { id: 'business-services', title: 'Business services', description: 'Explore business Pages, listed services and booking requests.', category: 'Business' },
-  { id: 'events', title: 'Events', description: 'Discover and RSVP to events hosted inside your Circles.', category: 'Discover' },
-  { id: 'messaging', title: 'Messaging', description: 'Continue private and group conversations in your inbox.', category: 'Connect' },
-  { id: 'saved-library', title: 'Saved library', description: 'Organise posts, Pages, Circles and events into private collections.', category: 'Personal' },
-  { id: 'voh-workspace', title: 'VOH AI workspace', description: 'Open your connected AI workspace and saved conversations.', category: 'Tools' },
-];
+function getServices(copy: ReturnType<typeof getTranslations>) {
+  return [
+    { id: 'world-pulse', title: copy.miniWorldPulseTitle, description: copy.miniWorldPulseDescription, category: copy.miniCategoryDiscover },
+    { id: 'circles', title: copy.miniCirclesTitle, description: copy.miniCirclesDescription, category: copy.miniCategoryConnect },
+    { id: 'creator-channel', title: copy.miniCreatorChannelsTitle, description: copy.miniCreatorChannelsDescription, category: copy.miniCategoryCreators },
+    { id: 'business-services', title: copy.miniBusinessServicesTitle, description: copy.miniBusinessServicesDescription, category: copy.miniCategoryBusiness },
+    { id: 'events', title: copy.miniEventsTitle, description: copy.miniEventsDescription, category: copy.miniCategoryDiscover },
+    { id: 'messaging', title: copy.miniMessagingTitle, description: copy.miniMessagingDescription, category: copy.miniCategoryConnect },
+    { id: 'saved-library', title: copy.miniSavedLibraryTitle, description: copy.miniSavedLibraryDescription, category: copy.miniCategoryPersonal },
+    { id: 'voh-workspace', title: copy.miniVohWorkspaceTitle, description: copy.miniVohWorkspaceDescription, category: copy.miniCategoryTools },
+  ] as const;
+}
 
 interface Props {
   onOpen: (tab: string) => void;
   signedIn: boolean;
   onOpenVohAi: () => void;
+  locale?: string;
 }
 
-export default function MiniServicesHub({ onOpen, signedIn, onOpenVohAi }: Props) {
+export default function MiniServicesHub({ onOpen, signedIn, onOpenVohAi, locale = 'en' }: Props) {
+  const copy = getTranslations(locale);
+  const services = getServices(copy);
   return <section className="space-y-3" aria-labelledby="mini-services-title">
     <div className="flex items-end justify-between gap-3 px-1">
-      <div><p className="text-[10px] font-mono uppercase tracking-[0.2em] text-violet-400">NEXORA ecosystem</p><h2 id="mini-services-title" className="text-lg font-bold text-white">Mini Services</h2><p className="text-xs text-slate-400">Connected tools, one account, consistent permissions.</p></div>
+      <div><p className="text-[10px] font-mono uppercase tracking-[0.2em] text-violet-400">{copy.miniEcosystem}</p><h2 id="mini-services-title" className="text-lg font-bold text-white">{copy.miniServicesTitle}</h2><p className="text-xs text-slate-400">{copy.miniServicesDescription}</p></div>
       <CircleDot className="h-5 w-5 text-violet-300" aria-hidden="true" />
     </div>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -62,6 +68,6 @@ export default function MiniServicesHub({ onOpen, signedIn, onOpenVohAi }: Props
         </button>;
       })}
     </div>
-    {!signedIn && <p className="text-xs text-slate-400">Sign in to open NEXORA mini services.</p>}
+    {!signedIn && <p className="text-xs text-slate-400">{copy.miniServicesSignIn}</p>}
   </section>;
 }

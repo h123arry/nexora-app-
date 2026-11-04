@@ -70,6 +70,32 @@ export interface TranslationSet {
   filterVideos: string;
   filterCommunities: string;
   inboxTitle: string; inboxChats: string; inboxRequests: string; inboxArchived: string; inboxSearchPlaceholder: string; inboxNewMessage: string; inboxCreateGroup: string; inboxCreateGroupHeading: string; inboxGroupIntro: string; inboxGroupName: string; inboxGroupDescription: string; inboxInviteMembers: string; inboxSelectAtLeastTwo: string; inboxSearchPeople: string; inboxNoAccounts: string; inboxCancel: string; inboxCreating: string; inboxCreateGroupButton: string; inboxGroupCreatedNotice: string; inboxNoMatchingConversations: string; inboxNoMessageRequests: string; inboxNoArchivedConversations: string; inboxNoConversations: string; inboxStartConversationHint: string; inboxStartNewMessage: string; inboxTyping: string; inboxActiveNow: string; inboxOffline: string; inboxBack: string; inboxTryDifferent: string; inboxNewRequestsHint: string; inboxArchivedHint: string;
+  miniEcosystem: string;
+  miniServicesTitle: string;
+  miniServicesDescription: string;
+  miniServicesSignIn: string;
+  miniCategoryDiscover: string;
+  miniCategoryConnect: string;
+  miniCategoryCreators: string;
+  miniCategoryBusiness: string;
+  miniCategoryPersonal: string;
+  miniCategoryTools: string;
+  miniWorldPulseTitle: string;
+  miniWorldPulseDescription: string;
+  miniCirclesTitle: string;
+  miniCirclesDescription: string;
+  miniCreatorChannelsTitle: string;
+  miniCreatorChannelsDescription: string;
+  miniBusinessServicesTitle: string;
+  miniBusinessServicesDescription: string;
+  miniEventsTitle: string;
+  miniEventsDescription: string;
+  miniMessagingTitle: string;
+  miniMessagingDescription: string;
+  miniSavedLibraryTitle: string;
+  miniSavedLibraryDescription: string;
+  miniVohWorkspaceTitle: string;
+  miniVohWorkspaceDescription: string;
 }
 
 export const TRANSLATIONS: Record<Locale, TranslationSet> = {
@@ -173,7 +199,33 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     inboxBack: "Back to conversations",
     inboxTryDifferent: "Try a different name or message.",
     inboxNewRequestsHint: "New requests will appear here.",
-    inboxArchivedHint: "Conversations you archive will appear here."
+    inboxArchivedHint: "Conversations you archive will appear here.",
+    miniEcosystem: "NEXORA ecosystem",
+    miniServicesTitle: "Mini Services",
+    miniServicesDescription: "Connected tools, one account, consistent permissions.",
+    miniServicesSignIn: "Sign in to open NEXORA mini services.",
+    miniCategoryDiscover: "Discover",
+    miniCategoryConnect: "Connect",
+    miniCategoryCreators: "Creators",
+    miniCategoryBusiness: "Business",
+    miniCategoryPersonal: "Personal",
+    miniCategoryTools: "Tools",
+    miniWorldPulseTitle: "World Pulse",
+    miniWorldPulseDescription: "Explore live topics and what is happening across NEXORA.",
+    miniCirclesTitle: "Circles",
+    miniCirclesDescription: "Find your people, join discussions and take part in Circle life.",
+    miniCreatorChannelsTitle: "Creator channels",
+    miniCreatorChannelsDescription: "Follow Pages and read official updates from creators and organisations.",
+    miniBusinessServicesTitle: "Business services",
+    miniBusinessServicesDescription: "Explore business Pages, listed services and booking requests.",
+    miniEventsTitle: "Events",
+    miniEventsDescription: "Discover and RSVP to events hosted inside your Circles.",
+    miniMessagingTitle: "Messaging",
+    miniMessagingDescription: "Continue private and group conversations in your inbox.",
+    miniSavedLibraryTitle: "Saved library",
+    miniSavedLibraryDescription: "Organise posts, Pages, Circles and events into private collections.",
+    miniVohWorkspaceTitle: "VOH AI workspace",
+    miniVohWorkspaceDescription: "Open your connected AI workspace and saved conversations."
   },
   fr: {
     brandDescription: "Découvrez des gens. Créez des communautés. Façonnez l'avenir.",
@@ -275,7 +327,33 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     inboxBack: "Retour aux conversations",
     inboxTryDifferent: "Essayez un autre nom ou message.",
     inboxNewRequestsHint: "Les nouvelles demandes apparaîtront ici.",
-    inboxArchivedHint: "Les conversations archivées apparaîtront ici."
+    inboxArchivedHint: "Les conversations archivées apparaîtront ici.",
+    miniEcosystem: "Écosystème NEXORA",
+    miniServicesTitle: "Mini-services",
+    miniServicesDescription: "Des outils connectés, un compte et des autorisations cohérentes.",
+    miniServicesSignIn: "Connectez-vous pour ouvrir les mini-services NEXORA.",
+    miniCategoryDiscover: "Découvrir",
+    miniCategoryConnect: "Connexion",
+    miniCategoryCreators: "Créateurs",
+    miniCategoryBusiness: "Entreprise",
+    miniCategoryPersonal: "Personnel",
+    miniCategoryTools: "Outils",
+    miniWorldPulseTitle: "World Pulse",
+    miniWorldPulseDescription: "Explorez les sujets en direct et l’actualité de NEXORA.",
+    miniCirclesTitle: "Cercles",
+    miniCirclesDescription: "Trouvez votre communauté, participez aux discussions et à la vie des Cercles.",
+    miniCreatorChannelsTitle: "Chaînes des créateurs",
+    miniCreatorChannelsDescription: "Suivez les Pages et consultez les annonces officielles des créateurs et organisations.",
+    miniBusinessServicesTitle: "Services professionnels",
+    miniBusinessServicesDescription: "Explorez les Pages professionnelles, les services proposés et les demandes de réservation.",
+    miniEventsTitle: "Événements",
+    miniEventsDescription: "Découvrez les événements organisés dans vos Cercles et confirmez votre présence.",
+    miniMessagingTitle: "Messagerie",
+    miniMessagingDescription: "Retrouvez vos conversations privées et de groupe dans votre boîte de réception.",
+    miniSavedLibraryTitle: "Bibliothèque enregistrée",
+    miniSavedLibraryDescription: "Organisez publications, Pages, Cercles et événements dans des collections privées.",
+    miniVohWorkspaceTitle: "Espace VOH AI",
+    miniVohWorkspaceDescription: "Ouvrez votre espace IA connecté et vos conversations enregistrées."
   },
   ar: {
     brandDescription: "اكتشف الأشخاص. ابنِ المجتمعات. شكّل ملامح ما يحدث.",
@@ -377,7 +455,33 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     inboxBack: "العودة إلى المحادثات",
     inboxTryDifferent: "جرّب اسماً أو رسالة أخرى.",
     inboxNewRequestsHint: "ستظهر الطلبات الجديدة هنا.",
-    inboxArchivedHint: "ستظهر المحادثات التي تؤرشفها هنا."
+    inboxArchivedHint: "ستظهر المحادثات التي تؤرشفها هنا.",
+    miniEcosystem: "منظومة NEXORA",
+    miniServicesTitle: "الخدمات المصغّرة",
+    miniServicesDescription: "أدوات مترابطة وحساب واحد وأذونات متناسقة.",
+    miniServicesSignIn: "سجّل الدخول لفتح خدمات NEXORA المصغّرة.",
+    miniCategoryDiscover: "اكتشف",
+    miniCategoryConnect: "تواصل",
+    miniCategoryCreators: "المنشئون",
+    miniCategoryBusiness: "الأعمال",
+    miniCategoryPersonal: "شخصي",
+    miniCategoryTools: "الأدوات",
+    miniWorldPulseTitle: "نبض العالم",
+    miniWorldPulseDescription: "استكشف الموضوعات المباشرة وما يحدث عبر NEXORA.",
+    miniCirclesTitle: "الدوائر",
+    miniCirclesDescription: "اعثر على مجتمعك وشارك في النقاشات وحياة الدوائر.",
+    miniCreatorChannelsTitle: "قنوات المنشئين",
+    miniCreatorChannelsDescription: "تابع الصفحات واقرأ التحديثات الرسمية من المنشئين والمؤسسات.",
+    miniBusinessServicesTitle: "خدمات الأعمال",
+    miniBusinessServicesDescription: "استكشف صفحات الأعمال والخدمات المدرجة وطلبات الحجز.",
+    miniEventsTitle: "الفعاليات",
+    miniEventsDescription: "اكتشف الفعاليات التي تستضيفها دوائرك وسجّل حضورك.",
+    miniMessagingTitle: "المراسلة",
+    miniMessagingDescription: "تابع محادثاتك الخاصة والجماعية في صندوق الوارد.",
+    miniSavedLibraryTitle: "المحفوظات",
+    miniSavedLibraryDescription: "نظّم المنشورات والصفحات والدوائر والفعاليات في مجموعات خاصة.",
+    miniVohWorkspaceTitle: "مساحة VOH AI",
+    miniVohWorkspaceDescription: "افتح مساحة الذكاء الاصطناعي المتصلة ومحادثاتك المحفوظة."
   },
   pt: {
     brandDescription: "Descubra pessoas. Construa comunidades. Moldar o que acontece.",
@@ -479,7 +583,33 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     inboxBack: "Voltar às conversas",
     inboxTryDifferent: "Tente outro nome ou mensagem.",
     inboxNewRequestsHint: "Novas solicitações aparecerão aqui.",
-    inboxArchivedHint: "As conversas arquivadas aparecerão aqui."
+    inboxArchivedHint: "As conversas arquivadas aparecerão aqui.",
+    miniEcosystem: "Ecossistema NEXORA",
+    miniServicesTitle: "Mini serviços",
+    miniServicesDescription: "Ferramentas conectadas, uma conta e permissões consistentes.",
+    miniServicesSignIn: "Entre para abrir os mini serviços da NEXORA.",
+    miniCategoryDiscover: "Descobrir",
+    miniCategoryConnect: "Conectar",
+    miniCategoryCreators: "Criadores",
+    miniCategoryBusiness: "Negócios",
+    miniCategoryPersonal: "Pessoal",
+    miniCategoryTools: "Ferramentas",
+    miniWorldPulseTitle: "World Pulse",
+    miniWorldPulseDescription: "Explore assuntos ao vivo e o que está acontecendo na NEXORA.",
+    miniCirclesTitle: "Círculos",
+    miniCirclesDescription: "Encontre sua comunidade, participe das conversas e da vida dos Círculos.",
+    miniCreatorChannelsTitle: "Canais de criadores",
+    miniCreatorChannelsDescription: "Siga Páginas e leia atualizações oficiais de criadores e organizações.",
+    miniBusinessServicesTitle: "Serviços comerciais",
+    miniBusinessServicesDescription: "Explore Páginas comerciais, serviços publicados e solicitações de agendamento.",
+    miniEventsTitle: "Eventos",
+    miniEventsDescription: "Descubra eventos organizados nos seus Círculos e confirme presença.",
+    miniMessagingTitle: "Mensagens",
+    miniMessagingDescription: "Continue conversas privadas e em grupo na sua caixa de entrada.",
+    miniSavedLibraryTitle: "Biblioteca salva",
+    miniSavedLibraryDescription: "Organize publicações, Páginas, Círculos e eventos em coleções privadas.",
+    miniVohWorkspaceTitle: "Espaço VOH AI",
+    miniVohWorkspaceDescription: "Abra seu espaço de IA conectado e suas conversas salvas."
   }
 };
 

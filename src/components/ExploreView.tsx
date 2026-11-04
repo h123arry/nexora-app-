@@ -253,7 +253,7 @@ export default function ExploreView({
         </div>
       </div>
 
-      {!hasActiveSearch && <MiniServicesHub signedIn={Boolean(currentUserId)} onOpen={setActiveTab} onOpenVohAi={onOpenVohAi} />}
+      {!hasActiveSearch && <MiniServicesHub signedIn={Boolean(currentUserId)} onOpen={setActiveTab} onOpenVohAi={onOpenVohAi} locale={locale} />}
 
       {/* Recent Searches (shown when search is empty) */}
       {!hasActiveSearch && recentSearches.length > 0 && (
