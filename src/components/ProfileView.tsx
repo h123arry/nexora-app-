@@ -2260,7 +2260,7 @@ export default function ProfileView({
                             </div>
                             
                             {/* Visual SVG Progress loader bar */}
-                            <div role="progressbar" aria-label={pillar.name + ' score'} aria-valuemin={0} aria-valuemax={maxVal} aria-valuenow={pillar.val} className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                               <div className="h-full bg-linear-to-r from-violet-600 to-pink-500 rounded-full" style={{ width: cacheSize === '0.0 B' ? '0%' : '65%' }} />
                             </div>
                             <p className="text-[9px] text-zinc-500 font-sans leading-normal">Asset logs represent downloaded avatars, thumbnails, and cache metadata indexes.</p>
@@ -3462,7 +3462,7 @@ export default function ProfileView({
                           <span className="font-mono text-white font-extrabold">{pillar.val} pts</span>
                         </div>
                         <p className="text-[10px] text-zinc-400 leading-tight">{pillar.desc}</p>
-                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div role="progressbar" aria-label={pillar.name + ' score'} aria-valuemin={0} aria-valuemax={maxVal} aria-valuenow={pillar.val} className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                           <div className={`h-full ${pillar.color}`} style={{ width: `${pct}%` }} />
                         </div>
                       </div>
