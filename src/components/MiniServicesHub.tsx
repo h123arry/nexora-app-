@@ -57,7 +57,7 @@ export default function MiniServicesHub({ onOpen, signedIn, onOpenVohAi, locale 
       <CircleDot className="h-5 w-5 text-violet-300" aria-hidden="true" />
     </div>
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-      {SERVICES.map(service => {
+      {services.map(service => {
         const Icon = ICONS[service.id];
         return <button key={service.id} type="button" disabled={!signedIn} onClick={() => service.id === 'voh-workspace' ? onOpenVohAi() : onOpen(SERVICE_ROUTES[service.id])}
           className="group min-h-32 rounded-2xl border border-violet-400/15 bg-[#0b1020] p-3 text-left transition-colors hover:border-violet-400/40 hover:bg-violet-500/[0.06] disabled:cursor-not-allowed disabled:opacity-50">
