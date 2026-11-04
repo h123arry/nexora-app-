@@ -158,6 +158,12 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'chats', 'chat-1')));
     await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'chats'), where('participants', 'array-contains', 'alice'))));
     await assertFails(getDoc(doc(dbFor('mallory'), 'chats', 'chat-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'client-group-chat'), {
+      id: 'client-group-chat', participants: ['alice', 'bob', 'charlie'], isGroup: true, ownerId: 'alice', lastMessage: ''
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'duplicate-direct-chat'), {
+      id: 'duplicate-direct-chat', participants: ['alice', 'alice'], lastMessage: ''
+    }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { participants: ['alice', 'mallory'] }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'hello' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'x'.repeat(10001) }));
