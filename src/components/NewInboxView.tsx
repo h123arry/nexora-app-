@@ -11,6 +11,7 @@ import { db } from '../lib/firebase';
 import { setInboxChatPreference, watchInboxPreferences } from '../services/firebase/inboxPreferencesService';
 import { watchInboxChats } from '../services/firebase/chatDirectoryService';
 import { createGroupChat } from '../services/firebase/groupChatService';
+import { auth } from '../services/firebase/config';
 import CreateGroupChatModal from './CreateGroupChatModal';
 import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
 import { isSupportedOutgoingMediaType, serializeOutgoingMessage } from '../utils/messageSerialization';
@@ -89,6 +90,7 @@ export default function NewInboxView({
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const isServerBackedInbox = auth.currentUser?.uid === currentUser.id;
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const creatorsRef = useRef(creators);
   useEffect(() => { creatorsRef.current = creators; }, [creators]);
@@ -166,12 +168,13 @@ export default function NewInboxView({
   // The conversation list is account-scoped server data, not a device-local cache.
   // This keeps new conversations and updated previews in sync across signed-in devices.
   useEffect(() => {
+    if (!isServerBackedInbox) return;
     return watchInboxChats(currentUser.id, creatorsRef.current, serverChats => {
       setChats(serverChats);
     }, error => {
       console.warn('[NEXORA inbox] Server conversation list unavailable:', error.message);
     });
-  }, [currentUser.id]);
+  }, [currentUser.id, isServerBackedInbox]);
 
   // Firestore real-time listener
   useEffect(() => {
@@ -966,7 +969,7 @@ export default function NewInboxView({
       </AnimatePresence>
 
       <CreateGroupChatModal
-        isOpen={showCreateGroupModal}
+        isOpen={showCreateGroupModal && isServerBackedInbox}
         currentUserId={currentUser.id}
         creators={creators}
         onClose={() => setShowCreateGroupModal(false)}
