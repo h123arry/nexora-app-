@@ -198,3 +198,17 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     successMessage: "Operação verificada e registrada com sucesso"
   }
 };
+
+/** Resolve stored language labels/codes to a supported NEXORA locale. */
+export function resolveLocale(value?: string | null): Locale {
+  const normalized = String(value || 'en').trim().toLowerCase();
+  if (normalized === 'ar' || normalized.startsWith('arab')) return 'ar';
+  if (normalized === 'fr' || normalized.startsWith('fran')) return 'fr';
+  if (normalized === 'pt' || normalized.startsWith('portug')) return 'pt';
+  return 'en';
+}
+
+/** Arabic uses right-to-left text direction; supported Latin locales remain LTR. */
+export function getLocaleDirection(value?: string | null): 'rtl' | 'ltr' {
+  return resolveLocale(value) === 'ar' ? 'rtl' : 'ltr';
+}
