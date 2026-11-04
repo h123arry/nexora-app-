@@ -240,6 +240,21 @@ const publicProfile = (uid) => ({
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1')));
   });
 
+  it('allows group members to message but reserves group deletion for its owner', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'chats', 'server-group-chat'), {
+        id: 'server-group-chat', participants: ['alice', 'bob', 'charlie'],
+        isGroup: true, ownerId: 'alice', partnerName: 'Test Group', lastMessage: ''
+      });
+    });
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'chats', 'server-group-chat', 'messages', 'group-message'), {
+      id: 'group-message', chatId: 'server-group-chat', senderId: 'bob',
+      content: 'Hello group', status: 'sent', timestamp: new Date().toISOString()
+    }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'chats', 'server-group-chat')));
+    await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'server-group-chat')));
+  });
+
   it('allows creators to list only their own uploaded media assets', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'mediaAssets', 'alice-media'), {
