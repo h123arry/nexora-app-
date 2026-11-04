@@ -154,7 +154,6 @@ export const CommunityService = {
     const pageLimit = Math.max(1, Math.min(100, Math.floor(pageSize)));
     const constraints = [
       where('status', '==', 'active'),
-      orderBy('joinedAt', 'desc'),
       ...(cursor ? [startAfter(cursor)] : []),
       limit(pageLimit + 1),
     ];
