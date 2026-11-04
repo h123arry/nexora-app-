@@ -540,8 +540,9 @@ export default function NewInboxView({
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateGroupModal(true)}
-              className="nx-icon-button inline-flex"
-              title="Create group"
+              disabled={!isServerBackedInbox}
+              className="nx-icon-button inline-flex disabled:opacity-40"
+              title={isServerBackedInbox ? "Create group" : "Sign in to create a group"}
               aria-label="Create a group conversation"
             >
               <Users className="w-4 h-4" />
