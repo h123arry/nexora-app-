@@ -12,6 +12,9 @@ const members = ['group-member-a', 'group-member-b', 'group-member-c'];
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Group chat tests require the Firestore Emulator.');
   await db.recursiveDelete(owner);
+  await db.recursiveDelete(db.collection('users').doc('group-rate-owner'));
+  await db.collection('groupChatRateLimits').doc('group-owner').delete();
+  await db.collection('groupChatRateLimits').doc('group-rate-owner').delete();
   await Promise.all(members.map(id => db.recursiveDelete(db.collection('users').doc(id))));
   await owner.set({ id: 'group-owner', name: 'Group Owner', username: 'group_owner', avatar: '' });
   for (const id of members) {
@@ -50,6 +53,17 @@ describe('trusted group conversations', () => {
     await assert.rejects(createGroupChat(db, 'group-owner', 'Builders', '', [members[0], members[0]]), /valid, unique/);
     await assert.rejects(createGroupChat(db, 'group-owner', 'A', '', members.slice(0, 2)), /needs a name/);
     await assert.rejects(createGroupChat(db, 'group-owner', 'Builders', '', [members[0]]), /needs a name/);
+  });
+
+  it('rate-limits group creation per owner', async () => {
+    await db.collection('users').doc('group-rate-owner').set({ id: 'group-rate-owner', name: 'Rate Owner', username: 'rate_owner' });
+    for (let index = 0; index < 5; index += 1) {
+      await createGroupChat(db, 'group-rate-owner', 'Rate Group ' + index, '', members.slice(0, 2));
+    }
+    await assert.rejects(
+      createGroupChat(db, 'group-rate-owner', 'Rate Group 6', '', members.slice(0, 2)),
+      /Too many groups/,
+    );
   });
 
   it('respects blocks and recipient message privacy before adding members', async () => {

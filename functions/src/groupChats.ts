@@ -58,8 +58,23 @@ export async function createGroupChat(
     }
   }
 
-  const chatId = randomUUID();
   const now = new Date();
+  const rateRef = db.collection('groupChatRateLimits').doc(ownerUid);
+  await db.runTransaction(async tx => {
+    const rate = await tx.get(rateRef);
+    const previousStart = rate.get('windowStartedAt');
+    const previousStartDate = previousStart && typeof previousStart.toDate === 'function' ? previousStart.toDate() : null;
+    const windowActive = previousStartDate !== null && now.getTime() - previousStartDate.getTime() < 15 * 60 * 1000;
+    const count = windowActive && Number.isSafeInteger(rate.get('count')) ? Number(rate.get('count')) : 0;
+    if (count >= 5) throw new Error('Too many groups have been created recently. Please wait before trying again.');
+    tx.set(rateRef, {
+      windowStartedAt: windowActive ? previousStartDate : now,
+      count: count + 1,
+      updatedAt: now,
+    });
+  });
+
+  const chatId = randomUUID();
   const timestamp = now.toISOString();
   const ownerName = text(ownerSnapshot.get('name'), 120) || 'NEXORA member';
   const ownerUsername = text(ownerSnapshot.get('username'), 40);
