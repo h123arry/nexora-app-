@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarClock, Check, Clock3, Plus, PauseCircle, PlayCircle, Send } from 'lucide-react';
 import {
   listBusinessServices, publishBusinessServiceListing, setBusinessServiceListingStatus,
@@ -36,6 +36,7 @@ export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }
   const [requestedAt, setRequestedAt] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const bookingAttemptRef = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const refreshServices = async () => {
     setLoading(true);
@@ -84,9 +85,15 @@ export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }
   const submitBooking = async () => {
     setBusy(true); setError(''); setNotice('');
     try {
+      const fingerprint = JSON.stringify([selectedService, requestedAt, note]);
+      const attempt = bookingAttemptRef.current?.fingerprint === fingerprint
+        ? bookingAttemptRef.current
+        : { fingerprint, key: crypto.randomUUID() };
+      bookingAttemptRef.current = attempt;
       const result = await requestBusinessBooking({
-        pageId, serviceId: selectedService, requestedAt: new Date(requestedAt), note,
+        pageId, serviceId: selectedService, requestedAt: new Date(requestedAt), note, idempotencyKey: attempt.key,
       });
+      bookingAttemptRef.current = null;
       setNotice(result.created ? 'Your booking request was sent. The business must confirm it.' : 'Your booking request was already received.');
       setNote('');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Your booking request could not be sent.'); }

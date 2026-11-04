@@ -21,7 +21,7 @@ export async function createPageBookingRequest(
 ): Promise<{ bookingId: string; created: boolean }> {
   if (!customerUid || !validId(pageId) || !validId(serviceId)
     || typeof requestedAt !== 'string' || !Number.isFinite(Date.parse(requestedAt))
-    || Date.parse(requestedAt) <= Date.now()
+    || Date.parse(requestedAt) <= Date.now() || Date.parse(requestedAt) > Date.now() + 180 * 86400000
     || typeof note !== 'string' || note.trim().length > NOTE_LIMIT
     || typeof idempotencyKey !== 'string' || !KEY_PATTERN.test(idempotencyKey)) {
     throw new Error('Provide a valid service, future requested time, note and request key.');
@@ -31,10 +31,11 @@ export async function createPageBookingRequest(
   const serviceRef = pageRef.collection('services').doc(serviceId);
   const bookingId = createHash('sha256').update(customerUid + ':' + idempotencyKey).digest('hex');
   const bookingRef = db.collection('pageBookings').doc(bookingId);
+  const rateRef = db.collection('pageBookingRateLimits').doc(customerUid);
 
   return db.runTransaction(async tx => {
-    const [page, service, existing] = await Promise.all([
-      tx.get(pageRef), tx.get(serviceRef), tx.get(bookingRef),
+    const [page, service, existing, rate] = await Promise.all([
+      tx.get(pageRef), tx.get(serviceRef), tx.get(bookingRef), tx.get(rateRef),
     ]);
     if (existing.exists) {
       if (existing.get('customerId') !== customerUid || existing.get('pageId') !== pageId) {
@@ -42,6 +43,12 @@ export async function createPageBookingRequest(
       }
       return { bookingId, created: false };
     }
+    const now = new Date();
+    const rateData = rate.data() || {};
+    const windowStart = rateData.windowStartedAt?.toDate?.() || rateData.windowStartedAt;
+    const withinWindow = windowStart instanceof Date && now.getTime() - windowStart.getTime() < 3600000;
+    const requestCount = withinWindow ? Math.max(0, Number(rateData.requestCount) || 0) : 0;
+    if (requestCount >= 10) throw new Error('Too many booking requests. Try again later.');
     if (!page.exists || page.get('category') !== 'Business' || page.get('status') === 'suspended'
       || page.get('ownerId') === customerUid || !service.exists
       || service.get('status') !== 'active' || service.get('bookable') !== true) {
@@ -49,6 +56,7 @@ export async function createPageBookingRequest(
     }
     const serviceName = String(service.get('name') || '').trim();
     if (!serviceName || serviceName.length > 120) throw new Error('This business service is unavailable for booking.');
+    tx.set(rateRef, { windowStartedAt: withinWindow ? windowStart : now, requestCount: requestCount + 1, updatedAt: now });
     tx.create(bookingRef, {
       pageId, pageName: String(page.get('name') || 'Business'),
       serviceId, serviceName, customerId: customerUid,

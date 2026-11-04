@@ -26,6 +26,7 @@ export async function requestBusinessBooking(input: {
   serviceId: string;
   requestedAt: Date;
   note?: string;
+  idempotencyKey?: string;
 }): Promise<{ bookingId: string; created: boolean }> {
   if (!auth.currentUser) throw new Error('Sign in to request a booking.');
   if (!(input.requestedAt instanceof Date) || !Number.isFinite(input.requestedAt.getTime())) {
@@ -36,7 +37,7 @@ export async function requestBusinessBooking(input: {
     ...input,
     requestedAt: input.requestedAt.toISOString(),
     note: input.note || '',
-    idempotencyKey: crypto.randomUUID(),
+    idempotencyKey: input.idempotencyKey || crypto.randomUUID(),
   });
   return result.data as { bookingId: string; created: boolean };
 }

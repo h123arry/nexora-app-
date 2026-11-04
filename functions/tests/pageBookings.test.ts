@@ -47,6 +47,20 @@ describe('trusted business booking requests', () => {
     await assert.rejects(respondToPageBookingRequest(db, 'business-owner', created.bookingId, 'declined'), /already been resolved/);
   });
 
+  it('rate-limits repeated booking requests per customer', async () => {
+    for (let index = 0; index < 10; index += 1) {
+      await createPageBookingRequest(
+        db, 'customer-rate-test', 'booking-test-page', 'consultation',
+        new Date(Date.now() + (index + 1) * 86400000).toISOString(), '',
+        'rate-limit-key-' + String(index).padStart(4, '0'),
+      );
+    }
+    await assert.rejects(createPageBookingRequest(
+      db, 'customer-rate-test', 'booking-test-page', 'consultation',
+      new Date(Date.now() + 86400000).toISOString(), '', 'rate-limit-key-over',
+    ), /Too many booking requests/);
+  });
+
   it('rejects owners booking their own Page and unavailable services', async () => {
     await assert.rejects(createPageBookingRequest(
       db, 'business-owner', 'booking-test-page', 'consultation',

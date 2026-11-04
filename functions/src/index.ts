@@ -236,6 +236,7 @@ export const createBusinessBookingRequest = onCall({ maxInstances: 10 }, async (
     if (message.includes('Provide a valid')) throw new HttpsError('invalid-argument', message);
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     if (message.includes('request key')) throw new HttpsError('already-exists', message);
+    if (message.includes('Too many booking requests')) throw new HttpsError('resource-exhausted', message);
     throw new HttpsError('internal', 'Your booking request could not be created. Please retry.');
   }
 });
