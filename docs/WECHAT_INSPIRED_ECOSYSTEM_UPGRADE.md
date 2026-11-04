@@ -336,3 +336,5 @@ Additional in-place improvements:
 - **Circle manager invitations:** the invitation control is available to active owners, admins and moderators, matching the callable's server-side permission policy; owner-only role delegation remains unchanged.
 
 These are implementation slices, not a claim that all seven ecosystem upgrades are complete. Circle membership still has no enforced capacity limit, and page follower totals remain untracked. The next engineering step is to move every join/leave path behind trusted membership operations before introducing a configurable capacity, so clients cannot bypass it.
+
+- **Official Page audience metric:** the Page profile now requests its follower total from a trusted callable backed by Firestore aggregation, rather than displaying the previous hard-coded “Not tracked” label. The endpoint validates the Page ID, requires authentication, and confirms the Page exists before returning a count. This is a foundation for creator/organisation channel analytics, not yet a complete broadcast-channel product.
