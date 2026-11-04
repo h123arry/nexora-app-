@@ -304,6 +304,7 @@ export const publishPageChannelUpdate = onCall({ maxInstances: 10 }, async (requ
     const message = error instanceof Error ? error.message : '';
     if (message.includes('1 to 2,000')) throw new HttpsError('invalid-argument', message);
     if (message.includes('Only the owning')) throw new HttpsError('permission-denied', message);
+    if (message.includes('request key')) throw new HttpsError('already-exists', message);
     throw new HttpsError('internal', 'The Page channel update could not be published. Please retry.');
   }
 });
