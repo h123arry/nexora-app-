@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 import { motion } from 'motion/react';
 
 interface NexoraLoaderProps {
@@ -9,6 +9,7 @@ interface NexoraLoaderProps {
 }
 
 export default function NexoraLoader({ size = 'md', className = '', center = false, label }: NexoraLoaderProps) {
+  const gradientId = `nexora-loader-${useId().replace(/:/g, '')}`;
   const sizeMap = {
     xs: { box: 'w-4 h-4', stroke: 2, ring: 'w-4 h-4' },
     sm: { box: 'w-5 h-5', stroke: 2.2, ring: 'w-5 h-5' },
@@ -20,7 +21,7 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
   const { box, stroke } = sizeMap[size] || sizeMap.md;
 
   const content = (
-    <div className={`inline-flex flex-col items-center justify-center gap-2 ${className}`}>
+    <div role="status" aria-live="polite" aria-label={label || "Loading NEXORA"} className={`inline-flex flex-col items-center justify-center gap-2 ${className}`}>
       <div className={`relative flex items-center justify-center ${box}`}>
         {/* Outer glowing track ring */}
         <div className="absolute inset-0 rounded-full border border-white/10 shadow-[0_0_12px_rgba(139,92,246,0.15)]" />
@@ -33,9 +34,9 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
         >
           <svg className="w-full h-full overflow-visible" viewBox="0 0 32 32">
             <defs>
-              <linearGradient id="nexoraLoaderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#8b5cf6" stopOpacity="1" />
-                <stop offset="50%" stopColor="#ec4899" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#7138FF" stopOpacity="0.8" />
                 <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
               </linearGradient>
             </defs>
@@ -44,7 +45,7 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
               cy="16"
               r="13"
               fill="none"
-              stroke="url(#nexoraLoaderGrad)"
+              stroke={`url(#${gradientId})`}
               strokeWidth={stroke}
               strokeLinecap="round"
               strokeDasharray="50 25"

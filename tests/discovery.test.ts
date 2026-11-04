@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { rankPosts, recommendCreators, rankTrendingTopics, searchCreators, searchPosts } from '../src/services/discovery/discoveryService';
 import { Post, User } from '../src/types';
-import { rankReels } from '../src/services/reels/reelsRanking';
+import { rankReels, recordReelSignal } from '../src/services/reels/reelsRanking';
 
 const post = (overrides: Partial<Post>): Post => ({
   id: 'post', userId: 'creator', username: 'creator', name: 'Creator', avatar: '', isVerified: false,
@@ -178,6 +178,44 @@ describe('discovery service', () => {
     assert.deepEqual(topics.map(item => item.tag), ['ai']);
     assert.equal(topics[0].creatorCount, 2);
     assert.equal(topics[0].postCount, 2);
+  });
+
+  it('keeps reel feedback isolated between viewers on a shared device', () => {
+    const originalStorage = globalThis.localStorage;
+    const values = new Map<string, string>();
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (key: string) => values.get(key) ?? null,
+        setItem: (key: string, value: string) => values.set(key, String(value)),
+        removeItem: (key: string) => values.delete(key),
+      },
+    });
+    try {
+      const reel = post({ id: 'shared-reel', userId: 'creator', videoUrl: 'https://example.test/shared.mp4' });
+      recordReelSignal(reel.id, { notInterested: true }, 'viewer-a');
+      assert.equal(rankReels([reel], [], {}, { viewerId: 'viewer-a' }).length, 0);
+      assert.equal(rankReels([reel], [], {}, { viewerId: 'viewer-b' }).length, 1);
+    } finally {
+      if (originalStorage) {
+        Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: originalStorage });
+      } else {
+        Reflect.deleteProperty(globalThis, 'localStorage');
+      }
+    }
+  });
+
+  it('interleaves reel creators while retaining eligible videos', () => {
+    const now = Date.now();
+    const reels = [
+      post({ id: 'a-1', userId: 'creator-a', videoUrl: 'https://example.test/a1.mp4', timestamp: new Date(now).toISOString() }),
+      post({ id: 'a-2', userId: 'creator-a', videoUrl: 'https://example.test/a2.mp4', timestamp: new Date(now).toISOString() }),
+      post({ id: 'b-1', userId: 'creator-b', videoUrl: 'https://example.test/b1.mp4', timestamp: new Date(now).toISOString() }),
+    ];
+    const ranked = rankReels(reels, [], {}, { now });
+    assert.deepEqual(ranked.map(item => item.post.id), ['a-1', 'b-1', 'a-2']);
+    assert.equal(ranked.length, reels.length);
+    assert.ok(ranked.every(item => item.reasons.length > 0));
   });
 
   it('filters reels using privacy and topic controls and handles invalid timestamps deterministically', () => {

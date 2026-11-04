@@ -4,9 +4,20 @@ export interface RecommendationProfile {
   communities: Record<string, number>; // communityName -> weight
 }
 
+function getRecommendationStorageKey(): string {
+  try {
+    const rawUser = localStorage.getItem('nexora_user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    const ownerId = typeof user?.id === 'string' && user.id.trim() ? user.id.trim() : 'guest';
+    return `nexora_recommendation_profile_v3_${encodeURIComponent(ownerId)}`;
+  } catch {
+    return 'nexora_recommendation_profile_v3_guest';
+  }
+}
+
 export function getRecommendationProfile(): RecommendationProfile {
   try {
-    const saved = localStorage.getItem('nexora_recommendation_profile_v2');
+    const saved = localStorage.getItem(getRecommendationStorageKey());
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed && typeof parsed === 'object') {
@@ -33,7 +44,7 @@ export function saveRecommendationProfile(profile: RecommendationProfile) {
         .slice(-200)
         .map(([key, value]) => [key, Math.max(-100, Math.min(100, value))]),
     );
-    localStorage.setItem('nexora_recommendation_profile_v2', JSON.stringify({
+    localStorage.setItem(getRecommendationStorageKey(), JSON.stringify({
       tags: bounded(profile.tags),
       creators: bounded(profile.creators),
       communities: bounded(profile.communities),
@@ -44,7 +55,7 @@ export function saveRecommendationProfile(profile: RecommendationProfile) {
 }
 
 export function resetRecommendationProfile(): void {
-  localStorage.removeItem('nexora_recommendation_profile_v2');
+  localStorage.removeItem(getRecommendationStorageKey());
   window.dispatchEvent(new CustomEvent('nexora-recommendations-updated'));
 }
 
