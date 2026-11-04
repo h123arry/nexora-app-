@@ -75,17 +75,19 @@ export default function SavedView({
     setCollectionBusy(true);
     setCollectionMessage('');
     try {
-      const results: PromiseSettledResult<void>[] = [];
+      const results: PromiseSettledResult<boolean>[] = [];
       for (let index = 0; index < bookmarkedPosts.length; index += 10) {
         const batch = bookmarkedPosts.slice(index, index + 10);
         results.push(...await Promise.allSettled(batch.map(post =>
           addPostToSavedCollection(currentUser.id, selectedCollectionId, post.id)
         )));
       }
-      const added = results.filter(result => result.status === 'fulfilled').length;
-      const failed = results.length - added;
+      const added = results.filter(result => result.status === 'fulfilled' && result.value).length;
+      const failed = results.filter(result => result.status === 'rejected').length;
+      const skipped = results.length - added - failed;
       await refreshCollections();
-      setCollectionMessage(failed ? 'Added ' + added + ' items; ' + failed + ' could not be added.' : 'Added ' + added + ' saved posts to your collection.');
+      setCollectionPostIds(await listSavedCollectionPostIds(currentUser.id, selectedCollectionId));
+      setCollectionMessage('Added ' + added + ' items' + (skipped ? '; ' + skipped + ' already in this collection' : '') + (failed ? '; ' + failed + ' could not be added.' : '.'));
     } catch (error) {
       setCollectionMessage(error instanceof Error ? error.message : 'Could not update collection.');
     } finally { setCollectionBusy(false); }
