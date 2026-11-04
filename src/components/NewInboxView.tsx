@@ -13,6 +13,7 @@ import { watchInboxChats } from '../services/firebase/chatDirectoryService';
 import { createGroupChat } from '../services/firebase/groupChatService';
 import { auth } from '../services/firebase/config';
 import CreateGroupChatModal from './CreateGroupChatModal';
+import { getTranslations } from '../utils/translations';
 import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
 import { isSupportedOutgoingMediaType, serializeOutgoingMessage } from '../utils/messageSerialization';
 import { 
@@ -47,6 +48,7 @@ interface NewInboxViewProps {
   chats: Chat[];
   messages: { [chatId: string]: Message[] };
   creators?: User[];
+  locale?: string;
 }
 
 function readChatIdList(userId: string, key: string): string[] {
@@ -60,8 +62,10 @@ export default function NewInboxView({
   currentUser,
   chats: initialChats,
   messages: initialMessages,
-  creators = []
+  creators = [],
+  locale = 'en'
 }: NewInboxViewProps) {
+  const copy = getTranslations(locale);
   const [chats, setChats] = useState<Chat[]>(() => {
     const saved = localStorage.getItem(`nexora_chats_${currentUser.id}`);
     if (saved) {
@@ -535,23 +539,23 @@ export default function NewInboxView({
         <div className="nx-page-header p-4 border-b flex items-center justify-between backdrop-blur-md">
           <div className="flex items-center gap-2">
             <MessageSquare className="w-5 h-5 text-violet-400" />
-            <h1 className="text-base font-black tracking-tight text-white font-sans">Inbox</h1>
+            <h1 className="text-base font-black tracking-tight text-white font-sans">{copy.inboxTitle}</h1>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowCreateGroupModal(true)}
               disabled={!isServerBackedInbox}
               className="nx-icon-button inline-flex disabled:opacity-40"
-              title={isServerBackedInbox ? "Create group" : "Sign in to create a group"}
-              aria-label="Create a group conversation"
+              title={isServerBackedInbox ? copy.inboxCreateGroup : copy.navSignInToPersonalize}
+              aria-label={copy.inboxCreateGroup}
             >
               <Users className="w-4 h-4" />
             </button>
             <button
               onClick={() => setShowNewMessageModal(true)}
               className="nx-icon-button inline-flex bg-violet-600 text-white hover:bg-violet-500"
-              title="New Message"
-              aria-label="Start a new message"
+              title={copy.inboxNewMessage}
+              aria-label={copy.inboxNewMessage}
             >
               <Plus className="w-4 h-4" />
             </button>
@@ -566,21 +570,21 @@ export default function NewInboxView({
               aria-selected={inboxTab === 'chats'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'chats' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
-              Chats <span className="ml-1 opacity-75">{tabCounts.chats}</span>
+              {copy.inboxChats} <span className="ml-1 opacity-75">{tabCounts.chats}</span>
             </button>
             <button
               onClick={() => setInboxTab('requests')}
               aria-selected={inboxTab === 'requests'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'requests' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
-              Requests <span className="ml-1 opacity-75">{tabCounts.requests}</span>
+              {copy.inboxRequests} <span className="ml-1 opacity-75">{tabCounts.requests}</span>
             </button>
             <button
               onClick={() => setInboxTab('archived')}
               aria-selected={inboxTab === 'archived'}
               className={`min-h-11 flex-1 rounded-lg font-bold transition-all ${inboxTab === 'archived' ? 'bg-violet-600 text-white shadow-md' : 'text-zinc-400 hover:text-white'}`}
             >
-              Archived <span className="ml-1 opacity-75">{tabCounts.archived}</span>
+              {copy.inboxArchived} <span className="ml-1 opacity-75">{tabCounts.archived}</span>
             </button>
           </div>
 
@@ -590,7 +594,7 @@ export default function NewInboxView({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search conversations..."
+              placeholder={copy.inboxSearchPlaceholder}
               className="nx-field w-full pl-9 pr-4 py-2 text-xs font-sans"
             />
           </div>
@@ -603,16 +607,16 @@ export default function NewInboxView({
               <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-4 shadow-md">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <h3 className="text-sm font-bold text-white mb-1">{searchQuery ? 'No matching conversations' : inboxTab === 'requests' ? 'No message requests' : inboxTab === 'archived' ? 'No archived conversations' : 'No conversations yet'}</h3>
+              <h3 className="text-sm font-bold text-white mb-1">{searchQuery ? copy.inboxNoMatchingConversations : inboxTab === 'requests' ? copy.inboxNoMessageRequests : inboxTab === 'archived' ? copy.inboxNoArchivedConversations : copy.inboxNoConversations}</h3>
               <p className="text-xs text-zinc-400 max-w-xs mb-6 font-sans">
-                {searchQuery ? 'Try a different name or message.' : inboxTab === 'requests' ? 'New requests will appear here.' : inboxTab === 'archived' ? 'Conversations you archive will appear here.' : 'Choose a creator or contact to start a conversation.'}
+                {searchQuery ? copy.inboxTryDifferent : inboxTab === 'requests' ? copy.inboxNewRequestsHint : inboxTab === 'archived' ? copy.inboxArchivedHint : copy.inboxStartConversationHint}
               </p>
               {!searchQuery && inboxTab === 'chats' && <button
                 onClick={() => setShowNewMessageModal(true)}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                New Message
+                {copy.inboxStartNewMessage}
               </button>}
             </div>
           ) : (
@@ -696,7 +700,7 @@ export default function NewInboxView({
                   className="md:hidden p-2 bg-white/5 hover:bg-white/10 rounded-xl text-zinc-300 transition-all cursor-pointer"
                 >
                   <ArrowLeft className="w-4 h-4" />
-                  <span className="sr-only">Back to conversations</span>
+                  <span className="sr-only">{copy.inboxBack}</span>
                 </button>
 
                 <div className="relative shrink-0">
@@ -720,11 +724,11 @@ export default function NewInboxView({
                   </div>
                   <p className="text-[10px] text-zinc-400 font-mono">
                     {partnerTyping ? (
-                      <span className="text-violet-400 animate-pulse font-bold">typing...</span>
+                      <span className="text-violet-400 animate-pulse font-bold">{copy.inboxTyping}</span>
                     ) : activeChat.isPartnerOnline ? (
-                      'Active now'
+                      copy.inboxActiveNow
                     ) : (
-                      'Offline'
+                      copy.inboxOffline
                     )}
                   </p>
                 </div>
@@ -910,7 +914,7 @@ export default function NewInboxView({
               className="w-full max-w-md bg-[#0d0a1f] border border-white/10 rounded-2xl shadow-md overflow-hidden flex flex-col max-h-[85vh]"
             >
               <div className="p-4 border-b border-white/10 flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white font-sans">New Message</h3>
+                <h3 className="text-sm font-bold text-white font-sans">{copy.inboxNewMessage}</h3>
                 <button
                   onClick={() => setShowNewMessageModal(false)}
                   className="p-1.5 text-zinc-400 hover:text-white rounded-lg transition-all"
@@ -971,6 +975,7 @@ export default function NewInboxView({
 
       <CreateGroupChatModal
         isOpen={showCreateGroupModal && isServerBackedInbox}
+        locale={locale}
         currentUserId={currentUser.id}
         creators={creators}
         onClose={() => setShowCreateGroupModal(false)}
@@ -979,7 +984,7 @@ export default function NewInboxView({
           setShowCreateGroupModal(false);
           setInboxTab('chats');
           setActiveChatId(created.chatId);
-          window.dispatchEvent(new CustomEvent('toast', { detail: 'Group conversation created. Members have been notified.' }));
+          window.dispatchEvent(new CustomEvent('toast', { detail: copy.inboxGroupCreatedNotice }));
         }}
       />
 
