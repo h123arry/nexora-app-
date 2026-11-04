@@ -632,6 +632,15 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
     }
 
+
+    // Booking requests are private to the customer and owning business Page.
+    // All mutations go through trusted callables; clients cannot self-approve requests.
+    match /pageBookings/{bookingId} {
+      allow get, list: if signedIn()
+        && (resource.data.customerId == request.auth.uid || resource.data.ownerId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
     match /communities/{communityId} {
       // Private and invite-only records can include membership and moderation state.
       // Their detailed member authorization is not implemented, so only owners may read them.
