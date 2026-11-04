@@ -6,7 +6,13 @@ import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import MiniServicesHub from './MiniServicesHub';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
+
+function readExploreRecentSearches(userId: string): string[] {
+  if (!userId) return [];
+  try { const saved = localStorage.getItem('nexora_recent_searches_' + userId); const parsed = saved ? JSON.parse(saved) : []; return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, 8) : []; } catch { return []; }
+}
 
 interface ExploreViewProps {
   creators: User[];
@@ -59,16 +65,10 @@ export default function ExploreView({
     });
     return () => { cancelled = true; };
   }, [currentUserId]);
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('nexora_recent_searches');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => readExploreRecentSearches(currentUserId));
+  useEffect(() => { setRecentSearches(readExploreRecentSearches(currentUserId)); }, [currentUserId]);
 
-  // Debounce search input for performance
+    // Debounce search input for performance
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(localSearch);
@@ -83,7 +83,7 @@ export default function ExploreView({
     setRecentSearches(prev => {
       const updated = [trimmed, ...prev.filter(item => item !== trimmed)].slice(0, 8);
       try {
-        localStorage.setItem('nexora_recent_searches', JSON.stringify(updated));
+        localStorage.setItem('nexora_recent_searches_' + currentUserId, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -103,7 +103,7 @@ export default function ExploreView({
   const clearAllRecentSearches = () => {
     setRecentSearches([]);
     try {
-      localStorage.removeItem('nexora_recent_searches');
+      localStorage.removeItem('nexora_recent_searches_' + currentUserId);
     } catch {}
   };
 
@@ -203,6 +203,8 @@ export default function ExploreView({
           ))}
         </div>
       </div>
+
+      {!hasActiveSearch && <MiniServicesHub signedIn={Boolean(currentUserId)} onOpen={setActiveTab} />}
 
       {/* Recent Searches (shown when search is empty) */}
       {!hasActiveSearch && recentSearches.length > 0 && (
