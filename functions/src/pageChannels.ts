@@ -36,10 +36,12 @@ export async function publishPageChannelUpdate(
     for (const follower of followers.docs) {
       const recipientId = String(follower.get('followerId') || '');
       if (!recipientId || recipientId === ownerUid) continue;
-      batch.set(db.collection('activities').doc(`${recipientId}_page_${updateId}`), {
-        userId: recipientId, type: 'page_channel_update', actorId: ownerUid,
-        pageId, pageName: String(page.get('name') || 'NEXORA Page').slice(0, 120),
-        updateId, message: 'published a new official channel update', read: false, createdAt: now,
+      batch.set(db.collection('users').doc(recipientId).collection('notifications').doc(`page_${updateId}`), {
+        id: `page_${updateId}`, userId: recipientId, type: 'community',
+        username: String(page.get('username') || ''), avatar: String(page.get('avatar') || ''),
+        targetId: pageId, content: 'published a new official channel update',
+        timestamp: now.toISOString(), isRead: false, priority: 4,
+        category: 'communities', actorName: String(page.get('name') || 'NEXORA Page').slice(0, 120),
       });
     }
     await batch.commit();
