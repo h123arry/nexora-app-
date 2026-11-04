@@ -4,7 +4,9 @@ import {
   deleteDoc,
   getDoc,
   getDocs,
+  getCountFromServer,
   limit,
+  startAfter,
   onSnapshot,
   orderBy,
   query,
@@ -12,6 +14,7 @@ import {
   setDoc,
   where,
   writeBatch,
+  type QueryDocumentSnapshot,
 } from 'firebase/firestore';
 import { db, functions } from '../../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
@@ -137,14 +140,26 @@ export const CommunityService = {
 
 
 
-  async listActiveMembers(communityId: string): Promise<Array<{ userId: string; name: string; username: string; avatar: string; role: string }>> {
+  async listActiveMembersPage(
+    communityId: string,
+    pageSize = 40,
+    cursor?: QueryDocumentSnapshot,
+  ): Promise<{
+    members: Array<{ userId: string; name: string; username: string; avatar: string; role: string }>;
+    nextCursor?: QueryDocumentSnapshot;
+  }> {
     if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
-    const members = await getDocs(query(
-      collection(db, 'communities', communityId, 'members'),
+    const pageLimit = Math.max(1, Math.min(100, Math.floor(pageSize)));
+    const constraints = [
       where('status', '==', 'active'),
-      limit(100),
-    ));
-    return Promise.all(members.docs.map(async member => {
+      orderBy('joinedAt', 'desc'),
+      ...(cursor ? [startAfter(cursor)] : []),
+      limit(pageLimit + 1),
+    ];
+    const snapshot = await getDocs(query(collection(db, 'communities', communityId, 'members'), ...constraints));
+    const page = snapshot.docs.slice(0, pageLimit);
+    const nextCursor = snapshot.docs.length > pageLimit ? page[page.length - 1] : undefined;
+    const members = await Promise.all(page.map(async member => {
       const profile = await getDoc(doc(db, 'publicProfiles', member.id));
       const data = profile.exists() ? profile.data() : {};
       return {
@@ -155,6 +170,22 @@ export const CommunityService = {
         role: String(member.data().role || 'member'),
       };
     }));
+    return { members, nextCursor };
+  },
+
+  async getActiveMemberCount(communityId: string): Promise<number> {
+    if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
+    const membersQuery = query(
+      collection(db, 'communities', communityId, 'members'),
+      where('status', '==', 'active'),
+    );
+    const result = await getCountFromServer(membersQuery);
+    return result.data().count;
+  },
+
+  async listActiveMembers(communityId: string) {
+    const page = await this.listActiveMembersPage(communityId, 100);
+    return page.members;
   },
 
   watchMessages(
