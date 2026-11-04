@@ -9,6 +9,7 @@ import {
 import { User, Chat, Message, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
 import { setInboxChatPreference, watchInboxPreferences } from '../services/firebase/inboxPreferencesService';
+import { watchInboxChats } from '../services/firebase/chatDirectoryService';
 import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
 import { isSupportedOutgoingMediaType, serializeOutgoingMessage } from '../utils/messageSerialization';
 import { 
@@ -156,6 +157,16 @@ export default function NewInboxView({
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [localMessages, activeChatId]);
+
+  // The conversation list is account-scoped server data, not a device-local cache.
+  // This keeps new conversations and updated previews in sync across signed-in devices.
+  useEffect(() => {
+    return watchInboxChats(currentUser.id, creators, serverChats => {
+      setChats(serverChats);
+    }, error => {
+      console.warn('[NEXORA inbox] Server conversation list unavailable:', error.message);
+    });
+  }, [currentUser.id, creators]);
 
   // Firestore real-time listener
   useEffect(() => {
