@@ -24,7 +24,18 @@ before(async () => {
 after(async () => {
   await db.recursiveDelete(page);
   const bookings = await db.collection('pageBookings').where('pageId', '==', 'booking-test-page').get();
-  await Promise.all(bookings.docs.map(item => item.ref.delete()));
+  await Promise.all(bookings.docs.map(async item => {
+    const booking = item.data();
+    const ownerId = String(booking.ownerId || '');
+    const customerId = String(booking.customerId || '');
+    await Promise.all([
+      db.collection('users').doc(ownerId).collection('notifications').doc('booking_request_' + item.id).delete(),
+      db.collection('users').doc(customerId).collection('notifications').doc('booking_response_' + item.id + '_accepted').delete(),
+      db.collection('users').doc(customerId).collection('notifications').doc('booking_response_' + item.id + '_declined').delete(),
+      item.ref.delete(),
+    ]);
+  }));
+  await Promise.all(['customer-1', 'customer-2', 'customer-3', 'customer-rate-test', 'customer-service-scope'].map(id => db.collection('pageBookingRateLimits').doc(id).delete()));
   await deleteApp(app);
 });
 
@@ -38,6 +49,10 @@ describe('trusted business booking requests', () => {
     const booking = await db.collection('pageBookings').doc(first.bookingId).get();
     assert.equal(booking.get('status'), 'pending');
     assert.equal(booking.get('ownerId'), 'business-owner');
+    const ownerNotification = await db.collection('users').doc('business-owner').collection('notifications').doc('booking_request_' + first.bookingId).get();
+    assert.equal(ownerNotification.exists, true);
+    assert.equal(ownerNotification.get('targetId'), first.bookingId);
+    assert.equal(ownerNotification.get('isRead'), false);
   });
 
   it('scopes idempotency keys to the selected service', async () => {
@@ -61,6 +76,12 @@ describe('trusted business booking requests', () => {
     );
     await assert.rejects(respondToPageBookingRequest(db, 'intruder', created.bookingId, 'accepted'), /Only the business Page owner/);
     assert.deepEqual(await respondToPageBookingRequest(db, 'business-owner', created.bookingId, 'accepted'), { status: 'accepted' });
+    const customerNotificationRef = db.collection('users').doc('customer-2').collection('notifications').doc('booking_response_' + created.bookingId + '_accepted');
+    const customerNotification = await customerNotificationRef.get();
+    assert.equal(customerNotification.exists, true);
+    assert.match(customerNotification.get('content'), /accepted your booking request/);
+    assert.deepEqual(await respondToPageBookingRequest(db, 'business-owner', created.bookingId, 'accepted'), { status: 'accepted' });
+    assert.equal((await customerNotificationRef.get()).exists, true);
     await assert.rejects(respondToPageBookingRequest(db, 'business-owner', created.bookingId, 'declined'), /already been resolved/);
   });
 
