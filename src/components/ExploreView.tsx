@@ -309,8 +309,8 @@ export default function ExploreView({
             <div role="status" className="p-8 rounded-3xl nx-surface text-center text-xs text-zinc-400">Searching public people, Pages and Circles…</div>
           ) : visibleResultCount === 0 && searchFilterType === 'communities' ? (
             <div className="p-6 rounded-3xl nx-surface text-center space-y-3 my-8">
-              <h3 className="text-sm font-bold text-white">Community discovery lives in the Communities hub</h3>
-              <p className="text-xs text-zinc-400 max-w-sm mx-auto font-sans">Explore uses no separate cached community results. Open the hub to search its current community directory.</p>
+              <h3 className="text-sm font-bold text-white">{directoryError ? 'Directory search is unavailable' : 'No public Pages or Circles found'}</h3>
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto font-sans">{directoryError || 'Try another search term, or open the Communities hub to browse available groups.'}</p>
               <button type="button" onClick={() => setActiveTab('communities')} className="px-4 py-2 rounded-xl bg-violet-600/15 hover:bg-violet-600 border border-violet-400/30 text-violet-200 hover:text-white text-[10px] font-mono font-bold uppercase">Open Communities</button>
             </div>
           ) : visibleResultCount === 0 ? (
@@ -327,9 +327,9 @@ export default function ExploreView({
             <div className="space-y-8">
               
               {/* Users Section */}
-              {(searchFilterType === 'all' || searchFilterType === 'users') && filteredCreators.length > 0 && (
+              {(searchFilterType === 'all' || searchFilterType === 'users') && searchPeople.length > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Users ({filteredCreators.length})</h3>
+                  <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Users ({searchPeople.length})</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {searchPeople.map(user => (
                       <div
