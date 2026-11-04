@@ -87,6 +87,8 @@ export default function NewInboxView({
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const creatorsRef = useRef(creators);
+  useEffect(() => { creatorsRef.current = creators; }, [creators]);
 
   // Interactive chat features
   const [showAttachmentMenu, setShowAttachmentMenu] = useState(false);
@@ -161,12 +163,12 @@ export default function NewInboxView({
   // The conversation list is account-scoped server data, not a device-local cache.
   // This keeps new conversations and updated previews in sync across signed-in devices.
   useEffect(() => {
-    return watchInboxChats(currentUser.id, creators, serverChats => {
+    return watchInboxChats(currentUser.id, creatorsRef.current, serverChats => {
       setChats(serverChats);
     }, error => {
       console.warn('[NEXORA inbox] Server conversation list unavailable:', error.message);
     });
-  }, [currentUser.id, creators]);
+  }, [currentUser.id]);
 
   // Firestore real-time listener
   useEffect(() => {
