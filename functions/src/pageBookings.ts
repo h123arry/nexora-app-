@@ -29,7 +29,9 @@ export async function createPageBookingRequest(
 
   const pageRef = db.collection('pages').doc(pageId);
   const serviceRef = pageRef.collection('services').doc(serviceId);
-  const bookingId = createHash('sha256').update(customerUid + ':' + idempotencyKey).digest('hex');
+  // Scope retries to the customer, Page and service. Reusing a key for a different
+  // service must never silently return an unrelated booking request.
+  const bookingId = createHash('sha256').update(customerUid + ':' + pageId + ':' + serviceId + ':' + idempotencyKey).digest('hex');
   const bookingRef = db.collection('pageBookings').doc(bookingId);
   const rateRef = db.collection('pageBookingRateLimits').doc(customerUid);
 
@@ -38,7 +40,7 @@ export async function createPageBookingRequest(
       tx.get(pageRef), tx.get(serviceRef), tx.get(bookingRef), tx.get(rateRef),
     ]);
     if (existing.exists) {
-      if (existing.get('customerId') !== customerUid || existing.get('pageId') !== pageId) {
+      if (existing.get('customerId') !== customerUid || existing.get('pageId') !== pageId || existing.get('serviceId') !== serviceId) {
         throw new Error('This request key has already been used.');
       }
       return { bookingId, created: false };

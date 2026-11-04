@@ -2123,6 +2123,7 @@ export default function App() {
               setSearchQuery={setSearchQuery}
               isLoggedIn={isLoggedIn}
               onOpenAuth={() => setShowAuthModal(true)}
+              locale={resolveLocale(currentUser.preferredLanguage)}
             />
           </div>
 
@@ -2200,6 +2201,11 @@ export default function App() {
                       onViewProfile={handleViewProfile}
                       interestDNA={currentUser.interestDNA}
                       currentUserId={isLoggedIn && firebaseUser?.uid === currentUser.id ? firebaseUser.uid : ''}
+                      onOpenVohAi={() => {
+                        setMatrixSubTabRedirect('ai');
+                        navigateTo('matrix');
+                      }}
+                      locale={resolveLocale(currentUser.preferredLanguage)}
                     />
                   )}
 

@@ -4,6 +4,7 @@ import { User, ThemeMood } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import NexoraPremiumLogo from './NexoraPremiumLogo';
 import NexoraBranding from './NexoraBranding';
+import { getTranslations } from '../utils/translations';
 
 interface SidebarProps {
   currentUser: User;
@@ -20,6 +21,7 @@ interface SidebarProps {
   setSearchQuery: (query: string) => void;
   isLoggedIn?: boolean;
   onOpenAuth?: () => void;
+  locale?: string;
 }
 
 export default function Sidebar({
@@ -31,15 +33,17 @@ export default function Sidebar({
   onOpenCreatePost,
   onNavigate,
   isLoggedIn = true,
-  onOpenAuth
+  onOpenAuth,
+  locale = 'en'
 }: SidebarProps) {
+  const copy = getTranslations(locale);
   const destinations = [
-    { id: 'feed', label: 'Home', hint: 'Your daily signal', icon: Home },
-    { id: 'explore', label: 'Explore', hint: 'Find your people', icon: Compass },
-    { id: 'communities', label: 'Communities', hint: 'Shared interests', icon: Users },
-    { id: 'inbox', label: 'Messages', hint: 'Private conversations', icon: MessageSquare, count: unreadMessagesCount },
-    { id: 'activity', label: 'Activity', hint: 'Stay in the loop', icon: Bell, count: unreadNotificationsCount },
-    { id: 'profile', label: 'Profile', hint: 'Your space', icon: UserIcon }
+    { id: 'feed', label: copy.navHome, hint: copy.navDailySignal, icon: Home },
+    { id: 'explore', label: copy.navExplore, hint: copy.navFindPeople, icon: Compass },
+    { id: 'communities', label: copy.navCommunities, hint: copy.navSharedInterests, icon: Users },
+    { id: 'inbox', label: copy.navMessages, hint: copy.navPrivateConversations, icon: MessageSquare, count: unreadMessagesCount },
+    { id: 'activity', label: copy.navActivity, hint: copy.navStayInLoop, icon: Bell, count: unreadNotificationsCount },
+    { id: 'profile', label: copy.navProfile, hint: copy.navYourSpace, icon: UserIcon }
   ];
 
   return (
@@ -66,20 +70,20 @@ export default function Sidebar({
             </div>
             <p className="mt-0.5 truncate text-[10px] font-medium tracking-wide text-slate-400">@{currentUser.username}</p>
           </div>
-          <button className="nx-icon-button !min-h-8 !min-w-8 !rounded-xl" aria-label="Profile settings" onClick={() => { if (onNavigate) onNavigate('settings'); else setActiveTab('settings'); }}>
+          <button className="nx-icon-button !min-h-8 !min-w-8 !rounded-xl" aria-label={copy.navProfileSettings} onClick={() => { if (onNavigate) onNavigate('settings'); else setActiveTab('settings'); }}>
             <Settings2 className="h-3.5 w-3.5" />
           </button>
         </div>
         {!isLoggedIn && (
           <div className="mt-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3 text-center">
-            <p className="mb-2 text-[10px] font-semibold leading-relaxed text-violet-100">Visitor preview. Sample content may appear; sign in for real account actions.</p>
-            <button onClick={onOpenAuth} className="nx-btn-primary min-h-9 w-full px-3 text-[10px]">Sign in to personalize</button>
+            <p className="mb-2 text-[10px] font-semibold leading-relaxed text-violet-100">{copy.navVisitorPreview}</p>
+            <button onClick={onOpenAuth} className="nx-btn-primary min-h-9 w-full px-3 text-[10px]">{copy.navSignInToPersonalize}</button>
           </div>
         )}
       </div>
 
-      <div className="mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Navigate</div>
-      <nav className="space-y-1.5" aria-label="Primary navigation">
+      <div className="mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{copy.navNavigate}</div>
+      <nav className="space-y-1.5" aria-label={copy.navPrimaryNavigation}>
         {destinations.map(({ id, label, hint, icon: Icon, count }) => {
           const isActive = activeTab === id;
           return (
@@ -115,19 +119,19 @@ export default function Sidebar({
       </nav>
 
       <div className="my-6 h-px bg-white/[0.08]" />
-      <div className="mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">Create & discover</div>
+      <div className="mb-3 px-2 text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">{copy.navCreateDiscover}</div>
       <div className="space-y-1.5">
         <button onClick={onOpenCreatePost} className="nx-create-action group flex w-full items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-3 py-3 text-left transition-all hover:border-violet-300/40 hover:bg-violet-500/15">
           <span className="nx-create-action-icon flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-violet-500 to-indigo-700 text-white shadow-[0_8px_20px_rgba(139,92,246,0.28)]"><PlusCircle className="h-[18px] w-[18px]" /></span>
-          <span><span className="block text-sm font-bold text-white">Create</span><span className="block text-[10px] text-violet-200/70">Share a moment</span></span>
+          <span><span className="block text-sm font-bold text-white">{copy.navCreate}</span><span className="block text-[10px] text-violet-200/70">{copy.navShareMoment}</span></span>
         </button>
         <button onClick={() => setActiveTab('creator')} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-200"><BarChart2 className="h-[18px] w-[18px]" /></span>
-          <span><span className="block text-sm font-semibold text-slate-300 group-hover:text-white">Creator Studio</span><span className="block text-[10px] text-slate-500">Grow your signal</span></span>
+          <span><span className="block text-sm font-semibold text-slate-300 group-hover:text-white">{copy.navCreatorStudio}</span><span className="block text-[10px] text-slate-500">{copy.navGrowSignal}</span></span>
         </button>
         <button onClick={() => window.dispatchEvent(new CustomEvent('open-system-hub'))} className="group flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-3 text-left transition-all hover:border-white/10 hover:bg-white/[0.04]">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-200"><Sparkles className="h-[18px] w-[18px]" /></span>
-          <span><span className="block text-sm font-semibold text-slate-300 group-hover:text-white">System Hub</span><span className="block text-[10px] text-slate-500">Settings & accessibility</span></span>
+          <span><span className="block text-sm font-semibold text-slate-300 group-hover:text-white">{copy.navSystemHub}</span><span className="block text-[10px] text-slate-500">{copy.navSettingsAccessibility}</span></span>
         </button>
       </div>
 
@@ -136,7 +140,7 @@ export default function Sidebar({
           <div className="flex items-center gap-2"><NexoraPremiumLogo className="h-7 w-7" /><span className="text-xs font-bold text-slate-200">Nexora Network</span></div>
           <p className="mt-2 text-[10px] leading-relaxed text-slate-500">A more intentional place to connect, create, and belong.</p>
         </div>
-        <p className="mt-4 px-2 text-center text-[9px] font-medium uppercase tracking-[0.18em] text-slate-600">Private by design · Premium by default</p>
+        <p className="mt-4 px-2 text-center text-[9px] font-medium uppercase tracking-[0.18em] text-slate-600">{copy.navPrivateByDesign} · {copy.navPremiumByDefault}</p>
       </div>
     </aside>
   );

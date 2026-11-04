@@ -23,7 +23,7 @@ const SERVICE_ROUTES: Record<NexoraMiniServiceId, string> = {
   'business-services': 'communities',
   'saved-library': 'saved',
   messaging: 'inbox',
-  'voh-workspace': 'voh',
+  'voh-workspace': 'matrix',
   events: 'matrix',
 };
 
@@ -41,9 +41,10 @@ const SERVICES: Array<{ id: NexoraMiniServiceId; title: string; description: str
 interface Props {
   onOpen: (tab: string) => void;
   signedIn: boolean;
+  onOpenVohAi: () => void;
 }
 
-export default function MiniServicesHub({ onOpen, signedIn }: Props) {
+export default function MiniServicesHub({ onOpen, signedIn, onOpenVohAi }: Props) {
   return <section className="space-y-3" aria-labelledby="mini-services-title">
     <div className="flex items-end justify-between gap-3 px-1">
       <div><p className="text-[10px] font-mono uppercase tracking-[0.2em] text-violet-400">NEXORA ecosystem</p><h2 id="mini-services-title" className="text-lg font-bold text-white">Mini Services</h2><p className="text-xs text-slate-400">Connected tools, one account, consistent permissions.</p></div>
@@ -52,9 +53,9 @@ export default function MiniServicesHub({ onOpen, signedIn }: Props) {
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
       {SERVICES.map(service => {
         const Icon = ICONS[service.id];
-        return <button key={service.id} type="button" disabled={!signedIn} onClick={() => onOpen(SERVICE_ROUTES[service.id])}
+        return <button key={service.id} type="button" disabled={!signedIn} onClick={() => service.id === 'voh-workspace' ? onOpenVohAi() : onOpen(SERVICE_ROUTES[service.id])}
           className="group min-h-32 rounded-2xl border border-violet-400/15 bg-[#0b1020] p-3 text-left transition-colors hover:border-violet-400/40 hover:bg-violet-500/[0.06] disabled:cursor-not-allowed disabled:opacity-50">
-          <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Icon className="h-4 w-4" /></span>
+          <span className="mb-3 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Icon className="h-4 w-4" aria-hidden="true" /></span>
           <span className="block text-[9px] font-mono uppercase tracking-wider text-violet-300/70">{service.category}</span>
           <span className="mt-1 block text-sm font-bold text-white">{service.title}</span>
           <span className="mt-1 block text-[10px] leading-relaxed text-slate-400">{service.description}</span>

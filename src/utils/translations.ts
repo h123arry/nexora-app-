@@ -38,6 +38,37 @@ export interface TranslationSet {
   deviceVerificationLabel: string;
   getAccessKey: string;
   successMessage: string;
+  navHome: string;
+  navExplore: string;
+  navCommunities: string;
+  navMessages: string;
+  navActivity: string;
+  navProfile: string;
+  navNavigate: string;
+  navCreateDiscover: string;
+  navCreate: string;
+  navShareMoment: string;
+  navCreatorStudio: string;
+  navGrowSignal: string;
+  navSystemHub: string;
+  navSettingsAccessibility: string;
+  navProfileSettings: string;
+  navVisitorPreview: string;
+  navSignInToPersonalize: string;
+  navPrimaryNavigation: string;
+  navPrivateByDesign: string;
+  navPremiumByDefault: string;
+  navDailySignal: string;
+  navFindPeople: string;
+  navSharedInterests: string;
+  navPrivateConversations: string;
+  navStayInLoop: string;
+  navYourSpace: string;
+  filterAll: string;
+  filterUsers: string;
+  filterPosts: string;
+  filterVideos: string;
+  filterCommunities: string;
 }
 
 export const TRANSLATIONS: Record<Locale, TranslationSet> = {
@@ -78,7 +109,38 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     recoveryPhoneLabel: "Enter phone number (SMS token)",
     deviceVerificationLabel: "Verify via logged device fingerprint",
     getAccessKey: "Recover Access Key",
-    successMessage: "Operation verified and logged successfully"
+    successMessage: "Operation verified and logged successfully",
+    navHome: "Home",
+    navExplore: "Explore",
+    navCommunities: "Communities",
+    navMessages: "Messages",
+    navActivity: "Activity",
+    navProfile: "Profile",
+    navNavigate: "Navigate",
+    navCreateDiscover: "Create & discover",
+    navCreate: "Create",
+    navShareMoment: "Share a moment",
+    navCreatorStudio: "Creator Studio",
+    navGrowSignal: "Grow your signal",
+    navSystemHub: "System Hub",
+    navSettingsAccessibility: "Settings & accessibility",
+    navProfileSettings: "Profile settings",
+    navVisitorPreview: "Visitor preview. Sample content may appear; sign in for real account actions.",
+    navSignInToPersonalize: "Sign in to personalize",
+    navPrimaryNavigation: "Primary navigation",
+    navPrivateByDesign: "Private by design",
+    navPremiumByDefault: "Premium by default",
+    navDailySignal: "Your daily signal",
+    navFindPeople: "Find your people",
+    navSharedInterests: "Shared interests",
+    navPrivateConversations: "Private conversations",
+    navStayInLoop: "Stay in the loop",
+    navYourSpace: "Your space",
+    filterAll: "All Results",
+    filterUsers: "Users",
+    filterPosts: "Posts",
+    filterVideos: "Videos",
+    filterCommunities: "Communities"
   },
   fr: {
     brandDescription: "Découvrez des gens. Créez des communautés. Façonnez l'avenir.",
@@ -117,7 +179,38 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     recoveryPhoneLabel: "Entrez le numéro de téléphone (code SMS)",
     deviceVerificationLabel: "Vérifier via l'empreinte de l'appareil",
     getAccessKey: "Récupérer la clé d'accès",
-    successMessage: "Opération vérifiée et enregistrée avec succès"
+    successMessage: "Opération vérifiée et enregistrée avec succès",
+    navHome: "Accueil",
+    navExplore: "Explorer",
+    navCommunities: "Communautés",
+    navMessages: "Messages",
+    navActivity: "Activité",
+    navProfile: "Profil",
+    navNavigate: "Navigation",
+    navCreateDiscover: "Créer et découvrir",
+    navCreate: "Créer",
+    navShareMoment: "Partager un moment",
+    navCreatorStudio: "Studio créateur",
+    navGrowSignal: "Développez votre audience",
+    navSystemHub: "Centre système",
+    navSettingsAccessibility: "Paramètres et accessibilité",
+    navProfileSettings: "Paramètres du profil",
+    navVisitorPreview: "Aperçu visiteur. Du contenu d’exemple peut apparaître ; connectez-vous pour les actions du compte.",
+    navSignInToPersonalize: "Se connecter pour personnaliser",
+    navPrimaryNavigation: "Navigation principale",
+    navPrivateByDesign: "Conçu pour la confidentialité",
+    navPremiumByDefault: "Premium par défaut",
+    navDailySignal: "Votre signal quotidien",
+    navFindPeople: "Trouvez votre communauté",
+    navSharedInterests: "Intérêts partagés",
+    navPrivateConversations: "Conversations privées",
+    navStayInLoop: "Restez informé",
+    navYourSpace: "Votre espace",
+    filterAll: "Tous les résultats",
+    filterUsers: "Personnes",
+    filterPosts: "Publications",
+    filterVideos: "Vidéos",
+    filterCommunities: "Communautés"
   },
   ar: {
     brandDescription: "اكتشف الأشخاص. ابنِ المجتمعات. شكّل ملامح ما يحدث.",
@@ -156,7 +249,38 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     recoveryPhoneLabel: "أدخل رقم الهاتف للتحقق عبر رمز SMS",
     deviceVerificationLabel: "التحقق من بصمة الجهاز النشط",
     getAccessKey: "استعادة مفتاح الدخول",
-    successMessage: "تم التحقق من العملية وتسجيلها بنجاح"
+    successMessage: "تم التحقق من العملية وتسجيلها بنجاح",
+    navHome: "الرئيسية",
+    navExplore: "استكشف",
+    navCommunities: "المجتمعات",
+    navMessages: "الرسائل",
+    navActivity: "النشاط",
+    navProfile: "الملف الشخصي",
+    navNavigate: "التنقل",
+    navCreateDiscover: "أنشئ واكتشف",
+    navCreate: "إنشاء",
+    navShareMoment: "شارك لحظة",
+    navCreatorStudio: "استوديو المنشئين",
+    navGrowSignal: "وسّع حضورك",
+    navSystemHub: "مركز النظام",
+    navSettingsAccessibility: "الإعدادات وإمكانية الوصول",
+    navProfileSettings: "إعدادات الملف الشخصي",
+    navVisitorPreview: "معاينة الزائر. قد يظهر محتوى تجريبي؛ سجّل الدخول لاستخدام ميزات الحساب.",
+    navSignInToPersonalize: "سجّل الدخول للتخصيص",
+    navPrimaryNavigation: "التنقل الرئيسي",
+    navPrivateByDesign: "الخصوصية في التصميم",
+    navPremiumByDefault: "مميز افتراضياً",
+    navDailySignal: "إشارتك اليومية",
+    navFindPeople: "اعثر على مجتمعك",
+    navSharedInterests: "اهتمامات مشتركة",
+    navPrivateConversations: "محادثات خاصة",
+    navStayInLoop: "ابقَ على اطلاع",
+    navYourSpace: "مساحتك",
+    filterAll: "كل النتائج",
+    filterUsers: "الأشخاص",
+    filterPosts: "المنشورات",
+    filterVideos: "الفيديوهات",
+    filterCommunities: "المجتمعات"
   },
   pt: {
     brandDescription: "Descubra pessoas. Construa comunidades. Moldar o que acontece.",
@@ -195,7 +319,38 @@ export const TRANSLATIONS: Record<Locale, TranslationSet> = {
     recoveryPhoneLabel: "Insira seu telefone (Token SMS)",
     deviceVerificationLabel: "Verificar via celular confiável",
     getAccessKey: "Recuperar Chave de Acesso",
-    successMessage: "Operação verificada e registrada com sucesso"
+    successMessage: "Operação verificada e registrada com sucesso",
+    navHome: "Início",
+    navExplore: "Explorar",
+    navCommunities: "Comunidades",
+    navMessages: "Mensagens",
+    navActivity: "Atividade",
+    navProfile: "Perfil",
+    navNavigate: "Navegar",
+    navCreateDiscover: "Criar e descobrir",
+    navCreate: "Criar",
+    navShareMoment: "Compartilhe um momento",
+    navCreatorStudio: "Estúdio do Criador",
+    navGrowSignal: "Amplie sua presença",
+    navSystemHub: "Central do Sistema",
+    navSettingsAccessibility: "Configurações e acessibilidade",
+    navProfileSettings: "Configurações do perfil",
+    navVisitorPreview: "Prévia de visitante. Conteúdo de exemplo pode aparecer; entre para usar ações da conta.",
+    navSignInToPersonalize: "Entre para personalizar",
+    navPrimaryNavigation: "Navegação principal",
+    navPrivateByDesign: "Privacidade por princípio",
+    navPremiumByDefault: "Premium por padrão",
+    navDailySignal: "Seu sinal diário",
+    navFindPeople: "Encontre sua comunidade",
+    navSharedInterests: "Interesses em comum",
+    navPrivateConversations: "Conversas privadas",
+    navStayInLoop: "Fique por dentro",
+    navYourSpace: "Seu espaço",
+    filterAll: "Todos os resultados",
+    filterUsers: "Pessoas",
+    filterPosts: "Publicações",
+    filterVideos: "Vídeos",
+    filterCommunities: "Comunidades"
   }
 };
 
@@ -211,4 +366,9 @@ export function resolveLocale(value?: string | null): Locale {
 /** Arabic uses right-to-left text direction; supported Latin locales remain LTR. */
 export function getLocaleDirection(value?: string | null): 'rtl' | 'ltr' {
   return resolveLocale(value) === 'ar' ? 'rtl' : 'ltr';
+}
+
+/** Return the complete dictionary for a stored language preference. */
+export function getTranslations(value?: string | null): TranslationSet {
+  return TRANSLATIONS[resolveLocale(value)];
 }

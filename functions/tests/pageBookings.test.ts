@@ -16,6 +16,9 @@ before(async () => {
   await page.collection('services').doc('consultation').set({
     name: 'Consultation', status: 'active', bookable: true,
   });
+  await page.collection('services').doc('follow-up').set({
+    name: 'Follow-up', status: 'active', bookable: true,
+  });
 });
 
 after(async () => {
@@ -35,6 +38,20 @@ describe('trusted business booking requests', () => {
     const booking = await db.collection('pageBookings').doc(first.bookingId).get();
     assert.equal(booking.get('status'), 'pending');
     assert.equal(booking.get('ownerId'), 'business-owner');
+  });
+
+  it('scopes idempotency keys to the selected service', async () => {
+    const key = 'same-service-key-0001';
+    const requestedAt = new Date(Date.now() + 259200000).toISOString();
+    const first = await createPageBookingRequest(
+      db, 'customer-service-scope', 'booking-test-page', 'consultation', requestedAt, '', key,
+    );
+    const second = await createPageBookingRequest(
+      db, 'customer-service-scope', 'booking-test-page', 'follow-up', requestedAt, '', key,
+    );
+    assert.notEqual(first.bookingId, second.bookingId);
+    assert.equal(second.created, true);
+    assert.equal((await db.collection('pageBookings').doc(second.bookingId).get()).get('serviceId'), 'follow-up');
   });
 
   it('allows only the Page owner to resolve a pending request', async () => {
