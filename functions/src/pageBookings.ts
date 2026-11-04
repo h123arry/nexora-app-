@@ -43,6 +43,18 @@ export async function createPageBookingRequest(
       if (existing.get('customerId') !== customerUid || existing.get('pageId') !== pageId || existing.get('serviceId') !== serviceId) {
         throw new Error('This request key has already been used.');
       }
+      const existingOwnerId = String(existing.get('ownerId') || '');
+      const notificationRef = db.collection('users').doc(existingOwnerId).collection('notifications').doc('booking_request_' + bookingId);
+      const notification = await tx.get(notificationRef);
+      if (!notification.exists) {
+        tx.create(notificationRef, {
+          id: 'booking_request_' + bookingId, userId: existingOwnerId,
+          type: 'community', category: 'communities', targetId: bookingId,
+          content: 'received a booking request for ' + String(existing.get('serviceName') || 'a service'),
+          actorName: 'NEXORA customer', username: '', avatar: '',
+          timestamp: new Date().toISOString(), isRead: false, priority: 4,
+        });
+      }
       return { bookingId, created: false };
     }
     const now = new Date();
@@ -52,19 +64,33 @@ export async function createPageBookingRequest(
     const requestCount = withinWindow ? Math.max(0, Number(rateData.requestCount) || 0) : 0;
     if (requestCount >= 10) throw new Error('Too many booking requests. Try again later.');
     if (!page.exists || page.get('category') !== 'Business' || page.get('status') === 'suspended'
-      || page.get('ownerId') === customerUid || !service.exists
+      || !page.get('ownerId') || page.get('ownerId') === customerUid || !service.exists
       || service.get('status') !== 'active' || service.get('bookable') !== true) {
       throw new Error('This business service is unavailable for booking.');
     }
     const serviceName = String(service.get('name') || '').trim();
     if (!serviceName || serviceName.length > 120) throw new Error('This business service is unavailable for booking.');
+    const ownerUid = String(page.get('ownerId'));
+    const notificationRef = db.collection('users').doc(ownerUid).collection('notifications').doc('booking_request_' + bookingId);
+    const existingNotification = await tx.get(notificationRef);
     tx.set(rateRef, { windowStartedAt: withinWindow ? windowStart : now, requestCount: requestCount + 1, updatedAt: now });
     tx.create(bookingRef, {
       pageId, pageName: String(page.get('name') || 'Business'),
+      pageUsername: String(page.get('username') || ''),
+      pageAvatar: String(page.get('avatar') || ''),
       serviceId, serviceName, customerId: customerUid,
-      ownerId: String(page.get('ownerId')), requestedAt: new Date(requestedAt),
-      note: note.trim(), status: 'pending', createdAt: new Date(), updatedAt: new Date(),
+      ownerId: ownerUid, requestedAt: new Date(requestedAt),
+      note: note.trim(), status: 'pending', createdAt: now, updatedAt: now,
     });
+    if (!existingNotification.exists) {
+      tx.create(notificationRef, {
+        id: 'booking_request_' + bookingId, userId: ownerUid,
+        type: 'community', category: 'communities', targetId: bookingId,
+        content: 'received a booking request for ' + serviceName,
+        actorName: 'NEXORA customer', username: '', avatar: '',
+        timestamp: now.toISOString(), isRead: false, priority: 4,
+      });
+    }
     return { bookingId, created: true };
   });
 }
@@ -83,11 +109,29 @@ export async function respondToPageBookingRequest(
     const booking = await tx.get(ref);
     if (!booking.exists) throw new Error('This booking request is unavailable.');
     if (booking.get('ownerId') !== ownerUid) throw new Error('Only the business Page owner can respond.');
-    if (booking.get('status') !== 'pending') {
-      if (booking.get('status') === decision) return { status: decision };
+    if (booking.get('status') !== 'pending' && booking.get('status') !== decision) {
       throw new Error('This booking request has already been resolved.');
     }
-    tx.update(ref, { status: decision, respondedAt: new Date(), updatedAt: new Date() });
+    const customerUid = String(booking.get('customerId') || '');
+    const notificationId = 'booking_response_' + bookingId + '_' + decision;
+    const notificationRef = db.collection('users').doc(customerUid).collection('notifications').doc(notificationId);
+    const notification = await tx.get(notificationRef);
+    const now = new Date();
+    if (booking.get('status') === 'pending') {
+      tx.update(ref, { status: decision, respondedAt: now, updatedAt: now });
+    }
+    if (!notification.exists) {
+      const pageName = String(booking.get('pageName') || 'Business Page');
+      const serviceName = String(booking.get('serviceName') || 'your service');
+      tx.create(notificationRef, {
+        id: notificationId, userId: customerUid,
+        type: 'community', category: 'communities', targetId: bookingId,
+        content: pageName + ' ' + decision + ' your booking request for ' + serviceName,
+        actorName: pageName, username: String(booking.get('pageUsername') || ''),
+        avatar: String(booking.get('pageAvatar') || ''),
+        timestamp: now.toISOString(), isRead: false, priority: 4,
+      });
+    }
     return { status: decision };
   });
 }
