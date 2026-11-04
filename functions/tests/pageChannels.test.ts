@@ -11,9 +11,10 @@ const page = db.doc('pages/page-channel-test');
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Page channel tests require the Firestore Emulator.');
   await db.recursiveDelete(page);
-  await page.set({ id: 'page-channel-test', ownerId: 'creator', category: 'Creator' });
+  await page.set({ id: 'page-channel-test', ownerId: 'creator', category: 'Creator', name: 'Test Creator' });
+  await db.collection('follows').doc('follower-1_page-channel-test').set({ followerId: 'follower-1', followingId: 'page-channel-test', createdAt: new Date() });
 });
-after(async () => { await db.recursiveDelete(page); await deleteApp(app); });
+after(async () => { await db.recursiveDelete(page); await db.collection('follows').doc('follower-1_page-channel-test').delete(); await deleteApp(app); });
 
 describe('official Page broadcast channel', () => {
   it('allows only the Page owner to publish and remove channel updates', async () => {
