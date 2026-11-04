@@ -180,6 +180,31 @@ describe('discovery service', () => {
     assert.equal(topics[0].postCount, 2);
   });
 
+  it('keeps reel feedback isolated between viewers on a shared device', () => {
+    const originalStorage = globalThis.localStorage;
+    const values = new Map<string, string>();
+    Object.defineProperty(globalThis, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (key: string) => values.get(key) ?? null,
+        setItem: (key: string, value: string) => values.set(key, String(value)),
+        removeItem: (key: string) => values.delete(key),
+      },
+    });
+    try {
+      const reel = post({ id: 'shared-reel', userId: 'creator', videoUrl: 'https://example.test/shared.mp4' });
+      recordReelSignal(reel.id, { notInterested: true }, 'viewer-a');
+      assert.equal(rankReels([reel], [], {}, { viewerId: 'viewer-a' }).length, 0);
+      assert.equal(rankReels([reel], [], {}, { viewerId: 'viewer-b' }).length, 1);
+    } finally {
+      if (originalStorage) {
+        Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: originalStorage });
+      } else {
+        Reflect.deleteProperty(globalThis, 'localStorage');
+      }
+    }
+  });
+
   it('interleaves reel creators while retaining eligible videos', () => {
     const now = Date.now();
     const reels = [
