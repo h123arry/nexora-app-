@@ -902,6 +902,41 @@ const publicProfile = (uid) => ({
     await assertSucceeds(deleteDoc(collectionRef));
   });
 
+  it('restricts official Page channel updates to Page owners and followers', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'pages', 'channel-page'), { id: 'channel-page', ownerId: 'page-owner', category: 'Creator' });
+      await setDoc(doc(db, 'pages', 'channel-page', 'channelUpdates', 'update-1'), {
+        id: 'update-1', pageId: 'channel-page', ownerId: 'page-owner', content: 'Official update', status: 'published'
+      });
+      await setDoc(doc(db, 'follows', 'alice_channel-page'), { followerId: 'alice', followingId: 'channel-page' });
+    });
+    const update = doc(dbFor('alice'), 'pages', 'channel-page', 'channelUpdates', 'update-1');
+    await assertSucceeds(getDoc(update));
+    await assertSucceeds(getDoc(doc(dbFor('page-owner'), 'pages', 'channel-page', 'channelUpdates', 'update-1')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'pages', 'channel-page', 'channelUpdates', 'update-1')));
+    await assertFails(setDoc(doc(dbFor('page-owner'), 'pages', 'channel-page', 'channelUpdates', 'forged'), {
+      id: 'forged', pageId: 'channel-page', content: 'Forged', status: 'published'
+    }));
+  });
+
+  it('allows public service reads but keeps paused listings owner-only', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'pages', 'service-page'), { id: 'service-page', ownerId: 'service-owner', category: 'Business' });
+      await setDoc(doc(db, 'pages', 'service-page', 'services', 'active-service'), {
+        id: 'active-service', status: 'active', bookable: true, name: 'Active'
+      });
+      await setDoc(doc(db, 'pages', 'service-page', 'services', 'paused-service'), {
+        id: 'paused-service', status: 'paused', bookable: false, name: 'Paused'
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'pages', 'service-page', 'services', 'active-service')));
+    await assertFails(getDoc(doc(dbFor('alice'), 'pages', 'service-page', 'services', 'paused-service')));
+    await assertSucceeds(getDoc(doc(dbFor('service-owner'), 'pages', 'service-page', 'services', 'paused-service')));
+    await assertFails(setDoc(doc(dbFor('service-owner'), 'pages', 'service-page', 'services', 'forged'), {
+      id: 'forged', status: 'active', bookable: true, name: 'Forged'
+    }));
+  });
+
   it('keeps notification inbox records private and server-created', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice', 'notifications', 'like-1'), {
