@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, serverTimestamp, setDoc, type Unsubscribe } from 'firebase/firestore';
+import { collection, doc, onSnapshot, runTransaction, serverTimestamp, type Unsubscribe } from 'firebase/firestore';
 import { auth, db } from './config';
 
 export interface InboxChatPreference {
@@ -42,8 +42,13 @@ export async function setInboxChatPreference(
     throw new Error('Choose an inbox preference to update.');
   }
   const ref = doc(db, 'users', uid, 'inboxPreferences', chatId);
-  const update: Record<string, unknown> = { chatId, updatedAt: serverTimestamp() };
-  if (typeof patch.pinned === 'boolean') update.pinned = patch.pinned;
-  if (typeof patch.archived === 'boolean') update.archived = patch.archived;
-  await setDoc(ref, update, { merge: true });
+  await runTransaction(db, async transaction => {
+    const current = await transaction.get(ref);
+    transaction.set(ref, {
+      chatId,
+      pinned: typeof patch.pinned === 'boolean' ? patch.pinned : current.data()?.pinned === true,
+      archived: typeof patch.archived === 'boolean' ? patch.archived : current.data()?.archived === true,
+      updatedAt: serverTimestamp(),
+    });
+  });
 }
