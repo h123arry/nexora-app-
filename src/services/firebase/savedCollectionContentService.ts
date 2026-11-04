@@ -92,7 +92,7 @@ export async function removeContentFromSavedCollection(
 ): Promise<boolean> {
   requireOwner(uid);
   validId(collectionId); validId(itemId);
-  if (itemType === 'event' ? !parentId : Boolean(parentId)) throw new Error('Invalid saved content reference.');
+  if (!['post', 'circle', 'page', 'event'].includes(itemType) || (itemType === 'event' ? !parentId : Boolean(parentId))) throw new Error('Invalid saved content reference.');
   if (parentId) validId(parentId);
   const parentRef = doc(db, 'users', uid, 'savedCollections', collectionId);
   const itemRef = doc(parentRef, 'items', itemDocumentId(itemType, itemId, parentId));

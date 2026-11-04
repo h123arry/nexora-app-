@@ -8,6 +8,7 @@ import CircleEventsPanel from './CircleEventsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
 import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 import CircleGovernancePanel from './CircleGovernancePanel';
+import SaveToCollectionButton from './SaveToCollectionButton';
 
 interface CirclesViewProps {
   currentUser: User;

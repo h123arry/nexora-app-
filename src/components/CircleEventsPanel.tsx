@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { CommunityService } from '../services/firebase/communityService';
+import SaveToCollectionButton from './SaveToCollectionButton';
 
 type CircleEvent = { id: string; title: string; startsAt: string; location: string; attendeeCount: number; createdBy: string; myRsvp: boolean };
 
@@ -50,7 +51,7 @@ export default function CircleEventsPanel({ communityId, currentUserId }: { comm
     </form>
     {events.length === 0 ? <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-xs text-violet-200/50">No events have been scheduled in this Circle yet.</div> : events.map(item => <div key={item.id} className="p-4 rounded-2xl bg-white/[0.01] border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
       <div className="space-y-1"><h4 className="text-sm font-bold text-white">{item.title}</h4><p className="text-[10.5px] text-violet-300/80">{item.startsAt}</p>{item.location && <p className="text-[9.5px] text-violet-300/50 font-mono">{item.location}</p>}<p className="text-[10px] text-violet-200/50">{item.attendeeCount} attending</p></div>
-      <button type="button" disabled={pending === item.id} onClick={() => respond(item)} className="px-3 py-1.5 rounded-lg text-[9.5px] font-mono font-bold uppercase disabled:opacity-50">{pending === item.id ? 'Saving...' : item.myRsvp ? 'Cancel RSVP' : 'Attend'}</button>
+      <div className="flex flex-wrap items-center gap-2"><SaveToCollectionButton userId={currentUserId} itemType="event" itemId={item.id} parentId={communityId} /><button type="button" disabled={pending === item.id} onClick={() => respond(item)} className="px-3 py-1.5 rounded-lg text-[9.5px] font-mono font-bold uppercase disabled:opacity-50">{pending === item.id ? 'Saving...' : item.myRsvp ? 'Cancel RSVP' : 'Attend'}</button>
     </div>)}
   </section>;
 }

@@ -29,12 +29,16 @@ export async function searchPublicDirectory(
   if (!viewerUid) throw new Error('Sign in to search NEXORA.');
   const term = normalizeQuery(rawQuery);
   const prefixEnd = term + '\uf8ff';
-  const [viewerSettings, peopleByUsername, pagesByUsername, pagesByName, circles] = await Promise.all([
+  const titlePrefix = term.charAt(0).toLocaleUpperCase() + term.slice(1);
+  const titlePrefixEnd = titlePrefix + '\uf8ff';
+  const [viewerSettings, peopleByUsername, pagesByUsername, pagesByName, pagesByTitle, circles, circlesByTitle] = await Promise.all([
     db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get(),
     db.collection('users').orderBy('username').startAt(term).endAt(prefixEnd).limit(RESULT_LIMIT * 2).get(),
     db.collection('pages').orderBy('username').startAt(term).endAt(prefixEnd).limit(RESULT_LIMIT).get(),
     db.collection('pages').orderBy('name').startAt(term).endAt(prefixEnd).limit(RESULT_LIMIT).get(),
+    db.collection('pages').orderBy('name').startAt(titlePrefix).endAt(titlePrefixEnd).limit(RESULT_LIMIT).get(),
     db.collection('communities').where('type', '==', 'public').orderBy('name').startAt(term).endAt(prefixEnd).limit(RESULT_LIMIT).get(),
+    db.collection('communities').where('type', '==', 'public').orderBy('name').startAt(titlePrefix).endAt(titlePrefixEnd).limit(RESULT_LIMIT).get(),
   ]);
 
   const viewerData = viewerSettings.data() || {};
@@ -70,7 +74,7 @@ export async function searchPublicDirectory(
     };
   }))).filter((item): item is NonNullable<typeof item> => item !== null);
 
-  const pages = [...pagesByUsername.docs, ...pagesByName.docs]
+  const pages = [...pagesByUsername.docs, ...pagesByName.docs, ...pagesByTitle.docs]
     .filter((item, index, all) => all.findIndex(other => other.id === item.id) === index)
     .filter(item => item.get('status') !== 'suspended')
     .slice(0, RESULT_LIMIT)
@@ -82,7 +86,7 @@ export async function searchPublicDirectory(
       description: String(item.get('description') || '').slice(0, 240),
     }));
 
-  const visibleCircles = circles.docs
+  const visibleCircles = [...circles.docs, ...circlesByTitle.docs]\n    .filter((item, index, all) => all.findIndex(other => other.id === item.id) === index)
     .filter(item => !strings(item.get('bannedUsers')).includes(viewerUid))
     .map(item => ({
       id: item.id, name: String(item.get('name') || 'Circle'),
