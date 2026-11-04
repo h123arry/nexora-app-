@@ -8,7 +8,8 @@ interface NexoraLoaderProps {
   label?: string;
 }
 
-export default function NexoraLoader({ size = 'md', className = '', center = false, label }: NexoraLoaderProps) {\n  const gradientId = `nexora-loader-${useId().replace(/:/g, '')}`;
+export default function NexoraLoader({ size = 'md', className = '', center = false, label }: NexoraLoaderProps) {
+  const gradientId = `nexora-loader-${useId().replace(/:/g, '')}`;
   const sizeMap = {
     xs: { box: 'w-4 h-4', stroke: 2, ring: 'w-4 h-4' },
     sm: { box: 'w-5 h-5', stroke: 2.2, ring: 'w-5 h-5' },
