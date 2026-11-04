@@ -832,6 +832,41 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(aliceBookmark, { postId: 'bookmark-private' }));
     await assertSucceeds(deleteDoc(aliceBookmark));
   });
+  it('keeps named saved collections private and limits their records to public post references', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'posts', 'collection-public'), {
+        id: 'collection-public', userId: 'author', audience: 'public', content: 'Public'
+      });
+      await setDoc(doc(db, 'posts', 'collection-private'), {
+        id: 'collection-private', userId: 'author', audience: 'followers', content: 'Private'
+      });
+    });
+    const collectionRef = doc(dbFor('alice'), 'users', 'alice', 'savedCollections', 'reading-list');
+    await assertSucceeds(setDoc(collectionRef, {
+      name: 'Reading list', itemCount: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(collectionRef));
+    await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'savedCollections', 'reading-list')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'users', 'alice', 'savedCollections', 'forged'), {
+      name: 'Forged', itemCount: 0, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    }));
+    const itemRef = doc(collectionRef, 'items', 'post_collection-public');
+    await assertSucceeds(setDoc(itemRef, {
+      itemType: 'post', itemId: 'collection-public', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(collectionRef, 'items', 'post_collection-private'), {
+      itemType: 'post', itemId: 'collection-private', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(collectionRef, 'items', 'bad-type'), {
+      itemType: 'circle', itemId: 'collection-public', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(updateDoc(collectionRef, { itemCount: 1, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(collectionRef, { itemCount: 501, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(collectionRef, { name: 'Tampered' }));
+    await assertSucceeds(deleteDoc(itemRef));
+    await assertSucceeds(deleteDoc(collectionRef));
+  });
+
   it('keeps notification inbox records private and server-created', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice', 'notifications', 'like-1'), {
