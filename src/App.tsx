@@ -2200,6 +2200,10 @@ export default function App() {
                       onViewProfile={handleViewProfile}
                       interestDNA={currentUser.interestDNA}
                       currentUserId={isLoggedIn && firebaseUser?.uid === currentUser.id ? firebaseUser.uid : ''}
+                      onOpenVohAi={() => {
+                        setMatrixSubTabRedirect('ai');
+                        navigateTo('matrix');
+                      }}
                     />
                   )}
 

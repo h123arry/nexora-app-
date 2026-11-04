@@ -26,6 +26,7 @@ interface ExploreViewProps {
   onViewProfile?: (userIdOrUsername: string) => void;
   interestDNA?: Record<string, number>;
   currentUserId?: string;
+  onOpenVohAi: () => void;
 }
 
 export default function ExploreView({
@@ -38,7 +39,8 @@ export default function ExploreView({
   followingIds,
   onViewProfile,
   interestDNA = {},
-  currentUserId = ''
+  currentUserId = '',
+  onOpenVohAi
 }: ExploreViewProps) {
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -247,7 +249,7 @@ export default function ExploreView({
         </div>
       </div>
 
-      {!hasActiveSearch && <MiniServicesHub signedIn={Boolean(currentUserId)} onOpen={setActiveTab} />}
+      {!hasActiveSearch && <MiniServicesHub signedIn={Boolean(currentUserId)} onOpen={setActiveTab} onOpenVohAi={onOpenVohAi} />}
 
       {/* Recent Searches (shown when search is empty) */}
       {!hasActiveSearch && recentSearches.length > 0 && (
