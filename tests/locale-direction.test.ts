@@ -13,7 +13,7 @@ describe('NEXORA locale direction', () => {
   });
 
   it('provides complete navigation and discovery labels in every supported locale', () => {
-    const required = ['navHome', 'navExplore', 'navCommunities', 'navMessages', 'navActivity', 'navProfile', 'filterAll', 'filterUsers', 'filterPosts', 'filterVideos', 'filterCommunities', 'inboxTitle', 'inboxChats', 'inboxRequests', 'inboxArchived', 'inboxCreateGroupHeading', 'inboxInviteMembers', 'inboxCreateGroupButton'] as const;
+    const required = ['navHome', 'navExplore', 'navCommunities', 'navMessages', 'navActivity', 'navProfile', 'filterAll', 'filterUsers', 'filterPosts', 'filterVideos', 'filterCommunities', 'inboxTitle', 'inboxChats', 'inboxRequests', 'inboxArchived', 'inboxCreateGroupHeading', 'inboxInviteMembers', 'inboxCreateGroupButton', 'miniServicesTitle', 'miniServicesDescription', 'miniWorldPulseTitle', 'miniCirclesTitle', 'miniCreatorChannelsTitle', 'miniBusinessServicesTitle', 'miniEventsTitle', 'miniMessagingTitle', 'miniSavedLibraryTitle', 'miniVohWorkspaceTitle'] as const;
     for (const locale of Object.keys(TRANSLATIONS) as Array<keyof typeof TRANSLATIONS>) {
       const dictionary = getTranslations(locale);
       for (const key of required) assert.equal(typeof dictionary[key], 'string', `${locale} is missing ${key}`);
