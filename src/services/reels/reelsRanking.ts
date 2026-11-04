@@ -152,9 +152,10 @@ export function rankReels(
     if (nextIndex < 0) nextIndex = remaining.findIndex(item => (creatorCounts.get(item.post.userId || '') || 0) < 3);
     if (nextIndex < 0) break;
     const [next] = remaining.splice(nextIndex, 1);
-    selected.push({ post: next.post, score: next.score, reasons: next.reasons });
+    selected.push({ post: next.post, score: next.score, reasons: next.reasons, index: next.index });
     const creatorId = next.post.userId || '';
     creatorCounts.set(creatorId, (creatorCounts.get(creatorId) || 0) + 1);
   }
-  return selected.concat(remaining.map(({ post, score, reasons }) => ({ post, score, reasons })));
+  return selected.map(({ post, score, reasons }) => ({ post, score, reasons }))
+    .concat(remaining.map(({ post, score, reasons }) => ({ post, score, reasons })));
 }
