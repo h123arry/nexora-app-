@@ -44,6 +44,13 @@ interface NewInboxViewProps {
   creators?: User[];
 }
 
+function readChatIdList(userId: string, key: string): string[] {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('nexora_' + key + '_' + userId) || '[]');
+    return Array.isArray(parsed) ? [...new Set(parsed.filter((id): id is string => typeof id === 'string' && id.length > 0))].slice(0, 500) : [];
+  } catch { return []; }
+}
+
 export default function NewInboxView({
   currentUser,
   chats: initialChats,
@@ -92,8 +99,8 @@ export default function NewInboxView({
   const [replyMessageId, setReplyMessageId] = useState<string | null>(null);
 
   // Pinned & Archived & Muted & Requests state
-  const [pinnedChats, setPinnedChats] = useState<string[]>([]);
-  const [archivedChats, setArchivedChats] = useState<string[]>([]);
+  const [pinnedChats, setPinnedChats] = useState<string[]>(() => readChatIdList(currentUser.id, 'pinned_chats'));
+  const [archivedChats, setArchivedChats] = useState<string[]>(() => readChatIdList(currentUser.id, 'archived_chats'));
   const [messageRequests, setMessageRequests] = useState<Chat[]>([]);
   const [partnerTyping, setPartnerTyping] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
@@ -113,6 +120,10 @@ export default function NewInboxView({
   useEffect(() => {
     localStorage.setItem(`nexora_messages_${currentUser.id}`, JSON.stringify(localMessages));
   }, [localMessages, currentUser.id]);
+
+  useEffect(() => { localStorage.setItem('nexora_pinned_chats_' + currentUser.id, JSON.stringify(pinnedChats.slice(0, 500))); }, [pinnedChats, currentUser.id]);
+  useEffect(() => { localStorage.setItem('nexora_archived_chats_' + currentUser.id, JSON.stringify(archivedChats.slice(0, 500))); }, [archivedChats, currentUser.id]);
+  useEffect(() => { setPinnedChats(readChatIdList(currentUser.id, 'pinned_chats')); setArchivedChats(readChatIdList(currentUser.id, 'archived_chats')); }, [currentUser.id]);
 
   // Auto scroll
   useEffect(() => {
@@ -664,6 +675,11 @@ export default function NewInboxView({
                 </div>
               </div>
 
+              {/* Conversation organisation controls; saved per account on this device. */}
+              <div className="flex items-center gap-1.5">
+                <button type="button" aria-pressed={pinnedChats.includes(activeChat.id)} onClick={() => setPinnedChats(previous => previous.includes(activeChat.id) ? previous.filter(id => id !== activeChat.id) : [activeChat.id, ...previous].slice(0, 500))} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'}><Pin className="w-4 h-4" /></button>
+                <button type="button" aria-pressed={archivedChats.includes(activeChat.id)} onClick={() => { const isArchived = archivedChats.includes(activeChat.id); setArchivedChats(previous => isArchived ? previous.filter(id => id !== activeChat.id) : [...previous, activeChat.id].slice(-500)); if (!isArchived) setActiveChatId(null); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'}><Archive className="w-4 h-4" /></button>
+              </div>
               {/* Call & Media Buttons */}
               <div className="flex items-center gap-2">
                 <button
