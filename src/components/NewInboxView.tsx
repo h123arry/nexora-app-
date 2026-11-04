@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { User, Chat, Message, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
+import { setInboxChatPreference, watchInboxPreferences } from '../services/firebase/inboxPreferencesService';
 import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
 import { isSupportedOutgoingMediaType, serializeOutgoingMessage } from '../utils/messageSerialization';
 import { 
@@ -122,9 +123,16 @@ export default function NewInboxView({
     localStorage.setItem(`nexora_messages_${currentUser.id}`, JSON.stringify(localMessages));
   }, [localMessages, currentUser.id]);
 
-  useEffect(() => { if (chatPreferenceOwnerRef.current === currentUser.id) localStorage.setItem('nexora_pinned_chats_' + currentUser.id, JSON.stringify(pinnedChats.slice(0, 500))); }, [pinnedChats, currentUser.id]);
-  useEffect(() => { if (chatPreferenceOwnerRef.current === currentUser.id) localStorage.setItem('nexora_archived_chats_' + currentUser.id, JSON.stringify(archivedChats.slice(0, 500))); }, [archivedChats, currentUser.id]);
-  useEffect(() => { chatPreferenceOwnerRef.current = currentUser.id; setPinnedChats(readChatIdList(currentUser.id, 'pinned_chats')); setArchivedChats(readChatIdList(currentUser.id, 'archived_chats')); }, [currentUser.id]);
+  useEffect(() => {
+    chatPreferenceOwnerRef.current = currentUser.id;
+    setPinnedChats(readChatIdList(currentUser.id, 'pinned_chats'));
+    setArchivedChats(readChatIdList(currentUser.id, 'archived_chats'));
+    return watchInboxPreferences(currentUser.id, preferences => {
+      if (chatPreferenceOwnerRef.current !== currentUser.id) return;
+      setPinnedChats(preferences.filter(item => item.pinned).map(item => item.chatId).slice(0, 500));
+      setArchivedChats(preferences.filter(item => item.archived).map(item => item.chatId).slice(0, 500));
+    }, error => console.warn('[NEXORA inbox] Cross-device preferences unavailable:', error));
+  }, [currentUser.id]);
 
   // Auto scroll
   useEffect(() => {
@@ -678,8 +686,8 @@ export default function NewInboxView({
 
               {/* Conversation organisation controls; saved per account on this device. */}
               <div className="flex items-center gap-1.5">
-                <button type="button" aria-pressed={pinnedChats.includes(activeChat.id)} onClick={() => setPinnedChats(previous => previous.includes(activeChat.id) ? previous.filter(id => id !== activeChat.id) : [activeChat.id, ...previous].slice(0, 500))} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'}><Pin className="w-4 h-4" /></button>
-                <button type="button" aria-pressed={archivedChats.includes(activeChat.id)} onClick={() => { const isArchived = archivedChats.includes(activeChat.id); setArchivedChats(previous => isArchived ? previous.filter(id => id !== activeChat.id) : [...previous, activeChat.id].slice(-500)); if (!isArchived) setActiveChatId(null); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'}><Archive className="w-4 h-4" /></button>
+                <button type="button" aria-pressed={pinnedChats.includes(activeChat.id)} onClick={() => { const pinned = !pinnedChats.includes(activeChat.id); setPinnedChats(previous => pinned ? [activeChat.id, ...previous].slice(0, 500) : previous.filter(id => id !== activeChat.id)); void setInboxChatPreference(currentUser.id, activeChat.id, { pinned }).catch(error => console.warn('[NEXORA inbox] Could not sync pin:', error)); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={pinnedChats.includes(activeChat.id) ? 'Unpin conversation' : 'Pin conversation'}><Pin className="w-4 h-4" /></button>
+                <button type="button" aria-pressed={archivedChats.includes(activeChat.id)} onClick={() => { const isArchived = archivedChats.includes(activeChat.id); setArchivedChats(previous => isArchived ? previous.filter(id => id !== activeChat.id) : [...previous, activeChat.id].slice(-500)); void setInboxChatPreference(currentUser.id, activeChat.id, { archived: !isArchived }).catch(error => console.warn('[NEXORA inbox] Could not sync archive:', error)); if (!isArchived) setActiveChatId(null); }} className="p-2 rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-violet-200" title={archivedChats.includes(activeChat.id) ? 'Restore conversation' : 'Archive conversation'}><Archive className="w-4 h-4" /></button>
               </div>
               {/* Call & Media Buttons */}
               <div className="flex items-center gap-2">
