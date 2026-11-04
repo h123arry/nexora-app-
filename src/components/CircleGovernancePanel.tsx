@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ShieldCheck, UserCog, Link2, Copy, Ban } from 'lucide-react';
 import { CommunityService } from '../services/firebase/communityService';
+import type { CircleMemberCursor } from '../services/firebase/communityService';
 
 type CircleMember = {
   userId: string;
@@ -25,6 +26,9 @@ export default function CircleGovernancePanel({
   const [reasonByUser, setReasonByUser] = useState<Record<string, string>>({});
   const [roleByUser, setRoleByUser] = useState<Record<string, 'admin' | 'moderator' | 'member'>>({});
   const [loading, setLoading] = useState(true);
+  const [memberCount, setMemberCount] = useState<number | null>(null);
+  const [nextCursor, setNextCursor] = useState<CircleMemberCursor | undefined>(undefined);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -35,12 +39,36 @@ export default function CircleGovernancePanel({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    CommunityService.listActiveMembers(communityId)
-      .then(result => { if (active) setMembers(result); })
+    setMembers([]);
+    setNextCursor(undefined);
+    Promise.all([
+      CommunityService.listActiveMembersPage(communityId, 40),
+      CommunityService.getActiveMemberCount(communityId),
+    ])
+      .then(([page, count]) => {
+        if (!active) return;
+        setMembers(page.members);
+        setNextCursor(page.nextCursor);
+        setMemberCount(count);
+      })
       .catch(() => { if (active) setError('Circle members could not be loaded.'); })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [communityId]);
+
+  const loadMoreMembers = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    try {
+      const page = await CommunityService.listActiveMembersPage(communityId, 40, nextCursor);
+      setMembers(previous => [...previous, ...page.members]);
+      setNextCursor(page.nextCursor);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'More Circle members could not be loaded.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const createInvite = async () => {
     if (!canManage || inviteBusy) return;
@@ -100,7 +128,7 @@ export default function CircleGovernancePanel({
         <ShieldCheck className="h-4 w-4 text-violet-400" />
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle governance</h3>
-          <p className="text-[11px] text-violet-200/50">Manage trusted roles with server-verified permissions and an audit trail.</p>
+          <p className="text-[11px] text-violet-200/50">Manage trusted roles with server-verified permissions and an audit trail.</p>\n          {memberCount !== null && <p className="text-[10px] text-violet-300/70">{memberCount.toLocaleString()} active members · showing {members.length}</p>}
         </div>
       </div>
       {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-950/20 p-3 text-xs text-rose-200">{error}</p>}
@@ -151,6 +179,10 @@ export default function CircleGovernancePanel({
               </article>
             );
           })}
+          {nextCursor && <button type="button" onClick={() => void loadMoreMembers()} disabled={loadingMore}
+            className="w-full rounded-xl border border-violet-400/20 bg-violet-500/5 px-4 py-3 text-xs font-bold text-violet-200 disabled:opacity-40">
+            {loadingMore ? 'Loading members...' : 'Load more members'}
+          </button>}
         </div>
       )}
       {!isOwner && <p className="text-[10px] text-violet-200/40">Role delegation is reserved for the Circle owner. Active managers can create invitations; the server verifies every action.</p>}
