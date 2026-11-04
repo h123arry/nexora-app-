@@ -31,7 +31,7 @@ function withLocalStorage(run: () => void): void {
 test('recommendation profiles remain isolated between signed-in accounts', () => {
   withLocalStorage(() => {
     localStorage.setItem('nexora_user', JSON.stringify({ id: 'account-a' }));
-    saveRecommendationProfile({ tags: { technology: 30 }, creators: { creator-a: 20 }, communities: {} });
+    saveRecommendationProfile({ tags: { technology: 30 }, creators: { 'creator-a': 20 }, communities: {} });
 
     localStorage.setItem('nexora_user', JSON.stringify({ id: 'account-b' }));
     assert.deepEqual(getRecommendationProfile(), { tags: {}, creators: {}, communities: {} });
