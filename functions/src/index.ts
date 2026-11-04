@@ -299,7 +299,7 @@ export const searchNexoraDirectory = onCall({ maxInstances: 10 }, async (request
 export const publishPageChannelUpdate = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a Page channel update.');
   try {
-    return await publishPageChannelUpdateRecord(adminDb, request.auth.uid, request.data?.pageId, request.data?.content);
+    return await publishPageChannelUpdateRecord(adminDb, request.auth.uid, request.data?.pageId, request.data?.content, request.data?.idempotencyKey);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('1 to 2,000')) throw new HttpsError('invalid-argument', message);
