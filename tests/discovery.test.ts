@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { rankPosts, recommendCreators, rankTrendingTopics, searchCreators, searchPosts } from '../src/services/discovery/discoveryService';
 import { Post, User } from '../src/types';
-import { rankReels } from '../src/services/reels/reelsRanking';
+import { rankReels, recordReelSignal } from '../src/services/reels/reelsRanking';
 
 const post = (overrides: Partial<Post>): Post => ({
   id: 'post', userId: 'creator', username: 'creator', name: 'Creator', avatar: '', isVerified: false,
