@@ -315,3 +315,12 @@ This is the active implementation scope requested for the next ecosystem tranche
 - Add emulator or unit regression coverage for every new permission boundary and state transition.
 - Do not mark a track complete until its user flow, persistence, security rules, failure states and tests are verified.
 - Keep payments, bookings, translation and third-party integrations honest about external dependencies and operational readiness.
+
+## Implementation ledger — 4 November 2026
+
+Two additional foundations have been integrated into the existing app:
+
+- **Private saved collections (first slice):** the Saved view now creates named folders, stores collection metadata and item references under the signed-in user's Firestore account, and can add the user's currently bookmarked public posts to a selected folder. Collection and item reads/writes are owner-scoped in Firestore rules. The current item adapter supports public posts; channel, Circle, event and service references remain future adapters, so this is not yet the complete cross-surface collection feature.
+- **Locale direction:** the application shell now resolves stored language names/codes and applies the correct document language and text direction. Arabic receives RTL direction; English, French and Portuguese remain LTR. This is a foundation, not a claim that every screen has been fully translated or visually mirrored.
+
+Regression coverage was added for private saved-collection permissions and locale direction. GitHub Actions CI was triggered for the latest changes and was still running at the time of this ledger update. Do not treat these changes as verified until the workflow and emulator suites finish successfully.
