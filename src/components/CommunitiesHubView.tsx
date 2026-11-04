@@ -1488,6 +1488,26 @@ export default function CommunitiesHubView({
                   </div>
                 </div>
 
+                <section className="space-y-3 pt-2" aria-label="Page posts">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-violet-300">Recent Page posts</h3>
+                    <span className="text-[10px] text-violet-200/50">From your loaded feed</span>
+                  </div>
+                  {posts.filter(post => post.userId === selectedPage.id).slice(0, 20).length === 0 ? (
+                    <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-violet-200/50">This Page has not published a post visible in your current feed.</p>
+                  ) : posts.filter(post => post.userId === selectedPage.id).slice(0, 20).map(post => (
+                    <article key={post.id} className="rounded-2xl border border-white/10 bg-black/25 p-4 space-y-3">
+                      <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-white/90">{post.content}</p>
+                      {post.imageUrl && <img src={post.imageUrl} alt="" loading="lazy" onError={hideUnavailableImage} className="max-h-72 w-full rounded-xl object-cover" />}
+                      {post.videoUrl && <video src={post.videoUrl} controls preload="metadata" className="max-h-72 w-full rounded-xl bg-black" />}
+                      <div className="flex items-center justify-between border-t border-white/5 pt-2">
+                        <span className="text-[10px] text-violet-200/50">{Number(post.likes || 0).toLocaleString()} Sparks</span>
+                        <button type="button" onClick={() => onLikePost(post.id)} className="rounded-lg border border-violet-400/20 px-3 py-2 text-[10px] font-bold text-violet-200 hover:bg-violet-500/10">Spark</button>
+                      </div>
+                    </article>
+                  ))}
+                </section>
+
                 <div className="space-y-2 text-xs font-mono text-current/60">
                   {selectedPage.website && (
                     <p className="flex items-center gap-1.5">
