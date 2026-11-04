@@ -308,6 +308,40 @@ service cloud.firestore {
         allow get, list: if owner(userId);
         allow create, update, delete: if false;
       }
+      // Named saved collections are private, bounded and scoped to the account owner.
+      match /savedCollections/{collectionId} {
+        allow get, list: if owner(userId);
+        allow create: if owner(userId)
+          && request.resource.data.keys().hasOnly(['name', 'itemCount', 'createdAt', 'updatedAt'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() > 0
+          && request.resource.data.name.size() <= 48
+          && request.resource.data.itemCount == 0
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.updatedAt == request.time;
+        allow update: if owner(userId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['itemCount', 'updatedAt'])
+          && request.resource.data.itemCount is int
+          && request.resource.data.itemCount >= 0
+          && request.resource.data.itemCount <= 500
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+
+        match /items/{itemId} {
+          allow get, list: if owner(userId);
+          allow create: if owner(userId)
+            && request.resource.data.keys().hasOnly(['itemType', 'itemId', 'createdAt'])
+            && request.resource.data.itemType == 'post'
+            && request.resource.data.itemId is string
+            && itemId == 'post_' + request.resource.data.itemId
+            && request.resource.data.createdAt == request.time
+            && exists(/databases/$(database)/documents/posts/$(request.resource.data.itemId))
+            && publicPost(get(/databases/$(database)/documents/posts/$(request.resource.data.itemId)).data);
+          allow update: if false;
+          allow delete: if owner(userId);
+        }
+      }
+
       // Saved-post records are private to their owner. Only public posts can be bookmarked.
       match /postBookmarks/{postId} {
         allow get, list: if owner(userId);
