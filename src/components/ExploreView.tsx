@@ -161,6 +161,8 @@ export default function ExploreView({
             <input
               type="text"
               placeholder="Search users, posts, videos, hashtags..."
+              aria-label="Search people, posts, videos, hashtags and communities"
+              autoComplete="off"
               value={localSearch}
               onChange={(e) => setLocalSearch(e.target.value)}
               onKeyDown={(e) => {
@@ -171,7 +173,9 @@ export default function ExploreView({
               className="nx-field w-full pl-11 pr-10 text-sm font-sans"
             />
             {localSearch && (
-              <button 
+              <button
+                type="button"
+                aria-label="Clear search"
                 onClick={() => setLocalSearch('')}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-white p-1"
               >
@@ -182,7 +186,7 @@ export default function ExploreView({
         </div>
 
         {/* Quick Filter Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div role="group" aria-label="Filter discovery results" className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {[
             { id: 'all', label: 'All Results' },
             { id: 'users', label: 'Users' },
@@ -191,9 +195,10 @@ export default function ExploreView({
             { id: 'communities', label: 'Communities' }
           ].map(f => (
             <button
+              type="button"
               key={f.id}
+              aria-pressed={searchFilterType === f.id}
               onClick={() => setSearchFilterType(f.id as any)}
-                aria-selected={searchFilterType === f.id}
                 className={`nx-explore-filter px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer border ${
                   searchFilterType === f.id
                   ? 'bg-violet-600/20 text-violet-100 border-violet-300/40 shadow-[inset_0_0_0_1px_rgba(182,155,255,0.08)]'
@@ -224,22 +229,26 @@ export default function ExploreView({
           </div>
           <div className="flex flex-wrap gap-2">
             {recentSearches.map((term) => (
-              <button
-                key={term}
-                onClick={() => {
-                  setLocalSearch(term);
-                  addRecentSearch(term);
-                }}
-                className="group flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-zinc-300 transition-all cursor-pointer"
-              >
-                <span>{term}</span>
-                <span 
-                  onClick={(e) => removeRecentSearch(term, e)}
-                  className="text-zinc-500 hover:text-violet-300 p-0.5"
+              <div key={term} className="group flex items-center rounded-xl bg-white/5 hover:bg-white/10 border border-white/5 text-xs text-zinc-300 transition-all">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLocalSearch(term);
+                    addRecentSearch(term);
+                  }}
+                  className="min-h-10 px-3 py-1.5 rounded-l-xl text-left cursor-pointer focus-visible:outline-2 focus-visible:outline-violet-300"
+                >
+                  {term}
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remove ${term} from recent searches`}
+                  onClick={(event) => removeRecentSearch(term, event)}
+                  className="min-h-10 min-w-10 flex items-center justify-center rounded-r-xl text-zinc-500 hover:text-violet-300 focus-visible:outline-2 focus-visible:outline-violet-300"
                 >
                   <X className="w-3 h-3" />
-                </span>
-              </button>
+                </button>
+              </div>
             ))}
           </div>
         </div>
@@ -247,7 +256,7 @@ export default function ExploreView({
 
       {/* SEARCH RESULTS VIEW */}
       {hasActiveSearch ? (
-        <div className="space-y-6 text-left">
+        <div id="explore-search-results" className="space-y-6 text-left">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-mono text-violet-400 uppercase tracking-widest font-extrabold">
               Found {visibleResultCount} {visibleResultCount === 1 ? 'result' : 'results'} for "{debouncedSearch}"
@@ -285,16 +294,20 @@ export default function ExploreView({
                   <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Users ({filteredCreators.length})</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {filteredCreators.map(user => (
-                      <div 
-                        key={user.id} 
-                        onClick={() => {
-                          addRecentSearch(user.username);
-                          onViewProfile?.(user.id);
-                        }}
-                        className="nx-soft-card p-4 hover:border-violet-400/30 flex items-center justify-between gap-3 cursor-pointer transition-all group"
+                      <div
+                        key={user.id}
+                        className="nx-soft-card p-3 hover:border-violet-400/30 flex items-center justify-between gap-3 transition-all group"
                       >
-                        <div className="flex items-center gap-3 overflow-hidden">
-                          <img src={user.avatar} alt={user.name} className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
+                        <button
+                          type="button"
+                          aria-label={`View ${user.name}'s profile`}
+                          onClick={() => {
+                            addRecentSearch(user.username);
+                            onViewProfile?.(user.id);
+                          }}
+                          className="min-w-0 flex flex-1 items-center gap-3 overflow-hidden rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300"
+                        >
+                          <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
                           <div className="overflow-hidden">
                             <div className="flex items-center gap-1.5">
                               <h4 className="text-xs font-bold text-white truncate">{user.name}</h4>
@@ -303,10 +316,12 @@ export default function ExploreView({
                             <span className="text-[10px] font-mono text-violet-400 truncate block">@{user.username}</span>
                             <p className="text-[10px] text-zinc-400 truncate mt-0.5">{user.bio || 'Nexora Creator'}</p>
                           </div>
-                        </div>
+                        </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          type="button"
+                          aria-pressed={followingIds.includes(user.id)}
+                          aria-label={followingIds.includes(user.id) ? `Unfollow ${user.username}` : `Follow ${user.username}`}
+                          onClick={() => {
                             onToggleFollow?.(user.id);
                           }}
                           className={`px-4 py-1.5 rounded-xl text-[10px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0 ${
