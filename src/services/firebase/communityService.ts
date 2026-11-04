@@ -20,6 +20,8 @@ import { db, functions } from '../../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import type { Circle } from '../../types';
 
+export type CircleMemberCursor = QueryDocumentSnapshot;
+
 const COMMUNITY_NAME_LIMIT = 60;
 const COMMUNITY_DESCRIPTION_LIMIT = 500;
 const COMMUNITY_TAG_LIMIT = 8;
