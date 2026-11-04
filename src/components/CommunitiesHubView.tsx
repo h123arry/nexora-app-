@@ -8,6 +8,7 @@ import { isCircleJoinedDb, joinCircleDb, leaveCircleDb } from '../data/database'
 import { ActivityService } from '../services/activityService';
 import { auth } from '../services/firebase/config';
 import { getPageFollowerCount } from '../services/firebase/pageChannelService';
+import BusinessServicesPanel from './BusinessServicesPanel';
 
 const hideUnavailableImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
   event.currentTarget.style.display = 'none';
@@ -1507,6 +1508,8 @@ export default function CommunitiesHubView({
                     </article>
                   ))}
                 </section>
+
+                {selectedPage.category === 'Business' && <BusinessServicesPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} />}
 
                 <div className="space-y-2 text-xs font-mono text-current/60">
                   {selectedPage.website && (

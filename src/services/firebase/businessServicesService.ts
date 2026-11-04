@@ -19,15 +19,13 @@ function requireOwner(uid: string): void {
   if (!uid || auth.currentUser?.uid !== uid) throw new Error('Sign in to manage business services.');
 }
 
-export async function listBusinessServices(pageId: string): Promise<BusinessServiceListing[]> {
+export async function listBusinessServices(pageId: string, includePaused = false): Promise<BusinessServiceListing[]> {
   if (!pageId || pageId.length > 150 || pageId.includes('/')) throw new Error('A valid business Page is required.');
-  const snapshot = await getDocs(query(
-    collection(db, 'pages', pageId, 'services'),
-    where('status', '==', 'active'),
-    where('bookable', '==', true),
-    orderBy('name'),
-    limit(50),
-  ));
+  if (includePaused && !auth.currentUser) throw new Error('Sign in to manage business services.');
+  const base = collection(db, 'pages', pageId, 'services');
+  const snapshot = await getDocs(includePaused
+    ? query(base, orderBy('name'), limit(50))
+    : query(base, where('status', '==', 'active'), where('bookable', '==', true), orderBy('name'), limit(50)));
   return snapshot.docs.map(item => ({ id: item.id, ...item.data() } as BusinessServiceListing));
 }
 
