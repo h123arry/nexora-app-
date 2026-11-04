@@ -125,10 +125,26 @@ export default function NewInboxView({
 
   useEffect(() => {
     chatPreferenceOwnerRef.current = currentUser.id;
-    setPinnedChats(readChatIdList(currentUser.id, 'pinned_chats'));
-    setArchivedChats(readChatIdList(currentUser.id, 'archived_chats'));
+    const legacyPinned = readChatIdList(currentUser.id, 'pinned_chats');
+    const legacyArchived = readChatIdList(currentUser.id, 'archived_chats');
+    setPinnedChats(legacyPinned);
+    setArchivedChats(legacyArchived);
+    let firstSnapshot = true;
     return watchInboxPreferences(currentUser.id, preferences => {
       if (chatPreferenceOwnerRef.current !== currentUser.id) return;
+      // Migrate existing device-only preferences once, and only when this account
+      // has no server preferences yet. Never overwrite a newer cross-device state.
+      if (firstSnapshot) {
+        firstSnapshot = false;
+        if (preferences.length === 0 && (legacyPinned.length > 0 || legacyArchived.length > 0)) {
+          const migration = new Map<string, { pinned?: boolean; archived?: boolean }>();
+          legacyPinned.forEach(chatId => migration.set(chatId, { ...migration.get(chatId), pinned: true }));
+          legacyArchived.forEach(chatId => migration.set(chatId, { ...migration.get(chatId), archived: true }));
+          void Promise.allSettled([...migration].map(([chatId, patch]) =>
+            setInboxChatPreference(currentUser.id, chatId, patch)
+          ));
+        }
+      }
       setPinnedChats(preferences.filter(item => item.pinned).map(item => item.chatId).slice(0, 500));
       setArchivedChats(preferences.filter(item => item.archived).map(item => item.chatId).slice(0, 500));
     }, error => console.warn('[NEXORA inbox] Cross-device preferences unavailable:', error));
