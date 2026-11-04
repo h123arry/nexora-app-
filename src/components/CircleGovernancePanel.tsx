@@ -128,7 +128,8 @@ export default function CircleGovernancePanel({
         <ShieldCheck className="h-4 w-4 text-violet-400" />
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle governance</h3>
-          <p className="text-[11px] text-violet-200/50">Manage trusted roles with server-verified permissions and an audit trail.</p>\n          {memberCount !== null && <p className="text-[10px] text-violet-300/70">{memberCount.toLocaleString()} active members · showing {members.length}</p>}
+          <p className="text-[11px] text-violet-200/50">Manage trusted roles with server-verified permissions and an audit trail.</p>
+          {memberCount !== null && <p className="text-[10px] text-violet-300/70">{memberCount.toLocaleString()} active members · showing {members.length}</p>}
         </div>
       </div>
       {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-950/20 p-3 text-xs text-rose-200">{error}</p>}
