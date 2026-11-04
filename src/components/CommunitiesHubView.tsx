@@ -23,6 +23,7 @@ interface CommunitiesHubViewProps {
   onLikePost: (postId: string) => void;
   onAddComment: (postId: string, commentContent: string) => void;
   theme: 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';
+  locale?: 'en' | 'fr' | 'ar' | 'pt';
   onViewProfile: (userIdOrUsername: string) => void;
 }
 
@@ -34,6 +35,7 @@ export default function CommunitiesHubView({
   onLikePost,
   onAddComment,
   theme,
+  locale = 'en',
   onViewProfile
 }: CommunitiesHubViewProps) {
   // 1. Storage Keys
@@ -1510,7 +1512,7 @@ export default function CommunitiesHubView({
                   ))}
                 </section>
 
-                <PageChannelPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} isFollowing={followedPageIds.includes(selectedPage.id)} />\n\n                {selectedPage.category === 'Business' && <BusinessServicesPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} />}
+                <PageChannelPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} isFollowing={followedPageIds.includes(selectedPage.id)} locale={locale} />\n\n                {selectedPage.category === 'Business' && <BusinessServicesPanel pageId={selectedPage.id} ownerId={selectedPage.ownerId} currentUserId={currentUser.id} locale={locale} />}
 
                 <div className="space-y-2 text-xs font-mono text-current/60">
                   {selectedPage.website && (
