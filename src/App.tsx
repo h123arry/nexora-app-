@@ -2289,6 +2289,7 @@ export default function App() {
                       onLikePost={handleLikePost}
                       onAddComment={handleAddComment}
                       theme={theme}
+                      locale={resolveLocale(currentUser.preferredLanguage)}
                       onViewProfile={handleViewProfile}
                     />
                   )}
