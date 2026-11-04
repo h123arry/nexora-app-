@@ -271,6 +271,20 @@ service cloud.firestore {
           || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));
       allow delete: if false;
 
+      match /inboxPreferences/{chatId} {
+        allow get, list: if owner(userId);
+        allow create, update: if owner(userId)
+          && chatId.size() > 0 && chatId.size() <= 150
+          && exists(/databases/$(database)/documents/chats/$(chatId))
+          && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+          && request.resource.data.keys().hasOnly(['chatId', 'pinned', 'archived', 'updatedAt'])
+          && request.resource.data.chatId == chatId
+          && request.resource.data.pinned is bool
+          && request.resource.data.archived is bool
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+      }
+
       match /memoryEvents/{eventId} { allow read, write: if owner(userId); }
       match /memoryState/{stateId} { allow read, write: if owner(userId); }
       match /settings/{settingId} {
