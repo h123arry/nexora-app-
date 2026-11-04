@@ -180,7 +180,8 @@ export default function UniversalSearchModal({
     matchedChats.length > 0 ||
     matchedOpportunities.length > 0 ||
     matchedSaved.length > 0 ||
-    matchedAiChats.length > 0;
+    matchedAiChats.length > 0 ||
+    (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0));
 
   return (
     <div id="universal-search-modal" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
