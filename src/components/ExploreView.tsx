@@ -186,7 +186,7 @@ export default function ExploreView({
         </div>
 
         {/* Quick Filter Tabs */}
-        <div role="tablist" aria-label="Filter discovery results" className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <div role="group" aria-label="Filter discovery results" className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {[
             { id: 'all', label: 'All Results' },
             { id: 'users', label: 'Users' },
@@ -196,13 +196,9 @@ export default function ExploreView({
           ].map(f => (
             <button
               type="button"
-              role="tab"
               key={f.id}
-              id={`explore-filter-${f.id}`}
-              aria-controls="explore-search-results"
-              tabIndex={searchFilterType === f.id ? 0 : -1}
+              aria-pressed={searchFilterType === f.id}
               onClick={() => setSearchFilterType(f.id as any)}
-              aria-selected={searchFilterType === f.id}
                 className={`nx-explore-filter px-4 py-1.5 rounded-xl text-xs font-mono font-bold uppercase transition-all shrink-0 cursor-pointer border ${
                   searchFilterType === f.id
                   ? 'bg-violet-600/20 text-violet-100 border-violet-300/40 shadow-[inset_0_0_0_1px_rgba(182,155,255,0.08)]'
@@ -260,7 +256,7 @@ export default function ExploreView({
 
       {/* SEARCH RESULTS VIEW */}
       {hasActiveSearch ? (
-        <div id="explore-search-results" role="tabpanel" aria-labelledby={`explore-filter-${searchFilterType}`} className="space-y-6 text-left">
+        <div id="explore-search-results" className="space-y-6 text-left">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-xs font-mono text-violet-400 uppercase tracking-widest font-extrabold">
               Found {visibleResultCount} {visibleResultCount === 1 ? 'result' : 'results'} for "{debouncedSearch}"
@@ -300,24 +296,17 @@ export default function ExploreView({
                     {filteredCreators.map(user => (
                       <div
                         key={user.id}
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`View ${user.name}'s profile`}
-                        onClick={() => {
-                          addRecentSearch(user.username);
-                          onViewProfile?.(user.id);
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.target !== event.currentTarget) return;
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
+                        className="nx-soft-card p-3 hover:border-violet-400/30 flex items-center justify-between gap-3 transition-all group"
+                      >
+                        <button
+                          type="button"
+                          aria-label={`View ${user.name}'s profile`}
+                          onClick={() => {
                             addRecentSearch(user.username);
                             onViewProfile?.(user.id);
-                          }
-                        }}
-                        className="nx-soft-card p-4 hover:border-violet-400/30 flex items-center justify-between gap-3 cursor-pointer transition-all group focus-visible:outline-2 focus-visible:outline-violet-300"
-                      >
-                        <div className="flex items-center gap-3 overflow-hidden">
+                          }}
+                          className="min-w-0 flex flex-1 items-center gap-3 overflow-hidden rounded-lg text-left focus-visible:outline-2 focus-visible:outline-violet-300"
+                        >
                           <img src={user.avatar} alt="" loading="lazy" decoding="async" className="w-12 h-12 rounded-xl object-cover ring-2 ring-violet-500/30 group-hover:scale-105 transition-transform" />
                           <div className="overflow-hidden">
                             <div className="flex items-center gap-1.5">
@@ -327,10 +316,12 @@ export default function ExploreView({
                             <span className="text-[10px] font-mono text-violet-400 truncate block">@{user.username}</span>
                             <p className="text-[10px] text-zinc-400 truncate mt-0.5">{user.bio || 'Nexora Creator'}</p>
                           </div>
-                        </div>
+                        </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          type="button"
+                          aria-pressed={followingIds.includes(user.id)}
+                          aria-label={followingIds.includes(user.id) ? `Unfollow ${user.username}` : `Follow ${user.username}`}
+                          onClick={() => {
                             onToggleFollow?.(user.id);
                           }}
                           className={`px-4 py-1.5 rounded-xl text-[10px] font-mono font-bold uppercase transition-all cursor-pointer shrink-0 ${
