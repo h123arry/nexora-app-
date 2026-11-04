@@ -490,13 +490,14 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                       {selectedCircle.description}
                     </p>
                   </div>
+                  <div className="flex items-center gap-2"><SaveToCollectionButton userId={currentUser.id} itemType="circle" itemId={selectedCircle.id} disabled={selectedCircle.type !== 'public'} />
                   <button 
                     onClick={() => setSelectedCircle(null)}
                     className="p-1.5 sm:p-2 bg-black/40 hover:bg-black/60 text-white rounded-xl border border-white/5 transition-colors cursor-pointer shrink-0"
                     title="Close Lounge"
                   >
                     <X className="w-4 h-4 sm:w-5 sm:h-5" />
-                  </button>
+                  </button></div>
                 </div>
               </div>
 
