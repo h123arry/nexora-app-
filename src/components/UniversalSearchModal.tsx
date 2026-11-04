@@ -78,7 +78,7 @@ export default function UniversalSearchModal({
     const updated = recentSearches.filter(s => s !== term);
     setRecentSearches(updated);
     try {
-      localStorage.setItem('nexora_recent_searches', JSON.stringify(updated));
+      localStorage.setItem('nexora_recent_searches_' + currentUser.id, JSON.stringify(updated));
     } catch {}
   };
 
@@ -184,7 +184,7 @@ export default function UniversalSearchModal({
     (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0));
 
   return (
-    <div id="universal-search-modal" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
+    <div id="universal-search-modal" role="dialog" aria-modal="true" aria-label="NEXORA universal search" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
       
       {/* Top Header & Search Input Bar */}
       <div className="shrink-0 border-b border-white/10 bg-[#0c091d]/90 px-4 sm:px-8 py-4 sm:py-5 flex flex-col gap-3">
@@ -194,6 +194,7 @@ export default function UniversalSearchModal({
             <input
               ref={inputRef}
               type="text"
+              aria-label="Search NEXORA"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -247,7 +248,7 @@ export default function UniversalSearchModal({
 
           {/* EMPTY QUERY STATE: Quick Actions & Recent Searches */}
           {!query.trim() && (
-            <div className="space-y-8 animate-fade-in">
+            <div className="space-y-8 animate-fade-in" aria-live="polite">
               
               {/* Quick Actions / Productivity Hub */}
               <div className="space-y-3">
