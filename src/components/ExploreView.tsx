@@ -78,7 +78,7 @@ export default function ExploreView({
 
   // Save search to recent searches when submitted or selected
   const addRecentSearch = (term: string) => {
-    if (!term.trim()) return;
+    if (!currentUserId || !term.trim()) return;
     const trimmed = term.trim();
     setRecentSearches(prev => {
       const updated = [trimmed, ...prev.filter(item => item !== trimmed)].slice(0, 8);
@@ -91,10 +91,11 @@ export default function ExploreView({
 
   const removeRecentSearch = (term: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!currentUserId) return;
     setRecentSearches(prev => {
       const updated = prev.filter(item => item !== term);
       try {
-        localStorage.setItem('nexora_recent_searches', JSON.stringify(updated));
+        localStorage.setItem('nexora_recent_searches_' + currentUserId, JSON.stringify(updated));
       } catch {}
       return updated;
     });
@@ -102,6 +103,7 @@ export default function ExploreView({
 
   const clearAllRecentSearches = () => {
     setRecentSearches([]);
+    if (!currentUserId) return;
     try {
       localStorage.removeItem('nexora_recent_searches_' + currentUserId);
     } catch {}
