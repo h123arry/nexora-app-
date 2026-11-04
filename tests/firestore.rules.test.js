@@ -158,6 +158,12 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'chats', 'chat-1')));
     await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'chats'), where('participants', 'array-contains', 'alice'))));
     await assertFails(getDoc(doc(dbFor('mallory'), 'chats', 'chat-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'client-group-chat'), {
+      id: 'client-group-chat', participants: ['alice', 'bob', 'charlie'], isGroup: true, ownerId: 'alice', lastMessage: ''
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'chats', 'duplicate-direct-chat'), {
+      id: 'duplicate-direct-chat', participants: ['alice', 'alice'], lastMessage: ''
+    }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { participants: ['alice', 'mallory'] }));
     await assertSucceeds(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'hello' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'chat-1'), { lastMessage: 'x'.repeat(10001) }));
@@ -232,6 +238,21 @@ const publicProfile = (uid) => ({
     }));
     await assertFails(getDocs(collection(dbFor('mallory'), 'chats', 'chat-1', 'messages')));
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'chat-1', 'messages', 'm1')));
+  });
+
+  it('allows group members to message but reserves group deletion for its owner', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'chats', 'server-group-chat'), {
+        id: 'server-group-chat', participants: ['alice', 'bob', 'charlie'],
+        isGroup: true, ownerId: 'alice', partnerName: 'Test Group', lastMessage: ''
+      });
+    });
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'chats', 'server-group-chat', 'messages', 'group-message'), {
+      id: 'group-message', chatId: 'server-group-chat', senderId: 'bob',
+      content: 'Hello group', status: 'sent', timestamp: new Date().toISOString()
+    }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'chats', 'server-group-chat')));
+    await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'chats', 'server-group-chat')));
   });
 
   it('allows creators to list only their own uploaded media assets', async () => {

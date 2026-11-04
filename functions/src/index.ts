@@ -10,6 +10,7 @@ import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communi
 import { setCircleMemberRole } from './communityGovernance.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createPageBookingRequest, respondToPageBookingRequest } from './pageBookings.js';
+import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
 import { searchPublicDirectory } from './directorySearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
@@ -295,6 +296,19 @@ export const searchNexoraDirectory = onCall({ maxInstances: 10 }, async (request
   }
 });
 
+
+export const createGroupChat = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a group conversation.');
+  try {
+    return await createGroupChatRecord(adminDb, request.auth.uid, request.data?.name, request.data?.description, request.data?.participantIds);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('needs a name') || message.includes('valid, unique')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('cannot create') || message.includes('privacy restriction') || message.includes('does not accept')) throw new HttpsError('permission-denied', message);
+    if (message.includes('selected accounts')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'The group conversation could not be created. Please retry.');
+  }
+});
 
 export const publishPageChannelUpdate = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a Page channel update.');

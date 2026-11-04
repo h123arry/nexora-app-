@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, Plus, Check, CheckCheck, Send, MessageSquare, 
+  Search, Plus, Users, Check, CheckCheck, Send, MessageSquare, 
   ArrowLeft, ShieldCheck, User as UserIcon, X, Sparkles,
   Paperclip, Image as ImageIcon, Video, Mic, Smile, MoreVertical,
   Phone, Archive, Pin, Trash2, Globe, Quote, Eye, EyeOff, Volume2, Pause, Play, Download
@@ -10,6 +10,9 @@ import { User, Chat, Message, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
 import { setInboxChatPreference, watchInboxPreferences } from '../services/firebase/inboxPreferencesService';
 import { watchInboxChats } from '../services/firebase/chatDirectoryService';
+import { createGroupChat } from '../services/firebase/groupChatService';
+import { auth } from '../services/firebase/config';
+import CreateGroupChatModal from './CreateGroupChatModal';
 import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
 import { isSupportedOutgoingMediaType, serializeOutgoingMessage } from '../utils/messageSerialization';
 import { 
@@ -86,6 +89,8 @@ export default function NewInboxView({
   const [searchQuery, setSearchQuery] = useState('');
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const isServerBackedInbox = auth.currentUser?.uid === currentUser.id;
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const creatorsRef = useRef(creators);
   useEffect(() => { creatorsRef.current = creators; }, [creators]);
@@ -163,12 +168,13 @@ export default function NewInboxView({
   // The conversation list is account-scoped server data, not a device-local cache.
   // This keeps new conversations and updated previews in sync across signed-in devices.
   useEffect(() => {
+    if (!isServerBackedInbox) return;
     return watchInboxChats(currentUser.id, creatorsRef.current, serverChats => {
       setChats(serverChats);
     }, error => {
       console.warn('[NEXORA inbox] Server conversation list unavailable:', error.message);
     });
-  }, [currentUser.id]);
+  }, [currentUser.id, isServerBackedInbox]);
 
   // Firestore real-time listener
   useEffect(() => {
@@ -531,14 +537,25 @@ export default function NewInboxView({
             <MessageSquare className="w-5 h-5 text-violet-400" />
             <h1 className="text-base font-black tracking-tight text-white font-sans">Inbox</h1>
           </div>
-          <button
-            onClick={() => setShowNewMessageModal(true)}
-            className="nx-icon-button inline-flex bg-violet-600 text-white hover:bg-violet-500"
-            title="New Message"
-            aria-label="Start a new message"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowCreateGroupModal(true)}
+              disabled={!isServerBackedInbox}
+              className="nx-icon-button inline-flex disabled:opacity-40"
+              title={isServerBackedInbox ? "Create group" : "Sign in to create a group"}
+              aria-label="Create a group conversation"
+            >
+              <Users className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setShowNewMessageModal(true)}
+              className="nx-icon-button inline-flex bg-violet-600 text-white hover:bg-violet-500"
+              title="New Message"
+              aria-label="Start a new message"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Tabs & Search */}
@@ -951,6 +968,20 @@ export default function NewInboxView({
           </div>
         )}
       </AnimatePresence>
+
+      <CreateGroupChatModal
+        isOpen={showCreateGroupModal && isServerBackedInbox}
+        currentUserId={currentUser.id}
+        creators={creators}
+        onClose={() => setShowCreateGroupModal(false)}
+        onCreate={async (name, description, participantIds) => {
+          const created = await createGroupChat(name, description, participantIds);
+          setShowCreateGroupModal(false);
+          setInboxTab('chats');
+          setActiveChatId(created.chatId);
+          window.dispatchEvent(new CustomEvent('toast', { detail: 'Group conversation created. Members have been notified.' }));
+        }}
+      />
 
       {/* ATTACHMENT MENU */}
       <AttachmentMenu
