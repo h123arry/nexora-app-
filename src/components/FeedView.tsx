@@ -1564,6 +1564,7 @@ export default function FeedView({
         // The ranking utility keeps the reasons explainable and deterministic.
         return rankReels(sortedList, followingIds, currentUser.interestDNA, {
           mutedCreatorIds, blockedCreatorIds: blockedUserIds, hiddenPostIds, notInterestedTags,
+          viewerId: currentUser.id,
         }).map(({ post }) => post as RefactoredPost);
       }
       return sortedList;

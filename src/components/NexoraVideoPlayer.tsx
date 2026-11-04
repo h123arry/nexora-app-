@@ -462,7 +462,7 @@ export default function NexoraVideoPlayer({
       if (!watchCompletedRef.current) {
         watchCompletedRef.current = true;
         recordRecommendationEvent('watch_complete', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
-        recordReelSignal(post.id, { completed: true, watchedSeconds: Math.round(time) });
+        recordReelSignal(post.id, { completed: true, watchedSeconds: Math.round(time) }, currentUser?.id);
       }
     }
 
@@ -470,7 +470,7 @@ export default function NexoraVideoPlayer({
     if (time > 3.0 && !viewLoggedRef.current) {
       viewLoggedRef.current = true;
       logToWatchHistory();
-      recordReelSignal(post.id, { watchedSeconds: Math.round(time) });
+      recordReelSignal(post.id, { watchedSeconds: Math.round(time) }, currentUser?.id);
 
       try {
         const currentUserStr = localStorage.getItem('nexora_user');
@@ -633,7 +633,7 @@ export default function NexoraVideoPlayer({
       if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
       lastTapRef.current = 0;
       if (!post.isLikedByUser) onSpark();
-      recordReelSignal(post.id, { liked: true });
+      recordReelSignal(post.id, { liked: true }, currentUser?.id);
       setHeartPosition({ x: clientX, y: clientY });
       setShowDoubleTapHeart(true);
       window.setTimeout(() => setShowDoubleTapHeart(false), 700);
@@ -680,6 +680,7 @@ export default function NexoraVideoPlayer({
         }
         break;
       case 'not-interested':
+        recordReelSignal(post.id, { notInterested: true }, currentUser?.id);
         onNotInterested?.();
         window.dispatchEvent(new CustomEvent('toast', { detail: '👁️ Post marked as not interested. Feed adjusted.' }));
         break;

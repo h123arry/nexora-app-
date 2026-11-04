@@ -376,7 +376,7 @@ export default function ExploreView({
                         <div className="flex items-center gap-3 overflow-hidden">
                           <div className="relative w-12 h-14 rounded-xl overflow-hidden bg-black shrink-0 border border-white/10">
                             {video.videoUrl ? (
-                              <video src={video.videoUrl} className="w-full h-full object-cover" muted />
+                              <video src={video.videoUrl} poster={video.image || undefined} className="w-full h-full object-cover" muted playsInline preload="none" aria-hidden="true" />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center text-xs">🎥</div>
                             )}
@@ -387,7 +387,7 @@ export default function ExploreView({
                           <div className="overflow-hidden">
                             <h4 className="text-xs font-bold text-white truncate">{video.content || 'Untitled Video'}</h4>
                             <span className="text-[10px] font-mono text-violet-400 truncate block">@{video.username}</span>
-                            <span className="text-[9px] font-mono text-zinc-500 block mt-0.5">{video.likes || 42} sparks</span>
+                            <span className="text-[9px] font-mono text-zinc-500 block mt-0.5">{video.likes || 0} sparks</span>
                           </div>
                         </div>
                         <button 

@@ -180,6 +180,19 @@ describe('discovery service', () => {
     assert.equal(topics[0].postCount, 2);
   });
 
+  it('interleaves reel creators while retaining eligible videos', () => {
+    const now = Date.now();
+    const reels = [
+      post({ id: 'a-1', userId: 'creator-a', videoUrl: 'https://example.test/a1.mp4', timestamp: new Date(now).toISOString() }),
+      post({ id: 'a-2', userId: 'creator-a', videoUrl: 'https://example.test/a2.mp4', timestamp: new Date(now).toISOString() }),
+      post({ id: 'b-1', userId: 'creator-b', videoUrl: 'https://example.test/b1.mp4', timestamp: new Date(now).toISOString() }),
+    ];
+    const ranked = rankReels(reels, [], {}, { now });
+    assert.deepEqual(ranked.map(item => item.post.id), ['a-1', 'b-1', 'a-2']);
+    assert.equal(ranked.length, reels.length);
+    assert.ok(ranked.every(item => item.reasons.length > 0));
+  });
+
   it('filters reels using privacy and topic controls and handles invalid timestamps deterministically', () => {
     const reels = [
       post({ id: 'allowed', userId: 'creator-a', videoUrl: 'https://example.test/a.mp4', tags: ['AI'], timestamp: 'invalid' }),
