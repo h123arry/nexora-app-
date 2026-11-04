@@ -8,6 +8,7 @@ import { auth } from '../services/firebase/config';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import MiniServicesHub from './MiniServicesHub';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
+import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
 
 function readExploreRecentSearches(userId: string): string[] {
   if (!userId) return [];
@@ -67,6 +68,36 @@ export default function ExploreView({
   }, [currentUserId]);
   const [recentSearches, setRecentSearches] = useState<string[]>(() => readExploreRecentSearches(currentUserId));
   useEffect(() => { setRecentSearches(readExploreRecentSearches(currentUserId)); }, [currentUserId]);
+
+  const [directoryResults, setDirectoryResults] = useState<PublicDirectoryResult | null>(null);
+  const [directoryLoading, setDirectoryLoading] = useState(false);
+  const [directoryError, setDirectoryError] = useState('');
+
+  // Signed-in discovery uses the privacy-filtered server directory for people,
+  // Pages and public Circles. Local post search remains scoped to loaded public posts.
+  useEffect(() => {
+    const term = debouncedSearch.trim();
+    if (!currentUserId || term.length < 2) {
+      setDirectoryResults(null);
+      setDirectoryLoading(false);
+      setDirectoryError('');
+      return;
+    }
+    let cancelled = false;
+    setDirectoryLoading(true);
+    setDirectoryError('');
+    void searchPublicDirectory(term).then(results => {
+      if (!cancelled) setDirectoryResults(results);
+    }).catch(error => {
+      if (!cancelled) {
+        setDirectoryResults(null);
+        setDirectoryError(error instanceof Error ? error.message : 'Directory search is temporarily unavailable.');
+      }
+    }).finally(() => {
+      if (!cancelled) setDirectoryLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [currentUserId, debouncedSearch]);
 
     // Debounce search input for performance
   useEffect(() => {
@@ -136,15 +167,19 @@ export default function ExploreView({
   }, [posts, debouncedSearch]);
 
   const hasActiveSearch = debouncedSearch.trim().length > 0;
+  const searchPeople = currentUserId && directoryResults ? directoryResults.people : filteredCreators;
+  const searchPages = directoryResults?.pages || [];
+  const searchCircles = directoryResults?.circles || [];
+  const directoryEntryCount = searchPages.length + searchCircles.length;
   const visibleResultCount = searchFilterType === 'users'
-    ? filteredCreators.length
+    ? searchPeople.length
     : searchFilterType === 'posts'
       ? filteredPosts.length
       : searchFilterType === 'videos'
         ? filteredVideos.length
         : searchFilterType === 'communities'
-          ? 0
-          : filteredCreators.length + filteredPosts.length + filteredVideos.length;
+          ? directoryEntryCount
+          : searchPeople.length + filteredPosts.length + filteredVideos.length + directoryEntryCount;
 
   return (
     <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
@@ -268,8 +303,11 @@ export default function ExploreView({
               Clear Search ✖
             </button>
           </div>
+          {directoryLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching the live directory…</p>}
 
-          {visibleResultCount === 0 && searchFilterType === 'communities' ? (
+          {visibleResultCount === 0 && searchFilterType === 'communities' && directoryLoading ? (
+            <div role="status" className="p-8 rounded-3xl nx-surface text-center text-xs text-zinc-400">Searching public people, Pages and Circles…</div>
+          ) : visibleResultCount === 0 && searchFilterType === 'communities' ? (
             <div className="p-6 rounded-3xl nx-surface text-center space-y-3 my-8">
               <h3 className="text-sm font-bold text-white">Community discovery lives in the Communities hub</h3>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto font-sans">Explore uses no separate cached community results. Open the hub to search its current community directory.</p>
@@ -293,7 +331,7 @@ export default function ExploreView({
                 <div className="space-y-3">
                   <h3 className="text-[10px] font-mono text-violet-400 uppercase tracking-wider font-bold">Users ({filteredCreators.length})</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {filteredCreators.map(user => (
+                    {searchPeople.map(user => (
                       <div
                         key={user.id}
                         className="nx-soft-card p-3 hover:border-violet-400/30 flex items-center justify-between gap-3 transition-all group"
@@ -420,25 +458,40 @@ export default function ExploreView({
                 </div>
               )}
 
-              {/* Community discovery is owned by CommunitiesHub, which subscribes to the current community source. */}
-              {(searchFilterType === 'all' || searchFilterType === 'communities') && (
+              {(searchFilterType === 'all' || searchFilterType === 'communities') && directoryEntryCount > 0 && (
                 <div className="space-y-3">
-                  <h3 className="text-[10px] font-mono text-violet-300 uppercase tracking-wider font-bold">Discover communities</h3>
-                  <div className="p-4 rounded-2xl nx-surface flex items-center justify-between gap-3">
-                    <p className="text-xs text-zinc-400">Community search and membership are managed in the live Communities hub. {searchFilterType === 'communities' && localSearch.trim() ? 'Your search will carry over.' : ''}</p>
-                    <button type="button" onClick={() => {
-                      try {
-                        if (searchFilterType === 'communities' && localSearch.trim()) {
-                          window.sessionStorage.setItem('nexora_community_search_handoff', localSearch.trim());
-                        } else {
-                          window.sessionStorage.removeItem('nexora_community_search_handoff');
-                        }
-                      } catch (error) {
-                        console.warn('Could not hand off community search:', error);
-                      }
-                      setActiveTab('communities');
-                    }} className="px-3.5 py-2 rounded-xl bg-violet-500/15 hover:bg-violet-600 border border-violet-400/25 text-violet-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
+                  <h3 className="text-[10px] font-mono text-violet-300 uppercase tracking-wider font-bold">Pages & Circles ({directoryEntryCount})</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {searchPages.map(page => (
+                      <button key={'page-' + page.id} type="button" onClick={() => {
+                        try { window.sessionStorage.setItem('nexora_community_search_handoff', debouncedSearch); } catch {}
+                        setActiveTab('communities');
+                      }} className="nx-soft-card min-h-24 p-3 text-left hover:border-violet-400/30">
+                        <span className="block text-xs font-bold text-white">{page.name}</span>
+                        <span className="block text-[10px] text-violet-300">@{page.username} · {page.category}</span>
+                        <span className="mt-1 block text-[10px] leading-relaxed text-zinc-400">{page.description || 'NEXORA Page'}</span>
+                      </button>
+                    ))}
+                    {searchCircles.map(circle => (
+                      <button key={'circle-' + circle.id} type="button" onClick={() => {
+                        try { window.sessionStorage.setItem('nexora_community_search_handoff', debouncedSearch); } catch {}
+                        setActiveTab('communities');
+                      }} className="nx-soft-card min-h-24 p-3 text-left hover:border-violet-400/30">
+                        <span className="block text-xs font-bold text-white">{circle.name}</span>
+                        <span className="block text-[10px] text-violet-300">Public Circle</span>
+                        <span className="mt-1 block text-[10px] leading-relaxed text-zinc-400">{circle.description || 'Explore this public Circle'}</span>
+                      </button>
+                    ))}
                   </div>
+                </div>
+              )}
+              {(searchFilterType === 'all' || searchFilterType === 'communities') && (
+                <div className="rounded-2xl nx-surface p-4 flex items-center justify-between gap-3">
+                  <p className="text-xs text-zinc-400">{directoryLoading ? 'Searching the live NEXORA directory…' : directoryError ? directoryError : 'Open the Communities hub to explore and join available communities.'}</p>
+                  <button type="button" onClick={() => {
+                    try { window.sessionStorage.setItem('nexora_community_search_handoff', debouncedSearch); } catch {}
+                    setActiveTab('communities');
+                  }} className="px-3.5 py-2 rounded-xl bg-violet-500/15 hover:bg-violet-600 border border-violet-400/25 text-violet-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
                 </div>
               )}
 
