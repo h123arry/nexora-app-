@@ -85,6 +85,7 @@ export default function ExploreView({
     }
     let cancelled = false;
     setDirectoryLoading(true);
+    setDirectoryResults(null);
     setDirectoryError('');
     void searchPublicDirectory(term).then(results => {
       if (!cancelled) setDirectoryResults(results);
@@ -304,6 +305,7 @@ export default function ExploreView({
             </button>
           </div>
           {directoryLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching the live directory…</p>}
+          {directoryError && <p role="alert" className="px-1 text-[10px] text-amber-300">Live directory search is unavailable. Showing locally loaded results where possible.</p>}
 
           {visibleResultCount === 0 && searchFilterType === 'communities' && directoryLoading ? (
             <div role="status" className="p-8 rounded-3xl nx-surface text-center text-xs text-zinc-400">Searching public people, Pages and Circles…</div>
