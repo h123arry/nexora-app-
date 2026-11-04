@@ -26,7 +26,7 @@ before(async () => {
 });
 
 after(async () => {
-  const chats = await db.collection('chats').where('ownerId', '==', 'group-owner').get();
+  const chats = await db.collection('chats').where('ownerId', 'in', ['group-owner', 'group-rate-owner']).get();
   for (const chat of chats.docs) {
     await db.recursiveDelete(chat.ref);
     await Promise.all(members.map(id => db.collection('users').doc(id).collection('notifications').doc('group_' + chat.id).delete()));
