@@ -4,7 +4,7 @@ import { Bookmark, Search, Trash2, Play, Volume2, Briefcase, Sparkles, FolderPlu
 import { Post, User } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { addPostToSavedCollection, createSavedCollection, listSavedCollections, removeSavedCollection, type SavedCollection } from '../services/firebase/savedCollectionService';
+import { addPostToSavedCollection, createSavedCollection, listSavedCollections, listSavedCollectionPostIds, removeSavedCollection, type SavedCollection } from '../services/firebase/savedCollectionService';
 
 interface SavedViewProps {
   currentUser: User;
@@ -25,6 +25,7 @@ export default function SavedView({
   const [activeCategory, setActiveCategory] = useState<'all' | 'posts' | 'videos' | 'voice' | 'opportunities'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [collections, setCollections] = useState<SavedCollection[]>([]);
+  const [collectionPostIds, setCollectionPostIds] = useState<string[]>([]);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
   const [collectionBusy, setCollectionBusy] = useState(false);
@@ -41,6 +42,18 @@ export default function SavedView({
   };
 
   useEffect(() => { void refreshCollections(); }, [currentUser.id]);
+
+  useEffect(() => {
+    let active = true;
+    if (!selectedCollectionId) {
+      setCollectionPostIds([]);
+      return () => { active = false; };
+    }
+    listSavedCollectionPostIds(currentUser.id, selectedCollectionId)
+      .then(ids => { if (active) setCollectionPostIds(ids); })
+      .catch(error => { if (active) setCollectionMessage(error instanceof Error ? error.message : 'Could not load collection items.'); });
+    return () => { active = false; };
+  }, [currentUser.id, selectedCollectionId]);
 
   const handleCreateCollection = async () => {
     if (!newCollectionName.trim() || collectionBusy) return;
@@ -62,9 +75,13 @@ export default function SavedView({
     setCollectionBusy(true);
     setCollectionMessage('');
     try {
-      const results = await Promise.allSettled(bookmarkedPosts.map(post =>
-        addPostToSavedCollection(currentUser.id, selectedCollectionId, post.id)
-      ));
+      const results: PromiseSettledResult<void>[] = [];
+      for (let index = 0; index < bookmarkedPosts.length; index += 10) {
+        const batch = bookmarkedPosts.slice(index, index + 10);
+        results.push(...await Promise.allSettled(batch.map(post =>
+          addPostToSavedCollection(currentUser.id, selectedCollectionId, post.id)
+        )));
+      }
       const added = results.filter(result => result.status === 'fulfilled').length;
       const failed = results.length - added;
       await refreshCollections();
@@ -89,7 +106,7 @@ export default function SavedView({
 
   // Filter bookmarked posts from parent list
   const bookmarkedPosts = posts.filter(p => userBookmarks.includes(p.id));
-  const displayPosts = bookmarkedPosts;
+  const displayPosts = selectedCollectionId ? posts.filter(post => collectionPostIds.includes(post.id)) : bookmarkedPosts;
 
   const filteredItems = displayPosts.filter(post => {
     // Search query filter
@@ -159,9 +176,9 @@ export default function SavedView({
         {collections.length > 0 && <div className="flex flex-col sm:flex-row gap-2">
           <select value={selectedCollectionId} onChange={event => setSelectedCollectionId(event.target.value)} aria-label="Choose a collection"
             className="min-w-0 flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2.5 text-xs text-white">
-            {collections.map(collection => <option key={collection.id} value={collection.id}>{collection.name} · {collection.itemCount} items</option>)}
+            <option value=''>All bookmarks</option>{collections.map(collection => <option key={collection.id} value={collection.id}>{collection.name} · {collection.itemCount} items</option>)}
           </select>
-          <button type="button" onClick={handleAddBookmarksToCollection} disabled={collectionBusy || bookmarkedPosts.length === 0}
+          <button type="button" onClick={handleAddBookmarksToCollection} disabled={collectionBusy || !selectedCollectionId || bookmarkedPosts.length === 0}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-40"><Check className="w-3.5 h-3.5" /> Add all saved posts</button>
           <button type="button" onClick={() => void handleDeleteCollection(selectedCollectionId)} disabled={collectionBusy}
             className="rounded-xl border border-rose-500/20 px-3 py-2.5 text-xs text-rose-300 disabled:opacity-40">Delete</button>
