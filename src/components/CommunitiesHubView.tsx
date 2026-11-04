@@ -1498,7 +1498,7 @@ export default function CommunitiesHubView({
                   ) : posts.filter(post => post.userId === selectedPage.id).slice(0, 20).map(post => (
                     <article key={post.id} className="rounded-2xl border border-white/10 bg-black/25 p-4 space-y-3">
                       <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-white/90">{post.content}</p>
-                      {post.imageUrl && <img src={post.imageUrl} alt="" loading="lazy" onError={hideUnavailableImage} className="max-h-72 w-full rounded-xl object-cover" />}
+                      {post.image && <img src={post.image} alt="" loading="lazy" onError={hideUnavailableImage} className="max-h-72 w-full rounded-xl object-cover" />}
                       {post.videoUrl && <video src={post.videoUrl} controls preload="metadata" className="max-h-72 w-full rounded-xl bg-black" />}
                       <div className="flex items-center justify-between border-t border-white/5 pt-2">
                         <span className="text-[10px] text-violet-200/50">{Number(post.likes || 0).toLocaleString()} Sparks</span>
