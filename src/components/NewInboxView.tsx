@@ -111,6 +111,7 @@ export default function NewInboxView({
   const messageCursorsRef = useRef<Record<string, QueryDocumentSnapshot<DocumentData> | null>>({});
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const typingStateRef = useRef<'typing' | null>(null);
+  const chatPreferenceOwnerRef = useRef(currentUser.id);
 
   // Persistence
   useEffect(() => {
@@ -121,9 +122,9 @@ export default function NewInboxView({
     localStorage.setItem(`nexora_messages_${currentUser.id}`, JSON.stringify(localMessages));
   }, [localMessages, currentUser.id]);
 
-  useEffect(() => { localStorage.setItem('nexora_pinned_chats_' + currentUser.id, JSON.stringify(pinnedChats.slice(0, 500))); }, [pinnedChats, currentUser.id]);
-  useEffect(() => { localStorage.setItem('nexora_archived_chats_' + currentUser.id, JSON.stringify(archivedChats.slice(0, 500))); }, [archivedChats, currentUser.id]);
-  useEffect(() => { setPinnedChats(readChatIdList(currentUser.id, 'pinned_chats')); setArchivedChats(readChatIdList(currentUser.id, 'archived_chats')); }, [currentUser.id]);
+  useEffect(() => { if (chatPreferenceOwnerRef.current === currentUser.id) localStorage.setItem('nexora_pinned_chats_' + currentUser.id, JSON.stringify(pinnedChats.slice(0, 500))); }, [pinnedChats, currentUser.id]);
+  useEffect(() => { if (chatPreferenceOwnerRef.current === currentUser.id) localStorage.setItem('nexora_archived_chats_' + currentUser.id, JSON.stringify(archivedChats.slice(0, 500))); }, [archivedChats, currentUser.id]);
+  useEffect(() => { chatPreferenceOwnerRef.current = currentUser.id; setPinnedChats(readChatIdList(currentUser.id, 'pinned_chats')); setArchivedChats(readChatIdList(currentUser.id, 'archived_chats')); }, [currentUser.id]);
 
   // Auto scroll
   useEffect(() => {
