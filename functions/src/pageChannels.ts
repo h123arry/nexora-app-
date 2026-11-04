@@ -20,10 +20,32 @@ export async function publishPageChannelUpdate(
     throw new Error('Only the owning Page account can publish channel updates.');
   }
   const updateId = randomUUID();
+  const now = new Date();
   await pageRef.collection('channelUpdates').doc(updateId).create({
     id: updateId, pageId, ownerId: ownerUid, content,
-    createdAt: new Date(), status: 'published',
+    createdAt: now, status: 'published',
   });
+
+  // Notify every follower in bounded batches without loading the full audience.
+  const followerQuery = db.collection('follows').where('followingId', '==', pageId).limit(450);
+  let cursor: FirebaseFirestore.QueryDocumentSnapshot | undefined;
+  while (true) {
+    const followers = cursor ? await followerQuery.startAfter(cursor).get() : await followerQuery.get();
+    if (followers.empty) break;
+    const batch = db.batch();
+    for (const follower of followers.docs) {
+      const recipientId = String(follower.get('followerId') || '');
+      if (!recipientId || recipientId === ownerUid) continue;
+      batch.set(db.collection('activities').doc(`${recipientId}_page_${updateId}`), {
+        userId: recipientId, type: 'page_channel_update', actorId: ownerUid,
+        pageId, pageName: String(page.get('name') || 'NEXORA Page').slice(0, 120),
+        updateId, message: 'published a new official channel update', read: false, createdAt: now,
+      });
+    }
+    await batch.commit();
+    cursor = followers.docs[followers.docs.length - 1];
+    if (followers.size < 450) break;
+  }
   return { updateId };
 }
 

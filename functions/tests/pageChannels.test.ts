@@ -21,6 +21,9 @@ describe('official Page broadcast channel', () => {
     const created = await publishPageChannelUpdate(db, 'creator', 'page-channel-test', 'A new update for followers.');
     const update = page.collection('channelUpdates').doc(created.updateId);
     assert.equal((await update.get()).get('status'), 'published');
+    const activity = await db.collection('activities').doc(`follower-1_page_${created.updateId}`).get();
+    assert.equal(activity.get('type'), 'page_channel_update');
+    assert.equal(activity.get('userId'), 'follower-1');
     await assert.rejects(publishPageChannelUpdate(db, 'intruder', 'page-channel-test', 'Forged update'), /Only the owning Page/);
     await deletePageChannelUpdate(db, 'creator', 'page-channel-test', created.updateId);
     assert.equal((await update.get()).exists, false);
