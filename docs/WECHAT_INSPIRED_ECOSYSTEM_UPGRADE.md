@@ -326,3 +326,13 @@ Two additional foundations have been integrated into the existing app:
 Regression coverage was added for private saved-collection permissions and locale direction. GitHub Actions CI was triggered for the latest changes and was still running at the time of this ledger update. Do not treat these changes as verified until the workflow and emulator suites finish successfully.
 
 - **Circle member administration:** the governance panel now retrieves active members in pages of 40 and obtains the active-member total from Firestore's count aggregation instead of presenting the first 100 fetched records as the complete list. The invitation UI is also available to projected active admins/moderators as well as owners; trusted callable authorization remains the final authority. This does not yet implement the proposed 10,000-member capacity limit. Capacity enforcement remains a separate server-side migration because the existing public join path still permits direct client membership creation.
+
+## Implementation ledger — 4 November 2026 (continued)
+
+Additional in-place improvements:
+
+- **Circle member directory:** the member panel now reads an accurate Firestore aggregation count and loads active members in cursor-based pages of 40, rather than implying that the first 100 returned records are the Circle's capacity. The governance panel uses the same paginated directory.
+- **Unified search hardening:** search text is normalized safely when profile/post fields are absent, and recent-search history is now scoped to the signed-in account rather than shared across accounts on the same browser. AI-history search no longer falls back to a global unscoped local-storage key.
+- **Circle manager invitations:** the invitation control is available to active owners, admins and moderators, matching the callable's server-side permission policy; owner-only role delegation remains unchanged.
+
+These are implementation slices, not a claim that all seven ecosystem upgrades are complete. Circle membership still has no enforced capacity limit, and page follower totals remain untracked. The next engineering step is to move every join/leave path behind trusted membership operations before introducing a configurable capacity, so clients cannot bypass it.
