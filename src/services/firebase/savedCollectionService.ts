@@ -65,6 +65,18 @@ export async function createSavedCollection(uid: string, rawName: string): Promi
   return ref.id;
 }
 
+export async function listSavedCollectionPostIds(uid: string, collectionId: string): Promise<string[]> {
+  requireOwner(uid);
+  validateId(collectionId);
+  const items = await getDocs(query(
+    collection(db, 'users', uid, 'savedCollections', collectionId, 'items'),
+    limit(MAX_ITEMS_PER_COLLECTION),
+  ));
+  return items.docs
+    .filter(item => item.data().itemType === 'post' && typeof item.data().itemId === 'string')
+    .map(item => String(item.data().itemId));
+}
+
 export async function addPostToSavedCollection(uid: string, collectionId: string, postId: string): Promise<void> {
   requireOwner(uid);
   validateId(collectionId);
