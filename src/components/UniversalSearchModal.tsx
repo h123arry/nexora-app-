@@ -15,6 +15,9 @@ interface UniversalSearchModalProps {
   onViewProfile: (user: User) => void;
 }
 
+function searchText(value: unknown): string { return typeof value === 'string' ? value.normalize('NFKC').toLocaleLowerCase().trim() : ''; }
+function readRecentSearches(userId: string): string[] { try { const saved = localStorage.getItem('nexora_recent_searches_' + userId); const parsed = saved ? JSON.parse(saved) : []; return Array.isArray(parsed) ? [...new Set(parsed.filter((item): item is string => typeof item === 'string').map(item => item.trim()).filter(Boolean))].slice(0, 10) : []; } catch { return []; } }
+
 export default function UniversalSearchModal({
   isOpen,
   onClose,
@@ -27,14 +30,8 @@ export default function UniversalSearchModal({
   onViewProfile,
 }: UniversalSearchModalProps) {
   const [query, setQuery] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
-    try {
-      const saved = localStorage.getItem('nexora_recent_searches');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches(currentUser.id));
+  useEffect(() => { setRecentSearches(readRecentSearches(currentUser.id)); }, [currentUser.id]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -72,7 +69,7 @@ export default function UniversalSearchModal({
     const updated = [trimmed, ...recentSearches.filter(s => s.toLowerCase() !== trimmed.toLowerCase())].slice(0, 10);
     setRecentSearches(updated);
     try {
-      localStorage.setItem('nexora_recent_searches', JSON.stringify(updated));
+      localStorage.setItem('nexora_recent_searches_' + currentUser.id, JSON.stringify(updated));
     } catch {}
   };
 
@@ -88,11 +85,11 @@ export default function UniversalSearchModal({
   const handleClearAllRecent = () => {
     setRecentSearches([]);
     try {
-      localStorage.removeItem('nexora_recent_searches');
+      localStorage.removeItem('nexora_recent_searches_' + currentUser.id);
     } catch {}
   };
 
-  const trimmedQ = query.trim().toLowerCase();
+  const trimmedQ = searchText(query);
 
   // 1. People
   const matchedUsers = users.filter(u => !u.isBanned && !u.isSuspended).filter(u => 
