@@ -282,6 +282,24 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('alice'), 'mediaAssets', 'alice-uploaded')));
   });
 
+  it('stores inbox organisation preferences per account and only for chats the user belongs to', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'chats', 'chat-1'), { participants: ['alice', 'bob'], lastMessage: '' });
+    });
+    const preference = doc(dbFor('alice'), 'users', 'alice', 'inboxPreferences', 'chat-1');
+    await assertSucceeds(setDoc(preference, {
+      chatId: 'chat-1', pinned: true, archived: false, updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(preference));
+    await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'inboxPreferences', 'chat-1')));
+    await assertFails(setDoc(doc(dbFor('mallory'), 'users', 'mallory', 'inboxPreferences', 'chat-1'), {
+      chatId: 'chat-1', pinned: true, archived: false, updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'inboxPreferences', 'not-a-member-chat'), {
+      chatId: 'not-a-member-chat', pinned: true, archived: false, updatedAt: serverTimestamp()
+    }));
+  });
+
   it('stores creator drafts per account and validates draft metadata', async () => {
     await assertSucceeds(setDoc(doc(dbFor('alice'), 'drafts', 'draft-1'), {
       userId: 'alice', caption: 'A creator draft', videoUrl: '', type: 'text', tags: ['nexora'], updatedAt: serverTimestamp()
