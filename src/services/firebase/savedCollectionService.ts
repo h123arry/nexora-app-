@@ -1,6 +1,5 @@
 import {
-  collection, deleteDoc, doc, getDocs, limit, orderBy, query, runTransaction,
-  serverTimestamp, where,
+  collection, doc, getDocs, limit, orderBy, query, runTransaction, serverTimestamp, writeBatch,
 } from 'firebase/firestore';
 import { auth, db } from './config';
 
@@ -92,7 +91,6 @@ export async function removeSavedCollection(uid: string, collectionId: string): 
   validateId(collectionId);
   const parentRef = doc(db, 'users', uid, 'savedCollections', collectionId);
   const items = await getDocs(query(collection(parentRef, 'items'), limit(MAX_ITEMS_PER_COLLECTION)));
-  const { writeBatch } = await import('firebase/firestore');
   const batch = writeBatch(db);
   items.docs.forEach(item => batch.delete(item.ref));
   batch.delete(parentRef);
