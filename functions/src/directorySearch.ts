@@ -86,7 +86,8 @@ export async function searchPublicDirectory(
       description: String(item.get('description') || '').slice(0, 240),
     }));
 
-  const visibleCircles = [...circles.docs, ...circlesByTitle.docs]\n    .filter((item, index, all) => all.findIndex(other => other.id === item.id) === index)
+  const visibleCircles = [...circles.docs, ...circlesByTitle.docs]
+    .filter((item, index, all) => all.findIndex(other => other.id === item.id) === index)
     .filter(item => !strings(item.get('bannedUsers')).includes(viewerUid))
     .map(item => ({
       id: item.id, name: String(item.get('name') || 'Circle'),
