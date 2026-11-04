@@ -7,6 +7,7 @@ import { addFollow, createCommunity, createPage, removeFollow, subscribeToCommun
 import { isCircleJoinedDb, joinCircleDb, leaveCircleDb } from '../data/database';
 import { ActivityService } from '../services/activityService';
 import { auth } from '../services/firebase/config';
+import { getPageFollowerCount } from '../services/firebase/pageChannelService';
 
 const hideUnavailableImage = (event: React.SyntheticEvent<HTMLImageElement>) => {
   event.currentTarget.style.display = 'none';
@@ -97,6 +98,23 @@ export default function CommunitiesHubView({
 
   // 6. Selected Page Profile View State
   const [selectedPage, setSelectedPage] = useState<Page | null>(null);
+  const [selectedPageFollowerCount, setSelectedPageFollowerCount] = useState<number | null>(null);
+  const [pageFollowerCountLoading, setPageFollowerCountLoading] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    if (!selectedPage?.id) {
+      setSelectedPageFollowerCount(null);
+      return () => { active = false; };
+    }
+    setPageFollowerCountLoading(true);
+    setSelectedPageFollowerCount(null);
+    getPageFollowerCount(selectedPage.id)
+      .then(count => { if (active) setSelectedPageFollowerCount(count); })
+      .catch(() => { if (active) setSelectedPageFollowerCount(null); })
+      .finally(() => { if (active) setPageFollowerCountLoading(false); });
+    return () => { active = false; };
+  }, [selectedPage?.id]);
 
   // 7. Modals / Creation Panel toggles
   const [showCreateCommunityModal, setShowCreateCommunityModal] = useState(false);
@@ -1458,7 +1476,7 @@ export default function CommunitiesHubView({
                 <div className="grid grid-cols-3 gap-3 bg-black/40 border border-white/5 rounded-2xl p-3 text-center">
                   <div>
                     <span className="text-[9px] font-mono text-current/40 uppercase block">Followers</span>
-                    <span className="text-xs sm:text-sm font-black text-violet-300">Not tracked</span>
+                    <span className="text-xs sm:text-sm font-black text-violet-300">{pageFollowerCountLoading ? 'Loading...' : selectedPageFollowerCount === null ? 'Unavailable' : selectedPageFollowerCount.toLocaleString()}</span>
                   </div>
                   <div>
                     <span className="text-[9px] font-mono text-current/40 uppercase block">Posts in feed</span>
