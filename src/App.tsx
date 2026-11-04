@@ -2123,6 +2123,7 @@ export default function App() {
               setSearchQuery={setSearchQuery}
               isLoggedIn={isLoggedIn}
               onOpenAuth={() => setShowAuthModal(true)}
+              locale={resolveLocale(currentUser.preferredLanguage)}
             />
           </div>
 
@@ -2204,6 +2205,7 @@ export default function App() {
                         setMatrixSubTabRedirect('ai');
                         navigateTo('matrix');
                       }}
+                      locale={resolveLocale(currentUser.preferredLanguage)}
                     />
                   )}
 

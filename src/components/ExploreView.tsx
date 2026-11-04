@@ -9,6 +9,7 @@ import PurpleVerifiedBadge from './VohVerifiedBadge';
 import MiniServicesHub from './MiniServicesHub';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
+import { getTranslations } from '../utils/translations';
 
 function readExploreRecentSearches(userId: string): string[] {
   if (!userId) return [];
@@ -27,6 +28,7 @@ interface ExploreViewProps {
   interestDNA?: Record<string, number>;
   currentUserId?: string;
   onOpenVohAi: () => void;
+  locale?: string;
 }
 
 export default function ExploreView({
@@ -40,8 +42,10 @@ export default function ExploreView({
   onViewProfile,
   interestDNA = {},
   currentUserId = '',
-  onOpenVohAi
+  onOpenVohAi,
+  locale = 'en'
 }: ExploreViewProps) {
+  const copy = getTranslations(locale);
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities'>('all');
@@ -198,7 +202,7 @@ export default function ExploreView({
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-400" />
             <input
               type="text"
-              placeholder="Search users, posts, videos, hashtags..."
+              placeholder={copy.searchPlaceholder}
               aria-label="Search people, posts, videos, hashtags and communities"
               autoComplete="off"
               value={localSearch}
@@ -226,11 +230,11 @@ export default function ExploreView({
         {/* Quick Filter Tabs */}
         <div role="group" aria-label="Filter discovery results" className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
           {[
-            { id: 'all', label: 'All Results' },
-            { id: 'users', label: 'Users' },
-            { id: 'posts', label: 'Posts' },
-            { id: 'videos', label: 'Videos' },
-            { id: 'communities', label: 'Communities' }
+            { id: 'all', label: copy.filterAll },
+            { id: 'users', label: copy.filterUsers },
+            { id: 'posts', label: copy.filterPosts },
+            { id: 'videos', label: copy.filterVideos },
+            { id: 'communities', label: copy.filterCommunities }
           ].map(f => (
             <button
               type="button"
