@@ -46,9 +46,10 @@ export async function searchPublicDirectory(
     ...strings(viewerData?.messaging?.blockedUserIds),
     ...strings(viewerData?.privacy?.blockedUserIds),
   ]);
+  // Apply visibility and block filters before the final result cap. Otherwise a
+  // block-heavy prefix can hide eligible accounts that appear later in the query.
   const candidates = [...new Map(peopleByUsername.docs.map(doc => [doc.id, doc])).values()]
-    .filter(doc => doc.id !== viewerUid && doc.get('isBanned') !== true && doc.get('isSuspended') !== true && doc.get('isSeedProfile') !== true)
-    .slice(0, RESULT_LIMIT);
+    .filter(doc => doc.id !== viewerUid && doc.get('isBanned') !== true && doc.get('isSuspended') !== true && doc.get('isSeedProfile') !== true);
 
   const people = (await Promise.all(candidates.map(async candidate => {
     if (viewerBlocks.has(candidate.id)) return null;
@@ -72,7 +73,7 @@ export async function searchPublicDirectory(
       bio: String(data.bio || ''),
       isVerified: data.isVerified === true,
     };
-  }))).filter((item): item is NonNullable<typeof item> => item !== null);
+  }))).filter((item): item is NonNullable<typeof item> => item !== null).slice(0, RESULT_LIMIT);
 
   const pages = [...pagesByUsername.docs, ...pagesByName.docs, ...pagesByTitle.docs]
     .filter((item, index, all) => all.findIndex(other => other.id === item.id) === index)
