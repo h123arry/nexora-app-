@@ -103,8 +103,9 @@ export function rankReels(
     .filter(post => !blocked.has(post.userId || '') && !muted.has(post.userId || ''))
     .filter(post => !hidden.has(post.id))
     .filter(post => !(post.tags || []).some(tag => notInterested.has(tag.replace(/^#/, '').trim().toLowerCase())))
-    .map((post, index) => {
-      const signals = readSignals(post.id, context.viewerId);
+    .map((post, index) => ({ post, index, signals: readSignals(post.id, context.viewerId) }))
+    .filter(({ signals }) => !signals.notInterested)
+    .map(({ post, index, signals }) => {
       const tags = (post.tags || []).map(tag => tag.replace(/^#/, '').trim().toLowerCase()).filter(Boolean);
       const matchedTags = [...new Set(tags)].filter(tag => interestScores[tag] > 0);
       const ageHours = getAgeHours(post.timestamp, now);
