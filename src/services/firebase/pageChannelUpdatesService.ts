@@ -24,10 +24,10 @@ export function watchPageChannelUpdates(
   error => onError?.(error));
 }
 
-export async function publishPageChannelUpdate(pageId: string, content: string): Promise<string> {
+export async function publishPageChannelUpdate(pageId: string, content: string, idempotencyKey: string): Promise<string> {
   if (!auth.currentUser) throw new Error('Sign in to publish a channel update.');
   const callable = httpsCallable(functions, 'publishPageChannelUpdate');
-  const result = await callable({ pageId, content });
+  const result = await callable({ pageId, content, idempotencyKey });
   return (result.data as { updateId: string }).updateId;
 }
 

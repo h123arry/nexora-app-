@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Megaphone, Send, Trash2 } from 'lucide-react';
 import {
   deletePageChannelUpdate, publishPageChannelUpdate, watchPageChannelUpdates,
@@ -15,6 +15,7 @@ export default function PageChannelPanel({ pageId, ownerId, currentUserId, isFol
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const publishAttemptRef = useRef<{ content: string; key: string } | null>(null);
 
   useEffect(() => {
     setUpdates([]);
@@ -26,7 +27,17 @@ export default function PageChannelPanel({ pageId, ownerId, currentUserId, isFol
     event.preventDefault();
     if (busy || !content.trim()) return;
     setBusy(true); setError(''); setNotice('');
-    try { await publishPageChannelUpdate(pageId, content); setContent(''); setNotice('Your update was published to Page followers.'); }
+    try {
+      const normalizedContent = content.trim();
+      const attempt = publishAttemptRef.current?.content === normalizedContent
+        ? publishAttemptRef.current
+        : { content: normalizedContent, key: crypto.randomUUID() };
+      publishAttemptRef.current = attempt;
+      await publishPageChannelUpdate(pageId, normalizedContent, attempt.key);
+      publishAttemptRef.current = null;
+      setContent('');
+      setNotice('Your update was published to Page followers.');
+    }
     catch (cause) { setError(cause instanceof Error ? cause.message : 'The update could not be published.'); }
     finally { setBusy(false); }
   };
