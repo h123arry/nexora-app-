@@ -245,7 +245,7 @@ export default function SavedView({
               setCollectionBusy(true);
               try {
                 await removeContentFromSavedCollection(currentUser.id, selectedCollectionId, item.itemType, item.itemId, item.parentId);
-                setCollectionSummaries(previous => previous.filter(entry => !(entry.itemType === item.itemType && entry.itemId === item.itemId)));
+                setCollectionSummaries(previous => previous.filter(entry => !(entry.itemType === item.itemType && entry.itemId === item.itemId && entry.parentId === item.parentId)));
                 await refreshCollections();
               } catch (error) { setCollectionMessage(error instanceof Error ? error.message : 'Could not remove saved item.'); }
               finally { setCollectionBusy(false); }

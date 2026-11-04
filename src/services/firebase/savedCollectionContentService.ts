@@ -49,7 +49,7 @@ export interface SavedContentSummary extends SavedContentReference {
 /** Resolve private collection references to only the public/member-visible labels needed by Saved. */
 export async function listSavedContentSummaries(uid: string, collectionId: string): Promise<SavedContentSummary[]> {
   const references = await listSavedContentReferences(uid, collectionId);
-  return Promise.all(references.map(async reference => {
+  return Promise.all(references.filter(reference => reference.itemType !== 'post').map(async reference => {
     const target = reference.itemType === 'post' ? doc(db, 'posts', reference.itemId)
       : reference.itemType === 'circle' ? doc(db, 'communities', reference.itemId)
       : reference.itemType === 'page' ? doc(db, 'pages', reference.itemId)
