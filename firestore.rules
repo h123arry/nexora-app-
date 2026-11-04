@@ -344,13 +344,37 @@ service cloud.firestore {
         match /items/{itemId} {
           allow get, list: if owner(userId);
           allow create: if owner(userId)
-            && request.resource.data.keys().hasOnly(['itemType', 'itemId', 'createdAt'])
-            && request.resource.data.itemType == 'post'
+            && request.resource.data.keys().hasOnly(['itemType', 'itemId', 'parentId', 'createdAt'])
             && request.resource.data.itemId is string
-            && itemId == 'post_' + request.resource.data.itemId
+            && request.resource.data.itemId.size() > 0
+            && request.resource.data.itemId.size() <= 150
             && request.resource.data.createdAt == request.time
-            && exists(/databases/$(database)/documents/posts/$(request.resource.data.itemId))
-            && publicPost(get(/databases/$(database)/documents/posts/$(request.resource.data.itemId)).data);
+            && (
+              (request.resource.data.itemType == 'post'
+                && !request.resource.data.keys().hasAny(['parentId'])
+                && itemId == 'post_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/posts/$(request.resource.data.itemId))
+                && publicPost(get(/databases/$(database)/documents/posts/$(request.resource.data.itemId)).data))
+              || (request.resource.data.itemType == 'circle'
+                && !request.resource.data.keys().hasAny(['parentId'])
+                && itemId == 'circle_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/communities/$(request.resource.data.itemId))
+                && get(/databases/$(database)/documents/communities/$(request.resource.data.itemId)).data.type == 'public')
+              || (request.resource.data.itemType == 'page'
+                && !request.resource.data.keys().hasAny(['parentId'])
+                && itemId == 'page_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/pages/$(request.resource.data.itemId)))
+              || (request.resource.data.itemType == 'event'
+                && request.resource.data.keys().hasAny(['parentId'])
+                && request.resource.data.parentId is string
+                && request.resource.data.parentId.size() > 0
+                && request.resource.data.parentId.size() <= 150
+                && itemId == 'event_' + request.resource.data.parentId + '_' + request.resource.data.itemId
+                && exists(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/events/$(request.resource.data.itemId))
+                && get(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/events/$(request.resource.data.itemId)).data.status == 'scheduled'
+                && exists(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/members/$(userId))
+                && get(/databases/$(database)/documents/communities/$(request.resource.data.parentId)/members/$(userId)).data.status == 'active')
+            );
           allow update: if false;
           allow delete: if owner(userId);
         }

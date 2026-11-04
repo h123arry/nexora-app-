@@ -858,6 +858,11 @@ const publicProfile = (uid) => ({
       await setDoc(doc(db, 'posts', 'collection-private'), {
         id: 'collection-private', userId: 'author', audience: 'followers', content: 'Private'
       });
+      await setDoc(doc(db, 'communities', 'collection-circle'), { id: 'collection-circle', type: 'public', name: 'Public Circle' });
+      await setDoc(doc(db, 'pages', 'collection-page'), { id: 'collection-page', ownerId: 'owner', name: 'Public Page' });
+      await setDoc(doc(db, 'communities', 'collection-event-circle'), { id: 'collection-event-circle', type: 'private' });
+      await setDoc(doc(db, 'communities', 'collection-event-circle', 'members', 'alice'), { userId: 'alice', status: 'active' });
+      await setDoc(doc(db, 'communities', 'collection-event-circle', 'events', 'collection-event'), { id: 'collection-event', status: 'scheduled' });
     });
     const collectionRef = doc(dbFor('alice'), 'users', 'alice', 'savedCollections', 'reading-list');
     await assertSucceeds(setDoc(collectionRef, {
@@ -878,7 +883,19 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(collectionRef, 'items', 'bad-type'), {
       itemType: 'circle', itemId: 'collection-public', createdAt: serverTimestamp()
     }));
-    await assertSucceeds(updateDoc(collectionRef, { itemCount: 1, updatedAt: serverTimestamp() }));
+    await assertSucceeds(setDoc(doc(collectionRef, 'items', 'circle_collection-circle'), {
+      itemType: 'circle', itemId: 'collection-circle', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(doc(collectionRef, 'items', 'page_collection-page'), {
+      itemType: 'page', itemId: 'collection-page', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(doc(collectionRef, 'items', 'event_collection-event-circle_collection-event'), {
+      itemType: 'event', itemId: 'collection-event', parentId: 'collection-event-circle', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(collectionRef, 'items', 'event_other-circle_private-event'), {
+      itemType: 'event', itemId: 'private-event', parentId: 'other-circle', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(updateDoc(collectionRef, { itemCount: 4, updatedAt: serverTimestamp() }));
     await assertFails(updateDoc(collectionRef, { itemCount: 501, updatedAt: serverTimestamp() }));
     await assertFails(updateDoc(collectionRef, { name: 'Tampered' }));
     await assertSucceeds(deleteDoc(itemRef));
