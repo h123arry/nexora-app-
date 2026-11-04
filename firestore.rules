@@ -641,7 +641,7 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    match /communities/{communityId} {
+    match /pages/{pageId}/services/{serviceId} {\n      allow get, list: if resource.data.status == 'active' && resource.data.bookable == true;\n      allow create, update, delete: if false;\n    }\n\n    match /communities/{communityId} {
       // Private and invite-only records can include membership and moderation state.
       // Their detailed member authorization is not implemented, so only owners may read them.
       allow get, list: if resource.data.type == 'public'

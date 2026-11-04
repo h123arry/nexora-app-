@@ -10,6 +10,7 @@ import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communi
 import { setCircleMemberRole } from './communityGovernance.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createPageBookingRequest, respondToPageBookingRequest } from './pageBookings.js';
+import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -248,5 +249,31 @@ export const respondToBusinessBookingRequest = onCall({ maxInstances: 10 }, asyn
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     if (message.includes('already been resolved')) throw new HttpsError('failed-precondition', message);
     throw new HttpsError('internal', 'The booking request could not be updated. Please retry.');
+  }
+});
+
+
+export const publishBusinessServiceListing = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a business service.');
+  try {
+    return await publishBusinessService(adminDb, request.auth.uid, request.data?.pageId, request.data);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Provide a valid')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the owning')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The business service could not be published. Please retry.');
+  }
+});
+
+export const setBusinessServiceListingStatus = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage business services.');
+  try {
+    return await setBusinessServiceStatus(adminDb, request.auth.uid, request.data?.pageId, request.data?.serviceId, request.data?.status);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid business')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the owning')) throw new HttpsError('permission-denied', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'The business service could not be updated. Please retry.');
   }
 });

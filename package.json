@@ -18,7 +18,7 @@
     "test:rules": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-rules \"node --test tests/firestore.rules.test.js\"",
     "test:storage": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore,storage --project demo-nexora-storage-rules \"node --test tests/storage.rules.test.js\"",
     "test:migration": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-migration \"npx tsx --test functions/tests/backfillPublicPostAudience.test.ts\"",
-    "test:engagement": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-engagement \"npx tsx --test functions/tests/postEngagement.test.ts functions/tests/communityPolls.test.ts functions/tests/communityEvents.test.ts functions/tests/communityAnnouncements.test.ts functions/tests/communityGovernance.test.ts functions/tests/communityInvites.test.ts functions/tests/pageBookings.test.ts\"",
+    "test:engagement": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-engagement \"npx tsx --test functions/tests/postEngagement.test.ts functions/tests/communityPolls.test.ts functions/tests/communityEvents.test.ts functions/tests/communityAnnouncements.test.ts functions/tests/communityGovernance.test.ts functions/tests/communityInvites.test.ts functions/tests/pageBookings.test.ts functions/tests/businessServices.test.ts\"",
     "test:voh-security": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore,auth,storage --project demo-nexora-voh \"npx tsx --test tests/voh-api-security.test.ts\""
   },
   "dependencies": {
@@ -54,4 +54,4 @@
   "engines": {
     "node": "22"
   }
-}
+}\n
