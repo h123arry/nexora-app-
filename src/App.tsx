@@ -2346,7 +2346,7 @@ export default function App() {
                       userBookmarks={userBookmarks}
                       onBookmarkPost={handleBookmarkPost}
                       onViewProfile={handleViewProfile}
-                      onSelectTab={setActiveTab}
+                      onSelectTab={(tab) => navigateTo(tab as typeof activeTab)}
                     />
                   )}
 
