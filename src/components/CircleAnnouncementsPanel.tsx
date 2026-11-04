@@ -94,7 +94,7 @@ export default function CircleAnnouncementsPanel({
               </div>
               <h4 className="text-sm font-bold text-white">{item.title}</h4>
             </div>
-            {isOwner && (
+            {canManage && (
               <button type="button" onClick={() => void togglePin(item)} disabled={updatingId !== null} aria-label={item.pinned ? 'Unpin announcement' : 'Pin announcement'} className="shrink-0 rounded-lg border border-white/10 p-2 text-violet-200 disabled:opacity-50">
                 {item.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
               </button>
