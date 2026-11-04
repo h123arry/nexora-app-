@@ -93,24 +93,24 @@ export default function UniversalSearchModal({
 
   // 1. People
   const matchedUsers = users.filter(u => !u.isBanned && !u.isSuspended).filter(u => 
-    u.name.toLowerCase().includes(trimmedQ) || 
-    u.username.toLowerCase().includes(trimmedQ) || 
-    u.bio?.toLowerCase().includes(trimmedQ)
+    searchText(u.name).includes(trimmedQ) || 
+    searchText(u.username).includes(trimmedQ) || 
+    searchText(u.bio).includes(trimmedQ)
   ).slice(0, 5);
 
   // 2. Posts
   const matchedPosts = posts.filter(p =>
-    p.content.toLowerCase().includes(trimmedQ) ||
-    p.name.toLowerCase().includes(trimmedQ) ||
-    p.username.toLowerCase().includes(trimmedQ) ||
-    p.tags?.some(t => t.toLowerCase().includes(trimmedQ)) ||
-    p.communityName?.toLowerCase().includes(trimmedQ)
+    searchText(p.content).includes(trimmedQ) ||
+    searchText(p.name).includes(trimmedQ) ||
+    searchText(p.username).includes(trimmedQ) ||
+    p.tags?.some(t => searchText(t).includes(trimmedQ)) ||
+    searchText(p.communityName).includes(trimmedQ)
   ).slice(0, 5);
 
   // 3. World Pulse
   const matchedPulse = posts.filter(p =>
     (p.location || p.tags?.some(t => ['pulse', 'breaking', 'news', 'world'].includes(t.toLowerCase()))) &&
-    (p.content.toLowerCase().includes(trimmedQ) || p.tags?.some(t => t.toLowerCase().includes(trimmedQ)) || p.location?.toLowerCase().includes(trimmedQ))
+    (searchText(p.content).includes(trimmedQ) || p.tags?.some(t => searchText(t).includes(trimmedQ)) || searchText(p.location).includes(trimmedQ))
   ).slice(0, 4);
 
   // 4. Communities
@@ -120,7 +120,7 @@ export default function UniversalSearchModal({
     if (saved) storedCommunities = JSON.parse(saved);
   } catch {}
   const matchedCommunities = storedCommunities.filter(c =>
-    c.name?.toLowerCase().includes(trimmedQ) || c.description?.toLowerCase().includes(trimmedQ) || c.category?.toLowerCase().includes(trimmedQ)
+    searchText(c?.name).includes(trimmedQ) || searchText(c?.description).includes(trimmedQ) || searchText(c?.category).includes(trimmedQ)
   ).slice(0, 4);
 
   // 5. Circles
@@ -130,22 +130,22 @@ export default function UniversalSearchModal({
     if (saved) storedCircles = JSON.parse(saved);
   } catch {}
   const matchedCircles = storedCircles.filter(cir =>
-    cir.name?.toLowerCase().includes(trimmedQ) || cir.description?.toLowerCase().includes(trimmedQ)
+    searchText(cir?.name).includes(trimmedQ) || searchText(cir?.description).includes(trimmedQ)
   ).slice(0, 3);
 
   // 6. Messages / Chats
   const matchedChats = chats.filter(ch =>
-    ch.partnerName?.toLowerCase().includes(trimmedQ) ||
-    ch.lastMessage?.toLowerCase().includes(trimmedQ) ||
-    ch.groupCategory?.toLowerCase().includes(trimmedQ)
+    searchText(ch.partnerName).includes(trimmedQ) ||
+    searchText(ch.lastMessage).includes(trimmedQ) ||
+    searchText(ch.groupCategory).includes(trimmedQ)
   ).slice(0, 4);
 
   // 7. Opportunities (from real published posts with opportunity tag/type)
   const matchedOpportunities = posts.filter(p =>
     p.opportunityType && (
-      p.content.toLowerCase().includes(trimmedQ) ||
-      p.opportunityType.toLowerCase().includes(trimmedQ) ||
-      p.tags?.some(t => t.toLowerCase().includes(trimmedQ))
+      searchText(p.content).includes(trimmedQ) ||
+      searchText(p.opportunityType).includes(trimmedQ) ||
+      p.tags?.some(t => searchText(t).includes(trimmedQ))
     )
   ).map(p => ({
     id: p.id,
@@ -158,17 +158,17 @@ export default function UniversalSearchModal({
   // 8. Saved Content
   const savedPostIds = currentUser.savedCollections ? Object.values(currentUser.savedCollections).flat() : [];
   const matchedSaved = posts.filter(p => 
-    savedPostIds.includes(p.id) && (p.content.toLowerCase().includes(trimmedQ) || p.tags?.some(t => t.toLowerCase().includes(trimmedQ)))
+    savedPostIds.includes(p.id) && (searchText(p.content).includes(trimmedQ) || p.tags?.some(t => searchText(t).includes(trimmedQ)))
   ).slice(0, 3);
 
   // 9. VOH AI conversations
   let aiConversations: any[] = [];
   try {
-    const aiSaved = localStorage.getItem(`nexora_ai_chats_${currentUser.id}`) || localStorage.getItem('nexora_ai_chats');
+    const aiSaved = localStorage.getItem(`nexora_ai_chats_${currentUser.id}`);
     if (aiSaved) aiConversations = JSON.parse(aiSaved);
   } catch {}
   const matchedAiChats = aiConversations.filter(chat =>
-    chat.title?.toLowerCase().includes(trimmedQ) || chat.messages?.some((m: any) => m.content?.toLowerCase().includes(trimmedQ))
+    searchText(chat?.title).includes(trimmedQ) || chat.messages?.some((m: any) => searchText(m?.content).includes(trimmedQ))
   ).slice(0, 3);
 
   const hasAnyResults = 
