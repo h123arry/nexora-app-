@@ -2317,6 +2317,7 @@ export default function App() {
                       </div>
                       <NewInboxView
                         key={currentUser.id}
+                        locale={resolveLocale(currentUser.preferredLanguage)}
                         currentUser={getRichUser(currentUser)}
                         chats={readUserScopedJson(localStorage, 'nexora_chats', currentUser.id, INITIAL_CHATS)}
                         messages={readUserScopedJson(localStorage, 'nexora_messages', currentUser.id, INITIAL_MESSAGES)}
