@@ -751,6 +751,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     communityId={selectedCircle.id}
                     currentUserId={currentUser.id}
                     isOwner={selectedCircle.ownerId === currentUser.id}
+                    canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
                   />
                 )}
 
