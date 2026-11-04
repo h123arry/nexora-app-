@@ -665,8 +665,20 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    match /pages/{pageId}/channelUpdates/{updateId} {\n      allow get, list: if signedIn()\n        && (get(/databases/$(database)/documents/pages/$(pageId)).data.ownerId == request.auth.uid\n          || exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + pageId)));\n      allow create, update, delete: if false;\n    }\n\n    match /pages/{pageId}/services/{serviceId} {\n      allow get, list: if (resource.data.status == 'active' && resource.data.bookable == true)
-          || (signedIn() && get(/databases/$(database)/documents/pages/$(pageId)).data.ownerId == request.auth.uid);\n      allow create, update, delete: if false;\n    }\n\n    match /communities/{communityId} {
+    match /pages/{pageId}/channelUpdates/{updateId} {
+      allow get, list: if signedIn()
+        && (get(/databases/$(database)/documents/pages/$(pageId)).data.ownerId == request.auth.uid
+          || exists(/databases/$(database)/documents/follows/$(request.auth.uid + '_' + pageId)));
+      allow create, update, delete: if false;
+    }
+
+    match /pages/{pageId}/services/{serviceId} {
+      allow get, list: if (resource.data.status == 'active' && resource.data.bookable == true)
+          || (signedIn() && get(/databases/$(database)/documents/pages/$(pageId)).data.ownerId == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /communities/{communityId} {
       // Private and invite-only records can include membership and moderation state.
       // Their detailed member authorization is not implemented, so only owners may read them.
       allow get, list: if resource.data.type == 'public'
