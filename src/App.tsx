@@ -46,7 +46,7 @@ import { mergeRealtimePosts } from './services/posts/postCollection';
 import { httpsCallable } from 'firebase/functions';
 import { collection, getDocs, limit, query } from 'firebase/firestore';
 import { useFirebase } from './context/FirebaseContext';
-import { TRANSLATIONS } from './utils/translations';
+import { TRANSLATIONS, getLocaleDirection, resolveLocale } from './utils/translations';
 import { resolveMediaUrl } from './utils/indexedDbStorage';
 import { recordRecommendationEvent } from './utils/recommendations';
 import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
@@ -2067,7 +2067,7 @@ export default function App() {
 
   // Render Core layout
   return (
-    <div id="nexora-master-wrapper" className={`nx-app-shell ${getThemeWrapperClass(theme)} transition-colors duration-500`}>
+    <div id="nexora-master-wrapper" lang={resolveLocale(currentUser.preferredLanguage)} dir={getLocaleDirection(currentUser.preferredLanguage)} className={`nx-app-shell ${getThemeWrapperClass(theme)} transition-colors duration-500`}>
       <a
         href="#nexora-main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-xl focus:bg-violet-600 focus:px-4 focus:py-3 focus:text-sm focus:font-bold focus:text-white focus:shadow-xl"
