@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, Plus, Check, CheckCheck, Send, MessageSquare, 
+  Search, Plus, Users, Check, CheckCheck, Send, MessageSquare, 
   ArrowLeft, ShieldCheck, User as UserIcon, X, Sparkles,
   Paperclip, Image as ImageIcon, Video, Mic, Smile, MoreVertical,
   Phone, Archive, Pin, Trash2, Globe, Quote, Eye, EyeOff, Volume2, Pause, Play, Download
