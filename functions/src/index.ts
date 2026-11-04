@@ -11,6 +11,7 @@ import { setCircleMemberRole } from './communityGovernance.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createPageBookingRequest, respondToPageBookingRequest } from './pageBookings.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
+import { searchPublicDirectory } from './directorySearch.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -275,5 +276,19 @@ export const setBusinessServiceListingStatus = onCall({ maxInstances: 10 }, asyn
     if (message.includes('Only the owning')) throw new HttpsError('permission-denied', message);
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     throw new HttpsError('internal', 'The business service could not be updated. Please retry.');
+  }
+});
+
+
+export const searchNexoraDirectory = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to search NEXORA.');
+  try {
+    return await searchPublicDirectory(adminDb, request.auth.uid, request.data?.query);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('between 2 and 40') || message.includes('Enter a search term')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    throw new HttpsError('internal', 'Directory search is temporarily unavailable.');
   }
 });
