@@ -3407,8 +3407,8 @@ export default function ProfileView({
                   <p className="text-xs font-sans text-zinc-200 font-medium">"The trust and impact you have built on Nexora."</p>
                   <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationPoints || 0)} PR</span>
                 </div>
-                <div className="p-3.5 rounded-2xl bg-pink-950/30 border border-pink-500/20 space-y-1">
-                  <span className="text-[10px] font-mono text-pink-400 font-extrabold uppercase block">Contributions</span>
+                <div className="p-3.5 rounded-2xl bg-violet-950/30 border border-violet-500/20 space-y-1">
+                  <span className="text-[10px] font-mono text-violet-300 font-extrabold uppercase block">Contributions</span>
                   <p className="text-xs font-sans text-zinc-200 font-medium">"The value you have added to the Nexora community."</p>
                   <span className="text-[11px] font-black text-white block pt-1">{formatSecondaryStat(currentUser.reputationBreakdown?.contributions || 0)} Value</span>
                 </div>
@@ -3421,7 +3421,7 @@ export default function ProfileView({
                     <CheckCircle2 className="w-3.5 h-3.5" /> Invariant: Rep ≤ Contrib
                   </span>
                   <span className="text-cyan-400 font-bold flex items-center gap-1">
-                    <Lock className="w-3.5 h-3.5" /> Anti-Farming Shield Active
+                    <Lock className="w-3.5 h-3.5" /> Integrity protections
                   </span>
                 </div>
                 <p className="text-[11px] text-zinc-400 leading-relaxed font-sans">
@@ -3433,19 +3433,24 @@ export default function ProfileView({
               <div className="space-y-3">
                 <h4 className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider font-extrabold flex items-center justify-between">
                   <span>Internal Contribution Dimensions</span>
-                  <span className="text-violet-400 text-[10px]">6 Signals Evaluated</span>
+                  <span className="text-violet-400 text-[10px]">6 Signals Tracked</span>
                 </h4>
 
                 <div className="grid grid-cols-1 gap-2.5">
+                  {!currentUser.reputationBreakdown?.categories && (
+                    <p className="text-[10px] text-zinc-500 leading-relaxed">
+                      Verified contribution scores will appear here when the platform has evaluated your activity. Placeholder scores are not displayed.
+                    </p>
+                  )}
                   {[
-                    { key: 'contentCreation', name: 'Content Creation', icon: '🎨', val: currentUser.reputationBreakdown?.categories?.contentCreation ?? 18, desc: 'Original posts, rich media & video depth', color: 'bg-violet-500' },
-                    { key: 'communityEngagement', name: 'Community Engagement', icon: '💬', val: currentUser.reputationBreakdown?.categories?.communityEngagement ?? 24, desc: 'Thoughtful comments & creator sparks', color: 'bg-pink-500' },
-                    { key: 'helpfulResponses', name: 'Helpful Responses', icon: '💡', val: currentUser.reputationBreakdown?.categories?.helpfulResponses ?? 15, desc: 'Direct replies & community endorsements', color: 'bg-cyan-500' },
-                    { key: 'discoveryImpact', name: 'Discovery Impact', icon: '🚀', val: currentUser.reputationBreakdown?.categories?.discoveryImpact ?? 32, desc: 'Unique user sparks & viral shares', color: 'bg-emerald-500' },
-                    { key: 'trustBuilding', name: 'Trust Building', icon: '🔒', val: currentUser.reputationBreakdown?.categories?.trustBuilding ?? 45, desc: 'Profile completeness & account longevity', color: 'bg-amber-500' },
-                    { key: 'platformParticipation', name: 'Platform Participation', icon: '🌐', val: currentUser.reputationBreakdown?.categories?.platformParticipation ?? 20, desc: 'Missions completed & circle leadership', color: 'bg-indigo-500' },
+                    { key: 'contentCreation', name: 'Content Creation', icon: '🎨', val: currentUser.reputationBreakdown?.categories?.contentCreation ?? 0, desc: 'Original posts, rich media & video depth', color: 'bg-violet-500' },
+                    { key: 'communityEngagement', name: 'Community Engagement', icon: '💬', val: currentUser.reputationBreakdown?.categories?.communityEngagement ?? 0, desc: 'Thoughtful comments & creator sparks', color: 'bg-violet-400' },
+                    { key: 'helpfulResponses', name: 'Helpful Responses', icon: '💡', val: currentUser.reputationBreakdown?.categories?.helpfulResponses ?? 0, desc: 'Direct replies & community endorsements', color: 'bg-violet-300' },
+                    { key: 'discoveryImpact', name: 'Discovery Impact', icon: '🚀', val: currentUser.reputationBreakdown?.categories?.discoveryImpact ?? 0, desc: 'Unique user sparks & viral shares', color: 'bg-emerald-500' },
+                    { key: 'trustBuilding', name: 'Trust Building', icon: '🔒', val: currentUser.reputationBreakdown?.categories?.trustBuilding ?? 0, desc: 'Profile completeness & account longevity', color: 'bg-amber-500' },
+                    { key: 'platformParticipation', name: 'Platform Participation', icon: '🌐', val: currentUser.reputationBreakdown?.categories?.platformParticipation ?? 0, desc: 'Missions completed & circle leadership', color: 'bg-indigo-500' },
                   ].map(pillar => {
-                    const maxVal = Math.max(50, (currentUser.reputationBreakdown?.contributions || 100) * 0.4);
+                    const maxVal = Math.max(50, (currentUser.reputationBreakdown?.contributions ?? 0) * 0.4);
                     const pct = Math.min(100, Math.round((pillar.val / maxVal) * 100));
 
                     return (
@@ -3457,7 +3462,7 @@ export default function ProfileView({
                           <span className="font-mono text-white font-extrabold">{pillar.val} pts</span>
                         </div>
                         <p className="text-[10px] text-zinc-400 leading-tight">{pillar.desc}</p>
-                        <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <div role="progressbar" aria-label={pillar.name + ' score'} aria-valuemin={0} aria-valuemax={maxVal} aria-valuenow={pillar.val} className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
                           <div className={`h-full ${pillar.color}`} style={{ width: `${pct}%` }} />
                         </div>
                       </div>
@@ -3472,19 +3477,19 @@ export default function ProfileView({
                 <div className="grid grid-cols-3 gap-2 text-center pt-1">
                   <div className="bg-white/5 p-2 rounded-xl">
                     <span className="text-xs font-mono font-bold text-emerald-400 block">
-                      {Math.round((currentUser.reputationBreakdown?.trustMultiplier || 0.85) * 100)}%
+                      {currentUser.reputationBreakdown?.trustMultiplier == null ? 'N/A' : Math.round(currentUser.reputationBreakdown.trustMultiplier * 100) + '%'}
                     </span>
                     <span className="text-[9px] text-zinc-400 block mt-0.5">Trust Multiplier</span>
                   </div>
                   <div className="bg-white/5 p-2 rounded-xl">
                     <span className="text-xs font-mono font-bold text-cyan-400 block">
-                      {Math.round((currentUser.reputationBreakdown?.antiGamingStatus?.uniqueEngagerRatio || 0.92) * 100)}%
+                      {currentUser.reputationBreakdown?.antiGamingStatus?.uniqueEngagerRatio == null ? 'N/A' : Math.round(currentUser.reputationBreakdown.antiGamingStatus.uniqueEngagerRatio * 100) + '%'}
                     </span>
                     <span className="text-[9px] text-zinc-400 block mt-0.5">Unique Engagers</span>
                   </div>
                   <div className="bg-white/5 p-2 rounded-xl">
-                    <span className="text-xs font-mono font-bold text-pink-400 block">Active</span>
-                    <span className="text-[9px] text-zinc-400 block mt-0.5">Anti-Spam Shield</span>
+                    <span className="text-xs font-mono font-bold text-violet-300 block">N/A</span>
+                    <span className="text-[9px] text-zinc-400 block mt-0.5">Integrity status</span>
                   </div>
                 </div>
               </div>
