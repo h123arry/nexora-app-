@@ -14,10 +14,12 @@ export default function CircleGovernancePanel({
   communityId,
   currentUserId,
   isOwner,
+  canManage = isOwner,
 }: {
   communityId: string;
   currentUserId: string;
   isOwner: boolean;
+  canManage?: boolean;
 }) {
   const [members, setMembers] = useState<CircleMember[]>([]);
   const [reasonByUser, setReasonByUser] = useState<Record<string, string>>({});
@@ -41,7 +43,7 @@ export default function CircleGovernancePanel({
   }, [communityId]);
 
   const createInvite = async () => {
-    if (!isOwner || inviteBusy) return;
+    if (!canManage || inviteBusy) return;
     setInviteBusy(true);
     setError('');
     setNotice('');
@@ -103,7 +105,7 @@ export default function CircleGovernancePanel({
       </div>
       {error && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-950/20 p-3 text-xs text-rose-200">{error}</p>}
       {notice && <p role="status" className="rounded-xl border border-emerald-400/20 bg-emerald-950/20 p-3 text-xs text-emerald-200">{notice}</p>}
-      {isOwner && (
+      {canManage && (
         <div className="rounded-2xl border border-violet-400/20 bg-violet-950/10 p-4 space-y-3">
           <div className="flex items-center gap-2"><Link2 className="h-4 w-4 text-violet-300" /><p className="text-xs font-bold text-white">Circle invitations</p></div>
           <p className="text-[11px] text-violet-200/60">Create a single-use-token link that expires after 7 days or 25 successful joins. You can revoke it at any time.</p>
@@ -151,7 +153,7 @@ export default function CircleGovernancePanel({
           })}
         </div>
       )}
-      {!isOwner && <p className="text-[10px] text-violet-200/40">Only the Circle owner can delegate roles. All changes are checked and recorded by the server.</p>}
+      {!isOwner && <p className="text-[10px] text-violet-200/40">Role delegation is reserved for the Circle owner. Active managers can create invitations; the server verifies every action.</p>}
     </section>
   );
 }
