@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Bookmark, Search, Trash2, Play, Volume2, Briefcase, Filter, ExternalLink, Sparkles, FolderPlus, ArrowUpRight } from 'lucide-react';
+import { Bookmark, Search, Trash2, Play, Volume2, Briefcase, Sparkles, FolderPlus, Check, Plus } from 'lucide-react';
 import { Post, User } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import { addPostToSavedCollection, createSavedCollection, listSavedCollections, removeSavedCollection, type SavedCollection } from '../services/firebase/savedCollectionService';
 
 interface SavedViewProps {
   currentUser: User;
@@ -23,6 +24,68 @@ export default function SavedView({
 }: SavedViewProps) {
   const [activeCategory, setActiveCategory] = useState<'all' | 'posts' | 'videos' | 'voice' | 'opportunities'>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [collections, setCollections] = useState<SavedCollection[]>([]);
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [selectedCollectionId, setSelectedCollectionId] = useState('');
+  const [collectionBusy, setCollectionBusy] = useState(false);
+  const [collectionMessage, setCollectionMessage] = useState('');
+
+  const refreshCollections = async () => {
+    try {
+      const next = await listSavedCollections(currentUser.id);
+      setCollections(next);
+      setSelectedCollectionId(previous => previous || next[0]?.id || '');
+    } catch (error) {
+      setCollectionMessage(error instanceof Error ? error.message : 'Could not load saved collections.');
+    }
+  };
+
+  useEffect(() => { void refreshCollections(); }, [currentUser.id]);
+
+  const handleCreateCollection = async () => {
+    if (!newCollectionName.trim() || collectionBusy) return;
+    setCollectionBusy(true);
+    setCollectionMessage('');
+    try {
+      const id = await createSavedCollection(currentUser.id, newCollectionName);
+      setNewCollectionName('');
+      setSelectedCollectionId(id);
+      await refreshCollections();
+      setCollectionMessage('Collection created.');
+    } catch (error) {
+      setCollectionMessage(error instanceof Error ? error.message : 'Could not create collection.');
+    } finally { setCollectionBusy(false); }
+  };
+
+  const handleAddBookmarksToCollection = async () => {
+    if (!selectedCollectionId || collectionBusy) return;
+    setCollectionBusy(true);
+    setCollectionMessage('');
+    try {
+      const results = await Promise.allSettled(bookmarkedPosts.map(post =>
+        addPostToSavedCollection(currentUser.id, selectedCollectionId, post.id)
+      ));
+      const added = results.filter(result => result.status === 'fulfilled').length;
+      const failed = results.length - added;
+      await refreshCollections();
+      setCollectionMessage(failed ? 'Added ' + added + ' items; ' + failed + ' could not be added.' : 'Added ' + added + ' saved posts to your collection.');
+    } catch (error) {
+      setCollectionMessage(error instanceof Error ? error.message : 'Could not update collection.');
+    } finally { setCollectionBusy(false); }
+  };
+
+  const handleDeleteCollection = async (id: string) => {
+    if (collectionBusy || !window.confirm('Delete this collection and its saved references? Your original posts will not be deleted.')) return;
+    setCollectionBusy(true);
+    try {
+      await removeSavedCollection(currentUser.id, id);
+      setSelectedCollectionId('');
+      await refreshCollections();
+      setCollectionMessage('Collection deleted.');
+    } catch (error) {
+      setCollectionMessage(error instanceof Error ? error.message : 'Could not delete collection.');
+    } finally { setCollectionBusy(false); }
+  };
 
   // Filter bookmarked posts from parent list
   const bookmarkedPosts = posts.filter(p => userBookmarks.includes(p.id));
@@ -80,6 +143,32 @@ export default function SavedView({
           />
         </div>
       </div>
+
+      <section className="rounded-3xl border border-violet-500/20 bg-violet-950/15 p-5 space-y-4" aria-label="Saved collections">
+        <div className="flex items-center justify-between gap-3">
+          <div><h2 className="text-sm font-bold text-white flex items-center gap-2"><FolderPlus className="w-4 h-4 text-violet-300" /> Your collections</h2>
+          <p className="text-xs text-zinc-400 mt-1">Private folders synced to your NEXORA account.</p></div>
+          <span className="text-[10px] text-zinc-500">{collections.length}/50</span>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input value={newCollectionName} onChange={event => setNewCollectionName(event.target.value)} maxLength={48} placeholder="Name a collection..." aria-label="New collection name"
+            className="min-w-0 flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500" />
+          <button type="button" onClick={handleCreateCollection} disabled={collectionBusy || !newCollectionName.trim() || collections.length >= 50}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40"><Plus className="w-3.5 h-3.5" /> Create</button>
+        </div>
+        {collections.length > 0 && <div className="flex flex-col sm:flex-row gap-2">
+          <select value={selectedCollectionId} onChange={event => setSelectedCollectionId(event.target.value)} aria-label="Choose a collection"
+            className="min-w-0 flex-1 rounded-xl bg-black/40 border border-white/10 px-3 py-2.5 text-xs text-white">
+            {collections.map(collection => <option key={collection.id} value={collection.id}>{collection.name} · {collection.itemCount} items</option>)}
+          </select>
+          <button type="button" onClick={handleAddBookmarksToCollection} disabled={collectionBusy || bookmarkedPosts.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-40"><Check className="w-3.5 h-3.5" /> Add all saved posts</button>
+          <button type="button" onClick={() => void handleDeleteCollection(selectedCollectionId)} disabled={collectionBusy}
+            className="rounded-xl border border-rose-500/20 px-3 py-2.5 text-xs text-rose-300 disabled:opacity-40">Delete</button>
+        </div>}
+        {collectionMessage && <p role="status" aria-live="polite" className="text-xs text-violet-200">{collectionMessage}</p>}
+        {collections.length === 0 && <p className="text-xs text-zinc-500">Create your first folder to organise saved posts.</p>}
+      </section>
 
       {/* Category Filter Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar">
