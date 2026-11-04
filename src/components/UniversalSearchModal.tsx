@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Users, MessageSquare, Briefcase, Bookmark, Cpu, Globe, ArrowRight, Sparkles, Hash, Clock, Trash2, Plus, Shield, ShieldCheck, Heart, Play, Radio, ChevronRight } from 'lucide-react';
 import { User, Post, Chat } from '../types';
+import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
 
 interface UniversalSearchModalProps {
   isOpen: boolean;
@@ -31,7 +32,26 @@ export default function UniversalSearchModal({
 }: UniversalSearchModalProps) {
   const [query, setQuery] = useState('');
   const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentSearches(currentUser.id));
+  const [serverResults, setServerResults] = useState<PublicDirectoryResult | null>(null);
+  const [serverSearchLoading, setServerSearchLoading] = useState(false);
+  const [serverSearchError, setServerSearchError] = useState('');
   useEffect(() => { setRecentSearches(readRecentSearches(currentUser.id)); }, [currentUser.id]);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (!isOpen || term.length < 2) {
+      setServerResults(null); setServerSearchError(''); setServerSearchLoading(false); return;
+    }
+    let active = true;
+    setServerResults(null);
+    const timer = window.setTimeout(async () => {
+      setServerSearchLoading(true); setServerSearchError('');
+      try { const result = await searchPublicDirectory(term); if (active) setServerResults(result); }
+      catch { if (active) setServerSearchError('Live directory search is temporarily unavailable. Loaded results are still available.'); }
+      finally { if (active) setServerSearchLoading(false); }
+    }, 300);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [isOpen, query, currentUser.id]);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -181,7 +201,7 @@ export default function UniversalSearchModal({
     matchedOpportunities.length > 0 ||
     matchedSaved.length > 0 ||
     matchedAiChats.length > 0 ||
-    (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0));
+    (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0)) || serverSearchLoading || Boolean(serverSearchError);
 
   return (
     <div id="universal-search-modal" role="dialog" aria-modal="true" aria-label="NEXORA universal search" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
@@ -334,7 +354,7 @@ export default function UniversalSearchModal({
                     <span>Nexora Unified Search & Command Center</span>
                   </h4>
                   <p className="text-xs text-zinc-300 font-sans leading-relaxed max-w-xl">
-                    Searches the people, posts, communities, circles, loaded chat summaries, saved content, opportunities, and local VOH AI history currently available in this browser. It does not query an unconfigured server index or invent missing results.
+                    Searches public people, Pages and Circles through NEXORA's server-backed directory, alongside posts, chats, saved content, opportunities and VOH AI history currently loaded in this browser.
                   </p>
                 </div>
               </div>
@@ -352,11 +372,45 @@ export default function UniversalSearchModal({
                   </div>
                   <h3 className="text-lg font-sans font-bold text-white">No results found for "{query}"</h3>
                   <p className="text-sm text-zinc-400 font-sans max-w-sm mx-auto">
-                    Try a different keyword, username, hashtag (#), or community name. Search only covers data currently loaded for this account and browser.
+                    Try a different keyword, username, hashtag (#), or Circle name. Directory results are server-backed; other content is searched from data currently loaded for this account.
                   </p>
                 </div>
               ) : (
                 <div className="space-y-10">
+
+                  {serverSearchLoading && <p className="text-xs text-violet-200/70">Searching the live NEXORA directory…</p>}
+                  {serverSearchError && <p role="status" className="text-xs text-amber-200/80">{serverSearchError}</p>}
+                  {serverResults && (
+                    <section className="space-y-4 rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] p-4" aria-label="Live directory results">
+                      <h4 className="text-xs font-mono uppercase tracking-widest text-violet-300">Live NEXORA directory</h4>
+                      {serverResults.people.length > 0 && <div className="space-y-2">
+                        <p className="text-xs font-semibold text-white">People</p>
+                        {serverResults.people.map(person => <button key={person.id} type="button" onClick={() => onViewProfile({
+                          id: person.id, username: person.username, name: person.name, avatar: person.avatar, bio: person.bio,
+                          location: '', website: '', followers: 0, following: 0, isVerified: person.isVerified, coverImage: '', joinedDate: '',
+                          reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+                          interestDNA: {}, skills: [],
+                        })} className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/5">
+                          <img src={person.avatar || ''} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} className="h-9 w-9 rounded-full bg-white/10 object-cover" />
+                          <span className="min-w-0"><span className="block truncate text-sm font-semibold text-white">{person.name}</span><span className="block truncate text-xs text-violet-200/60">@{person.username}</span></span>
+                        </button>)}
+                      </div>}
+                      {serverResults.pages.length > 0 && <div className="space-y-2">
+                        <p className="text-xs font-semibold text-white">Pages</p>
+                        {serverResults.pages.map(page => <button key={page.id} type="button" onClick={() => { onClose(); onSelectTab('communities'); }} className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/5">
+                          <img src={page.avatar || ''} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} className="h-9 w-9 rounded-xl bg-white/10 object-cover" />
+                          <span className="min-w-0"><span className="block truncate text-sm font-semibold text-white">{page.name}</span><span className="block truncate text-xs text-violet-200/60">@{page.username} · {page.category}</span></span>
+                        </button>)}
+                      </div>}
+                      {serverResults.circles.length > 0 && <div className="space-y-2">
+                        <p className="text-xs font-semibold text-white">Public Circles</p>
+                        {serverResults.circles.map(circle => <button key={circle.id} type="button" onClick={() => { onClose(); onSelectTab('matrix'); }} className="flex w-full items-center gap-3 rounded-xl p-2 text-left hover:bg-white/5">
+                          <img src={circle.bannerImage || ''} alt="" onError={event => { event.currentTarget.style.display = 'none'; }} className="h-9 w-9 rounded-xl bg-white/10 object-cover" />
+                          <span className="min-w-0"><span className="block truncate text-sm font-semibold text-white">{circle.name}</span><span className="block truncate text-xs text-violet-200/60">{circle.description}</span></span>
+                        </button>)}
+                      </div>}
+                    </section>
+                  )}
 
                   {/* 1. PEOPLE */}
                   {matchedUsers.length > 0 && (
