@@ -203,3 +203,21 @@ export const revokeCommunityInvite = onCall({ maxInstances: 10 }, async (request
     throw new HttpsError('internal', 'The Circle invitation could not be revoked. Please retry.');
   }
 });
+
+
+export const getPageFollowerCount = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view Page audience metrics.');
+  const pageId = request.data?.pageId;
+  if (typeof pageId !== 'string' || pageId.length < 1 || pageId.length > 150 || pageId.includes('/')) {
+    throw new HttpsError('invalid-argument', 'A valid Page ID is required.');
+  }
+  try {
+    const page = await adminDb.collection('pages').doc(pageId).get();
+    if (!page.exists) throw new HttpsError('not-found', 'This Page is unavailable.');
+    const aggregate = await adminDb.collection('follows').where('followingId', '==', pageId).count().get();
+    return { pageId, followerCount: aggregate.data().count };
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('internal', 'Page audience metrics are temporarily unavailable.');
+  }
+});
