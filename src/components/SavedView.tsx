@@ -5,6 +5,7 @@ import { Post, User } from '../types';
 import RelativeTimestamp from './RelativeTimestamp';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import { addPostToSavedCollection, createSavedCollection, listSavedCollections, listSavedCollectionPostIds, removeSavedCollection, type SavedCollection } from '../services/firebase/savedCollectionService';
+import { listSavedContentSummaries, removeContentFromSavedCollection, type SavedContentSummary } from '../services/firebase/savedCollectionContentService';
 
 interface SavedViewProps {
   currentUser: User;
@@ -13,6 +14,7 @@ interface SavedViewProps {
   onBookmarkPost: (postId: string) => void;
   onViewProfile?: (userId: string) => void;
   onSharePost?: (postId: string) => void;
+  onSelectTab?: (tab: string) => void;
 }
 
 export default function SavedView({
@@ -20,12 +22,14 @@ export default function SavedView({
   posts,
   userBookmarks = [],
   onBookmarkPost,
-  onViewProfile
+  onViewProfile,
+  onSelectTab
 }: SavedViewProps) {
   const [activeCategory, setActiveCategory] = useState<'all' | 'posts' | 'videos' | 'voice' | 'opportunities'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [collections, setCollections] = useState<SavedCollection[]>([]);
   const [collectionPostIds, setCollectionPostIds] = useState<string[]>([]);
+  const [collectionSummaries, setCollectionSummaries] = useState<SavedContentSummary[]>([]);
   const [newCollectionName, setNewCollectionName] = useState('');
   const [selectedCollectionId, setSelectedCollectionId] = useState('');
   const [collectionBusy, setCollectionBusy] = useState(false);
@@ -47,11 +51,15 @@ export default function SavedView({
     let active = true;
     if (!selectedCollectionId) {
       setCollectionPostIds([]);
+      setCollectionSummaries([]);
       return () => { active = false; };
     }
-    listSavedCollectionPostIds(currentUser.id, selectedCollectionId)
-      .then(ids => { if (active) setCollectionPostIds(ids); })
-      .catch(error => { if (active) setCollectionMessage(error instanceof Error ? error.message : 'Could not load collection items.'); });
+    Promise.all([
+      listSavedCollectionPostIds(currentUser.id, selectedCollectionId),
+      listSavedContentSummaries(currentUser.id, selectedCollectionId),
+    ]).then(([ids, summaries]) => {
+      if (active) { setCollectionPostIds(ids); setCollectionSummaries(summaries); }
+    }).catch(error => { if (active) setCollectionMessage(error instanceof Error ? error.message : 'Could not load collection items.'); });
     return () => { active = false; };
   }, [currentUser.id, selectedCollectionId]);
 
@@ -110,6 +118,10 @@ export default function SavedView({
   const bookmarkedPosts = posts.filter(p => userBookmarks.includes(p.id));
   const displayPosts = selectedCollectionId ? posts.filter(post => collectionPostIds.includes(post.id)) : bookmarkedPosts;
 
+  const otherItems = selectedCollectionId ? collectionSummaries.filter(item => item.itemType !== 'post'
+    && (item.title.toLowerCase().includes(searchQuery.toLowerCase()) || item.subtitle.toLowerCase().includes(searchQuery.toLowerCase()))
+    && activeCategory === 'all') : [];
+
   const filteredItems = displayPosts.filter(post => {
     // Search query filter
     if (searchQuery.trim()) {
@@ -141,7 +153,7 @@ export default function SavedView({
             <h1 className="text-xl font-sans font-black tracking-tight text-white flex items-center gap-2">
               Saved Collection
               <span className="text-xs font-mono font-bold text-violet-400 bg-violet-950/60 border border-white/10 px-2.5 py-0.5 rounded-full">
-                {displayPosts.length} Items
+                {displayPosts.length + otherItems.length} Items
               </span>
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
@@ -217,9 +229,34 @@ export default function SavedView({
         })}
       </div>
 
+      {/* Saved Pages, Circles and events share the same private collection as posts. */}
+      {otherItems.length > 0 && <section className="space-y-2" aria-label="Saved Pages, Circles and events">
+        {otherItems.map(item => <article key={item.itemType + '_' + item.itemId} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#0b1020] p-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-mono uppercase tracking-wider text-violet-300">{item.itemType === 'circle' ? 'Circle' : item.itemType === 'page' ? 'Page' : 'Event'}</p>
+            <h3 className="truncate text-sm font-semibold text-white">{item.title}</h3>
+            {item.subtitle && <p className="mt-1 truncate text-xs text-slate-400">{item.subtitle}</p>}
+            {!item.available && <p className="mt-1 text-[10px] text-amber-200/70">Saved reference retained; content may have been removed or access changed.</p>}
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <button type="button" onClick={() => onSelectTab?.(item.itemType === 'page' ? 'communities' : 'matrix')} className="rounded-lg border border-violet-400/30 px-3 py-2 text-[10px] font-semibold text-violet-200">Explore</button>
+            <button type="button" disabled={collectionBusy} onClick={async () => {
+              if (!selectedCollectionId || collectionBusy) return;
+              setCollectionBusy(true);
+              try {
+                await removeContentFromSavedCollection(currentUser.id, selectedCollectionId, item.itemType, item.itemId, item.parentId);
+                setCollectionSummaries(previous => previous.filter(entry => !(entry.itemType === item.itemType && entry.itemId === item.itemId)));
+                await refreshCollections();
+              } catch (error) { setCollectionMessage(error instanceof Error ? error.message : 'Could not remove saved item.'); }
+              finally { setCollectionBusy(false); }
+            }} className="rounded-lg border border-rose-500/20 px-3 py-2 text-[10px] text-rose-200 disabled:opacity-40">Remove</button>
+          </div>
+        </article>)}
+      </section>}
+
       {/* List of saved items */}
       <div className="space-y-4">
-        {filteredItems.length === 0 ? (
+        {filteredItems.length === 0 && otherItems.length === 0 ? (
           <div className="p-12 text-center rounded-3xl bg-white/5 border border-white/5 space-y-3">
             <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 text-violet-400 flex items-center justify-center mx-auto">
               <Bookmark className="w-6 h-6" />

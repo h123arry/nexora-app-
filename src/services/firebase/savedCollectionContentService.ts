@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDocs, limit, orderBy, query, runTransaction, serverTimestamp,
+  collection, doc, getDoc, getDocs, limit, orderBy, query, runTransaction, serverTimestamp,
 } from 'firebase/firestore';
 import { auth, db } from './config';
 
@@ -37,6 +37,33 @@ export async function listSavedContentReferences(uid: string, collectionId: stri
     itemId: String(item.data().itemId || ''),
     ...(typeof item.data().parentId === 'string' ? { parentId: item.data().parentId } : {}),
     createdAt: item.data().createdAt,
+  }));
+}
+
+export interface SavedContentSummary extends SavedContentReference {
+  title: string;
+  subtitle: string;
+  available: boolean;
+}
+
+/** Resolve private collection references to only the public/member-visible labels needed by Saved. */
+export async function listSavedContentSummaries(uid: string, collectionId: string): Promise<SavedContentSummary[]> {
+  const references = await listSavedContentReferences(uid, collectionId);
+  return Promise.all(references.map(async reference => {
+    const target = reference.itemType === 'post' ? doc(db, 'posts', reference.itemId)
+      : reference.itemType === 'circle' ? doc(db, 'communities', reference.itemId)
+      : reference.itemType === 'page' ? doc(db, 'pages', reference.itemId)
+      : doc(db, 'communities', reference.parentId!, 'events', reference.itemId);
+    try {
+      const snapshot = await getDoc(target);
+      if (!snapshot.exists()) return { ...reference, title: 'Unavailable item', subtitle: 'This content is no longer available.', available: false };
+      const data = snapshot.data();
+      const title = String(data.title || data.name || 'Saved ' + reference.itemType).trim().slice(0, 160);
+      const subtitle = String(data.description || data.category || data.location || '').trim().slice(0, 240);
+      return { ...reference, title, subtitle, available: true };
+    } catch {
+      return { ...reference, title: 'Saved ' + reference.itemType, subtitle: 'Details are not currently available.', available: false };
+    }
   }));
 }
 

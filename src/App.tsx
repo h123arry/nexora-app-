@@ -2346,6 +2346,7 @@ export default function App() {
                       userBookmarks={userBookmarks}
                       onBookmarkPost={handleBookmarkPost}
                       onViewProfile={handleViewProfile}
+                      onSelectTab={setActiveTab}
                     />
                   )}
 
