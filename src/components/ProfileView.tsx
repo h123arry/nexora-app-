@@ -1880,20 +1880,19 @@ export default function ProfileView({
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-4">
                           <span className="text-[9px] font-mono text-cyan-400 font-extrabold uppercase tracking-widest block">🔒 PRIVACY SETTINGS</span>
                           
-                          {/* Private Node account toggle */}
-                          <div className="flex items-center justify-between p-2 rounded-xl bg-black/20">
+                          {/* Private account is deliberately unavailable until follower-request and
+                              private-post reads are enforced together by trusted rules and services. */}
+                          <div className="flex items-center justify-between p-2 rounded-xl bg-black/20 opacity-80">
                             <div className="space-y-0.5 text-left max-w-[80%]">
                               <p className="text-xs font-bold text-white">Private Account</p>
-                              <p className="text-[9px] text-zinc-500 leading-normal">Approved followers can view your posts.</p>
+                              <p className="text-[9px] text-zinc-500 leading-normal">Not enabled yet. NEXORA must finish follower approvals and private-post access enforcement before this control can safely be turned on.</p>
                             </div>
                             <input
                               type="checkbox"
-                              checked={isPrivateNode}
-                              onChange={(e) => {
-                                setIsPrivateNode(e.target.checked);
-                                window.dispatchEvent(new CustomEvent('toast', { detail: e.target.checked ? '🔒 Account is now Private' : '🔓 Account is now Public' }));
-                              }}
-                              className="accent-cyan-400 h-4 w-4"
+                              checked={false}
+                              disabled
+                              aria-label="Private account unavailable until access controls are implemented"
+                              className="accent-violet-500 h-4 w-4 cursor-not-allowed"
                             />
                           </div>
 
