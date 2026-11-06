@@ -610,6 +610,8 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(ownNotification));
     await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'notifications')));
     await assertSucceeds(updateDoc(ownNotification, { isRead: true }));
+    await assertSucceeds(updateDoc(ownNotification, { isRead: false }));
+    await assertFails(updateDoc(ownNotification, { isRead: 'yes' }));
     await assertFails(updateDoc(ownNotification, { content: 'tampered' }));
     await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'notifications', 'notice-1')));
     await assertFails(deleteDoc(doc(dbFor('bob'), 'users', 'alice', 'notifications', 'notice-1')));
