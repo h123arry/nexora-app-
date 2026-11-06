@@ -1,5 +1,6 @@
-import { getMessaging, getToken, onMessage, Messaging } from 'firebase/messaging';
-import { app } from './config';
+import { getMessaging, getToken, onMessage, Messaging, deleteToken } from 'firebase/messaging';
+import { collection, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { auth, app, db } from './config';
 
 export interface PushNotificationPayload {
   title: string;
@@ -19,6 +20,23 @@ export class PushNotificationService {
   private static messaging: Messaging | null = null;
   private static token: string | null = null;
   private static isInitialized = false;
+
+  private static async tokenDocumentId(token: string): Promise<string> {
+    const bytes = new TextEncoder().encode(token);
+    const digest = await crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  }
+
+  private static async persistToken(token: string): Promise<void> {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Sign in before registering a push device.');
+    const tokenId = await this.tokenDocumentId(token);
+    await setDoc(doc(db, 'users', uid, 'pushTokens', tokenId), {
+      token,
+      platform: 'web',
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+  }
 
   /**
    * Initializes Push Notifications & FCM Messaging
@@ -54,6 +72,7 @@ export class PushNotificationService {
         try {
           const fcmToken = await getToken(this.messaging, { vapidKey });
           if (fcmToken) {
+            await this.persistToken(fcmToken);
             this.token = fcmToken;
             console.info('FCM device registration is active.');
           }
@@ -61,7 +80,7 @@ export class PushNotificationService {
           console.warn('FCM token registration unavailable; verify the VAPID key and messaging service worker configuration.');
         }
       } else {
-        console.info('ℹ️ FCM Web Push: VAPID Key not supplied in VITE_FIREBASE_VAPID_KEY. Operating with Native OS Web Notifications.');
+        console.info('FCM Web Push is not configured: VITE_FIREBASE_VAPID_KEY is missing. Permission alone does not enable remote push delivery.');
       }
 
       // Listen for foreground messages
@@ -77,11 +96,23 @@ export class PushNotificationService {
       });
 
       this.isInitialized = true;
-      return this.token || 'granted_native_active';
+      return this.token;
     } catch {
       console.warn('Push Notification initialization unavailable in this environment.');
       return null;
     }
+  }
+
+  /** Removes this browser's registration from the signed-in account. */
+  static async unregister(): Promise<void> {
+    const uid = auth.currentUser?.uid;
+    const token = this.token;
+    if (!uid || !token) return;
+    const tokenId = await this.tokenDocumentId(token);
+    await deleteDoc(doc(db, 'users', uid, 'pushTokens', tokenId));
+    if (this.messaging) await deleteToken(this.messaging);
+    this.token = null;
+    this.isInitialized = false;
   }
 
   /**
