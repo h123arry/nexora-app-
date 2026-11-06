@@ -622,6 +622,29 @@ const publicProfile = (uid) => ({
       userId: 'alice', type: 'system', content: 'Forged', isRead: false
     }));
   });
+  it('keeps recent search history private and owner-managed', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'users', 'alice', 'searchHistory', 'nexora'), {
+        term: 'NEXORA', updatedAt: new Date()
+      });
+    });
+    const ownSearch = doc(dbFor('alice'), 'users', 'alice', 'searchHistory', 'nexora');
+    await assertSucceeds(getDoc(ownSearch));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'searchHistory')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'searchHistory', 'nexora')));
+    await assertFails(getDocs(collection(dbFor('bob'), 'users', 'alice', 'searchHistory')));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'users', 'alice', 'searchHistory', 'instagram'), {
+      term: 'Instagram', updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'searchHistory', 'invalid'), {
+      term: 'x', updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'users', 'alice', 'searchHistory', 'forged'), {
+      term: 'private query', updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(deleteDoc(ownSearch));
+  });
+
   it('lets users read their own trusted like markers but never create or modify them directly', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice', 'postLikes', 'post-1'), { postId: 'post-1', userId: 'alice' });
