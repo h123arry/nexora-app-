@@ -12,6 +12,12 @@ This phase improves the existing NEXORA social experience in place. It does not 
 - Failed writes are surfaced to the user rather than silently represented as saved.
 - Firestore rules permit only the owner to update the `isRead` field, require a boolean value, and continue to prohibit client-created notification records.
 
+### Atomic bulk notification operations
+- Mark-selected and mark-all-read now use one Firestore batch rather than parallel independent writes.
+- Selected deletion and clear-all likewise use one atomic batch.
+- Duplicate IDs are collapsed, malformed IDs are rejected, and the batch is capped at 100 records to match the bounded inbox subscription.
+- A failed batch leaves the operation unapplied as a unit instead of partially changing the inbox.
+
 ### Story creator analytics
 - Story views remain durable, one-per-viewer records under `stories/{storyId}/views/{viewerId}`.
 - A creator-only count query reads the aggregate view count while the story is active.
