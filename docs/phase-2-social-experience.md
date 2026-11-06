@@ -25,6 +25,13 @@ This phase improves the existing NEXORA social experience in place. It does not 
 - Firestore rules allow the story owner to read/list view records and deny other accounts.
 - Expired stories are not exposed to other users; client queries are bounded and filter by expiry.
 
+### Trusted web push delivery
+- A trusted Firestore create trigger sends new inbox notifications to the recipient's registered web devices through Firebase Admin Messaging.
+- Delivery reads only the recipient's private token subcollection and respects the account's push preference when explicitly disabled.
+- Provider-safe batches are capped at 500 tokens; invalid/unregistered device tokens are removed.
+- Payload data is string-only and includes a bounded deep link; message notifications route to the relevant inbox conversation.
+- This server trigger still requires deployed Functions, configured FCM/VAPID, valid device registration and a real end-to-end delivery test before production delivery can be claimed.
+
 ### Account-scoped web push registration
 - When a signed-in user grants browser notification permission and an FCM token is successfully issued, the client persists the token under that account's private `users/{uid}/pushTokens` collection.
 - Device-token document IDs are SHA-256 hashes; the raw token is stored only in the owner-private document for trusted delivery services.
