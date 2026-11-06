@@ -25,6 +25,13 @@ This phase improves the existing NEXORA social experience in place. It does not 
 - Story authorization tests cover viewer marker creation, owner-only get/list access and cross-account denial.
 - The existing CI workflow runs type-checking, unit tests, Auth/Firestore/Storage emulator tests, integration/security suites, dependency audits and production builds.
 
+### Account-isolated local publishing drafts
+- Saved drafts now use a UID-specific device-local storage key rather than one global browser key.
+- Draft parsing is defensive against malformed/corrupt localStorage data.
+- Composer autosave and draft persistence pause while the signed-in account changes, then load the new account's own draft state.
+- The old unscoped global draft key is intentionally not auto-imported because its owner cannot be established safely.
+- Drafts remain device-local; this change does not claim cross-device draft sync or durable media backup.
+
 ## Existing capabilities retained
 - Public profile projection and owner-checked profile updates.
 - Authenticated public directory search across people, Pages and Circles.
