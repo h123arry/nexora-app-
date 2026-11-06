@@ -461,6 +461,33 @@ const publicProfile = (uid) => ({
     }));
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'stories', 'story-1', 'views', 'bob')));
     await assertSucceeds(getDocs(collection(dbFor('alice'), 'stories', 'story-1', 'views')));
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'stories', 'story-1', 'reactions', 'bob'), {
+      storyId: 'story-1', userId: 'bob', emoji: '🔥', updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('mallory'), 'stories', 'story-1', 'reactions', 'bob'), {
+      storyId: 'story-1', userId: 'bob', emoji: '🔥', updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'stories', 'story-1', 'reactions', 'bob'), {
+      storyId: 'story-1', userId: 'alice', emoji: '🔥', updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'stories', 'story-1', 'reactions', 'bob'), {
+      storyId: 'story-1', userId: 'bob', emoji: '💣', updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'stories', 'story-1', 'reactions', 'bob')));
+    await assertFails(getDoc(doc(dbFor('mallory'), 'stories', 'story-1', 'reactions', 'bob')));
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'stories', 'story-1', 'replies', 'reply-bob'), {
+      storyId: 'story-1', authorId: 'bob', authorName: 'Bob', message: 'Great moment!', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'stories', 'story-1', 'replies', 'reply-forged'), {
+      storyId: 'story-1', authorId: 'alice', authorName: 'Alice', message: 'Forged', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'stories', 'story-1', 'replies', 'reply-too-long'), {
+      storyId: 'story-1', authorId: 'bob', authorName: 'Bob', message: 'x'.repeat(501), createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'stories', 'story-1', 'replies', 'reply-bob')));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'stories', 'story-1', 'replies', 'reply-bob')));
+    await assertFails(getDoc(doc(dbFor('mallory'), 'stories', 'story-1', 'replies', 'reply-bob')));
+
     await assertFails(getDoc(doc(dbFor('bob'), 'stories', 'story-1', 'views', 'bob')));
     await assertFails(getDocs(collection(dbFor('bob'), 'stories', 'story-1', 'views')));
     await assertFails(setDoc(doc(dbFor('mallory'), 'stories', 'story-1', 'views', 'bob'), {
