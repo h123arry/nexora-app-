@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, Sparkles, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, Send, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Tv, Trash2, Play, Volume2, VolumeX, Shield, UserCheck, AlertTriangle, RefreshCw, Layers, Check, CheckSquare, Square, Trash, Archive, Star, Calendar, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, Pin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
+import { setNotificationReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
@@ -200,26 +201,34 @@ export default function NotificationsView({
     addToast("🗑️ Notifications list completely flushed!");
   };
 
-  const handleToggleRead = (id: string, e?: React.MouseEvent) => {
+  const handleToggleRead = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setNotificationsList(prev => prev.map(n => {
-      if (n.id === id) {
-        const nextState = !n.isRead;
-        if (nextState) {
-          addToast("Marked notification as read");
-        }
-        return { ...n, isRead: nextState };
-      }
-      return n;
-    }));
+    const notification = notificationsList.find(item => item.id === id);
+    if (!notification) return;
+    const nextState = !notification.isRead;
+    try {
+      await setNotificationReadState(currentUser.id, id, nextState);
+      setNotificationsList(prev => prev.map(item => item.id === id ? { ...item, isRead: nextState } : item));
+      addToast(nextState ? "Marked notification as read" : "Marked notification as unread");
+    } catch {
+      addToast("Couldn't update this notification. Please try again.");
+    }
   };
 
-  const handleMarkSelectedRead = () => {
-    if (selectedIds.length === 0) return;
-    setNotificationsList(prev => prev.map(n => selectedIds.includes(n.id) ? { ...n, isRead: true } : n));
-    addToast(`✨ Marked ${selectedIds.length} selected as read!`);
-    setSelectedIds([]);
-    setIsMultiSelectMode(false);
+  const handleMarkSelectedRead = async () => {
+    const unreadIds = notificationsList
+      .filter(item => selectedIds.includes(item.id) && !item.isRead)
+      .map(item => item.id);
+    if (unreadIds.length === 0) return;
+    try {
+      await Promise.all(unreadIds.map(id => setNotificationReadState(currentUser.id, id, true)));
+      setNotificationsList(prev => prev.map(item => unreadIds.includes(item.id) ? { ...item, isRead: true } : item));
+      addToast(`✨ Marked ${unreadIds.length} selected as read!`);
+      setSelectedIds([]);
+      setIsMultiSelectMode(false);
+    } catch {
+      addToast("Some notifications couldn't be updated. Please try again.");
+    }
   };
 
   const handleDeleteSelected = () => {
@@ -305,7 +314,9 @@ export default function NotificationsView({
 
     // Mark as read automatically on tap
     if (!notif.isRead) {
-      setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+      void setNotificationReadState(currentUser.id, notif.id, true)
+        .then(() => setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n)))
+        .catch(() => addToast("Couldn't mark this notification as read. Please try again."));
     }
 
     // Interactive custom routing checks
