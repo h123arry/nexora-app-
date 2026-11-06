@@ -54,6 +54,9 @@ jobs:
       - name: Run unit tests
         run: npm run test:unit
 
+      - name: Test staging configuration safety gates
+        run: npm run test:staging-config
+
       - name: Run Firebase Auth regression tests
         run: npm run test:auth
 
