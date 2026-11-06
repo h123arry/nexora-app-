@@ -329,6 +329,22 @@ service cloud.firestore {
           && request.resource.data.keys().hasAll(['isRead'])
           && request.resource.data.isRead is bool;
       }
+
+      // Push tokens are private device credentials. Only the owning account may
+      // register, refresh, inspect or revoke its own web-device token records.
+      match /pushTokens/{tokenId} {
+        allow get, list: if owner(userId);
+        allow create, update: if owner(userId)
+          && tokenId.matches('^[a-f0-9]{64}$')
+          && request.resource.data.keys().hasOnly(['token', 'platform', 'updatedAt'])
+          && request.resource.data.token is string
+          && request.resource.data.token.size() >= 20
+          && request.resource.data.token.size() <= 4096
+          && request.resource.data.platform == 'web'
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+      }
+
       match /activityEvents/{eventId} { allow read, write: if owner(userId); }
       // Callable backend owns these markers and the corresponding post counter.
       match /postLikes/{postId} {
