@@ -138,7 +138,7 @@ export default function MediaCreationEngine({
   // Form Fields
   const [caption, setCaption] = useState(() => initialAutosave?.caption || '');
   const [topics, setTopics] = useState(() => initialAutosave?.topics || '');
-  const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>(() => initialAutosave?.audience || 'public');
+  const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>(() => 'public');
   const [location, setLocation] = useState(() => initialAutosave?.location || '');
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [taggedUsernames, setTaggedUsernames] = useState(() => initialAutosave?.taggedUsernames || '');
@@ -281,7 +281,7 @@ export default function MediaCreationEngine({
     const nextAutosave = readLocalAutosave(autosaveKey);
     setCaption(nextAutosave?.caption || '');
     setTopics(nextAutosave?.topics || '');
-    setAudience(nextAutosave?.audience || 'public');
+    setAudience('public');
     setActiveMode(nextAutosave?.activeMode || null);
     setCurrentStep(nextAutosave?.currentStep || 1);
     setLocation(nextAutosave?.location || '');
