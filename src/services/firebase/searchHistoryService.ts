@@ -51,10 +51,17 @@ export async function listRecentSearches(userId: string): Promise<string[]> {
 export async function saveRecentSearch(userId: string, value: string): Promise<void> {
   requireOwner(userId);
   const term = normalizeTerm(value);
-  await setDoc(doc(db, 'users', userId, 'searchHistory', searchDocumentId(term)), {
+  const historyRef = collection(db, 'users', userId, 'searchHistory');
+  await setDoc(doc(historyRef, searchDocumentId(term)), {
     term,
     updatedAt: serverTimestamp(),
   });
+  const newest = await getDocs(query(historyRef, orderBy('updatedAt', 'desc'), limit(MAX_RECENT_SEARCHES + 1)));
+  if (newest.docs.length > MAX_RECENT_SEARCHES) {
+    const batch = writeBatch(db);
+    newest.docs.slice(MAX_RECENT_SEARCHES).forEach(item => batch.delete(item.ref));
+    await batch.commit();
+  }
 }
 
 /** Remove one account-level recent search. */
