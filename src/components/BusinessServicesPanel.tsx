@@ -13,7 +13,15 @@ interface Props {
   pageId: string;
   ownerId: string;
   currentUserId: string;
+  locale?: 'en' | 'fr' | 'ar' | 'pt';
 }
+
+const labels = {
+ en: { heading:'Services & bookings', pending:'pending request', pendingPlural:'pending requests', customerIntro:'Request an appointment with this business', publishHeading:'Publish a service', serviceName:'Service name', description:'Description', duration:'Duration (minutes)', price:'Indicative price (₦)', publish:'Publish service', published:'Service published.', publishError:'The service could not be published.', paused:'Service paused.', active:'Service is available again.', statusError:'The service status could not be updated.', loading:'Loading services…', none:'No services are listed yet.', pause:'Pause', activate:'Activate', selected:'Selected', choose:'Choose', requestHeading:'Request a booking', date:'Preferred date and time', note:'Note (optional)', send:'Send request', sent:'Your booking request was sent. The business must confirm it.', already:'Your booking request was already received.', bookingError:'Your booking request could not be sent.', requests:'Booking requests', yourRequests:'Your requests', accepted:'Booking request accepted.', declined:'Booking request declined.', decisionError:'The booking request could not be updated.' },
+ fr: { heading:'Services et réservations', pending:'demande en attente', pendingPlural:'demandes en attente', customerIntro:'Demandez un rendez-vous à cette entreprise', publishHeading:'Publier un service', serviceName:'Nom du service', description:'Description', duration:'Durée (minutes)', price:'Prix indicatif (₦)', publish:'Publier le service', published:'Service publié.', publishError:'Impossible de publier le service.', paused:'Service suspendu.', active:'Le service est de nouveau disponible.', statusError:'Impossible de modifier le statut du service.', loading:'Chargement des services…', none:'Aucun service répertorié.', pause:'Suspendre', activate:'Activer', selected:'Sélectionné', choose:'Choisir', requestHeading:'Demander une réservation', date:'Date et heure souhaitées', note:'Note (facultatif)', send:'Envoyer la demande', sent:'Votre demande a été envoyée. L’entreprise doit la confirmer.', already:'Votre demande de réservation a déjà été reçue.', bookingError:'Impossible d’envoyer votre demande.', requests:'Demandes de réservation', yourRequests:'Vos demandes', accepted:'Demande de réservation acceptée.', declined:'Demande de réservation refusée.', decisionError:'Impossible de mettre à jour la demande.' },
+ ar: { heading:'الخدمات والحجوزات', pending:'طلب قيد الانتظار', pendingPlural:'طلبات قيد الانتظار', customerIntro:'اطلب موعداً من هذا النشاط التجاري', publishHeading:'نشر خدمة', serviceName:'اسم الخدمة', description:'الوصف', duration:'المدة (بالدقائق)', price:'السعر التقديري (₦)', publish:'نشر الخدمة', published:'تم نشر الخدمة.', publishError:'تعذر نشر الخدمة.', paused:'تم إيقاف الخدمة مؤقتاً.', active:'الخدمة متاحة مجدداً.', statusError:'تعذر تحديث حالة الخدمة.', loading:'جارٍ تحميل الخدمات…', none:'لا توجد خدمات مدرجة بعد.', pause:'إيقاف مؤقت', activate:'تفعيل', selected:'تم الاختيار', choose:'اختيار', requestHeading:'طلب حجز', date:'التاريخ والوقت المفضلان', note:'ملاحظة (اختياري)', send:'إرسال الطلب', sent:'تم إرسال طلب الحجز. يجب على النشاط التجاري تأكيده.', already:'تم استلام طلب الحجز مسبقاً.', bookingError:'تعذر إرسال طلب الحجز.', requests:'طلبات الحجز', yourRequests:'طلباتك', accepted:'تم قبول طلب الحجز.', declined:'تم رفض طلب الحجز.', decisionError:'تعذر تحديث طلب الحجز.' },
+ pt: { heading:'Serviços e reservas', pending:'pedido pendente', pendingPlural:'pedidos pendentes', customerIntro:'Peça um agendamento a esta empresa', publishHeading:'Publicar um serviço', serviceName:'Nome do serviço', description:'Descrição', duration:'Duração (minutos)', price:'Preço indicativo (₦)', publish:'Publicar serviço', published:'Serviço publicado.', publishError:'Não foi possível publicar o serviço.', paused:'Serviço pausado.', active:'O serviço está disponível novamente.', statusError:'Não foi possível atualizar o estado do serviço.', loading:'A carregar serviços…', none:'Ainda não há serviços listados.', pause:'Pausar', activate:'Ativar', selected:'Selecionado', choose:'Escolher', requestHeading:'Solicitar reserva', date:'Data e hora preferidas', note:'Nota (opcional)', send:'Enviar pedido', sent:'O seu pedido foi enviado. A empresa precisa de o confirmar.', already:'O seu pedido de reserva já foi recebido.', bookingError:'Não foi possível enviar o pedido.', requests:'Pedidos de reserva', yourRequests:'Os seus pedidos', accepted:'Pedido de reserva aceite.', declined:'Pedido de reserva recusado.', decisionError:'Não foi possível atualizar o pedido.' }
+};
 
 function localDateTimeMinimum(): string {
   const date = new Date(Date.now() + 60_000);
@@ -21,7 +29,8 @@ function localDateTimeMinimum(): string {
   return new Date(date.getTime() - offset * 60_000).toISOString().slice(0, 16);
 }
 
-export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }: Props) {
+export default function BusinessServicesPanel({ pageId, ownerId, currentUserId, locale = 'en' }: Props) {
+  const t = labels[locale] || labels.en;
   const isOwner = currentUserId === ownerId;
   const [services, setServices] = useState<BusinessServiceListing[]>([]);
   const [bookings, setBookings] = useState<BusinessBookingRequest[]>([]);
@@ -67,8 +76,8 @@ export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }
         currency: 'NGN',
       });
       setName(''); setDescription(''); setPrice('');
-      setNotice('Service published.'); await refreshServices();
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'The service could not be published.'); }
+      setNotice(t.published); await refreshServices();
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t.publishError); }
     finally { setBusy(false); }
   };
 
@@ -76,9 +85,9 @@ export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }
     setBusy(true); setError('');
     try {
       await setBusinessServiceListingStatus(currentUserId, pageId, service.id, service.status === 'active' ? 'paused' : 'active');
-      setNotice(service.status === 'active' ? 'Service paused.' : 'Service is available again.');
+      setNotice(service.status === 'active' ? t.paused : t.active);
       await refreshServices();
-    } catch { setError('The service status could not be updated.'); }
+    } catch { setError(t.statusError); }
     finally { setBusy(false); }
   };
 
@@ -94,16 +103,16 @@ export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }
         pageId, serviceId: selectedService, requestedAt: new Date(requestedAt), note, idempotencyKey: attempt.key,
       });
       bookingAttemptRef.current = null;
-      setNotice(result.created ? 'Your booking request was sent. The business must confirm it.' : 'Your booking request was already received.');
+      setNotice(result.created ? t.sent : t.already);
       setNote('');
-    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Your booking request could not be sent.'); }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t.bookingError); }
     finally { setBusy(false); }
   };
 
   const resolveBooking = async (bookingId: string, decision: 'accepted' | 'declined') => {
     setBusy(true); setError('');
-    try { await respondToBusinessBooking(bookingId, decision); setNotice(decision === 'accepted' ? 'Booking request accepted.' : 'Booking request declined.'); }
-    catch { setError('The booking request could not be updated.'); }
+    try { await respondToBusinessBooking(bookingId, decision); setNotice(decision === 'accepted' ? t.accepted : t.declined); }
+    catch { setError(t.decisionError); }
     finally { setBusy(false); }
   };
 
@@ -111,27 +120,27 @@ export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }
     <section className="mt-6 rounded-2xl border border-violet-400/20 bg-[#0b1020] p-4 sm:p-5 space-y-4" aria-labelledby="business-services-heading">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 id="business-services-heading" className="text-base font-bold text-white">Services & bookings</h3>
-          <p className="text-xs text-slate-400">{isOwner ? `${pendingCount} pending request${pendingCount === 1 ? '' : 's'}` : 'Request an appointment with this business'}</p>
+          <h3 id="business-services-heading" className="text-base font-bold text-white">{t.heading}</h3>
+          <p className="text-xs text-slate-400">{isOwner ? `${pendingCount} ${pendingCount === 1 ? t.pending : t.pendingPlural}` : t.customerIntro}</p>
         </div>
         <CalendarClock className="h-5 w-5 text-violet-300" aria-hidden="true" />
       </div>
 
       {isOwner && (
         <div className="rounded-xl border border-white/10 bg-white/[0.03] p-3 space-y-3">
-          <h4 className="text-sm font-semibold text-white">Publish a service</h4>
-          <label className="block text-xs text-slate-300">Service name<input value={name} onChange={e => setName(e.target.value)} maxLength={120} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
-          <label className="block text-xs text-slate-300">Description<textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={1200} rows={2} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
+          <h4 className="text-sm font-semibold text-white">{t.publishHeading}</h4>
+          <label className="block text-xs text-slate-300">{t.serviceName}<input value={name} onChange={e => setName(e.target.value)} maxLength={120} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
+          <label className="block text-xs text-slate-300">{t.description}<textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={1200} rows={2} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
           <div className="grid grid-cols-2 gap-2">
-            <label className="text-xs text-slate-300">Duration (minutes)<input type="number" min="5" max="1440" value={duration} onChange={e => setDuration(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
-            <label className="text-xs text-slate-300">Indicative price (₦)<input type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
+            <label className="text-xs text-slate-300">{t.duration}<input type="number" min="5" max="1440" value={duration} onChange={e => setDuration(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
+            <label className="text-xs text-slate-300">{t.price}<input type="number" min="0" step="0.01" value={price} onChange={e => setPrice(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
           </div>
-          <button type="button" disabled={busy || !name.trim() || Number(duration) < 5 || Number(duration) > 1440 || (price.trim() && (!Number.isFinite(Number(price)) || Number(price) < 0))} onClick={() => void createService()} className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"><Plus className="h-4 w-4" />Publish service</button>
+          <button type="button" disabled={busy || !name.trim() || Number(duration) < 5 || Number(duration) > 1440 || (price.trim() && (!Number.isFinite(Number(price)) || Number(price) < 0))} onClick={() => void createService()} className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"><Plus className="h-4 w-4" />{t.publish}</button>
         </div>
       )}
 
-      {loading ? <p className="text-sm text-slate-400">Loading services…</p> : services.length === 0
-        ? <p className="text-sm text-slate-400">No services are listed yet.</p>
+      {loading ? <p className="text-sm text-slate-400">{t.loading}</p> : services.length === 0
+        ? <p className="text-sm text-slate-400">{t.none}</p>
         : <div className="space-y-2">{services.map(service => (
           <article key={service.id} className="rounded-xl border border-white/10 p-3">
             <div className="flex items-start justify-between gap-3">
@@ -140,24 +149,24 @@ export default function BusinessServicesPanel({ pageId, ownerId, currentUserId }
                 {service.description && <p className="mt-1 text-sm text-slate-300">{service.description}</p>}
                 <p className="mt-2 flex flex-wrap gap-3 text-xs text-slate-400"><span><Clock3 className="mr-1 inline h-3 w-3" />{service.durationMinutes} min</span>{service.priceMinor !== null && <span>{service.currency} {(service.priceMinor / 100).toLocaleString()}</span>}</p>
               </div>
-              {isOwner ? <button type="button" disabled={busy} onClick={() => void toggleService(service)} className="shrink-0 text-xs text-violet-300">{service.status === 'active' ? <><PauseCircle className="mr-1 inline h-4 w-4" />Pause</> : <><PlayCircle className="mr-1 inline h-4 w-4" />Activate</>}</button>
-                : <button type="button" onClick={() => setSelectedService(service.id)} aria-pressed={selectedService === service.id} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold ${selectedService === service.id ? 'bg-violet-600 text-white' : 'border border-violet-400/40 text-violet-200'}`}>{selectedService === service.id ? 'Selected' : 'Choose'}</button>}
+              {isOwner ? <button type="button" disabled={busy} onClick={() => void toggleService(service)} className="shrink-0 text-xs text-violet-300">{service.status === 'active' ? <><PauseCircle className="mr-1 inline h-4 w-4" />{t.pause}</> : <><PlayCircle className="mr-1 inline h-4 w-4" />{t.activate}</>}</button>
+                : <button type="button" onClick={() => setSelectedService(service.id)} aria-pressed={selectedService === service.id} className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold ${selectedService === service.id ? 'bg-violet-600 text-white' : 'border border-violet-400/40 text-violet-200'}`}>{selectedService === service.id ? t.selected : t.choose}</button>}
             </div>
           </article>
         ))}</div>}
 
       {!isOwner && selectedService && (
         <div className="rounded-xl border border-violet-400/20 p-3 space-y-3">
-          <h4 className="text-sm font-semibold text-white">Request a booking</h4>
-          <label className="block text-xs text-slate-300">Preferred date and time<input type="datetime-local" min={localDateTimeMinimum()} value={requestedAt} onChange={e => setRequestedAt(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
-          <label className="block text-xs text-slate-300">Note (optional)<textarea value={note} onChange={e => setNote(e.target.value)} maxLength={1000} rows={2} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
-          <button type="button" disabled={busy || !requestedAt || new Date(requestedAt).getTime() <= Date.now()} onClick={() => void submitBooking()} className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"><Send className="h-4 w-4" />Send request</button>
+          <h4 className="text-sm font-semibold text-white">{t.requestHeading}</h4>
+          <label className="block text-xs text-slate-300">{t.date}<input type="datetime-local" min={localDateTimeMinimum()} value={requestedAt} onChange={e => setRequestedAt(e.target.value)} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
+          <label className="block text-xs text-slate-300">{t.note}<textarea value={note} onChange={e => setNote(e.target.value)} maxLength={1000} rows={2} className="mt-1 w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white" /></label>
+          <button type="button" disabled={busy || !requestedAt || new Date(requestedAt).getTime() <= Date.now()} onClick={() => void submitBooking()} className="inline-flex items-center gap-2 rounded-lg bg-violet-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"><Send className="h-4 w-4" />{t.send}</button>
         </div>
       )}
 
       {bookings.length > 0 && (
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-white">{isOwner ? 'Booking requests' : 'Your requests'}</h4>
+          <h4 className="text-sm font-semibold text-white">{isOwner ? t.requests : t.yourRequests}</h4>
           {bookings.map(booking => (
             <article key={booking.id} className="rounded-xl border border-white/10 p-3">
               <div className="flex items-center justify-between gap-2"><p className="text-sm font-semibold text-white">{booking.serviceName}</p><span className="rounded-full bg-white/10 px-2 py-1 text-xs capitalize text-slate-300">{booking.status}</span></div>
