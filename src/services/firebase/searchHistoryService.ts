@@ -30,7 +30,7 @@ function normalizeTerm(value: string): string {
 }
 
 function searchDocumentId(term: string): string {
-  return encodeURIComponent(term.toLocaleLowerCase()).slice(0, 500);
+  return encodeURIComponent(term.toLocaleLowerCase());
 }
 
 /** Load the ten most recently used search terms for this account. */
