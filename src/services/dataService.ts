@@ -28,9 +28,13 @@ import { mergePendingActions, PendingAction } from './syncQueue';
 // 3. OFFLINE QUEUE & SYNC ENGINE
 // ==========================================
 class BackgroundSyncEngine {
-  private queueKey = 'nexora_offline_sync_queue';
+  private readonly queueKeyPrefix = 'nexora_offline_sync_queue';
   private processing = false;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
+
+  private queueKeyFor(uid: string): string {
+    return `${this.queueKeyPrefix}_${uid}`;
+  }
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -41,24 +45,28 @@ class BackgroundSyncEngine {
     }
   }
 
-  public getQueue(): PendingAction[] {
+  public getQueue(uid = auth.currentUser?.uid): PendingAction[] {
+    if (!uid) return [];
     try {
-      const saved = localStorage.getItem(this.queueKey);
+      const saved = localStorage.getItem(this.queueKeyFor(uid));
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   }
 
-  private saveQueue(queue: PendingAction[]) {
+  private saveQueue(queue: PendingAction[], uid = auth.currentUser?.uid) {
+    if (!uid) return;
     try {
-      localStorage.setItem(this.queueKey, JSON.stringify(queue));
+      localStorage.setItem(this.queueKeyFor(uid), JSON.stringify(queue));
     } catch (e) {
       console.error('[Sync Engine] Failed to persist sync queue:', e);
     }
   }
 
   public async enqueue(action: PendingAction['action'], payload: any) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Sign in before queueing an account action.');
     const newAction: PendingAction = {
       id: `act-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
       action,
@@ -67,7 +75,7 @@ class BackgroundSyncEngine {
       retryCount: 0
     };
 
-    const currentQueue = this.getQueue();
+    const currentQueue = this.getQueue(uid);
     
     // De-duplicate: If exactly same user/post write is pending, merge or overwrite with latest payload
     const isDuplicate = currentQueue.findIndex(item => 
@@ -83,7 +91,7 @@ class BackgroundSyncEngine {
       currentQueue.push(newAction);
     }
 
-    this.saveQueue(currentQueue);
+    this.saveQueue(currentQueue, uid);
     console.log(`[Sync Engine] Enqueued background event: ${action}`);
 
     if (navigator.onLine) {
@@ -93,7 +101,9 @@ class BackgroundSyncEngine {
 
   public async processQueue() {
     if (this.processing) return;
-    const queue = this.getQueue();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    const queue = this.getQueue(uid);
     if (queue.length === 0) return;
 
     this.processing = true;
@@ -103,6 +113,10 @@ class BackgroundSyncEngine {
     const failedActions: PendingAction[] = [];
 
     for (const item of queue) {
+      if (auth.currentUser?.uid !== uid) {
+        this.processing = false;
+        return;
+      }
       try {
         await this.executeAction(item);
         console.log(`[Sync Engine] Successfully executed pending action: ${item.action}`);
@@ -119,8 +133,12 @@ class BackgroundSyncEngine {
 
     // An action may be enqueued while the snapshot above is being flushed.
     // Never replace those newer entries with the failed-action list.
-    const latestQueue = this.getQueue();
-    this.saveQueue(mergePendingActions(queue, failedActions, latestQueue));
+    if (auth.currentUser?.uid !== uid) {
+      this.processing = false;
+      return;
+    }
+    const latestQueue = this.getQueue(uid);
+    this.saveQueue(mergePendingActions(queue, failedActions, latestQueue), uid);
     this.processing = false;
 
     if (failedActions.length > 0 && typeof navigator !== 'undefined' && navigator.onLine && !this.retryTimer) {
