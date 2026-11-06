@@ -189,16 +189,28 @@ export default function NotificationsView({
   // ---------------------------------------------------------------------------
   // INTERACTIVE ACTION HANDLERS
   // ---------------------------------------------------------------------------
-  const handleMarkAllAsReadLocal = () => {
-    setNotificationsList(prev => prev.map(n => ({ ...n, isRead: true })));
-    onMarkAllAsRead();
-    addToast("✨ Marked all notifications as read!");
+  const handleMarkAllAsReadLocal = async () => {
+    const unreadIds = notificationsList.filter(item => !item.isRead).map(item => item.id);
+    try {
+      await Promise.all(unreadIds.map(id => setNotificationReadState(currentUser.id, id, true)));
+      setNotificationsList(prev => prev.map(item => ({ ...item, isRead: true })));
+      onMarkAllAsRead();
+      addToast("✨ Marked all notifications as read!");
+    } catch {
+      addToast("Couldn't update all notifications. Please try again.");
+    }
   };
 
-  const handleClearAllLocal = () => {
-    setNotificationsList([]);
-    onClearNotifications();
-    addToast("🗑️ Notifications list completely flushed!");
+  const handleClearAllLocal = async () => {
+    const ids = notificationsList.map(item => item.id);
+    try {
+      await Promise.all(ids.map(id => deleteOwnNotification(currentUser.id, id)));
+      setNotificationsList([]);
+      onClearNotifications();
+      addToast("🗑️ Notifications inbox cleared.");
+    } catch {
+      addToast("Couldn't clear all notifications. Please try again.");
+    }
   };
 
   const handleToggleRead = async (id: string, e?: React.MouseEvent) => {
