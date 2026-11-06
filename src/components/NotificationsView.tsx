@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, Sparkles, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, Send, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Tv, Trash2, Play, Volume2, VolumeX, Shield, UserCheck, AlertTriangle, RefreshCw, Layers, Check, CheckSquare, Square, Trash, Archive, Star, Calendar, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, Pin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
-import { setNotificationReadState } from '../services/dataService';
+import { deleteOwnNotification, setNotificationReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
@@ -231,12 +231,18 @@ export default function NotificationsView({
     }
   };
 
-  const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
-    setNotificationsList(prev => prev.filter(n => !selectedIds.includes(n.id)));
-    addToast(`🗑️ Removed ${selectedIds.length} selected notifications!`);
-    setSelectedIds([]);
-    setIsMultiSelectMode(false);
+  const handleDeleteSelected = async () => {
+    const ids = notificationsList.filter(n => selectedIds.includes(n.id)).map(n => n.id);
+    if (ids.length === 0) return;
+    try {
+      await Promise.all(ids.map(id => deleteOwnNotification(currentUser.id, id)));
+      setNotificationsList(prev => prev.filter(n => !ids.includes(n.id)));
+      addToast(`🗑️ Removed ${ids.length} notifications!`);
+      setSelectedIds([]);
+      setIsMultiSelectMode(false);
+    } catch {
+      addToast("Some notifications couldn't be deleted. Please try again.");
+    }
   };
 
   const handleArchiveSelected = () => {
@@ -256,10 +262,15 @@ export default function NotificationsView({
     }
   };
 
-  const handleDismissSingle = (id: string, e: React.MouseEvent) => {
+  const handleDismissSingle = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotificationsList(prev => prev.filter(n => n.id !== id));
-    addToast("Notification dismissed");
+    try {
+      await deleteOwnNotification(currentUser.id, id);
+      setNotificationsList(prev => prev.filter(n => n.id !== id));
+      addToast("Notification dismissed");
+    } catch {
+      addToast("Couldn't dismiss this notification. Please try again.");
+    }
   };
 
   // Friend Request actions
@@ -376,8 +387,12 @@ export default function NotificationsView({
   const handleSwipeActionMock = (id: string, action: 'delete' | 'archive' | 'mute' | 'read' | 'pin', e: React.MouseEvent) => {
     e.stopPropagation();
     if (action === 'delete') {
-      setNotificationsList(prev => prev.filter(n => n.id !== id));
-      addToast("Notification permanently deleted");
+      void deleteOwnNotification(currentUser.id, id)
+        .then(() => {
+          setNotificationsList(prev => prev.filter(n => n.id !== id));
+          addToast("Notification permanently deleted");
+        })
+        .catch(() => addToast("Couldn't delete this notification. Please try again."));
     } else if (action === 'archive') {
       setNotificationsList(prev => prev.map(n => n.id === id ? { ...n, isArchived: true } : n));
       addToast("Notification sent to archive vault");
