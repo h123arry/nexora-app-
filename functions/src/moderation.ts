@@ -190,20 +190,29 @@ export const submitModerationAppeal = onCall({ maxInstances: 10 }, async (reques
 
   const appealId = `appeal_${createHash('sha256').update(`${userId}:${enforcement.id}`).digest('hex').slice(0, 40)}`;
   const appealRef = db.collection('moderationAppeals').doc(appealId);
-  const existing = await appealRef.get();
-  if (existing.exists && ['pending', 'under_review'].includes(String(existing.data()?.status))) return { accepted: true, duplicate: true, appealId };
-  await appealRef.create({
-    id: appealId,
-    userId,
-    enforcementId: enforcement.id,
-    targetType,
-    targetId: targetId.trim(),
-    reason: reason.trim(),
-    status: 'pending',
-    policyVersion: '2026-10',
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
+  const auditRef = db.collection('moderationAuditEvents').doc();
+  const duplicate = await db.runTransaction(async transaction => {
+    const existing = await transaction.get(appealRef);
+    // A stable appeal ID permits one appeal record per account/enforcement.
+    // Treat retries as idempotent, including retries after review has started.
+    if (existing.exists) return true;
+    const now = FieldValue.serverTimestamp();
+    transaction.create(appealRef, {
+      id: appealId,
+      userId,
+      enforcementId: enforcement.id,
+      targetType,
+      targetId: targetId.trim(),
+      reason: reason.trim(),
+      status: 'pending',
+      policyVersion: '2026-10',
+      createdAt: now,
+      updatedAt: now,
+    });
+    transaction.create(auditRef, {
+      type: 'appeal_submitted', appealId, enforcementId: enforcement.id, actorId: userId, createdAt: now,
+    });
+    return false;
   });
-  await db.collection('moderationAuditEvents').add({ type: 'appeal_submitted', appealId, enforcementId: enforcement.id, actorId: userId, createdAt: FieldValue.serverTimestamp() });
-  return { accepted: true, duplicate: false, appealId };
+  return { accepted: true, duplicate, appealId };
 });
