@@ -46,6 +46,13 @@ This phase improves the existing NEXORA social experience in place. It does not 
 - The old unscoped global draft key is intentionally not auto-imported because its owner cannot be established safely.
 - Drafts remain device-local; this change does not claim cross-device draft sync or durable media backup.
 
+### Durable story interactions
+- Viewers can send one of five supported emoji reactions; each account has one reaction record per story and can change it.
+- Viewers can send a text reply of up to 500 characters to an active story.
+- Reactions are readable by the reacting account and story owner; replies are readable by the author and story owner.
+- Firestore validates account identity, supported reaction values, payload shape, message length and story expiry. Interaction records cannot be edited or deleted by arbitrary clients.
+- Story interactions are durable Firestore records, not local-only UI state.
+
 ## Existing capabilities retained
 - Public profile projection and owner-checked profile updates.
 - Authenticated public directory search across people, Pages and Circles.

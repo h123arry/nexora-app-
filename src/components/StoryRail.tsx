@@ -8,6 +8,8 @@ import {
   createTextStory,
   createMediaStory,
   getStoryViewCount,
+  reactToStory,
+  replyToStory,
   markStoryViewed,
   NexoraStory,
   subscribeToPublicStories
@@ -349,6 +351,9 @@ function StoryViewer({
 }) {
   const [progress, setProgress] = useState(0);
   const [viewCount, setViewCount] = useState<number | null>(null);
+  const [reply, setReply] = useState('');
+  const [interactionError, setInteractionError] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -406,6 +411,29 @@ function StoryViewer({
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, []);
 
+  const sendReply = async () => {
+    if (!reply.trim() || sendingReply) return;
+    setSendingReply(true);
+    setInteractionError('');
+    try {
+      await replyToStory(story, reply);
+      setReply('');
+    } catch (error) {
+      setInteractionError(error instanceof Error ? error.message : 'Unable to send your reply.');
+    } finally {
+      setSendingReply(false);
+    }
+  };
+
+  const sendReaction = async (emoji: string) => {
+    setInteractionError('');
+    try {
+      await reactToStory(story, emoji);
+    } catch (error) {
+      setInteractionError(error instanceof Error ? error.message : 'Unable to send your reaction.');
+    }
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -459,7 +487,21 @@ function StoryViewer({
               <p className="text-center text-xl sm:text-2xl font-bold leading-snug text-white drop-shadow">{story.caption}</p>
             )}
           </div>
-          <div className="flex items-center justify-between p-4">
+          <div className="px-4 pb-2">
+            <div className="flex items-center justify-center gap-3" aria-label="React to story">
+              {['❤️', '🔥', '👏', '😂', '😍'].map((emoji) => (
+                <button key={emoji} type="button" onClick={() => void sendReaction(emoji)} className="rounded-full bg-white/10 px-3 py-2 text-lg hover:bg-violet-500/25" aria-label={`React with ${emoji}`}>{emoji}</button>
+              ))}
+            </div>
+            {story.userId !== currentUserId && (
+              <form className="mt-2 flex gap-2" onSubmit={(event) => { event.preventDefault(); void sendReply(); }}>
+                <input value={reply} onChange={(event) => setReply(event.target.value.slice(0, 500))} maxLength={500} placeholder="Reply to story…" className="nx-field min-w-0 flex-1 px-3 py-2 text-xs" aria-label="Story reply" />
+                <button type="submit" disabled={!reply.trim() || sendingReply} className="nx-btn-primary !min-h-9 px-3 text-xs disabled:opacity-50">{sendingReply ? '…' : 'Send'}</button>
+              </form>
+            )}
+            {interactionError && <p role="alert" className="mt-1 text-[10px] text-rose-300">{interactionError}</p>}
+          </div>
+          <div className="flex items-center justify-between p-4 pt-2">
             <button type="button" onClick={onPrev} className="nx-btn-ghost !min-h-9 text-xs">Prev</button>
             <span className="text-[10px] font-mono text-zinc-400">{story.userId === currentUserId && viewCount !== null ? `${viewCount} views` : "24h story"}</span>
             <button type="button" onClick={onNext} className="nx-btn-ghost !min-h-9 text-xs">Next</button>

@@ -564,6 +564,38 @@ service cloud.firestore {
       allow update: if false;
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
 
+      match /reactions/{userId} {
+        allow get, list: if signedIn()
+          && (userId == request.auth.uid
+            || get(/databases/$(database)/documents/stories/$(storyId)).data.userId == request.auth.uid);
+        allow create, update: if signedIn()
+          && userId == request.auth.uid
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.expiresAt > request.time
+          && request.resource.data.keys().hasOnly(['storyId', 'userId', 'emoji', 'updatedAt'])
+          && request.resource.data.storyId == storyId
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.emoji in ['❤️', '🔥', '👏', '😂', '😍']
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if signedIn() && userId == request.auth.uid;
+      }
+      match /replies/{replyId} {
+        allow create: if signedIn()
+          && get(/databases/$(database)/documents/stories/$(storyId)).data.expiresAt > request.time
+          && request.resource.data.keys().hasOnly(['storyId', 'authorId', 'authorName', 'message', 'createdAt'])
+          && request.resource.data.storyId == storyId
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 100
+          && request.resource.data.message is string
+          && request.resource.data.message.size() > 0
+          && request.resource.data.message.size() <= 500
+          && request.resource.data.createdAt == request.time;
+        allow get, list: if signedIn()
+          && (get(/databases/$(database)/documents/stories/$(storyId)).data.userId == request.auth.uid
+            || resource.data.authorId == request.auth.uid);
+        allow update, delete: if false;
+      }
+
       match /views/{viewerId} {
         allow create: if signedIn()
           && viewerId == request.auth.uid
