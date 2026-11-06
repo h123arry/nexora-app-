@@ -1,5 +1,5 @@
 import { getMessaging, getToken, onMessage, Messaging, deleteToken } from 'firebase/messaging';
-import { collection, deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import { auth, app, db } from './config';
 
 export interface PushNotificationPayload {
@@ -20,6 +20,7 @@ export class PushNotificationService {
   private static messaging: Messaging | null = null;
   private static token: string | null = null;
   private static isInitialized = false;
+  private static tokenOwnerUid: string | null = null;
 
   private static async tokenDocumentId(token: string): Promise<string> {
     const bytes = new TextEncoder().encode(token);
@@ -36,13 +37,24 @@ export class PushNotificationService {
       platform: 'web',
       updatedAt: serverTimestamp(),
     }, { merge: true });
+    this.tokenOwnerUid = uid;
   }
 
   /**
    * Initializes Push Notifications & FCM Messaging
    */
   static async init(): Promise<string | null> {
-    if (this.isInitialized && this.token) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return null;
+    if (this.token && this.tokenOwnerUid && this.tokenOwnerUid !== uid) {
+      const previousTokenId = await this.tokenDocumentId(this.token);
+      await deleteDoc(doc(db, 'users', this.tokenOwnerUid, 'pushTokens', previousTokenId));
+      if (this.messaging) await deleteToken(this.messaging);
+      this.token = null;
+      this.tokenOwnerUid = null;
+      this.isInitialized = false;
+    }
+    if (this.isInitialized && this.token && this.tokenOwnerUid === uid) {
       return this.token;
     }
 
@@ -105,13 +117,14 @@ export class PushNotificationService {
 
   /** Removes this browser's registration from the signed-in account. */
   static async unregister(): Promise<void> {
-    const uid = auth.currentUser?.uid;
+    const uid = this.tokenOwnerUid;
     const token = this.token;
     if (!uid || !token) return;
     const tokenId = await this.tokenDocumentId(token);
     await deleteDoc(doc(db, 'users', uid, 'pushTokens', tokenId));
     if (this.messaging) await deleteToken(this.messaging);
     this.token = null;
+    this.tokenOwnerUid = null;
     this.isInitialized = false;
   }
 
