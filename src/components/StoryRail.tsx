@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Heart, FileImage, LoaderCircle, Plus, Send, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileImage, LoaderCircle, Plus, Send, X } from 'lucide-react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../services/firebase/config';
 import { User } from '../types';
