@@ -25,6 +25,14 @@ This phase improves the existing NEXORA social experience in place. It does not 
 - Firestore rules allow the story owner to read/list view records and deny other accounts.
 - Expired stories are not exposed to other users; client queries are bounded and filter by expiry.
 
+### Account-scoped web push registration
+- When a signed-in user grants browser notification permission and an FCM token is successfully issued, the client persists the token under that account's private `users/{uid}/pushTokens` collection.
+- Device-token document IDs are SHA-256 hashes; the raw token is stored only in the owner-private document for trusted delivery services.
+- Firestore rules restrict token reads, registration, refresh and revocation to the owning account and validate the token shape and server timestamp.
+- Registration is tied to the active account; switching accounts removes the previous account's registration before registering the new account.
+- The service exposes an explicit unregister operation for device revocation.
+- Missing VAPID configuration or failed token registration is not reported as active remote push delivery. A successful client token registration still does not prove that a deployed sender, service worker, or production delivery path is operational.
+
 ## Verification
 - Existing notification authorization tests cover owner reads, owner read-state changes, owner deletion, cross-account denial and client-forged record denial.
 - New assertions reject non-boolean notification read states.
