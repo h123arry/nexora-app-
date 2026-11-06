@@ -1,4 +1,4 @@
-import { User, Post, Circle } from '../../types';
+import type { User, Post, Circle } from '../../types';
 
 export interface IntelligentSearchSuggestions {
   suggestions: string[];
@@ -6,41 +6,70 @@ export interface IntelligentSearchSuggestions {
   suggestedCircles: Circle[];
 }
 
+function normalize(value: string): string {
+  return value.normalize('NFKC').trim().toLocaleLowerCase();
+}
+
+function rankText(value: string, query: string): number {
+  const normalized = normalize(value);
+  if (!normalized || !query) return 0;
+  if (normalized === query) return 4;
+  if (normalized.startsWith(query)) return 3;
+  if (normalized.split(/\s+/).some(word => word.startsWith(query))) return 2;
+  return normalized.includes(query) ? 1 : 0;
+}
+
 export class SearchEngine {
+  /**
+   * Suggestions are derived only from supplied, real directory/content data.
+   * Empty queries and unmatched queries return no invented trending topics.
+   */
   static getSuggestions(query: string, users: User[], posts: Post[], circles: Circle[]): IntelligentSearchSuggestions {
-    const q = query.toLowerCase();
-    const suggestions: string[] = [];
+    const q = normalize(query || '');
+    if (!q) return { suggestions: [], suggestedUsers: [], suggestedCircles: [] };
 
-    // Filter matching usernames/names
     const suggestedUsers = users
-      .filter(u => u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q))
-      .slice(0, 3);
+      .filter(user => !user.isBanned && !user.isSuspended)
+      .map(user => ({
+        user,
+        score: Math.max(rankText(user.username || '', q), rankText(user.name || '', q)),
+      }))
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score || a.user.id.localeCompare(b.user.id))
+      .slice(0, 3)
+      .map(result => result.user);
 
-    // Filter matching circles
     const suggestedCircles = circles
-      .filter(c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q)))
-      .slice(0, 3);
+      .filter(circle => circle.type !== 'private' && circle.type !== 'invite-only')
+      .map(circle => {
+        const nameScore = rankText(circle.name || '', q);
+        const tagScore = Math.max(0, ...(circle.tags || []).map(tag => rankText(tag, q)));
+        return { circle, score: Math.max(nameScore, tagScore) };
+      })
+      .filter(result => result.score > 0)
+      .sort((a, b) => b.score - a.score || a.circle.id.localeCompare(b.circle.id))
+      .slice(0, 3)
+      .map(result => result.circle);
 
-    // Dynamic autocomplete suggestion chips
-    if (q.includes('fo') || q.includes('sp')) {
-      suggestions.push('Football predictions WAT', 'Sports activities Port Harcourt');
+    const suggestions = new Set<string>();
+    for (const post of posts) {
+      for (const tag of post.tags || []) {
+        if (rankText(tag, q) > 0) suggestions.add('#' + tag.replace(/^#/, ''));
+      }
+      if (post.searchSuggestion && rankText(post.searchSuggestion, q) > 0) {
+        suggestions.add(post.searchSuggestion.trim());
+      }
     }
-    if (q.includes('ai') || q.includes('co')) {
-      suggestions.push('AI builders guild', 'Code compiler memory serialization');
-    }
-    if (q.includes('de') || q.includes('ui')) {
-      suggestions.push('Design tokens & space-glass styles', 'UI responsive grid frameworks');
-    }
-
-    // Default suggestions if none
-    if (suggestions.length === 0) {
-      suggestions.push('Lagos startup founders alliance', 'Premium creative writing communities', '#SpaceGlass aesthetic guides');
+    for (const circle of suggestedCircles) {
+      for (const tag of circle.tags || []) {
+        if (rankText(tag, q) > 0) suggestions.add('#' + tag.replace(/^#/, ''));
+      }
     }
 
     return {
-      suggestions,
+      suggestions: [...suggestions].slice(0, 6),
       suggestedUsers,
-      suggestedCircles
+      suggestedCircles,
     };
   }
 }
