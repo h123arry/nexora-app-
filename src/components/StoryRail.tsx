@@ -66,14 +66,21 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [viewerSelection, setViewerSelection] = useState<{ authorIndex: number; storyIndex: number } | null>(null);
-  const [viewedStoryIds, setViewedStoryIds] = useState<string[]>(() => {
-    try {
-      const stored = JSON.parse(sessionStorage.getItem('nexora_viewed_stories') || '[]');
-      return Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string') : [];
-    } catch {
-      return [];
+  const [viewedStoryIds, setViewedStoryIds] = useState<string[]>([]);
+  const viewedStoriesKey = authUserId ? `nexora_viewed_stories_${authUserId}` : null;
+
+  useEffect(() => {
+    if (!viewedStoriesKey) {
+      setViewedStoryIds([]);
+      return;
     }
-  });
+    try {
+      const stored = JSON.parse(sessionStorage.getItem(viewedStoriesKey) || '[]');
+      setViewedStoryIds(Array.isArray(stored) ? stored.filter((id): id is string => typeof id === 'string') : []);
+    } catch {
+      setViewedStoryIds([]);
+    }
+  }, [viewedStoriesKey]);
   const railRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => onAuthStateChanged(auth, (user) => setAuthUserId(user?.uid ?? null)), []);
@@ -115,7 +122,9 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
   const rememberViewed = (story: NexoraStory) => {
     setViewedStoryIds(previous => {
       const next = previous.includes(story.id) ? previous : [...previous, story.id].slice(-500);
-      try { sessionStorage.setItem('nexora_viewed_stories', JSON.stringify(next)); } catch {}
+      if (viewedStoriesKey) {
+        try { sessionStorage.setItem(viewedStoriesKey, JSON.stringify(next)); } catch {}
+      }
       return next;
     });
     void markStoryViewed(story).catch(() => undefined);
