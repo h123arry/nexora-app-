@@ -36,8 +36,14 @@ This phase improves the existing NEXORA social experience in place. It does not 
 ## Verification
 - Existing notification authorization tests cover owner reads, owner read-state changes, owner deletion, cross-account denial and client-forged record denial.
 - New assertions reject non-boolean notification read states.
-- Story authorization tests cover viewer marker creation, owner-only get/list access and cross-account denial.
+- Story authorization tests cover viewer marker creation, owner-only get/list access, cross-account denial, validated replies and supported reactions.
 - The existing CI workflow runs type-checking, unit tests, Auth/Firestore/Storage emulator tests, integration/security suites, dependency audits and production builds.
+
+### Durable story interactions
+- Viewers can send one of five supported emoji reactions; each account has one reaction record per story and can change it.
+- Viewers can send a text reply of up to 500 characters to an active story.
+- Reactions are readable by the reacting account and story owner; replies are readable by the author and story owner.
+- Firestore validates account identity, supported reaction values, payload shape, message length and story expiry.
 
 ### Account-isolated local publishing drafts
 - Saved drafts now use a UID-specific device-local storage key rather than one global browser key.
@@ -58,16 +64,18 @@ This phase improves the existing NEXORA social experience in place. It does not 
 - Authenticated public directory search across people, Pages and Circles.
 - Bounded public-feed pagination and subscription.
 - Story text/image/video upload, 24-hour expiry, story navigation and owner deletion.
-- Existing messaging, group chat, broadcast, inbox, media and receipt components.
+- Account-backed direct and group messaging, cross-device inbox conversation directory and account-scoped inbox preferences.
+- Broadcast channels, business mini-services localization and booking request/decision notifications.
+- Account-isolated local publishing drafts and private, cross-device recent-search history.
 
 ## Explicit limitations, not represented as complete
 - Story audience controls remain public-only; close-friends/follower-only story privacy is not enabled.
-- Story replies/reactions and an archive/highlights lifecycle are not part of this tranche.
-- Notification push delivery still depends on valid FCM/VAPID and service-worker deployment; durable inbox state does not prove push delivery.
+- Story archive/highlights lifecycle and audience controls remain outstanding; current stories are public-only and expire after 24 hours.
+- Notification push delivery still depends on valid FCM/VAPID configuration, a deployed service worker and a trusted sender; token registration alone does not prove end-to-end delivery.
 - Profile privacy, follower-request enforcement and private-post audience enforcement require coordinated server/rules migrations before they can be safely enabled.
 - Messaging still has legacy/local-first paths; simulated call UI is not a real-time calling transport.
 - Directory search is a callable backend feature and still requires deployed-function verification.
 - Live Firebase staging and two-account production-like verification remain separate release gates.
 
-## Merge policy
-Do not merge this phase branch until the latest commit passes the complete CI workflow. Do not describe staging, push delivery, private audiences or real-time calls as production-verified without live evidence.
+## Merge and release policy
+Phase 2 code changes are merged only after the full CI workflow passes. Live Firebase staging, two-account production-like tests, deployed push delivery, private audiences and real-time calling are separate release gates and must not be described as production-verified without live evidence.
