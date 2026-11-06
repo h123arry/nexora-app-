@@ -20,11 +20,13 @@ export { submitModerationReport, reviewModerationReport, submitModerationAppeal 
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
-export { deliverNotificationPush } from './pushDelivery.js';
+import { createNotificationPushDelivery } from './pushDelivery.js';
 
 const adminApp = getFirebaseAdminApp();
 const firestoreDatabaseId = resolveFirestoreDatabaseId();
 const adminDb = getFirestore(adminApp, firestoreDatabaseId);
+
+export const deliverNotificationPush = createNotificationPushDelivery(adminDb, adminApp);
 setGlobalOptions({
   region: 'us-central1',
   maxInstances: 5,
