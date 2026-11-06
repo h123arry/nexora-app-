@@ -110,49 +110,63 @@ export const reviewModerationReport = onCall({ maxInstances: 10 }, async (reques
   const reportSnap = await reportRef.get();
   if (!reportSnap.exists) throw new HttpsError('not-found', 'Report not found.');
   const report = reportSnap.data() || {};
-  if (!['pending', 'under_review', 'escalated'].includes(String(report.status))) throw new HttpsError('failed-precondition', 'This report is already closed.');
+  if (!['pending', 'under_review', 'escalated'].includes(String(report.status))) {
+    throw new HttpsError('failed-precondition', 'This report is already closed.');
+  }
 
   const accountId = action === 'dismiss' ? null : await resolveAccountId(report);
   if (action !== 'dismiss' && !accountId) throw new HttpsError('failed-precondition', 'The reported account could not be resolved safely.');
-  const batch = db.batch();
   const now = FieldValue.serverTimestamp();
-  batch.update(reportRef, {
-    status: action === 'dismiss' ? 'dismissed' : 'resolved',
-    action,
-    decisionNote: typeof decisionNote === 'string' ? decisionNote.trim() : '',
-    reviewerId,
-    reviewedAt: now,
-    updatedAt: now,
-  });
-  if (action !== 'dismiss') {
-    const enforcementId = `enforcement_${reportId}`;
-    const expiresAt = action === 'warn' ? null : Timestamp.fromMillis(Date.now() + (action === 'ban' ? 3650 : 7) * 24 * 60 * 60 * 1000);
-    batch.set(db.collection('accountEnforcements').doc(enforcementId), {
-      id: enforcementId,
-      accountId,
-      targetId: report.targetId,
+  const enforcementId = `enforcement_${reportId}`;
+  const enforcementRef = db.collection('accountEnforcements').doc(enforcementId);
+  const accountStatusRef = accountId ? db.collection('accountStatus').doc(accountId) : null;
+  const expiresAt = action === 'warn' ? null : Timestamp.fromMillis(Date.now() + (action === 'ban' ? 3650 : 7) * 24 * 60 * 60 * 1000);
+  const auditRef = db.collection('moderationAuditEvents').doc();
+
+  // Re-check and apply the decision in one transaction. Two moderators racing
+  // on the same report cannot both issue an enforcement or duplicate audit rows.
+  await db.runTransaction(async transaction => {
+    const current = await transaction.get(reportRef);
+    if (!current.exists) throw new HttpsError('not-found', 'Report not found.');
+    const currentStatus = String(current.get('status') || '');
+    if (!['pending', 'under_review', 'escalated'].includes(currentStatus)) {
+      throw new HttpsError('failed-precondition', 'This report is already closed.');
+    }
+    transaction.update(reportRef, {
+      status: action === 'dismiss' ? 'dismissed' : 'resolved',
       action,
-      reportId,
-      status: 'active',
-      policyVersion: '2026-10',
-      issuedBy: reviewerId,
-      createdAt: now,
-      expiresAt,
-    }, { merge: true });
-    batch.set(db.collection('accountStatus').doc(accountId as string), {
-      accountId,
-      postingRestricted: action === 'restrict_posting' || action === 'suspend' || action === 'ban',
-      messagingRestricted: action === 'restrict_messaging' || action === 'suspend' || action === 'ban',
-      suspended: action === 'suspend' || action === 'ban',
-      expiresAt,
+      decisionNote: typeof decisionNote === 'string' ? decisionNote.trim() : '',
+      reviewerId,
+      reviewedAt: now,
       updatedAt: now,
-      sourceEnforcementId: enforcementId,
-    }, { merge: true });
-  }
-  batch.create(db.collection('moderationAuditEvents').doc(), {
-    type: 'report_reviewed', reportId, action, actorId: reviewerId, createdAt: now,
+    });
+    if (action !== 'dismiss' && accountStatusRef) {
+      transaction.set(enforcementRef, {
+        id: enforcementId,
+        accountId,
+        targetId: report.targetId,
+        action,
+        reportId,
+        status: 'active',
+        policyVersion: '2026-10',
+        issuedBy: reviewerId,
+        createdAt: now,
+        expiresAt,
+      });
+      transaction.set(accountStatusRef, {
+        accountId,
+        postingRestricted: action === 'restrict_posting' || action === 'suspend' || action === 'ban',
+        messagingRestricted: action === 'restrict_messaging' || action === 'suspend' || action === 'ban',
+        suspended: action === 'suspend' || action === 'ban',
+        expiresAt,
+        updatedAt: now,
+        sourceEnforcementId: enforcementId,
+      }, { merge: true });
+    }
+    transaction.create(auditRef, {
+      type: 'report_reviewed', reportId, action, actorId: reviewerId, createdAt: now,
+    });
   });
-  await batch.commit();
   return { accepted: true, reportId, action };
 });
 
