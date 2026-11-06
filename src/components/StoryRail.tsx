@@ -7,6 +7,7 @@ import { User } from '../types';
 import {
   createTextStory,
   createMediaStory,
+  getStoryViewCount,
   markStoryViewed,
   NexoraStory,
   subscribeToPublicStories
@@ -319,6 +320,7 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
         {activeStory && (
           <StoryViewer
             story={activeStory}
+            currentUserId={authUserId || ''}
             onClose={() => setViewerSelection(null)}
             onPrev={() => moveViewer(-1)}
             onNext={() => moveViewer(1)}
@@ -332,19 +334,33 @@ export default function StoryRail({ currentUser, onRequireAuth, onViewProfile }:
 
 function StoryViewer({
   story,
+  currentUserId,
   onClose,
   onPrev,
   onNext,
   onViewProfile
 }: {
   story: NexoraStory;
+  currentUserId: string;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;
   onViewProfile?: (userId: string) => void;
 }) {
   const [progress, setProgress] = useState(0);
+  const [viewCount, setViewCount] = useState<number | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    setViewCount(null);
+    if (story.userId === currentUserId) {
+      getStoryViewCount(story)
+        .then(count => { if (active) setViewCount(count); })
+        .catch(() => { if (active) setViewCount(null); });
+    }
+    return () => { active = false; };
+  }, [story.id, story.userId, story.expiresAt, currentUserId]);
 
   useEffect(() => {
     setProgress(0);
@@ -445,7 +461,7 @@ function StoryViewer({
           </div>
           <div className="flex items-center justify-between p-4">
             <button type="button" onClick={onPrev} className="nx-btn-ghost !min-h-9 text-xs">Prev</button>
-            <span className="text-[10px] font-mono text-zinc-400">24h story</span>
+            <span className="text-[10px] font-mono text-zinc-400">{story.userId === currentUserId && viewCount !== null ? `${viewCount} views` : "24h story"}</span>
             <button type="button" onClick={onNext} className="nx-btn-ghost !min-h-9 text-xs">Next</button>
           </div>
         </div>
