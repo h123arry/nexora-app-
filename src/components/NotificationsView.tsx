@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, Sparkles, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, Send, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Tv, Trash2, Play, Volume2, VolumeX, Shield, UserCheck, AlertTriangle, RefreshCw, Layers, Check, CheckSquare, Square, Trash, Archive, Star, Calendar, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, Pin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
-import { deleteOwnNotification, setNotificationReadState } from '../services/dataService';
+import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
@@ -192,7 +192,7 @@ export default function NotificationsView({
   const handleMarkAllAsReadLocal = async () => {
     const unreadIds = notificationsList.filter(item => !item.isRead).map(item => item.id);
     try {
-      await Promise.all(unreadIds.map(id => setNotificationReadState(currentUser.id, id, true)));
+      await setNotificationsReadState(currentUser.id, unreadIds, true);
       setNotificationsList(prev => prev.map(item => ({ ...item, isRead: true })));
       onMarkAllAsRead();
       addToast("✨ Marked all notifications as read!");
@@ -204,7 +204,7 @@ export default function NotificationsView({
   const handleClearAllLocal = async () => {
     const ids = notificationsList.map(item => item.id);
     try {
-      await Promise.all(ids.map(id => deleteOwnNotification(currentUser.id, id)));
+      await deleteOwnNotifications(currentUser.id, ids);
       setNotificationsList([]);
       onClearNotifications();
       addToast("🗑️ Notifications inbox cleared.");
@@ -233,7 +233,7 @@ export default function NotificationsView({
       .map(item => item.id);
     if (unreadIds.length === 0) return;
     try {
-      await Promise.all(unreadIds.map(id => setNotificationReadState(currentUser.id, id, true)));
+      await setNotificationsReadState(currentUser.id, unreadIds, true);
       setNotificationsList(prev => prev.map(item => unreadIds.includes(item.id) ? { ...item, isRead: true } : item));
       addToast(`✨ Marked ${unreadIds.length} selected as read!`);
       setSelectedIds([]);
@@ -247,7 +247,7 @@ export default function NotificationsView({
     const ids = notificationsList.filter(n => selectedIds.includes(n.id)).map(n => n.id);
     if (ids.length === 0) return;
     try {
-      await Promise.all(ids.map(id => deleteOwnNotification(currentUser.id, id)));
+      await deleteOwnNotifications(currentUser.id, ids);
       setNotificationsList(prev => prev.filter(n => !ids.includes(n.id)));
       addToast(`🗑️ Removed ${ids.length} notifications!`);
       setSelectedIds([]);
