@@ -271,6 +271,17 @@ service cloud.firestore {
           || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));
       allow delete: if false;
 
+      match /searchHistory/{searchId} {
+        allow get, list: if owner(userId);
+        allow create, update: if owner(userId)
+          && request.resource.data.keys().hasOnly(['term', 'updatedAt'])
+          && request.resource.data.term is string
+          && request.resource.data.term.size() >= 2
+          && request.resource.data.term.size() <= 100
+          && request.resource.data.updatedAt == request.time;
+        allow delete: if owner(userId);
+      }
+
       match /inboxPreferences/{chatId} {
         allow get, list: if owner(userId);
         allow create, update: if owner(userId)
