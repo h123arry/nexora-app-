@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Users, MessageSquare, Briefcase, Bookmark, Cpu, Globe, ArrowRight, Sparkles, Hash, Clock, Trash2, Plus, Shield, ShieldCheck, Heart, Play, Radio, ChevronRight } from 'lucide-react';
 import { User, Post, Chat } from '../types';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
+import { clearRecentSearches, deleteRecentSearch, listRecentSearches, saveRecentSearch } from '../services/firebase/searchHistoryService';
 
 interface UniversalSearchModalProps {
   isOpen: boolean;
@@ -35,7 +36,18 @@ export default function UniversalSearchModal({
   const [serverResults, setServerResults] = useState<PublicDirectoryResult | null>(null);
   const [serverSearchLoading, setServerSearchLoading] = useState(false);
   const [serverSearchError, setServerSearchError] = useState('');
-  useEffect(() => { setRecentSearches(readRecentSearches(currentUser.id)); }, [currentUser.id]);
+  useEffect(() => {
+    setRecentSearches(readRecentSearches(currentUser.id));
+    let active = true;
+    listRecentSearches(currentUser.id).then(remoteTerms => {
+      if (!active || remoteTerms.length === 0) return;
+      setRecentSearches(remoteTerms);
+      try { localStorage.setItem('nexora_recent_searches_' + currentUser.id, JSON.stringify(remoteTerms)); } catch {}
+    }).catch(() => {
+      // Local history remains available when the account history is temporarily offline.
+    });
+    return () => { active = false; };
+  }, [currentUser.id]);
 
   useEffect(() => {
     const term = query.trim();
@@ -91,6 +103,9 @@ export default function UniversalSearchModal({
     try {
       localStorage.setItem('nexora_recent_searches_' + currentUser.id, JSON.stringify(updated));
     } catch {}
+    void saveRecentSearch(currentUser.id, trimmed).catch(() => {
+      // Keep the device-local fallback; cloud history can retry on a later search.
+    });
   };
 
   const handleRemoveRecent = (term: string, e: React.MouseEvent) => {
@@ -100,6 +115,7 @@ export default function UniversalSearchModal({
     try {
       localStorage.setItem('nexora_recent_searches_' + currentUser.id, JSON.stringify(updated));
     } catch {}
+    void deleteRecentSearch(currentUser.id, term).catch(() => undefined);
   };
 
   const handleClearAllRecent = () => {
@@ -107,6 +123,7 @@ export default function UniversalSearchModal({
     try {
       localStorage.removeItem('nexora_recent_searches_' + currentUser.id);
     } catch {}
+    void clearRecentSearches(currentUser.id).catch(() => undefined);
   };
 
   const trimmedQ = searchText(query);
