@@ -64,8 +64,8 @@ export class RecommendationEngine {
 
     const creatorsToFollow = creators
       .filter(candidate => {
-        const id = candidate.id?.trim().toLowerCase();
-        return Boolean(id)
+        const id = (candidate.id || '').trim().toLowerCase();
+        return id.length > 0
           && id !== user.id.trim().toLowerCase()
           && !candidate.isBanned
           && !candidate.isSuspended
@@ -102,9 +102,9 @@ export class RecommendationEngine {
 
     const circlesToJoin = circles
       .filter(circle => {
-        const id = circle.id?.trim().toLowerCase();
+        const id = (circle.id || '').trim().toLowerCase();
         const visibility = circle.type || 'unknown';
-        return Boolean(id)
+        return id.length > 0
           && !joinedCircles.has(id)
           && !blockedCircles.has(id)
           && !((circle.bannedUsers || []).some(member => member.toLowerCase() === user.id.toLowerCase()))
