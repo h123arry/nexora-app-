@@ -22,7 +22,7 @@ function requireOwner(userId: string): void {
 }
 
 function normalizeTerm(value: string): string {
-  const term = value.normalize('NFKC').trim().replace(/\\s+/g, ' ');
+  const term = value.normalize('NFKC').trim().replace(/\s+/g, ' ');
   if (term.length < 2 || term.length > MAX_SEARCH_LENGTH) {
     throw new Error('Search terms must contain between 2 and 100 characters.');
   }
