@@ -32,6 +32,19 @@ test('prepares only an adjacent video and downgrades it on a slow connection', (
   });
 });
 
+test('does not start speculative video requests while offline', () => {
+  assert.deepEqual(getVideoPreloadPlan({
+    ...base,
+    isActive: false,
+    postVideoIndex: 2,
+    isOffline: true,
+  }), {
+    shouldPreload: false,
+    isReleased: false,
+    preloadMode: 'none',
+  });
+});
+
 test('releases distant videos and avoids preparing non-video content', () => {
   assert.equal(getVideoPreloadPlan({
     ...base,
