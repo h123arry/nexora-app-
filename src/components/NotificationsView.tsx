@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, Sparkles, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, Send, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Tv, Trash2, Play, Volume2, VolumeX, Shield, UserCheck, AlertTriangle, RefreshCw, Layers, Check, CheckSquare, Square, Trash, Archive, Star, Calendar, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, Pin } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
+import { deleteOwnNotification, setNotificationReadState } from '../services/dataService';
 import RelativeTime from './RelativeTime';
 import NexoraLoader from './NexoraLoader';
 import { getNotificationTimeSection } from '../utils/notificationTime';
@@ -188,46 +189,72 @@ export default function NotificationsView({
   // ---------------------------------------------------------------------------
   // INTERACTIVE ACTION HANDLERS
   // ---------------------------------------------------------------------------
-  const handleMarkAllAsReadLocal = () => {
-    setNotificationsList(prev => prev.map(n => ({ ...n, isRead: true })));
-    onMarkAllAsRead();
-    addToast("✨ Marked all notifications as read!");
+  const handleMarkAllAsReadLocal = async () => {
+    const unreadIds = notificationsList.filter(item => !item.isRead).map(item => item.id);
+    try {
+      await Promise.all(unreadIds.map(id => setNotificationReadState(currentUser.id, id, true)));
+      setNotificationsList(prev => prev.map(item => ({ ...item, isRead: true })));
+      onMarkAllAsRead();
+      addToast("✨ Marked all notifications as read!");
+    } catch {
+      addToast("Couldn't update all notifications. Please try again.");
+    }
   };
 
-  const handleClearAllLocal = () => {
-    setNotificationsList([]);
-    onClearNotifications();
-    addToast("🗑️ Notifications list completely flushed!");
+  const handleClearAllLocal = async () => {
+    const ids = notificationsList.map(item => item.id);
+    try {
+      await Promise.all(ids.map(id => deleteOwnNotification(currentUser.id, id)));
+      setNotificationsList([]);
+      onClearNotifications();
+      addToast("🗑️ Notifications inbox cleared.");
+    } catch {
+      addToast("Couldn't clear all notifications. Please try again.");
+    }
   };
 
-  const handleToggleRead = (id: string, e?: React.MouseEvent) => {
+  const handleToggleRead = async (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setNotificationsList(prev => prev.map(n => {
-      if (n.id === id) {
-        const nextState = !n.isRead;
-        if (nextState) {
-          addToast("Marked notification as read");
-        }
-        return { ...n, isRead: nextState };
-      }
-      return n;
-    }));
+    const notification = notificationsList.find(item => item.id === id);
+    if (!notification) return;
+    const nextState = !notification.isRead;
+    try {
+      await setNotificationReadState(currentUser.id, id, nextState);
+      setNotificationsList(prev => prev.map(item => item.id === id ? { ...item, isRead: nextState } : item));
+      addToast(nextState ? "Marked notification as read" : "Marked notification as unread");
+    } catch {
+      addToast("Couldn't update this notification. Please try again.");
+    }
   };
 
-  const handleMarkSelectedRead = () => {
-    if (selectedIds.length === 0) return;
-    setNotificationsList(prev => prev.map(n => selectedIds.includes(n.id) ? { ...n, isRead: true } : n));
-    addToast(`✨ Marked ${selectedIds.length} selected as read!`);
-    setSelectedIds([]);
-    setIsMultiSelectMode(false);
+  const handleMarkSelectedRead = async () => {
+    const unreadIds = notificationsList
+      .filter(item => selectedIds.includes(item.id) && !item.isRead)
+      .map(item => item.id);
+    if (unreadIds.length === 0) return;
+    try {
+      await Promise.all(unreadIds.map(id => setNotificationReadState(currentUser.id, id, true)));
+      setNotificationsList(prev => prev.map(item => unreadIds.includes(item.id) ? { ...item, isRead: true } : item));
+      addToast(`✨ Marked ${unreadIds.length} selected as read!`);
+      setSelectedIds([]);
+      setIsMultiSelectMode(false);
+    } catch {
+      addToast("Some notifications couldn't be updated. Please try again.");
+    }
   };
 
-  const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
-    setNotificationsList(prev => prev.filter(n => !selectedIds.includes(n.id)));
-    addToast(`🗑️ Removed ${selectedIds.length} selected notifications!`);
-    setSelectedIds([]);
-    setIsMultiSelectMode(false);
+  const handleDeleteSelected = async () => {
+    const ids = notificationsList.filter(n => selectedIds.includes(n.id)).map(n => n.id);
+    if (ids.length === 0) return;
+    try {
+      await Promise.all(ids.map(id => deleteOwnNotification(currentUser.id, id)));
+      setNotificationsList(prev => prev.filter(n => !ids.includes(n.id)));
+      addToast(`🗑️ Removed ${ids.length} notifications!`);
+      setSelectedIds([]);
+      setIsMultiSelectMode(false);
+    } catch {
+      addToast("Some notifications couldn't be deleted. Please try again.");
+    }
   };
 
   const handleArchiveSelected = () => {
@@ -247,10 +274,15 @@ export default function NotificationsView({
     }
   };
 
-  const handleDismissSingle = (id: string, e: React.MouseEvent) => {
+  const handleDismissSingle = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setNotificationsList(prev => prev.filter(n => n.id !== id));
-    addToast("Notification dismissed");
+    try {
+      await deleteOwnNotification(currentUser.id, id);
+      setNotificationsList(prev => prev.filter(n => n.id !== id));
+      addToast("Notification dismissed");
+    } catch {
+      addToast("Couldn't dismiss this notification. Please try again.");
+    }
   };
 
   // Friend Request actions
@@ -305,7 +337,9 @@ export default function NotificationsView({
 
     // Mark as read automatically on tap
     if (!notif.isRead) {
-      setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n));
+      void setNotificationReadState(currentUser.id, notif.id, true)
+        .then(() => setNotificationsList(prev => prev.map(n => n.id === notif.id ? { ...n, isRead: true } : n)))
+        .catch(() => addToast("Couldn't mark this notification as read. Please try again."));
     }
 
     // Interactive custom routing checks
@@ -365,8 +399,12 @@ export default function NotificationsView({
   const handleSwipeActionMock = (id: string, action: 'delete' | 'archive' | 'mute' | 'read' | 'pin', e: React.MouseEvent) => {
     e.stopPropagation();
     if (action === 'delete') {
-      setNotificationsList(prev => prev.filter(n => n.id !== id));
-      addToast("Notification permanently deleted");
+      void deleteOwnNotification(currentUser.id, id)
+        .then(() => {
+          setNotificationsList(prev => prev.filter(n => n.id !== id));
+          addToast("Notification permanently deleted");
+        })
+        .catch(() => addToast("Couldn't delete this notification. Please try again."));
     } else if (action === 'archive') {
       setNotificationsList(prev => prev.map(n => n.id === id ? { ...n, isArchived: true } : n));
       addToast("Notification sent to archive vault");

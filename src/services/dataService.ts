@@ -541,6 +541,28 @@ export async function getUserContent(userId: string, limitCount = DEFAULT_READ_L
   }
 }
 
+/** Delete one notification from the signed-in owner's inbox. */
+export async function deleteOwnNotification(userId: string, notificationId: string): Promise<void> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('You can only delete your own notifications.');
+  }
+  if (!notificationId || notificationId.length > 150) {
+    throw new Error('Invalid notification identifier.');
+  }
+  await deleteDoc(doc(db, 'users', userId, 'notifications', notificationId));
+}
+
+/** Persist one notification's read state in the signed-in owner's notification record. */
+export async function setNotificationReadState(userId: string, notificationId: string, isRead: boolean): Promise<void> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('You can only update your own notifications.');
+  }
+  if (!notificationId || notificationId.length > 150) {
+    throw new Error('Invalid notification identifier.');
+  }
+  await updateDoc(doc(db, 'users', userId, 'notifications', notificationId), { isRead });
+}
+
 export async function getNotifications(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   if (!auth.currentUser || auth.currentUser.uid !== userId) {
     throw new Error('You can only read your own notifications.');

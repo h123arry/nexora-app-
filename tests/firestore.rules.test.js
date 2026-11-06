@@ -459,7 +459,9 @@ const publicProfile = (uid) => ({
       storyId: 'story-1', viewerId: 'bob', createdAt: serverTimestamp()
     }));
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'stories', 'story-1', 'views', 'bob')));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'stories', 'story-1', 'views')));
     await assertFails(getDoc(doc(dbFor('bob'), 'stories', 'story-1', 'views', 'bob')));
+    await assertFails(getDocs(collection(dbFor('bob'), 'stories', 'story-1', 'views')));
     await assertFails(setDoc(doc(dbFor('mallory'), 'stories', 'story-1', 'views', 'bob'), {
       storyId: 'story-1', viewerId: 'bob', createdAt: serverTimestamp()
     }));
@@ -610,6 +612,8 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(ownNotification));
     await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'notifications')));
     await assertSucceeds(updateDoc(ownNotification, { isRead: true }));
+    await assertSucceeds(updateDoc(ownNotification, { isRead: false }));
+    await assertFails(updateDoc(ownNotification, { isRead: 'yes' }));
     await assertFails(updateDoc(ownNotification, { content: 'tampered' }));
     await assertFails(getDoc(doc(dbFor('bob'), 'users', 'alice', 'notifications', 'notice-1')));
     await assertFails(deleteDoc(doc(dbFor('bob'), 'users', 'alice', 'notifications', 'notice-1')));

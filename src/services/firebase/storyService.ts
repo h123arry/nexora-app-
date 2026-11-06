@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getCountFromServer,
   limit,
   onSnapshot,
   orderBy,
@@ -156,6 +157,18 @@ export async function markStoryViewed(story: NexoraStory): Promise<void> {
     viewerId: signedInUser.uid,
     createdAt: serverTimestamp(),
   });
+}
+
+/** Returns the durable view count to the story owner only. */
+export async function getStoryViewCount(story: NexoraStory): Promise<number> {
+  const signedInUser = auth.currentUser;
+  if (!signedInUser || signedInUser.uid !== story.userId) {
+    throw new Error('Only the story owner can view story analytics.');
+  }
+  if (timestampMillis(story.expiresAt) <= Date.now()) return 0;
+  const views = collection(db, STORIES_COLLECTION, story.id, 'views');
+  const snapshot = await getCountFromServer(views);
+  return snapshot.data().count;
 }
 
 export async function deleteStory(storyId: string): Promise<void> {
