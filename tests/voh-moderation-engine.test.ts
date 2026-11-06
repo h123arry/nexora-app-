@@ -8,7 +8,7 @@ test('moderation heuristics flag repeated guaranteed-return claims without claim
   assert.ok(result.score >= 0.5 && result.score <= 1);
   assert.ok(result.reasons.length > 0);
   assert.match(result.recommendation, /human assessment/i);
-  assert.doesNotMatch(result.recommendation, /automatically ban|automatic penalty/i);
+  assert.doesNotMatch(result.recommendation, /automatically ban|automatically enforce|auto-flag/i);
 });
 
 test('ordinary content is not called safe merely because no known pattern matched', () => {
