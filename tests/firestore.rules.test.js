@@ -459,7 +459,9 @@ const publicProfile = (uid) => ({
       storyId: 'story-1', viewerId: 'bob', createdAt: serverTimestamp()
     }));
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'stories', 'story-1', 'views', 'bob')));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'stories', 'story-1', 'views')));
     await assertFails(getDoc(doc(dbFor('bob'), 'stories', 'story-1', 'views', 'bob')));
+    await assertFails(getDocs(collection(dbFor('bob'), 'stories', 'story-1', 'views')));
     await assertFails(setDoc(doc(dbFor('mallory'), 'stories', 'story-1', 'views', 'bob'), {
       storyId: 'story-1', viewerId: 'bob', createdAt: serverTimestamp()
     }));
