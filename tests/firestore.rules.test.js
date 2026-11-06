@@ -1026,6 +1026,31 @@ const publicProfile = (uid) => ({
     }));
   });
 
+  it('keeps push device tokens private and owner-managed', async () => {
+    const tokenPath = ['users', 'alice', 'pushTokens', 'a'.repeat(64)];
+    const aliceToken = doc(dbFor('alice'), ...tokenPath);
+    await assertSucceeds(setDoc(aliceToken, {
+      token: 'fcm-device-token-value-that-is-long-enough',
+      platform: 'web',
+      updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(aliceToken));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'users', 'alice', 'pushTokens')));
+    await assertFails(getDoc(doc(dbFor('bob'), ...tokenPath)));
+    await assertFails(setDoc(doc(dbFor('bob'), ...tokenPath), {
+      token: 'forged-device-token-value-that-is-long-enough',
+      platform: 'web',
+      updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'pushTokens', 'invalid-id'), {
+      token: 'fcm-device-token-value-that-is-long-enough',
+      platform: 'web',
+      updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(deleteDoc(aliceToken));
+    await assertFails(deleteDoc(doc(dbFor('bob'), ...tokenPath)));
+  });
+
   it('keeps notification inbox records private and server-created', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice', 'notifications', 'like-1'), {
