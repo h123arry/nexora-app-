@@ -1,4 +1,5 @@
 import {
+  addDoc,
   collection,
   deleteDoc,
   doc,
@@ -169,6 +170,36 @@ export async function getStoryViewCount(story: NexoraStory): Promise<number> {
   const views = collection(db, STORIES_COLLECTION, story.id, 'views');
   const snapshot = await getCountFromServer(views);
   return snapshot.data().count;
+}
+
+/** Persist a short reply to an active public story. Replies are private to the story owner and author. */
+export async function replyToStory(story: NexoraStory, message: string): Promise<void> {
+  const user = auth.currentUser;
+  const text = message.trim();
+  if (!user) throw new Error('Sign in to reply to stories.');
+  if (timestampMillis(story.expiresAt) <= Date.now()) throw new Error('This story has expired.');
+  if (!text || text.length > 500) throw new Error('Replies must be between 1 and 500 characters.');
+  await addDoc(collection(db, STORIES_COLLECTION, story.id, 'replies'), {
+    storyId: story.id,
+    authorId: user.uid,
+    authorName: user.displayName || 'Nexora user',
+    message: text,
+    createdAt: serverTimestamp(),
+  });
+}
+
+/** One durable reaction per account; tapping again with another emoji updates it. */
+export async function reactToStory(story: NexoraStory, emoji: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Sign in to react to stories.');
+  if (timestampMillis(story.expiresAt) <= Date.now()) throw new Error('This story has expired.');
+  if (!['❤️', '🔥', '👏', '😂', '😍'].includes(emoji)) throw new Error('Unsupported story reaction.');
+  await setDoc(doc(db, STORIES_COLLECTION, story.id, 'reactions', user.uid), {
+    storyId: story.id,
+    userId: user.uid,
+    emoji,
+    updatedAt: serverTimestamp(),
+  });
 }
 
 export async function deleteStory(storyId: string): Promise<void> {
