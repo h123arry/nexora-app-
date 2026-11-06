@@ -300,6 +300,7 @@ export default function MediaCreationEngine({
 
   // Autosave
   useEffect(() => {
+    if (composerStateOwnerId !== currentUser.id) return;
     const timer = setTimeout(() => {
       if (!caption && !activeMode && selectedImages.length === 0 && !videoFileUrl && !voiceFileUrl) {
         localStorage.removeItem(autosaveKey);
@@ -331,7 +332,7 @@ export default function MediaCreationEngine({
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur]);
+  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur, composerStateOwnerId, currentUser.id]);
 
   // Camera preview management
   useEffect(() => {
