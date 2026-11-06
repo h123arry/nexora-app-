@@ -541,6 +541,17 @@ export async function getUserContent(userId: string, limitCount = DEFAULT_READ_L
   }
 }
 
+/** Persist one notification's read state in the signed-in owner's notification record. */
+export async function setNotificationReadState(userId: string, notificationId: string, isRead: boolean): Promise<void> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('You can only update your own notifications.');
+  }
+  if (!notificationId || notificationId.length > 150) {
+    throw new Error('Invalid notification identifier.');
+  }
+  await updateDoc(doc(db, 'users', userId, 'notifications', notificationId), { isRead });
+}
+
 export async function getNotifications(userId: string, limitCount = DEFAULT_READ_LIMIT) {
   if (!auth.currentUser || auth.currentUser.uid !== userId) {
     throw new Error('You can only read your own notifications.');
