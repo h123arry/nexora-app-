@@ -63,6 +63,36 @@ interface DraftItem {
   timestamp: string;
 }
 
+function readLocalDrafts(key: string): DraftItem[] {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is DraftItem =>
+      Boolean(item)
+      && typeof item.id === 'string'
+      && typeof item.caption === 'string'
+      && typeof item.topics === 'string'
+      && typeof item.type === 'string'
+      && typeof item.timestamp === 'string'
+      && Array.isArray(item.images)
+      && item.images.every((image: unknown) => typeof image === 'string')
+    ).slice(0, 50);
+  } catch {
+    return [];
+  }
+}
+
+function readLocalAutosave(key: string): Record<string, any> | null {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(key) || 'null');
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, any>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 const FILTER_PRESETS = [
   { name: 'Normal', style: 'none' },
   { name: 'Clarendon', style: 'contrast(1.2) brightness(1.1) saturate(1.2)' },
@@ -93,14 +123,8 @@ export default function MediaCreationEngine({
   initialTab = undefined
 }: MediaCreationEngineProps) {
   const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
-  const initialAutosave = (() => {
-    try {
-      const saved = localStorage.getItem(autosaveKey);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  })();
+  const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'visitor'}`;
+  const initialAutosave = readLocalAutosave(autosaveKey);
 
   // Navigation & Wizard Core
   const [activeTab, setActiveTab] = useState<'feed' | 'story' | 'drafts'>(initialTab || (isStoryModeInitially ? 'story' : 'feed'));
@@ -193,10 +217,8 @@ export default function MediaCreationEngine({
   });
   const [isAdvancedOptionsOpen, setIsAdvancedOptionsOpen] = useState(false);
   const [showExitConfirm, setShowExitConfirm] = useState(false);
-  const [draftsList, setDraftsList] = useState<DraftItem[]>(() => {
-    const saved = localStorage.getItem('nexora_post_drafts_v1');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [draftsList, setDraftsList] = useState<DraftItem[]>(() => readLocalDrafts(draftsKey));
+  const [composerStateOwnerId, setComposerStateOwnerId] = useState(currentUser.id);
 
   // Publish state; upload progress is reported by Firebase Storage callbacks.
   const [postingStatus, setPostingStatus] = useState<'idle' | 'publishing' | 'completed' | 'failed'>('idle');
@@ -244,11 +266,41 @@ export default function MediaCreationEngine({
   }, [permissionState]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_post_drafts_v1', JSON.stringify(draftsList));
-  }, [draftsList]);
+    if (composerStateOwnerId !== currentUser.id) return;
+    try {
+      localStorage.setItem(draftsKey, JSON.stringify(draftsList.slice(0, 50)));
+    } catch {
+      setErrorMessage('Device storage is full. Remove an old draft or media item and try again.');
+    }
+  }, [draftsList, draftsKey, composerStateOwnerId, currentUser.id]);
+
+  // If the signed-in account changes while the studio is open, discard the prior
+  // account's in-memory composer state before saving anything under the new UID.
+  useEffect(() => {
+    if (composerStateOwnerId === currentUser.id) return;
+    const nextAutosave = readLocalAutosave(autosaveKey);
+    setCaption(nextAutosave?.caption || '');
+    setTopics(nextAutosave?.topics || '');
+    setAudience('public');
+    setActiveMode(nextAutosave?.activeMode || null);
+    setCurrentStep(nextAutosave?.currentStep || 1);
+    setLocation(nextAutosave?.location || '');
+    setTaggedUsernames(nextAutosave?.taggedUsernames || '');
+    setImageAltText(nextAutosave?.imageAltText || '');
+    setSelectedImages(Array.isArray(nextAutosave?.images)
+      ? nextAutosave.images.filter((url: unknown): url is string => typeof url === 'string').map((url: string) => ({ url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }))
+      : []);
+    setVideoFileUrl(nextAutosave?.videoUrl || null);
+    setRecordedVideoUrl(nextAutosave?.recordedVideoUrl || null);
+    setVoiceFileUrl(nextAutosave?.voiceUrl || null);
+    setVoiceTranscript(nextAutosave?.voiceTranscript || '');
+    setDraftsList(readLocalDrafts(draftsKey));
+    setComposerStateOwnerId(currentUser.id);
+  }, [currentUser.id, autosaveKey, draftsKey, composerStateOwnerId]);
 
   // Autosave
   useEffect(() => {
+    if (composerStateOwnerId !== currentUser.id) return;
     const timer = setTimeout(() => {
       if (!caption && !activeMode && selectedImages.length === 0 && !videoFileUrl && !voiceFileUrl) {
         localStorage.removeItem(autosaveKey);
@@ -280,7 +332,7 @@ export default function MediaCreationEngine({
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur]);
+  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur, composerStateOwnerId, currentUser.id]);
 
   // Camera preview management
   useEffect(() => {
@@ -583,6 +635,7 @@ export default function MediaCreationEngine({
 
   // Save Draft
   const saveAsDraftLocally = () => {
+    if (composerStateOwnerId !== currentUser.id) return;
     const draft: DraftItem = {
       id: `draft-${Date.now()}`,
       caption,
@@ -598,7 +651,7 @@ export default function MediaCreationEngine({
     setDraftsList(prev => [draft, ...prev]);
     localStorage.removeItem('nexora_creation_autosave_v1');
     resetStates();
-    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved securely on this device.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved on this account’s device. Media drafts remain device-local.' }));
   };
 
   const handleSelectDraft = (draft: DraftItem) => {
