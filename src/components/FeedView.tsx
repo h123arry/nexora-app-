@@ -2243,6 +2243,7 @@ export default function FeedView({
             postVideoIndex,
             activeVideoIndex,
             isSlowConnection: isConnectionSlow,
+            isOffline,
           });
           const { shouldPreload, isReleased, preloadMode } = preloadPlan;
 
