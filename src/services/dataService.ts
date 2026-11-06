@@ -13,7 +13,8 @@ import {
   where, 
   serverTimestamp,
   FirestoreError,
-  onSnapshot
+  onSnapshot,
+  writeBatch
 } from 'firebase/firestore';
 import { PrivacySettings, User, Post, Circle as Community, Page, Notification, Message, Chat } from '../types';
 import { functions } from '../lib/firebase';
@@ -561,6 +562,41 @@ export async function setNotificationReadState(userId: string, notificationId: s
     throw new Error('Invalid notification identifier.');
   }
   await updateDoc(doc(db, 'users', userId, 'notifications', notificationId), { isRead });
+}
+
+const MAX_NOTIFICATION_BATCH_SIZE = 100;
+
+function validateNotificationBatch(userId: string, notificationIds: string[]): string[] {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('You can only manage your own notifications.');
+  }
+  const ids = [...new Set(notificationIds)];
+  if (ids.some(id => typeof id !== 'string' || !id.trim() || id.length > 150)) {
+    throw new Error('One or more notification identifiers are invalid.');
+  }
+  if (ids.length > MAX_NOTIFICATION_BATCH_SIZE) {
+    throw new Error(`A notification action can include at most ${MAX_NOTIFICATION_BATCH_SIZE} items.`);
+  }
+  return ids;
+}
+
+/** Atomically update a bounded set of notifications so bulk actions cannot partially succeed. */
+export async function setNotificationsReadState(userId: string, notificationIds: string[], isRead: boolean): Promise<void> {
+  if (typeof isRead !== 'boolean') throw new Error('Notification read state must be boolean.');
+  const ids = validateNotificationBatch(userId, notificationIds);
+  if (ids.length === 0) return;
+  const batch = writeBatch(db);
+  ids.forEach(id => batch.update(doc(db, 'users', userId, 'notifications', id), { isRead }));
+  await batch.commit();
+}
+
+/** Atomically delete a bounded set of notifications owned by the signed-in account. */
+export async function deleteOwnNotifications(userId: string, notificationIds: string[]): Promise<void> {
+  const ids = validateNotificationBatch(userId, notificationIds);
+  if (ids.length === 0) return;
+  const batch = writeBatch(db);
+  ids.forEach(id => batch.delete(doc(db, 'users', userId, 'notifications', id)));
+  await batch.commit();
 }
 
 export async function getNotifications(userId: string, limitCount = DEFAULT_READ_LIMIT) {

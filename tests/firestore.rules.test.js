@@ -18,7 +18,8 @@ import {
   setDoc,
   Timestamp,
   updateDoc,
-  where
+  where,
+  writeBatch
 } from 'firebase/firestore';
 
 const projectId = 'demo-nexora-rules';
@@ -622,6 +623,46 @@ const publicProfile = (uid) => ({
       userId: 'alice', type: 'system', content: 'Forged', isRead: false
     }));
   });
+  it('applies notification bulk batches atomically under owner-only rules', async () => {
+    await seed(async (db) => {
+      for (const id of ['notice-a', 'notice-b']) {
+        await setDoc(doc(db, 'users', 'alice', 'notifications', id), {
+          userId: 'alice', type: 'system', username: 'NEXORA', content: id, isRead: false,
+          timestamp: new Date().toISOString()
+        });
+      }
+      await setDoc(doc(db, 'users', 'bob', 'notifications', 'notice-private'), {
+        userId: 'bob', type: 'system', username: 'NEXORA', content: 'Private', isRead: false,
+        timestamp: new Date().toISOString()
+      });
+    });
+
+    const aliceDb = dbFor('alice');
+    const first = doc(aliceDb, 'users', 'alice', 'notifications', 'notice-a');
+    const second = doc(aliceDb, 'users', 'alice', 'notifications', 'notice-b');
+    const foreign = doc(aliceDb, 'users', 'bob', 'notifications', 'notice-private');
+
+    const rejectedBatch = writeBatch(aliceDb);
+    rejectedBatch.update(first, { isRead: true });
+    rejectedBatch.update(foreign, { isRead: true });
+    await assertFails(rejectedBatch.commit());
+    assert.equal((await getDoc(first)).data().isRead, false, 'a rejected batch must not partially update owned records');
+
+    const readBatch = writeBatch(aliceDb);
+    readBatch.update(first, { isRead: true });
+    readBatch.update(second, { isRead: true });
+    await assertSucceeds(readBatch.commit());
+    assert.equal((await getDoc(first)).data().isRead, true);
+    assert.equal((await getDoc(second)).data().isRead, true);
+
+    const deleteBatch = writeBatch(aliceDb);
+    deleteBatch.delete(first);
+    deleteBatch.delete(second);
+    await assertSucceeds(deleteBatch.commit());
+    assert.equal((await getDoc(first)).exists(), false);
+    assert.equal((await getDoc(second)).exists(), false);
+  });
+
   it('keeps recent search history private and owner-managed', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'users', 'alice', 'searchHistory', 'nexora'), {
