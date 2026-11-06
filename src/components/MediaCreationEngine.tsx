@@ -635,6 +635,7 @@ export default function MediaCreationEngine({
 
   // Save Draft
   const saveAsDraftLocally = () => {
+    if (composerStateOwnerId !== currentUser.id) return;
     const draft: DraftItem = {
       id: `draft-${Date.now()}`,
       caption,
