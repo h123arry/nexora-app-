@@ -248,7 +248,7 @@ export function recommendCreators<T extends User>(
     !creator.isBanned && !creator.isSuspended &&
     all.findIndex(item => item.id === creator.id) === index
   );
-  return unique.map((creator, index) => {
+  const ranked = unique.map((creator, index) => {
     const sharedTopics = Object.keys(creator.interestDNA || {})
       .map(tag => tag.replace(/^#/, '').trim().toLowerCase())
       .filter((tag, tagIndex, all) => Boolean(tag) && all.indexOf(tag) === tagIndex && interests[tag] > 0)
@@ -260,9 +260,27 @@ export function recommendCreators<T extends User>(
     return { creator, score, sharedTopics, reason: sharedTopics.length ? `Shares your interest in ${sharedTopics.map(tag => `#${tag}`).join(', ')}` : 'A creator to discover', index };
   })
     .filter(item => item.score > 0 && (Object.keys(interests).length === 0 || item.sharedTopics.length > 0))
-    .sort((a, b) => b.score - a.score || a.index - b.index)
-    .slice(0, limit)
-    .map(({ index: _index, ...item }) => item);
+    .sort((a, b) => b.score - a.score || a.index - b.index);
+
+  // Prevent one dominant interest from occupying the entire recommendation
+  // shelf. The cap is soft: if no alternative topic exists, eligible creators
+  // remain discoverable rather than disappearing.
+  const topicCap = Math.max(2, Math.ceil(limit / 3));
+  const topicCounts = new Map<string, number>();
+  const selected: typeof ranked = [];
+  const remaining = [...ranked];
+  while (remaining.length && selected.length < limit) {
+    let nextIndex = remaining.findIndex(item => {
+      const topic = item.sharedTopics[0] || 'general';
+      return (topicCounts.get(topic) || 0) < topicCap;
+    });
+    if (nextIndex < 0) nextIndex = 0;
+    const [next] = remaining.splice(nextIndex, 1);
+    selected.push(next);
+    const topic = next.sharedTopics[0] || 'general';
+    topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
+  }
+  return selected.map(({ index: _index, ...item }) => item);
 }
 
 export interface TrendingTopic {
