@@ -668,6 +668,12 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.followerId == request.auth.uid;
     }
 
+    // Creator audience aggregates, dedupe receipts and visitor hashes are backend-owned.
+    match /creatorAudienceDaily/{dayId} { allow read, write: if false; }
+    match /creatorAudienceEventReceipts/{eventId} { allow read, write: if false; }
+    match /creatorFollowProjections/{edgeId} { allow read, write: if false; }
+    match /creatorProfileDailyVisitors/{visitorId} { allow read, write: if false; }
+
     match /activities/{activityId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
