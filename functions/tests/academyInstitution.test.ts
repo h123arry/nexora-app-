@@ -79,12 +79,21 @@ describe('NEXORA Institute institution services', () => {
     assert.equal(failed.passed, false);
     const passed = await submitAcademyAssessment(db, 'learner-one', courseId, assessmentId, [0, 1, 1]);
     assert.equal(passed.passed, true);
-    const cert = await issueAcademyCertificate(db, 'learner-one', courseId, assessmentId);
+    const [cert, concurrentDuplicate] = await Promise.all([
+      issueAcademyCertificate(db, 'learner-one', courseId, assessmentId),
+      issueAcademyCertificate(db, 'learner-one', courseId, assessmentId),
+    ]);
+    assert.equal(cert.certificateId, concurrentDuplicate.certificateId);
+    assert.equal(cert.verificationCode, concurrentDuplicate.verificationCode);
     assert.equal((await verifyAcademyCertificate(db, cert.verificationCode)).valid, true);
     const duplicate = await issueAcademyCertificate(db, 'learner-one', courseId, assessmentId);
     assert.equal(duplicate.certificateId, cert.certificateId);
     await revokeAcademyCertificate(db, 'academy-admin', cert.certificateId, 'Credential review requested.');
     assert.equal((await verifyAcademyCertificate(db, cert.verificationCode)).valid, false);
+    await assert.rejects(
+      issueAcademyCertificate(db, 'learner-one', courseId, assessmentId),
+      /revoked Academy certificate cannot be reissued/,
+    );
   });
 
   it('books mentorship sessions idempotently and enforces capacity transactionally', async () => {
