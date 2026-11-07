@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Firestore } from 'firebase-admin/firestore';
+import type { Firestore, DocumentData } from 'firebase-admin/firestore';
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -55,7 +55,7 @@ function validateSchedule(input: ScheduleInput, now = Date.now()) {
   return { content, imageUrl: imageUrl as string, videoUrl: videoUrl as string, tags, scheduledAt: new Date(scheduledAt) };
 }
 
-function accountCannotPublish(status: FirebaseFirestore.DocumentData | undefined, now: Date): boolean {
+function accountCannotPublish(status: DocumentData | undefined, now: Date): boolean {
   if (!status) return false;
   const active = (field: string) => status[field] === true
     && !(status.expiresAt?.toDate instanceof Function && status.expiresAt.toDate() < now);
@@ -70,21 +70,26 @@ export async function createCreatorSchedule(
 ): Promise<{ scheduleId: string; status: 'scheduled'; scheduledAt: string }> {
   if (!uid) throw new HttpsError('unauthenticated', 'Sign in to schedule a post.');
   const payload = validateSchedule(input, now);
-  const profile = await store.collection('publicProfiles').doc(uid).get();
-  if (!profile.exists) throw new HttpsError('failed-precondition', 'Complete your public profile before scheduling posts.');
-  const accountStatus = await store.collection('accountStatus').doc(uid).get();
-  if (accountCannotPublish(accountStatus.data(), new Date(now))) {
-    throw new HttpsError('permission-denied', 'Your account cannot publish posts right now.');
-  }
-  const existing = await store.collection('creatorScheduledPosts')
-    .where('ownerId', '==', uid).where('status', '==', 'scheduled').count().get();
-  if (existing.data().count >= MAX_SCHEDULED_POSTS) {
-    throw new HttpsError('resource-exhausted', 'You can have up to 30 scheduled posts at a time.');
-  }
+  const profileRef = store.collection('publicProfiles').doc(uid);
+  const accountStatusRef = store.collection('accountStatus').doc(uid);
   const ref = store.collection('creatorScheduledPosts').doc(randomUUID());
-  await ref.create({
-    id: ref.id, ownerId: uid, ...payload, status: 'scheduled',
-    createdAt: new Date(now), updatedAt: new Date(now), schemaVersion: 1,
+  await store.runTransaction(async transaction => {
+    const countQuery = store.collection('creatorScheduledPosts')
+      .where('ownerId', '==', uid).where('status', '==', 'scheduled');
+    const [profile, accountStatus, existing] = await Promise.all([
+      transaction.get(profileRef), transaction.get(accountStatusRef), transaction.get(countQuery),
+    ]);
+    if (!profile.exists) throw new HttpsError('failed-precondition', 'Complete your public profile before scheduling posts.');
+    if (accountCannotPublish(accountStatus.data(), new Date(now))) {
+      throw new HttpsError('permission-denied', 'Your account cannot publish posts right now.');
+    }
+    if (existing.size >= MAX_SCHEDULED_POSTS) {
+      throw new HttpsError('resource-exhausted', 'You can have up to 30 scheduled posts at a time.');
+    }
+    transaction.create(ref, {
+      id: ref.id, ownerId: uid, ...payload, status: 'scheduled',
+      createdAt: new Date(now), updatedAt: new Date(now), schemaVersion: 1,
+    });
   });
   return { scheduleId: ref.id, status: 'scheduled', scheduledAt: payload.scheduledAt.toISOString() };
 }
