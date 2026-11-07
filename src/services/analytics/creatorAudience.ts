@@ -8,6 +8,8 @@ export interface CreatorAudiencePoint {
   netFollowerChange: number;
   followerCount: number | null;
   uniqueProfileVisitors: number;
+  newProfileVisitors: number;
+  returningProfileVisitors: number;
 }
 export interface CreatorAudienceAnalytics {
   days: number;
@@ -19,6 +21,8 @@ export interface CreatorAudienceAnalytics {
     netFollowerChange: number;
     profileVisits: number;
     uniqueProfileVisitors: number;
+    newProfileVisitors: number;
+    returningProfileVisitors: number;
   };
 }
 
