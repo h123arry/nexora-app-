@@ -20,6 +20,7 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
 import { scheduleCreatorPost, listCreatorScheduledPosts, cancelCreatorScheduledPost, type CreatorScheduledPost } from '../services/creatorSchedulingService';
 import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
+import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -1364,7 +1365,7 @@ export default function CreatorDashboardView({
           )}
 
           {/* TAB 8: MONETIZATION AVAILABILITY */}
-          {activeTab === 'monetization' && <CreatorGiftEarningsPanel />}
+          {activeTab === 'monetization' && <><CreatorGiftEarningsPanel /><CreatorEconomyExpansionPanel /></>}
         </motion.div>
       )}
 
