@@ -60,6 +60,21 @@ test('reset removes recommendation controls while retaining the selected feed ta
 });
 
 
+test('recommendation signals are bounded, normalized and reset with feed preferences', () => {
+  const normalized = normalizeFeedPreferences({ recommendationSignals: {
+    tags: { ' #AI ': 150, design: -150, invalid: Number.NaN },
+    creators: { 'creator-1': 12 },
+    communities: { 'Circle A': 25 },
+  } as any });
+  assert.deepEqual(normalized.recommendationSignals, {
+    tags: { '#AI': 100, design: -100 },
+    creators: { 'creator-1': 12 },
+    communities: { 'Circle A': 25 },
+  });
+  const reset = resetFeedPreferences(normalized);
+  assert.deepEqual(reset.recommendationSignals, { tags: {}, creators: {}, communities: {} });
+});
+
 test('feed settings transaction writes only the feed namespace and timestamp', () => {
   const feed = normalizeFeedPreferences({
     tab: 'friends',
