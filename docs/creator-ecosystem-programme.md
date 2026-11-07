@@ -112,7 +112,7 @@ A workstream is not complete because a screen exists. It must have:
 - Routed follow/unfollow actions through a trusted callable transaction that owns the canonical relationship edge and atomically updates public/private follower counters plus daily creator growth records.
 - Made repeated follow/unfollow requests idempotent by comparing the requested state with the canonical relationship document inside the transaction. Client writes to follow edges and analytics records are denied.
 - Preserved Page follows through the same trusted transaction, including Page follower totals.
-- Added authenticated profile-visit recording, deduplicated to one visitor signal per creator per UTC day.
+- Added authenticated profile-visit recording, deduplicated to one visitor signal per creator per UTC day; hashed visitor dedupe records expire after 90 days.
 - Added a creator-only callable analytics endpoint and a 7-day / 30-day Audience Growth dashboard alongside the existing evidence-based video watch-time insights.
 - Added Firestore indexes, default-deny rules and emulator tests for audience aggregates, counter ownership, Page follow compatibility and visitor deduplication.
 - Historical follower events are not backfilled. Profile visits are authenticated, rate-limited signals and do not prove human attention. Traffic source, device, geography, returning-audience cohorts and frame-level retention remain unavailable until trustworthy event sources exist.
