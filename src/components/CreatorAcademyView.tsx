@@ -115,7 +115,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
 
   const activeCourse = courses.find(course => course.id === selectedCourse) ?? courses[0] ?? COURSES[0];
   useEffect(() => {
-    if (!activeCourse.institutional || institutionalDetails[activeCourse.id]) return;
+    if (!activeCourse.institutional || institutionalDetails[activeCourse.id]) { setDetailLoading(false); return; }
     let active = true;
     setDetailLoading(true);
     setCatalogError('');
