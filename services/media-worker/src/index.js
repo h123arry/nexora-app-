@@ -11,9 +11,10 @@ import path from 'node:path';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
 const bucketName = process.env.MEDIA_BUCKET;
-if (!projectId || !bucketName) throw new Error('GOOGLE_CLOUD_PROJECT and MEDIA_BUCKET are required');
+const databaseId = process.env.FIRESTORE_DATABASE_ID;
+if (!projectId || !bucketName || !databaseId) throw new Error('GOOGLE_CLOUD_PROJECT, MEDIA_BUCKET and FIRESTORE_DATABASE_ID are required');
 if (!getApps().length) initializeApp({ projectId });
-const db = getFirestore();
+const db = getFirestore(getApps()[0], databaseId);
 const storage = new Storage({ projectId });
 const bucket = storage.bucket(bucketName);
 const MAX_INPUT_BYTES = 250 * 1024 * 1024;
