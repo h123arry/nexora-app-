@@ -222,6 +222,10 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       const result = await httpsCallable<{ courseId: string; assessmentId: string }, { certificateId: string; verificationCode: string; courseTitle: string }>(functions, 'academyIssueCertificate')({
         courseId: activeCourse.id, assessmentId,
       });
+      const verification = await httpsCallable<{ verificationCode: string }, { valid: boolean }>(functions, 'academyVerifyCertificate')({
+        verificationCode: result.data.verificationCode,
+      });
+      if (!verification.data.valid) throw new Error('The new credential did not pass independent verification.');
       setCertificate({ courseId: activeCourse.id, assessmentId, ...result.data });
     } catch (cause) {
       setAssessmentError(cause instanceof Error ? cause.message : 'Your certificate could not be issued.');
