@@ -109,8 +109,8 @@ A workstream is not complete because a screen exists. It must have:
 ## Current implementation status
 
 ### Delivered in the Creator Intelligence branch
-- Added server-side reconciliation of follow/unfollow relationship edges into daily creator audience records. Follow/unfollow changes update private and public profile counters through trusted Functions, not client-authored analytics fields.
-- Added idempotent event receipts and a server-owned relationship projection so duplicate trigger delivery does not double-count changes and stale create events do not resurrect removed follows.
+- Routed follow/unfollow actions through a trusted callable transaction that owns the canonical relationship edge and atomically updates public/private follower counters plus daily creator growth records.
+- Made repeated follow/unfollow requests idempotent by comparing the requested state with the canonical relationship document inside the transaction. Client writes to follow edges and analytics records are denied.
 - Added authenticated profile-visit recording, deduplicated to one visitor signal per creator per UTC day.
 - Added a creator-only callable analytics endpoint and a seven-day / 30-day Audience Growth dashboard with follows, unfollows, net follower change and authenticated unique profile visitors.
 - Added Firestore indexes and explicit client-deny rules for audience aggregates, event receipts, follow projections and visitor hashes.
