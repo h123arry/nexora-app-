@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { subscribeToLiveGiftEvents, type LiveGiftEvent } from '../services/giftDeliveryService';
 import GiftAnimationStage from './GiftAnimationStage';
+import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
 
 interface GiftLiveOverlayProps { streamId: string; soundEnabled?: boolean; audioContext?: AudioContext | null; }
 export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioContext = null }: GiftLiveOverlayProps) {
@@ -29,7 +30,7 @@ export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioC
   }, [active, queue]);
   useEffect(() => {
     if (!active) return;
-    const duration = active.animation === 'legendary' ? 7200 : active.animation === 'cinematic' ? 5200 : 3600;
+    const duration = getGiftAnimationProfile(active.giftId, active.animation).durationMs + 800;
     const timer = window.setTimeout(() => setActive(null), duration);
     return () => window.clearTimeout(timer);
   }, [active]);
