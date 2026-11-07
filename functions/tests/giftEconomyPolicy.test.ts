@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { assessGiftRisk, isSupportedDisplayCurrency, validatePayoutRequest } from '../src/giftEconomyPolicy.js';
+import { assessGiftRisk, isSupportedDisplayCurrency, validatePayoutRequest } from '../src/giftEconomyPolicy.ts';
 
 test('gift risk scoring classifies velocity and high value without treating low activity as suspicious', () => {
   assert.deepEqual(assessGiftRisk({ senderGiftCount10m: 1, senderGrossNex10m: 100, giftGrossNex: 100, senderAccountAgeDays: 90, senderRestricted: false, recipientRestricted: false }), { score: 0, tier: 'low', reasons: [] });
