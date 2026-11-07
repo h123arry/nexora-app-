@@ -3,7 +3,7 @@ import { Storage } from '@google-cloud/storage';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { spawn } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
 import { mkdtemp, mkdir, rm, stat, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -30,7 +30,16 @@ function run(binary,args) {
     child.on('close',code=>code===0?resolve(stdout):reject(new Error(`${binary} exited ${code}: ${stderr.slice(-4000)}`)));
   });
 }
-function safeId(value){return typeof value==='string' && /^[A-Za-z0-9_-]{1,128}$/.test(value);}
+function signedCdnUrl(objectPath, fallback) {
+  const base=process.env.MEDIA_CDN_BASE_URL?.replace(/\\/$/,'');
+  const keyName=process.env.MEDIA_CDN_KEY_NAME;
+  const key=process.env.MEDIA_CDN_SIGNING_KEY_BASE64;
+  if(!base || !keyName || !key) return fallback;
+  const expires=Math.floor(Date.now()/1000)+7*24*60*60;
+  const unsigned=`${base}/${objectPath}?Expires=${expires}&KeyName=${keyName}`;
+  const signature=createHmac('sha1',Buffer.from(key,'base64')).update(unsigned).digest('base64').replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
+  return `${unsigned}&Signature=${signature}`;
+}
 async function probe(file){
   const raw=await run('ffprobe',['-v','error','-show_entries','format=duration,format_name,size:stream=codec_type,codec_name,width,height,avg_frame_rate','-of','json',file]);
   const data=JSON.parse(raw); const video=data.streams?.find(s=>s.codec_type==='video');
@@ -53,6 +62,7 @@ async function processObject(event){
   const isVideo=String(object.contentType||'').toLowerCase().startsWith('video/');
   const isImage=String(object.contentType||'').toLowerCase().startsWith('image/');
   if(!isVideo && !isImage) return {ignored:true};
+  if(isImage && Number(object.size)>12*1024*1024) throw new Error('Image exceeds 12 MiB processing limit');
   const ref=db.collection('mediaAssets').doc(mediaId);
   const token=randomUUID();
   const accepted=await db.runTransaction(async tx=>{
@@ -99,10 +109,12 @@ async function processObject(event){
       const hls=path.join(dir,'index.m3u8');
       await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height}\\,ih)`,'-c:v','libx264','-preset','veryfast','-b:v',rendition.bitrate,'-c:a','aac','-b:a',rendition.audio,'-hls_time','6','-hls_playlist_type','vod','-hls_segment_filename',path.join(dir,'segment_%05d.ts'),hls]);
       const prefix=`${outputRoot}/${rendition.height}p`;
+      const playlist=(await readFile(hls,'utf8')).split(/\\r?\\n/).map(line=>line && !line.startsWith('#') ? signedCdnUrl(`${prefix}/${line}`,line) : line).join('\\n');
+      await (await import('node:fs/promises')).writeFile(hls,playlist);
       await upload(mp4,`${prefix}/video.mp4`,'video/mp4');
       await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl');
       for(const entry of await (await import('node:fs/promises')).readdir(dir)) if(entry.endsWith('.ts')) await upload(path.join(dir,entry),`${prefix}/${entry}`,'video/mp2t');
-      master.push(`#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(rendition.bitrate,10)*1000},RESOLUTION=${Math.round(metadata.width*rendition.height/metadata.height)}x${rendition.height}\n${rendition.height}p/index.m3u8`);
+      master.push(`#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(rendition.bitrate,10)*1000},RESOLUTION=${Math.round(metadata.width*rendition.height/metadata.height)}x${rendition.height}\\n${signedCdnUrl(`${prefix}/index.m3u8`,`${rendition.height}p/index.m3u8`)}`);
       actual.push({height:rendition.height,bitrate:rendition.bitrate,mp4Path:`${prefix}/video.mp4`,hlsPath:`${prefix}/index.m3u8`});
     }
     if(!actual.length) throw new Error('No supported rendition could be generated');
