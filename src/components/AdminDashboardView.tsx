@@ -21,7 +21,7 @@ export default function AdminDashboardView({
   lang
 }: AdminDashboardViewProps) {
   // Navigation tabs of Dashboard
-  const [activeSubTab, setActiveSubTab] = useState<'users' | 'moderation' | 'analytics' | 'finance' | 'health'>('users');
+  const [activeSubTab, setActiveSubTab] = useState<'users' | 'moderation' | 'analytics' | 'finance' | 'audit' | 'health'>('users');
   
   // Loaded state
   const [users, setUsers] = useState<User[]>([]);
@@ -39,6 +39,8 @@ export default function AdminDashboardView({
   const [analyticsPoints, setAnalyticsPoints] = useState<Array<{ day: string; available: boolean; totalEvents: number | null; uniqueActorsObserved: number | null; byType: Record<string, number> | null; partial: boolean | null }>>([]);
   const [financeState, setFinanceState] = useState<'idle' | 'loading' | 'ready' | 'denied' | 'unavailable'>('idle');
   const [financeSummary, setFinanceSummary] = useState<{ providerConfigured: boolean; transactions: unknown[]; checkoutAttempts: unknown[]; webhookFailures: unknown[] } | null>(null);
+  const [auditState, setAuditState] = useState<'idle' | 'loading' | 'ready' | 'denied' | 'unavailable'>('idle');
+  const [auditEvents, setAuditEvents] = useState<Array<{ id: string; actorUid: string; targetUid: string; action: string; previousRole?: string; newRole?: string; createdAt: string | null }>>([]);
 
   // Load and refresh administrative data
   const loadData = async () => {
@@ -137,6 +139,29 @@ export default function AdminDashboardView({
         setFinanceState(error?.code === 'functions/permission-denied' ? 'denied' : 'unavailable');
       });
   }, [activeSubTab, accessState]);
+
+  useEffect(() => {
+    if (activeSubTab !== 'audit' || accessState !== 'granted') return;
+    if (!canManageUsers) {
+      setAuditState('denied');
+      setAuditEvents([]);
+      return;
+    }
+    let active = true;
+    setAuditState('loading');
+    void httpsCallable<void, { events: typeof auditEvents }>(getFunctions(), 'listAdminAuditEvents')()
+      .then(result => {
+        if (!active) return;
+        setAuditEvents(result.data.events);
+        setAuditState('ready');
+      })
+      .catch((error: any) => {
+        if (!active) return;
+        setAuditEvents([]);
+        setAuditState(error?.code === 'functions/permission-denied' ? 'denied' : 'unavailable');
+      });
+    return () => { active = false; };
+  }, [activeSubTab, accessState, canManageUsers]);
 
   const analyticsTotals = analyticsPoints.reduce((totals, point) => {
     if (!point.available) return totals;
@@ -298,6 +323,14 @@ export default function AdminDashboardView({
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'finance' ? 'bg-emerald-600 border border-emerald-500/30 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
         >
           Finance Operations
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('audit')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-sans font-black tracking-wide transition-all cursor-pointer ${activeSubTab === 'audit' ? 'bg-violet-600 border border-white/10 text-white' : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/5'}`}
+        >
+          <Shield className="w-3.5 h-3.5" />
+          Audit Trail
         </button>
 
         <button 
@@ -594,7 +627,43 @@ export default function AdminDashboardView({
           </div>
         )}
 
-        {/* TAB 5: APP DIAGNOSTICS */}
+        {/* TAB 5: ADMINISTRATOR AUDIT TRAIL */}
+        {activeSubTab === 'audit' && (
+          <div className="space-y-4 text-left animate-fade-in">
+            <div className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
+              <h3 className="text-sm font-black uppercase tracking-widest text-violet-200">Administrator audit trail</h3>
+              <p className="mt-2 text-xs leading-relaxed text-zinc-400">Recent privileged account changes recorded by trusted server actions. Access is limited to administrators.</p>
+            </div>
+            {auditState === 'loading' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Loading audit history…</div>}
+            {auditState === 'denied' && <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-8 text-center text-xs text-amber-200">Administrator access is required to view this history.</div>}
+            {auditState === 'unavailable' && <div className="rounded-2xl border border-white/10 p-8 text-center text-xs text-zinc-500">Audit history is temporarily unavailable. No records were changed.</div>}
+            {auditState === 'ready' && (
+              <div className="overflow-x-auto rounded-2xl border border-white/10 bg-black/20">
+                <table className="w-full text-left border-collapse">
+                  <thead><tr className="border-b border-white/10 text-[9px] uppercase tracking-widest text-zinc-500">
+                    <th className="p-3">Action</th><th className="p-3">Actor</th><th className="p-3">Target</th><th className="p-3">Time</th>
+                  </tr></thead>
+                  <tbody className="divide-y divide-white/5 text-xs">
+                    {auditEvents.map(event => (
+                      <tr key={event.id}>
+                        <td className="p-3">
+                          <span className="font-bold text-white">{event.action.replaceAll('_', ' ')}</span>
+                          {event.previousRole && event.newRole && <span className="block mt-1 text-[10px] text-violet-300">{event.previousRole} → {event.newRole}</span>}
+                        </td>
+                        <td className="p-3 font-mono text-zinc-300">{event.actorUid || 'System'}</td>
+                        <td className="p-3 font-mono text-zinc-300">{event.targetUid || '—'}</td>
+                        <td className="p-3 text-zinc-500 whitespace-nowrap">{event.createdAt ? new Date(event.createdAt).toLocaleString() : 'Time unavailable'}</td>
+                      </tr>
+                    ))}
+                    {auditEvents.length === 0 && <tr><td colSpan={4} className="p-8 text-center text-xs text-zinc-500">No administrator actions recorded yet.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* TAB 6: APP DIAGNOSTICS */}
         {activeSubTab === 'health' && (
           <div className="space-y-4 text-left font-mono">
             <div className="p-4 rounded-2xl bg-zinc-950/60 border border-cyan-500/10 flex items-center justify-between">
