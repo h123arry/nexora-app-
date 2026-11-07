@@ -72,20 +72,21 @@ export async function createCreatorSchedule(
   const payload = validateSchedule(input, now);
   const profileRef = store.collection('publicProfiles').doc(uid);
   const accountStatusRef = store.collection('accountStatus').doc(uid);
+  const counterRef = store.collection('creatorScheduleCounters').doc(uid);
   const ref = store.collection('creatorScheduledPosts').doc(randomUUID());
   await store.runTransaction(async transaction => {
-    const countQuery = store.collection('creatorScheduledPosts')
-      .where('ownerId', '==', uid).where('status', '==', 'scheduled');
-    const [profile, accountStatus, existing] = await Promise.all([
-      transaction.get(profileRef), transaction.get(accountStatusRef), transaction.get(countQuery),
+    const [profile, accountStatus, counter] = await Promise.all([
+      transaction.get(profileRef), transaction.get(accountStatusRef), transaction.get(counterRef),
     ]);
     if (!profile.exists) throw new HttpsError('failed-precondition', 'Complete your public profile before scheduling posts.');
     if (accountCannotPublish(accountStatus.data(), new Date(now))) {
       throw new HttpsError('permission-denied', 'Your account cannot publish posts right now.');
     }
-    if (existing.size >= MAX_SCHEDULED_POSTS) {
+    const pendingCount = counter.exists ? Number(counter.get('pendingCount') || 0) : 0;
+    if (!Number.isSafeInteger(pendingCount) || pendingCount < 0 || pendingCount >= MAX_SCHEDULED_POSTS) {
       throw new HttpsError('resource-exhausted', 'You can have up to 30 scheduled posts at a time.');
     }
+    transaction.set(counterRef, { ownerId: uid, pendingCount: pendingCount + 1, updatedAt: new Date(now) }, { merge: true });
     transaction.create(ref, {
       id: ref.id, ownerId: uid, ...payload, status: 'scheduled',
       createdAt: new Date(now), updatedAt: new Date(now), schemaVersion: 1,
@@ -105,7 +106,11 @@ export async function cancelCreatorSchedule(store: Firestore, uid: string, sched
     if (!snapshot.exists) throw new HttpsError('not-found', 'This scheduled post is unavailable.');
     if (snapshot.get('ownerId') !== uid) throw new HttpsError('permission-denied', 'You cannot cancel another creator’s post.');
     if (snapshot.get('status') !== 'scheduled') throw new HttpsError('failed-precondition', 'Only pending scheduled posts can be cancelled.');
+    const counterRef = store.collection('creatorScheduleCounters').doc(uid);
+    const counter = await transaction.get(counterRef);
+    const pendingCount = counter.exists ? Number(counter.get('pendingCount') || 0) : 0;
     transaction.update(ref, { status: 'cancelled', updatedAt: new Date() });
+    transaction.set(counterRef, { ownerId: uid, pendingCount: Math.max(0, pendingCount - 1), updatedAt: new Date() }, { merge: true });
     return { cancelled: true };
   });
 }
@@ -126,14 +131,17 @@ export async function publishDueCreatorSchedules(store: Firestore, now = new Dat
       const uid = String(schedule.get('ownerId') || '');
       const profileRef = store.collection('publicProfiles').doc(uid);
       const statusRef = store.collection('accountStatus').doc(uid);
-      const [profile, accountStatus] = await Promise.all([
-        transaction.get(profileRef), transaction.get(statusRef),
+      const counterRef = store.collection('creatorScheduleCounters').doc(uid);
+      const [profile, accountStatus, counter] = await Promise.all([
+        transaction.get(profileRef), transaction.get(statusRef), transaction.get(counterRef),
       ]);
+      const pendingCount = counter.exists ? Number(counter.get('pendingCount') || 0) : 0;
       if (!profile.exists || accountCannotPublish(accountStatus.data(), now)) {
         transaction.update(scheduleRef, {
           status: 'blocked', blockReason: profile.exists ? 'account_restricted' : 'profile_unavailable',
           updatedAt: now,
         });
+        transaction.set(counterRef, { ownerId: uid, pendingCount: Math.max(0, pendingCount - 1), updatedAt: now }, { merge: true });
         return 'blocked';
       }
       const postId = 'scheduled-' + scheduleRef.id;
@@ -157,6 +165,7 @@ export async function publishDueCreatorSchedules(store: Firestore, now = new Dat
       transaction.update(scheduleRef, {
         status: 'published', publishedPostId: postId, publishedAt: now, updatedAt: now,
       });
+      transaction.set(counterRef, { ownerId: uid, pendingCount: Math.max(0, pendingCount - 1), updatedAt: now }, { merge: true });
       return 'published';
     });
     if (outcome === 'published') published += 1;
