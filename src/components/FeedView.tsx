@@ -3619,6 +3619,18 @@ export default function FeedView({
                     setHiddenPostIds(prev => [...prev, contextualMenuPost.id]);
                     const cleanTag = (contextualMenuPost.tags?.[0] || 'nexora').toLowerCase().replace('#', '');
                     setNotInterestedTags(prev => [...prev, cleanTag]);
+                    recordRecommendationEvent('not_interested', {
+                      tags: contextualMenuPost.tags,
+                      creatorId: contextualMenuPost.userId,
+                      creatorUsername: contextualMenuPost.username,
+                      communityName: contextualMenuPost.communityName,
+                    });
+                    trackClientObservation({
+                      eventType: 'not_interested',
+                      entityType: 'post',
+                      entityId: contextualMenuPost.id,
+                      properties: { feedback: 'not_interested' },
+                    });
                     setLastAction({ type: 'not_interested', postId: contextualMenuPost.id, data: { tags: [cleanTag] } });
                     setContextualMenuPost(null);
                     window.dispatchEvent(new CustomEvent('toast', { detail: '👎 Tag muted. Recommendation engine updated.' }));

@@ -47,4 +47,9 @@ describe('server-backed directory search', () => {
     await assert.rejects(searchPublicDirectory(db, '', 'nexora'), /Sign in/);
     await assert.rejects(searchPublicDirectory(db, 'viewer', 'x'), /between 2 and 40/);
   });
+  it('finds public people by display-name prefix as well as username', async () => {
+    const result = await searchPublicDirectory(db, 'viewer', 'Public');
+    assert.deepEqual(result.people.map(item => item.id), ['public-person']);
+  });
+
 });

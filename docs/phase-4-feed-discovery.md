@@ -24,10 +24,18 @@ Phase 4 improves the existing NEXORA discovery architecture. It does not replace
 - Latest sorts older posts correctly instead of tying all posts beyond seven days.
 - Existing discovery regression tests continue to cover blocked/muted creators, hidden posts, negative topic feedback, creator diversity, search matching, recommendations and trending topic quality.
 
+## Phase 4.2 · Bounded ranking and normalized search signals
+
+- Bound lifetime engagement counters so extreme historical totals cannot dominate the feed indefinitely.
+- Apply exponential freshness decay to engagement contributions in For You and Trending ranking.
+- Normalize Unicode accents, punctuation and case consistently for local post search.
+- Require every search term to match while ranking exact token matches above prefixes and substrings.
+- Keep search result limits, archive exclusions and video-only filtering intact.
+- Add isolated policy tests for bounded engagement, freshness half-life and search relevance.
+
 ## Remaining Phase 4 work
 
-1. Audit and improve ranking signal quality, including recency decay and meaningful engagement without lifetime-popularity dominance.
-2. Ensure all search surfaces use consistent eligibility, bounded queries, deduplication and useful relevance ordering.
+1. Ensure all server-backed search surfaces share consistent relevance, eligibility, pagination and privacy guarantees.
 3. Improve recommendation explanations and feedback loops while retaining account isolation and reset controls.
 4. Improve trending quality with time windows, distinct-creator participation and anti-spike protections.
 5. Add measurable ranking/search instrumentation that respects analytics consent and avoids collecting unnecessary personal data.

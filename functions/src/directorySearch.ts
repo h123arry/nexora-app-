@@ -31,9 +31,11 @@ export async function searchPublicDirectory(
   const prefixEnd = term + '\uf8ff';
   const titlePrefix = term.charAt(0).toLocaleUpperCase() + term.slice(1);
   const titlePrefixEnd = titlePrefix + '\uf8ff';
-  const [viewerSettings, peopleByUsername, pagesByUsername, pagesByName, pagesByTitle, circles, circlesByTitle] = await Promise.all([
+  const [viewerSettings, peopleByUsername, peopleByName, peopleByTitle, pagesByUsername, pagesByName, pagesByTitle, circles, circlesByTitle] = await Promise.all([
     db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get(),
-    db.collection('users').orderBy('username').startAt(term).endAt(prefixEnd).limit(RESULT_LIMIT * 2).get(),
+    db.collection('users').orderBy('username').startAt(term).endAt(prefixEnd).limit(QUERY_LIMIT).get(),
+    db.collection('users').orderBy('name').startAt(term).endAt(prefixEnd).limit(QUERY_LIMIT).get(),
+    db.collection('users').orderBy('name').startAt(titlePrefix).endAt(titlePrefixEnd).limit(QUERY_LIMIT).get(),
     db.collection('pages').orderBy('username').startAt(term).endAt(prefixEnd).limit(RESULT_LIMIT).get(),
     db.collection('pages').orderBy('name').startAt(term).endAt(prefixEnd).limit(RESULT_LIMIT).get(),
     db.collection('pages').orderBy('name').startAt(titlePrefix).endAt(titlePrefixEnd).limit(RESULT_LIMIT).get(),
@@ -48,8 +50,20 @@ export async function searchPublicDirectory(
   ]);
   // Apply visibility and block filters before the final result cap. Otherwise a
   // block-heavy prefix can hide eligible accounts that appear later in the query.
-  const candidates = [...new Map(peopleByUsername.docs.map(doc => [doc.id, doc])).values()]
-    .filter(doc => doc.id !== viewerUid && doc.get('isBanned') !== true && doc.get('isSuspended') !== true && doc.get('isSeedProfile') !== true);
+  const candidates = [...new Map([...peopleByUsername.docs, ...peopleByName.docs, ...peopleByTitle.docs].map(doc => [doc.id, doc])).values()]
+    .filter(doc => doc.id !== viewerUid && doc.get('isBanned') !== true && doc.get('isSuspended') !== true && doc.get('isSeedProfile') !== true)
+    .sort((a, b) => {
+      const relevance = (doc: typeof a) => {
+        const username = String(doc.get('username') || '').toLocaleLowerCase();
+        const name = String(doc.get('name') || '').toLocaleLowerCase();
+        if (username === term) return 0;
+        if (username.startsWith(term)) return 1;
+        if (name === term) return 2;
+        if (name.startsWith(term)) return 3;
+        return 4;
+      };
+      return relevance(a) - relevance(b) || String(a.get('username') || '').localeCompare(String(b.get('username') || ''));
+    });
 
   const people = (await Promise.all(candidates.map(async candidate => {
     if (viewerBlocks.has(candidate.id)) return null;

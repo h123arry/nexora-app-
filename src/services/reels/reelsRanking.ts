@@ -1,4 +1,5 @@
 import type { Post } from '../../types';
+import { boundedEngagementScore, freshnessMultiplier } from '../discovery/discoveryQuality';
 
 export interface ReelSignals {
   watchedSeconds?: number;
@@ -120,7 +121,7 @@ export function rankReels(
       const tags = (post.tags || []).map(tag => tag.replace(/^#/, '').trim().toLowerCase()).filter(Boolean);
       const matchedTags = [...new Set(tags)].filter(tag => interestScores[tag] > 0);
       const ageHours = getAgeHours(post.timestamp, now);
-      const freshness = Math.max(0, 36 - ageHours) * 1.25;
+      const freshness = freshnessMultiplier(ageHours, 36) * 45;
       const watchScore = signals.completed
         ? 28
         : Math.min(18, Math.log1p(signals.watchedSeconds || 0) * 5);
@@ -130,8 +131,7 @@ export function rankReels(
         (signals.saved ? 13 : 0);
       const rewatchScore = Math.min(16, (signals.rewatches || 0) * 4);
       const followScore = following.has(post.userId || '') ? 22 : signals.followedCreator ? 10 : 0;
-      const popularity = Math.min(12, Math.log1p(Math.max(0, post.likes || 0)) * 1.5 +
-        Math.log1p(Math.max(0, post.shares || 0)) * 2);
+      const popularity = Math.min(12, boundedEngagementScore({ likes: post.likes, shares: post.shares }) * 0.3);
       const interestScore = Math.min(24, matchedTags.reduce((sum, tag) => sum + Math.min(4, interestScores[tag]), 0) * 2);
       const score = Math.round((freshness + watchScore + meaningfulActions + rewatchScore + followScore + popularity + interestScore) * 100) / 100;
       const reasons: string[] = [];
