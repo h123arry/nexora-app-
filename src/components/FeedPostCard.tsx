@@ -154,7 +154,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   return (
     <div
       ref={cardRef}
-      id={`post-${post.id}`
+      id={`post-${post.id}`}
       data-post-id={post.id}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 450px' }}
       className={`nx-post-card py-4 sm:py-5 border-b border-white/5 transition-colors duration-150 group text-left relative space-y-3 transform-gpu ${
