@@ -314,10 +314,23 @@ async function createCommunityDirect(community: Community) {
       delete storedCommunity.reports;
       delete storedCommunity.activityLog;
     }
-    return await setDoc(doc(db, path, community.id), {
+    if (!auth.currentUser || auth.currentUser.uid !== community.ownerId) {
+      throw new Error('Only the signed-in Circle owner can create this community.');
+    }
+    const communityRef = doc(db, path, community.id);
+    const ownerMembershipRef = doc(db, path, community.id, 'members', auth.currentUser.uid);
+    const batch = writeBatch(db);
+    batch.set(communityRef, {
       ...storedCommunity,
       createdAt: serverTimestamp()
     });
+    batch.set(ownerMembershipRef, {
+      userId: auth.currentUser.uid,
+      role: 'owner',
+      status: 'active',
+      joinedAt: serverTimestamp(),
+    });
+    await batch.commit();
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path, auth);
   }
