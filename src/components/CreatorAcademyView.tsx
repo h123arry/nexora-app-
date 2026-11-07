@@ -212,7 +212,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
             <p className="max-w-xl text-sm leading-6 text-violet-100/70">A structured learning institution for creators. Learn the craft, build your community and develop a sustainable creator career.</p>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-2xl font-black">{completedCourses}<span className="text-sm text-white/40">/{COURSES.length}</span></p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/50">Courses completed</p></div>
+            <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-2xl font-black">{completedCourses}<span className="text-sm text-white/40">/{courses.length}</span></p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/50">Courses completed</p></div>
             <div className="rounded-2xl border border-white/10 bg-black/20 p-4"><p className="text-2xl font-black">{overallProgress}%</p><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-white/50">Learning progress</p></div>
           </div>
         </div>
@@ -284,9 +284,9 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
                   ))}
                   <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={assessmentBusy} onClick={()=>void submitAssessment(assessment)} className="min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-40">{assessmentBusy?'Submitting…':'Submit assessment'}</button>
                     {assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && <span className={'text-xs font-bold '+(assessmentResult.passed?'text-emerald-300':'text-amber-200')}>{assessmentResult.scorePercent}% · {assessmentResult.passed?'Passed':'Not passed yet'}</span>}
-                    {assessmentResult?.assessmentId===assessment.id && assessmentResult.passed && <button type="button" disabled={assessmentBusy} onClick={()=>void requestCertificate(assessment.id)} className="min-h-10 rounded-xl border border-violet-400/30 px-4 text-xs font-bold text-violet-200 disabled:opacity-40">Request certificate</button>}
+                    {assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && assessmentResult.passed && <button type="button" disabled={assessmentBusy} onClick={()=>void requestCertificate(assessment.id)} className="min-h-10 rounded-xl border border-violet-400/30 px-4 text-xs font-bold text-violet-200 disabled:opacity-40">Request certificate</button>}
                   </div>
-                  {certificate && assessmentResult?.assessmentId===assessment.id && <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3"><p className="text-xs font-bold text-emerald-200">Verified credential issued</p><p className="mt-1 text-[10px] text-white/50">{certificate.courseTitle} · {certificate.certificateId}</p><p className="mt-2 break-all font-mono text-xs text-white">{certificate.verificationCode}</p><p className="mt-1 text-[10px] text-white/40">Keep this code for independent certificate verification.</p></div>}
+                  {certificate && certificate.courseId===activeCourse.id && certificate.assessmentId===assessment.id && assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3"><p className="text-xs font-bold text-emerald-200">Verified credential issued</p><p className="mt-1 text-[10px] text-white/50">{certificate.courseTitle} · {certificate.certificateId}</p><p className="mt-2 break-all font-mono text-xs text-white">{certificate.verificationCode}</p><p className="mt-1 text-[10px] text-white/40">Keep this code for independent certificate verification.</p></div>}
                 </article>
               ))}
             </section>
