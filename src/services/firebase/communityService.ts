@@ -122,6 +122,12 @@ export const CommunityService = {
     };
   },
 
+  async isActiveMember(userId: string, communityId: string): Promise<boolean> {
+    if (!userId || !communityId || communityId.includes('/')) return false;
+    const membership = await getDoc(doc(db, 'communities', communityId, 'members', userId));
+    return membership.exists() && membership.data().status === 'active';
+  },
+
   async joinCommunity(userId: string, communityId: string): Promise<void> {
     if (!userId || !communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const communityRef = doc(db, 'communities', communityId);
