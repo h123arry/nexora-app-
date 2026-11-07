@@ -4,11 +4,18 @@ import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig
 import {
   applyNexBalanceEntries,
   buildNexTransferEntries,
-  validateNexUnits,
 } from './nexLedgerPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
+
+function safeCounter(value: unknown, label: string): number {
+  if (value === undefined) return 0;
+  if (!Number.isSafeInteger(value) || (value as number) < 0) {
+    throw new Error(`${label} is not a valid non-negative integer.`);
+  }
+  return value as number;
+}
 
 type LedgerTransferInput = {
   fromAccountId: string;
@@ -53,8 +60,13 @@ export async function postNexLedgerTransfer(
     const requestSnapshot = await transaction.get(requestRef);
     if (requestSnapshot.exists) {
       const prior = requestSnapshot.data() || {};
-      if (prior.transactionId !== input.transactionId) {
-        throw new Error('Idempotency key was already used for another transaction.');
+      if (prior.transactionId !== input.transactionId
+        || prior.fromAccountId !== input.fromAccountId
+        || prior.toAccountId !== input.toAccountId
+        || prior.units !== input.units
+        || prior.type !== input.type
+        || prior.actorId !== input.actorId) {
+        throw new Error('Idempotency key was already used for a different transaction payload.');
       }
       return { transactionId: input.transactionId, replayed: true };
     }
@@ -67,6 +79,14 @@ export async function postNexLedgerTransfer(
     const toData = toSnapshot.data() || {};
     const fromBalance = fromSnapshot.exists ? fromData.availableBalance : 0;
     const toBalance = toSnapshot.exists ? toData.availableBalance : 0;
+    const fromLifetimeCredited = safeCounter(fromData.lifetimeCredited, 'Source lifetime credits');
+    const fromLifetimeDebited = safeCounter(fromData.lifetimeDebited, 'Source lifetime debits');
+    const toLifetimeCredited = safeCounter(toData.lifetimeCredited, 'Destination lifetime credits');
+    const toLifetimeDebited = safeCounter(toData.lifetimeDebited, 'Destination lifetime debits');
+    if (fromLifetimeDebited > Number.MAX_SAFE_INTEGER - input.units
+      || toLifetimeCredited > Number.MAX_SAFE_INTEGER - input.units) {
+      throw new Error('NEX lifetime totals exceed the safe integer range.');
+    }
     const nextFromBalance = applyNexBalanceEntries(fromBalance, entries, input.fromAccountId);
     const nextToBalance = applyNexBalanceEntries(toBalance, entries, input.toAccountId);
     const now = FieldValue.serverTimestamp();
@@ -74,8 +94,8 @@ export async function postNexLedgerTransfer(
     transaction.set(fromRef, {
       currency: 'NEX',
       availableBalance: nextFromBalance,
-      lifetimeCredited: (fromData.lifetimeCredited || 0) + 0,
-      lifetimeDebited: (fromData.lifetimeDebited || 0) + input.units,
+      lifetimeCredited: fromLifetimeCredited,
+      lifetimeDebited: fromLifetimeDebited + input.units,
       schemaVersion: 1,
       createdAt: fromData.createdAt || now,
       updatedAt: now,
@@ -83,8 +103,8 @@ export async function postNexLedgerTransfer(
     transaction.set(toRef, {
       currency: 'NEX',
       availableBalance: nextToBalance,
-      lifetimeCredited: (toData.lifetimeCredited || 0) + input.units,
-      lifetimeDebited: (toData.lifetimeDebited || 0) + 0,
+      lifetimeCredited: toLifetimeCredited + input.units,
+      lifetimeDebited: toLifetimeDebited,
       schemaVersion: 1,
       createdAt: toData.createdAt || now,
       updatedAt: now,
@@ -111,6 +131,11 @@ export async function postNexLedgerTransfer(
     });
     transaction.create(requestRef, {
       transactionId: input.transactionId,
+      fromAccountId: input.fromAccountId,
+      toAccountId: input.toAccountId,
+      units: input.units,
+      type: input.type,
+      actorId: input.actorId,
       createdAt: now,
     });
     transaction.create(fromEntryRef, {
