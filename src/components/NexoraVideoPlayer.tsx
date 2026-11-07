@@ -375,7 +375,12 @@ export default function NexoraVideoPlayer({
     setHasVideoError(false);
     setIsReady(false);
     setRetryCount(0);
-  }, [finalVideoUrl]);
+    lastObservedMediaTimeRef.current = null;
+    creditedWatchSecondsRef.current = 0;
+    lastWatchSignalWriteRef.current = 0;
+    viewLoggedRef.current = false;
+    watchCompletedRef.current = false;
+  }, [finalVideoUrl, post.id]);
 
   useEffect(() => {
     if (!isBuffering) {
@@ -489,12 +494,13 @@ export default function NexoraVideoPlayer({
         
         if (!isCreatorWatching) {
           // Prevent rapid duplicate views within same session
-          const viewedPostsJson = sessionStorage.getItem('nexora_viewed_posts');
+          const viewedPostsKey = `nexora_viewed_posts_${encodeURIComponent(currentUser?.id || 'guest')}`;
+          const viewedPostsJson = sessionStorage.getItem(viewedPostsKey);
           const viewedPosts = viewedPostsJson ? JSON.parse(viewedPostsJson) : [];
           
           if (!viewedPosts.includes(post.id)) {
             viewedPosts.push(post.id);
-            sessionStorage.setItem('nexora_viewed_posts', JSON.stringify(viewedPosts));
+            sessionStorage.setItem(viewedPostsKey, JSON.stringify(viewedPosts));
             
             // Dispatch to root posts state (Single Source of Truth)
             window.dispatchEvent(new CustomEvent('nexora-increment-view', { detail: { postId: post.id } }));
@@ -509,7 +515,8 @@ export default function NexoraVideoPlayer({
   // Add video metadata to Watch History in localStorage
   const logToWatchHistory = () => {
     try {
-      const historyJson = localStorage.getItem('nexora_watch_history');
+      const historyKey = `nexora_watch_history_${encodeURIComponent(currentUser?.id || 'guest')}`;
+      const historyJson = localStorage.getItem(historyKey);
       let historyList = historyJson ? JSON.parse(historyJson) : [];
       
       // Filter existing item to move to top of queue
@@ -531,7 +538,7 @@ export default function NexoraVideoPlayer({
       // Cap at 15 items
       if (historyList.length > 15) historyList.pop();
       
-      localStorage.setItem('nexora_watch_history', JSON.stringify(historyList));
+      localStorage.setItem(historyKey, JSON.stringify(historyList));
       // Dispatch event to refresh Watch History lists in UI
       window.dispatchEvent(new CustomEvent('update-watch-history'));
     } catch (e) {
