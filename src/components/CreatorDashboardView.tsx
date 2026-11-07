@@ -19,6 +19,7 @@ import { uploadMediaFile } from '../services/firebase/storageService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
 import { scheduleCreatorPost, listCreatorScheduledPosts, cancelCreatorScheduledPost, type CreatorScheduledPost } from '../services/creatorSchedulingService';
+import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -1363,15 +1364,7 @@ export default function CreatorDashboardView({
           )}
 
           {/* TAB 8: MONETIZATION AVAILABILITY */}
-          {activeTab === 'monetization' && (
-            <div className="max-w-2xl rounded-2xl border border-white/10 bg-[#0a071f]/80 p-6 space-y-3">
-              <h3 className="text-base font-bold text-white">Monetization is not available</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Nexora does not currently provide a verified NEX balance ledger, exchange rate, earnings history, tips, subscriptions, payouts, or creator-revenue analytics. No monetary value or payment feature is represented here.
-              </p>
-              <p className="text-xs text-zinc-500">Do not treat locally displayed or sample values as an account balance or cash value.</p>
-            </div>
-          )}
+          {activeTab === 'monetization' && <CreatorGiftEarningsPanel />}
         </motion.div>
       )}
 

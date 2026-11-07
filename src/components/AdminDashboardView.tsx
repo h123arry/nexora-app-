@@ -5,6 +5,7 @@ import { collection, getDocs, doc, updateDoc, query, where, limit } from 'fireba
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../lib/firebase';
 import { reviewModerationReport } from '../services/dataService';
+import GiftEarningsFinancePanel from './GiftEarningsFinancePanel';
 
 interface AdminDashboardViewProps {
   currentUser: User;
@@ -606,6 +607,7 @@ export default function AdminDashboardView({
                 <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5"><span className="text-[10px] uppercase tracking-widest text-zinc-500">Webhook failures</span><p className="mt-2 text-lg font-black text-white">{financeSummary.webhookFailures.length}</p></div>
               </div>
             )}
+            <GiftEarningsFinancePanel />
           </div>
         )}
 

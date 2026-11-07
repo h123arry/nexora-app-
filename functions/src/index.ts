@@ -16,6 +16,7 @@ import { searchPublicDirectory } from './directorySearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
+export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
