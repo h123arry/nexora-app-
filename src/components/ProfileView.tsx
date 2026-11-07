@@ -9,6 +9,7 @@ import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
 import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
+import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
@@ -291,6 +292,13 @@ export default function ProfileView({
       }
     }
   };
+
+  useEffect(() => {
+    if (!isLoggedIn || isOwnProfile || !currentUser.id) return;
+    void recordCreatorProfileVisit(currentUser.id).catch(() => {
+      // Profile browsing must remain available when analytics is offline.
+    });
+  }, [currentUser.id, isLoggedIn, isOwnProfile]);
 
   useEffect(() => {
     setIsLoadingProfile(true);
