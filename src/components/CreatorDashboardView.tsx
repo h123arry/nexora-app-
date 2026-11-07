@@ -484,6 +484,7 @@ export default function CreatorDashboardView({
   };
 
   const clearDraftForm = () => {
+    setScheduledAtInput('');
     setCurrentDraftId(null);
     setDraftCaption('');
     setDraftTags('');
@@ -1593,8 +1594,8 @@ export default function CreatorDashboardView({
                       <input
                         type="datetime-local"
                         value={scheduledAtInput}
-                        min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
-                        max={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
+                        min={new Date(Date.now() + 5 * 60 * 1000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
+                        max={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
                         onChange={event => setScheduledAtInput(event.target.value)}
                         className="min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
                         aria-label="Schedule post date and time"
