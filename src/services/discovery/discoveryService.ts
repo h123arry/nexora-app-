@@ -79,6 +79,9 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
   const candidates = posts
     .map((post, index) => ({ post, index }))
     .filter(({ post }) => !muted.has(post.userId) && !blocked.has(post.userId) && !hidden.has(post.id))
+    // The Following tab is an eligibility boundary, not merely a ranking hint.
+    // Never fill it with unrelated creators when the followed set is small or empty.
+    .filter(({ post }) => mode !== 'following' || following.has(post.userId))
     .filter(({ post }) => !normalizedTags(post).some(tag => notInterested.has(tag)))
     .filter(({ post }) => !post.isArchived && (!post.scheduledTime || new Date(post.scheduledTime).getTime() <= now))
     .map(({ post, index }) => {
@@ -90,7 +93,9 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
       const followBoost = following.has(post.userId) ? RANKING_WEIGHTS.follow : 0;
       const unseenBoost = seen.has(post.id) ? 0 : RANKING_WEIGHTS.unseen;
       const score = mode === 'latest'
-        ? Math.max(0, 7 * 24 - age)
+        // A negative age score preserves chronological order even for posts
+        // older than seven days; clamping at zero would make old posts tie.
+        ? -age
         : mode === 'following'
           ? freshness + followBoost + unseenBoost
           : mode === 'trending'
