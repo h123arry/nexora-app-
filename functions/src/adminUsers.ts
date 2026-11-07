@@ -1,5 +1,5 @@
 import { getAuth } from 'firebase-admin/auth';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
@@ -74,6 +74,58 @@ export const listAdminUsers = onCall({ maxInstances: 5 }, async request => {
   }
 });
 
+export async function applyAdminAccountAction(
+  store: Firestore,
+  actorUid: string,
+  targetUid: string,
+  action: 'ban' | 'suspend' | 'reset_reputation',
+  enabled?: boolean,
+): Promise<void> {
+  const userRef = store.collection('users').doc(targetUid);
+  const statusRef = store.collection('accountStatus').doc(targetUid);
+  if (action === 'reset_reputation') {
+    await store.runTransaction(async transaction => {
+      const target = await transaction.get(userRef);
+      if (!target.exists) throw new HttpsError('not-found', 'The target account does not exist.');
+      transaction.update(userRef, {
+        reputationPoints: 0,
+        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.create(store.collection('adminAuditEvents').doc(), {
+        actorUid, targetUid, action: 'reputation_reset', createdAt: FieldValue.serverTimestamp(),
+      });
+    });
+    return;
+  }
+  if (typeof enabled !== 'boolean') throw new HttpsError('invalid-argument', 'The new restriction state is required.');
+  if (targetUid === actorUid) throw new HttpsError('failed-precondition', 'You cannot restrict your own administrator account.');
+  await store.runTransaction(async transaction => {
+    const [target, currentStatus] = await Promise.all([transaction.get(userRef), transaction.get(statusRef)]);
+    if (!target.exists) throw new HttpsError('not-found', 'The target account does not exist.');
+    if (target.get('username') === 'voh' || target.get('role') === 'founder') {
+      throw new HttpsError('permission-denied', 'The founder account cannot be restricted.');
+    }
+    const status = currentStatus.data() || {};
+    const banned = action === 'ban' ? enabled : status.banned === true;
+    const suspended = action === 'suspend' ? enabled : status.suspended === true;
+    const restricted = banned || suspended;
+    transaction.set(statusRef, {
+      accountId: targetUid, banned, suspended,
+      postingRestricted: restricted, messagingRestricted: restricted, giftingRestricted: restricted,
+      expiresAt: null, updatedAt: FieldValue.serverTimestamp(), updatedBy: actorUid,
+      source: 'admin_user_management',
+    }, { merge: true });
+    transaction.update(userRef, {
+      isBanned: banned, isSuspended: suspended, updatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.create(store.collection('adminAuditEvents').doc(), {
+      actorUid, targetUid, action: action + (enabled ? '_enabled' : '_disabled'),
+      createdAt: FieldValue.serverTimestamp(),
+    });
+  });
+}
+
 export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
   const data = request.data || {};
   const action = data.action;
@@ -122,65 +174,15 @@ export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
   const actorUid = requireAdmin(request);
   const userRef = db.collection('users').doc(targetUid);
   const statusRef = db.collection('accountStatus').doc(targetUid);
-  if (action === 'reset_reputation') {
-    await db.runTransaction(async transaction => {
-      const target = await transaction.get(userRef);
-      if (!target.exists) throw new HttpsError('not-found', 'The target account does not exist.');
-      transaction.update(userRef, {
-        reputationPoints: 0,
-        reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-        updatedAt: FieldValue.serverTimestamp(),
-      });
-      transaction.create(db.collection('adminAuditEvents').doc(), {
-        actorUid, targetUid, action: 'reputation_reset', createdAt: FieldValue.serverTimestamp(),
-      });
-    });
-    return { updated: true, targetUid, reputationPoints: 0 };
-  }
-
-  if (action !== 'ban' && action !== 'suspend') {
+  if (action !== 'ban' && action !== 'suspend' && action !== 'reset_reputation') {
     throw new HttpsError('invalid-argument', 'A supported account-management action is required.');
   }
-  const enabled = data.enabled;
-  if (typeof enabled !== 'boolean') throw new HttpsError('invalid-argument', 'The new restriction state is required.');
-  if (targetUid === actorUid) throw new HttpsError('failed-precondition', 'You cannot restrict your own administrator account.');
-  if (action === 'ban') {
-    const target = await userRef.get();
-    if (target.get('username') === 'voh' || target.get('role') === 'founder') {
-      throw new HttpsError('permission-denied', 'The founder account cannot be restricted.');
-    }
+  const enabled = action === 'reset_reputation' ? undefined : data.enabled;
+  if (action !== 'reset_reputation' && typeof enabled !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'The new restriction state is required.');
   }
-  await db.runTransaction(async transaction => {
-    const [target, currentStatus] = await Promise.all([transaction.get(userRef), transaction.get(statusRef)]);
-    if (!target.exists) throw new HttpsError('not-found', 'The target account does not exist.');
-    if (target.get('username') === 'voh' || target.get('role') === 'founder') {
-      throw new HttpsError('permission-denied', 'The founder account cannot be restricted.');
-    }
-    const status = currentStatus.data() || {};
-    const banned = action === 'ban' ? enabled : status.banned === true;
-    const suspended = action === 'suspend' ? enabled : status.suspended === true;
-    const restricted = banned || suspended;
-    transaction.set(statusRef, {
-      accountId: targetUid,
-      banned,
-      suspended,
-      postingRestricted: restricted,
-      messagingRestricted: restricted,
-      giftingRestricted: restricted,
-      expiresAt: null,
-      updatedAt: FieldValue.serverTimestamp(),
-      updatedBy: actorUid,
-      source: 'admin_user_management',
-    }, { merge: true });
-    transaction.update(userRef, {
-      isBanned: banned,
-      isSuspended: suspended,
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-    transaction.create(db.collection('adminAuditEvents').doc(), {
-      actorUid, targetUid, action: action + (enabled ? '_enabled' : '_disabled'),
-      createdAt: FieldValue.serverTimestamp(),
-    });
-  });
-  return { updated: true, targetUid, action, enabled };
+  await applyAdminAccountAction(db, actorUid, targetUid, action, enabled as boolean | undefined);
+  return action === 'reset_reputation'
+    ? { updated: true, targetUid, reputationPoints: 0 }
+    : { updated: true, targetUid, action, enabled };
 });
