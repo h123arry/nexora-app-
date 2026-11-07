@@ -516,7 +516,7 @@ export default function FeedView({
     return saved ? JSON.parse(saved) : [];
   });
   const feedPreferencesHydratedRef = useRef(false);
-  const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(true);
+  const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(() => currentUser.id === 'guest_visitor_id');
   const recommendationSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Local storage is an offline fallback only. Signed-in users hydrate the
