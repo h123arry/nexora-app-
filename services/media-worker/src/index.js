@@ -49,8 +49,8 @@ async function probe(file){
   if(duration<=0 || duration>MAX_DURATION_SECONDS || !video.width || !video.height) throw new Error('Video duration or dimensions are outside supported limits');
   return {durationSeconds:duration,width:video.width,height:video.height,format:data.format.format_name,videoCodec:video.codec_name,frameRate:video.avg_frame_rate};
 }
-async function upload(local,object,contentType){
-  await bucket.upload(local,{destination:object,metadata:{contentType,cacheControl:'public,max-age=31536000,immutable',metadata:{nexoraGenerated:'true'}}});
+async function upload(local,object,contentType,cacheControl='public,max-age=31536000,immutable'){
+  await bucket.upload(local,{destination:object,metadata:{contentType,cacheControl,metadata:{nexoraGenerated:'true'}}});
 }
 async function processObject(event){
   const object=event.data || event;
@@ -116,7 +116,7 @@ async function processObject(event){
       }).join(String.fromCharCode(10));
       await (await import('node:fs/promises')).writeFile(hls,playlist);
       await upload(mp4,`${prefix}/video.mp4`,'video/mp4');
-      await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl');
+      await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl','public,max-age=60');
       for(const entry of await (await import('node:fs/promises')).readdir(dir)) if(entry.endsWith('.ts')) await upload(path.join(dir,entry),`${prefix}/${entry}`,'video/mp2t');
       master.push('#EXT-X-STREAM-INF:BANDWIDTH='+ (parseInt(rendition.bitrate,10)*1000) + ',RESOLUTION=' + Math.round(metadata.width*rendition.height/metadata.height) + 'x' + rendition.height + String.fromCharCode(10) + signedCdnUrl(prefix+'/index.m3u8',rendition.height+'p/index.m3u8'));
       actual.push({height:rendition.height,bitrate:rendition.bitrate,mp4Path:`${prefix}/video.mp4`,hlsPath:`${prefix}/index.m3u8`});
@@ -124,7 +124,7 @@ async function processObject(event){
     if(!actual.length) throw new Error('No supported rendition could be generated');
     const masterPath=path.join(work,'master.m3u8');
     await (await import('node:fs/promises')).writeFile(masterPath,`#EXTM3U\n#EXT-X-VERSION:3\n${master.join('\n')}\n`);
-    await upload(masterPath,`${outputRoot}/master.m3u8`,'application/vnd.apple.mpegurl');
+    await upload(masterPath,`${outputRoot}/master.m3u8`,'application/vnd.apple.mpegurl','public,max-age=60');
     const poster=path.join(work,'poster.jpg');
     await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-ss',String(Math.min(1,metadata.durationSeconds/4)),'-i',input,'-frames:v','1','-vf','scale=640:-2','-q:v','3',poster]);
     await upload(poster,`${outputRoot}/poster.jpg`,'image/jpeg');
