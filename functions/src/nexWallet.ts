@@ -1,4 +1,4 @@
-import { FieldValue, type Firestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, type Firestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import {
@@ -8,7 +8,7 @@ import {
 } from './nexLedgerPolicy.js';
 
 const app = getFirebaseAdminApp();
-const db = (await import('firebase-admin/firestore')).getFirestore(app, resolveFirestoreDatabaseId());
+const db = getFirestore(app, resolveFirestoreDatabaseId());
 
 type LedgerTransferInput = {
   fromAccountId: string;
