@@ -271,7 +271,7 @@ export async function createAcademyMentorshipSession(db: Firestore, uid: string,
 }
 
 export async function listUpcomingAcademyMentorshipSessions(db: Firestore, now = new Date()) {
-  const snapshot = await db.collection('academyMentorshipSessions').where('status', '==', 'scheduled').limit(50).get();
+  const snapshot = await db.collection('academyMentorshipSessions').where('status', '==', 'scheduled').where('startsAt', '>=', now).orderBy('startsAt', 'asc').limit(50).get();
   const upcoming = snapshot.docs.map(session => {
     const startValue = session.get('startsAt');
     const startsAt = startValue?.toDate?.() instanceof Date ? startValue.toDate() : startValue instanceof Date ? startValue : null;
