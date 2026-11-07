@@ -1,4 +1,4 @@
-import { Home, MessageSquare, User as UserIcon, Bell, PlusCircle, Users, Sliders, Sparkles, Compass, BarChart2, Search, Settings2 } from 'lucide-react';
+import { Home, MessageSquare, User as UserIcon, Bell, PlusCircle, Users, Sliders, Sparkles, Compass, BarChart2, Search, Settings2, Gift } from 'lucide-react';
 import { motion } from 'motion/react';
 import { User, ThemeMood } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -40,6 +40,7 @@ export default function Sidebar({
   const destinations = [
     { id: 'feed', label: copy.navHome, hint: copy.navDailySignal, icon: Home },
     { id: 'explore', label: copy.navExplore, hint: copy.navFindPeople, icon: Compass },
+    { id: 'giftverse', label: 'Giftverse', hint: 'Discover 120 original creator gifts', icon: Gift },
     { id: 'communities', label: copy.navCommunities, hint: copy.navSharedInterests, icon: Users },
     { id: 'inbox', label: copy.navMessages, hint: copy.navPrivateConversations, icon: MessageSquare, count: unreadMessagesCount },
     { id: 'activity', label: copy.navActivity, hint: copy.navStayInLoop, icon: Bell, count: unreadNotificationsCount },

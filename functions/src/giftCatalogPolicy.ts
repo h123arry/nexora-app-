@@ -12,7 +12,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌹",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A velvet bloom with a luminous heart, made to turn a passing thank-you into a keepsake."
   },
   {
     "id": "floral-02",
@@ -26,7 +26,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌺",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A vivid garden flourish that sends warmth with every petal."
   },
   {
     "id": "floral-03",
@@ -40,7 +40,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌸",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A rare botanical accent, arranged for a moment worth remembering."
   },
   {
     "id": "floral-04",
@@ -54,7 +54,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌻",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A soft, radiant bloom with a little midnight magic."
   },
   {
     "id": "floral-05",
@@ -68,7 +68,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪷",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A garden favourite that makes appreciation feel personal."
   },
   {
     "id": "floral-06",
@@ -82,7 +82,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💐",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "An elegant floral statement, finished with a jewel-bright centre."
   },
   {
     "id": "floral-07",
@@ -96,7 +96,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌷",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A generous burst of colour for someone who brightens your day."
   },
   {
     "id": "floral-08",
@@ -110,7 +110,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌼",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A graceful bouquet-inspired treasure with a lasting glow."
   },
   {
     "id": "floral-09",
@@ -124,7 +124,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🥀",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A collector's bloom with a rich, polished finish."
   },
   {
     "id": "floral-10",
@@ -138,7 +138,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💮",
-    "description": "An original floral garden collectible, created for unforgettable moments on Nexora."
+    "description": "A signature floral tribute for an unforgettable creator."
   },
   {
     "id": "royal-01",
@@ -152,7 +152,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "👑",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A signature Nexora emblem for creators who command the room."
   },
   {
     "id": "royal-02",
@@ -166,7 +166,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "👑",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A regal crown rendered in luminous metal and precious colour."
   },
   {
     "id": "royal-03",
@@ -180,7 +180,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💎",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A royal keepsake that celebrates a moment of distinction."
   },
   {
     "id": "royal-04",
@@ -194,7 +194,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪑",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A throne-room treasure for a creator building a kingdom of their own."
   },
   {
     "id": "royal-05",
@@ -208,7 +208,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "⚜️",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A ceremonial token of respect, finished with imperial detail."
   },
   {
     "id": "royal-06",
@@ -222,7 +222,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🛡️",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A sovereign mark of appreciation with a brilliant jewel centre."
   },
   {
     "id": "royal-07",
@@ -236,7 +236,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💠",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A polished symbol of prestige for a truly memorable moment."
   },
   {
     "id": "royal-08",
@@ -250,7 +250,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🏰",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A grand royal statement made to stand out in the gift stream."
   },
   {
     "id": "royal-09",
@@ -264,7 +264,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✨",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A rare crown-room collectible with an unmistakable silhouette."
   },
   {
     "id": "royal-10",
@@ -278,7 +278,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "👑",
-    "description": "An original royal dominion collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary coronation tribute worthy of the Nexora stage."
   },
   {
     "id": "dragon-01",
@@ -292,7 +292,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐲",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A young mythical companion with a bright spark of mischief."
   },
   {
     "id": "dragon-02",
@@ -306,7 +306,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐉",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A powerful scaled guardian from the heart of the Dragon Realm."
   },
   {
     "id": "dragon-03",
@@ -320,7 +320,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🔥",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A fire-kissed creature that brings a little theatre to a thank-you."
   },
   {
     "id": "dragon-04",
@@ -334,7 +334,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💎",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A crystal-armoured dragon with a luminous presence."
   },
   {
     "id": "dragon-05",
@@ -348,7 +348,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌪️",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A swift sky-serpent imagined for bold, unforgettable moments."
   },
   {
     "id": "dragon-06",
@@ -362,7 +362,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🥚",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A rare dragon relic with a story of its own."
   },
   {
     "id": "dragon-07",
@@ -376,7 +376,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪽",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A storm-winged arrival designed to command attention."
   },
   {
     "id": "dragon-08",
@@ -390,7 +390,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐉",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "An ancient guardian carrying the spirit of the realm."
   },
   {
     "id": "dragon-09",
@@ -404,7 +404,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "❤️‍🔥",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary dragon treasure with a fierce, radiant finish."
   },
   {
     "id": "dragon-10",
@@ -418,7 +418,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐉",
-    "description": "An original dragon realm collectible, created for unforgettable moments on Nexora."
+    "description": "The realm's ultimate dragon arrival, made for a creator's biggest moment."
   },
   {
     "id": "wildlife-01",
@@ -432,7 +432,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦁",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A charming wild companion that brings a little joy to the feed."
   },
   {
     "id": "wildlife-02",
@@ -446,7 +446,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦁",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A golden guardian celebrating strength, warmth and character."
   },
   {
     "id": "wildlife-03",
@@ -460,7 +460,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐆",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A sleek nocturnal spirit with a striking silhouette."
   },
   {
     "id": "wildlife-04",
@@ -474,7 +474,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐆",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A rare wild beauty, rendered with quiet confidence."
   },
   {
     "id": "wildlife-05",
@@ -488,7 +488,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐘",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A majestic symbol of grace and presence."
   },
   {
     "id": "wildlife-06",
@@ -502,7 +502,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦜",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A vivid creature tribute for a creator who stands apart."
   },
   {
     "id": "wildlife-07",
@@ -516,7 +516,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐺",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A playful kingdom companion with a memorable character."
   },
   {
     "id": "wildlife-08",
@@ -530,7 +530,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐅",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A noble wildlife emblem finished in rich tones."
   },
   {
     "id": "wildlife-09",
@@ -544,7 +544,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐬",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A collector's wild icon with a premium finish."
   },
   {
     "id": "wildlife-10",
@@ -558,7 +558,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦁",
-    "description": "An original wild kingdom collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary arrival from the Nexora Wild Kingdom."
   },
   {
     "id": "love-01",
@@ -572,7 +572,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💜",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A heartfelt gesture designed to say more than words can."
   },
   {
     "id": "love-02",
@@ -586,7 +586,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💓",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A warm little keepsake for someone who made your day."
   },
   {
     "id": "love-03",
@@ -600,7 +600,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🫂",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A glowing symbol of affection with a polished finish."
   },
   {
     "id": "love-04",
@@ -614,7 +614,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💌",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A tender tribute for a creator whose work means something."
   },
   {
     "id": "love-05",
@@ -628,7 +628,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💕",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A bright reminder that their presence is appreciated."
   },
   {
     "id": "love-06",
@@ -642,7 +642,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💘",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A romantic keepsake with a jewel-like centre."
   },
   {
     "id": "love-07",
@@ -656,7 +656,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💍",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A generous expression of admiration and support."
   },
   {
     "id": "love-08",
@@ -670,7 +670,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🕊️",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A radiant heart made for a moment worth celebrating."
   },
   {
     "id": "love-09",
@@ -684,7 +684,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "❤️‍🔥",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A rare token of devotion, designed to feel special."
   },
   {
     "id": "love-10",
@@ -698,7 +698,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💞",
-    "description": "An original love & appreciation collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary expression of appreciation for an unforgettable creator."
   },
   {
     "id": "celestial-01",
@@ -712,7 +712,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✨",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A small piece of the night sky, sent with a little wonder."
   },
   {
     "id": "celestial-02",
@@ -726,7 +726,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌙",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A luminous orbiting treasure from beyond the ordinary."
   },
   {
     "id": "celestial-03",
@@ -740,7 +740,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "☀️",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A radiant starfall made for a creator who lights up the feed."
   },
   {
     "id": "celestial-04",
@@ -754,7 +754,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌌",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A cosmic keepsake with a midnight glow."
   },
   {
     "id": "celestial-05",
@@ -768,7 +768,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "☄️",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A celestial emblem that turns appreciation into a spectacle."
   },
   {
     "id": "celestial-06",
@@ -782,7 +782,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪐",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A rare constellation-inspired gift with a brilliant finish."
   },
   {
     "id": "celestial-07",
@@ -796,7 +796,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🚀",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A galactic arrival for a moment that deserves the stars."
   },
   {
     "id": "celestial-08",
@@ -810,7 +810,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌈",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A premium cosmic relic with a luminous orbit."
   },
   {
     "id": "celestial-09",
@@ -824,7 +824,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💫",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary piece of the Nexora heavens."
   },
   {
     "id": "celestial-10",
@@ -838,7 +838,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌠",
-    "description": "An original celestial worlds collectible, created for unforgettable moments on Nexora."
+    "description": "A universe-sized tribute for a creator who shines brightest."
   },
   {
     "id": "african-01",
@@ -852,7 +852,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎭",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A bold heritage-inspired emblem celebrating craft and identity."
   },
   {
     "id": "african-02",
@@ -866,7 +866,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "✴️",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A sunlit keepsake with geometric detail and warm colour."
   },
   {
     "id": "african-03",
@@ -880,7 +880,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪭",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A tribute to artistry, rhythm and the richness of African design."
   },
   {
     "id": "african-04",
@@ -894,7 +894,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐦",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A striking shield-inspired collectible with a modern finish."
   },
   {
     "id": "african-05",
@@ -908,7 +908,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪘",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A radiant symbol of community, pride and creative energy."
   },
   {
     "id": "african-06",
@@ -922,7 +922,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🗿",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A heritage-inspired treasure with a jewel-bright centre."
   },
   {
     "id": "african-07",
@@ -936,7 +936,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "📿",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A premium keepsake shaped by bold patterns and warm tones."
   },
   {
     "id": "african-08",
@@ -950,7 +950,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🧵",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A celebratory emblem made to honour a creator's impact."
   },
   {
     "id": "african-09",
@@ -964,7 +964,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌅",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A rare design statement rooted in contemporary African-inspired artistry."
   },
   {
     "id": "african-10",
@@ -978,7 +978,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐍",
-    "description": "An original african heritage collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary celebration of heritage, creativity and connection."
   },
   {
     "id": "fantasy-01",
@@ -992,7 +992,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🔥",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A mythical companion from a world just beyond the imagination."
   },
   {
     "id": "fantasy-02",
@@ -1006,7 +1006,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦄",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A luminous winged treasure made for dreamers and storytellers."
   },
   {
     "id": "fantasy-03",
@@ -1020,7 +1020,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌙",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A magical keepsake with an otherworldly silhouette."
   },
   {
     "id": "fantasy-04",
@@ -1034,7 +1034,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦅",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A rare enchanted emblem with a bright centrepiece."
   },
   {
     "id": "fantasy-05",
@@ -1048,7 +1048,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌀",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A fantasy realm arrival for a truly special moment."
   },
   {
     "id": "fantasy-06",
@@ -1062,7 +1062,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🧜‍♀️",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A graceful mythical tribute with a radiant finish."
   },
   {
     "id": "fantasy-07",
@@ -1076,7 +1076,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🧚",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A premium relic from a world of wonder."
   },
   {
     "id": "fantasy-08",
@@ -1090,7 +1090,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🐎",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary creature token with a cinematic presence."
   },
   {
     "id": "fantasy-09",
@@ -1104,7 +1104,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🏮",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A rare magical collectible made to be remembered."
   },
   {
     "id": "fantasy-10",
@@ -1118,7 +1118,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦚",
-    "description": "An original mythic realms collectible, created for unforgettable moments on Nexora."
+    "description": "A mythic finale worthy of a creator's greatest moment."
   },
   {
     "id": "music-01",
@@ -1132,7 +1132,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎤",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A rhythm-filled keepsake for a creator who sets the tempo."
   },
   {
     "id": "music-02",
@@ -1146,7 +1146,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💿",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A polished sound-inspired tribute with a bold silhouette."
   },
   {
     "id": "music-03",
@@ -1160,7 +1160,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎭",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A little encore for someone whose work moves you."
   },
   {
     "id": "music-04",
@@ -1174,7 +1174,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎧",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A collector's music emblem with a luminous finish."
   },
   {
     "id": "music-05",
@@ -1188,7 +1188,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎶",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A celebratory note for a creator who brings people together."
   },
   {
     "id": "music-06",
@@ -1202,7 +1202,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎹",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A premium rhythm token for a standout performance."
   },
   {
     "id": "music-07",
@@ -1216,7 +1216,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎆",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A rare soundwave-inspired collectible with a bright centre."
   },
   {
     "id": "music-08",
@@ -1230,7 +1230,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💐",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A stage-worthy tribute for a moment worth replaying."
   },
   {
     "id": "music-09",
@@ -1244,7 +1244,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🏟️",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary music keepsake with a showtime glow."
   },
   {
     "id": "music-10",
@@ -1258,7 +1258,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎸",
-    "description": "An original music & celebration collectible, created for unforgettable moments on Nexora."
+    "description": "A grand finale gift for the creator who owns the stage."
   },
   {
     "id": "luxury-01",
@@ -1272,7 +1272,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💎",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A finely cut jewel-inspired keepsake with a premium finish."
   },
   {
     "id": "luxury-02",
@@ -1286,7 +1286,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "⌚",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A polished statement piece for a moment of real appreciation."
   },
   {
     "id": "luxury-03",
@@ -1300,7 +1300,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎁",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A radiant luxury token with crisp facets and rich colour."
   },
   {
     "id": "luxury-04",
@@ -1314,7 +1314,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🏎️",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A collector's treasure with an elegant silhouette."
   },
   {
     "id": "luxury-05",
@@ -1328,7 +1328,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "📿",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A high-shine tribute for a creator with unmistakable presence."
   },
   {
     "id": "luxury-06",
@@ -1342,7 +1342,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🧴",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A premium atelier piece designed to catch the light."
   },
   {
     "id": "luxury-07",
@@ -1356,7 +1356,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💡",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A rare luxury emblem with a jewel-like glow."
   },
   {
     "id": "luxury-08",
@@ -1370,7 +1370,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪽",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A statement collectible for an extraordinary creator."
   },
   {
     "id": "luxury-09",
@@ -1384,7 +1384,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🏛️",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary luxury treasure with a refined finish."
   },
   {
     "id": "luxury-10",
@@ -1398,7 +1398,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🥂",
-    "description": "An original luxe atelier collectible, created for unforgettable moments on Nexora."
+    "description": "The signature luxe arrival for a moment that deserves more."
   },
   {
     "id": "tech-01",
@@ -1412,7 +1412,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "💠",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A future-facing signal for a creator shaping what comes next."
   },
   {
     "id": "tech-02",
@@ -1426,7 +1426,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🧊",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A luminous innovation token with a clean, precise silhouette."
   },
   {
     "id": "tech-03",
@@ -1440,7 +1440,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🔷",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A digital-era keepsake for a creator ahead of the curve."
   },
   {
     "id": "tech-04",
@@ -1454,7 +1454,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🤖",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A circuit-inspired emblem with a bright core."
   },
   {
     "id": "tech-05",
@@ -1468,7 +1468,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🦾",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A bold symbol of ideas, invention and momentum."
   },
   {
     "id": "tech-06",
@@ -1482,7 +1482,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🛸",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A premium tech relic with an electric glow."
   },
   {
     "id": "tech-07",
@@ -1496,7 +1496,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌐",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A rare innovation collectible designed for standout moments."
   },
   {
     "id": "tech-08",
@@ -1510,7 +1510,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🪽",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A futuristic tribute with a distinctive geometric finish."
   },
   {
     "id": "tech-09",
@@ -1524,7 +1524,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "♾️",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary signal from the next frontier."
   },
   {
     "id": "tech-10",
@@ -1538,7 +1538,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "⚛️",
-    "description": "An original future & innovation collectible, created for unforgettable moments on Nexora."
+    "description": "A next-generation celebration for a creator building the future."
   },
   {
     "id": "seasonal-01",
@@ -1552,7 +1552,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "❄️",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A festive keepsake for a moment worth celebrating."
   },
   {
     "id": "seasonal-02",
@@ -1566,7 +1566,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🏮",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A bright seasonal surprise with a polished finish."
   },
   {
     "id": "seasonal-03",
@@ -1580,7 +1580,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌱",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A cheerful token that brings a little occasion to the feed."
   },
   {
     "id": "seasonal-04",
@@ -1594,7 +1594,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌞",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A limited-time feeling, captured in a collectible design."
   },
   {
     "id": "seasonal-05",
@@ -1608,7 +1608,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎇",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A celebration piece for milestones big and small."
   },
   {
     "id": "seasonal-06",
@@ -1622,7 +1622,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎆",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A radiant seasonal tribute with a warm glow."
   },
   {
     "id": "seasonal-07",
@@ -1636,7 +1636,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎂",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A premium festival keepsake for a standout moment."
   },
   {
     "id": "seasonal-08",
@@ -1650,7 +1650,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🎉",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A rare celebration emblem made to catch the eye."
   },
   {
     "id": "seasonal-09",
@@ -1664,7 +1664,7 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "👑",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A legendary seasonal arrival with a grand finish."
   },
   {
     "id": "seasonal-10",
@@ -1678,6 +1678,6 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "subscriptionExclusive": false,
     "limitedEdition": false,
     "icon": "🌟",
-    "description": "An original seasonal wonders collectible, created for unforgettable moments on Nexora."
+    "description": "A once-in-a-lifetime celebration for a creator's biggest milestone."
   }
 ];export function findNexoraGift(id:unknown):NexoraGift|undefined{return typeof id==='string'?GIFT_CATALOG.find(g=>g.id===id):undefined;}
