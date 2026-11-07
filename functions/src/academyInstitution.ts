@@ -194,7 +194,7 @@ export async function issueAcademyCertificate(db: Firestore, uid: string, course
 }
 
 export async function verifyAcademyCertificate(db: Firestore, verificationCode: string) {
-  if (!/^[A-F0-9]{24}$/.test(verificationCode)) throw new Error('A valid verification code is required.');
+  if (!/^[A-F0-9]{36}$/.test(verificationCode)) throw new Error('A valid verification code is required.');
   const result = await db.collection('academyCertificates').where('verificationCode', '==', verificationCode).limit(1).get();
   if (result.empty) return { valid: false };
   const certificate = result.docs[0];
