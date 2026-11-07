@@ -1,13 +1,13 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Activity, CalendarDays, Megaphone, MessageSquare, RefreshCw, Users } from 'lucide-react';
+import { Activity, CalendarDays, FileText, Megaphone, MessageSquare, RefreshCw, Users } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
 
 type Insights = {
   communityId: string; windowDays: number; source: string; activeMembers: number; recentJoins: number;
   eventsCreated: number; upcomingEvents: number; eventRsvps: number; pollsCreated: number;
-  pollVotes: number; announcementsPublished: number;
-  truncated: { members: boolean; events: boolean; polls: boolean; announcements: boolean };
+  pollVotes: number; announcementsPublished: number; postsPublished: number;
+  truncated: { members: boolean; events: boolean; polls: boolean; announcements: boolean; posts: boolean };
 };
 
 const number = (value: number) => Number.isSafeInteger(value) && value >= 0 ? value.toLocaleString() : '—';
@@ -34,6 +34,7 @@ export default function CircleInsightsPanel({ communityId }: { communityId: stri
     { label: 'Upcoming events', value: data.upcomingEvents, detail: number(data.eventsCreated)+' created in 30 days', icon: CalendarDays },
     { label: 'Event RSVPs', value: data.eventRsvps, detail: 'Across recent event records', icon: Activity },
     { label: 'Poll participation', value: data.pollVotes, detail: number(data.pollsCreated)+' polls created in 30 days', icon: MessageSquare },
+    { label: 'Community posts', value: data.postsPublished, detail: 'Published in 30 days', icon: FileText },
     { label: 'Announcements', value: data.announcementsPublished, detail: 'Published in 30 days', icon: Megaphone },
   ] : [];
 
