@@ -33,13 +33,22 @@ Phase 4 improves the existing NEXORA discovery architecture. It does not replace
 - Keep search result limits, archive exclusions and video-only filtering intact.
 - Add isolated policy tests for bounded engagement, freshness half-life and search relevance.
 
+## Phase 4.3 · Account-scoped feedback learning
+
+- Apply locally learned positive and negative tag, creator and community signals directly to For You ranking.
+- Bound learned weights to a finite range and limit stored signal maps to 200 entries per category.
+- Persist recommendation signals inside the existing owner-only Firestore feed settings document, using the existing transactional feed update path.
+- Hydrate remote signals for signed-in accounts and retain local storage as an offline fallback.
+- Synchronize learning from searches, sparks, comments, saves and explicit not-interested actions.
+- Respect the user's recommendations-personalization privacy setting and clear learned signals when recommendation preferences are reset.
+- Keep guest profiles local and isolate signed-in profile keys by account.
+
 ## Remaining Phase 4 work
 
-1. Ensure all server-backed search surfaces share consistent relevance, eligibility, pagination and privacy guarantees.
-3. Improve recommendation explanations and feedback loops while retaining account isolation and reset controls.
-4. Improve trending quality with time windows, distinct-creator participation and anti-spike protections.
-5. Add measurable ranking/search instrumentation that respects analytics consent and avoids collecting unnecessary personal data.
-6. Validate performance and pagination on realistic large candidate sets.
+1. Complete a consented impression and feedback audit across all feed surfaces, including actual visible impressions and video watch signals.
+2. Verify server-side directory search pagination and Firestore index readiness against realistic data volumes.
+3. Measure ranking and search latency, candidate counts and feed diversity on large fixtures and staging.
+4. Validate deployed global discovery coverage; do not describe prefix directory search as full-text global search.
 
 ## Release discipline
 
