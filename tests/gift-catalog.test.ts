@@ -1,0 +1,4 @@
+import test from'node:test';import assert from'node:assert/strict';import{GIFT_CATALOG,GIFT_CATALOG_VERSION,findNexoraGift}from'../functions/src/giftCatalogPolicy.js';
+test('GIFTVERSE contains 120 unique gift images',()=>{assert.equal(GIFT_CATALOG.length,120);assert.equal(new Set(GIFT_CATALOG.map(g=>g.id)).size,120);assert.equal(new Set(GIFT_CATALOG.map(g=>g.image)).size,120);});
+test('each gift has safe NEX pricing, a bundled SVG symbol and valid rarity',()=>{for(const g of GIFT_CATALOG){assert.ok(Number.isSafeInteger(g.priceNex)&&g.priceNex>0);assert.match(g.image,/^#[a-z0-9-]+$/);assert.ok(['common','uncommon','rare','epic','legendary'].includes(g.rarity));}});
+test('gift lookup returns server price source and rejects unknown ids',()=>{assert.equal(GIFT_CATALOG_VERSION,1);assert.equal(findNexoraGift('royal-01')?.priceNex,5);assert.equal(findNexoraGift('missing'),undefined);});

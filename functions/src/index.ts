@@ -21,6 +21,7 @@ export { submitModerationReport, reviewModerationReport, submitModerationAppeal 
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
 export { getNexWalletSnapshot } from './nexWallet.js';
+export { getGiftCatalog, quoteNexGift } from './giftCatalog.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
 
