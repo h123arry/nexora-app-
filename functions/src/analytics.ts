@@ -13,7 +13,7 @@ export const CLIENT_EVENT_TYPES = [
   'search_started', 'search_completed', 'search_result_selected', 'conversation_opened',
   'message_submission_attempt', 'message_send_failure', 'creator_profile_visit',
   'creator_analytics_opened', 'feature_used', 'onboarding_milestone', 'reconnect',
-  'video_watch_progress', 'video_completed',
+  'video_watch_progress', 'video_completed', 'video_replayed',
 ] as const;
 const eventTypes = new Set<string>(CLIENT_EVENT_TYPES);
 const sensitiveKeys = new Set(['password', 'code', 'otp', 'token', 'secret', 'message', 'transcript', 'attachment', 'location', 'voice']);
