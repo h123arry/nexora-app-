@@ -67,7 +67,7 @@ test('recommendation signals are bounded, normalized and reset with feed prefere
     communities: { 'Circle A': 25 },
   } as any });
   assert.deepEqual(normalized.recommendationSignals, {
-    tags: { '#AI': 100, design: -100 },
+    tags: { ai: 100, design: -100 },
     creators: { 'creator-1': 12 },
     communities: { 'Circle A': 25 },
   });
