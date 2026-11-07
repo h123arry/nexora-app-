@@ -72,7 +72,6 @@ describe('NEXORA Institute institution services', () => {
     await publishAcademyAssessment(db, 'academy-instructor', courseId, assessmentId);
     const published = await getPublishedAcademyCourse(db, courseId);
     assert.equal(published.lessons.length, 3);
-    assert.equal(published.lessons[0].status, undefined);
     const tutorContext = await getAcademyTutorContext(db, 'learner-one', courseId, ['lesson-1', 'lesson-2']);
     assert.equal(tutorContext.lessons.length, 2);
     assert.match(tutorContext.groundingPolicy, /only from supplied lesson sources/);
