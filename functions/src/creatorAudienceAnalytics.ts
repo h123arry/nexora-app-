@@ -110,18 +110,27 @@ export async function recordCreatorProfileVisitForUser(
   const profileRef = store.collection('publicProfiles').doc(creatorId);
   const day = dayKey(now);
   const visitorRef = store.collection('creatorProfileDailyVisitors').doc(hash(creatorId + ':' + day + ':' + viewerId));
+  const historyRef = store.collection('creatorProfileVisitorHistory').doc(hash(creatorId + ':' + viewerId));
   const dailyRef = store.collection('creatorAudienceDaily').doc(hash(creatorId + ':' + day));
   return store.runTransaction(async tx => {
-    const [profile, visitor] = await Promise.all([tx.get(profileRef), tx.get(visitorRef)]);
+    const [profile, visitor, history] = await Promise.all([tx.get(profileRef), tx.get(visitorRef), tx.get(historyRef)]);
     if (!profile.exists) throw new HttpsError('not-found', 'This public profile is unavailable.');
     if (visitor.exists) return { recorded: false, reason: 'already-counted-today' };
     tx.create(visitorRef, {
       creatorId, day, visitorHash: hash(viewerId), createdAt: FieldValue.serverTimestamp(),
       expireAt: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000),
     });
+    tx.set(historyRef, {
+      creatorId, visitorHash: hash(viewerId),
+      firstSeenAt: history.exists ? history.get('firstSeenAt') : FieldValue.serverTimestamp(),
+      lastSeenAt: FieldValue.serverTimestamp(), lastSeenDay: day,
+      expireAt: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000),
+    }, { merge: true });
     tx.set(dailyRef, {
       creatorId, day,
       uniqueProfileVisitors: FieldValue.increment(1),
+      newProfileVisitors: FieldValue.increment(history.exists ? 0 : 1),
+      returningProfileVisitors: FieldValue.increment(history.exists ? 1 : 0),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     return { recorded: true, day };
@@ -157,6 +166,8 @@ export const getCreatorAudienceAnalytics = onCall({ maxInstances: 10 }, async re
       netFollowerChange: Number.isSafeInteger(data.netFollowerChange) ? data.netFollowerChange : 0,
       followerCount: Number.isSafeInteger(data.followerCount) ? data.followerCount : null,
       uniqueProfileVisitors: safeCount(data.uniqueProfileVisitors),
+      newProfileVisitors: safeCount(data.newProfileVisitors),
+      returningProfileVisitors: safeCount(data.returningProfileVisitors),
     };
   });
   return {
@@ -168,6 +179,8 @@ export const getCreatorAudienceAnalytics = onCall({ maxInstances: 10 }, async re
       unfollows: total.unfollows + point.unfollows,
       netFollowerChange: total.netFollowerChange + point.netFollowerChange,
       uniqueProfileVisitors: total.uniqueProfileVisitors + point.uniqueProfileVisitors,
-    }), { follows: 0, unfollows: 0, netFollowerChange: 0, uniqueProfileVisitors: 0 }),
+      newProfileVisitors: total.newProfileVisitors + point.newProfileVisitors,
+      returningProfileVisitors: total.returningProfileVisitors + point.returningProfileVisitors,
+    }), { follows: 0, unfollows: 0, netFollowerChange: 0, uniqueProfileVisitors: 0, newProfileVisitors: 0, returningProfileVisitors: 0 }),
   };
 });
