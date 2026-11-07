@@ -83,12 +83,13 @@ test('two emulator accounts retain separate identities and exercise public socia
     assert.ok(searchResults.docs.some((profileDoc) => profileDoc.id === bob.uid));
     await assert.rejects(getDoc(doc(db, 'users', bob.uid)), isPermissionDenied);
 
-    await setDoc(followRef, {
+    // Follow edges are backend-owned; direct client writes must fail closed.
+    await assert.rejects(setDoc(followRef, {
       followerId: alice.uid,
       followingId: bob.uid,
       createdAt: serverTimestamp(),
-    });
-    assert.equal((await getDoc(followRef)).exists(), true);
+    }), isPermissionDenied);
+    assert.equal((await getDoc(followRef)).exists(), false);
 
     await setDoc(postRef, {
       id: postId,
@@ -125,7 +126,7 @@ test('two emulator accounts retain separate identities and exercise public socia
     await login(bob);
     await setDoc(bobBookmarkRef, { postId, createdAt: serverTimestamp() });
     assert.equal((await getDoc(bobBookmarkRef)).exists(), true);
-    assert.equal((await getDoc(followRef)).exists(), true);
+    assert.equal((await getDoc(followRef)).exists(), false);
     assert.equal((await getDoc(doc(db, 'chats', chatId))).exists(), true);
     assert.equal((await getDoc(doc(db, `chats/${chatId}/messages`, 'alice-message'))).exists(), true);
     assert.equal((await getDocs(query(collection(db, 'posts'), where('audience', '==', 'public'))))
@@ -173,7 +174,7 @@ test('two emulator accounts retain separate identities and exercise public socia
     assert.equal((await getDoc(doc(db, `chats/${chatId}/messages`, 'bob-message'))).exists(), true);
     await assert.rejects(getDoc(bobBookmarkRef), isPermissionDenied);
     await updateDoc(doc(db, `chats/${chatId}/messages`, 'bob-message'), { status: 'read' });
-    await deleteDoc(followRef);
+    await assert.rejects(deleteDoc(followRef), isPermissionDenied);
     const remainingOutgoingFollows = await getDocs(query(collection(db, 'follows'), where('followerId', '==', alice.uid)));
     assert.equal(remainingOutgoingFollows.docs.some((followDoc) => followDoc.id === followRef.id), false);
 
@@ -186,7 +187,7 @@ test('two emulator accounts retain separate identities and exercise public socia
     const aliceCredential = await signInWithEmailAndPassword(auth, alice.email, testPassword).catch(() => null);
     if (aliceCredential) {
       await deleteDoc(postRef).catch(() => undefined);
-      await deleteDoc(followRef).catch(() => undefined);
+      // Follow edges are backend-owned; client cleanup is intentionally denied.
       await deleteDoc(doc(db, `chats/${chatId}/messages`, 'alice-message')).catch(() => undefined);
     }
     await signOut(auth).catch(() => undefined);

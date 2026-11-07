@@ -108,6 +108,15 @@ A workstream is not complete because a screen exists. It must have:
 
 ## Current implementation status
 
+### Delivered in the Creator Intelligence branch
+- Routed follow/unfollow actions through a trusted callable transaction that owns the canonical relationship edge and atomically updates public/private follower counters plus daily creator growth records.
+- Made repeated follow/unfollow requests idempotent by comparing the requested state with the canonical relationship document inside the transaction. Client writes to follow edges and analytics records are denied.
+- Preserved existing Page follows through the same trusted transaction, including Page follower totals.
+- Added authenticated profile-visit recording, deduplicated to one visitor signal per creator per UTC day; a 90-day hashed visitor history distinguishes new from returning profile visitors, with automatic expiry.
+- Added a creator-only analytics callable and a 7-day / 30-day Audience Growth dashboard alongside the existing evidence-based video watch-time insights.
+- Added Firestore indexes, TTL policies, default-deny rules and emulator tests for audience aggregates, counter ownership, Page follow compatibility and visitor cohort deduplication.
+- Returning-visitor metrics describe profile visits within that 90-day history window, not returning video viewers or the entire audience. Historical follower events are not backfilled. Traffic source, device, geography and frame-level retention remain unavailable until trustworthy event sources exist.
+
 ### Delivered in the Creator Studio phase
 - Added owner-scoped reusable post templates to the existing Creator Dashboard. Creators can save a named caption, format and hashtag structure, apply it to a fresh draft, and delete their own templates.
 - Template reads and writes use authenticated callable Functions; clients cannot write the template collection directly.

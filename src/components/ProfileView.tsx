@@ -4,6 +4,7 @@ import VohIcon from './VohIcon';
 import ShareSheet from './ShareSheet';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
+import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
@@ -291,6 +292,13 @@ export default function ProfileView({
       }
     }
   };
+
+  useEffect(() => {
+    if (!isLoggedIn || isOwnProfile || !currentUser.id) return;
+    void recordCreatorProfileVisit(currentUser.id).catch(() => {
+      // Profile browsing remains available when analytics is offline.
+    });
+  }, [currentUser.id, isLoggedIn, isOwnProfile]);
 
   useEffect(() => {
     setIsLoadingProfile(true);
