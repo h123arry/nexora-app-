@@ -25,8 +25,8 @@ export function assessGiftRisk(input: GiftRiskInput): GiftRiskAssessment {
   if (input.senderGrossNex10m >= 10000) { score += 15; reasons.push('sender_spend_elevated'); }
   if (input.giftGrossNex >= 25000) { score += 15; reasons.push('high_value_gift'); }
   if (input.senderAccountAgeDays !== null && input.senderAccountAgeDays < 7) { score += 15; reasons.push('new_sender_account'); }
-  if (input.senderRestricted) { score += 50; reasons.push('sender_restricted'); }
-  if (input.recipientRestricted) { score += 50; reasons.push('recipient_restricted'); }
+  if (input.senderRestricted) { score += 60; reasons.push('sender_restricted'); }
+  if (input.recipientRestricted) { score += 60; reasons.push('recipient_restricted'); }
   score = Math.min(100, score);
   return { score, tier: score >= 60 ? 'high' : score >= 30 ? 'review' : 'low', reasons };
 }
