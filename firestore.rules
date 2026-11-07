@@ -661,6 +661,7 @@ service cloud.firestore {
     match /creatorAudienceEventReceipts/{eventId} { allow read, write: if false; }
     match /creatorFollowProjections/{edgeId} { allow read, write: if false; }
     match /creatorProfileDailyVisitors/{visitorId} { allow read, write: if false; }
+    match /creatorProfileVisitorHistory/{visitorId} { allow read, write: if false; }
 
     match /activities/{activityId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
