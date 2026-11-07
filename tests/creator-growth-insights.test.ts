@@ -16,7 +16,7 @@ test('derives bounded watch-time and consistency insights from server aggregates
   assert.equal(result[0].value, '8.5 min');
   assert.equal(result[1].value, '3/4 days');
   assert.equal(result[2].id, 'momentum');
-  assert.match(result[2].value, /^\\+/);
+  assert.match(result[2].value, /^\+/);
 });
 
 test('ignores malformed dates and clamps invalid aggregate counts', () => {
