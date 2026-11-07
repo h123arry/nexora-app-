@@ -185,29 +185,15 @@
       ]
     },
     {
-      "collectionGroup": "creatorEarnings",
+      "collectionGroup": "creatorStudioTemplates",
       "queryScope": "COLLECTION",
       "fields": [
         {
-          "fieldPath": "creatorId",
+          "fieldPath": "ownerId",
           "order": "ASCENDING"
         },
         {
-          "fieldPath": "createdAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "creatorEarnings",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "status",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAt",
+          "fieldPath": "updatedAt",
           "order": "DESCENDING"
         }
       ]
