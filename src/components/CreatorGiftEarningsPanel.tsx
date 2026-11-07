@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, ArrowDownToLine, Gift, RefreshCw, Wallet, TrendingUp, ShieldCheck } from 'lucide-react';
+import { AlertCircle, Gift, RefreshCw, Wallet, TrendingUp, ShieldCheck } from 'lucide-react';
 import { getCreatorEarningsSnapshot, type CreatorEarningsSnapshot } from '../services/creatorEarningsService';
 
 function formatNex(value: number): string {
@@ -51,17 +51,17 @@ export default function CreatorGiftEarningsPanel() {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <article className="rounded-2xl border border-violet-300/20 bg-[linear-gradient(145deg,rgba(91,33,182,.22),rgba(10,7,31,.85))] p-4">
           <div className="flex items-center gap-2 text-xs text-violet-200"><Wallet size={15} /> Available NEX wallet</div>
-          <p className="mt-3 text-2xl font-black tabular-nums text-white">{loading ? '—' : formatNex(snapshot?.walletAvailableNex ?? 0)} <span className="text-xs text-violet-200">NEX</span></p>
+          <p className="mt-3 text-2xl font-black tabular-nums text-white">{loading ? '—' : snapshot ? formatNex(snapshot.walletAvailableNex) : '—'} <span className="text-xs text-violet-200">NEX</span></p>
           <p className="mt-1 text-[10px] text-slate-400">Your current internal wallet balance</p>
         </article>
         <article className="rounded-2xl border border-white/10 bg-[#100d20] p-4">
           <div className="flex items-center gap-2 text-xs text-slate-300"><Gift size={15} /> Pending gift review</div>
-          <p className="mt-3 text-2xl font-black tabular-nums text-white">{loading ? '—' : formatNex(snapshot?.pendingReviewGrossNex ?? 0)} <span className="text-xs text-slate-400">NEX</span></p>
+          <p className="mt-3 text-2xl font-black tabular-nums text-white">{loading ? '—' : snapshot ? formatNex(snapshot.pendingReviewGrossNex) : '—'} <span className="text-xs text-slate-400">NEX</span></p>
           <p className="mt-1 text-[10px] text-slate-500">Held in escrow, not yet spendable</p>
         </article>
         <article className="rounded-2xl border border-white/10 bg-[#100d20] p-4">
           <div className="flex items-center gap-2 text-xs text-slate-300"><TrendingUp size={15} /> Recent creator share</div>
-          <p className="mt-3 text-2xl font-black tabular-nums text-white">{loading ? '—' : formatNex(snapshot?.recentCreatorShareNex ?? 0)} <span className="text-xs text-slate-400">NEX</span></p>
+          <p className="mt-3 text-2xl font-black tabular-nums text-white">{loading ? '—' : snapshot ? formatNex(snapshot.recentCreatorShareNex) : '—'} <span className="text-xs text-slate-400">NEX</span></p>
           <p className="mt-1 text-[10px] text-slate-500">Settled share in the latest 100 gift records</p>
         </article>
       </div>
