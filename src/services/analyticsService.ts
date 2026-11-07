@@ -7,7 +7,7 @@ export const CLIENT_ANALYTICS_EVENTS = [
   'search_started', 'search_completed', 'search_result_selected', 'conversation_opened',
   'message_submission_attempt', 'message_send_failure', 'creator_profile_visit',
   'creator_analytics_opened', 'feature_used', 'onboarding_milestone', 'reconnect',
-  'video_watch_progress', 'video_completed',
+  'video_watch_progress', 'video_completed', 'video_replayed',
 ] as const;
 
 export type ClientAnalyticsEvent = typeof CLIENT_ANALYTICS_EVENTS[number];
