@@ -271,7 +271,7 @@ export async function createAcademyMentorshipSession(db: Firestore, uid: string,
 }
 
 export async function listUpcomingAcademyMentorshipSessions(db: Firestore, now = new Date()) {
-  const snapshot = await db.collection('academyMentorshipSessions').where('status', '==', 'scheduled').limit(100).get();
+  const snapshot = await db.collection('academyMentorshipSessions').where('status', '==', 'scheduled').limit(50).get();
   const upcoming = snapshot.docs.map(session => {
     const startValue = session.get('startsAt');
     const startsAt = startValue?.toDate?.() instanceof Date ? startValue.toDate() : startValue instanceof Date ? startValue : null;
@@ -290,7 +290,11 @@ export async function listUpcomingAcademyMentorshipSessions(db: Firestore, now =
     };
   }).filter(session => session.startsAt && new Date(session.startsAt) > now && session.seatsAvailable > 0)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-  return { sessions: upcoming, truncated: snapshot.size === 100 };
+  const sessions = await Promise.all(upcoming.map(async session => {
+    const profile = session.mentorId ? await db.collection('publicProfiles').doc(session.mentorId).get() : null;
+    return { ...session, mentorName: String(profile?.get('name') || profile?.get('username') || 'NEXORA Academy mentor'), mentorUsername: String(profile?.get('username') || '') };
+  }));
+  return { sessions, truncated: snapshot.size === 50 };
 }
 
 export async function bookAcademyMentorshipSession(db: Firestore, uid: string, sessionId: string) {
