@@ -12,7 +12,7 @@ type DirectoryCursor = { version: 1; term: string; after: Record<QueryKey, strin
 function normalizeQuery(value: unknown): string {
   if (typeof value !== 'string') throw new Error('Enter a search term.');
   const normalized = value.normalize('NFKC').trim().toLocaleLowerCase();
-  if (normalized.length < 2 || normalized.length > 40 || /[\\u0000-\\u001f]/.test(normalized)) {
+  if (normalized.length < 2 || normalized.length > 40 || /[\u0000-\u001f]/.test(normalized)) {
     throw new Error('Search terms must be between 2 and 40 characters.');
   }
   return normalized;
@@ -69,9 +69,9 @@ export async function searchPublicDirectory(
   if (!viewerUid) throw new Error('Sign in to search NEXORA.');
   const term = normalizeQuery(rawQuery);
   const cursor = decodeCursor(rawCursor, term);
-  const prefixEnd = term + '\\uf8ff';
+  const prefixEnd = term + '\uf8ff';
   const titlePrefix = term.charAt(0).toLocaleUpperCase() + term.slice(1);
-  const titlePrefixEnd = titlePrefix + '\\uf8ff';
+  const titlePrefixEnd = titlePrefix + '\uf8ff';
 
   const queryPage = async (collection: 'users' | 'pages' | 'communities', field: string, start: string, end: string, key: QueryKey) => {
     let query = db.collection(collection).orderBy(field).startAt(start).endAt(end).limit(QUERY_LIMIT + 1);
