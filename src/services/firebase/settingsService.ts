@@ -6,7 +6,7 @@ import {
   runTransaction,
 } from 'firebase/firestore';
 import { db, auth } from './config';
-import { buildFeedSettingsPatch, type FeedPreferences } from '../discovery/feedPreferences';
+import { buildFeedSettingsPatch, normalizeRecommendationSignals, type FeedPreferences } from '../discovery/feedPreferences';
 import { normalizeChatPreferences, type ChatPreferences } from '../messaging/chatPreferences';
 
 export interface NexoraSettings {
@@ -80,6 +80,7 @@ export const DEFAULT_SETTINGS: NexoraSettings = {
     mutedCreatorIds: [],
     hiddenPostIds: [],
     seenPostIds: [],
+    recommendationSignals: { tags: {}, creators: {}, communities: {} },
   },
   security: {
     twoFactorEnabled: false,
@@ -110,6 +111,7 @@ function mergeSettings(data: Partial<NexoraSettings>): NexoraSettings {
       mutedCreatorIds: boundedStrings(feed.mutedCreatorIds),
       hiddenPostIds: boundedStrings(feed.hiddenPostIds),
       seenPostIds: boundedStrings(feed.seenPostIds),
+      recommendationSignals: normalizeRecommendationSignals(feed.recommendationSignals),
     },
     security: { ...DEFAULT_SETTINGS.security, ...(data.security || {}) },
     messaging: normalizeChatPreferences(data.messaging as Partial<ChatPreferences> | undefined),
@@ -180,6 +182,7 @@ export class SettingsService {
         mutedCreatorIds: boundedStrings(updates.mutedCreatorIds ?? current.feed.mutedCreatorIds),
         hiddenPostIds: boundedStrings(updates.hiddenPostIds ?? current.feed.hiddenPostIds),
         seenPostIds: boundedStrings(updates.seenPostIds ?? current.feed.seenPostIds),
+        recommendationSignals: normalizeRecommendationSignals(updates.recommendationSignals ?? current.feed.recommendationSignals),
       };
       // Merge only the feed namespace. Writing DEFAULT_SETTINGS here would silently
       // reset existing privacy, notification, appearance, content, and security choices.
