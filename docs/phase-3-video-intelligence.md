@@ -25,6 +25,9 @@ Watch-history records and session view-deduplication keys are scoped to the acti
 ### Playback reliability
 Playback position persistence uses a bounded hashed key rather than embedding the complete media URL in a local-storage key. Storage failures no longer prevent playback, old position keys remain readable for continuity, and saved positions are restored only when duration metadata is valid.
 
+### Idempotent media finalization
+PR #58 adds a transaction around finalized-object state changes. Duplicate Storage events can no longer overwrite a later `processing` or `ready` state, and a reused media ID cannot change the owner of an existing asset. Only a new asset or the same owner's `pending_upload` record can advance through this verifier. The worker still records `uploaded`, not `ready`, until a real processor is configured.
+
 ## Explicit remaining production gates
 
 The following are not represented as completed:
