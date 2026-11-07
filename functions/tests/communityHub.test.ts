@@ -56,6 +56,7 @@ describe('Circle community feed and trusted insights', () => {
     assert.equal(insights.pollsCreated, 1);
     assert.equal(insights.pollVotes, 5);
     assert.equal(insights.announcementsPublished, 1);
+    assert.equal(insights.postsPublished, 1);
     await assert.rejects(getCommunityInsightsForUser(db, 'hub-member', 'hub-circle', now), error => error?.code === 'permission-denied');
     await assert.rejects(getCommunityInsightsForUser(db, 'hub-owner', 'missing-circle', now), error => error?.code === 'permission-denied');
   });
