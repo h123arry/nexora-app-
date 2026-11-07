@@ -13,6 +13,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, Folder
 import { motion, AnimatePresence } from 'motion/react';
 import { recordReelSignal } from '../services/reels/reelsRanking';
 import { getCreditedWatchDelta } from '../utils/watchTimePolicy';
+import { trackClientObservation } from '../services/analyticsService';
 
 interface Post {
   id: string;
@@ -447,6 +448,16 @@ export default function NexoraVideoPlayer({
       if (creditedWatchSecondsRef.current - lastWatchSignalWriteRef.current >= 5) {
         lastWatchSignalWriteRef.current = creditedWatchSecondsRef.current;
         recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
+        trackClientObservation({
+          eventType: 'video_watch_progress',
+          eventId: `${post.id}:watch:${Math.floor(creditedWatchSecondsRef.current / 5)}:${Date.now()}`,
+          entityType: 'post',
+          entityId: post.id,
+          properties: {
+            watchedSeconds: Math.floor(creditedWatchSecondsRef.current),
+            durationSeconds: Number.isFinite(duration) ? Math.floor(duration) : 0,
+          },
+        });
       }
     }
 
@@ -475,6 +486,16 @@ export default function NexoraVideoPlayer({
       if (!watchCompletedRef.current) {
         watchCompletedRef.current = true;
         recordRecommendationEvent('watch_complete', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
+        trackClientObservation({
+          eventType: 'video_completed',
+          eventId: `${post.id}:complete:${Date.now()}`,
+          entityType: 'post',
+          entityId: post.id,
+          properties: {
+            watchedSeconds: Math.floor(creditedWatchSecondsRef.current),
+            durationSeconds: Math.floor(duration),
+          },
+        });
         recordReelSignal(post.id, { completed: true, watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
       }
     }
