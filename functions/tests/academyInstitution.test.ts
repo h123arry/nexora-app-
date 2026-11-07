@@ -85,6 +85,7 @@ describe('NEXORA Institute institution services', () => {
     ]);
     assert.equal(cert.certificateId, concurrentDuplicate.certificateId);
     assert.equal(cert.verificationCode, concurrentDuplicate.verificationCode);
+    assert.match(cert.verificationCode, /^[A-F0-9]{36}$/);
     assert.equal((await verifyAcademyCertificate(db, cert.verificationCode)).valid, true);
     const duplicate = await issueAcademyCertificate(db, 'learner-one', courseId, assessmentId);
     assert.equal(duplicate.certificateId, cert.certificateId);
