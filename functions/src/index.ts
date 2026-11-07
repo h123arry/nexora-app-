@@ -23,6 +23,8 @@ export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPo
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
+export { createCommunityPost } from './communityPosts.js';
+export { getCommunityInsights } from './communityAnalytics.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
@@ -33,9 +35,9 @@ export { cleanupExpiredStories } from './storyCleanup.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
 import {
   saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
-  getPublishedAcademyCourse, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
+  getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
   issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
-  createAcademyMentorshipSession, bookAcademyMentorshipSession,
+  createAcademyMentorshipSession, listUpcomingAcademyMentorshipSessions, bookAcademyMentorshipSession,
 } from './academyInstitution.js';
 
 
@@ -394,6 +396,11 @@ export const academyGetPublishedCourse = onCall({ maxInstances: 10 }, async requ
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to access the Academy.');
   try { return await getPublishedAcademyCourse(adminDb, request.data?.courseId); } catch (error) { throw academyFailure(error); }
 });
+
+export const academyListPublishedCourses = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to browse the Academy.');
+  try { return await listPublishedAcademyCourses(adminDb); } catch (error) { throw academyFailure(error); }
+});
 export const academyCreateAssessment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create an Academy assessment.');
   try { return await createAcademyAssessment(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
@@ -425,6 +432,11 @@ export const academyCreateMentorshipSession = onCall({ maxInstances: 10 }, async
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to host an Academy session.');
   try { return await createAcademyMentorshipSession(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
 });
+export const academyListMentorshipSessions = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to browse Academy mentorship sessions.');
+  try { return await listUpcomingAcademyMentorshipSessions(adminDb); } catch (error) { throw academyFailure(error); }
+});
+
 export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to book an Academy session.');
   try { return await bookAcademyMentorshipSession(adminDb, request.auth.uid, request.data?.sessionId); } catch (error) { throw academyFailure(error); }
