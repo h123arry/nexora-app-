@@ -1,7 +1,7 @@
 import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { applyAdminAccountAction } from '../src/adminUsers.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-admin-users';
@@ -20,6 +20,8 @@ before(async () => {
     reputationBreakdown: { contributions: 100, helpfulness: 50, missionsCompleted: 50, skillsVerified: 50 },
   });
   await db.doc('users/founder-protected').set({ id: 'founder-protected', username: 'voh', role: 'founder', reputationPoints: 999 });
+  await db.doc('users/moderated-target').set({ id: 'moderated-target', username: 'moderated', role: 'user', isBanned: false, isSuspended: false });
+  await db.doc('accountStatus/moderated-target').set({ postingRestricted: true, messagingRestricted: true, giftingRestricted: false, expiresAt: Timestamp.fromMillis(Date.now() + 60_000), source: 'moderation-enforcement' });
 });
 
 after(async () => {
@@ -53,6 +55,19 @@ describe('trusted admin account actions', () => {
     assert.equal(status.get('suspended'), false);
     assert.equal(status.get('postingRestricted'), false);
     assert.equal((await db.collection('adminAuditEvents').get()).size, 4);
+  });
+
+  it('preserves independent moderation restrictions when an admin ban is lifted', async () => {
+    const before = await db.doc('accountStatus/moderated-target').get();
+    const expiry = before.get('expiresAt').toMillis();
+    await applyAdminAccountAction(db, 'admin-1', 'moderated-target', 'ban', true);
+    await applyAdminAccountAction(db, 'admin-1', 'moderated-target', 'ban', false);
+    const status = await db.doc('accountStatus/moderated-target').get();
+    assert.equal(status.get('banned'), false);
+    assert.equal(status.get('postingRestricted'), true);
+    assert.equal(status.get('messagingRestricted'), true);
+    assert.equal(status.get('giftingRestricted'), false);
+    assert.equal(status.get('expiresAt').toMillis(), expiry);
   });
 
   it('resets reputation through a trusted transaction and protects the founder account', async () => {
