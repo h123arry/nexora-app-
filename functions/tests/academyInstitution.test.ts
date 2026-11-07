@@ -80,6 +80,7 @@ describe('NEXORA Institute institution services', () => {
     const passed = await submitAcademyAssessment(db, 'learner-one', courseId, assessmentId, [0, 1, 1]);
     assert.equal(passed.passed, true);
     const cert = await issueAcademyCertificate(db, 'learner-one', courseId, assessmentId);
+    assert.match(cert.verificationCode, /^[A-F0-9]{24,64}$/);
     assert.equal((await verifyAcademyCertificate(db, cert.verificationCode)).valid, true);
     const duplicate = await issueAcademyCertificate(db, 'learner-one', courseId, assessmentId);
     assert.equal(duplicate.certificateId, cert.certificateId);
