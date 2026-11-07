@@ -1,5 +1,12 @@
-// Nexora Premium Video Playback Engine
-// Orchestrates predictive preloading, memory-aware caching, adaptive quality emulation, and layout transitions.
+// Coordinates the single active player, bounded preloads, playback positions and mute state.
+
+function positionStorageKey(url: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < url.length; index += 1) {
+    hash = Math.imul(hash ^ url.charCodeAt(index), 16777619);
+  }
+  return `nexora_vid_pos_v2_${(hash >>> 0).toString(36)}`;
+}
 
 export type PlayerCallback = {
   pause: () => void;
@@ -18,13 +25,13 @@ class VideoPlaybackManager {
   private preloadElements = new Map<string, HTMLVideoElement>();
   private MAX_PRELOAD_COUNT = 3; // Keep a maximum of 3 preloaded videos to prevent memory leaks
 
-  // Adaptive Quality Selection
-  private networkRTT: number = 100; // Estimated RTT
-  private currentQuality: 'high' | 'medium' | 'low' = 'high';
-
   // Persistent mute state synced with localStorage
   private globalMuted: boolean = (() => {
-    return localStorage.getItem('nexora_video_muted') !== 'false';
+    try {
+      return typeof localStorage === 'undefined' || localStorage.getItem('nexora_video_muted') !== 'false';
+    } catch {
+      return true;
+    }
   })();
 
   constructor() {
@@ -43,30 +50,7 @@ class VideoPlaybackManager {
         this.pauseAll();
       });
 
-      // Measure network speed if Network Information API is available
-      const conn = (navigator as any).connection;
-      if (conn) {
-        this.networkRTT = conn.rtt || 100;
-        this.adjustAdaptiveQuality(conn.downlink || 10);
-        conn.addEventListener('change', () => {
-          this.adjustAdaptiveQuality(conn.downlink || 10);
-        });
-      }
     }
-  }
-
-  /**
-   * Adjusts video quality dynamically based on network state
-   */
-  private adjustAdaptiveQuality(downlinkMbps: number) {
-    if (downlinkMbps < 1.5) {
-      this.currentQuality = 'low';
-    } else if (downlinkMbps < 5.0) {
-      this.currentQuality = 'medium';
-    } else {
-      this.currentQuality = 'high';
-    }
-    // Quality management logic
   }
 
   /**
@@ -123,8 +107,9 @@ class VideoPlaybackManager {
    */
   public preloadVideo(url: string) {
     if (!url || typeof document === 'undefined') return;
-    const connection = (navigator as any).connection;
-    if (connection?.saveData || ['slow-2g', '2g'].includes(connection?.effectiveType)) return;
+    const connection = typeof navigator !== 'undefined' ? (navigator as any).connection : undefined;
+    if (connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType)) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const resolvedUrl = this.getAdaptiveUrl(url);
 
     if (this.preloadElements.has(resolvedUrl)) return; // Already cached/preloading
@@ -151,7 +136,6 @@ class VideoPlaybackManager {
       hiddenVid.load(); // Warm up the buffer
 
       this.preloadElements.set(resolvedUrl, hiddenVid);
-      console.log(`[VideoPlaybackManager] Predictively preloading ${resolvedUrl}...`);
     } catch (e) {
       // Preload failed
     }
@@ -171,7 +155,7 @@ class VideoPlaybackManager {
     }
 
     // Guard: Prevent trying to play a video element with no source
-    if (!videoElement.src || videoElement.src === window.location.href || videoElement.src.trim() === '') {
+    if (!videoElement.src || (typeof window !== 'undefined' && videoElement.src === window.location.href) || videoElement.src.trim() === '') {
       return false;
     }
 
@@ -195,7 +179,7 @@ class VideoPlaybackManager {
     // Retrieve and restore saved position if any
     const savedPos = this.getPosition(url);
     if (savedPos > 0 && Math.abs(videoElement.currentTime - savedPos) > 1.0) {
-      if (savedPos < videoElement.duration - 2) {
+      if (Number.isFinite(videoElement.duration) && videoElement.duration > 0 && savedPos < videoElement.duration - 2) {
         videoElement.currentTime = savedPos;
       }
     }
@@ -298,8 +282,13 @@ class VideoPlaybackManager {
    */
   public savePosition(url: string, position: number) {
     if (!url) return;
+    if (!Number.isFinite(position) || position < 0) return;
     this.playbackPositions.set(url, position);
-    localStorage.setItem(`nexora_vid_pos_${url}`, String(position));
+    try {
+      localStorage.setItem(positionStorageKey(url), String(position));
+    } catch {
+      // Playback continues even when storage is unavailable or full.
+    }
   }
 
   /**
@@ -310,10 +299,15 @@ class VideoPlaybackManager {
     if (this.playbackPositions.has(url)) {
       return this.playbackPositions.get(url)!;
     }
-    const saved = localStorage.getItem(`nexora_vid_pos_${url}`);
-    if (saved) {
-      const parsed = parseFloat(saved);
-      return isNaN(parsed) ? 0 : parsed;
+    try {
+      const saved = localStorage.getItem(positionStorageKey(url))
+        ?? localStorage.getItem(`nexora_vid_pos_${url}`);
+      if (saved) {
+        const parsed = Number.parseFloat(saved);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+      }
+    } catch {
+      return 0;
     }
     return 0;
   }
@@ -323,7 +317,11 @@ class VideoPlaybackManager {
    */
   public setMute(muted: boolean) {
     this.globalMuted = muted;
-    localStorage.setItem('nexora_video_muted', muted ? 'true' : 'false');
+    try {
+      localStorage.setItem('nexora_video_muted', muted ? 'true' : 'false');
+    } catch {
+      // Mute state remains active in memory for this session.
+    }
     
     if (this.activeVideoElement) {
       this.activeVideoElement.muted = muted;
