@@ -34,7 +34,7 @@ export { cleanupExpiredStories } from './storyCleanup.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
 import {
   saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
-  getPublishedAcademyCourse, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
+  getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
   issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
   createAcademyMentorshipSession, bookAcademyMentorshipSession,
 } from './academyInstitution.js';
@@ -394,6 +394,11 @@ export const academyReviewCourse = onCall({ maxInstances: 10 }, async request =>
 export const academyGetPublishedCourse = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to access the Academy.');
   try { return await getPublishedAcademyCourse(adminDb, request.data?.courseId); } catch (error) { throw academyFailure(error); }
+});
+
+export const academyListPublishedCourses = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to browse the Academy.');
+  try { return await listPublishedAcademyCourses(adminDb); } catch (error) { throw academyFailure(error); }
 });
 export const academyCreateAssessment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create an Academy assessment.');
