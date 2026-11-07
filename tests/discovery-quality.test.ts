@@ -6,7 +6,7 @@ import {
   normalizeSearchText,
   scoreSearchTerms,
 } from '../src/services/discovery/discoveryQuality';
-import { rankPosts, rankTrendingTopics } from '../src/services/discovery/discoveryService';
+import { rankPosts, rankTrendingTopics, recommendCreators } from '../src/services/discovery/discoveryService';
 
 test('engagement signals are finite, non-negative and capped against lifetime-count dominance', () => {
   const normal = boundedEngagementScore({ likes: 100, comments: 10, shares: 5, saves: 2 });
@@ -69,4 +69,19 @@ test('trending engagement is freshness-weighted and capped per creator contribut
   assert.equal(normalTrend?.postCount, 5);
   assert.equal(normalTrend?.creatorCount, 2);
   assert.equal(manipulatedTrend?.engagement, normalTrend?.engagement);
+});
+
+test('creator recommendations interleave shared-interest groups without dropping eligible creators', () => {
+  const creator = (id: string, interestDNA: Record<string, number>) => ({
+    id, username: id, name: id, followers: 100, isVerified: false,
+    isBanned: false, isSuspended: false, interestDNA,
+  }) as any;
+  const results = recommendCreators([
+    creator('ai-1', { ai: 100 }),
+    creator('ai-2', { ai: 90 }),
+    creator('ai-3', { ai: 80 }),
+    creator('design-1', { design: 30 }),
+  ], { viewerId: 'viewer', interests: { ai: 100, design: 30 }, limit: 4 });
+  assert.equal(results.length, 4);
+  assert.ok(results.slice(0, 3).some(item => item.sharedTopics.includes('design')));
 });
