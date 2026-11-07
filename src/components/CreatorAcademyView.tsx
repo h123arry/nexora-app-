@@ -8,7 +8,7 @@ import CreatorAcademyInstitutionTools from './CreatorAcademyInstitutionTools';
 
 type Lesson = { id: string; title: string; minutes?: number; summary: string; body?: string; transcript?: string; resourceUrls?: string[] };
 type Assessment = { id: string; passPercent: number; questions: Array<{ id: string; prompt: string; options: string[] }> };
-type Course = { id: string; title: string; level: string; category: string; description: string; lessons: Lesson[]; institutional?: boolean; lessonCount?: number };
+type Course = { id: string; title: string; level: string; category: string; description: string; lessons: Lesson[]; institutional?: boolean; lessonCount?: number; version?: number };
 
 const COURSES: Course[] = [
   { id: 'creator-foundations', title: 'The Creator Foundations', level: 'Beginner', category: 'Getting started', description: 'Build a clear creator identity, choose your audience and establish a sustainable publishing habit.', lessons: [
@@ -241,7 +241,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
           <div className="flex items-center gap-2 text-violet-300"><BookOpen size={17}/><span className="text-[10px] font-black uppercase tracking-[0.18em]">Course curriculum</span></div>
           <h3 className="mt-3 text-xl font-black">{activeCourse.title}</h3>
           <p className="mt-2 text-sm leading-6 text-white/55">{activeCourse.description}</p>
-          {activeCourse.institutional && <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-violet-300">Published institutional course · Version {activeCourse.lessonCount ? activeCourse.lessonCount : 1}</p>}
+          {activeCourse.institutional && <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-violet-300">Published institutional course · Version {activeCourse.version || 1}</p>}
           {detailLoading && <p className="mt-3 text-xs text-violet-200/60">Loading approved course lessons…</p>}
           <div className="mt-5 space-y-2">
             {displayLessons.map((lesson, index) => {
