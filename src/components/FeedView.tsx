@@ -517,7 +517,7 @@ export default function FeedView({
   });
   const feedPreferencesHydratedRef = useRef(false);
   const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(() => currentUser.id === 'guest_visitor_id');
-  const recommendationSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const recommendationSyncTimerRef = useRef<number | null>(null);
 
   // Local storage is an offline fallback only. Signed-in users hydrate the
   // authoritative feed controls from owner-scoped Firestore settings.
