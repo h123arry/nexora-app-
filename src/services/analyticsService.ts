@@ -42,7 +42,7 @@ function getSessionRef(): string {
   return sessionRef;
 }
 
-function isEnabled(): boolean {
+export function hasAnalyticsObservationConsent(): boolean {
   try {
     return window.localStorage.getItem(CONSENT_KEY) === 'true';
   } catch {
@@ -68,7 +68,7 @@ function boundedProperties(properties: Record<string, AnalyticsValue> | undefine
 }
 
 export function trackClientObservation(input: AnalyticsInput): void {
-  if (!isEnabled() || sentEventIds.size >= 200) return;
+  if (!hasAnalyticsObservationConsent() || sentEventIds.size >= 200) return;
   const eventId = input.eventId || `${input.eventType}:${input.entityType || ''}:${input.entityId || ''}:${Date.now()}`;
   if (sentEventIds.has(eventId)) return;
   sentEventIds.add(eventId);
