@@ -240,6 +240,47 @@ export const CommunityService = {
   },
 
 
+  watchPosts(
+    communityId: string,
+    currentUserId: string,
+    onPosts: (posts: Array<{ id: string; authorId: string; authorName: string; authorUsername: string; authorAvatar: string; content: string; createdAt: string }>) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    if (!communityId || !currentUserId || communityId.includes('/')) {
+      onError(new Error('Join this Circle to read its feed.'));
+      return () => undefined;
+    }
+    const postsQuery = query(
+      collection(db, 'communities', communityId, 'posts'),
+      orderBy('createdAt', 'desc'),
+      limit(50),
+    );
+    return onSnapshot(postsQuery, snapshot => {
+      const posts = snapshot.docs.map(post => {
+        const data = post.data();
+        const createdAt = data.createdAt?.toDate?.();
+        return {
+          id: post.id,
+          authorId: String(data.authorId || ''),
+          authorName: String(data.authorName || 'NEXORA member'),
+          authorUsername: String(data.authorUsername || ''),
+          authorAvatar: typeof data.authorAvatar === 'string' ? data.authorAvatar : '',
+          content: String(data.content || ''),
+          createdAt: createdAt instanceof Date ? createdAt.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Recently',
+        };
+      });
+      onPosts(posts);
+    }, error => onError(error));
+  },
+
+  async createPost(communityId: string, content: string): Promise<void> {
+    if (!communityId || communityId.includes('/') || typeof content !== 'string' || !content.trim() || content.trim().length > 3000) {
+      throw new Error('Posts must contain 1 to 3,000 characters.');
+    }
+    const publish = httpsCallable(functions, 'createCommunityPost');
+    await publish({ communityId, content });
+  },
+
   watchPolls(
     communityId: string,
     currentUserId: string,
