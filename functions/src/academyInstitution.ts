@@ -166,22 +166,31 @@ export async function submitAcademyAssessment(db: Firestore, uid: string, course
 
 export async function issueAcademyCertificate(db: Firestore, uid: string, courseId: string, assessmentId: string) {
   if (!safeId(courseId) || !safeId(assessmentId)) throw new Error('A valid course and assessment are required.');
-  const attempts = await db.collection('academyAssessmentAttempts')
-    .where('userId', '==', uid).where('courseId', '==', courseId)
-    .where('assessmentId', '==', assessmentId).where('passed', '==', true).limit(1).get();
-  if (attempts.empty) throw new Error('Pass the published Academy assessment before requesting a certificate.');
-  const course = await db.collection('academyCourses').doc(courseId).get();
-  if (!course.exists || course.get('status') !== 'published') throw new Error('This course is unavailable.');
   const certificateId = createHash('sha256').update(uid + ':' + courseId + ':' + assessmentId).digest('hex').slice(0, 32);
   const verificationCode = createHash('sha256').update(certificateId + ':' + uid + ':' + courseId).digest('hex').slice(0, 24).toUpperCase();
+  const courseRef = db.collection('academyCourses').doc(courseId);
   const certificateRef = db.collection('academyCertificates').doc(certificateId);
-  const existingCertificate = await certificateRef.get();
-  if (existingCertificate.exists && existingCertificate.get('status') === 'valid') return { certificateId, verificationCode, courseTitle: course.get('title') };
-  await certificateRef.create({
-    id: certificateId, verificationCode, userId: uid, courseId, courseTitle: course.get('title'),
-    assessmentId, status: 'valid', issuedAt: new Date(), issuer: 'NEXORA Institute', schemaVersion: 1,
+  return db.runTransaction(async tx => {
+    const attemptsQuery = db.collection('academyAssessmentAttempts')
+      .where('userId', '==', uid).where('courseId', '==', courseId)
+      .where('assessmentId', '==', assessmentId).where('passed', '==', true).limit(1);
+    const [attempts, course, existingCertificate] = await Promise.all([
+      tx.get(attemptsQuery), tx.get(courseRef), tx.get(certificateRef),
+    ]);
+    if (attempts.empty) throw new Error('Pass the published Academy assessment before requesting a certificate.');
+    if (!course.exists || course.get('status') !== 'published') throw new Error('This course is unavailable.');
+    if (existingCertificate.exists) {
+      if (existingCertificate.get('status') === 'valid') {
+        return { certificateId, verificationCode, courseTitle: course.get('title') };
+      }
+      throw new Error('A revoked Academy certificate cannot be reissued.');
+    }
+    tx.create(certificateRef, {
+      id: certificateId, verificationCode, userId: uid, courseId, courseTitle: course.get('title'),
+      assessmentId, status: 'valid', issuedAt: new Date(), issuer: 'NEXORA Institute', schemaVersion: 1,
+    });
+    return { certificateId, verificationCode, courseTitle: course.get('title') };
   });
-  return { certificateId, verificationCode, courseTitle: course.get('title') };
 }
 
 export async function verifyAcademyCertificate(db: Firestore, verificationCode: string) {
