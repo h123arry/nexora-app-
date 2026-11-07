@@ -95,19 +95,21 @@ export const creatorFollowDeleted = onDocumentDeleted('follows/{followId}', asyn
  * Counts one authenticated visitor per creator per UTC day. This is a
  * rate-limited profile-visit signal, not proof of a human reading the page.
  */
-export const recordCreatorProfileVisit = onCall({ maxInstances: 10 }, async request => {
-  const viewerId = request.auth?.uid;
-  const creatorId = request.data?.creatorId;
-  if (!viewerId) throw new HttpsError('unauthenticated', 'Sign in to record a profile visit.');
+export async function recordCreatorProfileVisitForUser(
+  store: Firestore,
+  viewerId: string,
+  creatorId: string,
+  now = new Date(),
+) {
+  if (!validUid(viewerId)) throw new HttpsError('unauthenticated', 'Sign in to record a profile visit.');
   if (!validUid(creatorId) || creatorId === viewerId) {
     throw new HttpsError('invalid-argument', 'A valid public creator profile is required.');
   }
-  const profileRef = db.collection('publicProfiles').doc(creatorId);
-  const now = Timestamp.now();
-  const day = dayKey(now.toDate());
-  const visitorRef = db.collection('creatorProfileDailyVisitors').doc(hash(creatorId + ':' + day + ':' + viewerId));
-  const dailyRef = db.collection('creatorAudienceDaily').doc(hash(creatorId + ':' + day));
-  return db.runTransaction(async tx => {
+  const profileRef = store.collection('publicProfiles').doc(creatorId);
+  const day = dayKey(now);
+  const visitorRef = store.collection('creatorProfileDailyVisitors').doc(hash(creatorId + ':' + day + ':' + viewerId));
+  const dailyRef = store.collection('creatorAudienceDaily').doc(hash(creatorId + ':' + day));
+  return store.runTransaction(async tx => {
     const [profile, visitor] = await Promise.all([tx.get(profileRef), tx.get(visitorRef)]);
     if (!profile.exists) throw new HttpsError('not-found', 'This public profile is unavailable.');
     if (visitor.exists) return { recorded: false, reason: 'already-counted-today' };
@@ -122,6 +124,12 @@ export const recordCreatorProfileVisit = onCall({ maxInstances: 10 }, async requ
     }, { merge: true });
     return { recorded: true, day };
   });
+}
+
+export const recordCreatorProfileVisit = onCall({ maxInstances: 10 }, async request => {
+  const viewerId = request.auth?.uid;
+  if (!viewerId) throw new HttpsError('unauthenticated', 'Sign in to record a profile visit.');
+  return recordCreatorProfileVisitForUser(db, viewerId, request.data?.creatorId);
 });
 
 export const getCreatorAudienceAnalytics = onCall({ maxInstances: 10 }, async request => {
