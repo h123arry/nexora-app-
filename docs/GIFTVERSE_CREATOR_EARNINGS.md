@@ -7,7 +7,7 @@ Phase 5.5 establishes the trusted settlement layer on top of the existing GIFTVE
 - Policy version: `gift-revenue-v1`
 - Creator share: 70% (7,000 basis points)
 - NEXORA platform share: 30% (3,000 basis points)
-- Split arithmetic uses integer NEX units. The creator receives the floored 70% share and the platform receives the remainder, so no fractional or unallocated NEX is created.
+- Split arithmetic uses integer NEX units. The creator receives the 70% share rounded to the nearest whole NEX unit (half-up); the platform receives the remainder. BigInt arithmetic avoids intermediate precision loss, and no fractional or unallocated NEX is created.
 - The policy version and both shares are persisted on every settlement. Changing the policy later must create a new version; historical settlements are never recalculated.
 
 ## Gift lifecycle
