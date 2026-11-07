@@ -36,7 +36,7 @@ export const getCreatorEarningsSnapshot = onCall({ maxInstances: 10 }, async (re
   const uid = requireUid(request);
   try {
     const [earnings, wallet] = await Promise.all([
-      db.collection('creatorEarnings').where('creatorId', '==', uid).limit(100).get(),
+      db.collection('creatorEarnings').where('creatorId', '==', uid).orderBy('createdAt', 'desc').limit(100).get(),
       db.collection('nexWallets').doc(uid).get(),
     ]);
     const records = earnings.docs.map(snapshot => {
