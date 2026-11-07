@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import {
-  FieldValue, Timestamp, type Firestore, getFirestore,
+  FieldValue, type Firestore, getFirestore,
 } from 'firebase-admin/firestore';
 import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
