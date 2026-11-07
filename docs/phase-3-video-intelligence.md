@@ -28,18 +28,27 @@ Playback position persistence uses a bounded hashed key rather than embedding th
 ### Idempotent media finalization
 PR #58 adds a transaction around finalized-object state changes. Duplicate Storage events can no longer overwrite a later `processing` or `ready` state, and a reused media ID cannot change the owner of an existing asset. Only a new asset or the same owner's `pending_upload` record can advance through this verifier. The worker still records `uploaded`, not `ready`, until a real processor is configured.
 
-## Explicit remaining production gates
+## Implemented production pipeline (PR #60)
 
-The following are not represented as completed:
+- `services/media-worker` is a Node 22 Cloud Run worker packaged with FFmpeg and Sharp. It validates the owner-scoped finalized Storage object and uses a Firestore processing token to prevent duplicate workers from overwriting a later state.
+- Video processing uses ffprobe to extract actual duration, dimensions, container and codec metadata; it generates available 360p, 720p and 1080p MP4 renditions, HLS VOD playlists/segments, and a poster frame.
+- Image processing strips orientation metadata and generates responsive WebP variants at bounded widths. Original uploads remain unchanged.
+- Generated objects use generation-scoped paths and immutable cache headers. `infra/media-cdn` provisions a HTTPS Cloud CDN backend bucket and a signed-URL key. The source bucket remains private; public bucket access is not a supported shortcut.
+- `recordVideoWatchHeartbeat` records authenticated sessions with server timestamps and bounded plausible forward-progress credit. `creatorVideoDaily` stores daily accepted watch seconds, sessions and daily unique viewers. The Creator Dashboard reads those aggregates and labels their limitations.
+- The watch-time policy has regression tests for seeks, rewinds, impossible progress and long heartbeat gaps.
 
-1. **Transcoding and adaptive renditions:** there is no configured transcoder/Cloud Run pipeline producing verified MP4 renditions or HLS/DASH manifests. The current URL resolver is pass-through, not adaptive streaming.
-2. **Thumbnail generation and media metadata:** no trusted worker currently extracts real duration, dimensions, poster frames or codec metadata.
-3. **Compression and CDN delivery:** no configured image/video transformation or CDN cache-invalidation lifecycle is verified.
-4. **Durable watch-time analytics:** the player submits bounded watch-progress and completion observations to the existing analytics ingestion function only when the user has enabled analytics observations. These are authenticated, deduplicated server records and enter daily event-type aggregates, but remain client-reported observations, not tamper-proof playback proof or a server-authoritative cross-device watch-time ledger. Reel ranking preferences remain viewer-scoped locally.
-5. **Creator retention analytics:** creator insights still rely on post counters; unique reach, average watch duration, completion rate, retention curves and traffic-source breakdowns are not yet supported by authoritative events.
-6. **Deployed media verification:** Storage trigger deployment, real upload/finalization, playback across devices and retry/cleanup behavior require the owner's staging Firebase project and real media tests.
+## External deployment and acceptance gates
 
-These gates require provider configuration and/or real deployed media infrastructure. The app must not show fake quality labels, fabricated thumbnails, invented duration values or unsupported creator metrics while those services are absent.
+The code and infrastructure definitions are committed, but the following owner-controlled deployment steps are still required before these systems can be called live:
+
+1. Deploy `services/media-worker` to Cloud Run with the correct private `MEDIA_BUCKET` and a least-privilege service identity.
+2. Configure Eventarc for `google.cloud.storage.object.v1.finalized`, with authenticated invocation and retry enabled.
+3. Apply `infra/media-cdn` using a real domain, DNS, a newly generated signing key stored in Secret Manager, and the private bucket's Cloud CDN origin permissions. Wire signed delivery into the app's playback URL resolver before enabling CDN playback.
+4. Deploy Firebase Functions and the new Firestore composite index to the dedicated staging project.
+5. Run real staging uploads for video and image assets; verify processing states, metadata, renditions, HLS segments, posters, CDN authorization, second-account playback, duplicate events, retry after failure and abandoned-job recovery.
+6. Confirm the creator dashboard populates from real sessions after deployment. Daily unique-viewer totals are not cross-day unique reach. Client playback position remains a signal, so accepted server-timed records are abuse-bounded observations, not cryptographic proof of human attention.
+
+Do not report live deployment or verified CDN playback until those checks pass. Do not show fake quality labels, fabricated thumbnails, invented duration values or unsupported creator metrics.
 
 ## Validation expectations
 
