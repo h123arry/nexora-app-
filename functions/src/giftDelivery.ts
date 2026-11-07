@@ -1,4 +1,4 @@
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { findNexoraGift } from './giftCatalogPolicy.js';
@@ -57,7 +57,7 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
         return { giftId: transactionId, replayed: true, status: 'delivered' as const };
       }
       if (!senderProfile.exists || !recipientProfile.exists) throw new HttpsError('not-found', 'The sender or creator account could not be found.');
-      const blocked = (snapshot: FirebaseFirestore.DocumentSnapshot) => {
+      const blocked = (snapshot: DocumentSnapshot) => {
         const status = snapshot.data() || {};
         return status.suspended === true || status.giftingRestricted === true;
       };

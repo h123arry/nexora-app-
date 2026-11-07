@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 export type GiftDeliveryContext = 'live' | 'profile';
 export interface GiftDeliveryInput {
   recipientId: string;
@@ -31,10 +33,6 @@ export function validateGiftDeliveryInput(value: unknown): GiftDeliveryInput {
   };
 }
 export function giftDeliveryReferences(senderId: string, key: string): { transactionId: string; requestId: string } {
-  // Stable references make retries safe without exposing user IDs in ledger document names.
-  const input = senderId + ':' + key;
-  let hash = 2166136261;
-  for (let i = 0; i < input.length; i += 1) hash = Math.imul(hash ^ input.charCodeAt(i), 16777619);
-  const suffix = (hash >>> 0).toString(16).padStart(8, '0') + input.length.toString(16);
-  return { transactionId: 'gift_' + suffix, requestId: 'gift_req_' + suffix };
+  const digest = createHash('sha256').update(senderId + ':' + key).digest('hex');
+  return { transactionId: 'gift_' + digest, requestId: 'gift_req_' + digest };
 }

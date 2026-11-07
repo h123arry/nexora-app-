@@ -707,16 +707,6 @@ service cloud.firestore {
     match /nexLedgerTransactions/{transactionId} { allow read, write: if false; }
     match /nexLedgerRequests/{requestId} { allow read, write: if false; }
 
-    // Live delivery events are server-created. Only live gift presentation data is public.
-    match /giftDeliveryEvents/{eventId} {
-      allow get, list: if resource.data.targetType == 'live';
-      allow create, update, delete: if false;
-    }
-    match /users/{userId}/giftGallery/{giftId} {
-      allow get, list: if signedIn() && request.auth.uid == userId;
-      allow create, update, delete: if false;
-    }
-
     match /pages/{pageId} {
       allow get, list: if true;
       allow create: if signedIn()
