@@ -108,6 +108,14 @@ A workstream is not complete because a screen exists. It must have:
 
 ## Current implementation status
 
+### Delivered in the Creator Intelligence branch
+- Added server-side reconciliation of follow/unfollow relationship edges into daily creator audience records. Follow/unfollow changes update private and public profile counters through trusted Functions, not client-authored analytics fields.
+- Added idempotent event receipts and a server-owned relationship projection so duplicate trigger delivery does not double-count changes and stale create events do not resurrect removed follows.
+- Added authenticated profile-visit recording, deduplicated to one visitor signal per creator per UTC day.
+- Added a creator-only callable analytics endpoint and a seven-day / 30-day Audience Growth dashboard with follows, unfollows, net follower change and authenticated unique profile visitors.
+- Added Firestore indexes and explicit client-deny rules for audience aggregates, event receipts, follow projections and visitor hashes.
+- Historical follower events are not backfilled. Profile visits are authenticated, rate-limited signals and do not prove human attention. Traffic source, device, geography, returning-audience cohorts and frame-level retention remain unavailable until trustworthy event sources exist.
+
 ### Delivered in the Creator Studio phase
 - Added owner-scoped reusable post templates to the existing Creator Dashboard. Creators can save a named caption, format and hashtag structure, apply it to a fresh draft, and delete their own templates.
 - Template reads and writes use authenticated callable Functions; clients cannot write the template collection directly.
