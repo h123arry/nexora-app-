@@ -2233,6 +2233,7 @@ export default function App() {
                   {activeTab === 'profile' && (
                     <ProfileView
                       currentUser={getRichUser(viewedUser || currentUser)}
+                      isLoggedIn={isLoggedIn}
                       posts={resolvedPosts}
                       onUpdateProfile={handleUpdateProfile}
                       onLikePost={handleLikePost}

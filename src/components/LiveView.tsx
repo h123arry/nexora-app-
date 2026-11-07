@@ -1,18 +1,23 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import GiftLiveOverlay from './GiftLiveOverlay';
 import { motion, AnimatePresence } from 'motion/react';
-import { Radio, Users, MessageSquare, Heart, MoreVertical, X, Mic, Video, Camera, Settings, Eye, Clock, Calendar, Bell, Forward } from 'lucide-react';
+import { Radio, Users, MessageSquare, Heart, MoreVertical, X, Mic, Video, Camera, Settings, Eye, Clock, Calendar, Bell, Forward, Volume2, VolumeX } from 'lucide-react';
 import { User, LiveStream } from '../types';
 
 interface LiveViewProps {
   currentUser: User;
   onClose: () => void;
+  streamId?: string;
 }
 
-export default function LiveView({ currentUser, onClose }: LiveViewProps) {
+export default function LiveView({ currentUser, onClose, streamId }: LiveViewProps) {
   const [isLive, setIsLive] = useState(false);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
   const [message, setMessage] = useState('');
   const [viewerCount, setViewerCount] = useState(0);
+  const [giftSoundsEnabled, setGiftSoundsEnabled] = useState(false);
+  const giftAudioContext = useRef<AudioContext | null>(null);
+  useEffect(() => () => { if (giftAudioContext.current && giftAudioContext.current.state !== 'closed') void giftAudioContext.current.close(); }, []);
 
   return (
     <div className="fixed inset-0 z-[100] flex bg-black">
@@ -41,7 +46,17 @@ export default function LiveView({ currentUser, onClose }: LiveViewProps) {
           </div>
         )}
 
+        {/* Server-driven gift delivery overlay. A real broadcaster supplies its authoritative live session ID. */}
+        {isLive && streamId && <GiftLiveOverlay streamId={streamId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current} />}
+
         {/* Overlay Controls */}
+        {isLive && streamId && <button type="button" onClick={() => {
+          if (!giftAudioContext.current && typeof window !== 'undefined' && window.AudioContext) giftAudioContext.current = new window.AudioContext();
+          if (!giftSoundsEnabled) void giftAudioContext.current?.resume();
+          setGiftSoundsEnabled(value => !value);
+        }} aria-label={giftSoundsEnabled ? 'Mute gift sounds' : 'Enable gift sounds'} title={giftSoundsEnabled ? 'Mute gift sounds' : 'Enable gift sounds'} className="absolute top-4 right-16 z-[110] rounded-full bg-black/60 p-2 text-white">
+          {giftSoundsEnabled ? <Volume2 className="h-5 w-5"/> : <VolumeX className="h-5 w-5"/>}
+        </button>}
         <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 text-white nx-icon-button">
           <X className="w-6 h-6" />
         </button>

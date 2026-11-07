@@ -707,6 +707,17 @@ service cloud.firestore {
     match /nexLedgerTransactions/{transactionId} { allow read, write: if false; }
     match /nexLedgerRequests/{requestId} { allow read, write: if false; }
 
+    // Live gift delivery is immutable and may only be created by the trusted callable.
+    match /giftDeliveryEvents/{eventId} {
+      allow get, list: if signedIn() && resource.data.targetType == 'live';
+      allow create, update, delete: if false;
+    }
+    // Creator gift galleries are public to signed-in Nexora members and server-managed.
+    match /users/{userId}/giftGallery/{giftId} {
+      allow get, list: if signedIn();
+      allow create, update, delete: if false;
+    }
+
     match /pages/{pageId} {
       allow get, list: if true;
       allow create: if signedIn()
