@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Award, BookOpen, CheckCircle2, ChevronRight, Clock3, GraduationCap, Sparkles } from 'lucide-react';
 import { collection, doc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { User } from '../types';\nimport CreatorAcademyInstitutionTools from './CreatorAcademyInstitutionTools';
+import { User } from '../types';
+import CreatorAcademyInstitutionTools from './CreatorAcademyInstitutionTools';
 
 type Lesson = { id: string; title: string; minutes: number; summary: string };
 type Course = { id: string; title: string; level: string; category: string; description: string; lessons: Lesson[] };
@@ -173,7 +174,8 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
         <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><Award size={17}/><span className="text-xs font-bold">Institutional learning record</span></div><p className="mt-2 text-xs leading-5 text-white/45">Your completed lessons are saved against your account, ready for future assessments, mentorship and verified certificates.</p></div>
         <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-xs font-bold">Built for long-term growth</span></div><p className="mt-2 text-xs leading-5 text-white/45">The curriculum covers craft, audience, community, live production, analytics, business, brand and creator safety.</p></div>
       </section>
-      {loading && <p className="text-center text-xs text-white/35">Syncing your learning record…</p>}\n      <CreatorAcademyInstitutionTools />
+      {loading && <p className="text-center text-xs text-white/35">Syncing your learning record…</p>}
+      <CreatorAcademyInstitutionTools />
     </div>
   );
 }
