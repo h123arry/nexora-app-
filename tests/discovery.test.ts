@@ -11,6 +11,30 @@ const post = (overrides: Partial<Post>): Post => ({
 });
 
 describe('discovery service', () => {
+  it('keeps the Following feed strictly limited to followed creators', () => {
+    const ranked = rankPosts([
+      post({ id: 'followed-old', userId: 'followed', timestamp: '2025-01-01T00:00:00.000Z' }),
+      post({ id: 'unfollowed-new', userId: 'stranger', timestamp: '2026-11-07T00:00:00.000Z' }),
+      post({ id: 'followed-new', userId: 'followed', timestamp: '2026-11-06T00:00:00.000Z' }),
+    ], { mode: 'following', followingIds: ['followed'], now: Date.parse('2026-11-07T01:00:00.000Z') });
+    assert.deepEqual(ranked.map(item => item.post.id), ['followed-new', 'followed-old']);
+  });
+
+  it('returns an empty Following feed when the viewer follows nobody', () => {
+    const ranked = rankPosts([
+      post({ id: 'stranger-post', userId: 'stranger' }),
+    ], { mode: 'following', followingIds: [] });
+    assert.deepEqual(ranked, []);
+  });
+
+  it('keeps Latest chronological for posts older than the freshness window', () => {
+    const ranked = rankPosts([
+      post({ id: 'older', timestamp: '2024-01-01T00:00:00.000Z' }),
+      post({ id: 'newer', timestamp: '2025-06-01T00:00:00.000Z' }),
+    ], { mode: 'latest', now: Date.parse('2026-11-07T00:00:00.000Z') });
+    assert.deepEqual(ranked.map(item => item.post.id), ['newer', 'older']);
+  });
+
   it('ranks followed and interest-matching posts with grounded reasons', () => {
     const ranked = rankPosts([
       post({ id: 'generic', userId: 'other', timestamp: '2020-01-01T00:00:00.000Z' }),
