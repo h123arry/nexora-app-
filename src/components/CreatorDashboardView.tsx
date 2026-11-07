@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import NexoraLoader from './NexoraLoader';
 import CreatorAcademyView from './CreatorAcademyView';
 import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
+import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, GraduationCap } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
@@ -1164,7 +1165,7 @@ export default function CreatorDashboardView({
           )}
 
           {/* TAB 8: GIFTVERSE CREATOR EARNINGS */}
-          {activeTab === 'monetization' && <CreatorGiftEarningsPanel />}
+          {activeTab === 'monetization' && <><CreatorGiftEarningsPanel /><CreatorEconomyExpansionPanel /></>}
         </motion.div>
       )}
 
