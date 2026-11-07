@@ -97,6 +97,16 @@ const publicProfile = (uid) => ({
     }));
   });
 
+  it('prevents profile owners from forging follower and following totals after creation', async () => {
+    const alice = dbFor('alice');
+    await assertSucceeds(setDoc(doc(alice, 'publicProfiles', 'alice'), publicProfile('alice')));
+    await assertFails(updateDoc(doc(alice, 'publicProfiles', 'alice'), { followers: 900000 }));
+    await seed(async adminDb => setDoc(doc(adminDb, 'users', 'alice'), {
+      id: 'alice', username: 'alice', name: 'Alice', followers: 0, following: 0
+    }));
+    await assertFails(updateDoc(doc(alice, 'users', 'alice'), { following: 900000 }));
+  });
+
   it('keeps creator audience aggregates and deduplication records server-owned', async () => {
     const alice = dbFor('alice');
     for (const collectionName of ['creatorAudienceDaily', 'creatorAudienceEventReceipts', 'creatorFollowProjections', 'creatorProfileDailyVisitors']) {
