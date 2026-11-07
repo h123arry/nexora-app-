@@ -23,7 +23,7 @@ export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFi
 export { getNexWalletSnapshot } from './nexWallet.js';
 export { getGiftCatalog, quoteNexGift } from './giftCatalog.js';
 export { sendNexGift } from './giftDelivery.js';
-export { getCreatorEarningsSnapshot, settleGiftCreatorEarning } from './giftEarnings.js';
+export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
 import {
