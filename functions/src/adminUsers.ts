@@ -200,3 +200,28 @@ export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
     ? { updated: true, targetUid, reputationPoints: 0 }
     : { updated: true, targetUid, action, enabled };
 });
+
+export const listAdminAuditEvents = onCall({ maxInstances: 5 }, async request => {
+  requireAdmin(request);
+  try {
+    const snapshot = await db.collection('adminAuditEvents')
+      .orderBy('createdAt', 'desc').limit(100).get();
+    return {
+      events: snapshot.docs.map(item => {
+        const data = item.data();
+        const createdAt = data.createdAt?.toDate?.();
+        return {
+          id: item.id,
+          actorUid: String(data.actorUid || ''),
+          targetUid: String(data.targetUid || ''),
+          action: String(data.action || 'unknown'),
+          ...(typeof data.previousRole === 'string' ? { previousRole: data.previousRole } : {}),
+          ...(typeof data.newRole === 'string' ? { newRole: data.newRole } : {}),
+          createdAt: createdAt instanceof Date ? createdAt.toISOString() : null,
+        };
+      }),
+    };
+  } catch {
+    throw new HttpsError('unavailable', 'The administrator audit history is temporarily unavailable.');
+  }
+});
