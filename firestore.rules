@@ -538,6 +538,12 @@ service cloud.firestore {
       allow delete: if signedIn() && (resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
 
+    // Scheduled creator posts are private workflow records managed only by trusted Functions.
+    // Clients schedule, list and cancel through authenticated callables; the publisher uses Admin SDK.
+    match /creatorScheduledPosts/{scheduleId} {
+      allow read, write: if false;
+    }
+
     match /drafts/{draftId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
       allow create: if accountMayPost()
