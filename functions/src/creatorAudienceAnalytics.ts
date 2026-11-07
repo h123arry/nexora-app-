@@ -31,6 +31,7 @@ export async function setCreatorFollowStateForUser(
   }
   const followRef = store.collection('follows').doc(followerId + '_' + creatorId);
   const creatorPublicRef = store.collection('publicProfiles').doc(creatorId);
+  const creatorPageRef = store.collection('pages').doc(creatorId);
   const followerPublicRef = store.collection('publicProfiles').doc(followerId);
   const creatorPrivateRef = store.collection('users').doc(creatorId);
   const followerPrivateRef = store.collection('users').doc(followerId);
@@ -38,23 +39,24 @@ export async function setCreatorFollowStateForUser(
   const dailyRef = store.collection('creatorAudienceDaily').doc(hash(creatorId + ':' + day));
 
   return store.runTransaction(async tx => {
-    const [follow, creatorPublic, followerPublic, creatorPrivate, followerPrivate] = await Promise.all([
-      tx.get(followRef), tx.get(creatorPublicRef), tx.get(followerPublicRef),
-      tx.get(creatorPrivateRef), tx.get(followerPrivateRef),
+    const [follow, creatorPublic, creatorPage, followerPublic, creatorPrivate, followerPrivate] = await Promise.all([
+      tx.get(followRef), tx.get(creatorPublicRef), tx.get(creatorPageRef),
+      tx.get(followerPublicRef), tx.get(creatorPrivateRef), tx.get(followerPrivateRef),
     ]);
-    if (!creatorPublic.exists || !followerPublic.exists) {
-      throw new HttpsError('not-found', 'Both public profiles must exist before following.');
+    if (!creatorPublic.exists && !creatorPage.exists) {
+      throw new HttpsError('not-found', 'This creator or Page is unavailable.');
     }
+    if (!followerPublic.exists) throw new HttpsError('failed-precondition', 'Complete your public profile before following.');
     if (follow.exists === shouldFollow) {
       return {
         following: follow.exists,
         changed: false,
-        followerCount: safeCount(creatorPublic.get('followers')),
+        followerCount: creatorPublic.exists ? safeCount(creatorPublic.get('followers')) : null,
       };
     }
 
     const delta = shouldFollow ? 1 : -1;
-    const nextCreatorCount = Math.max(0, safeCount(creatorPublic.get('followers')) + delta);
+    const nextCreatorCount = creatorPublic.exists ? Math.max(0, safeCount(creatorPublic.get('followers')) + delta) : null;
     const nextFollowerCount = Math.max(0, safeCount(followerPublic.get('following')) + delta);
     if (shouldFollow) {
       tx.create(followRef, {
@@ -63,18 +65,22 @@ export async function setCreatorFollowStateForUser(
     } else {
       tx.delete(followRef);
     }
-    tx.update(creatorPublicRef, { followers: nextCreatorCount });
+    if (creatorPublic.exists && nextCreatorCount !== null) {
+      tx.update(creatorPublicRef, { followers: nextCreatorCount });
+      if (creatorPrivate.exists) tx.update(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() });
+    }
     tx.update(followerPublicRef, { following: nextFollowerCount });
-    if (creatorPrivate.exists) tx.update(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() });
     if (followerPrivate.exists) tx.update(followerPrivateRef, { following: nextFollowerCount, updatedAt: FieldValue.serverTimestamp() });
-    tx.set(dailyRef, {
-      creatorId, day,
-      follows: FieldValue.increment(shouldFollow ? 1 : 0),
-      unfollows: FieldValue.increment(shouldFollow ? 0 : 1),
-      netFollowerChange: FieldValue.increment(delta),
-      followerCount: nextCreatorCount,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
+    if (creatorPublic.exists && nextCreatorCount !== null) {
+      tx.set(dailyRef, {
+        creatorId, day,
+        follows: FieldValue.increment(shouldFollow ? 1 : 0),
+        unfollows: FieldValue.increment(shouldFollow ? 0 : 1),
+        netFollowerChange: FieldValue.increment(delta),
+        followerCount: nextCreatorCount,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
     return { following: shouldFollow, changed: true, followerCount: nextCreatorCount };
   });
 }
