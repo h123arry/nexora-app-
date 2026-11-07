@@ -653,6 +653,42 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Academy lesson progress is a learner-owned record, not a credential.
+    // Course completion and certificates must be assessed by trusted backend code.
+    match /academyProgress/{progressId} {
+      function validAcademyCourse(courseId) {
+        return courseId in [
+          'creator-foundations', 'content-craft', 'community-building',
+          'creator-business', 'live-production', 'creator-analytics',
+          'personal-brand', 'creator-safety'
+        ];
+      }
+      function validAcademyProgress() {
+        return request.resource.data.keys().hasOnly([
+            'userId', 'courseId', 'completedLessonIds', 'updatedAt', 'schemaVersion'
+          ])
+          && request.resource.data.keys().hasAll([
+            'userId', 'courseId', 'completedLessonIds', 'updatedAt', 'schemaVersion'
+          ])
+          && request.resource.data.userId == request.auth.uid
+          && validAcademyCourse(request.resource.data.courseId)
+          && progressId == request.auth.uid + '_' + request.resource.data.courseId
+          && request.resource.data.completedLessonIds is list
+          && request.resource.data.completedLessonIds.size() <= 3
+          && request.resource.data.schemaVersion == 1;
+      }
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validAcademyProgress();
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['completedLessonIds', 'updatedAt'])
+        && validAcademyProgress();
+      allow delete: if false;
+    }
+
     // Raw analytics observations and aggregate metrics are server-owned.
     match /analyticsEvents/{eventId} { allow read, write: if false; }
     match /analyticsDaily/{dayId} {
