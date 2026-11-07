@@ -553,10 +553,15 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 {activePortalTab === 'insights' && selectedCircleCanManage && <CircleInsightsPanel communityId={selectedCircle.id} />}
 
                 {activePortalTab === 'files' && (
-                  <div className="mx-auto max-w-2xl rounded-2xl border border-dashed border-white/10 p-8 text-center">
-                    <FileText className="mx-auto h-6 w-6 text-violet-300/60" />
-                    <h3 className="mt-3 text-sm font-bold text-white">No shared files yet</h3>
-                    <p className="mt-1 text-xs leading-5 text-white/40">This Circle has no uploaded documents or media. Files will appear here only after a real upload is completed.</p>
+                  <div className="mx-auto max-w-2xl space-y-3 text-left">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-violet-400">Shared documents and media</h3>
+                    {selectedCircle.mediaLibrary?.length ? selectedCircle.mediaLibrary.map(file => {
+                      const safeUrl = /^https:\/\//i.test(file.url);
+                      return <div key={file.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+                        <div className="flex min-w-0 items-center gap-3"><FileText className="h-5 w-5 shrink-0 text-violet-300"/><div className="min-w-0"><p className="truncate text-xs font-bold text-white">{file.name}</p><p className="mt-1 text-[10px] text-white/40">{file.type.toUpperCase()} · {file.size || 'Size unavailable'} · {file.timestamp || 'Date unavailable'}</p></div></div>
+                        {safeUrl ? <a href={file.url} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg border border-violet-400/20 px-3 py-2 text-[10px] font-bold text-violet-200">Open file</a> : <span className="shrink-0 text-[10px] text-white/30">Unavailable link</span>}
+                      </div>;
+                    }) : <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center"><FileText className="mx-auto h-6 w-6 text-violet-300/60"/><h3 className="mt-3 text-sm font-bold text-white">No shared files yet</h3><p className="mt-1 text-xs leading-5 text-white/40">This Circle has no uploaded documents or media recorded in its shared library.</p></div>}
                   </div>
                 )}
 
