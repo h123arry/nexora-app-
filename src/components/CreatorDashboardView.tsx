@@ -797,25 +797,27 @@ export default function CreatorDashboardView({
                   <p className="mt-5 text-xs text-amber-200">Audience growth data could not be loaded. Try again later.</p>
                 ) : audienceAnalytics ? (
                   <>
-                    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">New followers</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.follows.toLocaleString()}</strong></div>
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Unfollows</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.unfollows.toLocaleString()}</strong></div>
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Net growth</span><strong className={"mt-1 block text-lg " + (audienceAnalytics.totals.netFollowerChange >= 0 ? "text-emerald-300" : "text-amber-300")}>{audienceAnalytics.totals.netFollowerChange > 0 ? '+' : ''}{audienceAnalytics.totals.netFollowerChange.toLocaleString()}</strong></div>
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Daily unique visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.uniqueProfileVisitors.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">New profile visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.newProfileVisitors.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Returning profile visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.returningProfileVisitors.toLocaleString()}</strong></div>
                     </div>
                     {audienceAnalytics.points.length ? (
                       <div className="mt-4 space-y-2">
                         {audienceAnalytics.points.map(point => (
                           <div key={point.day} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-3 py-2 text-xs">
                             <span className="text-zinc-300">{point.day}</span>
-                            <span className="text-zinc-400">+{point.follows} follows · {point.unfollows} unfollows · {point.netFollowerChange > 0 ? '+' : ''}{point.netFollowerChange} net · {point.uniqueProfileVisitors} visitors</span>
+                            <span className="text-zinc-400">+{point.follows} follows · {point.unfollows} unfollows · {point.netFollowerChange > 0 ? '+' : ''}{point.netFollowerChange} net · {point.uniqueProfileVisitors} visitors · {point.newProfileVisitors} new · {point.returningProfileVisitors} returning</span>
                           </div>
                         ))}
                       </div>
                     ) : (
                       <p className="mt-4 text-xs text-zinc-400">No audience events have been recorded in this period yet.</p>
                     )}
-                    <p className="mt-4 text-[10px] leading-relaxed text-zinc-500">Follow changes are written atomically with relationship edges by trusted Functions. Profile visits count signed-in visitors once per creator per UTC day. These signals are rate-limited and server-timestamped, but are not proof of human attention. Historical activity before this system was deployed is not backfilled.</p>
+                    <p className="mt-4 text-[10px] leading-relaxed text-zinc-500">Follow changes are written atomically with relationship edges by trusted Functions. Profile visits count signed-in visitors once per creator per UTC day; new-versus-returning is based on a 90-day hashed visitor history. These signals are rate-limited and server-timestamped, but are not proof of human attention. Historical activity before this system was deployed is not backfilled.</p>
                   </>
                 ) : (
                   <p className="mt-5 text-xs text-zinc-400">Audience records are not available yet.</p>
