@@ -13,7 +13,7 @@ import RelativeTime from './RelativeTime';
 import FeedPostCard from './FeedPostCard';
 import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { recordRecommendationEvent } from '../utils/recommendations';
+import { getRecommendationProfile, recordRecommendationEvent } from '../utils/recommendations';
 import { trackClientObservation } from '../services/analyticsService';
 import { rankPosts } from '../services/discovery/discoveryService';
 import { SettingsService } from '../services/firebase/settingsService';
@@ -516,6 +516,7 @@ export default function FeedView({
     return saved ? JSON.parse(saved) : [];
   });
   const feedPreferencesHydratedRef = useRef(false);
+  const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(true);
 
   // Local storage is an offline fallback only. Signed-in users hydrate the
   // authoritative feed controls from owner-scoped Firestore settings.
@@ -526,6 +527,7 @@ export default function FeedView({
     SettingsService.getSettings(currentUser.id).then(settings => {
       if (cancelled) return;
       const preferences = normalizeFeedPreferences(settings.feed);
+      setRecommendationsPersonalizationEnabled(settings.privacy.recommendationsPersonalization !== false);
       setFeedTab(preferences.tab);
       setNotInterestedTags(preferences.notInterestedTags);
       setBlockedUserIds(preferences.blockedCreatorIds);
@@ -1469,7 +1471,8 @@ export default function FeedView({
         }
         sortedList = rankPosts(sortedList, {
           followingIds,
-          interestDNA: currentUser.interestDNA,
+          interestDNA: recommendationsPersonalizationEnabled ? currentUser.interestDNA : undefined,
+          recommendationSignals: recommendationsPersonalizationEnabled ? getRecommendationProfile() : undefined,
           mutedCreatorIds,
           blockedCreatorIds: blockedUserIds,
           hiddenPostIds,
@@ -1562,7 +1565,7 @@ export default function FeedView({
       } else if (feedTab === 'reels') {
         // Reels use short-form signals instead of the long-form media mixer.
         // The ranking utility keeps the reasons explainable and deterministic.
-        return rankReels(sortedList, followingIds, currentUser.interestDNA, {
+        return rankReels(sortedList, followingIds, recommendationsPersonalizationEnabled ? currentUser.interestDNA : {}, {
           mutedCreatorIds, blockedCreatorIds: blockedUserIds, hiddenPostIds, notInterestedTags,
           viewerId: currentUser.id,
         }).map(({ post }) => post as RefactoredPost);
@@ -1618,7 +1621,7 @@ export default function FeedView({
       // Otherwise, perform the full filtering, sorting and interleaving pass
       return getRankedPosts();
     });
-  }, [localPosts, feedTab, sortBy, searchFilterType, searchQuery, selectedTag, activeCollectionFolder, qualityFilter]);
+  }, [localPosts, feedTab, sortBy, searchFilterType, searchQuery, selectedTag, activeCollectionFolder, qualityFilter, recommendationsPersonalizationEnabled, currentUser.id]);
 
   const currentDisplayList = useMemo(() => orderedPosts.slice(0, visibleCount), [orderedPosts, visibleCount]);
   const activePostIndex = useMemo(
