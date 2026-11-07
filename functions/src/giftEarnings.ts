@@ -54,21 +54,23 @@ export const getCreatorEarningsSnapshot = onCall({ maxInstances: 10 }, async (re
         settledAt: iso(data.settledAt),
       };
     }).sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-    const pendingReviewNex = records.filter(x => x.status === 'pending_review').reduce((sum, x) => sum + x.grossNex, 0);
-    const availableNex = records.filter(x => x.status === 'available').reduce((sum, x) => sum + (x.creatorShareNex || 0), 0);
-    const lifetimeGrossNex = records.reduce((sum, x) => sum + x.grossNex, 0);
-    const lifetimeCreatorShareNex = records.reduce((sum, x) => sum + (x.creatorShareNex || 0), 0);
-    const lifetimePlatformShareNex = records.reduce((sum, x) => sum + (x.platformShareNex || 0), 0);
+    const pendingReviewGrossNex = records.filter(x => x.status === 'pending_review').reduce((sum, x) => sum + x.grossNex, 0);
+    const recentAvailableCreatorShareNex = records.filter(x => x.status === 'available').reduce((sum, x) => sum + (x.creatorShareNex || 0), 0);
+    const recentGrossNex = records.reduce((sum, x) => sum + x.grossNex, 0);
+    const recentCreatorShareNex = records.reduce((sum, x) => sum + (x.creatorShareNex || 0), 0);
+    const recentPlatformShareNex = records.reduce((sum, x) => sum + (x.platformShareNex || 0), 0);
     return {
       currency: 'NEX' as const,
       policyVersion: GIFT_REVENUE_POLICY_VERSION,
       creatorShareBps: CREATOR_REVENUE_SHARE_BPS,
       platformShareBps: PLATFORM_REVENUE_SHARE_BPS,
-      pendingReviewNex,
-      availableNex,
-      lifetimeGrossNex,
-      lifetimeCreatorShareNex,
-      lifetimePlatformShareNex,
+      earningsWindow: 'latest_100' as const,
+      hasMoreEarnings: earnings.size === 100,
+      pendingReviewGrossNex,
+      recentAvailableCreatorShareNex,
+      recentGrossNex,
+      recentCreatorShareNex,
+      recentPlatformShareNex,
       walletAvailableNex: safeBalance(wallet.data()?.availableBalance),
       earnings: records,
     };
@@ -94,7 +96,6 @@ export const settleGiftCreatorEarning = onCall({ maxInstances: 5 }, async (reque
   const earningRef = db.collection('creatorEarnings').doc(transactionId);
   const settlementRef = db.collection('giftEarningSettlements').doc(settlementId);
   const escrowRef = db.collection('nexWallets').doc(ESCROW_ACCOUNT);
-  const creatorWalletRef = db.collection('nexWallets').doc('placeholder');
   const platformWalletRef = db.collection('nexWallets').doc(PLATFORM_ACCOUNT);
 
   try {
