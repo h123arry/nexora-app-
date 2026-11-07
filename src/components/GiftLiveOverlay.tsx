@@ -44,7 +44,7 @@ export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioC
     category === 'music' ? { y: [0, -14, 0, -7, 0], scale: [1, 1.08, 1] } :
     { y: [70, -10, 0], scale: [.45, 1.15, 1] };
   useEffect(() => {
-    if (!active || !soundEnabled || !audioContext || audioContext.state !== 'running' || reduceMotion) return;
+    if (!active || !soundEnabled || !audioContext || audioContext.state !== 'running') return;
     const base = active.rarity === 'legendary' ? 660 : active.rarity === 'epic' ? 554 : 440;
     [0, 0.13, 0.26].forEach((offset, index) => {
       const oscillator = audioContext.createOscillator();

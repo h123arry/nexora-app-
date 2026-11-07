@@ -1133,4 +1133,30 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerRequests', 'request-1')));
   });
 
+  it('keeps GIFTVERSE live events server-created and creator galleries read-only', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'giftDeliveryEvents', 'live-event'), {
+        targetType: 'live', targetId: 'session-1', giftName: 'Violet Rose'
+      });
+      await setDoc(doc(db, 'giftDeliveryEvents', 'profile-event'), {
+        targetType: 'profile', targetId: 'alice', giftName: 'Violet Rose'
+      });
+      await setDoc(doc(db, 'users', 'alice', 'giftGallery', 'gift-1'), {
+        giftId: 'floral-01', giftName: 'Violet Rose', image: '/giftverse/gifts/floral-01.svg'
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'giftDeliveryEvents', 'live-event')));
+    await assertFails(getDoc(doc(dbFor('alice'), 'giftDeliveryEvents', 'profile-event')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'giftDeliveryEvents', 'forged'), {
+      targetType: 'live', targetId: 'session-1', giftName: 'Forged gift'
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'users', 'alice', 'giftGallery', 'gift-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'giftGallery', 'forged'), {
+      giftId: 'royal-01', giftName: 'Forged Crown'
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'users', 'alice', 'giftGallery', 'gift-1'), {
+      giftName: 'Tampered gift'
+    }));
+  });
+
 });
