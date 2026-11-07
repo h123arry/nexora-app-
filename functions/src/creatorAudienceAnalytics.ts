@@ -46,6 +46,10 @@ export async function applyCreatorFollowEvent(
       tx.get(followerPublicRef), tx.get(creatorPrivateRef), tx.get(followerPrivateRef),
     ]);
     if (receipt.exists) return { changed: false, reason: 'duplicate-event' };
+    if (!creatorPublic.exists) {
+      tx.create(receiptRef, { eventId, followId, followerId, creatorId, action, ignored: 'missing-public-profile', processedAt: FieldValue.serverTimestamp() });
+      return { changed: false, reason: 'missing-public-profile' };
+    }
     const activeNow = liveEdge.exists;
     // A delete snapshot proves the edge was active before this event when no
     // projection exists yet (legacy follows predate the analytics ledger).
@@ -54,8 +58,10 @@ export async function applyCreatorFollowEvent(
     tx.create(receiptRef, { eventId, followId, followerId, creatorId, action, processedAt: FieldValue.serverTimestamp() });
     if (delta === 0) return { changed: false, reason: 'already-reconciled' };
 
-    const creatorCount = Number(creatorPublic.get('followers') || 0);
-    const followerCount = Number(followerPublic.get('following') || 0);
+    const creatorRawCount = Number(creatorPublic.get('followers') || 0);
+    const followerRawCount = Number(followerPublic.get('following') || 0);
+    const creatorCount = Number.isSafeInteger(creatorRawCount) && creatorRawCount >= 0 ? creatorRawCount : 0;
+    const followerCount = Number.isSafeInteger(followerRawCount) && followerRawCount >= 0 ? followerRawCount : 0;
     const nextCreatorCount = Math.max(0, creatorCount + delta);
     const nextFollowerCount = Math.max(0, followerCount + delta);
     tx.set(projectionRef, {
