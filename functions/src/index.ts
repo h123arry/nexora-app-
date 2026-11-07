@@ -15,6 +15,7 @@ import { publishBusinessService, setBusinessServiceStatus } from './businessServ
 import { searchPublicDirectory } from './directorySearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
@@ -23,7 +24,6 @@ export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFi
 export { getNexWalletSnapshot } from './nexWallet.js';
 export { getGiftCatalog, quoteNexGift } from './giftCatalog.js';
 export { sendNexGift } from './giftDelivery.js';
-export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
 import {
