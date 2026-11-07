@@ -147,3 +147,52 @@ export const getGiftRiskReviewQueue = onCall({ maxInstances: 5 }, async request 
   const snapshot = await db.collection('giftRiskSignals').where('tier', 'in', ['review','high']).orderBy('createdAt', 'desc').limit(100).get();
   return { records: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || null })) };
 });
+
+export const setCreatorPayoutBeneficiary = onCall({ maxInstances: 5 }, async request => {
+  const actorId = uid(request);
+  if (!finance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  const creatorId = request.data?.creatorId;
+  const providerBeneficiaryRef = request.data?.providerBeneficiaryRef;
+  if (!safeId(creatorId) || typeof providerBeneficiaryRef !== 'string' || !/^[A-Za-z0-9_-]{8,120}$/.test(providerBeneficiaryRef)) {
+    throw new HttpsError('invalid-argument', 'A creator ID and provider-issued beneficiary token are required. Raw bank details are not accepted.');
+  }
+  const ref = db.collection('creatorPayoutBeneficiaries').doc(creatorId);
+  await db.runTransaction(async tx => {
+    const existing = await tx.get(ref);
+    tx.set(ref, { creatorId, providerBeneficiaryRef, provider: 'paystack', currency: 'NGN',
+      status: 'verified', verifiedBy: actorId, verifiedAt: FieldValue.serverTimestamp(),
+      createdAt: existing.data()?.createdAt || FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp() });
+    const audit = db.collection('creatorPayoutAuditEvents').doc();
+    tx.create(audit, { creatorId, actorId, action: 'beneficiary_verified', provider: 'paystack',
+      createdAt: FieldValue.serverTimestamp(), source: 'trusted_finance_admin' });
+  });
+  return { creatorId, status: 'verified' as const, provider: 'paystack', currency: 'NGN' as const };
+});
+
+export const resolveGiftRiskSignal = onCall({ maxInstances: 5 }, async request => {
+  const actorId = uid(request);
+  if (!finance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  const signalId = request.data?.signalId;
+  const outcome = request.data?.outcome;
+  const note = request.data?.note;
+  if (!safeId(signalId) || !['cleared','escalated'].includes(outcome)
+    || typeof note !== 'string' || note.trim().length < 8 || note.trim().length > 500) {
+    throw new HttpsError('invalid-argument', 'A risk signal, supported outcome and review note are required.');
+  }
+  const ref = db.collection('giftRiskSignals').doc(signalId);
+  await db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists) throw new HttpsError('not-found', 'This risk signal does not exist.');
+    const current = snapshot.data() || {};
+    if (current.disposition === 'cleared' || current.disposition === 'escalated') {
+      throw new HttpsError('failed-precondition', 'This risk signal has already been reviewed.');
+    }
+    tx.update(ref, { disposition: outcome, reviewedBy: actorId, reviewedAt: FieldValue.serverTimestamp() });
+    const audit = db.collection('giftRiskReviewAudit').doc();
+    tx.create(audit, { signalId, senderId: current.senderId, creatorId: current.creatorId,
+      actorId, outcome, note: note.trim(), score: current.score, tier: current.tier,
+      createdAt: FieldValue.serverTimestamp() });
+  });
+  return { signalId, disposition: outcome as 'cleared'|'escalated' };
+});
