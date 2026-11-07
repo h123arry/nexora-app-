@@ -24,7 +24,7 @@ const count = (value: unknown): number =>
  */
 export function buildCreatorGrowthInsights(points: CreatorWatchPoint[]): CreatorGrowthInsight[] {
   const safe = points
-    .filter(point => /^\\d{4}-\\d{2}-\\d{2}$/.test(point.day))
+    .filter(point => /^\d{4}-\d{2}-\d{2}$/.test(point.day))
     .map(point => ({
       day: point.day,
       sessions: count(point.sessionsStarted),
