@@ -108,9 +108,10 @@ describe('NEXORA Institute institution services', () => {
       startsAt: new Date(Date.now() + 60 * 60_000).toISOString(), durationMinutes: 30, capacity: 1,
     });
     const sessionRef = db.collection('academyMentorshipSessions').doc(created.sessionId);
-    const upcoming = await listUpcomingAcademyMentorshipSessions(db);
+    const upcoming = await listUpcomingAcademyMentorshipSessions(db, 'learner-one');
     const listed = upcoming.sessions.find(session => session.sessionId === created.sessionId);
     assert.equal(listed?.seatsAvailable, 1);
+    assert.equal(listed?.isBooked, false);
     assert.equal(listed?.title, 'Creator growth office hours');
     const firstBooking = await bookAcademyMentorshipSession(db, 'learner-one', created.sessionId);
     const retryBooking = await bookAcademyMentorshipSession(db, 'learner-one', created.sessionId);
