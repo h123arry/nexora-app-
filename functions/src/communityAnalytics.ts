@@ -23,7 +23,8 @@ export async function getCommunityInsightsForUser(
   const memberRef = communityRef.collection('members').doc(uid);
   const [community, member] = await Promise.all([communityRef.get(), memberRef.get()]);
   const role = member.exists ? String(member.get('role') || 'member') : 'member';
-  if (!community.exists || !member.exists || member.get('status') !== 'active'
+  const bannedUsers = community.exists && Array.isArray(community.get('bannedUsers')) ? community.get('bannedUsers') as unknown[] : [];
+  if (!community.exists || !member.exists || member.get('status') !== 'active' || bannedUsers.includes(uid)
     || !['owner', 'admin', 'moderator'].includes(role)) {
     throw new HttpsError('permission-denied', 'Active Circle managers can view community insights.');
   }
