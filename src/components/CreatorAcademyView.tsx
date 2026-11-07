@@ -68,8 +68,8 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
   const [detailLoading, setDetailLoading] = useState(false);
   const [isInstructor, setIsInstructor] = useState(false);
   const [assessmentAnswers, setAssessmentAnswers] = useState<Record<string, number[]>>({});
-  const [assessmentResult, setAssessmentResult] = useState<{ assessmentId: string; scorePercent: number; passed: boolean; attemptId: string } | null>(null);
-  const [certificate, setCertificate] = useState<{ certificateId: string; verificationCode: string; courseTitle: string } | null>(null);
+  const [assessmentResult, setAssessmentResult] = useState<{ courseId: string; assessmentId: string; scorePercent: number; passed: boolean; attemptId: string } | null>(null);
+  const [certificate, setCertificate] = useState<{ courseId: string; assessmentId: string; certificateId: string; verificationCode: string; courseTitle: string } | null>(null);
   const [assessmentBusy, setAssessmentBusy] = useState(false);
   const [assessmentError, setAssessmentError] = useState('');
 
@@ -136,6 +136,8 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
     return () => { active = false; };
   }, [activeCourse.id, activeCourse.institutional, institutionalDetails]);
 
+  useEffect(() => { setAssessmentResult(null); setCertificate(null); setAssessmentError(''); }, [selectedCourse]);
+
   const activeDetails = institutionalDetails[activeCourse.id];
   const displayLessons = activeDetails?.lessons ?? activeCourse.lessons;
   const assessments = activeDetails?.assessments ?? [];
@@ -170,7 +172,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
   };
 
   const submitAssessment = async (assessment: Assessment) => {
-    const answers = assessmentAnswers[assessment.id] || [];
+    const answers = assessmentAnswers[activeCourse.id + ':' + assessment.id] || [];
     if (assessmentBusy || answers.length !== assessment.questions.length || answers.some(answer => !Number.isInteger(answer) || answer < 0)) {
       setAssessmentError('Choose one answer for every question before submitting.');
       return;
@@ -180,7 +182,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       const result = await httpsCallable<{ courseId: string; assessmentId: string; answers: number[] }, { attemptId: string; scorePercent: number; passed: boolean }>(functions, 'academySubmitAssessment')({
         courseId: activeCourse.id, assessmentId: assessment.id, answers,
       });
-      setAssessmentResult({ assessmentId: assessment.id, ...result.data });
+      setAssessmentResult({ courseId: activeCourse.id, assessmentId: assessment.id, ...result.data });
     } catch (cause) {
       setAssessmentError(cause instanceof Error ? cause.message : 'The assessment could not be submitted.');
     } finally { setAssessmentBusy(false); }
@@ -193,7 +195,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       const result = await httpsCallable<{ courseId: string; assessmentId: string }, { certificateId: string; verificationCode: string; courseTitle: string }>(functions, 'academyIssueCertificate')({
         courseId: activeCourse.id, assessmentId,
       });
-      setCertificate(result.data);
+      setCertificate({ courseId: activeCourse.id, assessmentId, ...result.data });
     } catch (cause) {
       setAssessmentError(cause instanceof Error ? cause.message : 'Your certificate could not be issued.');
     } finally { setAssessmentBusy(false); }
@@ -269,18 +271,19 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
                     <div key={question.id} className="space-y-2">
                       <p className="text-xs font-semibold text-white">{index+1}. {question.prompt}</p>
                       <div className="grid gap-2 sm:grid-cols-2">{question.options.map((option,optionIndex) => {
-                        const chosen = (assessmentAnswers[assessment.id] || [])[index] === optionIndex;
+                        const chosen = (assessmentAnswers[activeCourse.id + ':' + assessment.id] || [])[index] === optionIndex;
                         return <button key={optionIndex} type="button" aria-pressed={chosen} onClick={() => setAssessmentAnswers(previous => {
-                          const next = [...(previous[assessment.id] || Array(question.options.length).fill(-1))];
+                          const answerKey = activeCourse.id + ':' + assessment.id;
+                          const next = [...(previous[answerKey] || Array(question.options.length).fill(-1))];
                           while(next.length < assessment.questions.length) next.push(-1);
                           next[index] = optionIndex;
-                          return { ...previous, [assessment.id]: next };
+                          return { ...previous, [answerKey]: next };
                         })} className={'rounded-xl border px-3 py-2 text-left text-xs transition-colors '+(chosen?'border-violet-400/50 bg-violet-500/15 text-white':'border-white/10 bg-white/[0.02] text-white/60 hover:border-white/20')}>{option}</button>;
                       })}</div>
                     </div>
                   ))}
                   <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={assessmentBusy} onClick={()=>void submitAssessment(assessment)} className="min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-40">{assessmentBusy?'Submitting…':'Submit assessment'}</button>
-                    {assessmentResult?.assessmentId===assessment.id && <span className={'text-xs font-bold '+(assessmentResult.passed?'text-emerald-300':'text-amber-200')}>{assessmentResult.scorePercent}% · {assessmentResult.passed?'Passed':'Not passed yet'}</span>}
+                    {assessmentResult?.courseId===activeCourse.id && assessmentResult?.assessmentId===assessment.id && <span className={'text-xs font-bold '+(assessmentResult.passed?'text-emerald-300':'text-amber-200')}>{assessmentResult.scorePercent}% · {assessmentResult.passed?'Passed':'Not passed yet'}</span>}
                     {assessmentResult?.assessmentId===assessment.id && assessmentResult.passed && <button type="button" disabled={assessmentBusy} onClick={()=>void requestCertificate(assessment.id)} className="min-h-10 rounded-xl border border-violet-400/30 px-4 text-xs font-bold text-violet-200 disabled:opacity-40">Request certificate</button>}
                   </div>
                   {certificate && assessmentResult?.assessmentId===assessment.id && <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3"><p className="text-xs font-bold text-emerald-200">Verified credential issued</p><p className="mt-1 text-[10px] text-white/50">{certificate.courseTitle} · {certificate.certificateId}</p><p className="mt-2 break-all font-mono text-xs text-white">{certificate.verificationCode}</p><p className="mt-1 text-[10px] text-white/40">Keep this code for independent certificate verification.</p></div>}
