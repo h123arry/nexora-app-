@@ -10,6 +10,10 @@ NEXORA is an actively developed social platform bringing together profiles, a so
 
 > **Project status:** This repository contains a mix of Firebase-backed application paths, client-local features, prototypes, and disabled integrations. Code or UI presence is not proof that a service is deployed, production-configured, or available to users.
 
+## Expansion programme
+
+The additive [NEXORA Expansion Programme](docs/NEXORA_EXPANSION_PROGRAMME.md) defines 11 connected workstreams, delivery safeguards, implementation sequencing, and release gates. It is a scope and status contract, not a claim that those workstreams are already implemented.
+
 ## About NEXORA
 
 NEXORA is being developed around meaningful interactions, secure accounts, reliable messaging, personalized discovery, and a consistent visual experience. The implementation is still evolving; the readiness of each feature varies. The sections below distinguish repository capabilities from integrations that remain incomplete or unverified.
