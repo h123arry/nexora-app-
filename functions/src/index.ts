@@ -36,7 +36,7 @@ import {
   saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
   getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
   issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
-  createAcademyMentorshipSession, bookAcademyMentorshipSession,
+  createAcademyMentorshipSession, listUpcomingAcademyMentorshipSessions, bookAcademyMentorshipSession,
 } from './academyInstitution.js';
 
 
@@ -431,6 +431,11 @@ export const academyCreateMentorshipSession = onCall({ maxInstances: 10 }, async
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to host an Academy session.');
   try { return await createAcademyMentorshipSession(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
 });
+export const academyListMentorshipSessions = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to browse Academy mentorship sessions.');
+  try { return await listUpcomingAcademyMentorshipSessions(adminDb); } catch (error) { throw academyFailure(error); }
+});
+
 export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to book an Academy session.');
   try { return await bookAcademyMentorshipSession(adminDb, request.auth.uid, request.data?.sessionId); } catch (error) { throw academyFailure(error); }
