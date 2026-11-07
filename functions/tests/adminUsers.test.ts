@@ -11,9 +11,15 @@ const target = db.doc('users/admin-action-target');
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Admin user-management tests require the Firestore Emulator.');
-  await db.recursiveDelete(db.collection('users'));
-  await db.recursiveDelete(db.collection('accountStatus'));
-  await db.recursiveDelete(db.collection('adminAuditEvents'));
+  await Promise.all([
+    target.delete().catch(() => undefined),
+    db.doc('users/founder-protected').delete().catch(() => undefined),
+    db.doc('users/moderated-target').delete().catch(() => undefined),
+    db.doc('accountStatus/admin-action-target').delete().catch(() => undefined),
+    db.doc('accountStatus/moderated-target').delete().catch(() => undefined),
+  ]);
+  const priorAudits = await db.collection('adminAuditEvents').where('actorUid', '==', 'admin-1').get();
+  await Promise.all(priorAudits.docs.map(item => item.ref.delete()));
   await target.set({
     id: 'admin-action-target', username: 'target', name: 'Target User', role: 'user',
     isBanned: false, isSuspended: false, reputationPoints: 250,
@@ -25,9 +31,15 @@ before(async () => {
 });
 
 after(async () => {
-  await db.recursiveDelete(db.collection('users'));
-  await db.recursiveDelete(db.collection('accountStatus'));
-  await db.recursiveDelete(db.collection('adminAuditEvents'));
+  await Promise.all([
+    target.delete().catch(() => undefined),
+    db.doc('users/founder-protected').delete().catch(() => undefined),
+    db.doc('users/moderated-target').delete().catch(() => undefined),
+    db.doc('accountStatus/admin-action-target').delete().catch(() => undefined),
+    db.doc('accountStatus/moderated-target').delete().catch(() => undefined),
+  ]);
+  const priorAudits = await db.collection('adminAuditEvents').where('actorUid', '==', 'admin-1').get();
+  await Promise.all(priorAudits.docs.map(item => item.ref.delete()));
   await deleteApp(app);
 });
 
