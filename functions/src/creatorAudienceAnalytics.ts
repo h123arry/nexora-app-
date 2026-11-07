@@ -117,6 +117,7 @@ export async function recordCreatorProfileVisitForUser(
     if (visitor.exists) return { recorded: false, reason: 'already-counted-today' };
     tx.create(visitorRef, {
       creatorId, day, visitorHash: hash(viewerId), createdAt: FieldValue.serverTimestamp(),
+      expireAt: new Date(now.getTime() + 90 * 24 * 60 * 60 * 1000),
     });
     tx.set(dailyRef, {
       creatorId, day,
