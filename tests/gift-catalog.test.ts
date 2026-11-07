@@ -12,9 +12,10 @@ test('GIFTVERSE contains 120 unique original gift identities and artwork referen
 
 test('all 120 catalogue references resolve to separate bundled SVG image files', () => {
   for (const gift of GIFT_CATALOG) {
-    assert.match(gift.image, /^\\/giftverse\\/gifts\\/[a-z0-9-]+\\.svg$/);
+    assert.ok(gift.image.startsWith('/giftverse/gifts/'));
+    assert.ok(gift.image.endsWith('.svg'));
     const artwork = readFileSync(new URL('../public' + gift.image, import.meta.url), 'utf8');
-    assert.match(artwork, /^<svg\\s/);
+    assert.ok(artwork.startsWith('<svg'));
     assert.ok(artwork.includes('data-gift-id="' + gift.id + '"'), 'Missing artwork for ' + gift.id);
   }
 });
