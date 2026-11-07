@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import NexoraLoader from './NexoraLoader';
 import CreatorAcademyView from './CreatorAcademyView';
+import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, GraduationCap } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
@@ -1162,16 +1163,8 @@ export default function CreatorDashboardView({
             </div>
           )}
 
-          {/* TAB 8: MONETIZATION AVAILABILITY */}
-          {activeTab === 'monetization' && (
-            <div className="max-w-2xl rounded-2xl border border-white/10 bg-[#0a071f]/80 p-6 space-y-3">
-              <h3 className="text-base font-bold text-white">Monetization is not available</h3>
-              <p className="text-sm text-zinc-400 leading-relaxed">
-                Nexora does not currently provide a verified NEX balance ledger, exchange rate, earnings history, tips, subscriptions, payouts, or creator-revenue analytics. No monetary value or payment feature is represented here.
-              </p>
-              <p className="text-xs text-zinc-500">Do not treat locally displayed or sample values as an account balance or cash value.</p>
-            </div>
-          )}
+          {/* TAB 8: GIFTVERSE CREATOR EARNINGS */}
+          {activeTab === 'monetization' && <CreatorGiftEarningsPanel />}
         </motion.div>
       )}
 
