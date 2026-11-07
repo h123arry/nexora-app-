@@ -110,13 +110,26 @@ export async function applyAdminAccountAction(
       throw new HttpsError('permission-denied', 'The founder account cannot be restricted.');
     }
     const status = currentStatus.data() || {};
+    const isAdminManaged = status.source === 'admin_user_management';
+    const moderationPostingRestricted = isAdminManaged
+      ? status.moderationPostingRestricted === true : status.postingRestricted === true;
+    const moderationMessagingRestricted = isAdminManaged
+      ? status.moderationMessagingRestricted === true : status.messagingRestricted === true;
+    const moderationGiftingRestricted = isAdminManaged
+      ? status.moderationGiftingRestricted === true : status.giftingRestricted === true;
+    const moderationExpiresAt = isAdminManaged ? status.moderationExpiresAt ?? null : status.expiresAt ?? null;
     const banned = action === 'ban' ? enabled : status.banned === true;
     const suspended = action === 'suspend' ? enabled : status.suspended === true;
     const restricted = banned || suspended;
     transaction.set(statusRef, {
       accountId: targetUid, banned, suspended,
-      postingRestricted: restricted, messagingRestricted: restricted, giftingRestricted: restricted,
-      expiresAt: null, updatedAt: FieldValue.serverTimestamp(), updatedBy: actorUid,
+      moderationPostingRestricted, moderationMessagingRestricted, moderationGiftingRestricted,
+      moderationExpiresAt,
+      postingRestricted: restricted || moderationPostingRestricted,
+      messagingRestricted: restricted || moderationMessagingRestricted,
+      giftingRestricted: restricted || moderationGiftingRestricted,
+      expiresAt: restricted ? null : moderationExpiresAt,
+      updatedAt: FieldValue.serverTimestamp(), updatedBy: actorUid,
       source: 'admin_user_management',
     }, { merge: true });
     transaction.update(userRef, {
