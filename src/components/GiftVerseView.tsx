@@ -1,5 +1,5 @@
 import React,{useEffect,useMemo,useState}from'react';import{Search,Sparkles,X,ShieldCheck,Gem,Gift,RefreshCw,ArrowDownWideNarrow}from'lucide-react';import{getGiftCatalog,quoteNexGift,type NexoraGift,type GiftCatalogResponse,type GiftQuote}from'../services/giftCatalogService';
-import {sendNexGift} from'../services/giftDeliveryService';
+import {sendNexGift} from'../services/giftDeliveryService';import GiftAnimationStage from'./GiftAnimationStage';
 const R:Record<NexoraGift['rarity'],string>={common:'Everyday',uncommon:'Uncommon',rare:'Rare',epic:'Epic',legendary:'Legendary'};const S:Record<NexoraGift['rarity'],string>={common:'border-white/10 text-slate-300',uncommon:'border-emerald-400/25 text-emerald-200',rare:'border-sky-400/25 text-sky-200',epic:'border-violet-400/35 text-violet-200',legendary:'border-amber-300/40 text-amber-200'};
 function GiftArt({gift,className='',active=false}:{gift:NexoraGift;className?:string;active?:boolean}){return <img src={gift.image} alt={gift.name} loading="lazy" decoding="async" draggable={false} data-animation={gift.animation} className={'gift-art '+(active?'gift-art-active ':'')+className}/>}
 function newGiftRequestKey(){return typeof crypto!=='undefined'&&'randomUUID'in crypto?crypto.randomUUID():`gift_${Date.now()}_${Math.random().toString(36).slice(2)}`;}
