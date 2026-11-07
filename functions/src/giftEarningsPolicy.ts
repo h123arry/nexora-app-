@@ -15,7 +15,7 @@ export function calculateGiftRevenueSplit(grossNex: unknown): GiftRevenueSplit {
     throw new Error('Gift gross must be a positive safe integer.');
   }
   const gross = grossNex as number;
-  const creatorShareNex = Math.floor(gross * CREATOR_REVENUE_SHARE_BPS / REVENUE_SHARE_DENOMINATOR);
+  const creatorShareNex = Number((BigInt(gross) * BigInt(CREATOR_REVENUE_SHARE_BPS) + BigInt(REVENUE_SHARE_DENOMINATOR / 2)) / BigInt(REVENUE_SHARE_DENOMINATOR));
   const platformShareNex = gross - creatorShareNex;
   if (!Number.isSafeInteger(creatorShareNex) || creatorShareNex <= 0
     || !Number.isSafeInteger(platformShareNex) || platformShareNex < 0
