@@ -1,11 +1,19 @@
 provider "google" { project = var.project_id }
 
 data "google_storage_bucket" "media" { name = var.bucket_name }
+data "google_project" "current" { project_id = var.project_id }
+
+resource "google_storage_bucket_iam_member" "cdn_origin_reader" {
+  bucket = data.google_storage_bucket.media.name
+  role   = "roles/storage.objectViewer"
+  member = "serviceAccount:service-${data.google_project.current.number}@cloud-cdn-fill.iam.gserviceaccount.com"
+}
 
 resource "google_compute_backend_bucket" "media" {
   name        = "nexora-private-media-origin"
   bucket_name = data.google_storage_bucket.media.name
   enable_cdn  = true
+  depends_on  = [google_storage_bucket_iam_member.cdn_origin_reader]
   cdn_policy {
     cache_mode                   = "CACHE_ALL_STATIC"
     default_ttl                  = 3600
