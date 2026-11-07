@@ -1,6 +1,5 @@
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-const RESULT_PAGE_SIZE = 8;
 const QUERY_LIMIT = 8;
 const QUERY_KEYS = [
   'usersUsername', 'usersNameLower', 'usersNameTitle',
