@@ -1097,4 +1097,40 @@ const publicProfile = (uid) => ({
     await assertFails(updateDoc(aliceNotification, { content: 'tampered notification' }));
   });
 
+  it('keeps Nex Coin wallets owner-readable and all wallet and ledger writes server-only', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'nexWallets', 'alice'), {
+        currency: 'NEX', availableBalance: 250, lifetimeCredited: 300,
+        lifetimeDebited: 50, schemaVersion: 1
+      });
+      await setDoc(doc(db, 'nexWallets', 'alice', 'transactions', 'tx-1'), {
+        direction: 'credit', units: 250, currency: 'NEX', status: 'posted'
+      });
+      await setDoc(doc(db, 'nexLedgerEntries', 'tx-1-credit'), {
+        accountId: 'alice', direction: 'credit', units: 250, currency: 'NEX'
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'nexWallets', 'alice')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'nexWallets', 'alice')));
+    await assertFails(getDocs(collection(dbFor('alice'), 'nexWallets')));
+    await assertSucceeds(getDocs(collection(dbFor('alice'), 'nexWallets', 'alice', 'transactions')));
+    await assertFails(getDocs(collection(dbFor('bob'), 'nexWallets', 'alice', 'transactions')));
+
+    await assertFails(setDoc(doc(dbFor('alice'), 'nexWallets', 'alice'), {
+      currency: 'NEX', availableBalance: 999999, lifetimeCredited: 999999, lifetimeDebited: 0
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'nexWallets', 'alice'), { availableBalance: 999999 }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'nexWallets', 'alice')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'nexWallets', 'alice', 'transactions', 'forged'), {
+      direction: 'credit', units: 999999, currency: 'NEX', status: 'posted'
+    }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerEntries', 'tx-1-credit')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'nexLedgerEntries', 'forged'), {
+      accountId: 'alice', direction: 'credit', units: 999999, currency: 'NEX'
+    }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerTransactions', 'tx-1')));
+    await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerRequests', 'request-1')));
+  });
+
 });
