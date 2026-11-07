@@ -19,7 +19,7 @@ export default function GiftEconomyOperationsPanel(){
  const refresh=useCallback(async()=>{setLoading(true);setError('');try{setRecords(await getGiftRiskReviewQueue());}catch(e){const code=(e as {code?:string})?.code||'';setError(code.includes('permission-denied')?'Finance administrator claim required.':'Gift risk review queue is temporarily unavailable.');}finally{setLoading(false);}},[]);
  useEffect(()=>{void refresh();},[refresh]);
  const review=async(id:string,outcome:'cleared'|'escalated')=>{const note=reviewNotes[id]||'';try{await resolveGiftRiskSignal(id,outcome,note);setNotice('Risk signal '+outcome+'. An immutable audit record was saved.');setReviewNotes(prev=>({...prev,[id]:''}));await refresh();}catch{setError('Risk decision could not be saved. Add a review note and retry.');}};
- const verifyBeneficiary=async()=>{setSaving(true);setError('');setNotice('');try{const result=await setCreatorPayoutBeneficiary(beneficiaryCreator,beneficiaryToken);setNotice('Verified NGN payout beneficiary for '+result.creatorId+'.');setBeneficiaryCreator('');setBeneficiaryToken('');}catch{setError('Beneficiary token could not be verified. Use the provider-issued token only.');}finally{setSaving(false);}};
+ const verifyBeneficiary=async()=>{setSaving(true);setError('');setNotice('');try{const result=await setCreatorPayoutBeneficiary(beneficiaryCreator,beneficiaryToken);setNotice('Provider beneficiary reference recorded for '+result.creatorId+'. Verification is still pending until a provider callback is connected.');setBeneficiaryCreator('');setBeneficiaryToken('');}catch{setError('Beneficiary token could not be verified. Use the provider-issued token only.');}finally{setSaving(false);}};
  const publish=async()=>{
   setSaving(true);setError('');setNotice('');
   try{const result=await createGiftCompetition({title,liveSessionId,startsAt:new Date(startsAt).toISOString(),endsAt:new Date(endsAt).toISOString()});setNotice('Competition created: '+result.competitionId);setTitle('');setLiveSessionId('');setStartsAt('');setEndsAt('');}
@@ -36,10 +36,10 @@ export default function GiftEconomyOperationsPanel(){
    <p className="mt-3 flex items-start gap-2 text-[10px] leading-5 text-slate-500"><ShieldCheck size={13} className="mt-0.5 shrink-0"/> Risk scores prioritize human review. They do not automatically accuse users, reverse gifts or seize balances.</p>
   </div>
   <div className="rounded-xl border border-white/10 p-4">
-   <h4 className="text-sm font-bold text-white">Verify provider beneficiary</h4>
-   <p className="mt-1 text-[10px] leading-5 text-slate-500">Use a provider-issued recipient token only after out-of-band identity and bank verification. Never enter raw account numbers here.</p>
+   <h4 className="text-sm font-bold text-white">Register provider beneficiary reference</h4>
+   <p className="mt-1 text-[10px] leading-5 text-slate-500">Use a provider-issued recipient token only. This records a reference; it does not verify the beneficiary or enable withdrawals. Never enter raw account numbers here.</p>
    <div className="mt-3 grid gap-3 sm:grid-cols-2"><input value={beneficiaryCreator} onChange={e=>setBeneficiaryCreator(e.target.value)} placeholder="Creator account ID" className="min-h-10 rounded-xl border border-white/10 bg-[#15102a] px-3 text-xs text-white"/><input value={beneficiaryToken} onChange={e=>setBeneficiaryToken(e.target.value)} placeholder="Provider beneficiary token" className="min-h-10 rounded-xl border border-white/10 bg-[#15102a] px-3 text-xs text-white"/></div>
-   <button type="button" disabled={saving||!beneficiaryCreator.trim()||!beneficiaryToken.trim()} onClick={()=>void verifyBeneficiary()} className="mt-3 min-h-10 w-full rounded-xl border border-white/10 px-4 text-xs font-bold text-white disabled:opacity-40">Record verified beneficiary</button>
+   <button type="button" disabled={saving||!beneficiaryCreator.trim()||!beneficiaryToken.trim()} onClick={()=>void verifyBeneficiary()} className="mt-3 min-h-10 w-full rounded-xl border border-white/10 px-4 text-xs font-bold text-white disabled:opacity-40">Register provider reference</button>
   </div>
   <div className="rounded-xl border border-white/10 p-4">
    <h4 className="flex items-center gap-2 text-sm font-bold text-white"><CalendarPlus size={15} className="text-violet-300"/> Schedule a live gift competition</h4>
