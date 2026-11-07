@@ -117,7 +117,9 @@ describe('NEXORA Institute institution services', () => {
     const retryBooking = await bookAcademyMentorshipSession(db, 'learner-one', created.sessionId);
     assert.equal(firstBooking.bookedCount, 1);
     assert.equal(retryBooking.bookedCount, 1);
-    assert.equal((await listUpcomingAcademyMentorshipSessions(db)).sessions.some(session => session.sessionId === created.sessionId), false);
+    const afterBooking = (await listUpcomingAcademyMentorshipSessions(db, 'learner-one')).sessions.find(session => session.sessionId === created.sessionId);
+    assert.equal(afterBooking?.isBooked, true);
+    assert.equal(afterBooking?.seatsAvailable, 0);
     assert.equal((await sessionRef.get()).get('bookedCount'), 1);
     await assert.rejects(bookAcademyMentorshipSession(db, 'learner-two', created.sessionId), /full/);
     await sessionRef.delete();
