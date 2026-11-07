@@ -133,7 +133,7 @@ export async function publishAcademyAssessment(db: Firestore, uid: string, cours
   const assessmentRef = courseRef.collection('assessments').doc(assessmentId);
   await db.runTransaction(async tx => {
     const [course, assessment] = await Promise.all([tx.get(courseRef), tx.get(assessmentRef)]);
-    if (!course.exists || course.get('ownerId') !== uid || course.get('status') !== 'draft' || !assessment.exists) throw new Error('This draft assessment is unavailable.');
+    if (!course.exists || course.get('ownerId') !== uid || course.get('status') !== 'published' || !assessment.exists || assessment.get('status') !== 'draft') throw new Error('This draft assessment is unavailable.');
     tx.update(assessmentRef, { status: 'published', publishedAt: new Date() });
   });
   return { assessmentId, published: true };
