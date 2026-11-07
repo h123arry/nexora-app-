@@ -19,10 +19,10 @@ export async function listCreatorStudioTemplates(): Promise<CreatorStudioTemplat
 
 export async function saveCreatorStudioTemplate(input: CreatorStudioTemplateInput): Promise<{ templateId: string; saved: boolean }> {
   const callable = httpsCallable<CreatorStudioTemplateInput, { templateId: string; saved: boolean }>(functions, 'saveCreatorStudioTemplate');
-  return (await callable)(input).data;
+  return (await callable(input)).data;
 }
 
 export async function deleteCreatorStudioTemplate(templateId: string): Promise<{ deleted: boolean }> {
   const callable = httpsCallable<{ templateId: string }, { deleted: boolean }>(functions, 'deleteCreatorStudioTemplate');
-  return (await callable)({ templateId }).data;
+  return (await callable({ templateId })).data;
 }
