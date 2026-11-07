@@ -200,3 +200,32 @@ export const settleGiftCreatorEarning = onCall({ maxInstances: 5 }, async (reque
     throw new HttpsError('internal', 'The creator earning could not be settled. No settlement was confirmed.');
   }
 });
+
+export const getPendingGiftEarningsForFinance = onCall({ maxInstances: 5 }, async (request) => {
+  requireUid(request);
+  if (!isFinanceAdmin(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  try {
+    const snapshot = await db.collection('creatorEarnings')
+      .where('status', '==', 'pending_review')
+      .orderBy('createdAt', 'desc')
+      .limit(100)
+      .get();
+    return {
+      records: snapshot.docs.map(item => {
+        const data = item.data();
+        return {
+          transactionId: item.id,
+          creatorId: data.creatorId,
+          senderId: data.senderId,
+          giftName: data.giftName,
+          quantity: data.quantity,
+          grossNex: data.grossNex,
+          createdAt: iso(data.createdAt),
+        };
+      }),
+      hasMore: snapshot.size === 100,
+    };
+  } catch {
+    throw new HttpsError('unavailable', 'The GIFTVERSE finance review queue is temporarily unavailable.');
+  }
+});
