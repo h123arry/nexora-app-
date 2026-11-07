@@ -41,7 +41,8 @@ export async function createCirclePostForUser(
     }
     const restriction = accountStatus.data() || {};
     if (activeRestriction(restriction, 'postingRestricted', now)
-      || activeRestriction(restriction, 'suspended', now)) {
+      || activeRestriction(restriction, 'suspended', now)
+      || activeRestriction(restriction, 'banned', now)) {
       throw new HttpsError('permission-denied', 'Your account cannot publish posts right now.');
     }
     const identity = profile.data() || {};
