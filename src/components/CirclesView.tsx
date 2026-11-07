@@ -57,6 +57,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
   const [activePortalTab, setActivePortalTab] = useState<string>('feed');
   const selectedCircleCanManage = Boolean(selectedCircle && (selectedCircle.ownerId === currentUser.id || selectedCircle.creatorId === currentUser.id || selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id)));
+  useEffect(() => { setActivePortalTab('feed'); }, [selectedCircle?.id]);
 
   // Interactive state helpers for sub-tabs in Community Portal
   const [circlePolls, setCirclePolls] = useState<Array<{ id: string; question: string; options: Array<{ id: string; text: string; votes: number }>; createdBy: string; status: string; myVote: string | null; createdAt: string }>>([]);
