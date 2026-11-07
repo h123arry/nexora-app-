@@ -761,6 +761,13 @@ service cloud.firestore {
       allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid;
       allow write: if false;
     }
+    match /creatorPayoutBeneficiaries/{userId} { allow read, write: if false; }
+    match /creatorPayoutAuditEvents/{eventId} { allow read, write: if false; }
+    match /creatorPayoutRequests/{requestId} { allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid; allow create, update, delete: if false; }
+    match /giftRiskSignals/{signalId} { allow read, write: if false; }
+    match /giftRiskReviewAudit/{eventId} { allow read, write: if false; }
+    match /giftCompetitions/{competitionId} { allow get, list: if signedIn(); allow create, update, delete: if false; }
+    match /giftCompetitionContributions/{contributionId} { allow read, write: if false; }
     match /financialLedger/{entryId} { allow read, write: if false; }
     match /paymentWebhookFailures/{failureId} { allow read, write: if false; }
     match /financeAuditEvents/{eventId} { allow read, write: if false; }
