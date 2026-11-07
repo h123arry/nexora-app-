@@ -293,7 +293,7 @@ export const searchNexoraDirectory = onCall({ maxInstances: 10 }, async (request
     return await searchPublicDirectory(adminDb, request.auth.uid, request.data?.query, request.data?.cursor);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
-    if (message.includes('between 2 and 40') || message.includes('Enter a search term')) {
+    if (message.includes('between 2 and 40') || message.includes('Enter a search term') || message.includes('cursor is invalid') || message.includes('cursor is stale')) {
       throw new HttpsError('invalid-argument', message);
     }
     throw new HttpsError('internal', 'Directory search is temporarily unavailable.');
