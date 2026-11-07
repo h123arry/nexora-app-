@@ -22,7 +22,7 @@ before(async () => {
 
 after(async () => {
   await db.doc('follows/' + followerId + '_' + creatorId).delete();
-  for (const collectionName of ['creatorAudienceDaily', 'creatorProfileDailyVisitors']) {
+  for (const collectionName of ['creatorAudienceDaily', 'creatorProfileDailyVisitors', 'creatorProfileVisitorHistory']) {
     const snap = await db.collection(collectionName).where('creatorId', '==', creatorId).get();
     for (const item of snap.docs) await item.ref.delete();
   }
@@ -90,8 +90,18 @@ describe('Creator audience analytics', () => {
     const daily = await db.collection('creatorAudienceDaily').where('creatorId', '==', creatorId).where('day', '==', '2026-11-06').get();
     assert.equal(daily.size, 1);
     assert.equal(daily.docs[0].get('uniqueProfileVisitors'), 2);
+    assert.equal(daily.docs[0].get('newProfileVisitors'), 2);
+    assert.equal(daily.docs[0].get('returningProfileVisitors'), 0);
     const visitorRecords = await db.collection('creatorProfileDailyVisitors').where('creatorId', '==', creatorId).where('day', '==', '2026-11-06').get();
     assert.ok(visitorRecords.docs[0].get('expireAt').toDate() > new Date('2027-02-03T00:00:00.000Z'));
+    const returning = await recordCreatorProfileVisitForUser(db, 'visitor-one', creatorId, new Date('2026-11-07T15:00:00.000Z'));
+    assert.equal(returning.recorded, true);
+    const nextDay = await db.collection('creatorAudienceDaily').where('creatorId', '==', creatorId).where('day', '==', '2026-11-07').get();
+    assert.equal(nextDay.docs[0].get('newProfileVisitors'), 0);
+    assert.equal(nextDay.docs[0].get('returningProfileVisitors'), 1);
+    const history = await db.collection('creatorProfileVisitorHistory').where('creatorId', '==', creatorId).get();
+    assert.equal(history.size, 2);
+    assert.ok(history.docs[0].get('expireAt').toDate() > new Date('2027-02-03T00:00:00.000Z'));
     await assert.rejects(recordCreatorProfileVisitForUser(db, 'visitor-one', 'visitor-one', day), /valid public creator profile/);
   });
 });
