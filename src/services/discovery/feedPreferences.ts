@@ -34,17 +34,17 @@ function cleanIds(values: unknown, normalize = false): string[] {
   return [...unique];
 }
 
-function cleanSignalMap(value: unknown): Record<string, number> {
+function cleanSignalMap(value: unknown, normalizeTags = false): Record<string, number> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return Object.fromEntries(Object.entries(value as Record<string, unknown>)
     .filter(([key, score]) => key.trim().length > 0 && key.length <= 120 && typeof score === 'number' && Number.isFinite(score))
     .slice(-200)
-    .map(([key, score]) => [key.trim(), Math.max(-100, Math.min(100, score as number))]));
+    .map(([key, score]) => [normalizeTags ? key.trim().replace(/^#/, '').toLowerCase() : key.trim(), Math.max(-100, Math.min(100, score as number))]));
 }
 
 export function normalizeRecommendationSignals(value?: Partial<RecommendationSignals> | null): RecommendationSignals {
   return {
-    tags: cleanSignalMap(value?.tags),
+    tags: cleanSignalMap(value?.tags, true),
     creators: cleanSignalMap(value?.creators),
     communities: cleanSignalMap(value?.communities),
   };
