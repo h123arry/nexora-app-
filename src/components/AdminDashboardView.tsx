@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User as UserIcon, Shield, Search, Ban, CheckCircle, RotateCcw, Trash2, AlertTriangle, BarChart2, Activity, Globe, Users, FileText, Sparkles, Zap, RefreshCw, TrendingUp, Award } from 'lucide-react';
 import { User, Post, Report, CrashLog } from '../types';
-import { collection, getDocs, doc, updateDoc, query, where, limit } from 'firebase/firestore';
+import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { auth, db } from '../lib/firebase';
 import { reviewModerationReport } from '../services/dataService';
@@ -29,6 +29,9 @@ export default function AdminDashboardView({
   const [crashLogs, setCrashLogs] = useState<CrashLog[]>([]);
   const [searchUserQuery, setSearchUserQuery] = useState('');
   const [accessState, setAccessState] = useState<'checking' | 'granted' | 'denied'>('checking');
+  const [canManageUsers, setCanManageUsers] = useState(false);
+  const [canManageRoles, setCanManageRoles] = useState(false);
+  const [userDirectoryUnavailable, setUserDirectoryUnavailable] = useState(false);
   
   // Analytics timeframe
   const [timeframe, setTimeframe] = useState<'24h' | '7d' | '30d'>('7d');
@@ -39,25 +42,22 @@ export default function AdminDashboardView({
 
   // Load and refresh administrative data
   const loadData = async () => {
-    // 1. Load users from Firestore
+    // 1. Load the protected user directory through a trusted callable.
     try {
-      if (db) {
-        const snap = await getDocs(query(collection(db, 'users'), limit(200)));
-        const firestoreUsers: User[] = [];
-        snap.forEach(docSnap => {
-          firestoreUsers.push({ id: docSnap.id, ...docSnap.data() } as User);
-        });
-        if (firestoreUsers.length > 0) {
-          setUsers(firestoreUsers);
-        } else {
-          setUsers([]);
-        }
-      } else {
-        setUsers([]);
-      }
-    } catch (e) {
-      console.error('Error loading users from Firestore:', e);
+      const result = await httpsCallable<void, {
+        users: User[];
+        permissions: { canManage: boolean; canManageRoles: boolean };
+      }>(getFunctions(), 'listAdminUsers')();
+      setUsers(result.data.users);
+      setCanManageUsers(result.data.permissions.canManage);
+      setCanManageRoles(result.data.permissions.canManageRoles);
+      setUserDirectoryUnavailable(false);
+    } catch (error) {
+      console.warn('Protected user directory unavailable:', error);
       setUsers([]);
+      setCanManageUsers(false);
+      setCanManageRoles(false);
+      setUserDirectoryUnavailable(true);
     }
     
     // 2. Load reports from the authoritative moderation queue. Reporter identity
@@ -103,6 +103,8 @@ export default function AdminDashboardView({
       const role = typeof claims.role === 'string' ? claims.role : '';
       const granted = claims.moderator === true || claims.admin === true || ['moderator', 'senior_moderator', 'admin', 'founder'].includes(role);
       setAccessState(granted ? 'granted' : 'denied');
+      setCanManageUsers(claims.admin === true || ['admin', 'founder'].includes(role));
+      setCanManageRoles(claims.founder === true || role === 'founder');
       if (granted) void loadData();
     }).catch(() => setAccessState('denied'));
   }, []);
@@ -145,78 +147,56 @@ export default function AdminDashboardView({
     return totals;
   }, { events: 0, actorDays: 0, impressions: 0, engagements: 0 });
 
-  // Sync back to Firestore user mutations
-  const syncUserChange = async (updatedUser: User) => {
+  // All privileged user changes go through authenticated, audited Admin SDK callables.
+  const runUserAction = async (payload: { action: string; targetUid: string; enabled?: boolean; role?: string }, successMessage: string) => {
     try {
-      if (db) {
-        await updateDoc(doc(db, 'users', updatedUser.id), {
-          ...updatedUser,
-          updatedAt: new Date()
-        });
-      }
-    } catch (e) {
-      console.error('Error updating user in Firestore:', e);
+      await httpsCallable<typeof payload, { updated: boolean }>(getFunctions(), 'updateAdminUser')(payload);
+      await loadData();
+      window.dispatchEvent(new CustomEvent('toast', { detail: successMessage }));
+    } catch (error) {
+      const code = (error as { code?: string })?.code || '';
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: code.includes('permission-denied')
+          ? 'Your administrator permission does not allow this action.'
+          : error instanceof Error ? error.message : 'The account update could not be completed.',
+      }));
     }
-    loadData(); // Rehydrate
   };
 
-  // Toggle Ban / Suspend
   const handleToggleBan = (user: User) => {
-    const isBanned = !user.isBanned;
-    const updated = { ...user, isBanned };
-    syncUserChange(updated);
-    window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `${user.name} is now ${isBanned ? '🚫 BANNED' : '✅ UNBANNED'}` 
-    }));
+    void runUserAction(
+      { action: 'ban', targetUid: user.id, enabled: !user.isBanned },
+      user.isBanned ? `Ban lifted for @${user.username}.` : `@${user.username} has been banned.`,
+    );
   };
 
   const handleToggleSuspend = (user: User) => {
-    const isSuspended = !user.isSuspended;
-    const updated = { ...user, isSuspended };
-    syncUserChange(updated);
-    window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `${user.name} access is ${isSuspended ? '⏳ SUSPENDED' : '✅ RESTORED'}` 
-    }));
+    void runUserAction(
+      { action: 'suspend', targetUid: user.id, enabled: !user.isSuspended },
+      user.isSuspended ? `Suspension lifted for @${user.username}.` : `@${user.username} has been suspended.`,
+    );
   };
 
-  // Toggle Verification
-  const handleToggleVerify = (user: User) => {
-    const isVerified = !user.isVerified;
-    const updated = { ...user, isVerified };
-    syncUserChange(updated);
-    window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `${user.name} badge updated to ${isVerified ? '💜 VERIFIED' : '⚪ UNVERIFIED'}` 
-    }));
-  };
-
-  // Toggle Admin Privileges (WhatsApp style role promotion/demotion)
   const handleToggleAdminRole = (user: User) => {
-    if (user.username === 'voh') {
-      window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ The original founder role cannot be altered!' }));
+    if (!canManageRoles) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Only the founder can change administrator roles.' }));
       return;
     }
-    const newRole = user.role === 'admin' ? 'user' : 'admin';
-    const updated = { ...user, role: newRole as any };
-    syncUserChange(updated);
-    window.dispatchEvent(new CustomEvent('toast', { 
-      detail: `🛡️ ${user.name} is now ${newRole === 'admin' ? 'promoted to ADMIN' : 'demoted to USER'}!` 
-    }));
+    if (user.username === 'voh') {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'The founder role is protected.' }));
+      return;
+    }
+    void runUserAction(
+      { action: 'role', targetUid: user.id, role: user.role === 'admin' ? 'user' : 'admin' },
+      user.role === 'admin' ? `@${user.username} is now a standard user.` : `@${user.username} is now an administrator.`,
+    );
   };
 
-  // Reset Reputation Points
   const handleResetReputation = (user: User) => {
-    const updated: User = {
-      ...user,
-      reputationPoints: 0,
-      reputationBreakdown: {
-        contributions: 0,
-        helpfulness: 0,
-        missionsCompleted: 0,
-        skillsVerified: 0
-      }
-    };
-    syncUserChange(updated);
-    window.dispatchEvent(new CustomEvent('toast', { detail: `🔄 Reputation Points of @${user.username} successfully reset to zero.` }));
+    void runUserAction(
+      { action: 'reset_reputation', targetUid: user.id },
+      `Reputation reset for @${user.username}.`,
+    );
   };
 
   // Resolve moderation reports
@@ -376,16 +356,17 @@ export default function AdminDashboardView({
                       
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <button 
-                            onClick={() => handleToggleVerify(user)}
-                            className={`p-1.5 rounded-lg border text-[9.5px] font-mono font-black flex items-center gap-1 transition-all uppercase cursor-pointer ${user.isVerified ? 'bg-violet-950/40 text-violet-400 border-white/10' : 'bg-zinc-900 border-white/5 text-zinc-500 hover:text-white'}`}
+                          <span
+                            title="Verification follows the account's verified email or phone status."
+                            className={`p-1.5 rounded-lg border text-[9.5px] font-mono font-black inline-flex items-center gap-1 uppercase ${user.isVerified ? 'bg-violet-950/40 text-violet-400 border-white/10' : 'bg-zinc-900 border-white/5 text-zinc-500'}`}
                           >
                             <CheckCircle className="w-3 h-3" />
                             {user.isVerified ? 'VERIFIED' : 'UNVERIFIED'}
-                          </button>
+                          </span>
 
                           <button 
                             onClick={() => handleToggleAdminRole(user)}
+                            disabled={!canManageRoles}
                             className={`p-1.5 rounded-lg border text-[9.5px] font-mono font-black flex items-center gap-1 transition-all uppercase cursor-pointer ${user.role === 'admin' ? 'bg-rose-950/40 text-rose-400 border-rose-500/20' : 'bg-zinc-900 border-white/5 text-zinc-500 hover:text-white'}`}
                           >
                             <Shield className="w-3 h-3" />
@@ -399,6 +380,7 @@ export default function AdminDashboardView({
                           <span className="text-emerald-400 font-extrabold">{user.reputationPoints.toLocaleString()} PR</span>
                           <button 
                             onClick={() => handleResetReputation(user)}
+                            disabled={!canManageUsers}
                             className="p-1 hover:bg-zinc-800 rounded text-amber-500 transition-all hover:scale-110 active:scale-95 cursor-pointer"
                             title="Reset Reputation to 0"
                           >
@@ -419,6 +401,7 @@ export default function AdminDashboardView({
                         <div className="inline-flex items-center gap-1.5">
                           <button 
                             onClick={() => handleToggleSuspend(user)}
+                            disabled={!canManageUsers}
                             className={`p-1.5 rounded-lg text-[10px] font-bold font-sans cursor-pointer ${user.isSuspended ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400'}`}
                             title="Suspend/Release Account"
                           >
@@ -427,7 +410,7 @@ export default function AdminDashboardView({
                           
                           <button 
                             onClick={() => handleToggleBan(user)}
-                            disabled={user.username === 'voh'}
+                            disabled={!canManageUsers || user.username === 'voh'}
                             className={`p-1.5 rounded-lg text-[10px] font-bold font-sans cursor-pointer ${user.username === 'voh' ? 'opacity-30 cursor-not-allowed' : user.isBanned ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400' : 'bg-red-500/10 hover:bg-red-500/20 text-red-400'}`}
                           >
                             {user.isBanned ? 'Revoke Ban' : 'Ban Permanent'}
@@ -439,7 +422,7 @@ export default function AdminDashboardView({
                   {filteredUsers.length === 0 && (
                     <tr>
                       <td colSpan={5} className="p-8 text-center text-zinc-500 font-mono text-[10.5px]">
-                        NO REGISTERED SYSTEM USERS MATCH THE SELECTION MATRIX query.
+                        {userDirectoryUnavailable ? 'USER DIRECTORY UNAVAILABLE OR ACCESS DENIED.' : 'NO REGISTERED SYSTEM USERS MATCH THE SELECTION MATRIX query.'}
                       </td>
                     </tr>
                   )}
