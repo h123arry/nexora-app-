@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import NexoraLoader from './NexoraLoader';
-import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown } from 'lucide-react';
+import CreatorAcademyView from './CreatorAcademyView';
+import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, GraduationCap } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
 import { getDownloadURL, ref } from 'firebase/storage';
@@ -32,7 +33,7 @@ export default function CreatorDashboardView({
   onUpdateProfile
 }: CreatorDashboardViewProps) {
   // Tabs & Navigation
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization'>('overview');
   
   // Real Local state for Optimistic UI and responsiveness
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
@@ -593,6 +594,7 @@ export default function CreatorDashboardView({
       <div className="flex flex-wrap gap-1.5 p-1 bg-black/40 border border-white/5 rounded-2xl overflow-x-auto">
         {[
           { id: 'overview', label: 'Overview', icon: TrendingUp },
+          { id: 'academy', label: 'Creator Academy', icon: GraduationCap },
           { id: 'analytics', label: 'Audience Insights', icon: Users },
           { id: 'content', label: 'Content Manager', icon: FileText },
           { id: 'drafts', label: 'Drafts & Schedule', icon: Calendar },
@@ -636,6 +638,8 @@ export default function CreatorDashboardView({
           transition={{ duration: 0.3 }}
           className="space-y-6"
         >
+          {activeTab === 'academy' && <CreatorAcademyView currentUser={currentUser} />}
+
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-6">

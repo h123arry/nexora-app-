@@ -25,6 +25,13 @@ export { getGiftCatalog, quoteNexGift } from './giftCatalog.js';
 export { sendNexGift } from './giftDelivery.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
+import {
+  saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
+  getPublishedAcademyCourse, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
+  issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
+  createAcademyMentorshipSession, bookAcademyMentorshipSession,
+} from './academyInstitution.js';
+
 
 const adminApp = getFirebaseAdminApp();
 const firestoreDatabaseId = resolveFirestoreDatabaseId();
@@ -342,4 +349,77 @@ export const deletePageChannelUpdate = onCall({ maxInstances: 10 }, async (reque
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     throw new HttpsError('internal', 'The Page channel update could not be deleted. Please retry.');
   }
+});
+
+
+// NEXORA Institute: all privileged authoring, grading and credential mutations
+// run through trusted callables. Learner clients never write grades/certificates.
+function academyFailure(error: unknown): HttpsError {
+  const message = error instanceof Error ? error.message : 'Academy service unavailable.';
+  if (message.includes('required.') || message.includes('valid ') || message.includes('Provide ') || message.includes('needs between') || message.includes('Answer every')) {
+    return new HttpsError('invalid-argument', message);
+  }
+  if (message.includes('Only the owner') || message.includes('cannot edit') || message.includes('instructor') || message.includes('Only active')) {
+    return new HttpsError('permission-denied', message);
+  }
+  if (message.includes('unavailable') || message.includes('not found')) return new HttpsError('not-found', message);
+  if (message.includes('Pass the published') || message.includes('not awaiting') || message.includes('must be revised')) return new HttpsError('failed-precondition', message);
+  if (message.includes('full')) return new HttpsError('resource-exhausted', message);
+  return new HttpsError('internal', 'The Academy request could not be completed. Please retry.');
+}
+
+export const academySaveCourseDraft = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to author an Academy course.');
+  try { return await saveAcademyCourseDraft(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
+});
+export const academySaveLesson = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to author an Academy lesson.');
+  try { return await saveAcademyLesson(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
+});
+export const academySubmitCourseForReview = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to submit an Academy course.');
+  try { return await submitAcademyCourseForReview(adminDb, request.auth.uid, request.data?.courseId); } catch (error) { throw academyFailure(error); }
+});
+export const academyReviewCourse = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review an Academy course.');
+  try { return await reviewAcademyCourse(adminDb, request.auth.uid, request.data?.courseId, request.data?.decision, request.data?.note); } catch (error) { throw academyFailure(error); }
+});
+export const academyGetPublishedCourse = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to access the Academy.');
+  try { return await getPublishedAcademyCourse(adminDb, request.data?.courseId); } catch (error) { throw academyFailure(error); }
+});
+export const academyCreateAssessment = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create an Academy assessment.');
+  try { return await createAcademyAssessment(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
+});
+export const academyPublishAssessment = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish an Academy assessment.');
+  try { return await publishAcademyAssessment(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId); } catch (error) { throw academyFailure(error); }
+});
+export const academySubmitAssessment = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to take an Academy assessment.');
+  try { return await submitAcademyAssessment(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId, request.data?.answers); } catch (error) { throw academyFailure(error); }
+});
+export const academyIssueCertificate = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to request your Academy certificate.');
+  try { return await issueAcademyCertificate(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId); } catch (error) { throw academyFailure(error); }
+});
+export const academyVerifyCertificate = onCall({ maxInstances: 10 }, async request => {
+  try { return await verifyAcademyCertificate(adminDb, request.data?.verificationCode); } catch (error) { throw academyFailure(error); }
+});
+export const academyRevokeCertificate = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to revoke an Academy certificate.');
+  try { return await revokeAcademyCertificate(adminDb, request.auth.uid, request.data?.certificateId, request.data?.reason); } catch (error) { throw academyFailure(error); }
+});
+export const academyGetTutorContext = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to use the Creator Tutor.');
+  try { return await getAcademyTutorContext(adminDb, request.auth.uid, request.data?.courseId, request.data?.lessonIds); } catch (error) { throw academyFailure(error); }
+});
+export const academyCreateMentorshipSession = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to host an Academy session.');
+  try { return await createAcademyMentorshipSession(adminDb, request.auth.uid, request.data); } catch (error) { throw academyFailure(error); }
+});
+export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to book an Academy session.');
+  try { return await bookAcademyMentorshipSession(adminDb, request.auth.uid, request.data?.sessionId); } catch (error) { throw academyFailure(error); }
 });

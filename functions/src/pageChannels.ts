@@ -52,6 +52,8 @@ export async function publishPageChannelUpdate(
     await Promise.all(recipients.map(async recipientId => {
       const notificationRef = db.collection('users').doc(recipientId)
         .collection('notifications').doc(`page_${updateId}`);
+      const existingNotification = await notificationRef.get();
+      if (existingNotification.exists) return;
       await db.runTransaction(async tx => {
         const existing = await tx.get(notificationRef);
         if (existing.exists) return;

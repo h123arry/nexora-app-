@@ -1132,6 +1132,56 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerTransactions', 'tx-1')));
     await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerRequests', 'request-1')));
   });
+  it('keeps Creator Academy learning progress owner-scoped and prevents client-issued credentials', async () => {
+    const alice = dbFor('alice');
+    const ownProgress = {
+      userId: 'alice', courseId: 'creator-foundations',
+      completedLessonIds: ['identity'], updatedAt: serverTimestamp(), schemaVersion: 1
+    };
+    await assertSucceeds(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), ownProgress));
+    await assertSucceeds(getDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
+    await assertSucceeds(getDocs(query(collection(alice, 'academyProgress'), where('userId', '==', 'alice'))));
+    await assertFails(getDoc(doc(dbFor('bob'), 'academyProgress', 'alice_creator-foundations')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'academyProgress', 'bob_creator-foundations'), {
+      ...ownProgress, userId: 'alice'
+    }));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_unknown-course'), {
+      ...ownProgress, courseId: 'unknown-course'
+    }));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
+      ...ownProgress, completedLessonIds: ['a', 'b', 'c', 'd']
+    }));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
+      ...ownProgress, certificateId: 'forged-certificate'
+    }));
+    await assertFails(updateDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
+      userId: 'bob'
+    }));
+    await assertFails(deleteDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
+  });
+
+  it('keeps Academy institution content, grading and credentials server-authoritative', async () => {
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyCourses', 'forged-course'), {
+      id: 'forged-course', ownerId: 'alice', status: 'published', title: 'Forged'
+    }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'academyCourses', 'private-draft')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyCourses', 'course-1', 'lessons', 'lesson-1'), {
+      id: 'lesson-1', title: 'Forged lesson', body: 'Client-authored lesson content', status: 'published'
+    }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'academyCourses', 'course-1', 'assessments', 'final')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyAssessmentAttempts', 'forged-attempt'), {
+      userId: 'alice', courseId: 'course-1', passed: true, scorePercent: 100
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyCertificates', 'forged-certificate'), {
+      userId: 'alice', courseId: 'course-1', status: 'valid', verificationCode: 'AAAAAAAAAAAAAAAAAAAAAAAA'
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyMentorshipSessions', 'forged-session'), {
+      mentorId: 'alice', status: 'scheduled', capacity: 1000, bookedCount: 0
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyMentorshipSessions', 'session-1', 'bookings', 'alice'), {
+      userId: 'alice', status: 'booked'
+    }));
+  });
 
   it('keeps GIFTVERSE live events server-created and creator galleries read-only', async () => {
     await seed(async (db) => {

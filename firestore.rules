@@ -183,6 +183,44 @@ service cloud.firestore {
     // Default-deny for every path not explicitly listed below.
     match /{document=**} { allow read, write: if false; }
 
+
+    // NEXORA Institute content is published by trusted Academy callables.
+    // Assessment answer keys, grading records and credentials are never client-writable.
+    match /academyInstructors/{uid} {
+      allow get: if owner(uid);
+      allow list, create, update, delete: if false;
+    }
+    match /academyCourses/{courseId} {
+      allow get, list: if resource.data.status == 'published';
+      allow create, update, delete: if false;
+      match /lessons/{lessonId} {
+        function publishedCourse() {
+          return get(/databases/$(database)/documents/academyCourses/$(courseId)).data.status == 'published';
+        }
+        allow get, list: if publishedCourse() && resource.data.status == 'published';
+        allow create, update, delete: if false;
+      }
+      match /assessments/{assessmentId} {
+        allow read, write: if false;
+      }
+    }
+    match /academyAssessmentAttempts/{attemptId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /academyCertificates/{certificateId} {
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
+    match /academyMentorshipSessions/{sessionId} {
+      allow get, list: if resource.data.status == 'scheduled';
+      allow create, update, delete: if false;
+      match /bookings/{userId} {
+        allow get: if owner(userId);
+        allow list, create, update, delete: if false;
+      }
+    }
+
     // Canonical username claims prevent query-before-write races during onboarding.
     match /usernames/{username} {
       allow get: if signedIn();
@@ -651,6 +689,42 @@ service cloud.firestore {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
       // Creator analytics are derived records; clients cannot forge totals.
       allow create, update, delete: if false;
+    }
+
+    // Academy lesson progress is a learner-owned record, not a credential.
+    // Course completion and certificates must be assessed by trusted backend code.
+    match /academyProgress/{progressId} {
+      function validAcademyCourse(courseId) {
+        return courseId in [
+          'creator-foundations', 'content-craft', 'community-building',
+          'creator-business', 'live-production', 'creator-analytics',
+          'personal-brand', 'creator-safety'
+        ];
+      }
+      function validAcademyProgress() {
+        return request.resource.data.keys().hasOnly([
+            'userId', 'courseId', 'completedLessonIds', 'updatedAt', 'schemaVersion'
+          ])
+          && request.resource.data.keys().hasAll([
+            'userId', 'courseId', 'completedLessonIds', 'updatedAt', 'schemaVersion'
+          ])
+          && request.resource.data.userId == request.auth.uid
+          && validAcademyCourse(request.resource.data.courseId)
+          && progressId == request.auth.uid + '_' + request.resource.data.courseId
+          && request.resource.data.completedLessonIds is list
+          && request.resource.data.completedLessonIds.size() <= 3
+          && request.resource.data.schemaVersion == 1;
+      }
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validAcademyProgress();
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['completedLessonIds', 'updatedAt'])
+        && validAcademyProgress();
+      allow delete: if false;
     }
 
     // Raw analytics observations and aggregate metrics are server-owned.
