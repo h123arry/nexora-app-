@@ -7,7 +7,6 @@ export interface CreatorAudiencePoint {
   unfollows: number;
   netFollowerChange: number;
   followerCount: number | null;
-  profileVisits: number;
   uniqueProfileVisitors: number;
 }
 export interface CreatorAudienceAnalytics {
