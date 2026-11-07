@@ -12,6 +12,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, Folder
 
 import { motion, AnimatePresence } from 'motion/react';
 import { recordReelSignal } from '../services/reels/reelsRanking';
+import { getCreditedWatchDelta } from '../utils/watchTimePolicy';
 
 interface Post {
   id: string;
@@ -191,6 +192,9 @@ export default function NexoraVideoPlayer({
   const viewLoggedRef = useRef(false);
   const watchCompletedRef = useRef(false);
   const playStartedTimeRef = useRef<number>(0);
+  const lastObservedMediaTimeRef = useRef<number | null>(null);
+  const creditedWatchSecondsRef = useRef(0);
+  const lastWatchSignalWriteRef = useRef(0);
   const [showPlayStateIndicator, setShowPlayStateIndicator] = useState<'play' | 'pause' | null>(null);
 
   const handleVolumeToggle = (forcedMute?: boolean) => {
@@ -430,6 +434,16 @@ export default function NexoraVideoPlayer({
   const handleTimeUpdate = () => {
     if (!videoRef.current) return;
     const time = videoRef.current.currentTime;
+    const previousMediaTime = lastObservedMediaTimeRef.current;
+    const creditedDelta = getCreditedWatchDelta(previousMediaTime, time, isPlaying);
+    lastObservedMediaTimeRef.current = time;
+    if (creditedDelta > 0) {
+      creditedWatchSecondsRef.current = Math.min(3600, creditedWatchSecondsRef.current + creditedDelta);
+      if (creditedWatchSecondsRef.current - lastWatchSignalWriteRef.current >= 5) {
+        lastWatchSignalWriteRef.current = creditedWatchSecondsRef.current;
+        recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
+      }
+    }
 
     // Throttle React state update to ~250ms interval to prevent 60fps re-renders
     if (Math.abs(time - lastStateTimeRef.current) >= 0.25) {
@@ -440,37 +454,31 @@ export default function NexoraVideoPlayer({
     // Throttle localStorage write to at most once every 4 seconds to eliminate main-thread storage locks
     if (Math.abs(time - lastSavedPosTimeRef.current) >= 4.0) {
       lastSavedPosTimeRef.current = time;
-      localStorage.setItem(`nexora_vid_pos_${videoUrl}`, String(time));
+      globalVideoPlaybackManager.savePosition(videoUrl, time);
     }
 
-    // Reset watchCompletedRef if wrapped/replayed
+    // A seek or loop is not watch time. Completion is credited only after
+    // meaningful playback has actually elapsed during this player session.
     if (time < 0.5 && lastTimeRef.current > duration - 1.5 && duration > 0) {
-      watchCompletedRef.current = false;
-      recordRecommendationEvent('watch_complete', { 
-        tags: post.tags, 
-        creatorId: post.userId, 
-        creatorUsername: post.username
-      });
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Quiet replay engagement boost synced!' }));
-    } else if (time < 0.5 && watchCompletedRef.current) {
       watchCompletedRef.current = false;
     }
     lastTimeRef.current = time;
 
     // Detect complete watch
-    if (duration > 0 && time > duration - 0.5) {
+    if (duration > 0 && time > duration - 0.5
+      && creditedWatchSecondsRef.current >= Math.min(3, duration * 0.5)) {
       if (!watchCompletedRef.current) {
         watchCompletedRef.current = true;
         recordRecommendationEvent('watch_complete', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username });
-        recordReelSignal(post.id, { completed: true, watchedSeconds: Math.round(time) }, currentUser?.id);
+        recordReelSignal(post.id, { completed: true, watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
       }
     }
 
     // Watch History: Log view when watched for more than 3 seconds (Meaningful watch duration)
-    if (time > 3.0 && !viewLoggedRef.current) {
+    if (creditedWatchSecondsRef.current >= 3 && !viewLoggedRef.current) {
       viewLoggedRef.current = true;
       logToWatchHistory();
-      recordReelSignal(post.id, { watchedSeconds: Math.round(time) }, currentUser?.id);
+      recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
 
       try {
         const currentUserStr = localStorage.getItem('nexora_user');
