@@ -13,6 +13,8 @@ import {
 import { submitModerationAppeal } from '../services/dataService';
 import { buildPostAnalytics } from '../services/analytics/postAnalytics';
 import { uploadMediaFile } from '../services/firebase/storageService';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app } from '../services/firebase/config';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -37,6 +39,9 @@ export default function CreatorDashboardView({
   const [drafts, setDrafts] = useState<any[]>([]);
   const [isDraftsLoading, setIsDraftsLoading] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [videoRetention, setVideoRetention] = useState<{ points: Array<{ day: string; sessionsStarted: number; uniqueViewers: number; acceptedWatchSeconds: number; averageAcceptedWatchSeconds: number | null }>; source: string; verifiedByServer: boolean; humanPlaybackProof: boolean } | null>(null);
+  const [isVideoRetentionLoading, setIsVideoRetentionLoading] = useState(false);
+  const [videoRetentionError, setVideoRetentionError] = useState(false);
   
   // Modals & Sub-states
   const [selectedPostForAnalytics, setSelectedPostForAnalytics] = useState<Post | null>(null);
@@ -75,6 +80,27 @@ export default function CreatorDashboardView({
   useEffect(() => {
     setLocalPosts(posts.filter(post => post.userId === currentUser.id));
   }, [posts, currentUser.id]);
+
+  useEffect(() => {
+    if (activeTab !== 'analytics') return;
+    let cancelled = false;
+    setIsVideoRetentionLoading(true);
+    setVideoRetentionError(false);
+    const loadRetention = async () => {
+      try {
+        const callable = httpsCallable(getFunctions(app), 'getCreatorVideoRetention');
+        const response = await callable({ days: 7 });
+        const data = response.data as typeof videoRetention;
+        if (!cancelled) setVideoRetention(data);
+      } catch {
+        if (!cancelled) setVideoRetentionError(true);
+      } finally {
+        if (!cancelled) setIsVideoRetentionLoading(false);
+      }
+    };
+    void loadRetention();
+    return () => { cancelled = true; };
+  }, [activeTab, currentUser.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -674,11 +700,44 @@ export default function CreatorDashboardView({
 
           {/* TAB 2: AUDIENCE INSIGHTS */}
           {activeTab === 'analytics' && (
-            <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a071f]/60 p-8 text-center">
-              <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Audience analytics unavailable</h4>
-              <p className="mx-auto mt-2 max-w-xl text-xs leading-relaxed text-zinc-400">
-                Retention, new-versus-returning audience, device, geographic and best-time metrics require a persisted analytics event source. No estimates are shown.
-              </p>
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-white/10 bg-[#0a071f]/70 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Video audience retention</h4>
+                    <p className="mt-1 text-[11px] text-zinc-400">Seven-day server-timed playback observations</p>
+                  </div>
+                  <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Server recorded</span>
+                </div>
+                {isVideoRetentionLoading ? (
+                  <p className="mt-5 text-xs text-zinc-400">Loading server-time records…</p>
+                ) : videoRetentionError ? (
+                  <p className="mt-5 text-xs text-amber-200">Video retention data could not be loaded. Try again later.</p>
+                ) : videoRetention?.points?.length ? (
+                  <>
+                    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3">
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Accepted watch time</span><strong className="mt-1 block text-lg text-white">{(videoRetention.points.reduce((sum, point) => sum + point.acceptedWatchSeconds, 0) / 3600).toFixed(2)}h</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Viewing sessions</span><strong className="mt-1 block text-lg text-white">{videoRetention.points.reduce((sum, point) => sum + point.sessionsStarted, 0).toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Unique viewers (daily)</span><strong className="mt-1 block text-lg text-white">{videoRetention.points.reduce((sum, point) => sum + point.uniqueViewers, 0).toLocaleString()}</strong></div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                      {videoRetention.points.map(point => (
+                        <div key={point.day} className="flex items-center justify-between rounded-lg bg-white/[0.03] px-3 py-2 text-xs">
+                          <span className="text-zinc-300">{point.day}</span>
+                          <span className="text-zinc-400">{point.sessionsStarted} sessions · {Math.round(point.acceptedWatchSeconds / 60)} min watched · {point.uniqueViewers} viewers</span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-[10px] leading-relaxed text-zinc-500">The server timestamps and bounds credited viewing intervals. Playback position is still supplied by the client, so these records are abuse-bounded observations, not cryptographic proof of human attention. Daily unique-viewer counts are not cross-day unique reach.</p>
+                  </>
+                ) : (
+                  <p className="mt-5 text-xs text-zinc-400">No server-timed video sessions have been recorded yet. Start receiving views after the updated player and Functions are deployed.</p>
+                )}
+              </div>
+              <div className="rounded-2xl border border-dashed border-white/10 bg-[#0a071f]/60 p-5">
+                <h4 className="text-xs font-bold text-white">Additional audience insights unavailable</h4>
+                <p className="mt-2 text-xs leading-relaxed text-zinc-400">Traffic source, device, geographic, new-versus-returning audience and frame-level retention curves are not yet supported by trusted event sources. Nexora does not estimate or fabricate these metrics.</p>
+              </div>
             </div>
           )}
 
