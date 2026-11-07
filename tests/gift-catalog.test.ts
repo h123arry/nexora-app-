@@ -10,12 +10,12 @@ test('GIFTVERSE contains 120 unique original gift identities and artwork referen
   assert.equal(new Set(GIFT_CATALOG.map(g => g.name)).size, 120);
 });
 
-test('all 120 catalogue references resolve to bundled SVG artwork symbols', () => {
-  const artwork = readFileSync(new URL('../public/giftverse/gifts.svg', import.meta.url), 'utf8');
-  assert.equal((artwork.match(/<symbol id=/g) ?? []).length, 120);
+test('all 120 catalogue references resolve to separate bundled SVG image files', () => {
   for (const gift of GIFT_CATALOG) {
-    assert.ok(artwork.includes(`<symbol id="${gift.id}"`), `Missing artwork for ${gift.id}`);
-    assert.equal(gift.image, `#${gift.id}`);
+    assert.match(gift.image, /^\\/giftverse\\/gifts\\/[a-z0-9-]+\\.svg$/);
+    const artwork = readFileSync(new URL('../public' + gift.image, import.meta.url), 'utf8');
+    assert.match(artwork, /^<svg\\s/);
+    assert.ok(artwork.includes('data-gift-id="' + gift.id + '"'), 'Missing artwork for ' + gift.id);
   }
 });
 
