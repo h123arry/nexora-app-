@@ -42,6 +42,6 @@ export async function resolveGiftRiskSignal(signalId: string, outcome: 'cleared'
   return (await call({signalId,outcome,note})).data;
 }
 export async function setCreatorPayoutBeneficiary(creatorId: string, providerBeneficiaryRef: string) {
-  const call = httpsCallable<{creatorId:string;providerBeneficiaryRef:string}, {creatorId:string;status:'verified';provider:'paystack';currency:'NGN'}>(functions, 'setCreatorPayoutBeneficiary');
+  const call = httpsCallable<{creatorId:string;providerBeneficiaryRef:string}, {creatorId:string;status:'pending';provider:'paystack';currency:'NGN'}>(functions, 'setCreatorPayoutBeneficiary');
   return (await call({creatorId,providerBeneficiaryRef})).data;
 }
