@@ -7,6 +7,7 @@ import { addFollow, createCommunity, createPage, removeFollow, subscribeToCommun
 import { isCircleJoinedDb, joinCircleDb, leaveCircleDb } from '../data/database';
 import { ActivityService } from '../services/activityService';
 import { auth } from '../services/firebase/config';
+import { CommunityService } from '../services/firebase/communityService';
 import { getPageFollowerCount } from '../services/firebase/pageChannelService';
 import BusinessServicesPanel from './BusinessServicesPanel';
 import PageChannelPanel from './PageChannelPanel';
@@ -154,11 +155,14 @@ export default function CommunitiesHubView({
 
   // Real-time synchronization for Communities and Pages
   useEffect(() => {
+    let active = true;
     const unsubComm = subscribeToCommunities(followActorId, (dbComms) => {
-      setCommunities(dbComms.map((community) => ({
+      void Promise.all(dbComms.map(async community => ({
         ...community,
-        isJoinedByMe: isCircleJoinedDb(followActorId, community.id)
-      })));
+        isJoinedByMe: await CommunityService.isActiveMember(followActorId, community.id).catch(() => false),
+      }))).then(next => {
+        if (active) setCommunities(next);
+      });
     });
     const unsubPages = subscribeToPages((dbPages) => {
       setPages(dbPages);
@@ -167,6 +171,7 @@ export default function CommunitiesHubView({
       setFollowedPageIds(follows.map((follow) => follow.followingId).filter((id): id is string => typeof id === 'string'));
     });
     return () => {
+      active = false;
       unsubComm();
       unsubPages();
       unsubFollows();
@@ -365,9 +370,9 @@ export default function CommunitiesHubView({
     try {
       if (willJoin) {
         recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
-        await joinCircleDb(followActorId, circleId);
+        await CommunityService.joinCommunity(followActorId, circleId);
       } else {
-        await leaveCircleDb(followActorId, circleId);
+        await CommunityService.leaveCommunity(followActorId, circleId);
       }
 
       setCommunities(prev => prev.map(c => {
