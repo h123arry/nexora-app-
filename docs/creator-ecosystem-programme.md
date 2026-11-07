@@ -108,7 +108,7 @@ A workstream is not complete because a screen exists. It must have:
 
 ## Current implementation status
 
-### Delivered in this branch: Academy learner foundation
+### Delivered in this branch: Academy learner foundation and institution backend
 - Added an Academy experience within the existing Creator Dashboard.
 - Added eight initial learning paths and 24 introductory lessons.
 - Added per-account Firestore progress persistence.
