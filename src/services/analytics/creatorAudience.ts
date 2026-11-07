@@ -19,7 +19,6 @@ export interface CreatorAudienceAnalytics {
     follows: number;
     unfollows: number;
     netFollowerChange: number;
-    profileVisits: number;
     uniqueProfileVisitors: number;
     newProfileVisitors: number;
     returningProfileVisitors: number;
