@@ -13,7 +13,9 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, Folder
 import { motion, AnimatePresence } from 'motion/react';
 import { recordReelReplay, recordReelSignal } from '../services/reels/reelsRanking';
 import { getCreditedWatchDelta } from '../utils/watchTimePolicy';
-import { trackClientObservation } from '../services/analyticsService';
+import { hasAnalyticsObservationConsent, trackClientObservation } from '../services/analyticsService';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app } from '../services/firebase/config';
 
 interface Post {
   id: string;
@@ -111,6 +113,7 @@ export default function NexoraVideoPlayer({
     }
   })();
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
+  const serverWatchSessionId = useRef(`vw_${post.id}_${Math.random().toString(36).slice(2, 18)}`).current;
 
   const resolvedUrl = useResolvedUrl(videoUrl);
   const finalVideoUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
@@ -448,6 +451,16 @@ export default function NexoraVideoPlayer({
       if (creditedWatchSecondsRef.current - lastWatchSignalWriteRef.current >= 5) {
         lastWatchSignalWriteRef.current = creditedWatchSecondsRef.current;
         recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
+        if (currentUser?.id && hasAnalyticsObservationConsent()) {
+          const recordHeartbeat = httpsCallable(getFunctions(app), 'recordVideoWatchHeartbeat');
+          void recordHeartbeat({
+            postId: post.id,
+            sessionId: serverWatchSessionId,
+            positionSeconds: Math.floor(time * 10) / 10,
+          }).catch(() => {
+            // Server-side watch analytics is best effort and never blocks playback.
+          });
+        }
         trackClientObservation({
           eventType: 'video_watch_progress',
           eventId: `${post.id}:watch:${Math.floor(creditedWatchSecondsRef.current / 5)}:${Date.now()}`,

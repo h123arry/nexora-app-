@@ -51,6 +51,9 @@ jobs:
       - name: Build trusted Firebase Functions
         run: npm run functions:build
 
+      - name: Validate Cloud Run media worker syntax
+        run: node --check services/media-worker/src/index.js
+
       - name: Run unit tests
         run: npm run test:unit
 
