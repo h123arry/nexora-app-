@@ -543,6 +543,9 @@ service cloud.firestore {
     match /creatorScheduledPosts/{scheduleId} {
       allow read, write: if false;
     }
+    match /creatorScheduleCounters/{userId} {
+      allow read, write: if false;
+    }
 
     match /drafts/{draftId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
