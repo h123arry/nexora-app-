@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Zap, Repeat, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
@@ -26,6 +26,7 @@ interface FeedPostCardProps {
   currentUser: User | null;
   activeDotsMenuPostId: string | null;
   setActiveDotsMenuPostId: (id: string | null) => void;
+  onImpression?: (postId: string) => void;
   onSpark: (postId: string) => void;
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
@@ -77,6 +78,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   currentUser,
   activeDotsMenuPostId,
   setActiveDotsMenuPostId,
+  onImpression,
   onSpark,
   onSave,
   onSharePost,
@@ -116,9 +118,43 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
   const hasMediaCaptionOverlay = Boolean(post.videoUrl || ((post.image || (post.images && post.images.length > 0)) && !post.opportunityType));
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const impressionTimerRef = useRef<number | null>(null);
+  const impressionRecordedRef = useRef(false);
+
+  useEffect(() => {
+    const target = cardRef.current;
+    if (!onImpression || !target || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (entry.target !== target) continue;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+          if (impressionTimerRef.current === null && !impressionRecordedRef.current) {
+            impressionTimerRef.current = window.setTimeout(() => {
+              impressionTimerRef.current = null;
+              if (impressionRecordedRef.current) return;
+              impressionRecordedRef.current = true;
+              onImpression(post.id);
+              observer.disconnect();
+            }, 1000);
+          }
+        } else if (impressionTimerRef.current !== null) {
+          window.clearTimeout(impressionTimerRef.current);
+          impressionTimerRef.current = null;
+        }
+      }
+    }, { threshold: [0, 0.5] });
+    observer.observe(target);
+    return () => {
+      observer.disconnect();
+      if (impressionTimerRef.current !== null) window.clearTimeout(impressionTimerRef.current);
+      impressionTimerRef.current = null;
+    };
+  }, [post.id, onImpression]);
 
   return (
     <div
+      ref={cardRef}
       id={`post-${post.id}`}
       data-post-id={post.id}
       style={{ contentVisibility: 'auto', containIntrinsicSize: '1px 450px' }}
@@ -757,6 +793,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
 
 export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
   if (prev.post.id !== next.post.id) return false;
+  if (prev.onImpression !== next.onImpression) return false;
   if (prev.isActive !== next.isActive) return false;
   if (prev.shouldPreload !== next.shouldPreload) return false;
   if (prev.isReleased !== next.isReleased) return false;

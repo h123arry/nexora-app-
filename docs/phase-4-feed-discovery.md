@@ -43,9 +43,18 @@ Phase 4 improves the existing NEXORA discovery architecture. It does not replace
 - Respect the user's recommendations-personalization privacy setting and clear learned signals when recommendation preferences are reset.
 - Keep guest profiles local and isolate signed-in profile keys by account.
 
+## Phase 4.4 · Qualified feed impression measurement
+
+- Observe actual feed-card visibility with IntersectionObserver.
+- Count an impression only after at least 50% of a card remains visible for one continuous second.
+- Deduplicate per post and signed-in account session in the feed UI.
+- Emit the existing consent-gated `content_impression` analytics event with post reference and non-sensitive surface/qualification metadata.
+- Disconnect observers and clear pending timers when cards leave the UI.
+- Keep telemetry best-effort so analytics outages never block feed rendering or interactions.
+
 ## Remaining Phase 4 work
 
-1. Complete a consented impression and feedback audit across all feed surfaces, including actual visible impressions and video watch signals.
+1. Complete a consented feedback audit across remaining feed surfaces and reconcile post impressions with verified video watch signals.
 2. Verify server-side directory search pagination and Firestore index readiness against realistic data volumes.
 3. Measure ranking and search latency, candidate counts and feed diversity on large fixtures and staging.
 4. Validate deployed global discovery coverage; do not describe prefix directory search as full-text global search.
