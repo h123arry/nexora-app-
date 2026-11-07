@@ -4,9 +4,9 @@ import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import {
   saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
-  getPublishedAcademyCourse, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
+  getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
   issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
-  createAcademyMentorshipSession, bookAcademyMentorshipSession,
+  createAcademyMentorshipSession, listUpcomingAcademyMentorshipSessions, bookAcademyMentorshipSession,
 } from '../src/academyInstitution.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-engagement' }, 'academy-institution-tests');
@@ -70,8 +70,13 @@ describe('NEXORA Institute institution services', () => {
     await assert.rejects(reviewAcademyCourse(db, 'academy-instructor', courseId, 'approve'), /instructor/);
     await reviewAcademyCourse(db, 'academy-editor', courseId, 'approve', 'Curriculum approved.');
     await publishAcademyAssessment(db, 'academy-instructor', courseId, assessmentId);
+    const catalog = await listPublishedAcademyCourses(db);
+    assert.ok(catalog.courses.some(course => course.id === courseId));
     const published = await getPublishedAcademyCourse(db, courseId);
     assert.equal(published.lessons.length, 3);
+    assert.equal(published.assessments.length, 1);
+    assert.equal(published.assessments[0].questions.length, 3);
+    assert.equal('correctIndex' in published.assessments[0].questions[0], false);
     const tutorContext = await getAcademyTutorContext(db, 'learner-one', courseId, ['lesson-1', 'lesson-2']);
     assert.equal(tutorContext.lessons.length, 2);
     assert.match(tutorContext.groundingPolicy, /only from supplied lesson sources/);
@@ -103,8 +108,15 @@ describe('NEXORA Institute institution services', () => {
       startsAt: new Date(Date.now() + 60 * 60_000).toISOString(), durationMinutes: 30, capacity: 1,
     });
     const sessionRef = db.collection('academyMentorshipSessions').doc(created.sessionId);
-    await bookAcademyMentorshipSession(db, 'learner-one', created.sessionId);
-    await bookAcademyMentorshipSession(db, 'learner-one', created.sessionId);
+    const upcoming = await listUpcomingAcademyMentorshipSessions(db);
+    const listed = upcoming.sessions.find(session => session.sessionId === created.sessionId);
+    assert.equal(listed?.seatsAvailable, 1);
+    assert.equal(listed?.title, 'Creator growth office hours');
+    const firstBooking = await bookAcademyMentorshipSession(db, 'learner-one', created.sessionId);
+    const retryBooking = await bookAcademyMentorshipSession(db, 'learner-one', created.sessionId);
+    assert.equal(firstBooking.bookedCount, 1);
+    assert.equal(retryBooking.bookedCount, 1);
+    assert.equal((await listUpcomingAcademyMentorshipSessions(db)).sessions.some(session => session.sessionId === created.sessionId), false);
     assert.equal((await sessionRef.get()).get('bookedCount'), 1);
     await assert.rejects(bookAcademyMentorshipSession(db, 'learner-two', created.sessionId), /full/);
     await sessionRef.delete();
