@@ -22,7 +22,7 @@ function requireReviewer(request: Request): string {
 
 function requireAdmin(request: Request): string {
   const uid = requireReviewer(request);
-  const token = request.auth?.token || {};
+  const token = (request.auth?.token || {}) as Record<string, unknown>;
   if (!(token.admin === true || ['admin', 'founder'].includes(String(token.role || '')))) {
     throw new HttpsError('permission-denied', 'Administrator access is required for account management.');
   }
