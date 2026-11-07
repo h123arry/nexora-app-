@@ -71,9 +71,9 @@ async function processObject(event){
       if(metadata.height<rendition.height) continue;
       const dir=path.join(work,String(rendition.height)); await mkdir(dir,{recursive:true});
       const mp4=path.join(dir,'video.mp4');
-      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height},ih)`,'-c:v','libx264','-preset','veryfast','-profile:v','main','-b:v',rendition.bitrate,'-maxrate',rendition.bitrate,'-bufsize',`${parseInt(rendition.bitrate,10)*2}k`,'-c:a','aac','-b:a',rendition.audio,'-movflags','+faststart','-pix_fmt','yuv420p',mp4]);
+      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height}\\,ih)`,'-c:v','libx264','-preset','veryfast','-profile:v','main','-b:v',rendition.bitrate,'-maxrate',rendition.bitrate,'-bufsize',`${parseInt(rendition.bitrate,10)*2}k`,'-c:a','aac','-b:a',rendition.audio,'-movflags','+faststart','-pix_fmt','yuv420p',mp4]);
       const hls=path.join(dir,'index.m3u8');
-      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height},ih)`,'-c:v','libx264','-preset','veryfast','-b:v',rendition.bitrate,'-c:a','aac','-b:a',rendition.audio,'-hls_time','6','-hls_playlist_type','vod','-hls_segment_filename',path.join(dir,'segment_%05d.ts'),hls]);
+      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height}\\,ih)`,'-c:v','libx264','-preset','veryfast','-b:v',rendition.bitrate,'-c:a','aac','-b:a',rendition.audio,'-hls_time','6','-hls_playlist_type','vod','-hls_segment_filename',path.join(dir,'segment_%05d.ts'),hls]);
       const prefix=`${outputRoot}/${rendition.height}p`;
       await upload(mp4,`${prefix}/video.mp4`,'video/mp4');
       await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl');
