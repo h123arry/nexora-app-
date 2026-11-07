@@ -247,30 +247,20 @@ async function savePostToDbDirect(post: any) {
   }
 }
 
-async function addFollowDirect(followerId: string, followingId: string) {
-  const path = 'follows';
-  try {
-    const followId = `${followerId}_${followingId}`;
-    return await setDoc(doc(db, path, followId), {
-      followerId,
-      followingId,
-      createdAt: serverTimestamp()
-    }, { merge: false });
-  } catch (error) {
-    handleFirestoreError(error, OperationType.CREATE, path, auth);
+async function setFollowStateDirect(followerId: string, followingId: string, following: boolean) {
+  if (!auth.currentUser || auth.currentUser.uid !== followerId) {
+    throw new Error('Only the signed-in account can change its follow relationships.');
   }
+  const setState = httpsCallable(functions, 'setCreatorFollowState');
+  return setState({ creatorId: followingId, following });
+}
+
+async function addFollowDirect(followerId: string, followingId: string) {
+  return setFollowStateDirect(followerId, followingId, true);
 }
 
 async function removeFollowDirect(followerId: string, followingId: string) {
-  const path = 'follows';
-  try {
-    const q = query(collection(db, path), where('followerId', '==', followerId), where('followingId', '==', followingId), limit(50));
-    const snapshot = await getDocs(q);
-    const deletePromises = snapshot.docs.map(d => deleteDoc(doc(db, path, d.id)));
-    await Promise.all(deletePromises);
-  } catch (error) {
-    handleFirestoreError(error, OperationType.DELETE, path, auth);
-  }
+  return setFollowStateDirect(followerId, followingId, false);
 }
 
 async function addNotificationDirect(userId: string, type: string, content: string) {
