@@ -1,9 +1,10 @@
-import { FieldValue, getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { findNexoraGift } from './giftCatalogPolicy.js';
 import { validateGiftDeliveryInput, giftDeliveryReferences } from './giftDeliveryPolicy.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
+import { assessGiftRisk } from './giftEconomyPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const ESCROW_ACCOUNT = 'gift_escrow';
@@ -44,11 +45,17 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
 
   try {
     return await db.runTransaction(async (tx) => {
-      const [prior, senderWallet, escrowWallet, senderProfile, recipientProfile, senderStatus, recipientStatus, liveSession] = await Promise.all([
+      const recentSenderGiftsQuery = db.collection('creatorEarnings').where('senderId', '==', senderId).where('createdAt', '>=', Timestamp.fromMillis(Date.now() - 10 * 60 * 1000)).orderBy('createdAt', 'desc').limit(20);
+      const activeCompetitionQuery = input.contextType === 'live'
+        ? db.collection('giftCompetitions').where('liveSessionId', '==', input.contextId).where('status', 'in', ['scheduled', 'active']).where('startsAt', '<=', Timestamp.now()).where('endsAt', '>', Timestamp.now()).limit(1)
+        : null;
+      const [prior, senderWallet, escrowWallet, senderProfile, recipientProfile, senderStatus, recipientStatus, liveSession, recentSenderGifts, competitions] = await Promise.all([
         tx.get(requestRef), tx.get(senderWalletRef), tx.get(escrowWalletRef),
         tx.get(db.collection('users').doc(senderId)), tx.get(db.collection('users').doc(input.recipientId)),
         tx.get(db.collection('accountStatus').doc(senderId)), tx.get(db.collection('accountStatus').doc(input.recipientId)),
         input.contextType === 'live' ? tx.get(db.collection('liveSessions').doc(input.contextId)) : Promise.resolve(null),
+        tx.get(recentSenderGiftsQuery),
+        activeCompetitionQuery ? tx.get(activeCompetitionQuery) : Promise.resolve(null),
       ]);
       if (prior.exists) {
         const previous = prior.data() || {};
@@ -116,10 +123,31 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
       });
       tx.create(senderHistoryRef, { ...common, direction: 'debit', balanceAfter: nextSenderBalance, counterpartyAccountId: ESCROW_ACCOUNT });
       tx.create(escrowHistoryRef, { ...common, direction: 'credit', balanceAfter: nextEscrowBalance, counterpartyAccountId: senderId });
+      const recentRows = recentSenderGifts.docs.map(item => item.data());
+      const accountCreatedAt = senderProfile.data()?.createdAt?.toDate?.()?.getTime?.();
+      const senderAccountAgeDays = Number.isFinite(accountCreatedAt) ? Math.max(0, (Date.now() - accountCreatedAt) / 86400000) : null;
+      const risk = assessGiftRisk({
+        senderGiftCount10m: recentRows.length,
+        senderGrossNex10m: recentRows.reduce((sum, row) => sum + (Number.isSafeInteger(row.grossNex) ? row.grossNex : 0), 0),
+        giftGrossNex: units, senderAccountAgeDays,
+        senderRestricted: blocked(senderStatus), recipientRestricted: blocked(recipientStatus),
+      });
+      const activeCompetition = competitions && !competitions.empty ? competitions.docs[0] : null;
       tx.create(earningRef, {
         creatorId: input.recipientId, senderId, giftId: gift.id, giftName: gift.name,
         quantity: input.quantity, grossNex: units, status: 'pending_review',
+        riskScore: risk.score, riskTier: risk.tier, riskReasons: risk.reasons,
+        ...(activeCompetition ? { competitionId: activeCompetition.id } : {}),
         source: 'giftverse', createdAt: now, updatedAt: now,
+      });
+      tx.create(db.collection('giftRiskSignals').doc(transactionId), {
+        transactionId, senderId, creatorId: input.recipientId, grossNex: units,
+        score: risk.score, tier: risk.tier, reasons: risk.reasons,
+        disposition: 'review_only', createdAt: now,
+      });
+      if (activeCompetition) tx.create(db.collection('giftCompetitionContributions').doc(transactionId), {
+        competitionId: activeCompetition.id, transactionId, creatorId: input.recipientId,
+        senderId, grossNex: units, createdAt: now,
       });
       tx.create(galleryRef, {
         giftId: gift.id, giftName: gift.name, image: gift.image, rarity: gift.rarity,
