@@ -8,6 +8,7 @@ export interface VideoPreloadPlanInput {
   postVideoIndex: number;
   activeVideoIndex: number;
   isSlowConnection: boolean;
+  isOffline?: boolean;
 }
 
 export interface VideoPreloadPlan {
@@ -17,8 +18,9 @@ export interface VideoPreloadPlan {
 }
 
 /**
- * Keeps only the active video and its immediate video neighbor prepared.
- * Slow/data-saving connections still receive metadata-only preparation.
+ * Keeps the active video ready and prepares only its immediate video
+ * neighbors. Data-saving/slow connections use metadata-only preparation;
+ * offline sessions never start speculative network requests.
  */
 export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadPlan {
   if (!input.isVideo) {
@@ -32,11 +34,15 @@ export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadP
   const hasActiveVideo = input.activeVideoIndex >= 0;
   const isAdjacentVideo = hasActiveVideo
     && Math.abs(input.postVideoIndex - input.activeVideoIndex) === 1;
-  const shouldPreload = isAdjacentVideo;
   const isReleased = hasActiveVideo
     ? !isAdjacentVideo
     : input.activePostIndex < 0 || Math.abs(input.postIndex - input.activePostIndex) > 2;
 
+  if (input.isOffline) {
+    return { shouldPreload: false, isReleased: false, preloadMode: 'none' };
+  }
+
+  const shouldPreload = isAdjacentVideo;
   return {
     shouldPreload,
     isReleased,
