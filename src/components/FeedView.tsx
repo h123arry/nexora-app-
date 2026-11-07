@@ -534,7 +534,7 @@ export default function FeedView({
       const localSignals = getRecommendationProfile();
       const hasLocalSignals = Object.values(localSignals).some(values => Object.keys(values).length > 0);
       if (hasRemoteSignals) saveRecommendationProfile(remoteSignals);
-      else if (hasLocalSignals) void SettingsService.updateFeed(currentUser.id, { recommendationSignals: localSignals });
+      else if (hasLocalSignals && settings.privacy.recommendationsPersonalization !== false) void SettingsService.updateFeed(currentUser.id, { recommendationSignals: localSignals });
       setFeedTab(preferences.tab);
       setNotInterestedTags(preferences.notInterestedTags);
       setBlockedUserIds(preferences.blockedCreatorIds);
@@ -552,6 +552,7 @@ export default function FeedView({
     payload: Parameters<typeof recordRecommendationEvent>[1],
   ) => {
     if (!recommendationsPersonalizationEnabled) return;
+    if (currentUser.id !== 'guest_visitor_id' && !feedPreferencesHydratedRef.current) return;
     recordRecommendationEvent(type, payload);
     if (auth.currentUser?.uid !== currentUser.id) return;
     if (recommendationSyncTimerRef.current) window.clearTimeout(recommendationSyncTimerRef.current);
