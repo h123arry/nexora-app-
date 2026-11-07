@@ -108,6 +108,13 @@ A workstream is not complete because a screen exists. It must have:
 
 ## Current implementation status
 
+### Delivered in the Creator Studio phase
+- Added owner-scoped reusable post templates to the existing Creator Dashboard. Creators can save a named caption, format and hashtag structure, apply it to a fresh draft, and delete their own templates.
+- Template reads and writes use authenticated callable Functions; clients cannot write the template collection directly.
+- Enforced bounded template names, captions, format values, tag counts, a 40-template per-creator cap, and ownership checks on edits/deletes.
+- The existing draft editor, media upload, post editing and archive workflows remain the canonical Studio foundation.
+- Automatic scheduled publishing remains explicitly unavailable; the dashboard does not represent a queued draft as a published post.
+
 ### Delivered in this branch: Academy learner foundation and institution backend
 - Added an Academy experience within the existing Creator Dashboard.
 - Added eight initial learning paths and 24 introductory lessons.
