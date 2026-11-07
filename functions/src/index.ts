@@ -17,6 +17,7 @@ import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageC
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
 export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
+export { listAdminUsers, updateAdminUser } from './adminUsers.js';
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
