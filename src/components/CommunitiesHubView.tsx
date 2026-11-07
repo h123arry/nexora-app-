@@ -4,9 +4,10 @@ import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, S
 import { Circle, User, Page, Post, Comment } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { addFollow, createCommunity, createPage, removeFollow, subscribeToCommunities, subscribeToFollows, subscribeToPages } from '../services/dataService';
-import { isCircleJoinedDb, joinCircleDb, leaveCircleDb } from '../data/database';
+import { isCircleJoinedDb } from '../data/database';
 import { ActivityService } from '../services/activityService';
 import { auth } from '../services/firebase/config';
+import { CommunityService } from '../services/firebase/communityService';
 import { getPageFollowerCount } from '../services/firebase/pageChannelService';
 import BusinessServicesPanel from './BusinessServicesPanel';
 import PageChannelPanel from './PageChannelPanel';
@@ -154,11 +155,14 @@ export default function CommunitiesHubView({
 
   // Real-time synchronization for Communities and Pages
   useEffect(() => {
+    let active = true;
     const unsubComm = subscribeToCommunities(followActorId, (dbComms) => {
-      setCommunities(dbComms.map((community) => ({
+      void Promise.all(dbComms.map(async community => ({
         ...community,
-        isJoinedByMe: isCircleJoinedDb(followActorId, community.id)
-      })));
+        isJoinedByMe: await CommunityService.isActiveMember(followActorId, community.id).catch(() => false),
+      }))).then(next => {
+        if (active) setCommunities(next);
+      });
     });
     const unsubPages = subscribeToPages((dbPages) => {
       setPages(dbPages);
@@ -167,6 +171,7 @@ export default function CommunitiesHubView({
       setFollowedPageIds(follows.map((follow) => follow.followingId).filter((id): id is string => typeof id === 'string'));
     });
     return () => {
+      active = false;
       unsubComm();
       unsubPages();
       unsubFollows();
@@ -243,7 +248,7 @@ export default function CommunitiesHubView({
   };
 
   // 15. Create Community Action
-  const handleCreateCommunity = (e: React.FormEvent) => {
+  const handleCreateCommunity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCommName.trim()) return;
 
@@ -271,10 +276,17 @@ export default function CommunitiesHubView({
       mediaLibrary: []
     };
 
-    joinCircleDb(followActorId, newComm.id);
-    setCommunities(prev => [newComm, ...prev]);
-    createCommunity(newComm);
-    setShowCreateCommunityModal(false);
+    try {
+      await createCommunity(newComm);
+      setCommunities(prev => [newComm, ...prev]);
+      setShowCreateCommunityModal(false);
+    } catch (error) {
+      console.error('Community creation failed:', error);
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'The community could not be created. Please retry.',
+      }));
+      return;
+    }
     // reset form
     setNewCommName('');
     setNewCommDesc('');
@@ -365,9 +377,9 @@ export default function CommunitiesHubView({
     try {
       if (willJoin) {
         recordRecommendationEvent('join_community', { communityName: target.name, tags: target.tags });
-        await joinCircleDb(followActorId, circleId);
+        await CommunityService.joinCommunity(followActorId, circleId);
       } else {
-        await leaveCircleDb(followActorId, circleId);
+        await CommunityService.leaveCommunity(followActorId, circleId);
       }
 
       setCommunities(prev => prev.map(c => {
