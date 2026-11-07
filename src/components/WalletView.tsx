@@ -39,6 +39,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
   }, []);
 
   useEffect(() => {
+    setSnapshot(null);
     void refreshWallet();
   }, [refreshWallet, currentUser.id]);
 
