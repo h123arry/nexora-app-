@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Award, BookOpen, CheckCircle2, ChevronRight, Clock3, GraduationCap, Sparkles } from 'lucide-react';
-import { collection, doc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { db, functions } from '../lib/firebase';
+import { httpsCallable } from 'firebase/functions';
 import { User } from '../types';
 import CreatorAcademyInstitutionTools from './CreatorAcademyInstitutionTools';
 
-type Lesson = { id: string; title: string; minutes: number; summary: string };
-type Course = { id: string; title: string; level: string; category: string; description: string; lessons: Lesson[] };
+type Lesson = { id: string; title: string; minutes?: number; summary: string; body?: string; transcript?: string; resourceUrls?: string[] };
+type Assessment = { id: string; passPercent: number; questions: Array<{ id: string; prompt: string; options: string[] }> };
+type Course = { id: string; title: string; level: string; category: string; description: string; lessons: Lesson[]; institutional?: boolean; lessonCount?: number };
 
 const COURSES: Course[] = [
   { id: 'creator-foundations', title: 'The Creator Foundations', level: 'Beginner', category: 'Getting started', description: 'Build a clear creator identity, choose your audience and establish a sustainable publishing habit.', lessons: [
@@ -55,43 +57,95 @@ type Progress = { courseId: string; completedLessonIds: string[] };
 
 export default function CreatorAcademyView({ currentUser }: { currentUser: User }) {
   const [progress, setProgress] = useState<Record<string, string[]>>({});
+  const [courses, setCourses] = useState<Course[]>(COURSES);
+  const [institutionalDetails, setInstitutionalDetails] = useState<Record<string, { lessons: Lesson[]; assessments: Assessment[] }>>({});
   const [selectedCourse, setSelectedCourse] = useState(COURSES[0].id);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [loadError, setLoadError] = useState(false);
+  const [catalogError, setCatalogError] = useState('');
+  const [catalogTruncated, setCatalogTruncated] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [isInstructor, setIsInstructor] = useState(false);
+  const [assessmentAnswers, setAssessmentAnswers] = useState<Record<string, number[]>>({});
+  const [assessmentResult, setAssessmentResult] = useState<{ assessmentId: string; scorePercent: number; passed: boolean; attemptId: string } | null>(null);
+  const [certificate, setCertificate] = useState<{ certificateId: string; verificationCode: string; courseTitle: string } | null>(null);
+  const [assessmentBusy, setAssessmentBusy] = useState(false);
+  const [assessmentError, setAssessmentError] = useState('');
 
   useEffect(() => {
     let active = true;
     const load = async () => {
       setLoading(true);
       setLoadError(false);
-      try {
-        const q = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(50));
-        const snapshot = await getDocs(q);
-        if (!active) return;
+      const progressQuery = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(50));
+      const [progressResult, catalogResult, instructorResult] = await Promise.allSettled([
+        getDocs(progressQuery),
+        httpsCallable<void, { courses: Array<{ id: string; title: string; description: string; level: string; category: string; lessonCount: number; version: number }>; truncated: boolean }>(functions, 'academyListPublishedCourses')(),
+        getDoc(doc(db, 'academyInstructors', currentUser.id)),
+      ]);
+      if (!active) return;
+      if (progressResult.status === 'fulfilled') {
         const next: Record<string, string[]> = {};
-        snapshot.docs.forEach(item => {
+        progressResult.value.docs.forEach(item => {
           const data = item.data() as Progress & { userId?: string };
           if (typeof data.courseId === 'string' && Array.isArray(data.completedLessonIds)) {
             next[data.courseId] = data.completedLessonIds.filter(id => typeof id === 'string');
           }
         });
         setProgress(next);
-      } catch {
-        if (active) setLoadError(true);
-      } finally {
-        if (active) setLoading(false);
+      } else setLoadError(true);
+      if (catalogResult.status === 'fulfilled') {
+        const catalog = catalogResult.value.data;
+        const published = catalog.courses.map(course => ({ ...course, lessons: [], institutional: true }));
+        const localIds = new Set(COURSES.map(course => course.id));
+        setCourses([...COURSES, ...published.filter(course => !localIds.has(course.id))]);
+        setCatalogTruncated(catalog.truncated);
+      } else setCatalogError('Published institutional courses could not be loaded. Your introductory curriculum is still available.');
+      if (instructorResult.status === 'fulfilled') {
+        const instructor = instructorResult.value;
+        setIsInstructor(instructor.exists() && instructor.data().status === 'active'
+          && ['instructor', 'editor', 'admin'].includes(String(instructor.data().role || '')));
       }
+      setLoading(false);
     };
     void load();
     return () => { active = false; };
   }, [currentUser.id]);
 
-  const activeCourse = COURSES.find(course => course.id === selectedCourse) ?? COURSES[0];
+  const activeCourse = courses.find(course => course.id === selectedCourse) ?? courses[0] ?? COURSES[0];
+  useEffect(() => {
+    if (!activeCourse.institutional || institutionalDetails[activeCourse.id]) return;
+    let active = true;
+    setDetailLoading(true);
+    setCatalogError('');
+    const load = async () => {
+      try {
+        const result = await httpsCallable<{ courseId: string }, { lessons: Array<{ id: string; title: string; body: string; transcript?: string; resourceUrls?: string[]; order: number }>; assessments: Assessment[] }>(functions, 'academyGetPublishedCourse')({ courseId: activeCourse.id });
+        if (!active) return;
+        const lessons = result.data.lessons.map(lesson => ({
+          id: lesson.id, title: lesson.title, body: lesson.body, transcript: lesson.transcript || '',
+          resourceUrls: lesson.resourceUrls || [], summary: lesson.body.slice(0, 220),
+        }));
+        setInstitutionalDetails(previous => ({ ...previous, [activeCourse.id]: { lessons, assessments: result.data.assessments || [] } }));
+      } catch {
+        if (active) setCatalogError('This published course could not be opened. Please retry.');
+      } finally { if (active) setDetailLoading(false); }
+    };
+    void load();
+    return () => { active = false; };
+  }, [activeCourse.id, activeCourse.institutional, institutionalDetails]);
+
+  const activeDetails = institutionalDetails[activeCourse.id];
+  const displayLessons = activeDetails?.lessons ?? activeCourse.lessons;
+  const assessments = activeDetails?.assessments ?? [];
   const completedLessons = Object.values(progress).reduce((total, ids) => total + ids.length, 0);
-  const totalLessons = COURSES.reduce((total, course) => total + course.lessons.length, 0);
-  const completedCourses = COURSES.filter(course => course.lessons.every(lesson => (progress[course.id] ?? []).includes(lesson.id))).length;
-  const overallProgress = useMemo(() => totalLessons ? Math.round(completedLessons / totalLessons * 100) : 0, [completedLessons, totalLessons]);
+  const totalLessons = courses.reduce((total, course) => total + (course.institutional ? Number(course.lessonCount || 0) : course.lessons.length), 0);
+  const completedCourses = courses.filter(course => {
+    const total = course.institutional ? Number(course.lessonCount || 0) : course.lessons.length;
+    return total > 0 && (progress[course.id] ?? []).length >= total;
+  }).length;
+  const overallProgress = useMemo(() => totalLessons ? Math.min(100, Math.round(completedLessons / totalLessons * 100)) : 0, [completedLessons, totalLessons]);
 
   const markLessonComplete = async (course: Course, lesson: Lesson) => {
     if (saving) return;
@@ -113,6 +167,36 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
     } finally {
       setSaving(null);
     }
+  };
+
+  const submitAssessment = async (assessment: Assessment) => {
+    const answers = assessmentAnswers[assessment.id] || [];
+    if (assessmentBusy || answers.length !== assessment.questions.length || answers.some(answer => !Number.isInteger(answer) || answer < 0)) {
+      setAssessmentError('Choose one answer for every question before submitting.');
+      return;
+    }
+    setAssessmentBusy(true); setAssessmentError(''); setAssessmentResult(null); setCertificate(null);
+    try {
+      const result = await httpsCallable<{ courseId: string; assessmentId: string; answers: number[] }, { attemptId: string; scorePercent: number; passed: boolean }>(functions, 'academySubmitAssessment')({
+        courseId: activeCourse.id, assessmentId: assessment.id, answers,
+      });
+      setAssessmentResult({ assessmentId: assessment.id, ...result.data });
+    } catch (cause) {
+      setAssessmentError(cause instanceof Error ? cause.message : 'The assessment could not be submitted.');
+    } finally { setAssessmentBusy(false); }
+  };
+
+  const requestCertificate = async (assessmentId: string) => {
+    if (assessmentBusy) return;
+    setAssessmentBusy(true); setAssessmentError('');
+    try {
+      const result = await httpsCallable<{ courseId: string; assessmentId: string }, { certificateId: string; verificationCode: string; courseTitle: string }>(functions, 'academyIssueCertificate')({
+        courseId: activeCourse.id, assessmentId,
+      });
+      setCertificate(result.data);
+    } catch (cause) {
+      setAssessmentError(cause instanceof Error ? cause.message : 'Your certificate could not be issued.');
+    } finally { setAssessmentBusy(false); }
   };
 
   return (
