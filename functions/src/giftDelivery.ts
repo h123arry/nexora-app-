@@ -21,6 +21,9 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
   try { input = validateGiftDeliveryInput(request.data); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Gift details are invalid.'); }
   if (input.recipientId === senderId) throw new HttpsError('failed-precondition', 'You cannot send a gift to your own account.');
+  if (input.contextType === 'profile' && input.contextId !== input.recipientId) {
+    throw new HttpsError('invalid-argument', 'Profile gifts must target the creator profile receiving the gift.');
+  }
   const gift = findNexoraGift(input.giftId);
   if (!gift) throw new HttpsError('not-found', 'This gift is no longer available.');
   if (gift.subscriptionExclusive) throw new HttpsError('failed-precondition', 'This gift requires an eligible creator subscription.');
