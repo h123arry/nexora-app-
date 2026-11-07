@@ -46,25 +46,24 @@ export async function publishPageChannelUpdate(
     const recipients = followers.docs
       .map(follower => String(follower.get('followerId') || ''))
       .filter(recipientId => validId(recipientId) && recipientId !== ownerUid);
-    const notificationRefs = recipients.map(recipientId =>
-      db.collection('users').doc(recipientId).collection('notifications').doc(`page_${updateId}`));
-    const existingNotifications = await Promise.all(notificationRefs.map(ref => ref.get()));
-    const batch = db.batch();
-    let writes = 0;
-    notificationRefs.forEach((ref, index) => {
-      // Preserve read state on retries and only create missing delivery records.
-      if (existingNotifications[index].exists) return;
-      const recipientId = recipients[index];
-      batch.create(ref, {
-        id: `page_${updateId}`, userId: recipientId, type: 'community',
-        username: String(page.get('username') || ''), avatar: String(page.get('avatar') || ''),
-        targetId: pageId, content: 'published a new official channel update',
-        timestamp: now.toISOString(), isRead: false, priority: 4,
-        category: 'communities', actorName: String(page.get('name') || 'NEXORA Page').slice(0, 120),
+    // Create each deterministic delivery only when absent. A transaction
+    // makes retries race-safe and guarantees an existing read state is never
+    // overwritten by a second publish attempt.
+    await Promise.all(recipients.map(async recipientId => {
+      const notificationRef = db.collection('users').doc(recipientId)
+        .collection('notifications').doc(`page_${updateId}`);
+      await db.runTransaction(async tx => {
+        const existing = await tx.get(notificationRef);
+        if (existing.exists) return;
+        tx.create(notificationRef, {
+          id: `page_${updateId}`, userId: recipientId, type: 'community',
+          username: String(page.get('username') || ''), avatar: String(page.get('avatar') || ''),
+          targetId: pageId, content: 'published a new official channel update',
+          timestamp: now.toISOString(), isRead: false, priority: 4,
+          category: 'communities', actorName: String(page.get('name') || 'NEXORA Page').slice(0, 120),
+        });
       });
-      writes += 1;
-    });
-    if (writes > 0) await batch.commit();
+    }));
     cursor = followers.docs[followers.docs.length - 1];
     if (followers.size < 450) break;
   }
