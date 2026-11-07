@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical, MoreHorizontal, Radio, ShieldCheck } from 'lucide-react';
+import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical, MoreHorizontal, Radio, ShieldCheck, Gift } from 'lucide-react';
 import VohIcon from './VohIcon';
 import ShareSheet from './ShareSheet';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
 import NexoraBranding from './NexoraBranding';
-import CreatorGiftGallery from './CreatorGiftGallery';
 import { validateUsername } from '../utils/username';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
@@ -200,6 +199,7 @@ const MediaGrid = React.memo(({ gridPosts, pinnedPostIds, onSelectPost }: MediaG
 
 interface ProfileViewProps {
   currentUser: User;
+  isLoggedIn?: boolean;
   posts: Post[];
   onUpdateProfile: (updatedData: Partial<User>) => void;
   onLikePost: (postId: string) => void;
@@ -221,6 +221,7 @@ interface ProfileViewProps {
 
 export default function ProfileView({
   currentUser,
+  isLoggedIn = false,
   posts,
   onUpdateProfile,
   onLikePost,
@@ -259,11 +260,12 @@ export default function ProfileView({
   const [showAllContentDropdown, setShowAllContentDropdown] = useState(false);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
   const [selectedGridPost, setSelectedGridPost] = useState<Post | null>(null);
+  const [showGiftVerse, setShowGiftVerse] = useState(false);
   const [detailCommentText, setDetailCommentText] = useState<string>('');
   const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const touchStartPos = useRef<{ x: number; y: number } | null>(null);
 
-  const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'gifts', 'bookmarks', 'archive'];
+  const profileTabsList = ['media', 'voice', 'reposts', 'sparks', 'bookmarks', 'archive'];
 
   const handleContentTouchStart = (e: React.TouchEvent) => {
     touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -1196,8 +1198,15 @@ export default function ProfileView({
                     >
                       {isFollowing ? 'Following' : 'Follow'}
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowGiftVerse(true)}
+                      className="px-3.5 py-1.5 bg-violet-600/20 hover:bg-violet-600/35 rounded-xl text-xs font-bold text-violet-100 border border-violet-300/20 transition-all cursor-pointer h-9 flex items-center justify-center gap-1.5"
+                    >
+                      <Gift className="h-3.5 w-3.5"/> Gift
+                    </button>
                     <button 
-                      onClick={() => onStartChat?.(currentUser.id)} 
+                      onClick={() => onStartChat?.(currentUser.id) 
                       className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-zinc-200 transition-all cursor-pointer h-9 flex items-center justify-center"
                     >
                       Message
@@ -1263,7 +1272,6 @@ export default function ProfileView({
                 { id: 'voice', label: 'Voice', icon: Mic },
                 { id: 'reposts', label: 'Reposts', icon: Repeat2 },
                 { id: 'sparks', label: 'Sparks', icon: Zap },
-                { id: 'gifts', label: 'Gifts', icon: Award },
                 ...(isOwnProfile ? [
                   { id: 'bookmarks', label: 'Saved', icon: Bookmark },
                   { id: 'archive', label: 'Archive', icon: HardDrive }
@@ -1299,7 +1307,7 @@ export default function ProfileView({
             onTouchEnd={handleContentTouchEnd}
             className="w-full pt-4 space-y-4 bg-black min-h-[350px] touch-pan-y"
           >
-            {profileTab === 'gifts' ? <CreatorGiftGallery userId={currentUser.id} /> : filteredTabPosts.length === 0 ? (
+            {filteredTabPosts.length === 0 ? (
               <div className="p-8 py-16 rounded-2xl bg-white/[0.01] border border-white/5 text-center space-y-3 max-w-md mx-auto my-6">
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/10 border border-white/10 flex items-center justify-center mx-auto text-violet-400">
                   {profileTab === 'media' && <Camera className="w-6 h-6" />}
@@ -3589,6 +3597,12 @@ export default function ProfileView({
       </AnimatePresence>
 
       {/* 📥 NEXORA SOCIAL SHARE SHEET MODAL */}
+      {showGiftVerse && <div className="fixed inset-0 z-[160] overflow-y-auto bg-black/90 backdrop-blur-md">
+        <div className="sticky top-0 z-[170] flex justify-end border-b border-white/10 bg-[#090714]/95 p-3">
+          <button type="button" onClick={() => setShowGiftVerse(false)} className="rounded-xl border border-white/15 px-4 py-2 text-xs font-bold text-white">Close GIFTVERSE</button>
+        </div>
+        <GiftVerseView isLoggedIn={isLoggedIn} recipientId={currentUser.id} deliveryContext="profile" deliveryContextId={currentUser.id}/>
+      </div>}
       <ShareSheet
         isOpen={showShareModal}
         onClose={() => setShowShareModal(false)}
