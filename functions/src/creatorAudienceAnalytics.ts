@@ -1,8 +1,5 @@
 import { createHash } from 'node:crypto';
-import {
-  FieldValue, type Firestore, getFirestore,
-} from 'firebase-admin/firestore';
-import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
+import { FieldValue, type Firestore, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 
@@ -11,90 +8,81 @@ const validUid = (value: unknown): value is string =>
   typeof value === 'string' && value.length > 0 && value.length <= 128 && !value.includes('/');
 const hash = (value: string) => createHash('sha256').update(value).digest('hex').slice(0, 40);
 const dayKey = (date: Date) => date.toISOString().slice(0, 10);
-
-type FollowAction = 'created' | 'deleted';
+const safeCount = (value: unknown) => {
+  const count = Number(value || 0);
+  return Number.isSafeInteger(count) && count >= 0 ? count : 0;
+};
 
 /**
- * Reconciles a follow edge against its server-owned projection. Reading the
- * current edge makes rapid follow/unfollow toggles safe when trigger delivery
- * is delayed or reordered. Event receipts make retries idempotent.
+ * A single trusted transaction owns follow edges, profile counters and daily
+ * creator growth metrics. Idempotency comes from comparing the requested
+ * state with the canonical relationship document inside the transaction.
  */
-export async function applyCreatorFollowEvent(
+export async function setCreatorFollowStateForUser(
   store: Firestore,
-  eventId: string,
-  followId: string,
-  edge: { followerId?: unknown; followingId?: unknown },
-  action: FollowAction,
-  occurredAt = new Date(),
+  followerId: string,
+  creatorId: string,
+  shouldFollow: boolean,
+  now = new Date(),
 ) {
-  const followerId = edge.followerId;
-  const creatorId = edge.followingId;
-  if (!validUid(followerId) || !validUid(creatorId) || followerId === creatorId) return { changed: false, reason: 'invalid-edge' };
-  const receiptRef = store.collection('creatorAudienceEventReceipts').doc(hash(eventId));
-  const edgeRef = store.collection('follows').doc(followId);
-  const projectionRef = store.collection('creatorFollowProjections').doc(hash(followerId + ':' + creatorId));
+  if (!validUid(followerId)) throw new HttpsError('unauthenticated', 'Sign in to follow creators.');
+  if (!validUid(creatorId) || creatorId === followerId || typeof shouldFollow !== 'boolean') {
+    throw new HttpsError('invalid-argument', 'A valid creator and follow state are required.');
+  }
+  const followRef = store.collection('follows').doc(followerId + '_' + creatorId);
   const creatorPublicRef = store.collection('publicProfiles').doc(creatorId);
   const followerPublicRef = store.collection('publicProfiles').doc(followerId);
   const creatorPrivateRef = store.collection('users').doc(creatorId);
   const followerPrivateRef = store.collection('users').doc(followerId);
-  const day = dayKey(occurredAt);
+  const day = dayKey(now);
   const dailyRef = store.collection('creatorAudienceDaily').doc(hash(creatorId + ':' + day));
 
   return store.runTransaction(async tx => {
-    const [receipt, liveEdge, projection, creatorPublic, followerPublic, creatorPrivate, followerPrivate] = await Promise.all([
-      tx.get(receiptRef), tx.get(edgeRef), tx.get(projectionRef), tx.get(creatorPublicRef),
-      tx.get(followerPublicRef), tx.get(creatorPrivateRef), tx.get(followerPrivateRef),
+    const [follow, creatorPublic, followerPublic, creatorPrivate, followerPrivate] = await Promise.all([
+      tx.get(followRef), tx.get(creatorPublicRef), tx.get(followerPublicRef),
+      tx.get(creatorPrivateRef), tx.get(followerPrivateRef),
     ]);
-    if (receipt.exists) return { changed: false, reason: 'duplicate-event' };
-    if (!creatorPublic.exists) {
-      tx.create(receiptRef, { eventId, followId, followerId, creatorId, action, ignored: 'missing-public-profile', processedAt: FieldValue.serverTimestamp() });
-      return { changed: false, reason: 'missing-public-profile' };
+    if (!creatorPublic.exists || !followerPublic.exists) {
+      throw new HttpsError('not-found', 'Both public profiles must exist before following.');
     }
-    const activeNow = liveEdge.exists;
-    // A delete snapshot proves the edge was active before this event when no
-    // projection exists yet (legacy follows predate the analytics ledger).
-    const activeBefore = projection.exists ? projection.get('active') === true : action === 'deleted';
-    const delta = activeNow === activeBefore ? 0 : activeNow ? 1 : -1;
-    tx.create(receiptRef, { eventId, followId, followerId, creatorId, action, processedAt: FieldValue.serverTimestamp() });
-    if (delta === 0) return { changed: false, reason: 'already-reconciled' };
+    if (follow.exists === shouldFollow) {
+      return {
+        following: follow.exists,
+        changed: false,
+        followerCount: safeCount(creatorPublic.get('followers')),
+      };
+    }
 
-    const creatorRawCount = Number(creatorPublic.get('followers') || 0);
-    const followerRawCount = Number(followerPublic.get('following') || 0);
-    const creatorCount = Number.isSafeInteger(creatorRawCount) && creatorRawCount >= 0 ? creatorRawCount : 0;
-    const followerCount = Number.isSafeInteger(followerRawCount) && followerRawCount >= 0 ? followerRawCount : 0;
-    const nextCreatorCount = Math.max(0, creatorCount + delta);
-    const nextFollowerCount = Math.max(0, followerCount + delta);
-    tx.set(projectionRef, {
-      followerId, creatorId, active: activeNow, updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-
-    if (creatorPublic.exists) tx.set(creatorPublicRef, { followers: nextCreatorCount }, { merge: true });
-    if (creatorPrivate.exists) tx.set(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    if (followerPublic.exists) tx.set(followerPublicRef, { following: nextFollowerCount }, { merge: true });
-    if (followerPrivate.exists) tx.set(followerPrivateRef, { following: nextFollowerCount, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-
+    const delta = shouldFollow ? 1 : -1;
+    const nextCreatorCount = Math.max(0, safeCount(creatorPublic.get('followers')) + delta);
+    const nextFollowerCount = Math.max(0, safeCount(followerPublic.get('following')) + delta);
+    if (shouldFollow) {
+      tx.create(followRef, {
+        followerId, followingId: creatorId, createdAt: FieldValue.serverTimestamp(),
+      });
+    } else {
+      tx.delete(followRef);
+    }
+    tx.update(creatorPublicRef, { followers: nextCreatorCount });
+    tx.update(followerPublicRef, { following: nextFollowerCount });
+    if (creatorPrivate.exists) tx.update(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() });
+    if (followerPrivate.exists) tx.update(followerPrivateRef, { following: nextFollowerCount, updatedAt: FieldValue.serverTimestamp() });
     tx.set(dailyRef, {
       creatorId, day,
-      follows: FieldValue.increment(delta > 0 ? 1 : 0),
-      unfollows: FieldValue.increment(delta < 0 ? 1 : 0),
+      follows: FieldValue.increment(shouldFollow ? 1 : 0),
+      unfollows: FieldValue.increment(shouldFollow ? 0 : 1),
       netFollowerChange: FieldValue.increment(delta),
       followerCount: nextCreatorCount,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
-    return { changed: true, active: activeNow, delta, followerCount: nextCreatorCount };
+    return { following: shouldFollow, changed: true, followerCount: nextCreatorCount };
   });
 }
 
-export const creatorFollowCreated = onDocumentCreated('follows/{followId}', async event => {
-  const snapshot = event.data;
-  if (!snapshot) return;
-  await applyCreatorFollowEvent(db, event.id, event.params.followId, snapshot.data(), 'created', new Date(event.time));
-});
-
-export const creatorFollowDeleted = onDocumentDeleted('follows/{followId}', async event => {
-  const snapshot = event.data;
-  if (!snapshot) return;
-  await applyCreatorFollowEvent(db, event.id, event.params.followId, snapshot.data(), 'deleted', new Date(event.time));
+export const setCreatorFollowState = onCall({ maxInstances: 20 }, async request => {
+  const followerId = request.auth?.uid;
+  if (!followerId) throw new HttpsError('unauthenticated', 'Sign in to follow creators.');
+  return setCreatorFollowStateForUser(db, followerId, request.data?.creatorId, request.data?.following);
 });
 
 /**
@@ -156,17 +144,17 @@ export const getCreatorAudienceAnalytics = onCall({ maxInstances: 10 }, async re
     const data = item.data();
     return {
       day: data.day,
-      follows: Number(data.follows || 0),
-      unfollows: Number(data.unfollows || 0),
-      netFollowerChange: Number(data.netFollowerChange || 0),
-      followerCount: Number.isFinite(data.followerCount) ? data.followerCount : null,
-      profileVisits: Number(data.profileVisits || 0),
-      uniqueProfileVisitors: Number(data.uniqueProfileVisitors || 0),
+      follows: safeCount(data.follows),
+      unfollows: safeCount(data.unfollows),
+      netFollowerChange: Number.isSafeInteger(data.netFollowerChange) ? data.netFollowerChange : 0,
+      followerCount: Number.isSafeInteger(data.followerCount) ? data.followerCount : null,
+      profileVisits: safeCount(data.profileVisits),
+      uniqueProfileVisitors: safeCount(data.uniqueProfileVisitors),
     };
   });
   return {
     days,
-    source: 'server_reconciled_follow_edges_and_authenticated_daily_profile_visitors',
+    source: 'server_transactional_follow_edges_and_authenticated_daily_profile_visitors',
     points,
     totals: points.reduce((total, point) => ({
       follows: total.follows + point.follows,
