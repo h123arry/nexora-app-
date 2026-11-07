@@ -95,7 +95,7 @@ export default function NexoraVideoPlayer({
   useEffect(() => {
     const target = containerRef.current;
     if (!target || isActive === false || videoImpressionRecordedRef.current || typeof IntersectionObserver === 'undefined') return;
-    let timer: ReturnType<typeof window.setTimeout> | null = null;
+    let timer: number | null = null;
     const observer = new IntersectionObserver(entries => {
       const entry = entries.find(item => item.target === target);
       if (!entry) return;
@@ -103,7 +103,7 @@ export default function NexoraVideoPlayer({
         if (timer === null) {
           timer = window.setTimeout(() => {
             timer = null;
-            if (videoImpressionRecordedRef.current || isActive === false) return;
+            if (videoImpressionRecordedRef.current) return;
             videoImpressionRecordedRef.current = true;
             trackClientObservation({
               eventType: 'content_impression',
