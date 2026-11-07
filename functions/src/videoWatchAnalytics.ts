@@ -2,11 +2,9 @@ import { createHash } from 'node:crypto';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { acceptedWatchCredit } from './videoWatchAnalyticsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
-const MAX_HEARTBEAT_GAP_MS = 30_000;
-const MAX_CREDIT_SECONDS = 15;
-const MIN_CREDIT_SECONDS = 2;
 
 function validId(value: unknown, max = 150): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= max && !value.includes('/');
@@ -70,12 +68,14 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
         updatedAt: FieldValue.serverTimestamp(),
       });
     } else {
-      const elapsed = Math.max(0, (now.toMillis() - (previous.lastHeartbeatAt as Timestamp).toMillis()) / 1000);
-      const delta = position - Number(previous.lastPositionSeconds || 0);
-      if (elapsed >= MIN_CREDIT_SECONDS && elapsed <= MAX_HEARTBEAT_GAP_MS / 1000
-        && delta > 0.25 && delta <= elapsed * 1.75 + 2) {
-        creditedSeconds = Math.min(elapsed, MAX_CREDIT_SECONDS);
-      }
+      const elapsed = previous.lastHeartbeatAt instanceof Timestamp
+        ? Math.max(0, (now.toMillis() - previous.lastHeartbeatAt.toMillis()) / 1000)
+        : 0;
+      creditedSeconds = acceptedWatchCredit({
+        elapsedSeconds: elapsed,
+        previousPositionSeconds: Number(previous.lastPositionSeconds || 0),
+        nextPositionSeconds: position,
+      });
       tx.update(sessionRef, {
         lastPositionSeconds: position,
         lastHeartbeatAt: now,
