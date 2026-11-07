@@ -52,12 +52,36 @@ Phase 4 improves the existing NEXORA discovery architecture. It does not replace
 - Disconnect observers and clear pending timers when cards leave the UI.
 - Keep telemetry best-effort so analytics outages never block feed rendering or interactions.
 
-## Remaining Phase 4 work
+## Phase 4.5 · Cross-surface impression and watch-signal reconciliation
 
-1. Complete a consented feedback audit across remaining feed surfaces and reconcile post impressions with verified video watch signals.
-2. Verify server-side directory search pagination and Firestore index readiness against realistic data volumes.
-3. Measure ranking and search latency, candidate counts and feed diversity on large fixtures and staging.
-4. Validate deployed global discovery coverage; do not describe prefix directory search as full-text global search.
+- Keep feed-card impressions and video-player impressions as distinct surfaces, each qualified at 50% visibility for one continuous second.
+- Video-player impressions use the existing consent-gated analytics ingestion path and never block playback.
+- Reuse the authenticated server-timed video heartbeat path for creator retention; client playback position remains an input signal, not proof of human attention.
+- Keep client reel-learning signals separate from server-accepted watch seconds so creator reporting does not mistake local estimates for server aggregates.
+- Preserve account/session deduplication and the existing analytics retention boundary.
+
+## Phase 4.6 · Cursor-paginated directory search
+
+- Add opaque, versioned continuation cursors tied to the normalized query.
+- Page each indexed username/name prefix query with Firestore document cursors; avoid offset pagination.
+- Preserve private-profile, mutual-block, ban, suspension, seed-account and public-Circle visibility filters on every page.
+- Expose continuation through the callable API and the Universal Search "Load more directory results" action.
+- Reject malformed, stale and cross-query cursors and allow the user to restart the search.
+- Prefix search remains prefix search; it is not full-text global search.
+
+## Phase 4.7 · Discovery scale and index regression coverage
+
+- Exercise ranking and local search against a deterministic 5,000-post / 250-creator fixture.
+- Assert unique post retention, creator diversity, bounded result sizes and explicit execution budgets.
+- Assert required Firestore composite indexes for public Circle directory and creator video retention queries.
+- Keep these checks in the normal unit-test CI command so regressions are caught before merge.
+
+## Phase 4.8 · Discovery coverage and deployment verification
+
+- Verify authenticated server-backed directory results for people, Pages and public Circles, including visibility filtering and continuation pages, in the Firestore Emulator.
+- Verify feed ranking, search relevance, feedback exclusions and creator diversity in deterministic large fixtures.
+- Verify required composite-index declarations in CI.
+- Production/staging deployment, live index readiness and real-user coverage remain owner-environment acceptance checks. They must be confirmed against the deployed staging project before claiming live global discovery. The current product search surface is prefix-based and must not be described as full-text global search.
 
 ## Release discipline
 
