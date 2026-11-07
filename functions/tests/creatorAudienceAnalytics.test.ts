@@ -23,7 +23,7 @@ before(async () => {
 
 after(async () => {
   await db.doc('follows/' + followId).delete();
-  for (const collectionName of ['creatorAudienceEventReceipts', 'creatorFollowProjections', 'creatorAudienceDaily']) {
+  for (const collectionName of ['creatorAudienceEventReceipts', 'creatorFollowProjections', 'creatorAudienceDaily', 'creatorProfileDailyVisitors']) {
     const snap = await db.collection(collectionName).where(collectionName === 'creatorAudienceEventReceipts' ? 'creatorId' : 'creatorId', '==', creatorId).get().catch(() => null);
     if (snap) for (const item of snap.docs) await item.ref.delete();
   }
