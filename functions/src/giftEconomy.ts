@@ -144,7 +144,7 @@ export const getGiftCompetitionLeaderboard = onCall({ maxInstances: 10 }, async 
 export const getGiftRiskReviewQueue = onCall({ maxInstances: 5 }, async request => {
   uid(request);
   if (!finance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
-  const snapshot = await db.collection('giftRiskSignals').where('tier', 'in', ['review','high']).orderBy('createdAt', 'desc').limit(100).get();
+  const snapshot = await db.collection('giftRiskSignals').where('disposition', '==', 'review_only').where('tier', 'in', ['review','high']).orderBy('createdAt', 'desc').limit(100).get();
   return { records: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), createdAt: doc.data().createdAt?.toDate?.()?.toISOString?.() || null })) };
 });
 
