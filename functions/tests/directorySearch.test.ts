@@ -38,14 +38,22 @@ after(async () => {
 
 describe('server-backed directory search', () => {
   it('returns public people, Pages and public Circles while excluding private and blocking accounts', async () => {
-    const result = await searchPublicDirectory(db, 'viewer', 'nexora');
-    assert.deepEqual(result.people.map(item => item.id), ['public-person', 'visible-late']);
-    assert.equal(result.pages[0]?.id, 'nexora-business');
-    assert.equal(result.circles[0]?.id, 'nexora-circle');
+    const firstPage = await searchPublicDirectory(db, 'viewer', 'nexora');
+    assert.equal(firstPage.pages[0]?.id, 'nexora-business');
+    assert.equal(firstPage.circles[0]?.id, 'nexora-circle');
+    assert.ok(firstPage.nextCursor, 'A block-heavy first page should provide a continuation cursor');
+    const secondPage = await searchPublicDirectory(db, 'viewer', 'nexora', firstPage.nextCursor);
+    assert.deepEqual(secondPage.people.map(item => item.id), ['public-person', 'visible-late']);
+    assert.equal(secondPage.nextCursor, null);
   });
   it('requires a bounded query and authenticated viewer', async () => {
     await assert.rejects(searchPublicDirectory(db, '', 'nexora'), /Sign in/);
     await assert.rejects(searchPublicDirectory(db, 'viewer', 'x'), /between 2 and 40/);
+  });
+  it('rejects stale or malformed continuation cursors', async () => {
+    await assert.rejects(searchPublicDirectory(db, 'viewer', 'nexora', 'not-a-cursor'), /cursor is invalid/);
+    const first = await searchPublicDirectory(db, 'viewer', 'nexora');
+    await assert.rejects(searchPublicDirectory(db, 'viewer', 'different-term', first.nextCursor), /cursor is invalid/);
   });
   it('finds public people by display-name prefix as well as username', async () => {
     const result = await searchPublicDirectory(db, 'viewer', 'Public');
