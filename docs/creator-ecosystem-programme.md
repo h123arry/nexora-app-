@@ -116,12 +116,21 @@ A workstream is not complete because a screen exists. It must have:
 - Added Firestore rules regression coverage for ownership, invalid course IDs, oversized progress, forged credential fields and deletion.
 - Clearly labels current completion as learner progress, not a verified certificate.
 
-### Not yet delivered
-- Course authoring/CMS, instructor and editorial workflows.
-- Rich lesson media, transcripts and course asset pipeline.
-- Assessments, server-verified grades, certificate issuance and revocation.
-- AI tutor grounded in approved Academy material.
-- The remaining creator workstreams listed above.
+### Delivered in the current institution phase
+- Added trusted instructor course drafting, lesson authoring, transcript/resource fields, editorial review and publication callables.
+- Added a connected institution workspace in the existing Academy dashboard for course authoring, lesson entry, editorial actions, assessment setup, learner attempts, certificate verification/revocation, Creator Tutor and mentorship actions.
+- Added server-side assessment grading and persisted attempts; answer keys are never returned to learner clients.
+- Added idempotent certificate issuance, public verification codes and admin-only revocation.
+- Connected VOH AI to selected, published Academy lessons. Tutor answers are grounded in approved lesson text, cite source lessons and abstain when the material does not support an answer.
+- Added mentor session scheduling and transactional capacity-limited bookings.
+- Added default-deny Firestore rules for institution records, supporting indexes, emulator integration tests and explicit anti-forgery rules tests.
+
+### Remaining Academy production gates
+- Full media ingestion/playback, caption generation and transcript processing; current authoring supports lesson text, transcript and HTTPS resource links.
+- Course version migration, attempt limits/retake policies, question randomization and credential appeals.
+- Instructor role provisioning/review operations and final live Firebase/Gemini staging acceptance.
+- Full accessibility/mobile review and operational monitoring.
+- The remaining eight creator ecosystem workstreams listed above.
 
 ### Verification status
 The changes are committed to the feature branch. Automated build, lint and emulator tests must be run in CI or a configured local/staging environment before merge. Do not claim those checks passed until their results are observed.
