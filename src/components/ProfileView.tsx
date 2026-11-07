@@ -1206,7 +1206,7 @@ export default function ProfileView({
                       <Gift className="h-3.5 w-3.5"/> Gift
                     </button>
                     <button 
-                      onClick={() => onStartChat?.(currentUser.id) 
+                      onClick={() => onStartChat?.(currentUser.id)} 
                       className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 rounded-xl text-xs font-bold text-zinc-200 transition-all cursor-pointer h-9 flex items-center justify-center"
                     >
                       Message
