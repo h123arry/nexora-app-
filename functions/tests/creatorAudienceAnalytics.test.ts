@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { applyCreatorFollowEvent } from '../src/creatorAudienceAnalytics.js';
+import { applyCreatorFollowEvent, recordCreatorProfileVisitForUser } from '../src/creatorAudienceAnalytics.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-engagement' }, 'creator-audience-analytics-tests');
 const db = getFirestore(app);
@@ -57,6 +57,21 @@ describe('Creator audience analytics', () => {
     assert.equal(daily.docs[0].get('follows'), 1);
     assert.equal(daily.docs[0].get('unfollows'), 1);
     assert.equal(daily.docs[0].get('netFollowerChange'), 0);
+  });
+
+  it('counts signed-in profile visitors once per creator per UTC day', async () => {
+    const day = new Date('2026-11-06T15:00:00.000Z');
+    const first = await recordCreatorProfileVisitForUser(db, 'visitor-one', creatorId, day);
+    const duplicate = await recordCreatorProfileVisitForUser(db, 'visitor-one', creatorId, new Date('2026-11-06T20:00:00.000Z'));
+    const second = await recordCreatorProfileVisitForUser(db, 'visitor-two', creatorId, day);
+    assert.equal(first.recorded, true);
+    assert.equal(duplicate.recorded, false);
+    assert.equal(second.recorded, true);
+    const daily = await db.collection('creatorAudienceDaily').where('creatorId', '==', creatorId).where('day', '==', '2026-11-06').get();
+    assert.equal(daily.size, 1);
+    assert.equal(daily.docs[0].get('profileVisits'), 2);
+    assert.equal(daily.docs[0].get('uniqueProfileVisitors'), 2);
+    await assert.rejects(recordCreatorProfileVisitForUser(db, 'visitor-one', 'visitor-one', day), /valid public creator profile/);
   });
 
   it('does not count stale create events after the relationship has already been removed', async () => {
