@@ -66,6 +66,7 @@ import NexoraPremiumLogo from './components/NexoraPremiumLogo';
 import NexoraBranding from './components/NexoraBranding';
 const CreatorDashboardView = lazy(() => import('./components/CreatorDashboardView'));
 const GiftEarningsFinancePanel = lazy(() => import('./components/GiftEarningsFinancePanel'));
+const GiftEconomyOperationsPanel = lazy(() => import('./components/GiftEconomyOperationsPanel'));
 const ActivityView = lazy(() => import('./components/ActivityView'));
 const OnboardingTour = lazy(() => import('./components/OnboardingTour'));
 const MediaCreationEngine = lazy(() => import('./components/MediaCreationEngine'));
@@ -2342,6 +2343,7 @@ export default function App() {
                         General admin controls remain disabled in this client. The GIFTVERSE finance queue below independently enforces its trusted finance administrator claim on the server.
                       </div>
                       <GiftEarningsFinancePanel />
+                      <GiftEconomyOperationsPanel />
                     </div>
                   )}
 
