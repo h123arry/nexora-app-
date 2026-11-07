@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { submitModerationAppeal } from '../services/dataService';
 import { buildPostAnalytics } from '../services/analytics/postAnalytics';
+import { getCreatorAudienceAnalytics, type CreatorAudienceAnalytics } from '../services/analytics/creatorAudience';
 import { buildCreatorGrowthInsights } from '../services/analytics/creatorGrowthInsights';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
@@ -48,6 +49,10 @@ export default function CreatorDashboardView({
   const [videoRetention, setVideoRetention] = useState<{ points: Array<{ day: string; sessionsStarted: number; uniqueViewers: number; acceptedWatchSeconds: number; averageAcceptedWatchSeconds: number | null }>; source: string; verifiedByServer: boolean; humanPlaybackProof: boolean } | null>(null);
   const [isVideoRetentionLoading, setIsVideoRetentionLoading] = useState(false);
   const [videoRetentionError, setVideoRetentionError] = useState(false);
+  const [audienceAnalytics, setAudienceAnalytics] = useState<CreatorAudienceAnalytics | null>(null);
+  const [isAudienceLoading, setIsAudienceLoading] = useState(false);
+  const [audienceError, setAudienceError] = useState(false);
+  const [analyticsDays, setAnalyticsDays] = useState<7 | 30>(7);
   
   // Modals & Sub-states
   const [selectedPostForAnalytics, setSelectedPostForAnalytics] = useState<Post | null>(null);
@@ -95,7 +100,7 @@ export default function CreatorDashboardView({
     const loadRetention = async () => {
       try {
         const callable = httpsCallable(getFunctions(app), 'getCreatorVideoRetention');
-        const response = await callable({ days: 7 });
+        const response = await callable({ days: analyticsDays });
         const data = response.data as typeof videoRetention;
         if (!cancelled) setVideoRetention(data);
       } catch {
@@ -106,7 +111,22 @@ export default function CreatorDashboardView({
     };
     void loadRetention();
     return () => { cancelled = true; };
-  }, [activeTab, currentUser.id]);
+  }, [activeTab, currentUser.id, analyticsDays]);
+
+  useEffect(() => {
+    if (activeTab !== 'analytics') return;
+    let cancelled = false;
+    setIsAudienceLoading(true);
+    setAudienceError(false);
+    getCreatorAudienceAnalytics(analyticsDays).then(data => {
+      if (!cancelled) setAudienceAnalytics(data);
+    }).catch(() => {
+      if (!cancelled) setAudienceError(true);
+    }).finally(() => {
+      if (!cancelled) setIsAudienceLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [activeTab, currentUser.id, analyticsDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -760,8 +780,56 @@ export default function CreatorDashboardView({
               <div className="rounded-2xl border border-white/10 bg-[#0a071f]/70 p-5">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
+                    <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Audience growth</h4>
+                    <p className="mt-1 text-[11px] text-zinc-400">{analyticsDays}-day server-transactional follower and profile activity</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select value={analyticsDays} onChange={event => setAnalyticsDays(Number(event.target.value) as 7 | 30)} className="rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-bold text-zinc-300">
+                      <option value={7}>7 days</option>
+                      <option value={30}>30 days</option>
+                    </select>
+                    <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Backend recorded</span>
+                  </div>
+                </div>
+                {isAudienceLoading ? (
+                  <p className="mt-5 text-xs text-zinc-400">Loading audience records…</p>
+                ) : audienceError ? (
+                  <p className="mt-5 text-xs text-amber-200">Audience growth data could not be loaded. Try again later.</p>
+                ) : audienceAnalytics ? (
+                  <>
+                    <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">New followers</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.follows.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Unfollows</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.unfollows.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Net growth</span><strong className={"mt-1 block text-lg " + (audienceAnalytics.totals.netFollowerChange >= 0 ? "text-emerald-300" : "text-amber-300")}>{audienceAnalytics.totals.netFollowerChange > 0 ? '+' : ''}{audienceAnalytics.totals.netFollowerChange.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Daily unique visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.uniqueProfileVisitors.toLocaleString()}</strong></div>
+                    </div>
+                    <div className="mt-3 rounded-xl bg-white/5 p-3">
+                      <span className="text-[10px] text-zinc-400">Authenticated profile visits (daily unique)</span>
+                      <strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.profileVisits.toLocaleString()}</strong>
+                    </div>
+                    {audienceAnalytics.points.length ? (
+                      <div className="mt-4 space-y-2">
+                        {audienceAnalytics.points.map(point => (
+                          <div key={point.day} className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/[0.03] px-3 py-2 text-xs">
+                            <span className="text-zinc-300">{point.day}</span>
+                            <span className="text-zinc-400">+{point.follows} follows · {point.unfollows} unfollows · {point.netFollowerChange > 0 ? '+' : ''}{point.netFollowerChange} net · {point.uniqueProfileVisitors} visitors</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="mt-4 text-xs text-zinc-400">No audience events have been recorded in this period yet.</p>
+                    )}
+                    <p className="mt-4 text-[10px] leading-relaxed text-zinc-500">Follow changes are written atomically with relationship edges by trusted Functions. Profile visits count signed-in visitors once per creator per UTC day. These signals are rate-limited and server-timestamped, but are not proof of human attention. Historical activity before this system was deployed is not backfilled.</p>
+                  </>
+                ) : (
+                  <p className="mt-5 text-xs text-zinc-400">Audience records are not available yet.</p>
+                )}
+              </div>
+              <div className="rounded-2xl border border-white/10 bg-[#0a071f]/70 p-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
                     <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Video audience retention</h4>
-                    <p className="mt-1 text-[11px] text-zinc-400">Seven-day server-timed playback observations</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">{analyticsDays}-day server-timed playback observations</p>
                   </div>
                   <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Server recorded</span>
                 </div>
