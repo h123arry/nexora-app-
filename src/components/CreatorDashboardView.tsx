@@ -800,10 +800,10 @@ export default function CreatorDashboardView({
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">New followers</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.follows.toLocaleString()}</strong></div>
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Unfollows</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.unfollows.toLocaleString()}</strong></div>
                       <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Net growth</span><strong className={"mt-1 block text-lg " + (audienceAnalytics.totals.netFollowerChange >= 0 ? "text-emerald-300" : "text-amber-300")}>{audienceAnalytics.totals.netFollowerChange > 0 ? '+' : ''}{audienceAnalytics.totals.netFollowerChange.toLocaleString()}</strong></div>
-                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400" >Daily unique visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.uniqueProfileVisitors.toLocaleString()}</strong></div>
+                      <div className="rounded-xl bg-white/5 p-3"><span className="text-[10px] text-zinc-400">Daily unique visitors</span><strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.uniqueProfileVisitors.toLocaleString()}</strong></div>
                     </div>
                     <div className="mt-3 rounded-xl bg-white/5 p-3">
-                      <span className="text-[10px] text-zinc-400" >Authenticated profile visits (daily unique)</span>
+                      <span className="text-[10px] text-zinc-400">Authenticated profile visits (daily unique)</span>
                       <strong className="mt-1 block text-lg text-white">{audienceAnalytics.totals.profileVisits.toLocaleString()}</strong>
                     </div>
                     {audienceAnalytics.points.length ? (
