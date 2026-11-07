@@ -4,6 +4,7 @@ import { Search, X, Users, MessageSquare, Briefcase, Bookmark, Cpu, Globe, Arrow
 import { User, Post, Chat } from '../types';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
 import { clearRecentSearches, deleteRecentSearch, listRecentSearches, saveRecentSearch } from '../services/firebase/searchHistoryService';
+import { trackClientObservation } from '../services/analyticsService';
 
 interface UniversalSearchModalProps {
   isOpen: boolean;
@@ -58,9 +59,28 @@ export default function UniversalSearchModal({
     setServerResults(null);
     const timer = window.setTimeout(async () => {
       setServerSearchLoading(true); setServerSearchError('');
-      try { const result = await searchPublicDirectory(term); if (active) setServerResults(result); }
-      catch { if (active) setServerSearchError('Live directory search is temporarily unavailable. Loaded results are still available.'); }
-      finally { if (active) setServerSearchLoading(false); }
+      trackClientObservation({ eventType: 'search_started', properties: { surface: 'universal_directory' } });
+      try {
+        const result = await searchPublicDirectory(term);
+        if (active) {
+          setServerResults(result);
+          trackClientObservation({
+            eventType: 'search_completed',
+            properties: {
+              surface: 'universal_directory',
+              success: true,
+              people_count: result.people.length,
+              pages_count: result.pages.length,
+              circles_count: result.circles.length,
+            },
+          });
+        }
+      } catch {
+        if (active) {
+          setServerSearchError('Live directory search is temporarily unavailable. Loaded results are still available.');
+          trackClientObservation({ eventType: 'search_completed', properties: { surface: 'universal_directory', success: false } });
+        }
+      } finally { if (active) setServerSearchLoading(false); }
     }, 300);
     return () => { active = false; window.clearTimeout(timer); };
   }, [isOpen, query, currentUser.id]);
