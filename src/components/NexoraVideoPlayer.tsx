@@ -11,7 +11,7 @@ import NexoraPostRollCard from './branding/NexoraPostRollCard';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
 import { motion, AnimatePresence } from 'motion/react';
-import { recordReelSignal } from '../services/reels/reelsRanking';
+import { recordReelReplay, recordReelSignal } from '../services/reels/reelsRanking';
 import { getCreditedWatchDelta } from '../utils/watchTimePolicy';
 import { trackClientObservation } from '../services/analyticsService';
 
@@ -475,8 +475,19 @@ export default function NexoraVideoPlayer({
 
     // A seek or loop is not watch time. Completion is credited only after
     // meaningful playback has actually elapsed during this player session.
-    if (time < 0.5 && lastTimeRef.current > duration - 1.5 && duration > 0) {
+    if (time < 0.5 && lastTimeRef.current > duration - 1.5 && duration > 0 && watchCompletedRef.current) {
       watchCompletedRef.current = false;
+      recordReelReplay(post.id, currentUser?.id);
+      trackClientObservation({
+        eventType: 'video_replayed',
+        eventId: `${post.id}:replay:${Date.now()}`,
+        entityType: 'post',
+        entityId: post.id,
+        properties: {
+          watchedSeconds: Math.floor(creditedWatchSecondsRef.current),
+          durationSeconds: Math.floor(duration),
+        },
+      });
     }
     lastTimeRef.current = time;
 

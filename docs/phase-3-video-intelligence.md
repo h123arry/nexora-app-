@@ -18,7 +18,7 @@ Phase 3 extends the existing feed, media and creator systems. It does not replac
 PR #56 is merged to `main`. It updates connection-quality state while the feed remains mounted, disables speculative preloads offline, and preserves the active mounted video instead of releasing it during an offline transition.
 
 ### Watch-time integrity
-The watch-time policy credits plausible forward playback progress only. Paused updates, seeks, rewinds, non-finite timestamps and long timer gaps are excluded. Completion and meaningful-view signals require actual credited playback, rather than simply seeking the playhead near the end or beyond three seconds.
+The watch-time policy credits plausible forward playback progress only. Paused updates, seeks, rewinds, non-finite timestamps and long timer gaps are excluded. Completion and meaningful-view signals require actual credited playback, rather than simply seeking the playhead near the end or beyond three seconds. A replay is recorded only when a previously completed video wraps back to its beginning; that viewer-scoped rewatch signal feeds the existing reel ranker and the consented analytics stream.
 
 Watch-history records and session view-deduplication keys are scoped to the active account. Existing unscoped local history is not automatically reassigned because its owner cannot be established safely.
 

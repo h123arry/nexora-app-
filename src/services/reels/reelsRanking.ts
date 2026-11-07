@@ -55,6 +55,17 @@ const readSignals = (postId: string, viewerId?: string): ReelSignals => {
   }
 };
 
+export function nextRewatchCount(current: unknown): number {
+  const count = typeof current === 'number' && Number.isFinite(current) ? Math.max(0, Math.floor(current)) : 0;
+  return Math.min(20, count + 1);
+}
+
+export function recordReelReplay(postId: string, viewerId?: string): void {
+  if (!postId || postId.length > 200) return;
+  const current = readSignals(postId, viewerId);
+  recordReelSignal(postId, { rewatches: nextRewatchCount(current.rewatches) }, viewerId);
+}
+
 export function recordReelSignal(postId: string, patch: ReelSignals, viewerId?: string): void {
   if (!postId || postId.length > 200) return;
   try {
