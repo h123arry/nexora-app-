@@ -4,7 +4,7 @@ import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import {
   saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
-  getPublishedAcademyCourse, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
+  getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
   issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
   createAcademyMentorshipSession, bookAcademyMentorshipSession,
 } from '../src/academyInstitution.js';
@@ -70,8 +70,13 @@ describe('NEXORA Institute institution services', () => {
     await assert.rejects(reviewAcademyCourse(db, 'academy-instructor', courseId, 'approve'), /instructor/);
     await reviewAcademyCourse(db, 'academy-editor', courseId, 'approve', 'Curriculum approved.');
     await publishAcademyAssessment(db, 'academy-instructor', courseId, assessmentId);
+    const catalog = await listPublishedAcademyCourses(db);
+    assert.ok(catalog.courses.some(course => course.id === courseId));
     const published = await getPublishedAcademyCourse(db, courseId);
     assert.equal(published.lessons.length, 3);
+    assert.equal(published.assessments.length, 1);
+    assert.equal(published.assessments[0].questions.length, 3);
+    assert.equal('correctIndex' in published.assessments[0].questions[0], false);
     const tutorContext = await getAcademyTutorContext(db, 'learner-one', courseId, ['lesson-1', 'lesson-2']);
     assert.equal(tutorContext.lessons.length, 2);
     assert.match(tutorContext.groundingPolicy, /only from supplied lesson sources/);
