@@ -65,6 +65,7 @@ import SlideDownMenu from './components/SlideDownMenu';
 import NexoraPremiumLogo from './components/NexoraPremiumLogo';
 import NexoraBranding from './components/NexoraBranding';
 const CreatorDashboardView = lazy(() => import('./components/CreatorDashboardView'));
+const GiftEarningsFinancePanel = lazy(() => import('./components/GiftEarningsFinancePanel'));
 const ActivityView = lazy(() => import('./components/ActivityView'));
 const OnboardingTour = lazy(() => import('./components/OnboardingTour'));
 const MediaCreationEngine = lazy(() => import('./components/MediaCreationEngine'));
@@ -2336,8 +2337,11 @@ export default function App() {
                   )}
 
                   {activeTab === 'admin' && (
-                    <div role="status" className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-6 text-sm text-amber-100">
-                      Admin controls are disabled in this client. Secure moderation requires a trusted Firebase admin claim and server-side authorization.
+                    <div className="space-y-4">
+                      <div role="status" className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-5 text-sm text-amber-100">
+                        General admin controls remain disabled in this client. The GIFTVERSE finance queue below independently enforces its trusted finance administrator claim on the server.
+                      </div>
+                      <GiftEarningsFinancePanel />
                     </div>
                   )}
 
