@@ -91,19 +91,19 @@ describe('trusted Creator Studio scheduled publishing', () => {
     for (let index = 0; index < 30; index += 1) {
       const created = await createCreatorSchedule(db, 'alice', {
         content: 'Queued post ' + index,
-        scheduledAt: new Date(fixedNow + 600_000 + index * 1000).toISOString(),
+        scheduledAt: new Date(fixedNow + 60 * 60_000 + index * 1000).toISOString(),
       }, fixedNow);
       ids.push(created.scheduleId);
     }
     assert.equal((await db.doc('creatorScheduleCounters/alice').get()).get('pendingCount'), 30);
     await assert.rejects(createCreatorSchedule(db, 'alice', {
       content: 'The 31st post',
-      scheduledAt: new Date(fixedNow + 700_000).toISOString(),
+      scheduledAt: new Date(fixedNow + 70 * 60_000).toISOString(),
     }, fixedNow), /up to 30 scheduled posts/);
     await cancelCreatorSchedule(db, 'alice', ids[0]);
     const replacement = await createCreatorSchedule(db, 'alice', {
       content: 'Replacement post',
-      scheduledAt: new Date(fixedNow + 800_000).toISOString(),
+      scheduledAt: new Date(fixedNow + 80 * 60_000).toISOString(),
     }, fixedNow);
     assert.ok(replacement.scheduleId);
     assert.equal((await db.doc('creatorScheduleCounters/alice').get()).get('pendingCount'), 30);
