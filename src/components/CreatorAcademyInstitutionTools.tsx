@@ -14,7 +14,7 @@ export default function CreatorAcademyInstitutionTools() {
   const [lessonTitle, setLessonTitle] = useState('');
   const [lessonBody, setLessonBody] = useState('');
   const [lessonTranscript, setLessonTranscript] = useState('');
-  const [assessmentId, setAssessmentId] = useState('final-assessment');
+  const [assessmentId, setAssessmentId] = useState('final-assessment');\n  const [assessmentQuestions, setAssessmentQuestions] = useState('[{\"prompt\":\"What should a creator establish first?\",\"options\":[\"Audience value\",\"A random price\"],\"correctIndex\":0},{\"prompt\":\"How should sponsorships be handled?\",\"options\":[\"Hide them\",\"Disclose them\"],\"correctIndex\":1},{\"prompt\":\"What supports a sustainable creator business?\",\"options\":[\"A clear value proposition\",\"Chasing every trend\"],\"correctIndex\":0}]');\n  const [certificateId, setCertificateId] = useState('');
   const [answers, setAnswers] = useState('0,1,0');
   const [verificationCode, setVerificationCode] = useState('');
   const [sessionId, setSessionId] = useState('');
@@ -35,7 +35,7 @@ export default function CreatorAcademyInstitutionTools() {
       setOutput(result.data);
       if (result.data.courseId) setCourseId(result.data.courseId);
       if (result.data.sessionId) setSessionId(result.data.sessionId);
-      if (result.data.verificationCode) setVerificationCode(result.data.verificationCode);
+      if (result.data.verificationCode) setVerificationCode(result.data.verificationCode);\n      if (result.data.certificateId) setCertificateId(result.data.certificateId);
       return result.data;
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The Academy request could not be completed.');
@@ -77,7 +77,7 @@ export default function CreatorAcademyInstitutionTools() {
           <input value={category} onChange={e => setCategory(e.target.value)} placeholder="Category" className="min-w-0 rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"/>
           <select value={level} onChange={e => setLevel(e.target.value)} className="min-w-0 rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"><option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>All levels</option></select>
         </div>
-        <button disabled={busy} onClick={() => void invoke('academySaveCourseDraft', { courseId: courseId || undefined, title: courseTitle, description: courseDescription, category, level })} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Save course draft</button>
+        <button disabled={busy} onClick={() => void invoke('academySaveCourseDraft', { ...(courseId ? { courseId } : {}), title: courseTitle, description: courseDescription, category, level })} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Save course draft</button>
         <div className="border-t border-white/10 pt-3">
           <p className="mb-2 text-xs font-bold text-violet-200">Lesson editor</p>
           <div className="grid grid-cols-2 gap-2">
@@ -91,7 +91,7 @@ export default function CreatorAcademyInstitutionTools() {
             const order = Number((document.getElementById('academy-lesson-order') as HTMLInputElement | null)?.value || 0);
             void invoke('academySaveLesson', { courseId, lessonId, title: lessonTitle, body: lessonBody, transcript: lessonTranscript, order });
           }} className="mt-2 rounded-xl bg-violet-600/80 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Save lesson</button>
-          <button disabled={busy || !courseId} onClick={() => void invoke('academySubmitCourseForReview', { courseId })} className="ml-2 rounded-xl border border-violet-400/30 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-50">Submit for review</button>
+          <button disabled={busy || !courseId} onClick={() => void invoke('academySubmitCourseForReview', { courseId })} className="ml-2 rounded-xl border border-violet-400/30 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-50">Submit for review</button>\n          <button disabled={busy || !courseId} onClick={() => void invoke('academyReviewCourse', { courseId, decision: 'approve', note: 'Approved through Academy editorial workspace.' })} className="ml-2 rounded-xl border border-emerald-400/30 px-4 py-2.5 text-xs font-bold text-emerald-200 disabled:opacity-50">Approve (editor)</button>
         </div>
       </div>
 
@@ -109,7 +109,7 @@ export default function CreatorAcademyInstitutionTools() {
         <div className="border-t border-white/10 pt-3">
           <p className="text-xs font-bold text-violet-200">Verify a certificate</p>
           <input value={verificationCode} onChange={e => setVerificationCode(e.target.value)} placeholder="24-character verification code" className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"/>
-          <button disabled={busy || !verificationCode} onClick={() => void invoke('academyVerifyCertificate', { verificationCode })} className="mt-2 rounded-xl border border-white/15 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Verify credential</button>
+          <button disabled={busy || !verificationCode} onClick={() => void invoke('academyVerifyCertificate', { verificationCode })} className="mt-2 rounded-xl border border-white/15 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Verify credential</button>\n          <input value={certificateId} onChange={e => setCertificateId(e.target.value)} placeholder="Certificate ID for admin revocation" className="mt-2 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"/>\n          <button disabled={busy || !certificateId} onClick={() => void invoke('academyRevokeCertificate', { certificateId, reason: 'Credential review and revocation requested by an Academy administrator.' })} className="mt-2 rounded-xl border border-red-400/30 px-4 py-2.5 text-xs font-bold text-red-200 disabled:opacity-50">Revoke (admin)</button>
         </div>
       </div>
 
