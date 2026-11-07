@@ -110,11 +110,11 @@ describe('trusted Creator Studio scheduled publishing', () => {
   });
 
   it('blocks publication when the creator is suspended at delivery time', async () => {
-    await db.doc('accountStatus/bob').set({ suspended: true });
     const created = await createCreatorSchedule(db, 'bob', {
       content: 'This should not publish',
       scheduledAt: new Date(fixedNow + 600_000).toISOString(),
     }, fixedNow);
+    await db.doc('accountStatus/bob').set({ suspended: true });
     const result = await publishDueCreatorSchedules(db, new Date(fixedNow + 11 * 60_000));
     assert.equal(result.blocked, 1);
     assert.equal((await db.doc('creatorScheduledPosts/' + created.scheduleId).get()).get('status'), 'blocked');
