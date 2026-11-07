@@ -2,6 +2,12 @@ import type { NexoraSettings } from '../firebase/settingsService';
 
 export type PersistedFeedTab = 'posts' | 'following' | 'friends' | 'trending' | 'reels';
 
+export interface RecommendationSignals {
+  tags: Record<string, number>;
+  creators: Record<string, number>;
+  communities: Record<string, number>;
+}
+
 export interface FeedPreferences {
   tab: PersistedFeedTab;
   notInterestedTags: string[];
@@ -9,6 +15,7 @@ export interface FeedPreferences {
   mutedCreatorIds: string[];
   hiddenPostIds: string[];
   seenPostIds: string[];
+  recommendationSignals: RecommendationSignals;
   recommendationResetAt?: string;
 }
 
@@ -27,6 +34,22 @@ function cleanIds(values: unknown, normalize = false): string[] {
   return [...unique];
 }
 
+function cleanSignalMap(value: unknown, normalizeTags = false): Record<string, number> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>)
+    .filter(([key, score]) => key.trim().length > 0 && key.length <= 120 && typeof score === 'number' && Number.isFinite(score))
+    .slice(-200)
+    .map(([key, score]) => [normalizeTags ? key.trim().replace(/^#/, '').toLowerCase() : key.trim(), Math.max(-100, Math.min(100, score as number))]));
+}
+
+export function normalizeRecommendationSignals(value?: Partial<RecommendationSignals> | null): RecommendationSignals {
+  return {
+    tags: cleanSignalMap(value?.tags, true),
+    creators: cleanSignalMap(value?.creators),
+    communities: cleanSignalMap(value?.communities),
+  };
+}
+
 export function normalizeFeedPreferences(input?: Partial<FeedPreferences> | null): FeedPreferences {
   const tab = input?.tab;
   return {
@@ -36,6 +59,7 @@ export function normalizeFeedPreferences(input?: Partial<FeedPreferences> | null
     mutedCreatorIds: cleanIds(input?.mutedCreatorIds),
     hiddenPostIds: cleanIds(input?.hiddenPostIds),
     seenPostIds: cleanIds(input?.seenPostIds),
+    recommendationSignals: normalizeRecommendationSignals(input?.recommendationSignals),
     ...(typeof input?.recommendationResetAt === 'string' && input.recommendationResetAt.length <= 40
       ? { recommendationResetAt: input.recommendationResetAt }
       : {}),
@@ -46,7 +70,7 @@ export function readFeedPreferences(settings?: NexoraSettings | null): FeedPrefe
   return normalizeFeedPreferences(settings?.feed);
 }
 
-export function resetFeedPreferences(current: FeedPreferences, at = new Date().toISOString()): FeedPreferences {
+export function resetFeedPreferences(current: Partial<FeedPreferences>, at = new Date().toISOString()): FeedPreferences {
   return {
     ...normalizeFeedPreferences(current),
     notInterestedTags: [],
@@ -54,6 +78,7 @@ export function resetFeedPreferences(current: FeedPreferences, at = new Date().t
     mutedCreatorIds: [],
     hiddenPostIds: [],
     seenPostIds: [],
+    recommendationSignals: normalizeRecommendationSignals(),
     recommendationResetAt: at,
   };
 }

@@ -85,3 +85,24 @@ test('creator recommendations interleave shared-interest groups without dropping
   assert.equal(results.length, 4);
   assert.ok(results.slice(0, 3).some(item => item.sharedTopics.includes('design')));
 });
+
+test('For You ranking applies account-scoped positive and negative recommendation feedback', () => {
+  const timestamp = '2026-11-07T11:00:00.000Z';
+  const makePost = (id: string, userId: string) => ({
+    id, userId, username: userId, name: userId, avatar: '', isVerified: false,
+    content: 'A discovery post', tags: ['design'], likes: 0, commentsCount: 0,
+    shares: 0, timestamp, comments: [],
+  }) as any;
+  const posts = [makePost('neutral', 'neutral-creator'), makePost('preferred', 'preferred-creator')];
+  const ranked = rankPosts(posts, {
+    now: Date.parse('2026-11-07T12:00:00.000Z'),
+    recommendationSignals: {
+      tags: { design: 20 },
+      creators: { 'preferred-creator': 60, 'neutral-creator': -80 },
+      communities: {},
+    },
+  });
+  assert.equal(ranked[0]?.post.id, 'preferred');
+  assert.ok(ranked[0]?.reasons.some(reason => reason.includes('recent feedback')));
+  assert.equal(ranked[1]?.post.id, 'neutral');
+});

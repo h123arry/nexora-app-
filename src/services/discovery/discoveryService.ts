@@ -6,6 +6,7 @@ export type FeedMode = 'forYou' | 'following' | 'latest' | 'trending';
 export interface RankingContext {
   followingIds?: string[];
   interestDNA?: Record<string, number>;
+  recommendationSignals?: { tags?: Record<string, number>; creators?: Record<string, number>; communities?: Record<string, number> };
   mutedCreatorIds?: string[];
   blockedCreatorIds?: string[];
   notInterestedTags?: string[];
@@ -56,6 +57,21 @@ function engagementScore(post: Post): number {
   });
 }
 
+function recommendationSignalScore(post: Post, signals?: RankingContext['recommendationSignals']): number {
+  if (!signals) return 0;
+  const tags = normalizedTags(post);
+  let score = tags.reduce((total, tag) => total + (signals.tags?.[tag] || 0), 0);
+  const content = normalizeSearchText(post.content || '');
+  for (const [keyword, weight] of Object.entries(signals.tags || {})) {
+    const normalized = normalizeSearchText(keyword);
+    if (normalized.length > 2 && content.includes(normalized) && !tags.includes(normalized)) score += weight * 0.3;
+  }
+  score += signals.creators?.[post.userId] || 0;
+  if (post.username && post.username !== post.userId) score += signals.creators?.[post.username] || 0;
+  if (post.communityName) score += signals.communities?.[post.communityName] || 0;
+  return Math.max(-100, Math.min(100, score));
+}
+
 function stableTieBreak<T extends Post>(a: { post: T; index: number }, b: { post: T; index: number }): number {
   return a.index - b.index || String(a.post.id).localeCompare(String(b.post.id));
 }
@@ -91,6 +107,7 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
       const freshness = Math.max(0, 48 - age) * RANKING_WEIGHTS.recency;
       const followBoost = following.has(post.userId) ? RANKING_WEIGHTS.follow : 0;
       const unseenBoost = seen.has(post.id) ? 0 : RANKING_WEIGHTS.unseen;
+      const feedbackScore = recommendationSignalScore(post, context.recommendationSignals);
       const score = mode === 'latest'
         // A negative age score preserves chronological order even for posts
         // older than seven days; clamping at zero would make old posts tie.
@@ -101,13 +118,15 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
             ? Math.min(60, engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 24)) + Math.max(0, 72 - age) * 1.8
             : interestScore + freshness + followBoost + unseenBoost
               + engagementScore(post) * RANKING_WEIGHTS.popularity * freshnessMultiplier(age, 36)
-              + (post.isVerified ? RANKING_WEIGHTS.verifiedTrust : 0);
+              + (post.isVerified ? RANKING_WEIGHTS.verifiedTrust : 0)
+              + feedbackScore * 0.5;
       const reasons: string[] = [];
       if (followBoost) reasons.push('from an account you follow');
       if (matchedTags.length) reasons.push(`matches topics ${matchedTags.slice(0, 2).map(tag => `#${tag}`).join(' and ')}`);
       if (age < 24) reasons.push('recently published');
       if (!seen.has(post.id)) reasons.push('new to your feed');
       if (mode === 'trending') reasons.push('showing recent community activity');
+      if (mode === 'forYou' && feedbackScore !== 0) reasons.push('adjusted using your recent feedback');
       if (reasons.length === 0) reasons.push('eligible from available post metadata');
       return { post, index, score, reasons };
     })
