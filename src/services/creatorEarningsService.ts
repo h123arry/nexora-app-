@@ -18,11 +18,14 @@ export interface CreatorEarningsSnapshot {
   policyVersion: string;
   creatorShareBps: number;
   platformShareBps: number;
-  pendingReviewNex: number;
-  availableNex: number;
-  lifetimeGrossNex: number;
-  lifetimeCreatorShareNex: number;
-  lifetimePlatformShareNex: number;
+  earningsWindow: 'latest_100';
+  hasMoreEarnings: boolean;
+  pendingReviewGrossNex: number;
+  recentAvailableCreatorShareNex: number;
+  recentGrossNex: number;
+  recentCreatorShareNex: number;
+  recentPlatformShareNex: number;
+  walletAvailableNex: number;
   earnings: CreatorGiftEarning[];
 }
 export async function getCreatorEarningsSnapshot(): Promise<CreatorEarningsSnapshot> {
