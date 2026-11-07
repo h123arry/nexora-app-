@@ -90,6 +90,8 @@ describe('Creator audience analytics', () => {
     const daily = await db.collection('creatorAudienceDaily').where('creatorId', '==', creatorId).where('day', '==', '2026-11-06').get();
     assert.equal(daily.size, 1);
     assert.equal(daily.docs[0].get('uniqueProfileVisitors'), 2);
+    const visitorRecords = await db.collection('creatorProfileDailyVisitors').where('creatorId', '==', creatorId).where('day', '==', '2026-11-06').get();
+    assert.ok(visitorRecords.docs[0].get('expireAt').toDate() > new Date('2027-02-03T00:00:00.000Z'));
     await assert.rejects(recordCreatorProfileVisitForUser(db, 'visitor-one', 'visitor-one', day), /valid public creator profile/);
   });
 });
