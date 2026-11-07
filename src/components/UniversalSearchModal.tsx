@@ -38,6 +38,8 @@ export default function UniversalSearchModal({
   const [serverSearchLoading, setServerSearchLoading] = useState(false);
   const [serverSearchError, setServerSearchError] = useState('');
   const [serverCursorLoading, setServerCursorLoading] = useState(false);
+  const activeDirectoryQueryRef = useRef('');
+  activeDirectoryQueryRef.current = query.trim();
   useEffect(() => {
     setRecentSearches(readRecentSearches(currentUser.id));
     let active = true;
@@ -58,6 +60,7 @@ export default function UniversalSearchModal({
     }
     let active = true;
     setServerResults(null);
+    setServerCursorLoading(false);
     const timer = window.setTimeout(async () => {
       setServerSearchLoading(true); setServerSearchError('');
       trackClientObservation({ eventType: 'search_started', properties: { surface: 'universal_directory' } });
@@ -88,9 +91,11 @@ export default function UniversalSearchModal({
 
   const handleLoadMoreDirectoryResults = async () => {
     if (!serverResults?.nextCursor || serverCursorLoading) return;
+    const requestedQuery = query.trim();
     setServerCursorLoading(true);
     try {
-      const next = await searchPublicDirectory(query.trim(), serverResults.nextCursor);
+      const next = await searchPublicDirectory(requestedQuery, serverResults.nextCursor);
+      if (activeDirectoryQueryRef.current !== requestedQuery) return;
       setServerResults(current => current ? {
         people: [...new Map([...current.people, ...next.people].map(item => [item.id, item])).values()],
         pages: [...new Map([...current.pages, ...next.pages].map(item => [item.id, item])).values()],
