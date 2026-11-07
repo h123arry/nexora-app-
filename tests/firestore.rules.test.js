@@ -97,6 +97,14 @@ const publicProfile = (uid) => ({
     }));
   });
 
+  it('keeps creator audience aggregates and deduplication records server-owned', async () => {
+    const alice = dbFor('alice');
+    for (const collectionName of ['creatorAudienceDaily', 'creatorAudienceEventReceipts', 'creatorFollowProjections', 'creatorProfileDailyVisitors']) {
+      await assertFails(setDoc(doc(alice, collectionName, 'forged'), { creatorId: 'alice', follows: 999999 }));
+      await assertFails(getDoc(doc(alice, collectionName, 'forged')));
+    }
+  });
+
   it('protects canonical username claims from collisions and forged ownership', async () => {
     const claim = {
       userId: 'alice', username: 'alice_handle',
