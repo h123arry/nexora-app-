@@ -88,6 +88,44 @@ export default function NexoraVideoPlayer({
 }: NexoraVideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoImpressionRecordedRef = useRef(false);
+
+  // A video gets its own qualified impression only while the player itself is
+  // genuinely visible. Feed-card impressions remain a separate surface.
+  useEffect(() => {
+    const target = containerRef.current;
+    if (!target || isActive === false || videoImpressionRecordedRef.current || typeof IntersectionObserver === 'undefined') return;
+    let timer: number | null = null;
+    const observer = new IntersectionObserver(entries => {
+      const entry = entries.find(item => item.target === target);
+      if (!entry) return;
+      if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+        if (timer === null) {
+          timer = window.setTimeout(() => {
+            timer = null;
+            if (videoImpressionRecordedRef.current) return;
+            videoImpressionRecordedRef.current = true;
+            trackClientObservation({
+              eventType: 'content_impression',
+              eventId: `${post.id}:video_player_impression:${Date.now()}`,
+              entityType: 'post',
+              entityId: post.id,
+              properties: { surface: 'video_player', qualification: '50_percent_for_1_second' },
+            });
+            observer.disconnect();
+          }, 1000);
+        }
+      } else if (timer !== null) {
+        window.clearTimeout(timer);
+        timer = null;
+      }
+    }, { threshold: [0, 0.5] });
+    observer.observe(target);
+    return () => {
+      observer.disconnect();
+      if (timer !== null) window.clearTimeout(timer);
+    };
+  }, [post.id, isActive]);
 
   // Release the media element itself when this reel is outside the active preload window.
   // Removing the source and reloading drops its buffered resource on constrained devices.

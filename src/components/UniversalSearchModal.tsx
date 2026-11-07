@@ -37,6 +37,9 @@ export default function UniversalSearchModal({
   const [serverResults, setServerResults] = useState<PublicDirectoryResult | null>(null);
   const [serverSearchLoading, setServerSearchLoading] = useState(false);
   const [serverSearchError, setServerSearchError] = useState('');
+  const [serverCursorLoading, setServerCursorLoading] = useState(false);
+  const activeDirectoryQueryRef = useRef('');
+  activeDirectoryQueryRef.current = query.trim();
   useEffect(() => {
     setRecentSearches(readRecentSearches(currentUser.id));
     let active = true;
@@ -53,10 +56,11 @@ export default function UniversalSearchModal({
   useEffect(() => {
     const term = query.trim();
     if (!isOpen || term.length < 2) {
-      setServerResults(null); setServerSearchError(''); setServerSearchLoading(false); return;
+      setServerResults(null); setServerSearchError(''); setServerSearchLoading(false); setServerCursorLoading(false); return;
     }
     let active = true;
     setServerResults(null);
+    setServerCursorLoading(false);
     const timer = window.setTimeout(async () => {
       setServerSearchLoading(true); setServerSearchError('');
       trackClientObservation({ eventType: 'search_started', properties: { surface: 'universal_directory' } });
@@ -84,6 +88,26 @@ export default function UniversalSearchModal({
     }, 300);
     return () => { active = false; window.clearTimeout(timer); };
   }, [isOpen, query, currentUser.id]);
+
+  const handleLoadMoreDirectoryResults = async () => {
+    if (!serverResults?.nextCursor || serverCursorLoading) return;
+    const requestedQuery = query.trim();
+    setServerCursorLoading(true);
+    try {
+      const next = await searchPublicDirectory(requestedQuery, serverResults.nextCursor);
+      if (activeDirectoryQueryRef.current !== requestedQuery) return;
+      setServerResults(current => current ? {
+        people: [...new Map([...current.people, ...next.people].map(item => [item.id, item])).values()],
+        pages: [...new Map([...current.pages, ...next.pages].map(item => [item.id, item])).values()],
+        circles: [...new Map([...current.circles, ...next.circles].map(item => [item.id, item])).values()],
+        nextCursor: next.nextCursor,
+      } : next);
+    } catch {
+      setServerSearchError('More directory results could not be loaded. Please retry.');
+    } finally {
+      setServerCursorLoading(false);
+    }
+  };
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -446,7 +470,14 @@ export default function UniversalSearchModal({
                           <span className="min-w-0"><span className="block truncate text-sm font-semibold text-white">{circle.name}</span><span className="block truncate text-xs text-violet-200/60">{circle.description}</span></span>
                         </button>)}
                       </div>}
-                    </section>
+                    {serverResults.nextCursor && (
+                        <div className="pt-2">
+                          <button type="button" onClick={() => void handleLoadMoreDirectoryResults()} disabled={serverCursorLoading} className="w-full rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/15 disabled:opacity-50">
+                            {serverCursorLoading ? 'Loading more…' : 'Load more directory results'}
+                          </button>
+                        </div>
+                      )}
+                      </section>
                   )}
 
                   {/* 1. PEOPLE */}
