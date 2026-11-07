@@ -15,7 +15,11 @@ export default function CreatorAcademyInstitutionTools() {
   const [lessonBody, setLessonBody] = useState('');
   const [lessonTranscript, setLessonTranscript] = useState('');
   const [assessmentId, setAssessmentId] = useState('final-assessment');
-  const [assessmentQuestions, setAssessmentQuestions] = useState('[{\"prompt\":\"What should a creator establish first?\",\"options\":[\"Audience value\",\"A random price\"],\"correctIndex\":0},{\"prompt\":\"How should sponsorships be handled?\",\"options\":[\"Hide them\",\"Disclose them\"],\"correctIndex\":1},{\"prompt\":\"What supports a sustainable creator business?\",\"options\":[\"A clear value proposition\",\"Chasing every trend\"],\"correctIndex\":0}]');
+  const [assessmentQuestions, setAssessmentQuestions] = useState(JSON.stringify([
+    { prompt: 'What should a creator establish first?', options: ['Audience value', 'A random price'], correctIndex: 0 },
+    { prompt: 'How should sponsorships be handled?', options: ['Hide them', 'Disclose them'], correctIndex: 1 },
+    { prompt: 'What supports a sustainable creator business?', options: ['A clear value proposition', 'Chasing every trend'], correctIndex: 0 },
+  ], null, 2));
   const [certificateId, setCertificateId] = useState('');
   const [answers, setAnswers] = useState('0,1,0');
   const [verificationCode, setVerificationCode] = useState('');
@@ -103,6 +107,8 @@ export default function CreatorAcademyInstitutionTools() {
         <h4 className="text-sm font-bold text-white">2. Assessments and credentials</h4>
         <input value={assessmentId} onChange={e => setAssessmentId(e.target.value)} placeholder="Assessment ID" className="w-full rounded-xl border border-white/10 bg-black/30 p-3 text-xs text-white"/>
         <p className="text-[11px] leading-5 text-white/45">Create and publish a question bank through the trusted Academy assessment service. Correct answers remain server-side.</p>
+        <textarea value={assessmentQuestions} onChange={e => setAssessmentQuestions(e.target.value)} rows={6} className="w-full rounded-xl border border-white/10 bg-black/30 p-3 font-mono text-[10px] text-white" aria-label="Assessment question JSON"/>
+        <button disabled={busy || !courseId} onClick={() => { try { void invoke('academyCreateAssessment', { courseId, assessmentId, passPercent: 70, questions: JSON.parse(assessmentQuestions) }); } catch { setError('Assessment questions must be valid JSON.'); } }} className="rounded-xl bg-violet-600/80 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Save question bank</button>
         <button disabled={busy || !courseId} onClick={() => void invoke('academyPublishAssessment', { courseId, assessmentId })} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50">Publish assessment</button>
         <div className="border-t border-white/10 pt-3">
           <p className="text-xs font-bold text-violet-200">Take an assessment</p>
