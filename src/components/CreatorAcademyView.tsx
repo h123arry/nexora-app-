@@ -216,19 +216,22 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
         </div>
         <div className="relative mt-6 h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-400 transition-all" style={{ width: overallProgress + '%' }}/></div>
         {loadError && <p role="status" className="relative mt-3 text-xs text-amber-200">We couldn't load your saved progress. Your courses remain available; reconnect and refresh to sync progress.</p>}
+        {catalogError && <p role="status" className="relative mt-3 text-xs text-amber-200">{catalogError}</p>}
+        {catalogTruncated && <p className="relative mt-2 text-[10px] text-amber-200">Showing the first 50 published institutional courses.</p>}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
         <section className="space-y-3">
-          <div className="flex items-center justify-between"><div><h3 className="text-lg font-extrabold">Learning paths</h3><p className="text-xs text-white/45">A curriculum designed for every stage.</p></div><span className="text-xs text-white/40">{COURSES.length} courses</span></div>
+          <div className="flex items-center justify-between"><div><h3 className="text-lg font-extrabold">Learning paths</h3><p className="text-xs text-white/45">A curriculum designed for every stage.</p></div><span className="text-xs text-white/40">{courses.length} courses</span></div>
           <div className="space-y-2">
-            {COURSES.map(course => {
+            {courses.map(course => {
               const done = (progress[course.id] ?? []).length;
-              const percent = Math.round(done / course.lessons.length * 100);
+              const lessonTotal = course.institutional ? Number(course.lessonCount || 0) : course.lessons.length;
+              const percent = lessonTotal ? Math.min(100, Math.round(done / lessonTotal * 100)) : 0;
               const active = selectedCourse === course.id;
               return <button key={course.id} onClick={() => setSelectedCourse(course.id)} className={'w-full rounded-2xl border p-4 text-left transition-all ' + (active ? 'border-violet-400/50 bg-violet-500/10' : 'border-white/8 bg-[#0b1020] hover:border-white/20')}>
                 <div className="flex items-start justify-between gap-3"><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-violet-300">{course.category} · {course.level}</p><h4 className="mt-1 text-sm font-bold">{course.title}</h4></div><ChevronRight size={16} className={active ? 'text-violet-300' : 'text-white/30'}/></div>
-                <div className="mt-3 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-violet-500" style={{ width: percent + '%' }}/></div><span className="text-[10px] text-white/45">{done}/{course.lessons.length}</span></div>
+                <div className="mt-3 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-violet-500" style={{ width: percent + '%' }}/></div><span className="text-[10px] text-white/45">{done}/{lessonTotal}</span></div>
               </button>;
             })}
           </div>
@@ -238,19 +241,54 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
           <div className="flex items-center gap-2 text-violet-300"><BookOpen size={17}/><span className="text-[10px] font-black uppercase tracking-[0.18em]">Course curriculum</span></div>
           <h3 className="mt-3 text-xl font-black">{activeCourse.title}</h3>
           <p className="mt-2 text-sm leading-6 text-white/55">{activeCourse.description}</p>
+          {activeCourse.institutional && <p className="mt-2 text-[10px] font-bold uppercase tracking-wider text-violet-300">Published institutional course · Version {activeCourse.lessonCount ? activeCourse.lessonCount : 1}</p>}
+          {detailLoading && <p className="mt-3 text-xs text-violet-200/60">Loading approved course lessons…</p>}
           <div className="mt-5 space-y-2">
-            {activeCourse.lessons.map((lesson, index) => {
+            {displayLessons.map((lesson, index) => {
               const done = (progress[activeCourse.id] ?? []).includes(lesson.id);
               return <article key={lesson.id} className="rounded-2xl border border-white/8 bg-white/[0.025] p-4">
                 <div className="flex items-start gap-3">
                   <div className={'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ' + (done ? 'bg-emerald-400/15 text-emerald-300' : 'bg-violet-500/15 text-violet-200')}>{done ? <CheckCircle2 size={17}/> : String(index + 1).padStart(2, '0')}</div>
-                  <div className="min-w-0 flex-1"><h4 className="text-sm font-bold">{lesson.title}</h4><p className="mt-1 text-xs leading-5 text-white/50">{lesson.summary}</p><div className="mt-2 flex items-center gap-1 text-[10px] text-white/35"><Clock3 size={12}/>{lesson.minutes} min</div></div>
+                  <div className="min-w-0 flex-1"><h4 className="text-sm font-bold">{lesson.title}</h4><p className="mt-1 text-xs leading-5 text-white/50">{lesson.summary}</p>{lesson.minutes && <div className="mt-2 flex items-center gap-1 text-[10px] text-white/35"><Clock3 size={12}/>{lesson.minutes} min</div>}
+                    {lesson.body && <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-white/65">{lesson.body}</p>}
+                    {lesson.transcript && <details className="mt-3"><summary className="cursor-pointer text-[10px] font-bold text-violet-200">Accessible transcript</summary><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-white/55">{lesson.transcript}</p></details>}
+                    {lesson.resourceUrls?.map(url => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-2 mr-3 inline-block text-[10px] text-violet-300 underline">Open lesson resource</a>)}</div>
                   <button disabled={done || saving !== null || loading} onClick={() => void markLessonComplete(activeCourse, lesson)} className={'shrink-0 rounded-xl px-3 py-2 text-[10px] font-bold transition-colors disabled:cursor-default ' + (done ? 'text-emerald-300' : 'bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50')}>{done ? 'Completed' : saving === lesson.id ? 'Saving…' : 'Complete'}</button>
                 </div>
               </article>;
             })}
           </div>
-          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-violet-400/15 bg-violet-500/5 p-4"><Sparkles size={17} className="mt-0.5 shrink-0 text-violet-300"/><p className="text-xs leading-5 text-white/55">Your learning record syncs to your NEXORA account. Eligible published courses can use server-graded assessments and verifiable certificates; completing these introductory lessons records progress but does not automatically award a credential.</p></div>
+          {activeCourse.institutional && (
+            <section className="mt-6 space-y-4 border-t border-white/10 pt-5">
+              <div><h4 className="text-sm font-black text-white">Published assessments</h4><p className="mt-1 text-xs text-white/45">Questions are supplied without answer keys. NEXORA grades your submission on the server.</p></div>
+              {assessmentError && <p role="alert" className="rounded-xl border border-rose-400/20 bg-rose-500/5 p-3 text-xs text-rose-200">{assessmentError}</p>}
+              {assessments.length === 0 ? <p className="rounded-xl border border-dashed border-white/10 p-4 text-xs text-white/40">This course has no published assessment yet.</p> : assessments.map(assessment => (
+                <article key={assessment.id} className="space-y-4 rounded-2xl border border-white/10 bg-black/20 p-4">
+                  <div className="flex items-center justify-between gap-3"><h5 className="text-sm font-bold text-white">Course assessment</h5><span className="text-[10px] text-violet-200">Pass mark {assessment.passPercent}%</span></div>
+                  {assessment.questions.map((question,index) => (
+                    <div key={question.id} className="space-y-2">
+                      <p className="text-xs font-semibold text-white">{index+1}. {question.prompt}</p>
+                      <div className="grid gap-2 sm:grid-cols-2">{question.options.map((option,optionIndex) => {
+                        const chosen = (assessmentAnswers[assessment.id] || [])[index] === optionIndex;
+                        return <button key={optionIndex} type="button" aria-pressed={chosen} onClick={() => setAssessmentAnswers(previous => {
+                          const next = [...(previous[assessment.id] || Array(question.options.length).fill(-1))];
+                          while(next.length < assessment.questions.length) next.push(-1);
+                          next[index] = optionIndex;
+                          return { ...previous, [assessment.id]: next };
+                        })} className={'rounded-xl border px-3 py-2 text-left text-xs transition-colors '+(chosen?'border-violet-400/50 bg-violet-500/15 text-white':'border-white/10 bg-white/[0.02] text-white/60 hover:border-white/20')}>{option}</button>;
+                      })}</div>
+                    </div>
+                  ))}
+                  <div className="flex flex-wrap items-center gap-2"><button type="button" disabled={assessmentBusy} onClick={()=>void submitAssessment(assessment)} className="min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-40">{assessmentBusy?'Submitting…':'Submit assessment'}</button>
+                    {assessmentResult?.assessmentId===assessment.id && <span className={'text-xs font-bold '+(assessmentResult.passed?'text-emerald-300':'text-amber-200')}>{assessmentResult.scorePercent}% · {assessmentResult.passed?'Passed':'Not passed yet'}</span>}
+                    {assessmentResult?.assessmentId===assessment.id && assessmentResult.passed && <button type="button" disabled={assessmentBusy} onClick={()=>void requestCertificate(assessment.id)} className="min-h-10 rounded-xl border border-violet-400/30 px-4 text-xs font-bold text-violet-200 disabled:opacity-40">Request certificate</button>}
+                  </div>
+                  {certificate && assessmentResult?.assessmentId===assessment.id && <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/5 p-3"><p className="text-xs font-bold text-emerald-200">Verified credential issued</p><p className="mt-1 text-[10px] text-white/50">{certificate.courseTitle} · {certificate.certificateId}</p><p className="mt-2 break-all font-mono text-xs text-white">{certificate.verificationCode}</p><p className="mt-1 text-[10px] text-white/40">Keep this code for independent certificate verification.</p></div>}
+                </article>
+              ))}
+            </section>
+          )}
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-violet-400/15 bg-violet-500/5 p-4"><Sparkles size={17} className="mt-0.5 shrink-0 text-violet-300"/><p className="text-xs leading-5 text-white/55">Your learning record syncs to your NEXORA account. Institutional assessments are server graded, and credentials are issued only after a passing result. Introductory lessons record progress but do not automatically award certificates.</p></div>
         </section>
       </div>
 
@@ -259,7 +297,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
         <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-xs font-bold">Built for long-term growth</span></div><p className="mt-2 text-xs leading-5 text-white/45">The curriculum covers craft, audience, community, live production, analytics, business, brand and creator safety.</p></div>
       </section>
       {loading && <p className="text-center text-xs text-white/35">Syncing your learning record…</p>}
-      <CreatorAcademyInstitutionTools />
+      {isInstructor && <CreatorAcademyInstitutionTools />}
     </div>
   );
 }
