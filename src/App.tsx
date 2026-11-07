@@ -77,6 +77,7 @@ const CommunitiesHubView = lazy(() => import('./components/CommunitiesHubView'))
 const SavedView = lazy(() => import('./components/SavedView'));
 const UniversalSearchModal = lazy(() => import('./components/UniversalSearchModal'));
 const WalletView = lazy(() => import('./components/WalletView'));
+const GiftVerseView = lazy(() => import('./components/GiftVerseView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import OfflineBanner from './components/OfflineBanner';
@@ -670,9 +671,9 @@ export default function App() {
   );
   const [privateCacheOwnerId, setPrivateCacheOwnerId] = useState(initialCacheUserId);
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'settings'>(() => {
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'giftverse' | 'settings'>(() => {
     const requestedTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
-    const supportedTabs = ['feed', 'explore', 'inbox', 'pulse', 'matrix', 'activity', 'profile', 'admin', 'nida', 'creator', 'communities', 'live', 'saved', 'wallet', 'settings'];
+    const supportedTabs = ['feed', 'explore', 'inbox', 'pulse', 'matrix', 'activity', 'profile', 'admin', 'nida', 'creator', 'communities', 'live', 'saved', 'wallet', 'giftverse', 'settings'];
     return supportedTabs.includes(requestedTab || '') ? requestedTab as any : 'feed';
   });
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
@@ -2357,6 +2358,8 @@ export default function App() {
                       onSelectTab={(tab) => navigateTo(tab as typeof activeTab)}
                     />
                   )}
+
+                  {activeTab === 'giftverse' && (<GiftVerseView isLoggedIn={isLoggedIn} />)}
 
                   {activeTab === 'wallet' && (
                     <WalletView

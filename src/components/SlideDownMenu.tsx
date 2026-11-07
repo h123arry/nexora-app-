@@ -13,6 +13,7 @@ import {
   Bookmark, 
   BarChart2, 
   Wallet, 
+  Gift, 
   Sliders, 
   X, 
   ChevronRight 
@@ -164,6 +165,9 @@ export default function SlideDownMenu({
       iconColor: 'text-indigo-400 bg-indigo-500/10'
     },
     {
+      id: 'giftverse', label: 'Giftverse', desc: 'Discover creator gifts', icon: Gift, tab: 'giftverse', badge: 0, iconColor: 'text-violet-300 bg-violet-500/10'
+    },
+    {
       id: 'wallet',
       label: 'Wallet',
       desc: 'Wallet & balance',
@@ -196,6 +200,7 @@ export default function SlideDownMenu({
     if (item.id === 'saved') return activeTab === 'saved';
     if (item.id === 'creator-hub') return activeTab === 'creator';
     if (item.id === 'wallet') return activeTab === 'wallet';
+    if (item.id === 'giftverse') return activeTab === 'giftverse';
     if (item.id === 'settings') return activeTab === 'settings';
     return activeTab === item.tab;
   };
