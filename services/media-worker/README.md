@@ -6,13 +6,13 @@ This Cloud Run service consumes Cloud Storage object-finalized events delivered 
 
 - Cloud Run service: `nexora-media-worker`
 - Runtime: Node.js 22 container in this directory
-- Environment: `MEDIA_BUCKET` set to the exact private Firebase Storage bucket
+- Environment: `MEDIA_BUCKET` set to the exact private Firebase Storage bucket and `FIRESTORE_DATABASE_ID=default` (NEXORA's named Firestore database)
 - Service identity: least-privilege read on source objects, create on `processed/**`, and Firestore read/write on `mediaAssets`
 - Eventarc trigger: the same bucket, event type `google.cloud.storage.object.v1.finalized`, destination Cloud Run service, authenticated service identity with `roles/run.invoker`
 - Cloud Run ingress should accept Eventarc traffic only; do not expose an unauthenticated public endpoint.
 - Set request timeout and memory to accommodate the largest permitted input; begin with 2 vCPU / 4 GiB and a 900-second request timeout, then load-test before increasing limits.
 
-Deploy from this directory after enabling Cloud Run, Eventarc, Cloud Build, Artifact Registry, and Eventarc delivery APIs. Configure the Firebase Storage bucket's location consistently with the Eventarc trigger.
+Deploy from this directory after enabling Cloud Run, Eventarc, Cloud Build, Artifact Registry, and Eventarc delivery APIs. Configure the Firebase Storage bucket's location consistently with the Eventarc trigger. If CDN delivery is enabled, set `MEDIA_CDN_BASE_URL`, `MEDIA_CDN_KEY_NAME=nexora-media-signing-key`, and `MEDIA_CDN_SIGNING_KEY_BASE64` from Secret Manager; the worker signs HLS playlist and segment URLs and leaves the bucket private.
 
 ## Delivery and security notes
 
