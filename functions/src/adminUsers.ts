@@ -87,6 +87,9 @@ export async function applyAdminAccountAction(
     await store.runTransaction(async transaction => {
       const target = await transaction.get(userRef);
       if (!target.exists) throw new HttpsError('not-found', 'The target account does not exist.');
+      if (target.get('username') === 'voh' || target.get('role') === 'founder') {
+        throw new HttpsError('permission-denied', 'The founder account cannot be changed.');
+      }
       transaction.update(userRef, {
         reputationPoints: 0,
         reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
@@ -172,8 +175,6 @@ export const updateAdminUser = onCall({ maxInstances: 5 }, async request => {
   }
 
   const actorUid = requireAdmin(request);
-  const userRef = db.collection('users').doc(targetUid);
-  const statusRef = db.collection('accountStatus').doc(targetUid);
   if (action !== 'ban' && action !== 'suspend' && action !== 'reset_reputation') {
     throw new HttpsError('invalid-argument', 'A supported account-management action is required.');
   }
