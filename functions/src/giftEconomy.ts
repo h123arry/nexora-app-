@@ -160,14 +160,16 @@ export const setCreatorPayoutBeneficiary = onCall({ maxInstances: 5 }, async req
   await db.runTransaction(async tx => {
     const existing = await tx.get(ref);
     tx.set(ref, { creatorId, providerBeneficiaryRef, provider: 'paystack', currency: 'NGN',
-      status: 'verified', verifiedBy: actorId, verifiedAt: FieldValue.serverTimestamp(),
+      // Registering a provider reference is not proof of beneficiary verification.
+      // Keep it pending until a real provider verification callback is integrated.
+      status: 'pending', registeredBy: actorId, registeredAt: FieldValue.serverTimestamp(),
       createdAt: existing.data()?.createdAt || FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp() });
     const audit = db.collection('creatorPayoutAuditEvents').doc();
-    tx.create(audit, { creatorId, actorId, action: 'beneficiary_verified', provider: 'paystack',
+    tx.create(audit, { creatorId, actorId, action: 'beneficiary_reference_registered', provider: 'paystack',
       createdAt: FieldValue.serverTimestamp(), source: 'trusted_finance_admin' });
   });
-  return { creatorId, status: 'verified' as const, provider: 'paystack', currency: 'NGN' as const };
+  return { creatorId, status: 'pending' as const, provider: 'paystack', currency: 'NGN' as const };
 });
 
 export const resolveGiftRiskSignal = onCall({ maxInstances: 5 }, async request => {
