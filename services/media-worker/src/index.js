@@ -31,14 +31,15 @@ function run(binary,args) {
   });
 }
 function signedCdnUrl(objectPath, fallback) {
-  const base=process.env.MEDIA_CDN_BASE_URL?.replace(/\\/$/,'');
+  let base=process.env.MEDIA_CDN_BASE_URL || '';
+  if(base.endsWith('/')) base=base.slice(0,-1);
   const keyName=process.env.MEDIA_CDN_KEY_NAME;
   const key=process.env.MEDIA_CDN_SIGNING_KEY_BASE64;
   if(!base || !keyName || !key) return fallback;
   const expires=Math.floor(Date.now()/1000)+7*24*60*60;
-  const unsigned=`${base}/${objectPath}?Expires=${expires}&KeyName=${keyName}`;
-  const signature=createHmac('sha1',Buffer.from(key,'base64')).update(unsigned).digest('base64').replace(/\\+/g,'-').replace(/\\//g,'_').replace(/=+$/,'');
-  return `${unsigned}&Signature=${signature}`;
+  const unsigned=base+'/'+objectPath+'?Expires='+expires+'&KeyName='+keyName;
+  const signature=createHmac('sha1',Buffer.from(key,'base64')).update(unsigned).digest('base64').replaceAll('+','-').replaceAll('/','_').replace(/=+$/,'');
+  return unsigned+'&Signature='+signature;
 }
 async function probe(file){
   const raw=await run('ffprobe',['-v','error','-show_entries','format=duration,format_name,size:stream=codec_type,codec_name,width,height,avg_frame_rate','-of','json',file]);
@@ -109,12 +110,15 @@ async function processObject(event){
       const hls=path.join(dir,'index.m3u8');
       await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height}\\,ih)`,'-c:v','libx264','-preset','veryfast','-b:v',rendition.bitrate,'-c:a','aac','-b:a',rendition.audio,'-hls_time','6','-hls_playlist_type','vod','-hls_segment_filename',path.join(dir,'segment_%05d.ts'),hls]);
       const prefix=`${outputRoot}/${rendition.height}p`;
-      const playlist=(await readFile(hls,'utf8')).split(/\\r?\\n/).map(line=>line && !line.startsWith('#') ? signedCdnUrl(`${prefix}/${line}`,line) : line).join('\\n');
+      const playlist=(await readFile(hls,'utf8')).split(String.fromCharCode(10)).map(rawLine=>{
+        const line=rawLine.replaceAll(String.fromCharCode(13),'');
+        return line && !line.startsWith('#') ? signedCdnUrl(prefix+'/'+line,line) : line;
+      }).join(String.fromCharCode(10));
       await (await import('node:fs/promises')).writeFile(hls,playlist);
       await upload(mp4,`${prefix}/video.mp4`,'video/mp4');
       await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl');
       for(const entry of await (await import('node:fs/promises')).readdir(dir)) if(entry.endsWith('.ts')) await upload(path.join(dir,entry),`${prefix}/${entry}`,'video/mp2t');
-      master.push(`#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(rendition.bitrate,10)*1000},RESOLUTION=${Math.round(metadata.width*rendition.height/metadata.height)}x${rendition.height}\\n${signedCdnUrl(`${prefix}/index.m3u8`,`${rendition.height}p/index.m3u8`)}`);
+      master.push('#EXT-X-STREAM-INF:BANDWIDTH='+ (parseInt(rendition.bitrate,10)*1000) + ',RESOLUTION=' + Math.round(metadata.width*rendition.height/metadata.height) + 'x' + rendition.height + String.fromCharCode(10) + signedCdnUrl(prefix+'/index.m3u8',rendition.height+'p/index.m3u8'));
       actual.push({height:rendition.height,bitrate:rendition.bitrate,mp4Path:`${prefix}/video.mp4`,hlsPath:`${prefix}/index.m3u8`});
     }
     if(!actual.length) throw new Error('No supported rendition could be generated');
