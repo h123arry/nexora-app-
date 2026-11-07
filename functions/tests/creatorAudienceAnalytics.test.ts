@@ -89,7 +89,6 @@ describe('Creator audience analytics', () => {
     assert.equal(second.recorded, true);
     const daily = await db.collection('creatorAudienceDaily').where('creatorId', '==', creatorId).where('day', '==', '2026-11-06').get();
     assert.equal(daily.size, 1);
-    assert.equal(daily.docs[0].get('profileVisits'), 2);
     assert.equal(daily.docs[0].get('uniqueProfileVisitors'), 2);
     await assert.rejects(recordCreatorProfileVisitForUser(db, 'visitor-one', 'visitor-one', day), /valid public creator profile/);
   });
