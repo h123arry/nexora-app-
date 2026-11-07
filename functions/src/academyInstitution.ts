@@ -270,18 +270,43 @@ export async function createAcademyMentorshipSession(db: Firestore, uid: string,
   return { sessionId, status: 'scheduled' as const };
 }
 
+export async function listUpcomingAcademyMentorshipSessions(db: Firestore, now = new Date()) {
+  const snapshot = await db.collection('academyMentorshipSessions').where('status', '==', 'scheduled').limit(100).get();
+  const upcoming = snapshot.docs.map(session => {
+    const startValue = session.get('startsAt');
+    const startsAt = startValue?.toDate?.() instanceof Date ? startValue.toDate() : startValue instanceof Date ? startValue : null;
+    const capacity = Number(session.get('capacity') || 0);
+    const bookedCount = Number(session.get('bookedCount') || 0);
+    return {
+      sessionId: session.id,
+      title: String(session.get('title') || ''),
+      description: String(session.get('description') || ''),
+      startsAt: startsAt?.toISOString() || '',
+      durationMinutes: Number(session.get('durationMinutes') || 0),
+      capacity,
+      bookedCount,
+      seatsAvailable: Math.max(0, capacity - bookedCount),
+      mentorId: String(session.get('mentorId') || ''),
+    };
+  }).filter(session => session.startsAt && new Date(session.startsAt) > now && session.seatsAvailable > 0)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  return { sessions: upcoming, truncated: snapshot.size === 100 };
+}
+
 export async function bookAcademyMentorshipSession(db: Firestore, uid: string, sessionId: string) {
   if (!safeId(sessionId)) throw new Error('A valid mentorship session is required.');
   const sessionRef = db.collection('academyMentorshipSessions').doc(sessionId);
   const bookingRef = sessionRef.collection('bookings').doc(uid);
+  let bookedCount = 0;
   await db.runTransaction(async tx => {
     const [session, booking] = await Promise.all([tx.get(sessionRef), tx.get(bookingRef)]);
     if (!session.exists || session.get('status') !== 'scheduled' || session.get('startsAt').toDate().getTime() <= Date.now()) throw new Error('This mentorship session is unavailable.');
-    if (booking.exists) return;
     const count = Number(session.get('bookedCount') || 0);
+    if (booking.exists) { bookedCount = count; return; }
     if (count >= Number(session.get('capacity') || 0)) throw new Error('This mentorship session is full.');
+    bookedCount = count + 1;
     tx.create(bookingRef, { userId: uid, sessionId, status: 'booked', bookedAt: new Date() });
-    tx.update(sessionRef, { bookedCount: count + 1 });
+    tx.update(sessionRef, { bookedCount });
   });
-  return { sessionId, booked: true };
+  return { sessionId, booked: true, bookedCount };
 }
