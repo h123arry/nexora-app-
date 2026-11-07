@@ -74,7 +74,7 @@ export async function searchPublicDirectory(
   const titlePrefixEnd = titlePrefix + '\\uf8ff';
 
   const queryPage = async (collection: 'users' | 'pages' | 'communities', field: string, start: string, end: string, key: QueryKey) => {
-    let query = db.collection(collection).orderBy(field).startAt(start).endAt(end).limit(QUERY_LIMIT);
+    let query = db.collection(collection).orderBy(field).startAt(start).endAt(end).limit(QUERY_LIMIT + 1);
     const afterId = cursor.after[key];
     if (afterId) {
       const afterDoc = await db.collection(collection).doc(afterId).get();
@@ -82,8 +82,8 @@ export async function searchPublicDirectory(
       query = query.startAfter(afterDoc);
     }
     const snapshot = await query.get();
-    cursor.after[key] = snapshot.size === QUERY_LIMIT ? snapshot.docs[snapshot.docs.length - 1].id : null;
-    return snapshot.docs;
+    cursor.after[key] = snapshot.size > QUERY_LIMIT ? snapshot.docs[QUERY_LIMIT - 1].id : null;
+    return snapshot.docs.slice(0, QUERY_LIMIT);
   };
 
   const [viewerSettings, peopleByUsername, peopleByName, peopleByTitle, pagesByUsername, pagesByName, pagesByTitle, circlesByName, circlesByTitle] = await Promise.all([
