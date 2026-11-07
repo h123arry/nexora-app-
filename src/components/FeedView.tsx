@@ -13,7 +13,7 @@ import RelativeTime from './RelativeTime';
 import FeedPostCard from './FeedPostCard';
 import NexoraVideo from './NexoraVideo';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
-import { getRecommendationProfile, recordRecommendationEvent } from '../utils/recommendations';
+import { getRecommendationProfile, recordRecommendationEvent, resetRecommendationProfile, saveRecommendationProfile } from '../utils/recommendations';
 import { trackClientObservation } from '../services/analyticsService';
 import { rankPosts } from '../services/discovery/discoveryService';
 import { SettingsService } from '../services/firebase/settingsService';
@@ -517,6 +517,7 @@ export default function FeedView({
   });
   const feedPreferencesHydratedRef = useRef(false);
   const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(true);
+  const recommendationSyncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Local storage is an offline fallback only. Signed-in users hydrate the
   // authoritative feed controls from owner-scoped Firestore settings.
@@ -528,6 +529,12 @@ export default function FeedView({
       if (cancelled) return;
       const preferences = normalizeFeedPreferences(settings.feed);
       setRecommendationsPersonalizationEnabled(settings.privacy.recommendationsPersonalization !== false);
+      const remoteSignals = preferences.recommendationSignals;
+      const hasRemoteSignals = Object.values(remoteSignals).some(values => Object.keys(values).length > 0);
+      const localSignals = getRecommendationProfile();
+      const hasLocalSignals = Object.values(localSignals).some(values => Object.keys(values).length > 0);
+      if (hasRemoteSignals) saveRecommendationProfile(remoteSignals);
+      else if (hasLocalSignals) void SettingsService.updateFeed(currentUser.id, { recommendationSignals: localSignals });
       setFeedTab(preferences.tab);
       setNotInterestedTags(preferences.notInterestedTags);
       setBlockedUserIds(preferences.blockedCreatorIds);
@@ -539,6 +546,23 @@ export default function FeedView({
     });
     return () => { cancelled = true; };
   }, [currentUser.id]);
+
+  const recordAndPersistRecommendationEvent = (
+    type: Parameters<typeof recordRecommendationEvent>[0],
+    payload: Parameters<typeof recordRecommendationEvent>[1],
+  ) => {
+    if (!recommendationsPersonalizationEnabled) return;
+    recordRecommendationEvent(type, payload);
+    if (auth.currentUser?.uid !== currentUser.id) return;
+    if (recommendationSyncTimerRef.current) window.clearTimeout(recommendationSyncTimerRef.current);
+    recommendationSyncTimerRef.current = window.setTimeout(() => {
+      void SettingsService.updateFeed(currentUser.id, {
+        recommendationSignals: getRecommendationProfile(),
+      }).catch(() => {
+        // Local account-scoped learning remains available when the network is offline.
+      });
+    }, 400);
+  };
 
   // 2. Custom Pinterest-style collection state
   const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => {
@@ -701,7 +725,7 @@ export default function FeedView({
   useEffect(() => {
     if (searchQuery && searchQuery.trim().length > 2) {
       const delayDebounce = setTimeout(() => {
-        recordRecommendationEvent('search', { keyword: searchQuery });
+        recordAndPersistRecommendationEvent('search', { keyword: searchQuery });
         trackClientObservation({ eventType: 'search_started' });
       }, 1000); // 1s debounce to avoid over-triggering
       return () => clearTimeout(delayDebounce);
@@ -1033,7 +1057,7 @@ export default function FeedView({
     trackClientObservation({ eventType: 'meaningful_interaction', entityType: 'post', entityId: postId, properties: { interaction: 'spark_observed' } });
     const post = localPosts.find(p => p.id === postId);
     if (post) {
-      recordRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+      recordAndPersistRecommendationEvent('spark', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
     }
     setLocalPosts(prev => prev.map(p => {
       if (p.id === postId) {
@@ -1127,7 +1151,7 @@ export default function FeedView({
     onBookmarkPost(postId);
     const post = localPosts.find(p => p.id === postId);
     if (post) {
-      recordRecommendationEvent('save', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+      recordAndPersistRecommendationEvent('save', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
     }
     trackClientObservation({ eventType: 'save', entityType: 'post', entityId: postId });
     setLocalPosts(prev => prev.map(p => {
@@ -1149,7 +1173,7 @@ export default function FeedView({
 
     const post = localPosts.find(p => p.id === postId);
     if (post) {
-      recordRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
+      recordAndPersistRecommendationEvent('comment', { tags: post.tags, creatorId: post.userId, creatorUsername: post.username, communityName: post.communityName });
     }
 
     setCommentInputs(prev => ({ ...prev, [postId]: '' }));
@@ -1272,6 +1296,10 @@ export default function FeedView({
     setBlockedUserIds(reset.blockedCreatorIds);
     setMutedCreatorIds(reset.mutedCreatorIds);
     setHiddenPostIds(reset.hiddenPostIds);
+    resetRecommendationProfile();
+    if (auth.currentUser?.uid === currentUser.id) {
+      void SettingsService.updateFeed(currentUser.id, { recommendationSignals: reset.recommendationSignals });
+    }
     try {
       sessionStorage.removeItem(`nexora_viewed_posts_${encodeURIComponent(auth.currentUser?.uid || 'guest')}`);
     } catch {
@@ -3622,7 +3650,7 @@ export default function FeedView({
                     setHiddenPostIds(prev => [...prev, contextualMenuPost.id]);
                     const cleanTag = (contextualMenuPost.tags?.[0] || 'nexora').toLowerCase().replace('#', '');
                     setNotInterestedTags(prev => [...prev, cleanTag]);
-                    recordRecommendationEvent('not_interested', {
+                    recordAndPersistRecommendationEvent('not_interested', {
                       tags: contextualMenuPost.tags,
                       creatorId: contextualMenuPost.userId,
                       creatorUsername: contextualMenuPost.username,
