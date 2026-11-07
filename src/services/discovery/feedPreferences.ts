@@ -70,7 +70,7 @@ export function readFeedPreferences(settings?: NexoraSettings | null): FeedPrefe
   return normalizeFeedPreferences(settings?.feed);
 }
 
-export function resetFeedPreferences(current: FeedPreferences, at = new Date().toISOString()): FeedPreferences {
+export function resetFeedPreferences(current: Partial<FeedPreferences>, at = new Date().toISOString()): FeedPreferences {
   return {
     ...normalizeFeedPreferences(current),
     notInterestedTags: [],
