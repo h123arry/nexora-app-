@@ -1,0 +1,11 @@
+# NEXORA GIFTVERSE artwork
+
+The directory `gifts/` contains 120 individually bundled SVG artworks, one for each server-owned catalogue gift. Every image has a stable gift ID, accessible display title, description and a 256 × 256 viewBox.
+
+Artwork colour tokens are validated as real SVG colours. Each collection has its own visual palette (floral, royal, dragon, wildlife, love, celestial, African heritage, fantasy, music, luxury, technology and seasonal).
+
+The catalogue stores the canonical image path, NEX price, rarity and animation profile. The app loads the individual image for each card and preview. Animation profile metadata prepares the assets for Phase 5.4's real delivery renderer; it does not itself activate cinematic playback.
+
+NEX prices remain server-owned. Phase 5.2 supports browsing and secure price quotes only. Sending, charging, creator earnings and withdrawals are later phases.
+
+The individual SVGs are standalone vector artwork extracted from the original 120-symbol GIFTVERSE sprite already in the repository. Separate generated PNG references discussed in chat were not available as retrievable files during this repository operation.

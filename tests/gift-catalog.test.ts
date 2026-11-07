@@ -17,6 +17,10 @@ test('all 120 catalogue references resolve to separate bundled SVG image files',
     const artwork = readFileSync(new URL('../public' + gift.image, import.meta.url), 'utf8');
     assert.ok(artwork.startsWith('<svg'));
     assert.ok(artwork.includes('data-gift-id="' + gift.id + '"'), 'Missing artwork for ' + gift.id);
+    assert.ok(artwork.includes('<title id="title">' + gift.name + '</title>'), 'Missing accessible title for ' + gift.id);
+    const colors = [...artwork.matchAll(/(?:fill|stroke|stop-color)="([^"]+)"/g)].map(match => match[1]);
+    assert.ok(colors.length > 0);
+    assert.ok(colors.every(value => /^#[0-9a-f]{3,8}$/i.test(value) || ['none', 'currentColor', 'transparent', 'white', 'black'].includes(value) || value.startsWith('url(')), 'Malformed SVG colour in ' + gift.id);
   }
 });
 
