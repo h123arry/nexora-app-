@@ -51,12 +51,13 @@ export async function setCreatorFollowStateForUser(
       return {
         following: follow.exists,
         changed: false,
-        followerCount: creatorPublic.exists ? safeCount(creatorPublic.get('followers')) : null,
+        followerCount: creatorPublic.exists ? safeCount(creatorPublic.get('followers')) : creatorPage.exists ? safeCount(creatorPage.get('followersCount')) : null,
       };
     }
 
     const delta = shouldFollow ? 1 : -1;
     const nextCreatorCount = creatorPublic.exists ? Math.max(0, safeCount(creatorPublic.get('followers')) + delta) : null;
+    const nextPageCount = creatorPage.exists ? Math.max(0, safeCount(creatorPage.get('followersCount')) + delta) : null;
     const nextFollowerCount = Math.max(0, safeCount(followerPublic.get('following')) + delta);
     if (shouldFollow) {
       tx.create(followRef, {
@@ -69,6 +70,7 @@ export async function setCreatorFollowStateForUser(
       tx.update(creatorPublicRef, { followers: nextCreatorCount });
       if (creatorPrivate.exists) tx.update(creatorPrivateRef, { followers: nextCreatorCount, updatedAt: FieldValue.serverTimestamp() });
     }
+    if (creatorPage.exists && nextPageCount !== null) tx.update(creatorPageRef, { followersCount: nextPageCount });
     tx.update(followerPublicRef, { following: nextFollowerCount });
     if (followerPrivate.exists) tx.update(followerPrivateRef, { following: nextFollowerCount, updatedAt: FieldValue.serverTimestamp() });
     if (creatorPublic.exists && nextCreatorCount !== null) {
@@ -81,7 +83,7 @@ export async function setCreatorFollowStateForUser(
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
-    return { following: shouldFollow, changed: true, followerCount: nextCreatorCount };
+    return { following: shouldFollow, changed: true, followerCount: nextCreatorCount ?? nextPageCount };
   });
 }
 
