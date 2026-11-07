@@ -1271,7 +1271,7 @@ export default function FeedView({
     setMutedCreatorIds(reset.mutedCreatorIds);
     setHiddenPostIds(reset.hiddenPostIds);
     try {
-      sessionStorage.removeItem('nexora_viewed_posts');
+      sessionStorage.removeItem(`nexora_viewed_posts_${encodeURIComponent(auth.currentUser?.uid || 'guest')}`);
     } catch {
       // Session storage may be disabled; durable controls are still reset.
     }
@@ -1461,7 +1461,7 @@ export default function FeedView({
       if (feedTab === 'posts' || feedTab === 'trending') {
         let viewedPostIds: string[] = [];
         try {
-          const rawViewed = sessionStorage.getItem('nexora_viewed_posts');
+          const rawViewed = sessionStorage.getItem(`nexora_viewed_posts_${encodeURIComponent(auth.currentUser?.uid || 'guest')}`);
           const parsedViewed = rawViewed ? JSON.parse(rawViewed) : [];
           viewedPostIds = Array.isArray(parsedViewed) ? parsedViewed.filter((id): id is string => typeof id === 'string') : [];
         } catch {
