@@ -4,7 +4,7 @@ import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, S
 import { Circle, User, Page, Post, Comment } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { addFollow, createCommunity, createPage, removeFollow, subscribeToCommunities, subscribeToFollows, subscribeToPages } from '../services/dataService';
-import { isCircleJoinedDb, joinCircleDb, leaveCircleDb } from '../data/database';
+import { isCircleJoinedDb, joinCircleDb } from '../data/database';
 import { ActivityService } from '../services/activityService';
 import { auth } from '../services/firebase/config';
 import { CommunityService } from '../services/firebase/communityService';
