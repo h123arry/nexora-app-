@@ -1132,5 +1132,33 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerTransactions', 'tx-1')));
     await assertFails(getDoc(doc(dbFor('alice'), 'nexLedgerRequests', 'request-1')));
   });
+  it('keeps Creator Academy learning progress owner-scoped and prevents client-issued credentials', async () => {
+    const alice = dbFor('alice');
+    const ownProgress = {
+      userId: 'alice', courseId: 'creator-foundations',
+      completedLessonIds: ['identity'], updatedAt: serverTimestamp(), schemaVersion: 1
+    };
+    await assertSucceeds(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), ownProgress));
+    await assertSucceeds(getDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
+    await assertSucceeds(getDocs(query(collection(alice, 'academyProgress'), where('userId', '==', 'alice'))));
+    await assertFails(getDoc(doc(dbFor('bob'), 'academyProgress', 'alice_creator-foundations')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'academyProgress', 'bob_creator-foundations'), {
+      ...ownProgress, userId: 'alice'
+    }));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_unknown-course'), {
+      ...ownProgress, courseId: 'unknown-course'
+    }));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
+      ...ownProgress, completedLessonIds: ['a', 'b', 'c', 'd']
+    }));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
+      ...ownProgress, certificateId: 'forged-certificate'
+    }));
+    await assertFails(updateDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
+      userId: 'bob'
+    }));
+    await assertFails(deleteDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
+  });
+
 
 });
