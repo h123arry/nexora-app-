@@ -29,3 +29,48 @@ NEX is the internal NEXORA wallet unit. This phase settles creator earnings in N
 - Firestore transactions check escrow funds and all wallet projections before posting.
 - All postings use immutable double-entry records and deterministic idempotency references.
 - Pending-review earnings are not spendable. Only successful settlement moves the creator share into their existing NEX wallet.
+
+# Phases 5.6–5.10: creator economy expansion
+
+## 5.6 — payout infrastructure readiness
+
+- Creator payout readiness is exposed by getCreatorPayoutReadiness.
+- A trusted finance administrator may register a provider-issued Paystack recipient token after completing identity and bank verification outside NEXORA. Raw account numbers are never accepted or stored by this flow.
+- requestCreatorPayout validates the requested NEX amount, verified beneficiary status and available balance. It fails closed while provider integration, a reviewed NEX/NGN conversion policy and provider settlement funding are unavailable. It does not debit or reserve wallet funds and never reports a payout as sent.
+- Cash withdrawal activation still requires Paystack secret provisioning, provider balance monitoring, idempotent transfer creation, signed webhook verification, beneficiary lifecycle controls, reconciliation, fraud/compliance approval and operational testing in a provider sandbox before production.
+- No live payout credential or exchange rate was supplied in this repository task, so real bank transfer execution remains intentionally disabled.
+
+## 5.7 — gifting fraud intelligence
+
+- Every trusted gift delivery now calculates a deterministic risk score from recent sender velocity, recent spend, gift value, account age and account restriction state.
+- The score and reason codes are attached to the creator earning record and an immutable-by-client giftRiskSignals record.
+- Low, review and high tiers are used for prioritising human review. A score is not a finding of fraud and does not automatically reverse a gift, freeze an account or confiscate NEX.
+- Finance administrators can clear or escalate a signal with a required review note. Every decision writes a separate audit event.
+- Risk signals do not replace refunds, chargebacks or formal moderation workflows.
+
+## 5.8 — creator financial intelligence
+
+- getCreatorGiftAnalytics aggregates server-created creator earning records for 7–90 day windows.
+- The Creator Studio shows verified 30-day gift gross, settled creator share and gift units, plus the available daily series.
+- Analytics are in NEX and only include records available in the trusted gift earnings collection. The bounded result is marked when truncated.
+- Forecasting is deliberately not presented as fact; it needs a sufficiently long verified history and a documented model before it is exposed.
+
+## 5.9 — live gift competitions
+
+- Finance administrators can schedule a competition against an existing live session, for up to seven days.
+- Real gift deliveries made in that session and within the competition window are attributed to the competition in the same trusted delivery transaction.
+- A server-derived leaderboard ranks creators by recorded gift NEX volume. It is provisional and does not create a prize pool or promise a cash reward.
+- Competition contribution records are server-managed. Clients cannot manufacture scores or edit competition outcomes.
+
+## 5.10 — global creator economy foundation
+
+- Creators can choose NGN, USD, GBP, EUR, GHS, KES, ZAR, CAD or AUD as a display preference.
+- This is a presentation preference only. NEX wallet accounting remains NEX; no unsupported FX quote, currency conversion, tax treatment or cross-border payout is fabricated.
+- International settlement requires per-country provider coverage, beneficiary/KYC verification, local regulatory review, transparent exchange-rate quotes, fee disclosure and payout reconciliation before a corridor can be enabled.
+
+## Collections and access
+
+- giftRiskSignals, giftRiskReviewAudit, creatorPayoutBeneficiaries, creatorPayoutAuditEvents, giftCompetitions and giftCompetitionContributions are server-managed.
+- creatorPayoutRequests is owner-readable but server-write-only. The current fail-closed payout endpoint does not create requests until the provider and rate are operational.
+- Firestore composite indexes support sender velocity, creator reporting, active competition attribution and risk review.
+- Callable authorization is checked server-side; UI visibility is not treated as authorization.
