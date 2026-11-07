@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { submitModerationAppeal } from '../services/dataService';
 import { buildPostAnalytics } from '../services/analytics/postAnalytics';
+import { buildCreatorGrowthInsights } from '../services/analytics/creatorGrowthInsights';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
@@ -743,6 +744,22 @@ export default function CreatorDashboardView({
                 <h4 className="text-xs font-bold text-white">Additional audience insights unavailable</h4>
                 <p className="mt-2 text-xs leading-relaxed text-zinc-400">Traffic source, device, geographic, new-versus-returning audience and frame-level retention curves are not yet supported by trusted event sources. Nexora does not estimate or fabricate these metrics.</p>
               </div>
+              {videoRetention?.points?.length ? (
+                <div className="rounded-2xl border border-violet-400/15 bg-[#0a071f]/70 p-5">
+                  <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Creator Growth Intelligence</h4>
+                  <p className="mt-1 text-[11px] text-zinc-400">Evidence-based observations from your server-timed playback data</p>
+                  <div className="mt-4 grid gap-3 md:grid-cols-3">
+                    {buildCreatorGrowthInsights(videoRetention.points).map(insight => (
+                      <article key={insight.id} className="rounded-xl border border-white/5 bg-white/[0.035] p-4">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-violet-200">{insight.title}</p>
+                        <p className="mt-2 text-xl font-black text-white">{insight.value}</p>
+                        <p className="mt-2 text-xs leading-relaxed text-zinc-400">{insight.explanation}</p>
+                      </article>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[10px] text-zinc-500">These are descriptive playback observations, not predictions or proof of human attention.</p>
+                </div>
+              ) : null}
             </div>
           )}
 
