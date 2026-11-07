@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import type { Firestore } from 'firebase-admin/firestore';
 
 const ID = /^[A-Za-z0-9_-]{1,120}$/;
@@ -167,7 +167,6 @@ export async function submitAcademyAssessment(db: Firestore, uid: string, course
 export async function issueAcademyCertificate(db: Firestore, uid: string, courseId: string, assessmentId: string) {
   if (!safeId(courseId) || !safeId(assessmentId)) throw new Error('A valid course and assessment are required.');
   const certificateId = createHash('sha256').update(uid + ':' + courseId + ':' + assessmentId).digest('hex').slice(0, 32);
-  const verificationCode = createHash('sha256').update(certificateId + ':' + uid + ':' + courseId).digest('hex').slice(0, 24).toUpperCase();
   const courseRef = db.collection('academyCourses').doc(courseId);
   const certificateRef = db.collection('academyCertificates').doc(certificateId);
   return db.runTransaction(async tx => {
@@ -181,10 +180,11 @@ export async function issueAcademyCertificate(db: Firestore, uid: string, course
     if (!course.exists || course.get('status') !== 'published') throw new Error('This course is unavailable.');
     if (existingCertificate.exists) {
       if (existingCertificate.get('status') === 'valid') {
-        return { certificateId, verificationCode, courseTitle: course.get('title') };
+        return { certificateId, verificationCode: existingCertificate.get('verificationCode'), courseTitle: course.get('title') };
       }
       throw new Error('A revoked Academy certificate cannot be reissued.');
     }
+    const verificationCode = randomBytes(18).toString('hex').toUpperCase();
     tx.create(certificateRef, {
       id: certificateId, verificationCode, userId: uid, courseId, courseTitle: course.get('title'),
       assessmentId, status: 'valid', issuedAt: new Date(), issuer: 'NEXORA Institute', schemaVersion: 1,
