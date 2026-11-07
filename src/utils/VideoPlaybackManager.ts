@@ -20,6 +20,7 @@ class VideoPlaybackManager {
   private activeVideoUrl: string | null = null;
   private registeredPlayers = new Map<string, PlayerCallback>();
   private playbackPositions = new Map<string, number>();
+  private MAX_POSITION_COUNT = 100;
   
   // Predictive preloading cache sandbox
   private preloadElements = new Map<string, HTMLVideoElement>();
@@ -283,6 +284,10 @@ class VideoPlaybackManager {
   public savePosition(url: string, position: number) {
     if (!url) return;
     if (!Number.isFinite(position) || position < 0) return;
+    if (!this.playbackPositions.has(url) && this.playbackPositions.size >= this.MAX_POSITION_COUNT) {
+      const oldestUrl = this.playbackPositions.keys().next().value;
+      if (oldestUrl) this.playbackPositions.delete(oldestUrl);
+    }
     this.playbackPositions.set(url, position);
     try {
       localStorage.setItem(positionStorageKey(url), String(position));
