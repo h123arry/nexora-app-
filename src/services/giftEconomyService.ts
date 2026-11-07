@@ -36,3 +36,12 @@ export async function getGiftRiskReviewQueue() {
 export async function createGiftCompetition(input:{title:string;liveSessionId:string;startsAt:string;endsAt:string}) {
   return (await httpsCallable<typeof input, {competitionId:string;status:'scheduled'}>(functions, 'createGiftCompetition')(input)).data;
 }
+
+export async function resolveGiftRiskSignal(signalId: string, outcome: 'cleared' | 'escalated', note: string) {
+  const call = httpsCallable<{signalId:string;outcome:'cleared'|'escalated';note:string}, {signalId:string;disposition:string}>(functions, 'resolveGiftRiskSignal');
+  return (await call({signalId,outcome,note})).data;
+}
+export async function setCreatorPayoutBeneficiary(creatorId: string, providerBeneficiaryRef: string) {
+  const call = httpsCallable<{creatorId:string;providerBeneficiaryRef:string}, {creatorId:string;status:'verified';provider:'paystack';currency:'NGN'}>(functions, 'setCreatorPayoutBeneficiary');
+  return (await call({creatorId,providerBeneficiaryRef})).data;
+}
