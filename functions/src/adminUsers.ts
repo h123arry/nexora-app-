@@ -31,7 +31,7 @@ function requireAdmin(request: Request): string {
 
 function requireFounder(request: Request): string {
   const uid = requireAdmin(request);
-  const token = request.auth?.token || {};
+  const token = (request.auth?.token || {}) as Record<string, unknown>;
   if (!(token.founder === true || token.role === 'founder')) {
     throw new HttpsError('permission-denied', 'Only the founder can change administrator roles.');
   }
@@ -44,7 +44,7 @@ function validUid(value: unknown): value is string {
 
 export const listAdminUsers = onCall({ maxInstances: 5 }, async request => {
   requireReviewer(request);
-  const token = request.auth?.token || {};
+  const token = (request.auth?.token || {}) as Record<string, unknown>;
   const canManage = token.admin === true || ['admin', 'founder'].includes(String(token.role || ''));
   const canManageRoles = token.founder === true || token.role === 'founder';
   try {
