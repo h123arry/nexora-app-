@@ -1160,5 +1160,27 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
   });
 
+  it('keeps Academy institution content, grading and credentials server-authoritative', async () => {
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyCourses', 'forged-course'), {
+      id: 'forged-course', ownerId: 'alice', status: 'published', title: 'Forged'
+    }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'academyCourses', 'private-draft')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyCourses', 'course-1', 'lessons', 'lesson-1'), {
+      id: 'lesson-1', title: 'Forged lesson', body: 'Client-authored lesson content', status: 'published'
+    }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'academyCourses', 'course-1', 'assessments', 'final')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyAssessmentAttempts', 'forged-attempt'), {
+      userId: 'alice', courseId: 'course-1', passed: true, scorePercent: 100
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyCertificates', 'forged-certificate'), {
+      userId: 'alice', courseId: 'course-1', status: 'valid', verificationCode: 'AAAAAAAAAAAAAAAAAAAAAAAA'
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyMentorshipSessions', 'forged-session'), {
+      mentorId: 'alice', status: 'scheduled', capacity: 1000, bookedCount: 0
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'academyMentorshipSessions', 'session-1', 'bookings', 'alice'), {
+      userId: 'alice', status: 'booked'
+    }));
+  });
 
 });
