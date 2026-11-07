@@ -30,12 +30,13 @@ export async function getCommunityInsightsForUser(
 
   const start = new Date(now.getTime() - 30 * 86400000);
   const members = communityRef.collection('members');
-  const [activeCount, recentMembers, events, polls, announcements] = await Promise.all([
+  const [activeCount, recentMembers, events, polls, announcements, posts] = await Promise.all([
     members.where('status', '==', 'active').count().get(),
     members.orderBy('joinedAt', 'desc').limit(200).get(),
     communityRef.collection('events').orderBy('createdAt', 'desc').limit(100).get(),
     communityRef.collection('polls').orderBy('createdAt', 'desc').limit(100).get(),
     communityRef.collection('announcements').orderBy('createdAt', 'desc').limit(100).get(),
+    communityRef.collection('posts').orderBy('createdAt', 'desc').limit(100).get(),
   ]);
 
   const recentJoins = recentMembers.docs.filter(item => {
@@ -66,6 +67,10 @@ export async function getCommunityInsightsForUser(
       return total + (Number.isSafeInteger(votes) && Number(votes) > 0 ? Number(votes) : 0);
     }, 0);
   }, 0);
+  const postCount = posts.docs.filter(item => {
+    const createdAt = dateOf(item.get('createdAt'));
+    return item.get('status') === 'published' && createdAt !== null && createdAt >= start;
+  }).length;
   const announcementCount = announcements.docs.filter(item => {
     const createdAt = dateOf(item.get('createdAt'));
     return createdAt !== null && createdAt >= start;
@@ -83,11 +88,13 @@ export async function getCommunityInsightsForUser(
     pollsCreated: pollRows.length,
     pollVotes,
     announcementsPublished: announcementCount,
+    postsPublished: postCount,
     truncated: {
       members: recentMembers.size === 200,
       events: events.size === 100,
       polls: polls.size === 100,
       announcements: announcements.size === 100,
+      posts: posts.size === 100,
     },
   };
 }
