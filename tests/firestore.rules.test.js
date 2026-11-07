@@ -97,6 +97,24 @@ const publicProfile = (uid) => ({
     }));
   });
 
+  it('prevents profile owners from forging follower and following totals after creation', async () => {
+    const alice = dbFor('alice');
+    await assertSucceeds(setDoc(doc(alice, 'publicProfiles', 'alice'), publicProfile('alice')));
+    await assertFails(updateDoc(doc(alice, 'publicProfiles', 'alice'), { followers: 900000 }));
+    await seed(async adminDb => setDoc(doc(adminDb, 'users', 'alice'), {
+      id: 'alice', username: 'alice', name: 'Alice', followers: 0, following: 0
+    }));
+    await assertFails(updateDoc(doc(alice, 'users', 'alice'), { following: 900000 }));
+  });
+
+  it('keeps creator audience aggregates and visitor hashes server-owned', async () => {
+    const alice = dbFor('alice');
+    for (const collectionName of ['creatorAudienceDaily', 'creatorAudienceEventReceipts', 'creatorFollowProjections', 'creatorProfileDailyVisitors']) {
+      await assertFails(setDoc(doc(alice, collectionName, 'forged'), { creatorId: 'alice', follows: 999999 }));
+      await assertFails(getDoc(doc(alice, collectionName, 'forged')));
+    }
+  });
+
   it('protects canonical username claims from collisions and forged ownership', async () => {
     const claim = {
       userId: 'alice', username: 'alice_handle',
@@ -589,16 +607,18 @@ const publicProfile = (uid) => ({
     await assertFails(getDocs(collection(dbFor('alice'), 'follows')));
     await assertFails(getDocs(query(collection(dbFor('alice'), 'follows'), where('followerId', '==', 'carol'))));
   });
-  it('supports deterministic follow edges and rejects relationship ownership changes', async () => {
+  it('requires trusted transactions for follow writes while preserving participant-scoped reads', async () => {
     const followRef = doc(dbFor('alice'), 'follows', 'alice_bob');
-    await assertSucceeds(setDoc(followRef, {
+    await assertFails(setDoc(followRef, {
       followerId: 'alice', followingId: 'bob', createdAt: serverTimestamp()
     }));
-    await assertSucceeds(setDoc(followRef, {
-      followerId: 'alice', followingId: 'bob', createdAt: serverTimestamp()
-    }, { merge: false }));
-    await assertFails(updateDoc(followRef, { followingId: 'mallory' }));
+    await seed(async adminDb => setDoc(doc(adminDb, 'follows', 'alice_bob'), {
+      followerId: 'alice', followingId: 'bob', createdAt: new Date()
+    }));
+    await assertSucceeds(getDoc(followRef));
+    await assertFails(updateDoc(followRef, { createdAt: serverTimestamp() }));
     await assertFails(updateDoc(doc(dbFor('bob'), 'follows', 'alice_bob'), { createdAt: serverTimestamp() }));
+    await assertFails(deleteDoc(followRef));
   });
   it('allows only owner-scoped preference settings with a bounded top-level contract', async () => {
     const preferences = {
