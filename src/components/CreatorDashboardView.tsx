@@ -18,6 +18,7 @@ import { buildCreatorGrowthInsights } from '../services/analytics/creatorGrowthI
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
+import { scheduleCreatorPost, listCreatorScheduledPosts, cancelCreatorScheduledPost, type CreatorScheduledPost } from '../services/creatorSchedulingService';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -73,6 +74,10 @@ export default function CreatorDashboardView({
   const [draftUrl, setDraftUrl] = useState('');
   const [isUploadingDraftMedia, setIsUploadingDraftMedia] = useState(false);
   const [draftUploadProgress, setDraftUploadProgress] = useState(0);
+  const [scheduledAtInput, setScheduledAtInput] = useState('');
+  const [isSchedulingDraft, setIsSchedulingDraft] = useState(false);
+  const [scheduledPosts, setScheduledPosts] = useState<CreatorScheduledPost[]>([]);
+  const [isScheduledPostsLoading, setIsScheduledPostsLoading] = useState(false);
   
   // Recovery Unsaved Draft Notice
   const [recoveredDraft, setRecoveredDraft] = useState<any | null>(null);
@@ -157,6 +162,29 @@ export default function CreatorDashboardView({
       .finally(() => { if (!cancelled) setIsTemplatesLoading(false); });
     return () => { cancelled = true; };
   }, [currentUser.id]);
+
+  useEffect(() => {
+    if (activeTab !== 'drafts') return;
+    let cancelled = false;
+    setIsScheduledPostsLoading(true);
+    listCreatorScheduledPosts()
+      .then(items => { if (!cancelled) setScheduledPosts(items); })
+      .catch(() => {
+        if (!cancelled) window.dispatchEvent(new CustomEvent('toast', { detail: 'Scheduled posts could not be loaded. Please retry.' }));
+      })
+      .finally(() => { if (!cancelled) setIsScheduledPostsLoading(false); });
+    return () => { cancelled = true; };
+  }, [activeTab, currentUser.id]);
+
+  const handleCancelScheduledPost = async (scheduleId: string) => {
+    try {
+      await cancelCreatorScheduledPost(scheduleId);
+      setScheduledPosts(prev => prev.map(item => item.id === scheduleId ? { ...item, status: 'cancelled' } : item));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Scheduled post cancelled.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Scheduled post could not be cancelled.' }));
+    }
+  };
 
   const handleSaveStudioTemplate = async () => {
     if (templateName.trim().length < 2) {
@@ -425,6 +453,53 @@ export default function CreatorDashboardView({
     }
   };
 
+  const handleScheduleDraft = async (draft: any) => {
+    if (isUploadingDraftMedia || isSchedulingDraft) return;
+    const content = draftCaption.trim();
+    const mediaUrl = draftUrl.trim();
+    if (!content && draftType === 'text') {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Add a caption before scheduling.' }));
+      return;
+    }
+    if (draftType !== 'text' && !mediaUrl) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Add media before scheduling.' }));
+      return;
+    }
+    const scheduledDate = new Date(scheduledAtInput);
+    if (!scheduledAtInput || !Number.isFinite(scheduledDate.getTime())) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a publishing date and time.' }));
+      return;
+    }
+    setIsSchedulingDraft(true);
+    try {
+      const result = await scheduleCreatorPost({
+        content,
+        imageUrl: draftType === 'image' ? mediaUrl : undefined,
+        videoUrl: draftType === 'video' ? mediaUrl : undefined,
+        tags: draftTags.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30),
+        scheduledAt: scheduledDate.toISOString(),
+      });
+      if (draft?.id && draft.id !== 'temp') {
+        try {
+          await deleteDoc(doc(db, 'drafts', draft.id));
+          setDrafts(prev => prev.filter(item => item.id !== draft.id));
+        } catch {
+          window.dispatchEvent(new CustomEvent('toast', { detail: 'Post scheduled, but its saved draft could not be removed.' }));
+        }
+      }
+      localStorage.removeItem(`nexora_unsaved_draft_${currentUser.id}`);
+      setRecoveredDraft(null);
+      setShowDraftModal(false);
+      clearDraftForm();
+      setScheduledAtInput('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Post scheduled for ${new Date(result.scheduledAt).toLocaleString()}.` }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Post could not be scheduled. Your draft has been kept.' }));
+    } finally {
+      setIsSchedulingDraft(false);
+    }
+  };
+
   const handleOpenDraftEdit = (draft: any) => {
     setCurrentDraftId(draft.id);
     setDraftCaption(draft.caption);
@@ -435,6 +510,7 @@ export default function CreatorDashboardView({
   };
 
   const clearDraftForm = () => {
+    setScheduledAtInput('');
     setCurrentDraftId(null);
     setDraftCaption('');
     setDraftTags('');
@@ -1036,8 +1112,34 @@ export default function CreatorDashboardView({
               </div>
 
               <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-3">
-                <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-zinc-400" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Publishing</h4></div>
-                <p className="text-xs text-zinc-400 leading-relaxed">Automatic scheduled publishing is not enabled yet. Save a draft and publish it manually when you're ready. Nexora will not show a scheduled post as published unless the server confirms it.</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-violet-300" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Publishing</h4></div>
+                  <span className="text-[10px] text-zinc-500 font-mono">{scheduledPosts.filter(item => item.status === 'scheduled').length} pending</span>
+                </div>
+                <p className="text-xs text-zinc-400 leading-relaxed">Posts are published by NEXORA's trusted scheduler. You can cancel a post while it is still pending.</p>
+                {isScheduledPostsLoading ? (
+                  <p className="text-xs text-zinc-500 py-5">Loading scheduled posts…</p>
+                ) : scheduledPosts.length === 0 ? (
+                  <p className="text-xs text-zinc-500 text-center py-6">No scheduled posts yet. Schedule one from the draft editor.</p>
+                ) : (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {scheduledPosts.map(item => (
+                      <div key={item.id} className="rounded-xl border border-white/5 bg-white/3 p-3 flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-white line-clamp-2">{item.content || (item.imageUrl ? 'Image post' : 'Video post')}</p>
+                          <p className="text-[10px] text-zinc-500 mt-1">{item.scheduledAt ? new Date(item.scheduledAt).toLocaleString() : 'Time unavailable'}</p>
+                          <p className="text-[9px] uppercase tracking-wider font-bold mt-1 text-violet-300">{item.status === 'scheduled' ? 'Pending' : item.status === 'published' ? 'Published' : item.status === 'blocked' ? 'Blocked by account status' : 'Cancelled'}</p>
+                        </div>
+                        {item.status === 'scheduled' && (
+                          <button type="button" onClick={() => void handleCancelScheduledPost(item.id)} className="shrink-0 rounded-lg border border-white/10 px-2.5 py-1.5 text-[10px] font-bold text-zinc-300 hover:bg-white/5">Cancel</button>
+                        )}
+                        {item.status === 'published' && item.publishedPostId && (
+                          <span className="shrink-0 text-[9px] text-emerald-300 font-bold">Live</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="md:col-span-2 p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
@@ -1555,6 +1657,26 @@ export default function CreatorDashboardView({
                     >
                       Discard
                     </button>
+                    <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center">
+                      <label className="text-[10px] text-zinc-400 font-bold">Schedule for</label>
+                      <input
+                        type="datetime-local"
+                        value={scheduledAtInput}
+                        min={new Date(Date.now() + 5 * 60 * 1000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
+                        max={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000 - new Date().getTimezoneOffset() * 60_000).toISOString().slice(0, 16)}
+                        onChange={event => setScheduledAtInput(event.target.value)}
+                        className="min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
+                        aria-label="Schedule post date and time"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleScheduleDraft({ id: currentDraftId || 'temp' })}
+                        disabled={isUploadingDraftMedia || isSchedulingDraft || !scheduledAtInput}
+                        className="px-4 py-2 rounded-xl border border-violet-400/30 bg-violet-500/10 text-violet-200 text-xs font-bold disabled:opacity-40"
+                      >
+                        {isSchedulingDraft ? 'Scheduling…' : 'Schedule post'}
+                      </button>
+                    </div>
                     <button 
                       type="button"
                       onClick={() => handlePublishDraft({ id: currentDraftId || 'temp' })}
