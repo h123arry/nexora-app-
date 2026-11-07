@@ -32,7 +32,7 @@ The following are not represented as completed:
 1. **Transcoding and adaptive renditions:** there is no configured transcoder/Cloud Run pipeline producing verified MP4 renditions or HLS/DASH manifests. The current URL resolver is pass-through, not adaptive streaming.
 2. **Thumbnail generation and media metadata:** no trusted worker currently extracts real duration, dimensions, poster frames or codec metadata.
 3. **Compression and CDN delivery:** no configured image/video transformation or CDN cache-invalidation lifecycle is verified.
-4. **Durable watch-time analytics:** reel preference signals are local viewer-scoped observations. They are not yet a server-authoritative, cross-device watch-time ledger.
+4. **Durable watch-time analytics:** the player submits bounded watch-progress and completion observations to the existing analytics ingestion function only when the user has enabled analytics observations. These are authenticated, deduplicated server records and enter daily event-type aggregates, but remain client-reported observations, not tamper-proof playback proof or a server-authoritative cross-device watch-time ledger. Reel ranking preferences remain viewer-scoped locally.
 5. **Creator retention analytics:** creator insights still rely on post counters; unique reach, average watch duration, completion rate, retention curves and traffic-source breakdowns are not yet supported by authoritative events.
 6. **Deployed media verification:** Storage trigger deployment, real upload/finalization, playback across devices and retry/cleanup behavior require the owner's staging Firebase project and real media tests.
 
