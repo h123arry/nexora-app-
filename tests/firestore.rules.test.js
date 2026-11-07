@@ -850,6 +850,28 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDocs(collection(dbFor('alice'), 'communities', 'directory-circle', 'members')));
   });
 
+  it('allows active Circle members to read feed posts and reserves creation for trusted callables', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'communities', 'feed-circle'), { id: 'feed-circle', ownerId: 'alice', type: 'private', name: 'Feed' });
+      await setDoc(doc(db, 'communities', 'feed-circle', 'members', 'alice'), { userId: 'alice', role: 'owner', status: 'active', joinedAt: Timestamp.now() });
+      await setDoc(doc(db, 'communities', 'feed-circle', 'members', 'bob'), { userId: 'bob', role: 'member', status: 'active', joinedAt: Timestamp.now() });
+      await setDoc(doc(db, 'communities', 'feed-circle', 'posts', 'post-1'), {
+        id: 'post-1', communityId: 'feed-circle', authorId: 'alice', authorName: 'Alice',
+        content: 'A real member post', status: 'published', createdAt: Timestamp.now()
+      });
+    });
+    const postPath = ['communities', 'feed-circle', 'posts', 'post-1'];
+    await assertSucceeds(getDoc(doc(dbFor('bob'), ...postPath)));
+    await assertSucceeds(getDocs(collection(dbFor('bob'), 'communities', 'feed-circle', 'posts')));
+    await assertFails(getDoc(doc(dbFor('mallory'), ...postPath)));
+    await assertFails(getDocs(collection(dbFor('mallory'), 'communities', 'feed-circle', 'posts')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'feed-circle', 'posts', 'forged'), {
+      id: 'forged', communityId: 'feed-circle', authorId: 'alice', content: 'Impersonation', createdAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), ...postPath), { content: 'Edited without policy' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), ...postPath)));
+  });
+
   it('allows active Circle members to read announcements but reserves all writes for trusted callables', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'communities', 'announcement-circle'), {

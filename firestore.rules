@@ -917,6 +917,17 @@ service cloud.firestore {
       }
 
 
+      // Community feed posts are visible to active Circle members and created only by trusted callables.
+      match /posts/{postId} {
+        function activeCirclePostMember() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
+        }
+        allow get, list: if activeCirclePostMember();
+        allow create, update, delete: if false;
+      }
+
       // Announcements are visible to active Circle members and managed only by trusted callables.
       match /announcements/{announcementId} {
         function activeCircleMember() {

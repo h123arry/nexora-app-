@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Download, Award } from 'lucide-react';
+import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Award } from 'lucide-react';
 import { Circle, User } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
 import CircleEventsPanel from './CircleEventsPanel';
+import CircleFeedPanel from './CircleFeedPanel';
+import CircleInsightsPanel from './CircleInsightsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
 import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 import CircleGovernancePanel from './CircleGovernancePanel';
@@ -54,6 +56,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   // Community Portal Modal state
   const [selectedCircle, setSelectedCircle] = useState<Circle | null>(null);
   const [activePortalTab, setActivePortalTab] = useState<string>('feed');
+  const selectedCircleCanManage = Boolean(selectedCircle && (selectedCircle.ownerId === currentUser.id || selectedCircle.creatorId === currentUser.id || selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id)));
+  useEffect(() => { setActivePortalTab('feed'); }, [selectedCircle?.id]);
 
   // Interactive state helpers for sub-tabs in Community Portal
   const [circlePolls, setCirclePolls] = useState<Array<{ id: string; question: string; options: Array<{ id: string; text: string; votes: number }>; createdBy: string; status: string; myVote: string | null; createdAt: string }>>([]);
@@ -516,7 +520,8 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     { id: 'mods', label: '🛡 Moderators', icon: Shield },
                     { id: 'rules', label: '📋 Rules', icon: FileText },
                     { id: 'leaderboard', label: '🏆 Leaderboard', icon: Trophy },
-                    { id: 'challenges', label: '🎯 Challenges', icon: Award }
+                    { id: 'challenges', label: '🎯 Challenges', icon: Award },
+                    ...(selectedCircleCanManage ? [{ id: 'insights', label: '📈 Insights', icon: BarChart2 }] : [])
                   ].map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activePortalTab === tab.id;
@@ -540,61 +545,24 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               {/* Main Tab Content dynamic viewport */}
               <div className="flex-1 overflow-y-auto p-5 space-y-4 font-sans text-xs sm:text-sm text-white/90">
                 
-                {activePortalTab === 'feed' && (
-                  <div className="space-y-3.5 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Community Discussion Stream</h3>
-                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/10 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block animate-pulse" />
-                        <span className="text-[10px] font-mono text-emerald-400">STICKY PIN</span>
-                      </div>
-                      <p className="text-xs sm:text-sm leading-relaxed">
-                        Welcome to our brand new community space on Nexora! Share your best moments, coordinate local meetups, and support members with sparks. Keep posts friendly.
-                      </p>
-                      <div className="text-[10px] text-violet-300/40 font-mono mt-1 pt-2 border-t border-white/5">
-                        Posted by Voice of Harrison • 2 hours ago
-                      </div>
-                    </div>
-
-                    <div className="p-4 rounded-2xl bg-white/[0.01] border border-white/10 space-y-2">
-                      <p className="text-xs sm:text-sm leading-relaxed">
-                        Setting up the local tournament brackets for this weekend. Who is checking in?
-                      </p>
-                      <div className="text-[10px] text-violet-300/40 font-mono mt-1 pt-2 border-t border-white/5">
-                        Posted by nexora_ai • Yesterday
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {activePortalTab === 'feed' && <CircleFeedPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 
                 {activePortalTab === 'members' && <CircleMembersPanel communityId={selectedCircle.id} />}
 
                 {activePortalTab === 'events' && <CircleEventsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 
+                {activePortalTab === 'insights' && selectedCircleCanManage && <CircleInsightsPanel communityId={selectedCircle.id} />}
+
                 {activePortalTab === 'files' && (
-                  <div className="space-y-3 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Shared Documents & Media</h3>
-                    {[
-                      { filename: 'Community Rules & Onboarding Guide.pdf', size: '1.4 MB', uploadedBy: 'voh' },
-                      { filename: 'Strategic Map Brackets.png', size: '4.8 MB', uploadedBy: 'chioma_codes' }
-                    ].map((fl, i) => (
-                      <div key={i} className="p-3 bg-white/[0.01] border border-white/5 rounded-2xl flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-5 h-5 text-violet-400 shrink-0" />
-                          <div>
-                            <p className="text-xs font-extrabold text-white">{fl.filename}</p>
-                            <p className="text-[9px] text-[#A78BFA]/50 font-mono">{fl.size} • Uploaded by @{fl.uploadedBy}</p>
-                          </div>
-                        </div>
-                        <button 
-                          onClick={() => alert(`Beginning download of "${fl.filename}"...`)}
-                          className="p-1.5 bg-violet-600/20 hover:bg-[#8b5cf6] text-white border border-white/10 rounded-lg transition-colors cursor-pointer"
-                          title="Download File"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))}
+                  <div className="mx-auto max-w-2xl space-y-3 text-left">
+                    <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-violet-400">Shared documents and media</h3>
+                    {selectedCircle.mediaLibrary?.length ? selectedCircle.mediaLibrary.map(file => {
+                      const safeUrl = /^https:\/\//i.test(file.url);
+                      return <div key={file.id} className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.02] p-3">
+                        <div className="flex min-w-0 items-center gap-3"><FileText className="h-5 w-5 shrink-0 text-violet-300"/><div className="min-w-0"><p className="truncate text-xs font-bold text-white">{file.name}</p><p className="mt-1 text-[10px] text-white/40">{file.type.toUpperCase()} · {file.size || 'Size unavailable'} · {file.timestamp || 'Date unavailable'}</p></div></div>
+                        {safeUrl ? <a href={file.url} target="_blank" rel="noreferrer" className="shrink-0 rounded-lg border border-violet-400/20 px-3 py-2 text-[10px] font-bold text-violet-200">Open file</a> : <span className="shrink-0 text-[10px] text-white/30">Unavailable link</span>}
+                      </div>;
+                    }) : <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center"><FileText className="mx-auto h-6 w-6 text-violet-300/60"/><h3 className="mt-3 text-sm font-bold text-white">No shared files yet</h3><p className="mt-1 text-xs leading-5 text-white/40">This Circle has no uploaded documents or media recorded in its shared library.</p></div>}
                   </div>
                 )}
 
