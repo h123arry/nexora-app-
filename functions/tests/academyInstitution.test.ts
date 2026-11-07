@@ -122,6 +122,7 @@ describe('NEXORA Institute institution services', () => {
     assert.equal(afterBooking?.seatsAvailable, 0);
     assert.equal((await sessionRef.get()).get('bookedCount'), 1);
     await assert.rejects(bookAcademyMentorshipSession(db, 'learner-two', created.sessionId), /full/);
+    await sessionRef.collection('bookings').doc('learner-one').delete();
     await sessionRef.delete();
   });
 });
