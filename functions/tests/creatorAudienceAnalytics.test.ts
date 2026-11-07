@@ -76,7 +76,7 @@ describe('Creator audience analytics', () => {
 
   it('rejects self-follows and follows to profiles that do not exist', async () => {
     await assert.rejects(setCreatorFollowStateForUser(db, followerId, followerId, true), /valid creator/);
-    await assert.rejects(setCreatorFollowStateForUser(db, followerId, 'missing-creator', true), /Both public profiles must exist/);
+    await assert.rejects(setCreatorFollowStateForUser(db, followerId, 'missing-creator', true), /This creator or Page is unavailable/);
   });
 
   it('counts signed-in profile visitors once per creator per UTC day', async () => {
