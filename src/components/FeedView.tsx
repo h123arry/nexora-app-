@@ -1650,7 +1650,7 @@ export default function FeedView({
       // Otherwise, perform the full filtering, sorting and interleaving pass
       return getRankedPosts();
     });
-  }, [localPosts, feedTab, sortBy, searchFilterType, searchQuery, selectedTag, activeCollectionFolder, qualityFilter, recommendationsPersonalizationEnabled, currentUser.id]);
+  }, [localPosts, feedTab, sortBy, searchFilterType, searchQuery, selectedTag, activeCollectionFolder, qualityFilter, recommendationsPersonalizationEnabled, recommendationsVersion, currentUser.id, currentUser.interestDNA]);
 
   const currentDisplayList = useMemo(() => orderedPosts.slice(0, visibleCount), [orderedPosts, visibleCount]);
   const activePostIndex = useMemo(
