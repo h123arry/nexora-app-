@@ -176,7 +176,7 @@ export function searchCreators<T extends User>(
   query: string,
   options: { limit?: number } = {},
 ): T[] {
-  const normalizedQuery = query.trim().toLowerCase().replace(/^@/, '');
+  const normalizedQuery = normalizeSearchText(query).replace(/^@/, '');
   const limit = Math.min(100, Math.max(1, options.limit ?? 50));
   const uniqueCreators = creators.filter((creator, index, all) =>
     !creator.isBanned &&
@@ -190,11 +190,11 @@ export function searchCreators<T extends User>(
   const terms = normalizedQuery.split(/\s+/).filter(Boolean);
   return uniqueCreators
     .map((creator, index) => {
-      const username = String(creator.username || '').toLowerCase().replace(/^@/, '');
-      const name = String(creator.name || '').toLowerCase();
-      const bio = String(creator.bio || '').toLowerCase();
-      const skills = (creator.skills || []).map(skill => String(skill).toLowerCase());
-      const interestTags = Object.keys(creator.interestDNA || {}).map(tag => tag.toLowerCase());
+      const username = normalizeSearchText(creator.username || '').replace(/^@/, '');
+      const name = normalizeSearchText(creator.name || '');
+      const bio = normalizeSearchText(creator.bio || '');
+      const skills = (creator.skills || []).map(skill => normalizeSearchText(skill));
+      const interestTags = Object.keys(creator.interestDNA || {}).map(tag => normalizeSearchText(tag));
       const fields = [username, name, bio, ...skills, ...interestTags];
       const termScores = terms.map(term => {
         if (username === term) return 12;
@@ -282,16 +282,24 @@ export function rankTrendingTopics(
   const windowHours = Math.max(1, Math.min(24 * 30, options.windowHours ?? 24 * 7));
   const minPosts = Math.max(1, options.minPosts ?? 2);
   const cutoff = now - windowHours * 3_600_000;
-  const topics = new Map<string, { postIds: Set<string>; creators: Set<string>; engagement: number; newest: number }>();
+  const topics = new Map<string, { postIds: Set<string>; creators: Set<string>; creatorContributions: Map<string, number>; engagement: number; newest: number }>();
   for (const post of posts) {
     if (post.isArchived || (post.scheduledTime && Date.parse(post.scheduledTime) > now)) continue;
     const timestamp = Date.parse(String(post.timestamp || ''));
     if (!Number.isFinite(timestamp) || timestamp < cutoff || timestamp > now) continue;
     for (const tag of normalizedTags(post)) {
-      const entry = topics.get(tag) || { postIds: new Set<string>(), creators: new Set<string>(), engagement: 0, newest: 0 };
+      const entry = topics.get(tag) || { postIds: new Set<string>(), creators: new Set<string>(), creatorContributions: new Map<string, number>(), engagement: 0, newest: 0 };
+      if (entry.postIds.has(post.id)) continue;
       entry.postIds.add(post.id);
       entry.creators.add(post.userId);
-      entry.engagement += Math.log1p(Math.max(0, post.likes || 0)) + Math.log1p(Math.max(0, post.commentsCount || 0)) * 2 + Math.log1p(Math.max(0, post.shares || 0)) * 2;
+      const creatorContributionCount = entry.creatorContributions.get(post.userId) || 0;
+      // Count all unique posts and creators, but cap each creator's engagement
+      // contribution so one prolific account cannot manufacture a trend spike.
+      if (creatorContributionCount < 3) {
+        const age = Math.max(0, (now - timestamp) / 3_600_000);
+        entry.engagement += boundedEngagementScore({ likes: post.likes, comments: post.commentsCount, shares: post.shares }) * freshnessMultiplier(age, Math.max(6, windowHours / 2));
+        entry.creatorContributions.set(post.userId, creatorContributionCount + 1);
+      }
       entry.newest = Math.max(entry.newest, timestamp);
       topics.set(tag, entry);
     }
