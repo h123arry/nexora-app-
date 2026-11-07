@@ -49,6 +49,7 @@ export default function CreatorDashboardView({
   const [isVideoRetentionLoading, setIsVideoRetentionLoading] = useState(false);
   const [videoRetentionError, setVideoRetentionError] = useState(false);
   const [audienceAnalytics, setAudienceAnalytics] = useState<CreatorAudienceAnalytics | null>(null);
+  const [analyticsDays, setAnalyticsDays] = useState<7 | 30>(7);
   const [isAudienceLoading, setIsAudienceLoading] = useState(false);
   const [audienceError, setAudienceError] = useState(false);
   
@@ -98,7 +99,7 @@ export default function CreatorDashboardView({
     const loadRetention = async () => {
       try {
         const callable = httpsCallable(getFunctions(app), 'getCreatorVideoRetention');
-        const response = await callable({ days: 7 });
+        const response = await callable({ days: analyticsDays });
         const data = response.data as typeof videoRetention;
         if (!cancelled) setVideoRetention(data);
       } catch {
@@ -109,14 +110,14 @@ export default function CreatorDashboardView({
     };
     void loadRetention();
     return () => { cancelled = true; };
-  }, [activeTab, currentUser.id]);
+  }, [activeTab, currentUser.id, analyticsDays]);
 
   useEffect(() => {
     if (activeTab !== 'analytics') return;
     let cancelled = false;
     setIsAudienceLoading(true);
     setAudienceError(false);
-    getCreatorAudienceAnalytics(7).then(data => {
+    getCreatorAudienceAnalytics(analyticsDays).then(data => {
       if (!cancelled) setAudienceAnalytics(data);
     }).catch(() => {
       if (!cancelled) setAudienceError(true);
@@ -124,7 +125,7 @@ export default function CreatorDashboardView({
       if (!cancelled) setIsAudienceLoading(false);
     });
     return () => { cancelled = true; };
-  }, [activeTab, currentUser.id]);
+  }, [activeTab, currentUser.id, analyticsDays]);
 
   useEffect(() => {
     let cancelled = false;
@@ -779,9 +780,15 @@ export default function CreatorDashboardView({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Audience growth</h4>
-                    <p className="mt-1 text-[11px] text-zinc-400">Seven-day server-reconciled follower and profile activity</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">{analyticsDays}-day server-reconciled follower and profile activity</p>
                   </div>
-                  <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Backend recorded</span>
+                  <div className="flex items-center gap-2">
+                    <select value={analyticsDays} onChange={event => setAnalyticsDays(Number(event.target.value) as 7 | 30)} className="rounded-lg border border-white/10 bg-black/30 px-2 py-1 text-[10px] font-bold text-zinc-300">
+                      <option value={7}>7 days</option>
+                      <option value={30}>30 days</option>
+                    </select>
+                    <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Backend recorded</span>
+                  </div>
                 </div>
                 {isAudienceLoading ? (
                   <p className="mt-5 text-xs text-zinc-400">Loading audience records…</p>
@@ -822,7 +829,7 @@ export default function CreatorDashboardView({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h4 className="text-sm font-extrabold text-white uppercase tracking-tight">Video audience retention</h4>
-                    <p className="mt-1 text-[11px] text-zinc-400">Seven-day server-timed playback observations</p>
+                    <p className="mt-1 text-[11px] text-zinc-400">{analyticsDays}-day server-timed playback observations</p>
                   </div>
                   <span className="rounded-full border border-violet-400/20 bg-violet-500/10 px-2.5 py-1 text-[10px] font-bold text-violet-200">Server recorded</span>
                 </div>
