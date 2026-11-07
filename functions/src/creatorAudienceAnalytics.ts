@@ -120,7 +120,6 @@ export async function recordCreatorProfileVisitForUser(
     });
     tx.set(dailyRef, {
       creatorId, day,
-      profileVisits: FieldValue.increment(1),
       uniqueProfileVisitors: FieldValue.increment(1),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -156,7 +155,6 @@ export const getCreatorAudienceAnalytics = onCall({ maxInstances: 10 }, async re
       unfollows: safeCount(data.unfollows),
       netFollowerChange: Number.isSafeInteger(data.netFollowerChange) ? data.netFollowerChange : 0,
       followerCount: Number.isSafeInteger(data.followerCount) ? data.followerCount : null,
-      profileVisits: safeCount(data.profileVisits),
       uniqueProfileVisitors: safeCount(data.uniqueProfileVisitors),
     };
   });
@@ -168,8 +166,7 @@ export const getCreatorAudienceAnalytics = onCall({ maxInstances: 10 }, async re
       follows: total.follows + point.follows,
       unfollows: total.unfollows + point.unfollows,
       netFollowerChange: total.netFollowerChange + point.netFollowerChange,
-      profileVisits: total.profileVisits + point.profileVisits,
       uniqueProfileVisitors: total.uniqueProfileVisitors + point.uniqueProfileVisitors,
-    }), { follows: 0, unfollows: 0, netFollowerChange: 0, profileVisits: 0, uniqueProfileVisitors: 0 }),
+    }), { follows: 0, unfollows: 0, netFollowerChange: 0, uniqueProfileVisitors: 0 }),
   };
 });
