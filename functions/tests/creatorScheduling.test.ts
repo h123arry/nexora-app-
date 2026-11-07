@@ -15,8 +15,8 @@ const fixedNow = Date.parse('2026-11-07T12:00:00.000Z');
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Creator scheduling tests require the Firestore Emulator.');
-  await db.recursiveDelete(db.doc('creatorScheduledPosts'));
-  await db.recursiveDelete(db.doc('posts'));
+  await db.recursiveDelete(db.collection('creatorScheduledPosts'));
+  await db.recursiveDelete(db.collection('posts'));
   await db.doc('publicProfiles/alice').set({
     id: 'alice', username: 'alice', name: 'Alice Creator', avatar: 'https://cdn.example.test/alice.png', isVerified: true,
   });
@@ -24,8 +24,8 @@ before(async () => {
 });
 
 after(async () => {
-  await db.recursiveDelete(db.doc('creatorScheduledPosts'));
-  await db.recursiveDelete(db.doc('posts'));
+  await db.recursiveDelete(db.collection('creatorScheduledPosts'));
+  await db.recursiveDelete(db.collection('posts'));
   await db.recursiveDelete(db.doc('publicProfiles/alice'));
   await db.recursiveDelete(db.doc('publicProfiles/bob'));
   await db.recursiveDelete(db.doc('accountStatus/alice'));
