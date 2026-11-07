@@ -434,7 +434,7 @@ export const academyCreateMentorshipSession = onCall({ maxInstances: 10 }, async
 });
 export const academyListMentorshipSessions = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to browse Academy mentorship sessions.');
-  try { return await listUpcomingAcademyMentorshipSessions(adminDb); } catch (error) { throw academyFailure(error); }
+  try { return await listUpcomingAcademyMentorshipSessions(adminDb, request.auth.uid); } catch (error) { throw academyFailure(error); }
 });
 
 export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async request => {
