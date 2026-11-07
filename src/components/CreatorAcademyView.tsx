@@ -274,7 +274,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
                         const chosen = (assessmentAnswers[activeCourse.id + ':' + assessment.id] || [])[index] === optionIndex;
                         return <button key={optionIndex} type="button" aria-pressed={chosen} onClick={() => setAssessmentAnswers(previous => {
                           const answerKey = activeCourse.id + ':' + assessment.id;
-                          const next = [...(previous[answerKey] || Array(question.options.length).fill(-1))];
+                          const next = [...(previous[answerKey] || Array(assessment.questions.length).fill(-1))];
                           while(next.length < assessment.questions.length) next.push(-1);
                           next[index] = optionIndex;
                           return { ...previous, [answerKey]: next };
