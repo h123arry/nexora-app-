@@ -289,7 +289,7 @@ export async function listUpcomingAcademyMentorshipSessions(db: Firestore, uid: 
       seatsAvailable: Math.max(0, capacity - bookedCount),
       mentorId: String(session.get('mentorId') || ''),
     };
-  }).filter(session => session.startsAt && new Date(session.startsAt) > now && session.seatsAvailable > 0)
+  }) .filter(session => session.startsAt && new Date(session.startsAt) > now)
     .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   const sessions = await Promise.all(upcoming.map(async session => {
     const [profile, booking] = await Promise.all([
@@ -303,7 +303,7 @@ export async function listUpcomingAcademyMentorshipSessions(db: Firestore, uid: 
       isBooked: booking.exists,
     };
   }));
-  return { sessions, truncated: snapshot.size === 50 };
+  return { sessions: sessions.filter(session => session.seatsAvailable > 0 || session.isBooked), truncated: snapshot.size === 50 };
 }
 
 export async function bookAcademyMentorshipSession(db: Firestore, uid: string, sessionId: string) {
