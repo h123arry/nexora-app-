@@ -13,7 +13,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, Folder
 import { motion, AnimatePresence } from 'motion/react';
 import { recordReelReplay, recordReelSignal } from '../services/reels/reelsRanking';
 import { getCreditedWatchDelta } from '../utils/watchTimePolicy';
-import { trackClientObservation } from '../services/analyticsService';
+import { hasAnalyticsObservationConsent, trackClientObservation } from '../services/analyticsService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
 
@@ -451,7 +451,7 @@ export default function NexoraVideoPlayer({
       if (creditedWatchSecondsRef.current - lastWatchSignalWriteRef.current >= 5) {
         lastWatchSignalWriteRef.current = creditedWatchSecondsRef.current;
         recordReelSignal(post.id, { watchedSeconds: Math.floor(creditedWatchSecondsRef.current) }, currentUser?.id);
-        if (currentUser?.id) {
+        if (currentUser?.id && hasAnalyticsObservationConsent()) {
           const recordHeartbeat = httpsCallable(getFunctions(app), 'recordVideoWatchHeartbeat');
           void recordHeartbeat({
             postId: post.id,
