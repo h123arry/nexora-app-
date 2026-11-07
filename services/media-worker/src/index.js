@@ -4,6 +4,7 @@ import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
+import sharp from 'sharp';
 import { mkdtemp, mkdir, rm, stat, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -49,7 +50,9 @@ async function processObject(event){
   const [,ownerId,mediaId]=match;
   if(object.metadata?.ownerId!==ownerId || object.metadata?.mediaId!==mediaId) return {ignored:true};
   if(Number(object.size)>MAX_INPUT_BYTES || Number(object.size)<=0) throw new Error('Input file exceeds media size policy');
-  if(!String(object.contentType||'').toLowerCase().startsWith('video/')) return {ignored:true};
+  const isVideo=String(object.contentType||'').toLowerCase().startsWith('video/');
+  const isImage=String(object.contentType||'').toLowerCase().startsWith('image/');
+  if(!isVideo && !isImage) return {ignored:true};
   const ref=db.collection('mediaAssets').doc(mediaId);
   const token=randomUUID();
   const accepted=await db.runTransaction(async tx=>{
@@ -63,6 +66,27 @@ async function processObject(event){
   try {
     const input=path.join(work,'source');
     await bucket.file(name).download({destination:input});
+    if(isImage) {
+      const sourceMetadata=await sharp(input,{limitInputPixels:100_000_000}).metadata();
+      if(!sourceMetadata.width || !sourceMetadata.height || sourceMetadata.width>20_000 || sourceMetadata.height>20_000) throw new Error('Image dimensions are outside supported limits');
+      const outputRoot=`processed/${ownerId}/${mediaId}/${object.generation || 'current'}`;
+      const variants=[];
+      for(const width of [320,640,1280]) {
+        if(sourceMetadata.width<width && width!==320) continue;
+        const output=path.join(work,`image-${width}.webp`);
+        await sharp(input,{limitInputPixels:100_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:82,effort:4}).toFile(output);
+        const objectPath=`${outputRoot}/image-${width}.webp`;
+        await upload(output,objectPath,'image/webp');
+        variants.push({width,path:objectPath});
+      }
+      const result=await db.runTransaction(async tx=>{
+        const snap=await tx.get(ref); const current=snap.data();
+        if(current?.processingToken!==token || current.ownerId!==ownerId) return false;
+        tx.set(ref,{status:'ready',processor:'nexora-sharp-v1',metadata:{width:sourceMetadata.width,height:sourceMetadata.height,format:sourceMetadata.format,hasAlpha:sourceMetadata.hasAlpha===true,processedAt:FieldValue.serverTimestamp()},imageVariants:variants,posterPath:variants[0]?.path || null,processingToken:FieldValue.delete(),processingCompletedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()},{merge:true});
+        return true;
+      });
+      return {ready:result,mediaId,imageVariants:variants.length};
+    }
     const metadata=await probe(input);
     const outputRoot=`processed/${ownerId}/${mediaId}/${object.generation || 'current'}`;
     const master=[];
