@@ -659,23 +659,18 @@ service cloud.firestore {
     }
 
     match /follows/{followId} {
-      // A user may inspect only relationship edges in which they participate.
-      // Firestore queries must constrain followerId or followingId to auth.uid.
+      // Relationship reads are participant-scoped; mutations go through the trusted follow callable.
       allow get, list: if signedIn()
         && (resource.data.followerId == request.auth.uid || resource.data.followingId == request.auth.uid);
-      allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['followerId', 'followingId', 'createdAt'])
-        && request.resource.data.followerId == request.auth.uid
-        && request.resource.data.followingId is string
-        && request.resource.data.followingId != request.auth.uid
-        && request.resource.data.followingId.size() > 0;
-      allow update: if signedIn()
-        && resource.data.followerId == request.auth.uid
-        && request.resource.data.followerId == resource.data.followerId
-        && request.resource.data.followingId == resource.data.followingId
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['createdAt']);
-      allow delete: if signedIn() && resource.data.followerId == request.auth.uid;
+      allow create, update, delete: if false;
     }
+
+    // Creator audience aggregates and visitor hashes are backend-owned.
+    match /creatorAudienceDaily/{dayId} { allow read, write: if false; }
+    match /creatorAudienceEventReceipts/{eventId} { allow read, write: if false; }
+    match /creatorFollowProjections/{edgeId} { allow read, write: if false; }
+    match /creatorProfileDailyVisitors/{visitorId} { allow read, write: if false; }
+    match /creatorProfileVisitorHistory/{visitorId} { allow read, write: if false; }
 
     match /activities/{activityId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
