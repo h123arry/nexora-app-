@@ -17,6 +17,7 @@ import { buildPostAnalytics } from '../services/analytics/postAnalytics';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
+import { scheduleCreatorPost } from '../services/creatorSchedulingService';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -72,6 +73,8 @@ export default function CreatorDashboardView({
   const [draftUrl, setDraftUrl] = useState('');
   const [isUploadingDraftMedia, setIsUploadingDraftMedia] = useState(false);
   const [draftUploadProgress, setDraftUploadProgress] = useState(0);
+  const [scheduledAtInput, setScheduledAtInput] = useState('');
+  const [isSchedulingDraft, setIsSchedulingDraft] = useState(false);
   
   // Recovery Unsaved Draft Notice
   const [recoveredDraft, setRecoveredDraft] = useState<any | null>(null);
@@ -421,6 +424,53 @@ export default function CreatorDashboardView({
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Post submitted to Nexora.' }));
     } catch {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Post could not be submitted. Your draft has been kept.' }));
+    }
+  };
+
+  const handleScheduleDraft = async (draft: any) => {
+    if (isUploadingDraftMedia || isSchedulingDraft) return;
+    const content = draftCaption.trim();
+    const mediaUrl = draftUrl.trim();
+    if (!content && draftType === 'text') {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Add a caption before scheduling.' }));
+      return;
+    }
+    if (draftType !== 'text' && !mediaUrl) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Add media before scheduling.' }));
+      return;
+    }
+    const scheduledDate = new Date(scheduledAtInput);
+    if (!scheduledAtInput || !Number.isFinite(scheduledDate.getTime())) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Choose a publishing date and time.' }));
+      return;
+    }
+    setIsSchedulingDraft(true);
+    try {
+      const result = await scheduleCreatorPost({
+        content,
+        imageUrl: draftType === 'image' ? mediaUrl : undefined,
+        videoUrl: draftType === 'video' ? mediaUrl : undefined,
+        tags: draftTags.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean).slice(0, 30),
+        scheduledAt: scheduledDate.toISOString(),
+      });
+      if (draft?.id && draft.id !== 'temp') {
+        try {
+          await deleteDoc(doc(db, 'drafts', draft.id));
+          setDrafts(prev => prev.filter(item => item.id !== draft.id));
+        } catch {
+          window.dispatchEvent(new CustomEvent('toast', { detail: 'Post scheduled, but its saved draft could not be removed.' }));
+        }
+      }
+      localStorage.removeItem(`nexora_unsaved_draft_${currentUser.id}`);
+      setRecoveredDraft(null);
+      setShowDraftModal(false);
+      clearDraftForm();
+      setScheduledAtInput('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Post scheduled for ${new Date(result.scheduledAt).toLocaleString()}.` }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Post could not be scheduled. Your draft has been kept.' }));
+    } finally {
+      setIsSchedulingDraft(false);
     }
   };
 
@@ -1538,6 +1588,26 @@ export default function CreatorDashboardView({
                     >
                       Discard
                     </button>
+                    <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 sm:items-center">
+                      <label className="text-[10px] text-zinc-400 font-bold">Schedule for</label>
+                      <input
+                        type="datetime-local"
+                        value={scheduledAtInput}
+                        min={new Date(Date.now() + 5 * 60 * 1000).toISOString().slice(0, 16)}
+                        max={new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 16)}
+                        onChange={event => setScheduledAtInput(event.target.value)}
+                        className="min-w-0 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs text-white"
+                        aria-label="Schedule post date and time"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleScheduleDraft({ id: currentDraftId || 'temp' })}
+                        disabled={isUploadingDraftMedia || isSchedulingDraft || !scheduledAtInput}
+                        className="px-4 py-2 rounded-xl border border-violet-400/30 bg-violet-500/10 text-violet-200 text-xs font-bold disabled:opacity-40"
+                      >
+                        {isSchedulingDraft ? 'Scheduling…' : 'Schedule post'}
+                      </button>
+                    </div>
                     <button 
                       type="button"
                       onClick={() => handlePublishDraft({ id: currentDraftId || 'temp' })}
