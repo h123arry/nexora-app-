@@ -102,11 +102,33 @@ export async function getPublishedAcademyCourse(db: Firestore, courseId: string)
   const ref = db.collection('academyCourses').doc(courseId);
   const course = await ref.get();
   if (!course.exists || course.get('status') !== 'published') throw new Error('This published course is unavailable.');
-  const lessons = await ref.collection('lessons').where('status', '==', 'published').orderBy('order').get();
+  const [lessons, assessments] = await Promise.all([
+    ref.collection('lessons').where('status', '==', 'published').orderBy('order').get(),
+    ref.collection('assessments').where('status', '==', 'published').get(),
+  ]);
   return {
     course: { id: course.id, title: course.get('title'), description: course.get('description'), level: course.get('level'), category: course.get('category'), version: course.get('version') },
     lessons: lessons.docs.map(item => ({ id: item.id, title: item.get('title'), body: item.get('body'), transcript: item.get('transcript') || '', resourceUrls: item.get('resourceUrls') || [], order: item.get('order') })),
+    // Never expose correctIndex or answer keys to learners.
+    assessments: assessments.docs.map(item => {
+      const questions = Array.isArray(item.get('questions')) ? item.get('questions') as Array<{ id: string; prompt: string; options: string[] }> : [];
+      return { id: item.id, passPercent: item.get('passPercent'), questions: questions.map(question => ({ id: question.id, prompt: question.prompt, options: question.options })) };
+    }),
   };
+}
+
+export async function listPublishedAcademyCourses(db: Firestore) {
+  const snapshot = await db.collection('academyCourses').where('status', '==', 'published').limit(50).get();
+  const courses = snapshot.docs.map(course => ({
+    id: course.id,
+    title: String(course.get('title') || ''),
+    description: String(course.get('description') || ''),
+    level: String(course.get('level') || 'All levels'),
+    category: String(course.get('category') || 'Creator skills'),
+    version: Number(course.get('version') || 1),
+    lessonCount: Number(course.get('lessonCount') || 0),
+  }));
+  return { courses, truncated: snapshot.size === 50 };
 }
 
 export async function createAcademyAssessment(db: Firestore, uid: string, input: any) {
