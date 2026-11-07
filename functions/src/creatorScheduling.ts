@@ -187,7 +187,7 @@ export const cancelCreatorScheduledPost = onCall({ maxInstances: 10 }, async req
 export const listCreatorScheduledPosts = onCall({ maxInstances: 10 }, async request => {
   const uid = requireUid(request);
   const snapshot = await db.collection('creatorScheduledPosts').where('ownerId', '==', uid)
-    .orderBy('scheduledAt', 'asc').limit(MAX_SCHEDULED_POSTS).get();
+    .orderBy('createdAt', 'desc').limit(MAX_SCHEDULED_POSTS).get();
   return { schedules: snapshot.docs.map(item => ({
     id: item.id, content: item.get('content'), imageUrl: item.get('imageUrl') || '',
     videoUrl: item.get('videoUrl') || '', tags: item.get('tags') || [],
