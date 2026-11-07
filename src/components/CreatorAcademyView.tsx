@@ -54,6 +54,7 @@ const COURSES: Course[] = [
 ];
 
 type Progress = { courseId: string; completedLessonIds: string[] };
+type MentorshipSession = { sessionId: string; title: string; description: string; startsAt: string; durationMinutes: number; capacity: number; bookedCount: number; seatsAvailable: number; mentorId: string; mentorName: string; mentorUsername: string };
 
 export default function CreatorAcademyView({ currentUser }: { currentUser: User }) {
   const [progress, setProgress] = useState<Record<string, string[]>>({});
@@ -72,6 +73,10 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
   const [certificate, setCertificate] = useState<{ courseId: string; assessmentId: string; certificateId: string; verificationCode: string; courseTitle: string } | null>(null);
   const [assessmentBusy, setAssessmentBusy] = useState(false);
   const [assessmentError, setAssessmentError] = useState('');
+  const [mentorshipSessions, setMentorshipSessions] = useState<MentorshipSession[]>([]);
+  const [mentorshipTruncated, setMentorshipTruncated] = useState(false);
+  const [mentorshipError, setMentorshipError] = useState('');
+  const [bookingSessionId, setBookingSessionId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -79,10 +84,11 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       setLoading(true);
       setLoadError(false);
       const progressQuery = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(50));
-      const [progressResult, catalogResult, instructorResult] = await Promise.allSettled([
+      const [progressResult, catalogResult, instructorResult, mentorshipResult] = await Promise.allSettled([
         getDocs(progressQuery),
         httpsCallable<void, { courses: Array<{ id: string; title: string; description: string; level: string; category: string; lessonCount: number; version: number }>; truncated: boolean }>(functions, 'academyListPublishedCourses')(),
         getDoc(doc(db, 'academyInstructors', currentUser.id)),
+        httpsCallable<void, { sessions: MentorshipSession[]; truncated: boolean }>(functions, 'academyListMentorshipSessions')(),
       ]);
       if (!active) return;
       if (progressResult.status === 'fulfilled') {
@@ -107,6 +113,10 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
         setIsInstructor(instructor.exists() && instructor.data().status === 'active'
           && ['instructor', 'editor', 'admin'].includes(String(instructor.data().role || '')));
       }
+      if (mentorshipResult.status === 'fulfilled') {
+        setMentorshipSessions(mentorshipResult.value.data.sessions);
+        setMentorshipTruncated(mentorshipResult.value.data.truncated);
+      } else setMentorshipError('Upcoming mentorship sessions could not be loaded.');
       setLoading(false);
     };
     void load();
@@ -186,6 +196,19 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
     } catch (cause) {
       setAssessmentError(cause instanceof Error ? cause.message : 'The assessment could not be submitted.');
     } finally { setAssessmentBusy(false); }
+  };
+
+  const bookMentorship = async (sessionId: string) => {
+    if (bookingSessionId) return;
+    setBookingSessionId(sessionId); setMentorshipError('');
+    try {
+      await httpsCallable<{ sessionId: string }, { sessionId: string; booked: boolean; bookedCount: number }>(functions, 'academyBookMentorshipSession')({ sessionId });
+      const refreshed = await httpsCallable<void, { sessions: MentorshipSession[]; truncated: boolean }>(functions, 'academyListMentorshipSessions')();
+      setMentorshipSessions(refreshed.data.sessions);
+      setMentorshipTruncated(refreshed.data.truncated);
+    } catch (cause) {
+      setMentorshipError(cause instanceof Error ? cause.message : 'This mentorship session could not be booked.');
+    } finally { setBookingSessionId(null); }
   };
 
   const requestCertificate = async (assessmentId: string) => {
@@ -294,6 +317,13 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
           <div className="mt-5 flex items-start gap-3 rounded-2xl border border-violet-400/15 bg-violet-500/5 p-4"><Sparkles size={17} className="mt-0.5 shrink-0 text-violet-300"/><p className="text-xs leading-5 text-white/55">Your learning record syncs to your NEXORA account. Institutional assessments are server graded, and credentials are issued only after a passing result. Introductory lessons record progress but do not automatically award certificates.</p></div>
         </section>
       </div>
+
+      <section className="space-y-4 rounded-3xl border border-white/10 bg-[#0b1020] p-5 md:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3"><div><div className="flex items-center gap-2 text-violet-300"><GraduationCap size={17}/><span className="text-[10px] font-black uppercase tracking-[0.18em]">Mentorship programme</span></div><h3 className="mt-2 text-lg font-black text-white">Upcoming mentor sessions</h3><p className="mt-1 text-xs text-white/45">Book a place in a scheduled session. Seat limits are enforced transactionally.</p></div><span className="text-[10px] text-white/40">{mentorshipSessions.length} available</span></div>
+        {mentorshipError && <p role="alert" className="rounded-xl border border-amber-300/20 bg-amber-400/5 p-3 text-xs text-amber-100">{mentorshipError}</p>}
+        {mentorshipSessions.length === 0 ? <p className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-white/40">There are no upcoming sessions with available seats right now.</p> : <div className="grid gap-3 md:grid-cols-2">{mentorshipSessions.map(session => <article key={session.sessionId} className="rounded-2xl border border-white/10 bg-black/20 p-4"><div className="flex items-start justify-between gap-3"><div><h4 className="text-sm font-bold text-white">{session.title}</h4><p className="mt-1 text-[10px] text-violet-200">{session.mentorName}{session.mentorUsername?' · @'+session.mentorUsername:''}</p></div><span className="rounded-lg bg-violet-500/10 px-2 py-1 text-[10px] text-violet-200">{session.seatsAvailable} seats</span></div><p className="mt-3 text-xs leading-5 text-white/55">{session.description}</p><p className="mt-3 text-[10px] text-white/40">{new Date(session.startsAt).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})} · {session.durationMinutes} minutes</p><button type="button" disabled={bookingSessionId!==null} onClick={()=>void bookMentorship(session.sessionId)} className="mt-4 min-h-10 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 text-xs font-bold text-violet-100 disabled:opacity-40">{bookingSessionId===session.sessionId?'Booking…':'Book this session'}</button></article>)}</div>}
+        {mentorshipTruncated && <p className="text-[10px] text-amber-200">Showing a bounded list of the first 50 scheduled sessions.</p>}
+      </section>
 
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><Award size={17}/><span className="text-xs font-bold">Institutional learning record</span></div><p className="mt-2 text-xs leading-5 text-white/45">Your completed lessons are saved against your account. Eligible courses can connect this learning record to assessed credentials and mentorship.</p></div>
