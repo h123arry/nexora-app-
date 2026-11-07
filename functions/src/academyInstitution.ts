@@ -102,11 +102,33 @@ export async function getPublishedAcademyCourse(db: Firestore, courseId: string)
   const ref = db.collection('academyCourses').doc(courseId);
   const course = await ref.get();
   if (!course.exists || course.get('status') !== 'published') throw new Error('This published course is unavailable.');
-  const lessons = await ref.collection('lessons').where('status', '==', 'published').orderBy('order').get();
+  const [lessons, assessments] = await Promise.all([
+    ref.collection('lessons').where('status', '==', 'published').orderBy('order').get(),
+    ref.collection('assessments').where('status', '==', 'published').get(),
+  ]);
   return {
     course: { id: course.id, title: course.get('title'), description: course.get('description'), level: course.get('level'), category: course.get('category'), version: course.get('version') },
     lessons: lessons.docs.map(item => ({ id: item.id, title: item.get('title'), body: item.get('body'), transcript: item.get('transcript') || '', resourceUrls: item.get('resourceUrls') || [], order: item.get('order') })),
+    // Never expose correctIndex or answer keys to learners.
+    assessments: assessments.docs.map(item => {
+      const questions = Array.isArray(item.get('questions')) ? item.get('questions') as Array<{ id: string; prompt: string; options: string[] }> : [];
+      return { id: item.id, passPercent: item.get('passPercent'), questions: questions.map(question => ({ id: question.id, prompt: question.prompt, options: question.options })) };
+    }),
   };
+}
+
+export async function listPublishedAcademyCourses(db: Firestore) {
+  const snapshot = await db.collection('academyCourses').where('status', '==', 'published').limit(50).get();
+  const courses = snapshot.docs.map(course => ({
+    id: course.id,
+    title: String(course.get('title') || ''),
+    description: String(course.get('description') || ''),
+    level: String(course.get('level') || 'All levels'),
+    category: String(course.get('category') || 'Creator skills'),
+    version: Number(course.get('version') || 1),
+    lessonCount: Number(course.get('lessonCount') || 0),
+  }));
+  return { courses, truncated: snapshot.size === 50 };
 }
 
 export async function createAcademyAssessment(db: Firestore, uid: string, input: any) {
@@ -248,18 +270,47 @@ export async function createAcademyMentorshipSession(db: Firestore, uid: string,
   return { sessionId, status: 'scheduled' as const };
 }
 
+export async function listUpcomingAcademyMentorshipSessions(db: Firestore, now = new Date()) {
+  const snapshot = await db.collection('academyMentorshipSessions').where('status', '==', 'scheduled').where('startsAt', '>=', now).orderBy('startsAt', 'asc').limit(50).get();
+  const upcoming = snapshot.docs.map(session => {
+    const startValue = session.get('startsAt');
+    const startsAt = startValue?.toDate?.() instanceof Date ? startValue.toDate() : startValue instanceof Date ? startValue : null;
+    const capacity = Number(session.get('capacity') || 0);
+    const bookedCount = Number(session.get('bookedCount') || 0);
+    return {
+      sessionId: session.id,
+      title: String(session.get('title') || ''),
+      description: String(session.get('description') || ''),
+      startsAt: startsAt?.toISOString() || '',
+      durationMinutes: Number(session.get('durationMinutes') || 0),
+      capacity,
+      bookedCount,
+      seatsAvailable: Math.max(0, capacity - bookedCount),
+      mentorId: String(session.get('mentorId') || ''),
+    };
+  }).filter(session => session.startsAt && new Date(session.startsAt) > now && session.seatsAvailable > 0)
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const sessions = await Promise.all(upcoming.map(async session => {
+    const profile = session.mentorId ? await db.collection('publicProfiles').doc(session.mentorId).get() : null;
+    return { ...session, mentorName: String(profile?.get('name') || profile?.get('username') || 'NEXORA Academy mentor'), mentorUsername: String(profile?.get('username') || '') };
+  }));
+  return { sessions, truncated: snapshot.size === 50 };
+}
+
 export async function bookAcademyMentorshipSession(db: Firestore, uid: string, sessionId: string) {
   if (!safeId(sessionId)) throw new Error('A valid mentorship session is required.');
   const sessionRef = db.collection('academyMentorshipSessions').doc(sessionId);
   const bookingRef = sessionRef.collection('bookings').doc(uid);
+  let bookedCount = 0;
   await db.runTransaction(async tx => {
     const [session, booking] = await Promise.all([tx.get(sessionRef), tx.get(bookingRef)]);
     if (!session.exists || session.get('status') !== 'scheduled' || session.get('startsAt').toDate().getTime() <= Date.now()) throw new Error('This mentorship session is unavailable.');
-    if (booking.exists) return;
     const count = Number(session.get('bookedCount') || 0);
+    if (booking.exists) { bookedCount = count; return; }
     if (count >= Number(session.get('capacity') || 0)) throw new Error('This mentorship session is full.');
+    bookedCount = count + 1;
     tx.create(bookingRef, { userId: uid, sessionId, status: 'booked', bookedAt: new Date() });
-    tx.update(sessionRef, { bookedCount: count + 1 });
+    tx.update(sessionRef, { bookedCount });
   });
-  return { sessionId, booked: true };
+  return { sessionId, booked: true, bookedCount };
 }
