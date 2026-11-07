@@ -185,8 +185,11 @@ export async function issueAcademyCertificate(db: Firestore, uid: string, course
 }
 
 export async function verifyAcademyCertificate(db: Firestore, verificationCode: string) {
-  if (!/^[A-F0-9]{24}$/.test(verificationCode)) throw new Error('A valid verification code is required.');
-  const result = await db.collection('academyCertificates').where('verificationCode', '==', verificationCode).limit(1).get();
+  const normalizedCode = typeof verificationCode === 'string' ? verificationCode.trim().toUpperCase() : '';
+  // Accept previously issued hexadecimal verification codes while new issuance
+  // uses a fixed 24-character digest prefix.
+  if (!/^[A-F0-9]{24,64}$/.test(normalizedCode)) throw new Error('A valid verification code is required.');
+  const result = await db.collection('academyCertificates').where('verificationCode', '==', normalizedCode).limit(1).get();
   if (result.empty) return { valid: false };
   const certificate = result.docs[0];
   return { valid: certificate.get('status') === 'valid', certificateId: certificate.id, courseTitle: certificate.get('courseTitle'), issuedAt: certificate.get('issuedAt'), status: certificate.get('status') };
