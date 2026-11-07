@@ -8,6 +8,7 @@ const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexor
 const db = getFirestore(app);
 const creatorId = 'creator-audience-test-owner';
 const followerId = 'creator-audience-test-follower';
+const pageId = 'creator-audience-test-page';
 
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Creator audience tests require the Firestore Emulator.');
@@ -16,6 +17,7 @@ before(async () => {
   await db.doc('publicProfiles/' + followerId).set({ id: followerId, following: 2 });
   await db.doc('users/' + creatorId).set({ id: creatorId, followers: 4 });
   await db.doc('users/' + followerId).set({ id: followerId, following: 2 });
+  await db.doc('pages/' + pageId).set({ id: pageId, followersCount: 7, ownerId: 'page-owner' });
 });
 
 after(async () => {
@@ -28,6 +30,7 @@ after(async () => {
   await db.doc('publicProfiles/' + followerId).delete();
   await db.doc('users/' + creatorId).delete();
   await db.doc('users/' + followerId).delete();
+  await db.doc('pages/' + pageId).delete();
   await deleteApp(app);
 });
 
@@ -59,6 +62,16 @@ describe('Creator audience analytics', () => {
     assert.equal(daily.docs[0].get('follows'), 1);
     assert.equal(daily.docs[0].get('unfollows'), 1);
     assert.equal(daily.docs[0].get('netFollowerChange'), 0);
+  });
+
+  it('preserves Page follows and updates Page follower totals', async () => {
+    const followed = await setCreatorFollowStateForUser(db, followerId, pageId, true);
+    assert.equal(followed.changed, true);
+    assert.equal(followed.followerCount, 8);
+    assert.equal((await db.doc('pages/' + pageId).get()).get('followersCount'), 8);
+    const unfollowed = await setCreatorFollowStateForUser(db, followerId, pageId, false);
+    assert.equal(unfollowed.followerCount, 7);
+    assert.equal((await db.doc('pages/' + pageId).get()).get('followersCount'), 7);
   });
 
   it('rejects self-follows and follows to profiles that do not exist', async () => {
