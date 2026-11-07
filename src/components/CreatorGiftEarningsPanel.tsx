@@ -94,6 +94,7 @@ export default function CreatorGiftEarningsPanel() {
               </div>
               <div className="text-right">
                 <p className="text-sm font-bold tabular-nums text-white">{formatNex(earning.creatorShareNex ?? earning.grossNex)} NEX</p>
+                <p className="text-[9px] text-slate-500">{earning.status === 'available' ? 'Creator share' : 'Gift gross'}</p>
                 <p className={'mt-1 text-[10px] font-bold ' + (earning.status === 'available' ? 'text-emerald-300' : earning.status === 'pending_review' ? 'text-amber-200' : 'text-slate-400')}>
                   {earning.status === 'available' ? 'Available' : earning.status === 'pending_review' ? 'Pending review' : earning.status}
                 </p>
