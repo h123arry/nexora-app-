@@ -135,6 +135,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               if (impressionRecordedRef.current) return;
               impressionRecordedRef.current = true;
               onImpression(post.id);
+              observer.disconnect();
             }, 1000);
           }
         } else if (impressionTimerRef.current !== null) {
