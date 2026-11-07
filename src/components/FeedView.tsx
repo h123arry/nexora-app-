@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Menu } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
@@ -516,8 +516,24 @@ export default function FeedView({
     return saved ? JSON.parse(saved) : [];
   });
   const feedPreferencesHydratedRef = useRef(false);
+  const impressedPostIdsRef = useRef<Set<string>>(new Set());
   const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(() => currentUser.id === 'guest_visitor_id');
   const recommendationSyncTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    impressedPostIdsRef.current.clear();
+  }, [currentUser.id]);
+
+  const handlePostImpression = useCallback((postId: string) => {
+    if (!postId || impressedPostIdsRef.current.has(postId)) return;
+    impressedPostIdsRef.current.add(postId);
+    trackClientObservation({
+      eventType: 'content_impression',
+      entityType: 'post',
+      entityId: postId,
+      properties: { surface: 'feed_card', qualification: '50_percent_for_1_second' },
+    });
+  }, []);
 
   // Local storage is an offline fallback only. Signed-in users hydrate the
   // authoritative feed controls from owner-scoped Firestore settings.
@@ -2313,6 +2329,7 @@ export default function FeedView({
                 currentUser={currentUser}
                 activeDotsMenuPostId={activeDotsMenuPostId}
                 setActiveDotsMenuPostId={setActiveDotsMenuPostId}
+                onImpression={handlePostImpression}
                 onSpark={handleSpark}
                 onSave={handleSave}
                 onSharePost={onSharePost}
