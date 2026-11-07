@@ -16,6 +16,7 @@ const fixedNow = Date.parse('2026-11-07T12:00:00.000Z');
 before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Creator scheduling tests require the Firestore Emulator.');
   await db.recursiveDelete(db.collection('creatorScheduledPosts'));
+  await db.recursiveDelete(db.collection('creatorScheduleCounters'));
   await db.recursiveDelete(db.collection('posts'));
   await db.doc('publicProfiles/alice').set({
     id: 'alice', username: 'alice', name: 'Alice Creator', avatar: 'https://cdn.example.test/alice.png', isVerified: true,
@@ -25,6 +26,7 @@ before(async () => {
 
 after(async () => {
   await db.recursiveDelete(db.collection('creatorScheduledPosts'));
+  await db.recursiveDelete(db.collection('creatorScheduleCounters'));
   await db.recursiveDelete(db.collection('posts'));
   await db.recursiveDelete(db.doc('publicProfiles/alice'));
   await db.recursiveDelete(db.doc('publicProfiles/bob'));
@@ -59,6 +61,7 @@ describe('trusted Creator Studio scheduled publishing', () => {
     await assert.rejects(cancelCreatorSchedule(db, 'bob', created.scheduleId), /cannot cancel another creator/);
     assert.deepEqual(await cancelCreatorSchedule(db, 'alice', created.scheduleId), { cancelled: true });
     assert.equal((await db.doc('creatorScheduledPosts/' + created.scheduleId).get()).get('status'), 'cancelled');
+    assert.equal((await db.doc('creatorScheduleCounters/alice').get()).get('pendingCount'), 0);
   });
 
   it('publishes due posts exactly once using trusted profile identity and zeroed engagement', async () => {
@@ -80,6 +83,30 @@ describe('trusted Creator Studio scheduled publishing', () => {
     assert.equal(post.get('likes'), 0);
     assert.equal(post.get('views'), 0);
     assert.equal(post.get('commentsCount'), 0);
+    assert.equal((await db.doc('creatorScheduleCounters/alice').get()).get('pendingCount'), 0);
+  });
+
+  it('serializes the 30-pending-post cap and releases capacity after cancellation', async () => {
+    const ids: string[] = [];
+    for (let index = 0; index < 30; index += 1) {
+      const created = await createCreatorSchedule(db, 'alice', {
+        content: 'Queued post ' + index,
+        scheduledAt: new Date(fixedNow + 600_000 + index * 1000).toISOString(),
+      }, fixedNow);
+      ids.push(created.scheduleId);
+    }
+    assert.equal((await db.doc('creatorScheduleCounters/alice').get()).get('pendingCount'), 30);
+    await assert.rejects(createCreatorSchedule(db, 'alice', {
+      content: 'The 31st post',
+      scheduledAt: new Date(fixedNow + 700_000).toISOString(),
+    }, fixedNow), /up to 30 scheduled posts/);
+    await cancelCreatorSchedule(db, 'alice', ids[0]);
+    const replacement = await createCreatorSchedule(db, 'alice', {
+      content: 'Replacement post',
+      scheduledAt: new Date(fixedNow + 800_000).toISOString(),
+    }, fixedNow);
+    assert.ok(replacement.scheduleId);
+    assert.equal((await db.doc('creatorScheduleCounters/alice').get()).get('pendingCount'), 30);
   });
 
   it('blocks publication when the creator is suspended at delivery time', async () => {
@@ -92,5 +119,6 @@ describe('trusted Creator Studio scheduled publishing', () => {
     assert.equal(result.blocked, 1);
     assert.equal((await db.doc('creatorScheduledPosts/' + created.scheduleId).get()).get('status'), 'blocked');
     assert.equal((await db.doc('posts/scheduled-' + created.scheduleId).get()).exists, false);
+    assert.equal((await db.doc('creatorScheduleCounters/bob').get()).get('pendingCount'), 0);
   });
 });
