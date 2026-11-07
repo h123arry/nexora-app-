@@ -660,7 +660,9 @@ service cloud.firestore {
 
     match /follows/{followId} {
       // Relationship reads are participant-scoped; mutations go through the trusted follow callable.
-      allow get, list: if signedIn()
+      allow get: if signedIn()
+        && (resource == null || resource.data.followerId == request.auth.uid || resource.data.followingId == request.auth.uid);
+      allow list: if signedIn()
         && (resource.data.followerId == request.auth.uid || resource.data.followingId == request.auth.uid);
       allow create, update, delete: if false;
     }
