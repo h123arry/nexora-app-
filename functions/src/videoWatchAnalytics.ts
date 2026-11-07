@@ -56,6 +56,8 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
 
     let creditedSeconds = 0;
     let started = false;
+    const viewerRef = db.collection('creatorVideoDailyViewers').doc(digest(creatorId + ':' + day + ':' + uid));
+    const viewerSnap = !previous ? await tx.get(viewerRef) : null;
     if (!previous) {
       started = true;
       tx.create(sessionRef, {
@@ -85,8 +87,6 @@ export const recordVideoWatchHeartbeat = onCall({ maxInstances: 20 }, async requ
 
     if (started || creditedSeconds > 0) {
       const aggregateRef = db.collection('creatorVideoDaily').doc(digest(creatorId + ':' + day));
-      const viewerRef = db.collection('creatorVideoDailyViewers').doc(digest(creatorId + ':' + day + ':' + uid));
-      const viewerSnap = started ? await tx.get(viewerRef) : null;
       tx.set(aggregateRef, {
         creatorId, day,
         sessionsStarted: FieldValue.increment(started ? 1 : 0),
