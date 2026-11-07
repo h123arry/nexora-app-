@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Firestore, DocumentReference } from 'firebase-admin/firestore';
+import type { Firestore } from 'firebase-admin/firestore';
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
