@@ -691,6 +691,22 @@ service cloud.firestore {
     match /paymentWebhookFailures/{failureId} { allow read, write: if false; }
     match /financeAuditEvents/{eventId} { allow read, write: if false; }
 
+    // Nex Coin balances and personal transaction history are readable only by
+    // their owner. Every write is performed by trusted server transactions.
+    match /nexWallets/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create, update, delete: if false;
+
+      match /transactions/{transactionId} {
+        allow get, list: if signedIn() && request.auth.uid == userId;
+        allow create, update, delete: if false;
+      }
+    }
+    match /nexLedgerEntries/{entryId} { allow read, write: if false; }
+    match /nexLedgerTransactions/{transactionId} { allow read, write: if false; }
+    match /nexLedgerRequests/{requestId} { allow read, write: if false; }
+
     match /pages/{pageId} {
       allow get, list: if true;
       allow create: if signedIn()
