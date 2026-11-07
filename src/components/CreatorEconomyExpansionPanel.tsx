@@ -49,6 +49,12 @@ export default function CreatorEconomyExpansionPanel() {
       <article className="rounded-2xl border border-white/10 bg-[#100d20] p-4"><div className="flex items-center gap-2 text-xs text-slate-300"><Trophy size={15}/> Gifts delivered</div><p className="mt-3 text-2xl font-black text-white">{loading?'—':number(analytics?.totals.gifts??0)}</p></article>
     </div>
     <div className="rounded-2xl border border-white/10 bg-[#0a071f]/75 p-4">
+      <h4 className="text-sm font-bold text-white">Daily gift performance</h4>
+      <p className="mt-1 text-xs text-slate-400">Server-recorded gift volume, grouped by UTC day.</p>
+      {!analytics?.daily.length?<p className="mt-3 text-xs text-slate-500">Daily performance will appear when verified gifts are received.</p>:<div className="mt-4 space-y-2">{analytics.daily.slice(-14).map(day=>{const peak=Math.max(1,...analytics.daily.map(item=>item.grossNex));return <div key={day.day} className="grid grid-cols-[76px_1fr_86px] items-center gap-2 text-[10px]"><span className="text-slate-500">{day.day.slice(5)}</span><div className="h-2 overflow-hidden rounded-full bg-white/[.06]"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-indigo-400" style={{width:(day.grossNex/peak*100)+'%'}}/></div><strong className="text-right text-slate-300">{number(day.grossNex)} NEX</strong></div>})}</div>}
+      {analytics?.truncated&&<p className="mt-3 text-[10px] text-amber-200">This report reached its 1,000-record limit. Totals are partial.</p>}
+    </div>
+    <div className="rounded-2xl border border-white/10 bg-[#0a071f]/75 p-4">
       <div className="flex items-center gap-2 text-sm font-bold text-white"><Globe2 size={16} className="text-violet-300"/> Global display currency</div>
       <p className="mt-1 text-xs text-slate-400">Choose how future financial summaries are labelled. This does not convert NEX or create an exchange rate.</p>
       <div className="mt-3 flex flex-wrap gap-2"><select value={currency} onChange={e=>setCurrency(e.target.value)} className="min-h-10 rounded-xl border border-white/10 bg-[#15102a] px-3 text-sm text-white">{currencies.map(code=><option key={code} value={code}>{code}</option>)}</select><button type="button" onClick={()=>void saveCurrency()} disabled={saving||loading} className="min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-50">{saving?'Saving…':'Save preference'}</button></div>
