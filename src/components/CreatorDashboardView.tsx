@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import NexoraLoader from './NexoraLoader';
 import CreatorAcademyView from './CreatorAcademyView';
+import { listCreatorStudioTemplates, saveCreatorStudioTemplate, deleteCreatorStudioTemplate, CreatorStudioTemplate } from '../services/creatorStudioService';
 import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, GraduationCap } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
@@ -39,6 +40,9 @@ export default function CreatorDashboardView({
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
   const [drafts, setDrafts] = useState<any[]>([]);
   const [isDraftsLoading, setIsDraftsLoading] = useState(true);
+  const [studioTemplates, setStudioTemplates] = useState<CreatorStudioTemplate[]>([]);
+  const [isTemplatesLoading, setIsTemplatesLoading] = useState(false);
+  const [templateName, setTemplateName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [videoRetention, setVideoRetention] = useState<{ points: Array<{ day: string; sessionsStarted: number; uniqueViewers: number; acceptedWatchSeconds: number; averageAcceptedWatchSeconds: number | null }>; source: string; verifiedByServer: boolean; humanPlaybackProof: boolean } | null>(null);
   const [isVideoRetentionLoading, setIsVideoRetentionLoading] = useState(false);
@@ -142,6 +146,53 @@ export default function CreatorDashboardView({
     }
     return () => { cancelled = true; };
   }, [currentUser.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setIsTemplatesLoading(true);
+    listCreatorStudioTemplates()
+      .then(items => { if (!cancelled) setStudioTemplates(items); })
+      .catch(() => { if (!cancelled) window.dispatchEvent(new CustomEvent('toast', { detail: 'Creator templates could not be loaded. Check your connection and retry.' })); })
+      .finally(() => { if (!cancelled) setIsTemplatesLoading(false); });
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
+
+  const handleSaveStudioTemplate = async () => {
+    if (templateName.trim().length < 2) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Give this template a name of at least 2 characters.' }));
+      return;
+    }
+    try {
+      const saved = await saveCreatorStudioTemplate({
+        name: templateName.trim(), caption: draftCaption.trim(), format: draftType,
+        tags: draftTags.split(',').map(tag => tag.trim().replace(/^#/, '')).filter(Boolean),
+      });
+      const refreshed = await listCreatorStudioTemplates();
+      setStudioTemplates(refreshed);
+      setTemplateName('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: saved.saved ? 'Reusable template saved to your account.' : 'Template could not be saved.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Template could not be saved.' }));
+    }
+  };
+
+  const handleApplyStudioTemplate = (template: CreatorStudioTemplate) => {
+    setDraftCaption(template.caption);
+    setDraftTags(template.tags.join(', '));
+    setDraftType(template.format);
+    setCurrentDraftId(null);
+    setShowDraftModal(true);
+  };
+
+  const handleDeleteStudioTemplate = async (templateId: string) => {
+    try {
+      await deleteCreatorStudioTemplate(templateId);
+      setStudioTemplates(prev => prev.filter(template => template.id !== templateId));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Template deleted.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Template could not be deleted. Please retry.' }));
+    }
+  };
 
   // Draft Continuous Auto-Save Trigger
   useEffect(() => {
@@ -970,6 +1021,36 @@ export default function CreatorDashboardView({
               <div className="p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-3">
                 <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-zinc-400" /><h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Scheduled Publishing</h4></div>
                 <p className="text-xs text-zinc-400 leading-relaxed">Automatic scheduled publishing is not enabled yet. Save a draft and publish it manually when you're ready. Nexora will not show a scheduled post as published unless the server confirms it.</p>
+              </div>
+
+              <div className="md:col-span-2 p-6 rounded-2xl bg-[#0a071f]/80 border border-white/5 space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Reusable Studio Templates</h4>
+                    <p className="text-xs text-zinc-500 mt-1">Save caption structures, hashtags and content formats for your next post.</p>
+                  </div>
+                  <span className="text-[10px] font-mono bg-violet-600/20 text-violet-300 border border-white/10 px-2 py-1 rounded-full">{studioTemplates.length}/40</span>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input value={templateName} onChange={event => setTemplateName(event.target.value)} maxLength={60} placeholder="Template name" aria-label="Template name" className="flex-1 min-w-0 bg-[#0a071f] border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-500" />
+                  <button type="button" onClick={() => void handleSaveStudioTemplate()} className="px-4 py-2 rounded-xl bg-violet-600/20 border border-violet-400/20 text-violet-200 text-xs font-bold">Save current editor as template</button>
+                </div>
+                {isTemplatesLoading ? <p className="text-xs text-zinc-500 py-3">Loading your templates…</p> : studioTemplates.length === 0 ? (
+                  <p className="text-xs text-zinc-500 py-3">No templates saved yet. Open a draft, prepare its caption and tags, then save them here.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {studioTemplates.map(template => (
+                      <div key={template.id} className="rounded-xl border border-white/5 bg-white/3 p-3 space-y-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0"><p className="text-xs font-bold text-white truncate">{template.name}</p><p className="text-[10px] text-violet-300 uppercase mt-1">{template.format} · {template.tags.length} tags</p></div>
+                          <button type="button" onClick={() => void handleDeleteStudioTemplate(template.id)} aria-label={`Delete ${template.name}`} className="p-1 text-pink-400 hover:bg-white/5 rounded"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </div>
+                        <p className="text-[11px] text-zinc-400 line-clamp-2">{template.caption || 'No starter caption'}</p>
+                        <button type="button" onClick={() => handleApplyStudioTemplate(template)} className="w-full rounded-lg bg-violet-600/15 text-violet-200 text-xs font-bold py-2">Use template</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
