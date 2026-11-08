@@ -117,7 +117,6 @@ export default function App() {
   }, []);
   const isLoggedIn = !!firebaseUser && !firebaseUser.isAnonymous && firebaseProfile?.id === firebaseUser.uid;
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
       username: 'visitor',
@@ -138,55 +137,8 @@ export default function App() {
       skills: []
     }));
 
-  const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
-    const map: Record<string, User> = {};
-
-    // 1. Official Nexora Account
-    const nexoraOfficial = getRichUser({
-      id: 'nexora_official_id',
-      username: 'nexoraofficial',
-      name: 'Nexora Official',
-      avatar: '/logo.svg',
-      bio: 'Official Nexora platform account. Secure decentralized global coordination & neural persistence protocol.',
-      location: 'Global Orbit',
-      website: 'https://nexora.app',
-      followers: 0,
-      following: 0,
-      sparks: 0,
-      isVerified: true,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined June 2026',
-      reputationPoints: 0,
-      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: { 'Technology': 100, 'AI': 100 },
-      skills: ['Protocol', 'Consensus']
-    });
-    map[nexoraOfficial.id] = nexoraOfficial;
-
-    // 2. Harrison Personal Account
-    const harrison = getRichUser({
-      id: 'user_voiceofharrison',
-      username: 'voiceofharrison',
-      name: 'Voice of Harrison',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Personal creator account. Building decentralized apps and neural architectures.',
-      location: 'Earth Orbit',
-      website: 'https://nexora.app',
-      followers: 0,
-      following: 0,
-      sparks: 0,
-      isVerified: true,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined June 2026',
-      reputationPoints: 0,
-      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: { 'Architecture': 90, 'AI': 90 },
-      skills: ['Systems Design', 'Full-Stack']
-    });
-    map[harrison.id] = harrison;
-
-    return map;
-  });
+  // Only profiles received from Firebase or the authenticated session are shown as people.
+  const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>({});
 
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
@@ -232,7 +184,6 @@ export default function App() {
   useEffect(() => {
     if (authInitializing) return;
     if (isLoggedIn && firebaseProfile) {
-      setIsDemoMode(false);
       setCurrentUser(getRichUser(firebaseProfile));
       localStorage.setItem('nexora_user', JSON.stringify(firebaseProfile));
       localStorage.removeItem('nexora_logged_in');
@@ -240,7 +191,7 @@ export default function App() {
     }
     localStorage.removeItem('nexora_user');
     localStorage.removeItem('nexora_logged_in');
-    if (!isDemoMode) setCurrentUser(getRichUser({
+    setCurrentUser(getRichUser({
       id: 'guest_visitor_id', username: 'visitor', name: 'Nexora Visitor',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       bio: 'Guest visitor browsing Nexora network.', location: 'Earth Orbit', website: 'https://nexora.app',
@@ -250,7 +201,7 @@ export default function App() {
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {}, skills: []
     }));
-  }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile, isDemoMode]);
+  }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile]);
 
   useEffect(() => {
     if (isLoggedIn && pendingAuthAction) {
@@ -317,12 +268,12 @@ export default function App() {
   }, [showDiagnosticsOverlay]);
 
   useEffect(() => {
-    if (!currentUser || !currentUser.id) return;
+    if (!isLoggedIn || !currentUser || !currentUser.id) return;
     setGlobalUsersMap(prev => ({
       ...prev,
       [currentUser.id]: currentUser
     }));
-  }, [currentUser]);
+  }, [isLoggedIn, currentUser]);
 
   useEffect(() => {
     let unsubPosts: () => void;
@@ -2093,7 +2044,7 @@ export default function App() {
   }, [posts]);
 
   // Do not render account data until the provider has resolved the current Firebase identity.
-  const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== 'demo-user-1' && currentUser.id !== firebaseUser?.uid;
+  const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== firebaseUser?.uid;
   if (authInitializing || staleAccountVisible) {
     return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring secure session…" /></div>;
   }
@@ -2338,7 +2289,7 @@ export default function App() {
                   )}
 
                   {activeTab === 'nida' && (
-                    <NidaView currentUser={getRichUser(currentUser)} />
+                    <NidaView currentUser={getRichUser(currentUser)} posts={resolvedPosts} />
                   )}
 
                   {activeTab === 'inbox' && (
@@ -2814,7 +2765,7 @@ export default function App() {
                   onClick={async () => {
                     try {
                       await logout();
-                      setIsDemoMode(false);
+
                       setViewedUser(null);
                       localStorage.removeItem('nexora_user');
                       localStorage.removeItem('nexora_logged_in');
@@ -3393,13 +3344,6 @@ export default function App() {
               <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-400">Loading secure sign-in…</div>}><AuthView
                 promptReason={authPromptReason}
                 onLoginSuccess={(loggedUser) => {
-                  if (loggedUser.id === 'demo-user-1' && import.meta.env.DEV) {
-                    setIsDemoMode(true);
-                    setCurrentUser(getRichUser(loggedUser));
-                    setShowAuthModal(false);
-                    return;
-                  }
-                  setIsDemoMode(false);
                   setCurrentUser(getRichUser(loggedUser));
                   setShowAuthModal(false);
                 }}
