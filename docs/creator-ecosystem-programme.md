@@ -156,3 +156,10 @@ The changes are committed to the feature branch. Automated build, lint and emula
 - Creators can save up to three owner-scoped membership tier drafts, each with a name, description and up to five unique benefits.
 - Drafts are created, updated and archived only through authenticated trusted callables. Firestore client writes are denied; owner-only reads are permitted.
 - This is a tier-definition workspace, not a paid membership checkout. No price, recurring debit, entitlement grant or cash/NEX charge is created. Checkout remains disabled until a verified payment provider and subscription lifecycle are implemented.
+
+
+### Persistent live rooms and chat
+- Added trusted server callables for starting/ending rooms, joining/leaving as a viewer, and sending persistent live chat messages.
+- Viewer counts are updated idempotently from server-owned viewer edges. Chat is limited to 5 messages per member per 10-second window, with a 500-character bound.
+- Active rooms and messages are readable by signed-in members; ended rooms are host-readable only. Clients cannot mutate session, viewer or message records directly.
+- The room/session/chat layer is now persistent, but the video transport remains explicitly `not_configured`. This work does not claim that camera streaming or remote playback is live yet.
