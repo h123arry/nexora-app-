@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { setAnalyticsObservationConsent } from '../services/analyticsService';
+import { SettingsService } from '../services/firebase/settingsService';
 import { 
   X, Shield, ShieldCheck, Eye, EyeOff, Check, AlertCircle, HardDrive, Sparkles, 
   Search, ChevronRight, ChevronDown, User, ShieldAlert, Monitor, Info, Trash2, 
@@ -12,6 +13,8 @@ import {
 
 interface PrivacySettingsModalProps {
   isOpen: boolean;
+  userId?: string;
+  profilePreview?: { name?: string; username?: string; avatar?: string; bio?: string; location?: string; coverImage?: string };
   onClose: () => void;
   privacy?: {
     visibility: 'everyone' | 'contacts' | 'nobody';
@@ -62,7 +65,9 @@ export default function PrivacySettingsModal({
   const [searchQuery, setSearchQuery] = useState('');
   
   // Custom List State for custom audiences
-  const [customPeople, setCustomPeople] = useState<string[]>(['Sophia Sterling', 'Lucas Cyber']);
+  const [customPeople, setCustomPeople] = useState<string[]>([]);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const [privacySaveError, setPrivacySaveError] = useState('');
   const [isAddingCustomPerson, setIsAddingCustomPerson] = useState(false);
   const [newCustomPersonName, setNewCustomPersonName] = useState('');
 
@@ -247,14 +252,26 @@ export default function PrivacySettingsModal({
   const [suspiciousActivity, setSuspiciousActivity] = useState<any[]>([]);
   const [analyticsObservations, setAnalyticsObservations] = useState(() => localStorage.getItem('nexora_analytics_observations_enabled') === 'true');
 
-  // Sync state changes back to local storage
+  // Load account-backed profile visibility preferences whenever this modal opens.
+  useEffect(() => {
+    if (!isOpen || !userId) return;
+    let active = true;
+    SettingsService.getSettings(userId).then(settings => {
+      if (active) setProfile(previous => ({ ...previous, ...settings.privacy.profileVisibility }));
+    }).catch(() => {
+      if (active) setPrivacySaveError('Could not load account privacy preferences. Changes may not be current.');
+    });
+    return () => { active = false; };
+  }, [isOpen, userId]);
+
+  // Sync legacy local-only controls. Profile visibility is cloud-backed when signed in.
   useEffect(() => {
     localStorage.setItem('nx_privacy_presence', JSON.stringify(presence));
   }, [presence]);
 
   useEffect(() => {
-    localStorage.setItem('nx_privacy_profile', JSON.stringify(profile));
-  }, [profile]);
+    if (!userId) localStorage.setItem('nx_privacy_profile', JSON.stringify(profile));
+  }, [profile, userId]);
 
   useEffect(() => {
     localStorage.setItem('nx_privacy_messaging', JSON.stringify(messaging));
@@ -314,21 +331,34 @@ export default function PrivacySettingsModal({
     }
   };
 
-  const handleApplyChanges = () => {
-    setAnalyticsObservationConsent(analyticsObservations);
-    if (onSavePrivacy) {
-      // Compatibility mapping
-      onSavePrivacy({
-        visibility: profile.profilePhoto === 'everyone' ? 'everyone' : (profile.profilePhoto === 'nobody' ? 'nobody' : 'contacts'),
-        lastSeen: presence.lastSeen === 'everyone' ? 'everyone' : (presence.lastSeen === 'nobody' ? 'nobody' : 'contacts'),
-        readReceipts: receipts.messageRead,
-        mediaQuality: 'saver'
-      });
+  const handleApplyChanges = async () => {
+    if (savingPrivacy) return;
+    setSavingPrivacy(true);
+    setPrivacySaveError('');
+    try {
+      setAnalyticsObservationConsent(analyticsObservations);
+      if (userId) {
+        await SettingsService.updatePrivacy(userId, { profileVisibility: profile });
+      } else {
+        localStorage.setItem('nx_privacy_profile', JSON.stringify(profile));
+      }
+      if (onSavePrivacy) {
+        onSavePrivacy({
+          visibility: profile.profilePhoto === 'everyone' ? 'everyone' : (profile.profilePhoto === 'nobody' ? 'nobody' : 'contacts'),
+          lastSeen: presence.lastSeen === 'everyone' ? 'everyone' : (presence.lastSeen === 'nobody' ? 'nobody' : 'contacts'),
+          readReceipts: receipts.messageRead,
+          mediaQuality: 'saver'
+        });
+      }
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: userId ? 'Profile visibility preferences saved to your NEXORA account.' : 'Privacy preferences saved on this device.'
+      }));
+      onClose();
+    } catch {
+      setPrivacySaveError('Your profile visibility preferences could not be saved. Please retry.');
+    } finally {
+      setSavingPrivacy(false);
     }
-    window.dispatchEvent(new CustomEvent('toast', { 
-      detail: "🔒 All security parameters updated across the Nexora node network!" 
-    }));
-    onClose();
   };
 
   // Profile Preview Simulator Logic
@@ -467,7 +497,7 @@ export default function PrivacySettingsModal({
             <div className="w-full md:w-64 border-r border-white/5 bg-black/20 overflow-y-auto p-3 space-y-1">
               {[
                 { id: 'presence', label: 'Presence & Activity', icon: Eye, count: Object.keys(presence).length },
-                { id: 'profile', label: 'Profile Visibility & Preview', icon: User, badge: 'Live Simulator' },
+                { id: 'profile', label: 'Profile Visibility', icon: User, badge: 'Account saved' },
                 { id: 'messaging', label: 'Messaging Settings', icon: Radio, count: Object.keys(messaging).length },
                 { id: 'calls', label: 'Call Controls & Silence', icon: Phone, count: Object.keys(calls).length },
                 { id: 'groups', label: 'Group Ledger Rights', icon: Lock, count: Object.keys(groups).length },
@@ -570,14 +600,14 @@ export default function PrivacySettingsModal({
                 </div>
               )}
 
-              {/* Profile Visibility Tab (With Two Live Preview Mockup Cards!) */}
+              {/* Profile visibility settings and audience preview */}
               {activeTab === 'profile' && (
                 <div className="space-y-6 text-left">
                   <div>
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                      <User className="w-4 h-4 text-violet-400" /> Granular Profile Parameters & Simulator
+                      <User className="w-4 h-4 text-violet-400" /> Profile visibility preferences
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1">Separately toggle visibility for every element of your identity ledger. Test your privacy using the live inspector simulator.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1">Choose who should be able to see each profile field. These preferences are saved to your account; each profile and discovery surface must also enforce them.</p>
                   </div>
 
                   {/* Dual Column: Settings (Left) vs Real-Time Simulator (Right) */}
@@ -589,17 +619,17 @@ export default function PrivacySettingsModal({
                         { key: 'profilePhoto', label: 'Profile Picture / NFT Avatar' },
                         { key: 'coverPhoto', label: 'Profile Background / Banner' },
                         { key: 'displayName', label: 'Legal Display Name' },
-                        { key: 'username', label: 'Hexora Username (@handle)' },
+                        { key: 'username', label: 'Username (@handle)' },
                         { key: 'bio', label: 'Biography Profile Metadata' },
                         { key: 'pronouns', label: 'Pronouns Indicator' },
                         { key: 'website', label: 'External Connected Website' },
-                        { key: 'verifiedBadge', label: 'Decentralized Verified Badge' },
-                        { key: 'location', label: 'Relay Geolocation Grid' },
+                        { key: 'verifiedBadge', label: 'Verified badge' },
+                        { key: 'location', label: 'Location' },
                         { key: 'birthday', label: 'Birthdate / Solar Coordinates' },
-                        { key: 'joinedDate', label: 'Account Activation Timestamp' },
+                        { key: 'joinedDate', label: 'Joined date' },
                         { key: 'followerCount', label: 'Followers List & Counter' },
-                        { key: 'posts', label: 'Immutable Feed Posts' },
-                        { key: 'likes', label: 'Activity Likes Archive' }
+                        { key: 'posts', label: 'Posts' },
+                        { key: 'likes', label: 'Likes' }
                       ].map(item => {
                         const val = profile[item.key as keyof typeof profile] as VisibilityAudience;
                         return (
@@ -629,7 +659,7 @@ export default function PrivacySettingsModal({
                     <div className="lg:col-span-5 bg-black/40 border border-white/5 rounded-2xl p-4 space-y-4 text-left">
                       <div className="flex items-center justify-between">
                         <span className="text-[10px] font-mono font-black uppercase text-violet-400 flex items-center gap-1.5">
-                          <Sparkles className="w-3.5 h-3.5" /> Identity Simulator
+                          <Sparkles className="w-3.5 h-3.5" /> Audience preview
                         </span>
                         
                         <div className="flex items-center gap-1 bg-zinc-950 p-1 border border-white/5 rounded-xl">
@@ -655,7 +685,7 @@ export default function PrivacySettingsModal({
                         <div className="h-20 bg-slate-800 rounded-xl relative overflow-hidden">
                           {canViewParameter('coverPhoto', profile.coverPhoto) ? (
                             <img 
-                              src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80" 
+                              src={profilePreview?.coverImage || undefined} 
                               alt="Cover" 
                               className="w-full h-full object-cover"
                             />
@@ -669,7 +699,7 @@ export default function PrivacySettingsModal({
                           <div className="absolute -bottom-4 left-4 w-12 h-12 rounded-xl bg-violet-600 p-0.5 border-2 border-black">
                             {canViewParameter('profilePhoto', profile.profilePhoto) ? (
                               <img 
-                                src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150" 
+                                src={profilePreview?.avatar || undefined} 
                                 alt="Avatar" 
                                 className="w-full h-full object-cover rounded-lg"
                               />
@@ -685,7 +715,7 @@ export default function PrivacySettingsModal({
                         <div className="pt-2 space-y-2">
                           <div className="flex items-center gap-1.5">
                             <span className="text-sm font-black">
-                              {canViewParameter('displayName', profile.displayName) ? 'Evelyn VOH' : '••••••••'}
+                              {canViewParameter('displayName', profile.displayName) ? (profilePreview?.name || 'Your name') : '••••••••'}
                             </span>
                             {canViewParameter('verifiedBadge', profile.verifiedBadge) && (
                               <span className="w-3.5 h-3.5 bg-violet-600 text-[8px] font-black rounded-full flex items-center justify-center text-white" title="Verified Ledger Node">✓</span>
@@ -693,12 +723,12 @@ export default function PrivacySettingsModal({
                           </div>
 
                           <div className="text-[10px] font-mono text-zinc-500">
-                            {canViewParameter('username', profile.username) ? '@evelyn_voh_node' : '@hidden_handle'}
+                            {canViewParameter('username', profile.username) ? (profilePreview?.username ? `@${profilePreview.username}` : '@your-username') : '@hidden_handle'}
                           </div>
 
                           <div className="text-[10px] bg-slate-950 p-2 border border-white/5 rounded-xl text-zinc-400">
                             <span className="text-[8px] font-mono uppercase text-zinc-600 block mb-0.5">Biography</span>
-                            {canViewParameter('bio', profile.bio) ? 'Leading decentralized security integrations for Nexora Mesh Networks.' : '🔒 Restricted by protocol'}
+                            {canViewParameter('bio', profile.bio) ? (profilePreview?.bio || 'No bio added yet.') : '🔒 Restricted by protocol'}
                           </div>
 
                           {/* Grid with other attributes */}
@@ -706,7 +736,7 @@ export default function PrivacySettingsModal({
                             <div className="bg-slate-950 p-1.5 border border-white/5 rounded-lg">
                               <span className="text-[7px] font-mono uppercase text-zinc-600 block">Location</span>
                               <span className="text-[9px] text-zinc-400">
-                                {canViewParameter('location', profile.location) ? '📍 London, UK' : '🔒 Restricted'}
+                                {canViewParameter('location', profile.location) ? (profilePreview?.location || 'No location added') : '🔒 Restricted'}
                               </span>
                             </div>
                             <div className="bg-slate-950 p-1.5 border border-white/5 rounded-lg">
@@ -1196,7 +1226,7 @@ export default function PrivacySettingsModal({
                       </div>
                     </div>
 
-                    {/* Change PIN visual simulation */}
+                    {/* Hidden chat access settings */}
                     <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col justify-between">
                       <div className="space-y-2">
                         <span className="text-xs font-black text-indigo-400 font-mono uppercase block">Active Gate Authorization Key</span>
@@ -1316,11 +1346,11 @@ export default function PrivacySettingsModal({
                 Cancel Settings
               </button>
               <button
-                onClick={handleApplyChanges}
+                onClick={() => void handleApplyChanges()}
                 className="px-6 py-2.5 bg-gradient-to-r from-violet-600 via-indigo-600 to-pink-500 hover:brightness-110 active:scale-98 rounded-xl text-xs font-mono uppercase tracking-widest font-black text-white shadow-lg shadow-violet-950/40 transition-all cursor-pointer flex items-center gap-1.5"
               >
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
-                <span>Apply Settings</span>
+                <span>{savingPrivacy ? 'Saving…' : 'Apply Settings'}</span>
               </button>
             </div>
           </div>

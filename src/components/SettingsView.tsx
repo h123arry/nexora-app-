@@ -308,7 +308,12 @@ export default function SettingsView({
         </div>
       </div>
       <Suspense fallback={null}>
-        <PrivacySettingsModal isOpen={showPrivacyDetails} onClose={() => setShowPrivacyDetails(false)} />
+        <PrivacySettingsModal
+          isOpen={showPrivacyDetails}
+          onClose={() => setShowPrivacyDetails(false)}
+          userId={currentUser.id}
+          profilePreview={{ name: currentUser.name, username: currentUser.username, avatar: currentUser.avatar, bio: currentUser.bio, location: currentUser.location, coverImage: currentUser.coverImage }}
+        />
       </Suspense>
     </div>
   );
