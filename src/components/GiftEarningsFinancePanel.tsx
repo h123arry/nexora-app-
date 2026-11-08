@@ -7,6 +7,18 @@ function dateLabel(value: string | null): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 'Date unavailable' : date.toLocaleString();
 }
+function riskLabel(disposition: PendingGiftEarningForFinance['riskDisposition']): string {
+  if (disposition === 'auto_cleared') return 'Low risk · auto-cleared';
+  if (disposition === 'cleared') return 'Finance-cleared';
+  if (disposition === 'escalated') return 'Escalated · settlement blocked';
+  if (disposition === 'legacy_manual_review') return 'Legacy record · finance review';
+  return 'Risk review required';
+}
+function canSettle(record: PendingGiftEarningForFinance): boolean {
+  return record.riskDisposition === 'auto_cleared'
+    || record.riskDisposition === 'cleared'
+    || record.riskDisposition === 'legacy_manual_review';
+}
 export default function GiftEarningsFinancePanel() {
   const [records, setRecords] = useState<PendingGiftEarningForFinance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,8 +74,17 @@ export default function GiftEarningsFinancePanel() {
           <div className="min-w-0"><p className="font-bold text-white">{record.giftName || 'GIFTVERSE gift'}{record.quantity > 1 ? ` ×${record.quantity}` : ''}</p><p className="mt-1 text-[10px] text-slate-500">{dateLabel(record.createdAt)}</p><p className="mt-1 break-all text-[10px] text-slate-600">Creator {record.creatorId} · Sender {record.senderId}</p></div>
           <div className="text-right"><p className="text-lg font-black tabular-nums text-white">{record.grossNex.toLocaleString()} NEX</p><p className="text-[10px] text-amber-200">Held in escrow</p></div>
         </div>
-        <button type="button" disabled={!!busyId} onClick={() => void settle(record)} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 text-xs font-bold text-white disabled:opacity-50">
-          {busyId === record.transactionId ? <RefreshCw size={14} className="animate-spin"/> : <Wallet size={14}/>} {busyId === record.transactionId ? 'Settling securely…' : 'Approve and settle 70/30'}
+        <div className="mt-3 rounded-lg border border-white/10 bg-white/[.03] p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[10px] font-bold text-violet-200">{riskLabel(record.riskDisposition)}</span>
+            <span className="text-[10px] text-slate-500">{record.riskTier ? record.riskTier.toUpperCase() + ' risk' : 'No risk signal'}</span>
+          </div>
+          {record.riskReasons.length > 0 && <p className="mt-1 text-[10px] leading-4 text-slate-400">{record.riskReasons.join(' · ')}</p>}
+          {record.riskDisposition === 'review_only' && <p className="mt-1 text-[10px] text-amber-200">Clear this signal in Gift Economy Operations before settling.</p>}
+          {record.riskDisposition === 'escalated' && <p className="mt-1 text-[10px] text-rose-200">This gift cannot be settled while the risk decision is escalated.</p>}
+        </div>
+        <button type="button" disabled={!!busyId || !canSettle(record)} onClick={() => void settle(record)} className="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 px-4 text-xs font-bold text-white disabled:opacity-50">
+          {busyId === record.transactionId ? <RefreshCw size={14} className="animate-spin"/> : <Wallet size={14}/>} {busyId === record.transactionId ? 'Settling securely…' : canSettle(record) ? 'Approve and settle 70/30' : 'Risk clearance required'}
         </button>
       </article>)}</div>}
     {hasMore && <p className="text-[10px] text-slate-500">Showing the latest 100 pending records. Older queue items require a subsequent page.</p>}
