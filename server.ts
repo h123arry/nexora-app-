@@ -339,6 +339,11 @@ function cleanMemoryStrings(value: unknown, maxItems: number, maxLength: number)
     .filter(Boolean);
 }
 
+function containsSensitiveMemoryFact(facts: string[]): boolean {
+  const sensitivePattern = /\\b(password|passcode|passphrase|secret key|one[- ]time code|otp|verification code|pin(?: number| code)?|account number|bank details|credit card|debit card|card number|cvv|cvc|bvn|nin|tin|tax identification number|tax id|private key|recovery phrase|seed phrase|api key|access token|bearer token)\\b/i;
+  return facts.some(fact => sensitivePattern.test(fact));
+}
+
 function shapeVohMemory(input: any) {
   const preferences = input?.preferences && typeof input.preferences === 'object' ? input.preferences : {};
   const savedPrompts = Array.isArray(input?.savedPrompts)
@@ -387,6 +392,10 @@ vohRouter.put('/memory', async (req, res) => {
     const uid = res.locals.vohUid as string;
     if (req.body?.memoryEnabled !== true || req.body?.consentVersion !== VOH_MEMORY_CONSENT_VERSION) {
       return res.status(400).json({ error: 'Explicit, current memory consent is required.' });
+    }
+    const requestedFacts = cleanMemoryStrings(req.body?.personalFacts, 60, 500);
+    if (containsSensitiveMemoryFact(requestedFacts)) {
+      return res.status(400).json({ error: 'VOH memory does not accept passwords, financial credentials, or sensitive identity numbers.' });
     }
     const memory = shapeVohMemory(req.body);
     await serverDb.collection(VOH_MEMORY_COLLECTION).doc(uid).set({
