@@ -61,8 +61,18 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
   const secret = PAYSTACK_SECRET_KEY.value();
   const mode = providerMode(secret);
   const policy = await payoutPolicy();
+  let credentialsVerified = false;
+  let ngnBalanceKobo: number | null = null;
+  if (mode !== 'unknown') {
+    try {
+      const balances = await paystack('/balance?currency=NGN', 'GET');
+      credentialsVerified = true;
+      const ngn = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN') : null;
+      ngnBalanceKobo = Number.isSafeInteger(ngn?.balance) ? ngn.balance : null;
+    } catch { credentialsVerified = false; }
+  }
   return {
-    provider: 'paystack', configured: mode !== 'unknown', mode,
+    provider: 'paystack', configured: mode !== 'unknown', credentialsVerified, ngnBalanceKobo, mode,
     corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && (mode === 'test' || livePayoutGatesPassed(policy)),
     liveSettlementApproved: policy.liveSettlementApproved === true,
     cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && livePayoutGatesPassed(policy),
@@ -78,7 +88,16 @@ export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_K
   requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const policy = await payoutPolicy();
+  let credentialsVerified = false;
+  let ngnBalanceKobo: number | null = null;
+  try {
+    const balances = await paystack('/balance?currency=NGN', 'GET');
+    credentialsVerified = true;
+    const ngn = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN') : null;
+    ngnBalanceKobo = Number.isSafeInteger(ngn?.balance) ? ngn.balance : null;
+  } catch { credentialsVerified = false; }
   return {
+    credentialsVerified, ngnBalanceKobo,
     mode: providerMode(PAYSTACK_SECRET_KEY.value()), enabled: policy.enabled === true,
     koboPerNex: policy.koboPerNex ?? null, providerFeeBufferKobo: policy.providerFeeBufferKobo ?? null,
     minimumNex: policy.minimumNex ?? null, maximumNex: policy.maximumNex ?? null,
@@ -125,6 +144,10 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY],
     throw new HttpsError('invalid-argument', 'A reviewed NEX/NGN rate, withdrawal limits and explicit enablement decision are required.');
   }
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
+  if (enabled && mode !== 'unknown') {
+    try { await paystack('/balance?currency=NGN', 'GET'); }
+    catch { throw new HttpsError('failed-precondition', 'Paystack credentials could not be authenticated. Verify the environment key before enabling payouts.'); }
+  }
   if (enabled && mode === 'unknown') throw new HttpsError('failed-precondition', 'A valid Paystack secret is required before enabling transfers.');
   if (mode === 'live' && enabled && (liveSettlementApproved !== true || providerBusinessVerified !== true || settlementFundingVerified !== true || complianceApproved !== true || webhookVerified !== true || liveTestTransferVerified !== true || providerFeeBufferKobo <= 0 || !safeText(liveEvidenceReference, 160))) {
     throw new HttpsError('failed-precondition', 'Live transfers require verified registered-business status, funded settlement balance, compliance approval, verified webhooks and a successful controlled live test transfer.');
