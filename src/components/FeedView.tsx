@@ -183,6 +183,7 @@ interface FeedViewProps {
   theme?: ThemeMood;
   onSharePost?: (postId: string) => void;
   onRepostPost?: (postId: string) => void;
+  onQuotePost?: (postId: string, quoteText: string) => Promise<boolean> | boolean;
   activeTab?: string;
   unreadMessagesCount?: number;
   onOpenMessages?: () => void;
@@ -214,6 +215,7 @@ export default function FeedView({
   theme = 'stealth-dark',
   onSharePost,
   onRepostPost,
+  onQuotePost,
   activeTab = 'feed',
   unreadMessagesCount = 0,
   onOpenMessages,
@@ -432,6 +434,9 @@ export default function FeedView({
   const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
   const [replyInputs, setReplyInputs] = useState<Record<string, string>>({});
   const [activeReplyFieldId, setActiveReplyFieldId] = useState<string | null>(null);
+  const [quoteTargetPost, setQuoteTargetPost] = useState<Post | null>(null);
+  const [quoteDraft, setQuoteDraft] = useState('');
+  const [isSubmittingQuote, setIsSubmittingQuote] = useState(false);
 
   // Moments List State (hydrated and preserved)
   const [momentsList, setMomentsList] = useState<any[]>(() => {
@@ -2398,6 +2403,7 @@ export default function FeedView({
                 onSave={handleSave}
                 onSharePost={onSharePost}
                 onRepostPost={onRepostPost}
+                onQuotePost={post => { setQuoteTargetPost(post); setQuoteDraft(''); }}
                 onCommentToggle={(postId) => setActiveCommentsPostId(activeCommentsPostId === postId ? null : postId)}
                 onToggleFollow={onToggleFollow}
                 onViewProfile={onViewProfile}
@@ -3850,6 +3856,47 @@ export default function FeedView({
                 Got It
               </button>
             </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {quoteTargetPost && (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/80 backdrop-blur-md p-4" onClick={() => !isSubmittingQuote && setQuoteTargetPost(null)}>
+            <motion.section
+              initial={{ opacity: 0, y: 18, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 18, scale: 0.98 }}
+              onClick={event => event.stopPropagation()}
+              className="w-full max-w-xl rounded-3xl border border-violet-400/25 bg-[#090714] p-5 shadow-2xl shadow-violet-950/40"
+              role="dialog" aria-modal="true" aria-labelledby="nexora-quote-title"
+            >
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <h2 id="nexora-quote-title" className="text-lg font-black text-white">Quote post</h2>
+                  <p className="mt-1 text-xs text-violet-200/70">Add your perspective before sharing it with your network.</p>
+                </div>
+                <button type="button" onClick={() => setQuoteTargetPost(null)} disabled={isSubmittingQuote} aria-label="Close quote composer" className="rounded-xl p-2 text-zinc-400 hover:bg-white/5 hover:text-white disabled:opacity-40"><X className="h-5 w-5" /></button>
+              </div>
+              <textarea value={quoteDraft} onChange={event => setQuoteDraft(event.target.value.slice(0, 500))} maxLength={500} rows={4} autoFocus placeholder="What do you want to add to this conversation?" className="w-full resize-y rounded-2xl border border-white/10 bg-[#120e2b] p-4 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-violet-500" />
+              <div className="mt-1 flex justify-end text-[10px] text-zinc-500">{quoteDraft.length}/500</div>
+              <div className="mt-3 rounded-2xl border border-violet-400/20 bg-violet-950/20 p-4">
+                <p className="text-xs font-bold text-violet-200">{quoteTargetPost.name} <span className="font-normal text-violet-300/70">@{quoteTargetPost.username}</span></p>
+                <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-300">{quoteTargetPost.content.slice(0, 700)}{quoteTargetPost.content.length > 700 ? '…' : ''}</p>
+                <p className="mt-3 text-[10px] text-violet-300/70">Original post will remain attributed to its creator.</p>
+              </div>
+              <div className="mt-4 flex justify-end gap-2">
+                <button type="button" onClick={() => setQuoteTargetPost(null)} disabled={isSubmittingQuote} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-bold text-zinc-300 hover:bg-white/5 disabled:opacity-40">Cancel</button>
+                <button type="button" disabled={isSubmittingQuote || !quoteDraft.trim() || !onQuotePost} onClick={async () => {
+                  if (!quoteTargetPost || !onQuotePost || !quoteDraft.trim()) return;
+                  setIsSubmittingQuote(true);
+                  try {
+                    const success = await onQuotePost(quoteTargetPost.id, quoteDraft.trim());
+                    if (success) { setQuoteTargetPost(null); setQuoteDraft(''); }
+                  } finally { setIsSubmittingQuote(false); }
+                }} className="rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-extrabold text-white hover:bg-violet-500 disabled:opacity-40">{isSubmittingQuote ? 'Posting…' : 'Quote post'}</button>
+              </div>
+            </motion.section>
           </div>
         )}
       </AnimatePresence>

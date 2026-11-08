@@ -10,6 +10,7 @@ const actorId = 'repost-test-actor';
 const authorId = 'repost-test-author';
 const sourcePostId = 'repost-test-public-source';
 const privatePostId = 'repost-test-private-source';
+const quoteSourcePostId = 'repost-test-quote-source';
 const createdRepostIds = new Set<string>();
 const app = initializeApp({ projectId }, 'post-repost-tests');
 const db = getFirestore(app);
@@ -24,12 +25,15 @@ before(async () => {
     timestamp: new Date().toISOString(), image: 'https://example.test/post.png',
   });
   await db.doc(`posts/${privatePostId}`).set({ id: privatePostId, userId: authorId, audience: 'followers', shares: 0 });
+  await db.doc(`posts/${quoteSourcePostId}`).set({ id: quoteSourcePostId, userId: authorId, username: authorId, name: 'Repost Author', content: 'Original quote source', audience: 'public', tags: [], shares: 0 });
 });
 
 after(async () => {
   await Promise.all([
     db.doc(`posts/${sourcePostId}`).delete(),
     db.doc(`posts/${privatePostId}`).delete(),
+    db.doc(`posts/${quoteSourcePostId}`).delete(),
+    db.doc(`users/${actorId}/postReposts/${quoteSourcePostId}`).delete(),
     db.doc(`publicProfiles/${actorId}`).delete(),
     db.doc(`publicProfiles/${authorId}`).delete(),
     db.doc(`users/${actorId}/postReposts/${sourcePostId}`).delete(),
@@ -61,6 +65,18 @@ test('retries are idempotent and do not create duplicate reposts or inflate coun
   assert.equal(second.repostPostId, first.repostPostId);
   assert.equal(second.shares, first.shares);
   assert.equal((await db.collection('posts').where('sourcePostId', '==', sourcePostId).get()).size, 1);
+});
+
+
+test('creates a quote repost while preserving the original creator and source text', async () => {
+  const result = await createPublicPostRepost(db, actorId, quoteSourcePostId, 'My perspective on this.');
+  createdRepostIds.add(result.repostPostId);
+  const repost = await db.doc(`posts/${result.repostPostId}`).get();
+  assert.equal(repost.get('isQuoteRepost'), true);
+  assert.equal(repost.get('quoteText'), 'My perspective on this.');
+  assert.equal(repost.get('content'), 'My perspective on this.');
+  assert.equal(repost.get('sourcePostContent'), 'Original quote source');
+  assert.equal(repost.get('sourceAuthorUsername'), authorId);
 });
 
 test('rejects private, missing and malformed source posts', async () => {

@@ -16,9 +16,12 @@ export async function createPublicPostRepost(
   db: Firestore,
   uid: string,
   postId: string,
+  rawQuoteText?: string,
 ): Promise<PostRepostResult> {
   if (!uid || typeof uid !== 'string') throw new Error('Authentication is required.');
   if (!validId(postId)) throw new Error('Invalid post ID.');
+  const quoteText = typeof rawQuoteText === 'string' ? rawQuoteText.trim() : '';
+  if (quoteText.length > 500) throw new Error('Quote text cannot exceed 500 characters.');
 
   const sourceRef = db.collection('posts').doc(postId);
   const markerRef = db.collection('users').doc(uid).collection('postReposts').doc(postId);
@@ -56,7 +59,9 @@ export async function createPublicPostRepost(
       name: String(profile.name || profile.username || 'NEXORA member').slice(0, 100),
       avatar: typeof profile.avatar === 'string' ? profile.avatar.slice(0, 1000) : '',
       isVerified: profile.isVerified === true,
-      content: String(sourceData.sourcePostContent || sourceData.content || '').slice(0, 5000),
+      content: quoteText || String(sourceData.sourcePostContent || sourceData.content || '').slice(0, 5000),
+      quoteText: quoteText || undefined,
+      isQuoteRepost: Boolean(quoteText),
       sourcePostContent: String(sourceData.sourcePostContent || sourceData.content || '').slice(0, 5000),
       sourceAuthorId: String(sourceData.sourceAuthorId || sourceData.userId || sourceData.authorId || ''),
       sourceAuthorUsername: String(sourceData.sourceAuthorUsername || sourceData.username || 'member').slice(0, 80),

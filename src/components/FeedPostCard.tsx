@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Zap, Repeat, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
+  Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
   Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, 
   Edit2, UserPlus, VolumeX, Pin, BookOpen, Archive, Trash, Sparkles, 
   BarChart2, Sliders, X, Check
@@ -31,6 +31,7 @@ interface FeedPostCardProps {
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
   onRepostPost?: (postId: string) => void;
+  onQuotePost?: (postId: string) => void;
   onCommentToggle: (postId: string) => void;
   onToggleFollow?: (userId: string) => void;
   onViewProfile?: (userId: string) => void;
@@ -84,6 +85,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   onSave,
   onSharePost,
   onRepostPost,
+  onQuotePost,
   onCommentToggle,
   onToggleFollow,
   onViewProfile,
@@ -512,6 +514,12 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                   <p className="text-sm text-slate-100 font-sans leading-relaxed whitespace-pre-wrap select-all">
                     {displayContent}
                   </p>
+                  {post.isQuoteRepost && post.sourcePostContent && (
+                    <div className="mt-3 rounded-2xl border border-violet-400/20 bg-[#0d0a20] p-3">
+                      <p className="text-[10px] font-semibold text-violet-200">{post.sourceAuthorName || 'Original creator'} <span className="font-normal text-violet-300/70">@{post.sourceAuthorUsername || 'member'}</span></p>
+                      <p className="mt-2 whitespace-pre-wrap text-xs leading-relaxed text-zinc-300">{post.sourcePostContent}</p>
+                    </div>
+                  )}
                   {shouldTruncate && !isExpanded && (
                     <button
                       onClick={() => setExpandedPostIds((prev) => [...prev, post.id])}
@@ -760,6 +768,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               <Repeat className="w-6 h-6 text-white" />
               <span className="text-[10px] font-mono font-bold">{post.shares || 0}</span>
             </button>
+
+            <button type="button" onClick={() => onQuotePost?.(post.id)} disabled={!onQuotePost} className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer disabled:opacity-40" title="Quote post" aria-label={`Quote post by ${post.name}`}><Quote className="w-5 h-5 text-violet-200" /><span className="text-[10px] font-mono font-bold">Quote</span></button>
 
             {/* Share */}
             <button

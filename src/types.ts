@@ -186,6 +186,8 @@ export interface Post {
   media?: string;
   opportunityType?: string;
   isRepost?: boolean;
+  isQuoteRepost?: boolean;
+  quoteText?: string;
   sourcePostId?: string;
   repostedBy?: string;
   sourcePostContent?: string;
