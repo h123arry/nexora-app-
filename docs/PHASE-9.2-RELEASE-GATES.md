@@ -15,7 +15,18 @@ This checklist is an engineering release contract. A checkbox is complete only w
 - [ ] Verify transport metrics, provider usage limits, recording policy, retention and replay delivery before advertising replays.
 - [ ] Run a staged concurrency/load test and record latency, packet loss, reconnect rate and provider cost.
 
-Current status: persistent room, viewer and chat infrastructure is implemented in PR #127. Camera capture, SFU transport, recording and replay are not configured.
+Current status: persistent room, viewer and chat infrastructure is merged in PR #127. The LiveKit adapter now issues 10-minute server-signed tokens, derives host/viewer grants from trusted session and viewer-edge state, and connects the browser camera/microphone and remote tracks. Provider credentials, staging transport acceptance, load evidence, recording and replay are still not configured or verified.
+
+### LiveKit environment setup
+Use separate LiveKit Cloud projects for staging and production. Provision these values as Firebase Functions secrets in each matching Firebase project:
+```bash
+firebase use <nexora-staging-project>
+firebase functions:secrets:set LIVEKIT_API_KEY
+firebase functions:secrets:set LIVEKIT_API_SECRET
+firebase functions:secrets:set LIVEKIT_URL
+firebase deploy --only functions
+```
+Set `LIVEKIT_URL` to the project's secure WebSocket endpoint (`wss://...`). Never put the API secret in Vite variables, browser storage, source files or chat. The token callable verifies the authenticated Firebase user, active room, host or exact live viewer connection, and account restrictions. Host tokens can publish; viewer tokens can only subscribe. Tokens expire after ten minutes. Repeat the same process with production credentials only after staging acceptance.
 
 ## 2. Production Firebase deployment verification
 
