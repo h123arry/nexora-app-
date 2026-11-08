@@ -3,22 +3,12 @@ import { auth, db } from './config';
 import { User } from '../../types';
 import { User as FirebaseUser } from 'firebase/auth';
 import { checkUsernameStatus, normalizeUsername } from '../../utils/username';
+import { createPublicProfileProjection } from './publicProfileProjection';
 
 export class ProfileService {
   /** Public projection deliberately excludes email, phone, role, moderation flags, balances and preferences. */
-  private static toPublicProfile(user: User): Partial<User> {
-    const {
-      id, username, name, avatar, bio, location, website, followers, following,
-      sparks, isVerified, hasStory, coverImage, joinedDate, reputationPoints,
-      reputationBreakdown, skills, statusText, statusEmoji,
-      pinnedMusicSong, pinnedMusicArtist, pinnedMusicUrl, pinnedPosts
-    } = user;
-    return Object.fromEntries(Object.entries({
-      id, username, name, avatar, bio, location, website, followers, following,
-      sparks, isVerified, hasStory, coverImage, joinedDate, reputationPoints,
-      reputationBreakdown, skills, statusText, statusEmoji,
-      pinnedMusicSong, pinnedMusicArtist, pinnedMusicUrl, pinnedPosts
-    }).filter(([, value]) => value !== undefined));
+  private static toPublicProfile(user: User, includeLocation = false): Partial<User> {
+    return createPublicProfileProjection(user, { includeLocation });
   }
 
   /** Retrieves the caller's private profile. Firestore rules restrict this to the owner. */
@@ -73,7 +63,7 @@ export class ProfileService {
       batch.set(doc(db, 'users', uid), {
         ...newUser, email: cleanEmail, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
       }, { merge: true });
-      batch.set(doc(db, 'publicProfiles', uid), this.toPublicProfile(newUser), { merge: true });
+      batch.set(doc(db, 'publicProfiles', uid), { ...this.toPublicProfile(newUser), location: deleteField() }, { merge: true });
       await batch.commit();
     }
     return newUser;
@@ -91,8 +81,13 @@ export class ProfileService {
     await updateDoc(docRef, { ...updates, updatedAt: serverTimestamp() });
     const existing = await this.getProfile(uid);
     if (existing) {
+      const settingsSnapshot = await getDoc(doc(db, 'users', uid, 'settings', 'preferences'));
+      const includeLocation = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';
       await setDoc(doc(db, 'publicProfiles', uid), {
-        ...this.toPublicProfile({ ...existing, ...updates }),
+        ...this.toPublicProfile({ ...existing, ...updates }, includeLocation),
+        location: includeLocation && typeof existing.location === 'string' && existing.location.trim()
+          ? existing.location
+          : deleteField(),
         interestDNA: deleteField(),
       }, { merge: true });
     }
@@ -109,8 +104,13 @@ export class ProfileService {
       }, firebaseUser.email || '');
     } else if (db) {
       // Existing users migrate only their own sanitized public projection at next authenticated session.
+      const settingsSnapshot = await getDoc(doc(db, 'users', firebaseUser.uid, 'settings', 'preferences'));
+      const includeLocation = settingsSnapshot.get('privacy.profileVisibility.location') === 'everyone';
       await setDoc(doc(db, 'publicProfiles', firebaseUser.uid), {
-        ...this.toPublicProfile(profile),
+        ...this.toPublicProfile(profile, includeLocation),
+        location: includeLocation && typeof profile.location === 'string' && profile.location.trim()
+          ? profile.location
+          : deleteField(),
         interestDNA: deleteField(),
       }, { merge: true });
     }
