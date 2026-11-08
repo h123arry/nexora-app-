@@ -1486,7 +1486,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
           <div className="lg:col-span-12 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
               
-              {/* Left Column: Direct Metrics dashboard (NOT fake) */}
+              {/* Left Column: Loaded creator account metrics */}
               <div className="md:col-span-4 bg-[#03010b] border border-white/10 rounded-3xl p-5 space-y-5">
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">CREATOR ECONOMY</span>
                 
