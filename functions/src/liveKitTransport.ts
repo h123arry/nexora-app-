@@ -9,6 +9,7 @@ const apiKey = defineSecret('LIVEKIT_API_KEY');
 const apiSecret = defineSecret('LIVEKIT_API_SECRET');
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const TOKEN_TTL_SECONDS = 10 * 60;
+const DEFAULT_LIVEKIT_URL = 'wss://nexora-live-is43sh5r.livekit.cloud';
 
 /**
  * Issues short-lived LiveKit credentials only after deriving identity, room and
@@ -52,7 +53,7 @@ export const getLiveKitToken = onCall(
     }
     const key = apiKey.value();
     const secret = apiSecret.value();
-    const wsUrl = process.env.LIVEKIT_URL?.trim();
+    const wsUrl = process.env.LIVEKIT_URL?.trim() || DEFAULT_LIVEKIT_URL;
     if (!key || !secret || !wsUrl || !/^wss:\/\//i.test(wsUrl)) {
       throw new HttpsError('failed-precondition', 'NEXORA Live video is not configured by the server yet.');
     }
