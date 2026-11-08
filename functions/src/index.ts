@@ -4,6 +4,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
+import { createPublicPostRepost } from './postReposts.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
@@ -170,6 +171,23 @@ export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) =>
   }
 });
 
+
+export const repostPublicPost = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to repost.');
+  const postId = request.data?.postId;
+  if (typeof postId !== 'string' || postId.length < 1 || postId.length > 150 || postId.includes('/')) {
+    throw new HttpsError('invalid-argument', 'A valid post ID is required.');
+  }
+  try {
+    return await createPublicPostRepost(adminDb, request.auth.uid, postId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('unavailable')) throw new HttpsError('not-found', 'This public post is unavailable.');
+    if (message.includes('Invalid')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('public profile')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The post could not be reposted. Please retry.');
+  }
+});
 
 export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Circle roles.');
