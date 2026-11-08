@@ -15,7 +15,7 @@ function valid<T>(fn: () => T): T {
   try { return fn(); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Live room details are invalid.'); }
 }
-function accountRestricted(data: FirebaseFirestore.DocumentData | undefined, field: string): boolean {
+function accountRestricted(data: Record<string, any> | undefined, field: string): boolean {
   if (!data?.[field]) return false;
   const expiresAt = data.expiresAt?.toMillis?.();
   return !expiresAt || expiresAt > Date.now();
@@ -140,7 +140,7 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
         windowStartedAtMs: rateData?.windowStartedAt?.toMillis?.() || 0,
         messageCount: Number.isSafeInteger(rateData?.messageCount) ? rateData.messageCount : 0,
       } : null;
-      let nextRate;
+      let nextRate: ReturnType<typeof nextLiveChatRateState>;
       try { nextRate = nextLiveChatRateState(currentRate, Date.now()); }
       catch (error) { throw new HttpsError('resource-exhausted', error instanceof Error ? error.message : 'You are sending messages too quickly.'); }
       const profileData = profile.data() || {};
