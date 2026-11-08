@@ -156,6 +156,7 @@ describe('VOH API security boundary', () => {
       consentVersion: '2026-11',
       interests: ['product design', 'AI'],
       creatorGoals: ['Grow an educational creator community'],
+      personalFacts: ['Building NEXORA', 'Prefers direct answers'],
       writingStyle: 'Natural and conversational',
       preferences: { aiTone: 'concise', voiceAutoPlay: false },
       ownerUid: 'attacker-controlled-value',
@@ -168,6 +169,7 @@ describe('VOH API security boundary', () => {
     assert.equal(loaded.status, 200);
     const payload = await loaded.json() as { memory: Record<string, any> };
     assert.deepEqual(payload.memory.interests, ['product design', 'AI']);
+    assert.deepEqual(payload.memory.personalFacts, ['Building NEXORA', 'Prefers direct answers']);
     assert.equal(payload.memory.ownerUid, undefined);
     assert.equal(payload.memory.hiddenAdminFlag, undefined);
 
