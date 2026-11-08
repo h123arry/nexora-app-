@@ -14,12 +14,10 @@ export interface LiveTransportAccessInput {
 export function resolveLiveTransportRole(input: LiveTransportAccessInput): LiveTransportRole {
   if (input.status !== 'live') throw new Error('This live room has ended.');
   if (!Number.isSafeInteger(input.nowMs) || input.nowMs < 0) throw new Error('Live transport clock is invalid.');
-  if (input.hostId === input.userId) {
-    if (!Number.isSafeInteger(input.hostExpiresAtMs) || (input.hostExpiresAtMs as number) <= input.nowMs) {
-      throw new Error('The host connection has expired. Refresh the live room before publishing.');
-    }
-    return 'host';
+  if (!Number.isSafeInteger(input.hostExpiresAtMs) || (input.hostExpiresAtMs as number) <= input.nowMs) {
+    throw new Error('The host connection has expired. Refresh the live room before joining video.');
   }
+  if (input.hostId === input.userId) return 'host';
   if (!Array.isArray(input.viewerConnectionIds)
     || !input.viewerConnectionIds.includes(input.connectionId)
     || !Number.isSafeInteger(input.viewerExpiresAtMs)
