@@ -31,16 +31,16 @@ export interface ChatFolder {
 }
 
 const STORAGE_KEYS = { SESSIONS: 'voh_ai_sessions', FOLDERS: 'voh_ai_folders' };
-function scopedKey(key: string): string {
+function scopedKey(key: string, userId = auth.currentUser?.uid || 'guest'): string {
   // Older builds stored conversations globally, which could expose one browser user's history to another.
   localStorage.removeItem(STORAGE_KEYS.SESSIONS);
   localStorage.removeItem(STORAGE_KEYS.FOLDERS);
-  return `${key}_${auth.currentUser?.uid || 'guest'}`;
+  return `${key}_${userId}`;
 }
 
 export class ChatEngine {
-  static getSessions(): ChatSession[] {
-    const key = scopedKey(STORAGE_KEYS.SESSIONS);
+  static getSessions(userId?: string): ChatSession[] {
+    const key = scopedKey(STORAGE_KEYS.SESSIONS, userId);
     const data = localStorage.getItem(key);
     if (!data) {
       // Return a default session
@@ -68,12 +68,12 @@ export class ChatEngine {
     return JSON.parse(data);
   }
 
-  static saveSessions(sessions: ChatSession[]): void {
-    localStorage.setItem(scopedKey(STORAGE_KEYS.SESSIONS), JSON.stringify(sessions));
+  static saveSessions(sessions: ChatSession[], userId?: string): void {
+    localStorage.setItem(scopedKey(STORAGE_KEYS.SESSIONS, userId), JSON.stringify(sessions));
   }
 
-  static getFolders(): ChatFolder[] {
-    const key = scopedKey(STORAGE_KEYS.FOLDERS);
+  static getFolders(userId?: string): ChatFolder[] {
+    const key = scopedKey(STORAGE_KEYS.FOLDERS, userId);
     const data = localStorage.getItem(key);
     if (!data) {
       const defaultFolders: ChatFolder[] = [
@@ -87,8 +87,8 @@ export class ChatEngine {
     return JSON.parse(data);
   }
 
-  static saveFolders(folders: ChatFolder[]): void {
-    localStorage.setItem(scopedKey(STORAGE_KEYS.FOLDERS), JSON.stringify(folders));
+  static saveFolders(folders: ChatFolder[], userId?: string): void {
+    localStorage.setItem(scopedKey(STORAGE_KEYS.FOLDERS, userId), JSON.stringify(folders));
   }
 
   static async sendChatMessage(
