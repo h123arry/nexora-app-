@@ -95,7 +95,7 @@ Use test credentials and test beneficiaries. Test all of the following:
 - Scheduled verification of pending transfers and exact reference/amount/currency matching.
 - Provider-balance shortfall and provider API outage.
 
-Paystack notes that test transfers simulate success; they do not prove a live bank credit. A green sandbox run is required but is not the final live-settlement sign-off.
+Paystack notes that test transfers simulate success; they do not prove a live bank credit. The implementation checks the documented `GET /balance` endpoint and compares the NGN balance in kobo against the transfer amount plus the configured fee reserve. A green sandbox run is required but is not the final live-settlement sign-off.
 
 ## 7. Live activation gates
 
@@ -111,7 +111,7 @@ The finance-only policy callable requires these five live evidence flags, a posi
 
 ## 8. Reconciliation and operations
 
-The scheduled `reconcilePaystackCreatorPayouts` function checks pending, unknown and approval-waiting transfers every 15 minutes. Provider outcomes are applied idempotently. A timeout is treated as ambiguous: NEX stays reserved until Paystack confirms the transfer outcome. Never manually mark a payout successful based only on the initial API response.
+The finance operations panel includes a provider OTP queue and a recent-authenticated finalization action for integrations that require OTP. OTPs are sent to the Paystack business owner's registered contact and are never stored or audit-logged. The scheduled `reconcilePaystackCreatorPayouts` function checks submitting, pending, unknown and approval-waiting transfers every 15 minutes. Provider outcomes are applied idempotently. A timeout is treated as ambiguous: NEX stays reserved until Paystack confirms the transfer outcome. Never manually mark a payout successful based only on the initial API response. A Paystack terminal `success` means the provider processed the transfer; it does not promise instant bank posting. The controlled live test must be confirmed at the receiving bank.
 
 Finance operations must review:
 - Provider transfer reference and status.
