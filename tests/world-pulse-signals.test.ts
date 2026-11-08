@@ -38,6 +38,14 @@ test('ignores archived, future, malformed and single-creator-only activity', () 
   assert.deepEqual(signals, []);
 });
 
+test('does not label flat or declining conversations as rising', () => {
+  const signals = rankRisingTopics([
+    post('old-1', 'u1', 30), post('old-2', 'u2', 28), post('old-3', 'u3', 27),
+    post('new-1', 'u1', 2), post('new-2', 'u2', 3),
+  ], { now, windowHours: 24 });
+  assert.deepEqual(signals, []);
+});
+
 test('extracts hashtags, normalizes duplicates and caps per-creator engagement influence', () => {
   const signals = rankRisingTopics([
     { ...post('a', 'u1', 2, ['#NEXORA', 'nexora']), content: 'New #WorldPulse launch' },

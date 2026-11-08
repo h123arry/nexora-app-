@@ -96,7 +96,7 @@ export function rankRisingTopics(
   }
 
   return [...signals.entries()]
-    .filter(([, signal]) => signal.currentPosts.size >= minPosts && signal.currentCreators.size >= minCreators)
+    .filter(([, signal]) => signal.currentPosts.size >= minPosts && signal.currentCreators.size >= minCreators && signal.currentPosts.size > signal.previousPosts.size)
     .map(([tag, signal]) => {
       const currentPosts = signal.currentPosts.size;
       const previousPosts = signal.previousPosts.size;
