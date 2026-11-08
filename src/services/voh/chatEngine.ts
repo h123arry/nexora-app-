@@ -95,7 +95,7 @@ export class ChatEngine {
     message: string,
     history: { sender: 'user' | 'voh'; text: string }[],
     currentUser: User
-  ): Promise<{ text: string; isDemo: boolean }> {
+  ): Promise<{ text: string }> {
     // Dynamic context integration
     const localPosts = JSON.parse(localStorage.getItem('nexora_posts') || '[]');
     const localCircles = getJoinedCirclesForUser(currentUser.id);
@@ -138,6 +138,6 @@ export class ChatEngine {
     if (!payload || typeof payload.text !== 'string') {
       throw new Error('VOH AI returned an invalid response. Please try again.');
     }
-    return { text: payload.text, isDemo: payload.isDemo === true };
+    return { text: payload.text };
   }
 }
