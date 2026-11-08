@@ -55,6 +55,23 @@ const publicProfile = (uid) => ({
 });
 
  describe('Firestore authorization regression tests', () => {
+  it('keeps payout beneficiary records and Paystack webhook events server-only', async () => {
+    const alice = dbFor('alice');
+    await seed(async (db) => {
+      await setDoc(doc(db, 'creatorPayoutBeneficiaries', 'alice'), {
+        creatorId: 'alice', provider: 'paystack', providerBeneficiaryRef: 'RCP_test123456',
+        accountNumberLast4: '6789', status: 'pending'
+      });
+      await setDoc(doc(db, 'paystackWebhookEvents', 'event-1'), {
+        eventType: 'transfer.success', reference: 'nexora_payout_000001'
+      });
+    });
+    await assertFails(getDoc(doc(alice, 'creatorPayoutBeneficiaries', 'alice')));
+    await assertFails(setDoc(doc(alice, 'creatorPayoutBeneficiaries', 'alice'), { status: 'verified' }));
+    await assertFails(getDoc(doc(alice, 'paystackWebhookEvents', 'event-1')));
+    await assertFails(setDoc(doc(alice, 'paystackWebhookEvents', 'forged'), { eventType: 'transfer.success' }));
+  });
+
   it('allows a user to create their own private/public profile pair but rejects spoofed identity and privilege fields', async () => {
     const ownPrivate = {
       id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
