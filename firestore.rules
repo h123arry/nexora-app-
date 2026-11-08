@@ -776,6 +776,7 @@ service cloud.firestore {
     match /giftCompetitionContributions/{contributionId} { allow read, write: if false; }
     match /financialLedger/{entryId} { allow read, write: if false; }
     match /paymentWebhookFailures/{failureId} { allow read, write: if false; }
+    match /paystackWebhookEvents/{eventId} { allow read, write: if false; }
     match /financeAuditEvents/{eventId} { allow read, write: if false; }
 
     // Nex Coin balances and personal transaction history are readable only by
