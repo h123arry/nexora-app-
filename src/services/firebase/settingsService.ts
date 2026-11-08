@@ -19,6 +19,7 @@ export interface NexoraSettings {
     recommendationsPersonalization: boolean;
     searchIndexing: boolean;
     allowFollowRequests: boolean;
+    profileVisibility: Record<string, 'everyone' | 'followers' | 'following' | 'mutual_friends' | 'contacts' | 'close_friends' | 'nobody' | 'custom'>;
   };
   notifications: {
     pushEnabled: boolean;
@@ -55,6 +56,7 @@ export const DEFAULT_SETTINGS: NexoraSettings = {
     recommendationsPersonalization: true,
     searchIndexing: true,
     allowFollowRequests: true,
+    profileVisibility: {},
   },
   notifications: {
     pushEnabled: true,
@@ -147,8 +149,17 @@ export class SettingsService {
   }
 
   static async updatePrivacy(uid: string, privacyUpdates: Partial<NexoraSettings['privacy']>): Promise<void> {
-    const current = await this.getSettings(uid);
-    await this.updateSettings(uid, { privacy: { ...current.privacy, ...privacyUpdates } });
+    if (!uid || auth.currentUser?.uid !== uid) throw new Error('Only the signed-in owner can update settings.');
+    const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    await runTransaction(db, async transaction => {
+      const snapshot = await transaction.get(settingsRef);
+      const stored = snapshot.exists() ? snapshot.data() as Partial<NexoraSettings> : DEFAULT_SETTINGS;
+      const currentPrivacy = { ...DEFAULT_SETTINGS.privacy, ...(stored.privacy || {}) };
+      transaction.set(settingsRef, {
+        privacy: { ...currentPrivacy, ...privacyUpdates },
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    });
   }
 
   static async updateNotifications(uid: string, updates: Partial<NexoraSettings['notifications']>): Promise<void> {
