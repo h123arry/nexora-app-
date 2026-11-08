@@ -136,11 +136,14 @@ export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
     return await db.runTransaction(async tx => {
       const [session, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
       if (!viewer.exists) return { sessionId, left: true, viewerCount: Math.max(0, Number(session.data()?.viewerCount || 0)) };
-      const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds.filter((item: unknown): item is string => typeof item === 'string') : [];
+      const rawConnections: unknown = viewer.data()?.connectionIds;
+      const connections: string[] = Array.isArray(rawConnections)
+        ? rawConnections.filter((item: unknown): item is string => typeof item === 'string')
+        : [];
       if (!connections.includes(connectionId)) {
         return { sessionId, left: true, viewerCount: Math.max(0, Number(session.data()?.viewerCount || 0)) };
       }
-      const remaining = connections.filter(item => item !== connectionId);
+      const remaining = connections.filter((item: string) => item !== connectionId);
       if (remaining.length > 0) {
         tx.update(viewerRef, { connectionIds: remaining, updatedAt: FieldValue.serverTimestamp() });
         return { sessionId, left: true, viewerCount: Number(session.data()?.viewerCount || 0) };
