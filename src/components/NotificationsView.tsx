@@ -20,7 +20,7 @@ interface NotificationsViewProps {
   onViewProfile?: (userId: string) => void;
 }
 
-// Extended Local Notification type to support grouping, interactive mock states, and rich visuals
+// UI-only metadata derived from real notification records.
 interface RichNotification extends Notification {
   timeSection: 'today' | 'yesterday' | 'this_week' | 'earlier' | 'older';
   priorityLevel: 'high' | 'medium' | 'low';
@@ -64,9 +64,6 @@ export default function NotificationsView({
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
-  // Interactive inline replies state
-  const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
 
   // Floating notifications/toast feedback system
   const [toasts, setToasts] = useState<{ id: string; content: string }[]>([]);
@@ -78,8 +75,6 @@ export default function NotificationsView({
   // Watch History (reused from existing template specs)
   const [watchHistory, setWatchHistory] = useState<any[]>([]);
 
-  // Pinned Notification overlay/highlight
-  const [pinnedNotifId, setPinnedNotifId] = useState<string | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   // Notification configuration preferences
@@ -158,7 +153,7 @@ export default function NotificationsView({
   // INITIAL DATA SEEDING (Merged with Prop Notifications)
   // ---------------------------------------------------------------------------
   useEffect(() => {
-    const seedMockNotifications = () => {
+    const hydrateNotifications = () => {
       // Convert propNotifications to RichNotifications if any are supplied by the app
       const resolvedProps = (propNotifications || []).map(n => ({
         ...n,
@@ -173,7 +168,7 @@ export default function NotificationsView({
       setNotificationsList(finalSet);
     };
 
-    seedMockNotifications();
+    hydrateNotifications();
 
     // Load watch history
     const savedHistory = localStorage.getItem('nexora_watch_history');
@@ -285,47 +280,7 @@ export default function NotificationsView({
     }
   };
 
-  // Friend Request actions
-  const handleFriendRequest = (id: string, status: 'accepted' | 'declined', e: React.MouseEvent) => {
-    e.stopPropagation();
-    setNotificationsList(prev => prev.map(n => {
-      if (n.id === id) {
-        return { 
-          ...n, 
-          friendRequestStatus: status,
-          content: status === 'accepted' 
-            ? "is now a mutual Connection! Start chatting anytime in Direct Messages." 
-            : "Connection request declined.",
-          isRead: true
-        };
-      }
-      return n;
-    }));
-    if (status === 'accepted') {
-      addToast("🤝 Connection accepted! Mutual developer link established.");
-    } else {
-      addToast("Connection request declined.");
-    }
-  };
-
-  // Event Register action
-  const handleEventRegister = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setNotificationsList(prev => prev.map(n => {
-      if (n.id === id) {
-        return { 
-          ...n, 
-          eventStatus: 'registered',
-          content: "You're registered for Global Design-Con! Added to your schedule list. Check email for virtual coordinates.",
-          isRead: true
-        };
-      }
-      return n;
-    }));
-    addToast("🎟️ Registered successfully! Calendar ticket dispatched.");
-  };
-
-  // Deep linking simulator
+  // Navigate only to records and routes that exist.
   const handleDeepLinkClick = (notif: RichNotification) => {
     if (isMultiSelectMode) {
       // Toggle selection in multi-select mode instead of deep linking
@@ -333,7 +288,6 @@ export default function NotificationsView({
       return;
     }
 
-    addToast(`🔗 Deep linking: Simulating navigation to ${notif.username || 'System'}'s activity focus...`);
 
     // Mark as read automatically on tap
     if (!notif.isRead) {
@@ -347,7 +301,11 @@ export default function NotificationsView({
       // Redirect to Feed, look for element
       window.dispatchEvent(new CustomEvent('changeTab', { detail: { tab: 'feed' } }));
       setTimeout(() => {
-        const targetPostId = notif.targetId || 'post-glass-ui';
+        const targetPostId = notif.targetId;
+        if (!targetPostId) {
+          addToast('This notification does not contain a linked post.');
+          return;
+        }
         const element = document.getElementById(`post-${targetPostId}`);
         if (element) {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -357,8 +315,7 @@ export default function NotificationsView({
           }, 4000);
           addToast("🎯 Highlighted post and filtered replies successfully!");
         } else {
-          // If the post is not in the active list, provide a rich modal simulation or info
-          addToast(`💡 Highlighted Comment from @${notif.username}: "${notif.previewText || notif.content}"`);
+          addToast('The linked post is not currently available in your feed.');
         }
       }, 500);
     } else if (notif.type === 'follow' || notif.type === 'profile_view') {
@@ -373,62 +330,6 @@ export default function NotificationsView({
     } else if (notif.type === 'reputation_milestone' && notif.reputationAwarded) {
       triggerConfetti();
     }
-  };
-
-  // Inline Reply submission
-  const handleInlineReplySubmit = (id: string, username: string) => {
-    if (!replyText.trim()) return;
-    addToast(`💬 Replied to @${username}: "${replyText}"`);
-    setActiveReplyId(null);
-    setReplyText('');
-
-    // Update notification content to show reply has been sent
-    setNotificationsList(prev => prev.map(n => {
-      if (n.id === id) {
-        return {
-          ...n,
-          isRead: true,
-          content: `${n.content} (You replied: "${replyText}")`
-        };
-      }
-      return n;
-    }));
-  };
-
-  // Swipe Simulation Buttons action helper
-  const handleSwipeActionMock = (id: string, action: 'delete' | 'archive' | 'mute' | 'read' | 'pin', e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (action === 'delete') {
-      void deleteOwnNotification(currentUser.id, id)
-        .then(() => {
-          setNotificationsList(prev => prev.filter(n => n.id !== id));
-          addToast("Notification permanently deleted");
-        })
-        .catch(() => addToast("Couldn't delete this notification. Please try again."));
-    } else if (action === 'archive') {
-      setNotificationsList(prev => prev.map(n => n.id === id ? { ...n, isArchived: true } : n));
-      addToast("Notification sent to archive vault");
-    } else if (action === 'read') {
-      setNotificationsList(prev => prev.map(n => n.id === id ? { ...n, isRead: !n.isRead } : n));
-      addToast("Read status toggled");
-    } else if (action === 'pin') {
-      setPinnedNotifId(prev => prev === id ? null : id);
-      addToast(pinnedNotifId === id ? "Notification unpinned" : "Notification pinned to top spotlight banner!");
-    } else if (action === 'mute') {
-      addToast(`Muted future activity updates from this specific category thread`);
-    }
-  };
-
-  // Notifications arrive through the app's realtime subscription.
-  // This control explains the live behavior instead of simulating a network refresh.
-  const handlePullToRefresh = () => {
-    addToast("Notifications update automatically when new activity arrives.");
-  };
-
-  // All currently subscribed notifications are already in memory; reveal the next batch.
-  const handleLoadMore = () => {
-    setVisibleCount(prev => prev + 5);
-    addToast("Showing more of your notifications.");
   };
 
   // ---------------------------------------------------------------------------
@@ -479,11 +380,6 @@ export default function NotificationsView({
     const priorityWeight = { high: 3, medium: 2, low: 1 };
     
     return filtered.sort((a, b) => {
-      // Pinned items take ultimate precedence
-      const aPinned = a.id === pinnedNotifId ? 1 : 0;
-      const bPinned = b.id === pinnedNotifId ? 1 : 0;
-      if (aPinned !== bPinned) return bPinned - aPinned;
-
       // Priority Level weighting
       const aWeight = priorityWeight[a.priorityLevel] || 1;
       const bWeight = priorityWeight[b.priorityLevel] || 1;
@@ -1201,66 +1097,6 @@ export default function NotificationsView({
                             
                             {/* Primary Category Buttons */}
                             <div className="flex items-center gap-2">
-                              {/* Friend Connection Request Pending state */}
-                              {notif.type === 'follow' && notif.friendRequestStatus === 'pending' && (
-                                <div className="flex items-center gap-1.5">
-                                  <button
-                                    onClick={(e) => handleFriendRequest(notif.id, 'accepted', e)}
-                                    className="px-3.5 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-sans font-bold uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md shadow-violet-600/10"
-                                  >
-                                    <Check className="w-3 h-3" />
-                                    <span>Accept Link</span>
-                                  </button>
-                                  <button
-                                    onClick={(e) => handleFriendRequest(notif.id, 'declined', e)}
-                                    className="px-2.5 py-1.5 bg-black/40 hover:bg-black/60 border border-white/10 text-zinc-400 hover:text-white rounded-xl text-[10px] font-sans font-bold uppercase transition-all cursor-pointer"
-                                  >
-                                    <span>Decline</span>
-                                  </button>
-                                </div>
-                              )}
-
-                              {/* Follow Back state (accepted connection) */}
-                              {notif.type === 'follow' && notif.friendRequestStatus === 'accepted' && (
-                                <span className="text-[10px] font-sans font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded-xl flex items-center gap-1">
-                                  <UserCheck className="w-3.5 h-3.5" />
-                                  <span>MUTUAL DEVELOPER SYNCED</span>
-                                </span>
-                              )}
-
-                              
-                              {/* Event registration action */}
-                              {notif.type === 'community' && notif.eventStatus === 'unregistered' && (
-                                <button
-                                  onClick={(e) => handleEventRegister(notif.id, e)}
-                                  className="px-3.5 py-1.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl text-[10px] font-sans font-extrabold uppercase transition-all cursor-pointer flex items-center gap-1 shadow-md shadow-cyan-600/10"
-                                >
-                                  <Calendar className="w-3 h-3 text-cyan-100" />
-                                  <span>Register Ticket</span>
-                                </button>
-                              )}
-
-                              {notif.type === 'community' && notif.eventStatus === 'registered' && (
-                                <span className="text-[10px] font-sans font-extrabold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-xl flex items-center gap-1">
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>TICKET SECURED</span>
-                                </span>
-                              )}
-
-                              {/* Inline comments response trigger */}
-                              {(notif.type === 'comment' || notif.type === 'mention') && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setActiveReplyId(activeReplyId === notif.id ? null : notif.id);
-                                  }}
-                                  className="px-3 py-1.5 bg-[#0e0c24] hover:bg-violet-600/10 border border-white/10 hover:border-white/10 text-violet-300 rounded-xl text-[10px] font-sans font-bold uppercase transition-all cursor-pointer flex items-center gap-1"
-                                >
-                                  <MessageSquare className="w-3 h-3 text-violet-400" />
-                                  <span>Reply Direct</span>
-                                </button>
-                              )}
-
                               {/* Smart Group expansion trigger */}
                               {notif.subActivities && (
                                 <button
@@ -1275,59 +1111,14 @@ export default function NotificationsView({
                                 </button>
                               )}
 
-                              {/* Security alerting direct verification */}
-                              {notif.type === 'system' && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    addToast("🛡️ Device ledger verified! Unknown Berlin agent flagged as safe.");
-                                  }}
-                                  className="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/25 text-rose-300 rounded-xl text-[10px] font-sans font-bold uppercase transition-all cursor-pointer flex items-center gap-1"
-                                >
-                                  <Shield className="w-3 h-3 text-rose-400" />
-                                  <span>Approve Session</span>
-                                </button>
-                              )}
-
-                              {/* Creator reward trigger */}
-                              {notif.type === 'reputation_milestone' && notif.reputationAwarded && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    triggerConfetti();
-                                  }}
-                                  className="px-3.5 py-1.5 bg-linear-to-r from-yellow-500 to-amber-500 text-slate-950 font-black rounded-xl text-[10px] font-sans uppercase transition-all cursor-pointer flex items-center gap-1 hover:scale-103 shadow-md shadow-amber-500/15"
-                                >
-                                  <Sparkles className="w-3.5 h-3.5 fill-current" />
-                                  <span>Claim Reward pts</span>
-                                </button>
-                              )}
                             </div>
 
-                            {/* Secondary Actions hover toolbar (Swipe Gestures Fallback for desktop mouse) */}
                             <div className="flex items-center gap-1.5 opacity-60 group-hover/item:opacity-100 transition-opacity">
                               <button
-                                onClick={(e) => handleSwipeActionMock(notif.id, 'pin', e)}
-                                className={`p-1.5 rounded-lg border transition-colors ${
-                                  isPinned 
-                                    ? 'bg-amber-500/10 border-amber-500/20 text-amber-400' 
-                                    : 'bg-black/30 border-white/5 text-zinc-500 hover:text-white hover:border-white/10'
-                                }`}
-                                title={isPinned ? 'Unpin' : 'Pin to spotlight banner'}
-                              >
-                                <Pin className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={(e) => handleSwipeActionMock(notif.id, 'archive', e)}
-                                className="p-1.5 rounded-lg border border-white/5 bg-black/30 text-zinc-500 hover:text-indigo-400 hover:border-indigo-500/15 transition-all"
-                                title="Send to Archive"
-                              >
-                                <Archive className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={(e) => handleSwipeActionMock(notif.id, 'delete', e)}
+                                onClick={(e) => void handleDismissSingle(notif.id, e)}
                                 className="p-1.5 rounded-lg border border-white/5 bg-black/30 text-zinc-500 hover:text-red-400 hover:border-red-500/15 transition-all"
-                                title="Delete forever"
+                                title="Delete notification"
+                                aria-label="Delete notification"
                               >
                                 <Trash className="w-3.5 h-3.5" />
                               </button>
@@ -1354,49 +1145,9 @@ export default function NotificationsView({
                                           <span className="text-[8.5px] font-mono text-zinc-500 block mt-0.5">{user.timestamp}</span>
                                         </div>
                                       </div>
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          addToast(`Following back @${user.username}!`);
-                                        }}
-                                        className="px-2.5 py-1 bg-violet-600/15 border border-white/10 hover:bg-violet-600 hover:text-white rounded-lg text-[9px] font-sans font-bold uppercase transition-all"
-                                      >
-                                        Follow Back
-                                      </button>
+
                                     </div>
                                   ))}
-                                </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-
-                          {/* Inline Reply slide form */}
-                          <AnimatePresence>
-                            {activeReplyId === notif.id && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden bg-[#030109] border border-white/10 rounded-2xl p-2.5"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <input 
-                                    type="text" 
-                                    placeholder={`Type reply to @${notif.username}...`}
-                                    value={replyText}
-                                    onChange={(e) => setReplyText(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') handleInlineReplySubmit(notif.id, notif.username);
-                                    }}
-                                    className="flex-1 px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs text-white focus:outline-none focus:border-white/10 text-left"
-                                  />
-                                  <button
-                                    onClick={() => handleInlineReplySubmit(notif.id, notif.username)}
-                                    className="p-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white transition-all cursor-pointer"
-                                  >
-                                    <Send className="w-3.5 h-3.5" />
-                                  </button>
                                 </div>
                               </motion.div>
                             )}
