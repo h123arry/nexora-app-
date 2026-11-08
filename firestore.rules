@@ -756,7 +756,6 @@ service cloud.firestore {
       allow write: if false;
     }
     // Creator-authored membership tier drafts are readable by their owner only; all mutations use trusted callables.
-    // Creator-authored membership tier drafts are readable by their owner only; all mutations use trusted callables.
     // Live room state is server-authoritative. Signed-in members may read active rooms;
     // only the host may read an ended room. Session and chat writes use trusted callables.
     match /liveSessions/{sessionId} {
