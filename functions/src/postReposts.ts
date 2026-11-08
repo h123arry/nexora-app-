@@ -60,8 +60,6 @@ export async function createPublicPostRepost(
       avatar: typeof profile.avatar === 'string' ? profile.avatar.slice(0, 1000) : '',
       isVerified: profile.isVerified === true,
       content: quoteText || String(sourceData.sourcePostContent || sourceData.content || '').slice(0, 5000),
-      quoteText: quoteText || undefined,
-      isQuoteRepost: Boolean(quoteText),
       sourcePostContent: String(sourceData.sourcePostContent || sourceData.content || '').slice(0, 5000),
       sourceAuthorId: String(sourceData.sourceAuthorId || sourceData.userId || sourceData.authorId || ''),
       sourceAuthorUsername: String(sourceData.sourceAuthorUsername || sourceData.username || 'member').slice(0, 80),
@@ -81,6 +79,11 @@ export async function createPublicPostRepost(
       repostedBy: uid,
       repostedAt: FieldValue.serverTimestamp(),
     } as Record<string, unknown>;
+
+    if (quoteText) {
+      repost.quoteText = quoteText;
+      repost.isQuoteRepost = true;
+    }
 
     for (const key of ['image', 'images', 'videoUrl', 'voiceAudioUrl', 'voiceTranscript', 'isVoice', 'voiceDuration', 'videoDuration', 'media', 'location']) {
       if (sourceData[key] !== undefined) repost[key] = sourceData[key];
