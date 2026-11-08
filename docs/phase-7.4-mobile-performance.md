@@ -42,3 +42,5 @@ Run cold-start, feed scroll, video playback, navigation, keyboard/input and memo
 - Provides a deterministic first-video/first-post fallback for older embedded browsers without IntersectionObserver.
 
 - Clears the active player once its card falls below the same 30% visibility threshold used to activate the next card, avoiding stale playback during partial offscreen transitions.
+
+- Removes nonessential feed-card GPU transforms and active-navigation glow filters on constrained devices; skeleton shimmer is also disabled for low-memory/low-core profiles, not only Data Saver.
