@@ -1,10 +1,11 @@
-import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
+import { calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
@@ -12,11 +13,6 @@ const PAYSTACK_WEBHOOK_SECRET = defineSecret('PAYSTACK_WEBHOOK_SECRET');
 const PAYSTACK_API = 'https://api.paystack.co';
 class PaystackApiError extends Error {
   constructor(message: string, readonly statusCode: number) { super(message); }
-}
-function liveGatesPassed(policy: Record<string, any>): boolean {
-  return policy.liveSettlementApproved === true && policy.providerBusinessVerified === true
-    && policy.settlementFundingVerified === true && policy.complianceApproved === true
-    && policy.webhookVerified === true && policy.liveTestTransferVerified === true;
 }
 type TransferStatus = 'processing' | 'submission_unknown' | 'awaiting_provider_approval' | 'success' | 'failed' | 'reversed';
 
@@ -62,14 +58,14 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
   const policy = await payoutPolicy();
   return {
     provider: 'paystack', configured: mode !== 'unknown', mode,
-    corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && (mode === 'test' || liveGatesPassed(policy)),
+    corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && (mode === 'test' || livePayoutGatesPassed(policy)),
     liveSettlementApproved: policy.liveSettlementApproved === true,
-    cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && liveGatesPassed(policy),
+    cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && livePayoutGatesPassed(policy),
     rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0,
     blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved'
       : policy.enabled !== true ? 'withdrawals_not_enabled_by_finance'
-      : mode === 'live' && !liveGatesPassed(policy) ? 'live_settlement_gates_incomplete' : null,
+      : mode === 'live' && !livePayoutGatesPassed(policy) ? 'live_settlement_gates_incomplete' : null,
   };
 });
 
@@ -221,9 +217,9 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
   const complianceStatus = complianceData.beneficiaryRef === b.providerBeneficiaryRef ? complianceData.status : 'pending';
   const enabled = policy.enabled === true && Number.isSafeInteger(policy.koboPerNex) && b.status === 'verified'
     && complianceStatus === 'approved' && complianceData.bankAccountNameMatched === true
-    && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && liveGatesPassed(policy)));
+    && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && livePayoutGatesPassed(policy)));
   return {
-    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && liveGatesPassed(policy), testModeAvailable: enabled && mode === 'test',
+    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && livePayoutGatesPassed(policy), testModeAvailable: enabled && mode === 'test',
     corridor: 'NG-NGN', currency: 'NGN', beneficiaryStatus: b.status === 'verified' ? 'verified' : 'not_configured',
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
     complianceStatus,
@@ -232,7 +228,7 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     providerFeeBufferKobo: Number.isSafeInteger(policy.providerFeeBufferKobo) ? policy.providerFeeBufferKobo : null,
     minimumNex: Number.isSafeInteger(policy.minimumNex) ? policy.minimumNex : null,
     maximumNex: Number.isSafeInteger(policy.maximumNex) ? policy.maximumNex : null,
-    cashWithdrawalEnabled: enabled && mode === 'live' && liveGatesPassed(policy),
+    cashWithdrawalEnabled: enabled && mode === 'live' && livePayoutGatesPassed(policy),
     blocker: mode === 'unknown' ? 'provider_secret_missing' : !policy.enabled ? 'payout_policy_disabled'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required' : complianceStatus !== 'approved' ? 'creator_compliance_review_required'
       : mode === 'live' && policy.liveSettlementApproved !== true ? 'live_settlement_not_approved' : null,
@@ -324,31 +320,8 @@ async function applyProviderOutcome(reference: string, outcome: 'success' | 'fai
   });
 }
 
-function validPaystackSignature(raw: Buffer, headers: Record<string, string | string[] | undefined>): boolean {
-  const modern = headers['paystack-signature'];
-  const legacy = headers['x-paystack-signature'];
-  const webhookSecret = PAYSTACK_WEBHOOK_SECRET.value();
-  const secretKey = PAYSTACK_SECRET_KEY.value();
-  if (typeof modern === 'string' && webhookSecret) {
-    const parts = modern.split(',');
-    const timestamp = Number(parts.find(part => part.startsWith('t='))?.slice(2));
-    if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300) return false;
-    const signed = String(timestamp) + '.' + raw.toString('utf8');
-    const expected = createHmac('sha512', webhookSecret).update(signed).digest('hex');
-    return parts.filter(part => part.startsWith('v1=')).some(part => {
-      const signature = part.slice(3).split(':').at(-1) || '';
-      return /^[a-f0-9]{128}$/.test(signature) && timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(signature, 'hex'));
-    });
-  }
-  if (typeof legacy === 'string' && secretKey) {
-    const expected = createHmac('sha512', secretKey).update(raw).digest('hex');
-    return /^[a-f0-9]{128}$/i.test(legacy) && timingSafeEqual(Buffer.from(expected, 'hex'), Buffer.from(legacy, 'hex'));
-  }
-  return false;
-}
-
 export const paystackPayoutWebhook = onRequest({ secrets: [PAYSTACK_SECRET_KEY, PAYSTACK_WEBHOOK_SECRET], maxInstances: 10 }, async (request, response) => {
-  if (request.method !== 'POST' || !request.rawBody || !validPaystackSignature(request.rawBody, request.headers)) {
+  if (request.method !== 'POST' || !request.rawBody || !verifyPaystackWebhookSignature(request.rawBody, request.headers, PAYSTACK_WEBHOOK_SECRET.value(), PAYSTACK_SECRET_KEY.value())) {
     response.status(401).send('Invalid webhook signature'); return;
   }
   const event = request.body as { event?: string; data?: { reference?: string; status?: string } };
@@ -380,7 +353,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   const policy = await payoutPolicy();
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   if (policy.enabled !== true || !Number.isSafeInteger(policy.koboPerNex) || mode === 'unknown'
-    || (mode === 'live' && !liveGatesPassed(policy))) {
+    || (mode === 'live' && !livePayoutGatesPassed(policy))) {
     throw new HttpsError('failed-precondition', 'NGN withdrawals are not enabled for this provider environment.');
   }
   if (amountNex < policy.minimumNex || amountNex > policy.maximumNex) throw new HttpsError('invalid-argument', 'The withdrawal amount is outside the approved limits.');
@@ -394,8 +367,9 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   if (compliance.status !== 'approved' || compliance.beneficiaryRef !== beneficiary.providerBeneficiaryRef || compliance.bankAccountNameMatched !== true) {
     throw new HttpsError('failed-precondition', 'Finance compliance review of this exact bank beneficiary is required before withdrawal.');
   }
-  const amountKobo = amountNex * policy.koboPerNex;
-  if (!Number.isSafeInteger(amountKobo) || amountKobo <= 0) throw new HttpsError('failed-precondition', 'The approved NGN conversion amount is invalid.');
+  let amountKobo: number;
+  try { amountKobo = calculateNgnPayoutKobo(amountNex, policy.koboPerNex); }
+  catch { throw new HttpsError('failed-precondition', 'The approved NGN conversion amount is invalid.'); }
   if (mode === 'live') {
     try {
       const balances = await paystack('/balance?currency=NGN', 'GET');
