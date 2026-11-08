@@ -82,13 +82,17 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
   }
   return {
     provider: 'paystack', configured: mode !== 'unknown', credentialsVerified, ngnBalanceKobo, mode,
-    corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && (mode === 'test' || livePayoutGatesPassed(policy)),
+    corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && ((mode === 'test' && !isProductionRuntime()) || (mode === 'live' && isProductionRuntime() && livePayoutGatesPassed(policy))),
     liveSettlementApproved: policy.liveSettlementApproved === true,
     cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && isProductionRuntime() && livePayoutGatesPassed(policy),
     rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0 && Number.isSafeInteger(policy.providerFeeBufferKobo),
     blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid' : !credentialsVerified ? 'provider_credentials_unverified'
+      : mode === 'test' && isProductionRuntime() ? 'test_transfers_blocked_in_production'
+      : mode === 'live' && !isProductionRuntime() ? 'live_transfers_require_production'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved'
       : policy.enabled !== true ? 'withdrawals_not_enabled_by_finance'
+      : mode === 'test' && isProductionRuntime() ? 'test_transfers_blocked_in_production'
+      : mode === 'live' && !isProductionRuntime() ? 'live_transfers_require_production'
       : mode === 'live' && !livePayoutGatesPassed(policy) ? 'live_settlement_gates_incomplete' : null,
   };
 });
