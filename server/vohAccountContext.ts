@@ -18,9 +18,8 @@ function safeText(value: unknown, maxLength: number): string {
 }
 
 function safeCount(value: unknown): number | null {
-  return typeof value === 'number' && Number.isFinite(value)
-    ? Math.max(0, Math.min(1_000_000_000, value))
-    : null;
+  if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) return null;
+  return Math.min(1_000_000_000, value);
 }
 
 /**
