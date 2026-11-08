@@ -185,6 +185,8 @@ export default function MediaGallery({
                   alt={item.title} 
                   className="w-11 h-11 rounded-xl object-cover border border-violet-500/10 shrink-0" 
                   referrerPolicy="no-referrer"
+                  loading="lazy"
+                  decoding="async"
                 />
               ) : item.type === 'video' ? (
                 <div className="w-11 h-11 rounded-xl bg-violet-950/40 border border-violet-500/15 flex items-center justify-center shrink-0 relative overflow-hidden">
