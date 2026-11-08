@@ -480,7 +480,7 @@ export const paystackPayoutWebhook = onRequest({ secrets: [PAYSTACK_SECRET_KEY, 
     const payoutSnap = await db.collection('creatorPayoutRequests').doc(reference).get();
     if (!payoutSnap.exists) { response.status(200).send('Unknown reference ignored'); return; }
     const payout = payoutSnap.data() || {};
-    if (Number(event.data?.amount) !== payout.amountKobo || event.data?.currency !== 'NGN' || event.data?.domain !== payout.mode) { response.status(400).send('Transfer amount or currency mismatch'); return; }
+    if (Number(event.data?.amount) !== payout.amountKobo || event.data?.currency !== 'NGN' || event.data?.domain !== payout.mode || event.data?.status !== (outcome === 'success' ? 'success' : outcome)) { response.status(400).send('Transfer amount or currency mismatch'); return; }
     await applyProviderOutcome(reference, outcome, createHmac('sha256', 'nexora-paystack-event').update(eventType + ':' + reference + ':' + String(event.data?.status || '')).digest('hex'));
     response.status(200).send('OK');
   } catch {
@@ -591,7 +591,7 @@ export const reconcilePaystackCreatorPayouts = onSchedule({
       const reference = doc.id;
       try {
         const result = await paystack('/transfer/verify/' + encodeURIComponent(reference), 'GET');
-        if (Number(result.amount) !== Number(doc.data().amountKobo) || result.currency !== 'NGN' || result.reference !== reference || result.domain !== doc.data().mode) {
+        if (Number(result.amount) !== Number(doc.data().amountKobo) || result.currency !== 'NGN' || result.reference !== reference || result.domain !== doc.data().mode || result.recipient?.recipient_code !== doc.data().beneficiaryRef) {
           throw new Error('Provider transfer does not match the NEXORA payout record.');
         }
         const providerStatus = String(result.status || '');
