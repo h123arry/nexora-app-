@@ -77,24 +77,26 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY],
   const actorId = requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const { enabled, koboPerNex, liveSettlementApproved, minimumNex, maximumNex, providerBusinessVerified, settlementFundingVerified, complianceApproved, webhookVerified, liveTestTransferVerified } = request.data || {};
+  const providerFeeBufferKobo = request.data?.providerFeeBufferKobo ?? 0;
   if (typeof enabled !== 'boolean' || !Number.isSafeInteger(koboPerNex) || koboPerNex < 1 || koboPerNex > 100000000
     || !Number.isSafeInteger(minimumNex) || minimumNex < 1000 || !Number.isSafeInteger(maximumNex)
-    || maximumNex < minimumNex || maximumNex > 10000000 || typeof liveSettlementApproved !== 'boolean') {
+    || maximumNex < minimumNex || maximumNex > 10000000 || typeof liveSettlementApproved !== 'boolean'
+    || !Number.isSafeInteger(providerFeeBufferKobo) || providerFeeBufferKobo < 0 || providerFeeBufferKobo > 10000000) {
     throw new HttpsError('invalid-argument', 'A reviewed NEX/NGN rate, withdrawal limits and explicit enablement decision are required.');
   }
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   if (enabled && mode === 'unknown') throw new HttpsError('failed-precondition', 'A valid Paystack secret is required before enabling transfers.');
-  if (mode === 'live' && enabled && (liveSettlementApproved !== true || providerBusinessVerified !== true || settlementFundingVerified !== true || complianceApproved !== true || webhookVerified !== true || liveTestTransferVerified !== true)) {
+  if (mode === 'live' && enabled && (liveSettlementApproved !== true || providerBusinessVerified !== true || settlementFundingVerified !== true || complianceApproved !== true || webhookVerified !== true || liveTestTransferVerified !== true || providerFeeBufferKobo <= 0)) {
     throw new HttpsError('failed-precondition', 'Live transfers require verified registered-business status, funded settlement balance, compliance approval, verified webhooks and a successful controlled live test transfer.');
   }
   if (mode !== 'live' && liveSettlementApproved) throw new HttpsError('failed-precondition', 'Live settlement approval can only be recorded with live credentials.');
   await db.collection('platformConfig').doc('ngnPayoutPolicy').set({
     provider: 'paystack', corridor: 'NG-NGN', enabled, koboPerNex, minimumNex, maximumNex,
-    liveSettlementApproved, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, mode, configuredBy: actorId, updatedAt: FieldValue.serverTimestamp(),
+    liveSettlementApproved, providerFeeBufferKobo, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, mode, configuredBy: actorId, updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   await db.collection('creatorPayoutAuditEvents').add({
     actorId, action: 'ngn_payout_policy_updated', mode, enabled, koboPerNex, minimumNex, maximumNex,
-    liveSettlementApproved, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, createdAt: FieldValue.serverTimestamp(),
+    liveSettlementApproved, providerFeeBufferKobo, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, createdAt: FieldValue.serverTimestamp(),
   });
   return { saved: true, mode, enabled, liveSettlementApproved };
 });
@@ -191,6 +193,7 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
     displayCurrency: profile.data()?.creatorEconomyDisplayCurrency || 'NGN',
     koboPerNex: Number.isSafeInteger(policy.koboPerNex) ? policy.koboPerNex : null,
+    providerFeeBufferKobo: Number.isSafeInteger(policy.providerFeeBufferKobo) ? policy.providerFeeBufferKobo : null,
     minimumNex: Number.isSafeInteger(policy.minimumNex) ? policy.minimumNex : null,
     maximumNex: Number.isSafeInteger(policy.maximumNex) ? policy.maximumNex : null,
     cashWithdrawalEnabled: enabled && mode === 'live' && liveGatesPassed(policy),
@@ -355,7 +358,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
     try {
       const balances = await paystack('/balance?currency=NGN', 'GET');
       const ngnBalance = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN')?.balance : undefined;
-      if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo) throw new HttpsError('failed-precondition', 'The Paystack NGN settlement balance is insufficient for this withdrawal.');
+      if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo + Number(policy.providerFeeBufferKobo || 0)) throw new HttpsError('failed-precondition', 'The Paystack NGN settlement balance is insufficient for this withdrawal.');
     } catch (error) {
       if (error instanceof HttpsError) throw error;
       throw new HttpsError('unavailable', 'Paystack settlement balance could not be verified. No NEX was reserved.');
