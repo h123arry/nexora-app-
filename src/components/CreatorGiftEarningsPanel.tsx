@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Gift, RefreshCw, Wallet, TrendingUp, ShieldCheck, Loader2, ChevronDown } from 'lucide-react';
+import { AlertCircle, Gift, RefreshCw, Wallet, TrendingUp, ShieldCheck, Loader2, ChevronDown, Download } from 'lucide-react';
 import { getCreatorEarningsSnapshot, type CreatorEarningsSnapshot, type CreatorGiftEarning } from '../services/creatorEarningsService';
+import { buildCreatorEarningsCsv } from '../utils/creatorEarningsCsv';
 
 function formatNex(value: number): string {
   return Number.isSafeInteger(value) && value >= 0 ? value.toLocaleString() : '—';
@@ -38,6 +39,19 @@ export default function CreatorGiftEarningsPanel() {
 
   useEffect(() => { void refresh(); }, [refresh]);
 
+  const exportHistory = () => {
+    if (!history.length) return;
+    const blob = new Blob([buildCreatorEarningsCsv(history)], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `nexora-creator-gift-earnings-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
     setLoadingMore(true);
@@ -62,10 +76,16 @@ export default function CreatorGiftEarningsPanel() {
           <h2 className="mt-1 text-2xl font-black text-white">Your gift earnings</h2>
           <p className="mt-1 text-sm text-slate-400">Transparent NEX earnings from gifts sent to you.</p>
         </div>
-        <button type="button" onClick={() => void refresh()} disabled={loading}
-          className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-bold text-white disabled:opacity-50">
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
-        </button>
+        <div className="flex gap-2">
+          <button type="button" onClick={exportHistory} disabled={!history.length || loading}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-xs font-bold text-violet-100 disabled:opacity-40">
+            <Download size={14}/> Export CSV
+          </button>
+          <button type="button" onClick={() => void refresh()} disabled={loading}
+            className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-bold text-white disabled:opacity-50">
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
+          </button>
+        </div>
       </div>
 
       {error && <div role="alert" className="flex items-start gap-2 rounded-xl border border-rose-400/20 bg-rose-500/10 p-3 text-sm text-rose-200">
