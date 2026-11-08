@@ -230,21 +230,28 @@ export const getPendingGiftEarningsForFinance = onCall({ maxInstances: 5 }, asyn
       .orderBy('createdAt', 'desc')
       .limit(100)
       .get();
-    return {
-      records: snapshot.docs.map(item => {
-        const data = item.data();
-        return {
-          transactionId: item.id,
-          creatorId: data.creatorId,
-          senderId: data.senderId,
-          giftName: data.giftName,
-          quantity: data.quantity,
-          grossNex: data.grossNex,
-          createdAt: iso(data.createdAt),
-        };
-      }),
-      hasMore: snapshot.size === 100,
-    };
+    const records = await Promise.all(snapshot.docs.map(async item => {
+      const data = item.data();
+      const riskSnapshot = await db.collection('giftRiskSignals').doc(item.id).get();
+      const risk = riskSnapshot.data() || null;
+      const allowedDispositions = ['auto_cleared', 'review_only', 'cleared', 'escalated'];
+      const disposition = risk
+        ? (allowedDispositions.includes(String(risk.disposition)) ? String(risk.disposition) : 'review_only')
+        : 'legacy_manual_review';
+      return {
+        transactionId: item.id,
+        creatorId: data.creatorId,
+        senderId: data.senderId,
+        giftName: data.giftName,
+        quantity: data.quantity,
+        grossNex: data.grossNex,
+        createdAt: iso(data.createdAt),
+        riskTier: risk && ['low', 'review', 'high'].includes(String(risk.tier)) ? risk.tier : null,
+        riskDisposition: disposition,
+        riskReasons: risk && Array.isArray(risk.reasons) ? risk.reasons.filter((reason: unknown): reason is string => typeof reason === 'string').slice(0, 12) : [],
+      };
+    }));
+    return { records, hasMore: snapshot.size === 100 };
   } catch {
     throw new HttpsError('unavailable', 'The GIFTVERSE finance review queue is temporarily unavailable.');
   }

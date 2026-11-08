@@ -43,6 +43,9 @@ export interface PendingGiftEarningForFinance {
   quantity: number;
   grossNex: number;
   createdAt: string | null;
+  riskTier: 'low' | 'review' | 'high' | null;
+  riskDisposition: 'auto_cleared' | 'review_only' | 'cleared' | 'escalated' | 'legacy_manual_review';
+  riskReasons: string[];
 }
 export async function getPendingGiftEarningsForFinance(): Promise<{ records: PendingGiftEarningForFinance[]; hasMore: boolean }> {
   const call = httpsCallable<void, { records: PendingGiftEarningForFinance[]; hasMore: boolean }>(functions, 'getPendingGiftEarningsForFinance');
