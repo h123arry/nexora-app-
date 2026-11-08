@@ -164,10 +164,10 @@ export class SettingsService {
       if (shouldSyncPublicLocation) {
         privateProfileSnapshot = await transaction.get(privateProfileRef);
       }
-      transaction.set(settingsRef, {
-        privacy: { ...currentPrivacy, ...privacyUpdates },
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      const nextPrivacy = { ...currentPrivacy, ...privacyUpdates };
+      transaction.set(settingsRef, snapshot.exists()
+        ? { privacy: nextPrivacy, updatedAt: serverTimestamp() }
+        : { ...DEFAULT_SETTINGS, privacy: nextPrivacy, updatedAt: serverTimestamp() }, { merge: true });
       if (shouldSyncPublicLocation) {
         const location = privateProfileSnapshot?.get('location');
         transaction.set(publicProfileRef, {
