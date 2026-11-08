@@ -2,9 +2,9 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
 
 export type CreatorPayoutReadiness = {
-  providerConfigured: boolean; payoutEnabled: boolean; corridor: 'NG-NGN'; currency: 'NGN';
-  beneficiaryStatus: 'verified' | 'pending' | 'not_configured'; displayCurrency: string;
-  blocker: string | null; cashWithdrawalEnabled: false;
+  providerConfigured: boolean; provider: 'paystack'; providerMode: 'test' | 'live' | 'unknown'; payoutEnabled: boolean; testModeAvailable: boolean; corridor: 'NG-NGN'; currency: 'NGN';
+  beneficiaryStatus: 'verified' | 'pending' | 'not_configured'; beneficiary: { accountName: string; accountNumberLast4: string; bankName: string } | null; displayCurrency: string;
+  koboPerNex: number | null; minimumNex: number | null; maximumNex: number | null; blocker: string | null; cashWithdrawalEnabled: boolean;
 };
 export type CreatorGiftAnalytics = {
   currency: 'NEX'; windowDays: number; source: string; truncated: boolean;
@@ -15,8 +15,24 @@ export type GiftCompetition = { id: string; title: string; liveSessionId: string
 export async function getCreatorPayoutReadiness() {
   return (await httpsCallable<void, CreatorPayoutReadiness>(functions, 'getCreatorPayoutReadiness')()).data;
 }
-export async function requestCreatorPayout(amountNex: number) {
-  return (await httpsCallable<{amountNex:number;currency:'NGN'}, {status:string}>(functions, 'requestCreatorPayout')({amountNex,currency:'NGN'})).data;
+export async function requestCreatorPayout(amountNex: number, idempotencyKey: string) {
+  return (await httpsCallable<{amountNex:number;idempotencyKey:string}, {reference:string;status:string;amountNex:number;amountKobo:number;currency:'NGN'}>(functions, 'requestCreatorPayout')({amountNex,idempotencyKey})).data;
+}
+export type NgnBank = { name: string; code: string; slug: string };
+export async function getNgnBanks() {
+  return (await httpsCallable<void, {banks:NgnBank[]}>(functions, 'getNgnBanks')()).data.banks;
+}
+export async function resolveNgnBankAccount(accountNumber: string, bankCode: string) {
+  return (await httpsCallable<{accountNumber:string;bankCode:string}, {verified:boolean;accountName:string;accountNumberLast4:string;bankCode:string}>(functions, 'resolveNgnBankAccount')({accountNumber,bankCode})).data;
+}
+export async function setCreatorPayoutBeneficiary(accountNumber: string, bankCode: string, confirmedAccountName: string) {
+  return (await httpsCallable<{accountNumber:string;bankCode:string;confirmedAccountName:string}, {creatorId:string;status:string;accountName:string;accountNumberLast4:string;bankName:string}>(functions, 'setCreatorPayoutBeneficiary')({accountNumber,bankCode,confirmedAccountName})).data;
+}
+export async function getNgnPayoutProviderStatus() {
+  return (await httpsCallable<void, {provider:string;configured:boolean;mode:string;transferFeatureEnabled:boolean;cashWithdrawalsEnabled:boolean;blocker:string|null}>(functions, 'getNgnPayoutProviderStatus')()).data;
+}
+export async function configureNgnPayoutPolicy(input:{enabled:boolean;koboPerNex:number;minimumNex:number;maximumNex:number;liveSettlementApproved:boolean;providerBusinessVerified?:boolean;settlementFundingVerified?:boolean;complianceApproved?:boolean;webhookVerified?:boolean;liveTestTransferVerified?:boolean}) {
+  return (await httpsCallable<typeof input, {saved:boolean;mode:string;enabled:boolean;liveSettlementApproved:boolean}>(functions, 'configureNgnPayoutPolicy')(input)).data;
 }
 export async function setCreatorEconomyDisplayCurrency(currency: string) {
   return (await httpsCallable<{currency:string}, {currency:string;conversionApplied:false;note:string}>(functions, 'setCreatorEconomyDisplayCurrency')({currency})).data;
