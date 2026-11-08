@@ -55,6 +55,7 @@ import { isUserCacheReady, readUserScopedJson, writeUserScopedJson } from './uti
 import { migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase/bookmarkService';
 import { createPostRepost } from './services/firebase/postRepostService';
 import { addPostCommentReply } from './services/firebase/postReplyService';
+import { setPostCommentLike } from './services/firebase/postCommentReactionService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -1192,28 +1193,24 @@ export default function App() {
     };
 
     const handleSparkComment = (e: Event) => {
-      const { postId, commentId } = (e as CustomEvent).detail || {};
-      if (!postId || !commentId) return;
-      setPosts(prev => {
-        const next = prev.map(p => {
-          if (p.id !== postId) return p;
-          const updatedPost = {
-            ...p,
-            comments: (p.comments || []).map(c => {
-              if (c.id !== commentId) return c;
-              const isLiked = !!c.isLikedByUser;
-              return {
-                ...c,
-                likes: isLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
-                isLikedByUser: !isLiked
-              };
-            })
-          };
-          savePostToDb(updatedPost);
-          return updatedPost;
+      const { postId, commentId, desiredLiked } = (e as CustomEvent).detail || {};
+      if (!postId || !commentId || typeof desiredLiked !== 'boolean') return;
+      void setPostCommentLike(postId, commentId, desiredLiked).then(result => {
+        setPosts(previous => {
+          const next = previous.map(post => post.id !== postId ? post : ({
+            ...post,
+            comments: (post.comments || []).map(comment => comment.id !== commentId ? comment : ({
+              ...comment,
+              likes: result.likes,
+              isLikedByUser: result.liked,
+            })),
+          }));
+          localStorage.setItem('nexora_posts', JSON.stringify(next));
+          return next;
         });
-        localStorage.setItem('nexora_posts', JSON.stringify(next));
-        return next;
+      }).catch(error => {
+        const message = error instanceof Error ? error.message : 'Your comment reaction could not be saved. Please retry.';
+        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       });
     };
 

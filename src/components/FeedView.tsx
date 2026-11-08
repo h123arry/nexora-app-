@@ -1196,25 +1196,10 @@ export default function FeedView({
 
   // Spark / Like status toggle for comments
   const handleSparkComment = (postId: string, commentId: string) => {
-    window.dispatchEvent(new CustomEvent('nexora-spark-comment', { detail: { postId, commentId } }));
-    setLocalPosts(prev => prev.map(p => {
-      if (p.id === postId) {
-        return {
-          ...p,
-          comments: p.comments.map(c => {
-            if (c.id === commentId) {
-              const isLiked = !c.isLikedByUser;
-              return {
-                ...c,
-                isLikedByUser: isLiked,
-                likes: isLiked ? c.likes + 1 : c.likes - 1
-              };
-            }
-            return c;
-          })
-        };
-      }
-      return p;
+    const comment = localPosts.find(post => post.id === postId)?.comments.find(item => item.id === commentId);
+    if (!comment) return;
+    window.dispatchEvent(new CustomEvent('nexora-spark-comment', {
+      detail: { postId, commentId, desiredLiked: !comment.isLikedByUser }
     }));
   };
 

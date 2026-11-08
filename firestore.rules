@@ -394,6 +394,11 @@ service cloud.firestore {
         allow get, list: if owner(userId);
         allow create, update, delete: if false;
       }
+      // Comment reaction markers are private and written only by the trusted callable.
+      match /commentLikes/{reactionId} {
+        allow get, list: if owner(userId);
+        allow create, update, delete: if false;
+      }
       // Named saved collections are private, bounded and scoped to the account owner.
       match /savedCollections/{collectionId} {
         allow get, list: if owner(userId);

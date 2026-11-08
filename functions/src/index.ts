@@ -6,6 +6,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
+import { setPublicPostCommentLike } from './postCommentReactions.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
@@ -172,6 +173,20 @@ export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) =>
   }
 });
 
+
+export const setPublicPostCommentLikeState = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to react to comments.');
+  const { postId, commentId, liked } = request.data || {};
+  if (typeof liked !== 'boolean') throw new HttpsError('invalid-argument', 'A boolean reaction state is required.');
+  try {
+    return await setPublicPostCommentLike(adminDb, request.auth.uid, postId, commentId, liked);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid post') || message.includes('desired reaction')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('no longer available')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'Your comment reaction could not be saved. Please retry.');
+  }
+});
 
 export const replyToPublicPostComment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to reply to comments.');
