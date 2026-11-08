@@ -179,7 +179,7 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
       const rateData = rate.data();
       const currentRate = rate.exists ? {
         windowStartedAtMs: rateData?.windowStartedAt?.toMillis?.() || 0,
-        messageCount: Number.isSafeInteger(rateData?.messageCount) ? rateData.messageCount : 0,
+        messageCount: Number.isSafeInteger(rateData?.messageCount) ? Number(rateData?.messageCount) : 0,
       } : null;
       let nextRate: ReturnType<typeof nextLiveChatRateState>;
       try { nextRate = nextLiveChatRateState(currentRate, Date.now()); }
