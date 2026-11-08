@@ -67,7 +67,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
 export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 2 }, async request => {
   const actorId = requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
-  const { enabled, koboPerNex, liveSettlementApproved, minimumNex, maximumNex } = request.data || {};
+  const { enabled, koboPerNex, liveSettlementApproved, minimumNex, maximumNex, providerBusinessVerified, settlementFundingVerified, complianceApproved, webhookVerified, liveTestTransferVerified } = request.data || {};
   if (typeof enabled !== 'boolean' || !Number.isSafeInteger(koboPerNex) || koboPerNex < 1 || koboPerNex > 100000000
     || !Number.isSafeInteger(minimumNex) || minimumNex < 1000 || !Number.isSafeInteger(maximumNex)
     || maximumNex < minimumNex || maximumNex > 10000000 || typeof liveSettlementApproved !== 'boolean') {
@@ -81,11 +81,11 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY],
   if (mode !== 'live' && liveSettlementApproved) throw new HttpsError('failed-precondition', 'Live settlement approval can only be recorded with live credentials.');
   await db.collection('platformConfig').doc('ngnPayoutPolicy').set({
     provider: 'paystack', corridor: 'NG-NGN', enabled, koboPerNex, minimumNex, maximumNex,
-    liveSettlementApproved, mode, configuredBy: actorId, updatedAt: FieldValue.serverTimestamp(),
+    liveSettlementApproved, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, mode, configuredBy: actorId, updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   await db.collection('creatorPayoutAuditEvents').add({
     actorId, action: 'ngn_payout_policy_updated', mode, enabled, koboPerNex, minimumNex, maximumNex,
-    liveSettlementApproved, createdAt: FieldValue.serverTimestamp(),
+    liveSettlementApproved, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, createdAt: FieldValue.serverTimestamp(),
   });
   return { saved: true, mode, enabled, liveSettlementApproved };
 });
@@ -236,7 +236,7 @@ function validPaystackSignature(raw: Buffer, headers: Record<string, string | st
     const parts = modern.split(',');
     const timestamp = Number(parts.find(part => part.startsWith('t='))?.slice(2));
     if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300) return false;
-    const signed = 't=' + timestamp + '.' + raw.toString('utf8');
+    const signed = String(timestamp) + '.' + raw.toString('utf8');
     const expected = createHmac('sha512', webhookSecret).update(signed).digest('hex');
     return parts.filter(part => part.startsWith('v1=')).some(part => {
       const signature = part.slice(3).split(':').at(-1) || '';
@@ -289,7 +289,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   if (beneficiary.status !== 'verified' || !safeText(beneficiary.providerBeneficiaryRef, 120)) throw new HttpsError('failed-precondition', 'Add and verify a bank beneficiary first.');
   const amountKobo = amountNex * policy.koboPerNex;
   if (!Number.isSafeInteger(amountKobo) || amountKobo <= 0) throw new HttpsError('failed-precondition', 'The approved NGN conversion amount is invalid.');
-  const reference = 'nxp_' + randomUUID().replace(/-/g, '');
+  if (mode === 'live') {\n    try {\n      const balances = await paystack('/balance?currency=NGN', 'GET');\n      const ngnBalance = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN')?.balance : undefined;\n      if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo) throw new HttpsError('failed-precondition', 'The Paystack NGN settlement balance is insufficient for this withdrawal.');\n    } catch (error) {\n      if (error instanceof HttpsError) throw error;\n      throw new HttpsError('unavailable', 'Paystack settlement balance could not be verified. No NEX was reserved.');\n    }\n  }\n  const reference = 'nxp_' + randomUUID().replace(/-/g, '');
   const idempotencyId = createHmac('sha256', 'nexora-payout-idempotency').update(creatorId + ':' + idempotencyKey).digest('hex');
   const payoutRef = db.collection('creatorPayoutRequests').doc(reference);
   const idemRef = db.collection('creatorPayoutIdempotency').doc(idempotencyId);
