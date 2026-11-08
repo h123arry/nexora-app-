@@ -1,5 +1,5 @@
 import { httpsCallable } from 'firebase/functions';
-import { collection, limit, onSnapshot, query, where, type Unsubscribe } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query, where, type Unsubscribe } from 'firebase/firestore';
 import { db, functions } from '../lib/firebase';
 
 export type GiftAnimationClass = 'sparkle' | 'reveal' | 'cinematic' | 'legendary';
@@ -40,6 +40,7 @@ export function subscribeToLiveGiftEvents(
     collection(db, 'giftDeliveryEvents'),
     where('targetType', '==', 'live'),
     where('targetId', '==', streamId),
+    orderBy('createdAt', 'desc'),
     limit(40),
   );
   return onSnapshot(eventsQuery, snapshot => {
