@@ -69,3 +69,11 @@ export async function getNgnPayoutPolicyForFinance() {
 export async function getCreatorPayoutComplianceQueue() {
   return (await httpsCallable<void, {records:CreatorPayoutComplianceRecord[]}>(functions, 'getCreatorPayoutComplianceQueue')()).data.records;
 }
+
+export type NgnPayoutOtpRecord = {reference:string;creatorId:string;amountNex:number;amountKobo:number;transferCode:string|null;createdAt:string|null};
+export async function getNgnPayoutOtpQueue() {
+  return (await httpsCallable<void, {records:NgnPayoutOtpRecord[]}>(functions, 'getNgnPayoutOtpQueue')()).data.records;
+}
+export async function finalizeNgnPayoutTransfer(reference:string, otp:string) {
+  return (await httpsCallable<{reference:string;otp:string},{reference:string;status:string}>(functions, 'finalizeNgnPayoutTransfer')({reference,otp})).data;
+}
