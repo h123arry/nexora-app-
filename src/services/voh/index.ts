@@ -8,6 +8,6 @@ export * from './creatorEngine';
 export * from './moderationEngine';
 export * from './recommendationEngine';
 export * from './searchEngine';
-export * from './profileEngine';
 export * from './notificationEngine';
 export * from '../../data/copyDictionary';
+export * from './profileEngine';

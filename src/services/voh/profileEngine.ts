@@ -3,96 +3,50 @@ import { getRichUser } from '../../data/database';
 
 export class ProfileEngine {
   private static profileCache = new Map<string, { user: User; timestamp: number }>();
-  private static revalidationQueue = new Set<string>();
-  private static CACHE_TTL_MS = 30000; // 30 seconds cache TTL for profile revalidation
+  private static CACHE_TTL_MS = 30_000;
 
   /**
-   * Retrieves profile information instantly.
-   * If in cache and not expired, returns the cached version.
-   * Otherwise, returns cached/fallback instantly and triggers a quiet background refresh.
+   * Enriches the supplied profile with the current app-side activity counters.
+   * This is a local cache operation, not a remote profile fetch or verification.
    */
   static getProfileInstantly(user: User, onRefresh?: (updatedUser: User) => void): User {
     if (!user || !user.id) return user;
-
+    const now = Date.now();
     const cached = this.profileCache.get(user.id);
-    const now = Date.now();
+    if (cached && now - cached.timestamp <= this.CACHE_TTL_MS) return cached.user;
 
-    if (cached) {
-      const isExpired = now - cached.timestamp > this.CACHE_TTL_MS;
-      if (isExpired) {
-        // Quiet background revalidation
-        this.triggerQuietRevalidation(user, onRefresh);
-      }
-      return cached.user;
-    }
-
-    // First-time cache warming
-    const rich = getRichUser(user);
-    this.profileCache.set(user.id, { user: rich, timestamp: now });
-    return rich;
+    const refreshed = getRichUser(user);
+    this.profileCache.set(user.id, { user: refreshed, timestamp: now });
+    if (cached && onRefresh && cached.user !== refreshed) onRefresh(refreshed);
+    return refreshed;
   }
 
-  /**
-   * Performs background revalidation of profile data quietly, reducing redundant DB calls
-   */
-  private static triggerQuietRevalidation(user: User, onRefresh?: (updatedUser: User) => void) {
-    if (this.revalidationQueue.has(user.id)) return; // Already revalidating this user
-    this.revalidationQueue.add(user.id);
-
-    // Simulate quiet background query to keep statistics fresh and synchronized
-    setTimeout(() => {
-      try {
-        const freshUser = getRichUser(user);
-        this.profileCache.set(user.id, { user: freshUser, timestamp: Date.now() });
-        if (onRefresh) {
-          onRefresh(freshUser);
-        }
-      } catch (e) {
-        console.warn(`[Profile Engine] Quiet revalidation failed for ${user.username}`, e);
-      } finally {
-        this.revalidationQueue.delete(user.id);
-      }
-    }, 150); // Small debounce/async shift to prevent frame drop
-  }
-
-  /**
-   * Warm up profiles for posts currently visible in the viewport or feed
-   */
-  static prefetchProfiles(users: User[]) {
-    if (!users || users.length === 0) return;
+  /** Warm the local profile cache from the profiles already present in the feed. */
+  static prefetchProfiles(users: User[]): void {
     const now = Date.now();
-    users.forEach(u => {
-      if (!u || !u.id) return;
-      if (!this.profileCache.has(u.id)) {
-        // Cache misses are populated asynchronously without blocking main thread
-        setTimeout(() => {
-          const rich = getRichUser(u);
-          this.profileCache.set(u.id, { user: rich, timestamp: now });
-        }, 0);
-      }
+    users.forEach(user => {
+      if (!user?.id || this.profileCache.has(user.id)) return;
+      this.profileCache.set(user.id, { user: getRichUser(user), timestamp: now });
     });
   }
 
-  /**
-   * Invalidates specific profile cache to force hard refresh
-   */
-  static invalidateProfile(userId: string) {
+  static invalidateProfile(userId: string): void {
     this.profileCache.delete(userId);
   }
 
+  /** Reports completeness only; field presence is not identity or credential verification. */
   static getProfileAudit(user: User): string {
-    const isBioEmpty = !user.bio || user.bio.trim() === '';
-    const hasWebsite = !!user.website;
-    const hasSkills = user.skills && user.skills.length > 0;
+    const bioPresent = typeof user.bio === 'string' && user.bio.trim().length > 0;
+    const websitePresent = typeof user.website === 'string' && user.website.trim().length > 0;
+    const skillsCount = Array.isArray(user.skills) ? user.skills.length : 0;
 
-    return `### 👤 VOH AI Profile Audit
-Reviewing profile credentials for **@${user.username}**:
-- **Bio Quality**: ${isBioEmpty ? '❌ Empty (Recommended: add a high-impact branding statement)' : '✅ Verified'}
-- **External Portfolio**: ${hasWebsite ? '✅ Verified link linked' : '⚠️ Missing external website (Recommended: link your github/behance)'}
-- **Developer Skills**: ${hasSkills ? `✅ Verified ${user.skills.length} skills` : '❌ No skills added (Recommended: list your specialty tools to verify reputation)'}
-
-#### 💡 Suggested Bio Options
-1. **Futuristic Option**: *"Pioneering modular design tokens and zero-cost compiler frameworks on Nexora. Let's co-build future human interfaces! 🚀"*
-2. **Community Builder Option**: *"Digital craftsman co-building verified knowledge networks in Port Harcourt. High-reputation creator and UI/UX strategist. 🎨"*`;
+    return [
+      '### Profile completeness',
+      `- **Bio:** ${bioPresent ? 'Added' : 'Missing'}`,
+      `- **Website:** ${websitePresent ? 'Added (not independently verified)' : 'Not added'}`,
+      `- **Skills:** ${skillsCount} listed (not independently verified)`,
+      '',
+      'These checks describe profile fields only. They do not verify identity, credentials, expertise or external links.',
+    ].join('\\n');
   }
 }

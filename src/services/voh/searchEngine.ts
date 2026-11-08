@@ -6,41 +6,32 @@ export interface IntelligentSearchSuggestions {
   suggestedCircles: Circle[];
 }
 
+/** Build search suggestions only from records supplied by the caller. */
 export class SearchEngine {
   static getSuggestions(query: string, users: User[], posts: Post[], circles: Circle[]): IntelligentSearchSuggestions {
-    const q = query.toLowerCase();
-    const suggestions: string[] = [];
+    const q = query.trim().toLocaleLowerCase();
+    if (!q) return { suggestions: [], suggestedUsers: [], suggestedCircles: [] };
 
-    // Filter matching usernames/names
     const suggestedUsers = users
-      .filter(u => u.username.toLowerCase().includes(q) || u.name.toLowerCase().includes(q))
+      .filter(user => user.username.toLocaleLowerCase().includes(q) || user.name.toLocaleLowerCase().includes(q))
       .slice(0, 3);
 
-    // Filter matching circles
     const suggestedCircles = circles
-      .filter(c => c.name.toLowerCase().includes(q) || c.tags.some(t => t.toLowerCase().includes(q)))
+      .filter(circle => circle.name.toLocaleLowerCase().includes(q)
+        || (Array.isArray(circle.tags) && circle.tags.some(tag => tag.toLocaleLowerCase().includes(q))))
       .slice(0, 3);
 
-    // Dynamic autocomplete suggestion chips
-    if (q.includes('fo') || q.includes('sp')) {
-      suggestions.push('Football predictions WAT', 'Sports activities Port Harcourt');
-    }
-    if (q.includes('ai') || q.includes('co')) {
-      suggestions.push('AI builders guild', 'Code compiler memory serialization');
-    }
-    if (q.includes('de') || q.includes('ui')) {
-      suggestions.push('Design tokens & space-glass styles', 'UI responsive grid frameworks');
-    }
+    const matchingPosts = posts.filter(post =>
+      `${post.content || ''} ${Array.isArray(post.tags) ? post.tags.join(' ') : ''}`.toLocaleLowerCase().includes(q)
+    ).slice(0, 20);
 
-    // Default suggestions if none
-    if (suggestions.length === 0) {
-      suggestions.push('Lagos startup founders alliance', 'Premium creative writing communities', '#SpaceGlass aesthetic guides');
-    }
+    const groundedTags = [
+      ...matchingPosts.flatMap(post => Array.isArray(post.tags) ? post.tags : []),
+      ...suggestedCircles.flatMap(circle => Array.isArray(circle.tags) ? circle.tags : []),
+    ]
+      .filter((tag): tag is string => typeof tag === 'string' && tag.trim().length > 0)
+      .map(tag => `#${tag.trim().replace(/^#/, '')}`);
 
-    return {
-      suggestions,
-      suggestedUsers,
-      suggestedCircles
-    };
+    return { suggestions: [...new Set(groundedTags)].slice(0, 5), suggestedUsers, suggestedCircles };
   }
 }

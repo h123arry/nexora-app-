@@ -12,58 +12,58 @@ export class PromptEngine {
       {
         id: 'creator-tips',
         category: 'creator',
-        name: '📈 Creator Growth Tips',
-        description: 'Actionable tips and trends to boost subscriber engagement.',
-        promptTemplate: 'Analyze current Nexora trends and recommend 3 tactical subscriber growth ideas.'
+        name: 'Creator Growth Experiments',
+        description: 'Plan measurable creator experiments using verified account analytics.',
+        promptTemplate: 'Use only the verified creator analytics supplied in this conversation. If reach, retention or conversion data is unavailable, say so. Suggest three measurable growth experiments without inventing results.'
       },
       {
         id: 'creator-ideas',
         category: 'creator',
-        name: '💡 Video / Post Ideas',
-        description: 'Fresh video formats, stories, and post layouts.',
-        promptTemplate: 'Generate 5 unique content ideas focusing on tech developers building in Port Harcourt.'
+        name: 'Content Ideas',
+        description: 'Generate original ideas using the creator niche and available content history.',
+        promptTemplate: 'Generate five original post or video ideas based on my stated niche and the content history supplied. Ask me for my niche if it is not available.'
       },
       {
         id: 'writing-polish',
         category: 'writing',
-        name: '✨ Rewrite & Polish',
-        description: 'Enhance structure, flow, and hashtags.',
-        promptTemplate: 'Polish the following text to make it incredibly compelling, adding balanced markdown structure: '
+        name: 'Rewrite & Polish',
+        description: 'Improve structure, clarity and flow while preserving the author’s voice.',
+        promptTemplate: 'Polish the following text for clarity and flow while preserving my natural voice: '
       },
       {
         id: 'writing-thread',
         category: 'writing',
-        name: '🧵 Create Twitter/Nex Thread',
-        description: 'Break a complex topic into scannable posts.',
-        promptTemplate: 'Convert this message into a 4-part engaging thread with tags: '
+        name: 'Create a Thread',
+        description: 'Break a complex topic into scannable, connected posts.',
+        promptTemplate: 'Convert this message into a clear, connected four-part thread with relevant tags: '
       },
       {
         id: 'community-suggest',
         category: 'community',
-        name: '👥 Rules & Description',
-        description: 'Formulate community rules and descriptions.',
-        promptTemplate: 'Generate high-reputation community guidelines and a welcoming description for: '
+        name: 'Community Rules & Description',
+        description: 'Draft practical community rules and a welcoming description.',
+        promptTemplate: 'Draft clear, practical community guidelines and a welcoming description for this community: '
       },
       {
         id: 'analytics-summary',
         category: 'analytics',
-        name: '📊 Growth Analysis',
-        description: 'Synthesize performance and offer action items.',
-        promptTemplate: 'Based on Nexora metrics, outline 3 actionable recommendations to improve subscriber retention.'
+        name: 'Evidence-Based Growth Analysis',
+        description: 'Summarize only recorded metrics and identify useful next experiments.',
+        promptTemplate: 'Summarize only the verified analytics supplied. Separate counts, rates and inferences, identify missing metrics, and suggest three measurable next steps.'
       },
       {
         id: 'profile-bio',
         category: 'profile',
-        name: '👤 Bio & Name Optimization',
-        description: 'Optimize bios to stand out.',
-        promptTemplate: 'Optimize my profile bio to represent me as a leading creator co-building decentralized networks.'
+        name: 'Bio & Name Optimization',
+        description: 'Improve profile positioning without inventing credentials or achievements.',
+        promptTemplate: 'Help me improve my profile bio using only the skills, experience and goals I provide. Do not invent credentials, locations or achievements.'
       },
       {
         id: 'hashtag-trends',
         category: 'hashtag',
-        name: '🏷️ Niche & Trending Hashtags',
-        description: 'Discover relevant hashtags for discoverability.',
-        promptTemplate: 'Suggest the top 8 viral hashtags for a post about building Web3 and AI frameworks in Lagos.'
+        name: 'Relevant Hashtags',
+        description: 'Suggest tags from the post topic and supplied trend evidence.',
+        promptTemplate: 'Suggest relevant hashtags based on the post content. Only call a hashtag trending or viral if a current, supplied trend snapshot supports that claim.'
       }
     ];
   }
