@@ -60,7 +60,8 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
   // Rank only real posts supplied by the live application data layer.
   const rankedPosts = posts.map(post => {
     const topic = post.tags?.[0]?.replace(/^#/, '') || 'General';
-    const interestScore = interestDNA[topic] ?? interestDNA[topic.toLowerCase()] ?? 0;
+    const interestKey = topic.length ? topic.charAt(0).toUpperCase() + topic.slice(1).toLowerCase() : topic;
+    const interestScore = interestDNA[topic] ?? interestDNA[interestKey] ?? 0;
     const engagementCount = (post.likes || 0) + (post.commentsCount || 0) * 2 + (post.shares || 0) * 3;
     const qualityScore = Math.min(100, Math.round(engagementCount / 5));
     const verificationScore = post.isVerified ? 100 : 50;
