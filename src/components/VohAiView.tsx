@@ -66,6 +66,12 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       : [];
   });
 
+  useEffect(() => {
+    setMemoryDNA(memoryProfile.memoryEnabled
+      ? [...memoryProfile.interests, ...memoryProfile.creatorGoals].filter(Boolean).slice(0, 20)
+      : []);
+  }, [memoryProfile.memoryEnabled, memoryProfile.interests, memoryProfile.creatorGoals]);
+
   // UI state indicators
   const [loadingAi, setLoadingAi] = useState(false);
   const [generatingMessageId, setGeneratingMessageId] = useState<string | null>(null);
