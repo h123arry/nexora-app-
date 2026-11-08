@@ -31,7 +31,7 @@ describe('VOH memory consent boundary', () => {
   it('requires explicit consent and can be disabled again', () => {
     const enabled = MemoryEngine.setConsent(true);
     assert.equal(enabled.memoryEnabled, true);
-    assert.equal(enabled.consentVersion, '2026-10');
+    assert.equal(enabled.consentVersion, '2026-11');
 
     const disabled = MemoryEngine.setConsent(false);
     assert.equal(disabled.memoryEnabled, false);
