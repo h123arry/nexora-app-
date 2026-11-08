@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Archive, Check, Crown, Loader2, Plus, RefreshCw, Save, ShieldCheck } from 'lucide-react';
+import { Archive, Check, Crown, Loader2, RefreshCw, Save, ShieldCheck } from 'lucide-react';
 import { archiveCreatorMembershipTier, createCreatorMembershipTier, listCreatorMembershipTiers, updateCreatorMembershipTier, type CreatorMembershipTier, type CreatorMembershipTierInput } from '../services/creatorMembershipService';
 
 const empty: CreatorMembershipTierInput = { name: '', description: '', benefits: [''] };
