@@ -281,14 +281,16 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     db.collection('creatorPayoutCompliance').doc(creatorId).get(), payoutPolicy(),
   ]);
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
+  let credentialsVerified = false;
+  if (mode !== 'unknown') { try { await paystack('/balance?currency=NGN', 'GET'); credentialsVerified = true; } catch { credentialsVerified = false; } }
   const b = beneficiary.data() || {};
   const complianceData = compliance.data() || {};
   const complianceStatus = complianceData.beneficiaryRef === b.providerBeneficiaryRef ? complianceData.status : 'pending';
-  const enabled = policy.enabled === true && Number.isSafeInteger(policy.koboPerNex) && b.status === 'verified'
+  const enabled = credentialsVerified && policy.enabled === true && Number.isSafeInteger(policy.koboPerNex) && b.status === 'verified'
     && complianceStatus === 'approved' && complianceData.bankAccountNameMatched === true
     && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && livePayoutGatesPassed(policy)));
   return {
-    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && livePayoutGatesPassed(policy), testModeAvailable: enabled && mode === 'test',
+    providerConfigured: credentialsVerified, credentialsVerified, provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && livePayoutGatesPassed(policy), testModeAvailable: enabled && mode === 'test',
     corridor: 'NG-NGN', currency: 'NGN', beneficiaryStatus: b.status === 'verified' ? 'verified' : 'not_configured',
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
     complianceStatus,
