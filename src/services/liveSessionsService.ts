@@ -1,5 +1,7 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../lib/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app, functions } from '../lib/firebase';
+
+const liveKitFunctions = getFunctions(app, 'europe-west1');
 
 export interface LiveSessionSummary {
   id: string; hostId: string; hostName?: string; title: string; status: 'live' | 'ended';
@@ -35,6 +37,6 @@ export async function sendLiveChatMessage(sessionId: string, message: string, co
 }
 
 export async function getLiveKitToken(sessionId: string, connectionId: string) {
-  const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'viewer'; expiresAt: number }>(functions, 'getLiveKitToken');
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'viewer'; expiresAt: number }>(liveKitFunctions, 'getLiveKitToken');
   return (await call({ sessionId, connectionId })).data;
 }
