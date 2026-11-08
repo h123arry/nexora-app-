@@ -177,10 +177,13 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
   const enabled = policy.enabled === true && Number.isSafeInteger(policy.koboPerNex) && b.status === 'verified'
     && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && policy.liveSettlementApproved === true));
   return {
-    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && policy.liveSettlementApproved === true,
+    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && policy.liveSettlementApproved === true, testModeAvailable: enabled && mode === 'test',
     corridor: 'NG-NGN', currency: 'NGN', beneficiaryStatus: b.status === 'verified' ? 'verified' : 'not_configured',
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
     displayCurrency: profile.data()?.creatorEconomyDisplayCurrency || 'NGN',
+    koboPerNex: Number.isSafeInteger(policy.koboPerNex) ? policy.koboPerNex : null,
+    minimumNex: Number.isSafeInteger(policy.minimumNex) ? policy.minimumNex : null,
+    maximumNex: Number.isSafeInteger(policy.maximumNex) ? policy.maximumNex : null,
     cashWithdrawalEnabled: enabled && mode === 'live' && policy.liveSettlementApproved === true,
     blocker: mode === 'unknown' ? 'provider_secret_missing' : !policy.enabled ? 'payout_policy_disabled'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required'
