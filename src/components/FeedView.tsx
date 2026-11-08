@@ -2274,7 +2274,6 @@ export default function FeedView({
                 post={post}
                 index={index}
                 isActive={activePostId === post.id}
-                playingVoiceId={playingVoiceId}
                 activeCommentsPostId={activeCommentsPostId}
                 followingIds={followingIds}
                 pinnedPostIds={pinnedPostIds}
@@ -2303,8 +2302,6 @@ export default function FeedView({
                 setMutedCreatorIds={setMutedCreatorIds}
                 handlePublishScheduledPostNow={handlePublishScheduledPostNow}
                 handleBroadcastReaction={handleBroadcastReaction}
-                setPlayingVoiceId={setPlayingVoiceId}
-                voiceSeconds={voiceSeconds}
                 votedPolls={votedPolls}
                 setVotedPolls={setVotedPolls}
                 selectedTag={selectedTag}
