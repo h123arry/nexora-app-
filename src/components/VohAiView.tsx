@@ -1,7 +1,7 @@
 import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Mic, MicOff, Volume2, VolumeX, FileText, Send, BrainCircuit, ClipboardCopy, Info, CheckCircle, TrendingUp, Award, Compass, Search, Plus, Trash2, Pin, Archive, FolderPlus, Folder, RefreshCw, HelpCircle, ShieldCheck, AlertTriangle, FileCheck, ThumbsUp, MessageSquare, Sparkle, PenSquare, Users, Settings, X, Play, Square, BookOpen, DollarSign, Cpu, Database, HardDrive, Bell, Layers, Lock, UserCheck, Activity, Eye, Forward } from 'lucide-react';
+import { Sparkles, Mic, MicOff, Volume2, Send, BrainCircuit, ClipboardCopy, TrendingUp, Award, Compass, Search, Plus, Trash2, Pin, Archive, FolderPlus, Folder, RefreshCw, ShieldCheck, MessageSquare, Sparkle, Users, X, Play, DollarSign, Database, Layers, UserCheck } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User, Post, Circle, Notification } from '../types';
 import { getJoinedCirclesForUser } from '../data/database';
@@ -11,62 +11,19 @@ import {
   ChatEngine, 
   ChatSession, 
   ChatFolder, 
-  Message,
+  Message, 
   VoiceEngine, 
   VoiceConfig, 
   MemoryEngine, 
-  UserMemoryProfile,
+  UserMemoryProfile, 
   SettingsEngine, 
   PromptEngine, 
-  QuickAssistantCard,
-  AnalyticsEngine,
-  CreatorEngine,
-  ModerationEngine,
-  RecommendationEngine,
-  SearchEngine,
-  ProfileEngine,
-  NotificationEngine,
-  FeedIntelligenceEngine,
-  CreatorRankingEngine,
-  MediaStreamingEngine,
-  SearchDiscoveryEngine,
-  TrustSafetyEngine,
-  CommunityEngine,
-  MessagingEngine,
-  VohAiIntelligenceEngine,
-  ProfileReputationEngine,
-  SearchIndexData,
-  NotificationItem,
-  CommunityConfig,
-  FeedIntelligenceService,
-  CreatorRankingService,
-  MediaStreamingService,
-  SearchDiscoveryService,
-  RecommendationService,
-  NotificationService,
-  CommunityService,
-  MessagingService,
-  VohAiIntelligenceService,
-  ProfileReputationService,
-  EngagementService,
-  TrendIntelligenceService,
-  ContentDistributionService,
-  ModerationTrustService,
-  AchievementService,
-  CreatorStudioService,
-  SocialGraphService,
-  MediaProcessingService,
-  RealTimeSyncService,
-  PlatformAnalyticsService,
-  SecurityService,
-  OfflineService,
-  PersonalizationService,
-  PlatformHealthService,
-  FeatureFlagService,
-  ALL_25_ENGINES,
-  TERMINOLOGY,
-  updateTerminology,
-  resetTerminology
+  CreatorEngine, 
+  ModerationEngine, 
+  SearchEngine, 
+  TERMINOLOGY, 
+  updateTerminology, 
+  resetTerminology, 
 } from '../services/voh';
 
 interface VohAiViewProps {
@@ -76,7 +33,7 @@ interface VohAiViewProps {
   setActiveTab: (tab: any) => void;
 }
 
-type AISubView = 'chat' | 'voice' | 'assistants' | 'engines' | 'search' | 'ecosystem' | 'moderation' | 'settings';
+type AISubView = 'chat' | 'voice' | 'assistants' | 'search' | 'ecosystem' | 'moderation' | 'settings';
 
 export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab }: VohAiViewProps) {
   // Navigation
@@ -143,22 +100,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // ─── INTERACTIVE CORE ENGINES CONTROL STATES ───
-  const [selectedEngineId, setSelectedEngineId] = useState<string>('feed');
-
-  const [simInputs, setSimInputs] = useState<Record<string, any>>({});
-
-  useEffect(() => {
-    const eng = ALL_25_ENGINES.find(e => e.id === selectedEngineId);
-    if (eng) {
-      const defaults: Record<string, any> = {};
-      eng.controls.forEach(c => {
-        defaults[c.key] = c.defaultValue;
-      });
-      setSimInputs(defaults);
-    }
-  }, [selectedEngineId]);
-  
   // Feed Intelligence states
   const [feedWatchTime, setFeedWatchTime] = useState<number>(24);
   const [feedRewatches, setFeedRewatches] = useState<number>(2);
@@ -1573,262 +1514,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             </div>
           </div>
         )}
-
-        {/* ======================================================== */}
-        {/* NEXORA CORE PLATFORM ENGINES VIEW */}
-        {/* ======================================================== */}
-        {activeSubView === 'engines' && (() => {
-          const activeEngine = ALL_25_ENGINES.find(e => e.id === selectedEngineId) || ALL_25_ENGINES[0];
-          const simulationResult = activeEngine.run(simInputs, posts);
-
-          const getIconComponent = (name) => {
-            switch (name) {
-              case 'Cpu': return Cpu;
-              case 'TrendingUp': return TrendingUp;
-              case 'HardDrive': return HardDrive;
-              case 'Search': return Search;
-              case 'Bell': return Bell;
-              case 'ShieldCheck': return ShieldCheck;
-              case 'Users': return Users;
-              case 'MessageSquare': return MessageSquare;
-              case 'BrainCircuit': return BrainCircuit;
-              case 'Award': return Award;
-              case 'Activity': return Activity;
-              case 'Share': return Forward;
-              case 'Lock': return Lock;
-              case 'Folder': return Folder;
-              case 'RefreshCw': return RefreshCw;
-              case 'Settings': return Settings;
-              case 'Pin': return Pin;
-              case 'PenSquare': return PenSquare;
-              case 'Layers': return Layers;
-              default: return Cpu;
-            }
-          };
-
-          return (
-            <div className="lg:col-span-12 space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 text-left animate-fade-in">
-                
-                {/* Left Column: 25 Engines Grouped List */}
-                <div className="lg:col-span-4 bg-[#03010b]/85 border border-white/10 rounded-3xl p-4 space-y-4 max-h-[800px] overflow-y-auto custom-scrollbar">
-                  <div className="pb-2 border-b border-white/5">
-                    <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">NEXORA NEXT-GEN PLATFORM ENGINES</span>
-                    <p className="text-[11px] text-current/50 leading-relaxed">25 Specialized Services & Core System Frameworks</p>
-                  </div>
-
-                  <div className="space-y-4">
-                    {[
-                      {
-                        name: '🧠 Core Personalization',
-                        engines: [
-                          { id: 'feed', name: 'Feed Intelligence', desc: 'Ranks and personalizes the Home Feed', iconName: 'Cpu', badge: 'Active' },
-                          { id: 'creator', name: 'Creator Ranking', desc: 'Calculates organic spread visibility', iconName: 'TrendingUp', badge: 'Active' },
-                          { id: 'recommendation', name: 'Recommendation Engine', desc: 'Suggests creators, communities & topics', iconName: 'Cpu', badge: 'Active' },
-                          { id: 'personalization', name: 'Personalization Engine', desc: 'Learns preferences from user actions', iconName: 'Settings', badge: 'Active' },
-                          { id: 'voh_ai', name: 'VOH AI Intelligence', desc: 'Powers discussions, tags & assist helpers', iconName: 'BrainCircuit', badge: 'AI Native' }
-                        ]
-                      },
-                      {
-                        name: '🎬 Content & Media',
-                        engines: [
-                          { id: 'stream', name: 'Media Streaming', desc: 'Adaptive quality & memory preloading', iconName: 'HardDrive', badge: 'Optimized' },
-                          { id: 'distribution', name: 'Content Distribution', desc: 'Balances freshness with follower spread', iconName: 'Forward', badge: 'Active' },
-                          { id: 'media_processing', name: 'Media Processing', desc: 'Transcodes videos & compresses images', iconName: 'HardDrive', badge: 'Automated' }
-                        ]
-                      },
-                      {
-                        name: '📡 Communication & Network',
-                        engines: [
-                          { id: 'search', name: 'Search & Discovery', desc: 'Indexes & ranks cross-platform results', iconName: 'Search', badge: 'Ready' },
-                          { id: 'notification', name: 'Notification Engine', desc: 'Batches and clusters incoming sparks', iconName: 'Bell', badge: 'Batched' },
-                          { id: 'community', name: 'Community Engine', desc: 'Calculates roles & moderator permissions', iconName: 'Users', badge: 'Online' },
-                          { id: 'messaging', name: 'Messaging Engine', desc: 'Controls DM receipts & typing loops', iconName: 'MessageSquare', badge: 'Encrypted' },
-                          { id: 'social_graph', name: 'Social Graph Engine', desc: 'Maps mutual follows & shared interests', iconName: 'Layers', badge: 'Connected' }
-                        ]
-                      },
-                      {
-                        name: '📈 Creator Growth & Studio',
-                        engines: [
-                          { id: 'engagement', name: 'Engagement Engine', desc: 'Aggregates Sparks, views and retention', iconName: 'Activity', badge: 'Live' },
-                          { id: 'trend', name: 'Trend Intelligence', desc: 'Calculates real viral topics & hashtags', iconName: 'TrendingUp', badge: 'Dynamic' },
-                          { id: 'achievement', name: 'Achievement Engine', desc: 'Awards milestones based on progress', iconName: 'Award', badge: 'Active' },
-                          { id: 'studio', name: 'Nexora Studio', desc: 'Provides advanced audience analytics', iconName: 'PenSquare', badge: 'Studio' }
-                        ]
-                      },
-                      {
-                        name: '🛡 Security & Infrastructure',
-                        engines: [
-                          { id: 'moderation', name: 'Moderation & Trust', desc: 'Filters spam, reports, and fake posts', iconName: 'ShieldCheck', badge: 'Secured' },
-                          { id: 'security', name: 'Security Engine', desc: 'Protects sessions, IP audits & alerts', iconName: 'Lock', badge: 'Shielded' },
-                          { id: 'offline', name: 'Offline Engine', desc: 'Supports caching, drafts and queues', iconName: 'Folder', badge: 'Cached' },
-                          { id: 'sync', name: 'Real-Time Sync', desc: 'Synchronizes activity across devices', iconName: 'RefreshCw', badge: 'Live Sync' },
-                          { id: 'analytics', name: 'Platform Analytics', desc: 'Provides platform DAU & system graphs', iconName: 'Activity', badge: 'Admin Only' },
-                          { id: 'health', name: 'Platform Health', desc: 'Monitors latency & memory diagnostics', iconName: 'Activity', badge: 'Healthy' },
-                          { id: 'flags', name: 'Feature Flag Engine', desc: 'Gradually rolls out features to cohorts', iconName: 'Pin', badge: 'Configured' }
-                        ]
-                      }
-                    ].map((cat) => (
-                      <div key={cat.name} className="space-y-1 pt-1 text-left">
-                        <span className="text-[9px] font-sans font-black tracking-wider text-violet-400/80 uppercase block px-1">{cat.name}</span>
-                        {cat.engines.map((eng) => {
-                          const EngIcon = getIconComponent(eng.iconName);
-                          const isActive = selectedEngineId === eng.id;
-                          return (
-                            <button
-                              key={eng.id}
-                              onClick={() => setSelectedEngineId(eng.id)}
-                              className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-start gap-2.5 cursor-pointer ${
-                                isActive 
-                                  ? 'bg-violet-600/15 border-white/10 shadow-md shadow-violet-500/5 text-white' 
-                                  : 'bg-white/2 border-white/5 text-current/70 hover:bg-white/5 hover:text-white'
-                              }`}
-                            >
-                              <div className={`p-1.5 rounded-lg shrink-0 mt-0.5 ${isActive ? 'bg-violet-600 text-white' : 'bg-white/5 text-violet-400'}`}>
-                                <EngIcon className="w-3.5 h-3.5" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-[11px] font-bold truncate font-sans">{eng.name}</span>
-                                  <span className={`text-[7px] font-mono font-black uppercase px-1 py-0.5 rounded ${
-                                    isActive ? 'bg-violet-500 text-white' : 'bg-violet-950 text-violet-300 border border-white/10'
-                                  }`}>
-                                    {eng.badge}
-                                  </span>
-                                </div>
-                                <p className="text-[9px] text-current/40 truncate leading-normal">{eng.desc}</p>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Right Column: Dynamic Engine Simulation Sandbox */}
-                <div className="lg:col-span-8 bg-[#03010b]/80 border border-white/10 rounded-3xl p-6 flex flex-col justify-between min-h-[550px]">
-                  
-                  {/* Header */}
-                  <div className="border-b border-white/5 pb-4 mb-4 flex items-center gap-3">
-                    <div className="p-2.5 bg-violet-600/20 text-violet-400 rounded-2xl">
-                      {React.createElement(getIconComponent(activeEngine.iconName), { className: "w-5 h-5 text-violet-400" })}
-                    </div>
-                    <div>
-                      <h3 className="text-sm font-sans font-black uppercase text-white">{activeEngine.name} Service</h3>
-                      <p className="text-[11px] text-current/50 leading-relaxed">{activeEngine.desc}</p>
-                    </div>
-                  </div>
-
-                  {/* Sandbox Content Split */}
-                  <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-                    
-                    {/* Controls (Left) */}
-                    <div className="space-y-4 bg-white/2 p-4 rounded-2xl border border-white/5 text-left flex flex-col justify-center">
-                      <span className="text-[10px] font-mono font-black text-violet-400 uppercase">Input parameters</span>
-                      
-                      {activeEngine.controls.length > 0 ? (
-                        <div className="space-y-3">
-                          {activeEngine.controls.map((ctrl) => (
-                            <div key={ctrl.key} className="space-y-1">
-                              <div className="flex justify-between text-[11px]">
-                                <span className="text-current/60">{ctrl.label}:</span>
-                                <span className="font-bold text-white">
-                                  {simInputs[ctrl.key] === true ? 'TRUE' : simInputs[ctrl.key] === false ? 'FALSE' : simInputs[ctrl.key]}
-                                </span>
-                              </div>
-                              
-                              {ctrl.type === 'slider' && (
-                                <input 
-                                  type="range" 
-                                  min={ctrl.min} 
-                                  max={ctrl.max} 
-                                  step={ctrl.step} 
-                                  value={simInputs[ctrl.key] || ctrl.defaultValue} 
-                                  onChange={(e) => setSimInputs(prev => ({ ...prev, [ctrl.key]: Number(e.target.value) }))}
-                                  className="w-full accent-violet-600 cursor-pointer h-1 bg-white/5 rounded-lg appearance-none"
-                                />
-                              )}
-
-                              {ctrl.type === 'toggle' && (
-                                <button
-                                  onClick={() => setSimInputs(prev => ({ ...prev, [ctrl.key]: !prev[ctrl.key] }))}
-                                  className={`w-full py-1.5 px-3 rounded-lg text-[10px] font-mono font-black border transition-all ${
-                                    simInputs[ctrl.key] 
-                                      ? 'bg-violet-600/20 border-violet-500 text-violet-300' 
-                                      : 'bg-white/2 border-white/5 text-current/50 hover:bg-white/5'
-                                  }`}
-                                >
-                                  {simInputs[ctrl.key] ? 'ENABLED' : 'DISABLED'}
-                                </button>
-                              )}
-
-                              {ctrl.type === 'text' && (
-                                <input 
-                                  type="text" 
-                                  value={simInputs[ctrl.key] || ''} 
-                                  onChange={(e) => setSimInputs(prev => ({ ...prev, [ctrl.key]: e.target.value }))}
-                                  className="w-full bg-black/40 border border-white/10 rounded-lg text-xs p-2 text-violet-300 focus:outline-hidden"
-                                />
-                              )}
-
-                              {ctrl.type === 'select' && (
-                                <select 
-                                  value={simInputs[ctrl.key] || ctrl.defaultValue} 
-                                  onChange={(e) => setSimInputs(prev => ({ ...prev, [ctrl.key]: e.target.value }))}
-                                  className="w-full bg-black/40 border border-white/10 rounded-lg text-xs p-2 text-violet-300 focus:outline-hidden"
-                                >
-                                  {ctrl.options.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                  ))}
-                                </select>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-[10.5px] text-current/40 italic">This diagnostic service runs autonomously on aggregated host parameters. No user inputs required.</p>
-                      )}
-                    </div>
-
-                    {/* Simulation Result (Right) */}
-                    <div className="bg-[#05030f]/60 border border-white/10 p-4 rounded-2xl flex flex-col justify-between text-left">
-                      <div className="space-y-3">
-                        <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-wider block">Real-time Service Outputs</span>
-                        
-                        <div className="space-y-2">
-                          {simulationResult.metrics.map((met, i) => (
-                            <div key={i} className="bg-white/2 p-2.5 rounded-xl border border-white/5">
-                              <span className="text-[9px] font-mono text-current/40 uppercase block">{met.label}</span>
-                              <span className={`text-xs font-sans font-black ${met.accent ? 'text-violet-300' : 'text-white'}`}>{met.value}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div className="border-t border-white/5 pt-3 mt-3 text-[10.5px] leading-relaxed text-current/50">
-                        <span className="font-mono text-[9px] font-black text-violet-400 uppercase block mb-1">Service Insight</span>
-                        {simulationResult.insights}
-                      </div>
-                    </div>
-
-                  </div>
-
-                  {/* Footer status line */}
-                  <div className="border-t border-white/5 pt-3 mt-4 flex items-center justify-between text-[10px] font-mono text-violet-400/80">
-                    <span className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                      <span>NEXORA PLATFORM HEALTH: READY (100%)</span>
-                    </span>
-                    <span>VOH AI ACTIVE</span>
-                  </div>
-
-                </div>
-
-              </div>
-            </div>
-          );
-        })()}
 
         {/* ======================================================== */}
         {/* ECOSYSTEM & MONETIZATION SUBVIEW */}
