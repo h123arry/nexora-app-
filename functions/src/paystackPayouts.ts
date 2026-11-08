@@ -11,6 +11,7 @@ const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
 const PAYSTACK_WEBHOOK_SECRET = defineSecret('PAYSTACK_WEBHOOK_SECRET');
 const PAYSTACK_API = 'https://api.paystack.co';
+function modeIsLiveCandidate(data: any): boolean { return typeof data?.mode === 'string' && data.mode === 'live'; }
 class PaystackApiError extends Error {
   constructor(message: string, readonly statusCode: number) { super(message); }
 }
@@ -69,30 +70,68 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
   };
 });
 
+export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
+  requireUser(request);
+  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  const policy = await payoutPolicy();
+  return {
+    mode: providerMode(PAYSTACK_SECRET_KEY.value()), enabled: policy.enabled === true,
+    koboPerNex: policy.koboPerNex ?? null, providerFeeBufferKobo: policy.providerFeeBufferKobo ?? null,
+    minimumNex: policy.minimumNex ?? null, maximumNex: policy.maximumNex ?? null,
+    liveSettlementApproved: policy.liveSettlementApproved === true,
+    providerBusinessVerified: policy.providerBusinessVerified === true,
+    settlementFundingVerified: policy.settlementFundingVerified === true,
+    complianceApproved: policy.complianceApproved === true,
+    webhookVerified: policy.webhookVerified === true,
+    liveTestTransferVerified: policy.liveTestTransferVerified === true,
+    liveEvidenceReference: policy.liveEvidenceReference || '',
+  };
+});
+
+export const getCreatorPayoutComplianceQueue = onCall({ maxInstances: 3 }, async request => {
+  requireUser(request);
+  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  const snapshot = await db.collection('creatorPayoutBeneficiaries').where('status', '==', 'verified').orderBy('updatedAt', 'desc').limit(100).get();
+  const rows = await Promise.all(snapshot.docs.map(async doc => {
+    const beneficiary = doc.data();
+    const compliance = await db.collection('creatorPayoutCompliance').doc(doc.id).get();
+    const review = compliance.data() || {};
+    const status = review.beneficiaryRef === beneficiary.providerBeneficiaryRef ? review.status : 'pending';
+    return {
+      creatorId: doc.id, beneficiaryRef: beneficiary.providerBeneficiaryRef,
+      accountName: beneficiary.accountName || '', accountNumberLast4: beneficiary.accountNumberLast4 || '',
+      bankName: beneficiary.bankName || '', complianceStatus: status,
+    };
+  }));
+  return { records: rows.filter(row => row.complianceStatus !== 'approved') };
+});
+
 export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 2 }, async request => {
   const actorId = requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const { enabled, koboPerNex, liveSettlementApproved, minimumNex, maximumNex, providerBusinessVerified, settlementFundingVerified, complianceApproved, webhookVerified, liveTestTransferVerified } = request.data || {};
   const providerFeeBufferKobo = request.data?.providerFeeBufferKobo ?? 0;
+  const liveEvidenceReference = request.data?.liveEvidenceReference;
   if (typeof enabled !== 'boolean' || !Number.isSafeInteger(koboPerNex) || koboPerNex < 1 || koboPerNex > 100000000
     || !Number.isSafeInteger(minimumNex) || minimumNex < 1000 || !Number.isSafeInteger(maximumNex)
     || maximumNex < minimumNex || maximumNex > 10000000 || typeof liveSettlementApproved !== 'boolean'
-    || !Number.isSafeInteger(providerFeeBufferKobo) || providerFeeBufferKobo < 0 || providerFeeBufferKobo > 10000000) {
+    || !Number.isSafeInteger(providerFeeBufferKobo) || providerFeeBufferKobo < 0 || providerFeeBufferKobo > 10000000
+    || (modeIsLiveCandidate(request.data) && enabled && !safeText(liveEvidenceReference, 160))) {
     throw new HttpsError('invalid-argument', 'A reviewed NEX/NGN rate, withdrawal limits and explicit enablement decision are required.');
   }
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   if (enabled && mode === 'unknown') throw new HttpsError('failed-precondition', 'A valid Paystack secret is required before enabling transfers.');
-  if (mode === 'live' && enabled && (liveSettlementApproved !== true || providerBusinessVerified !== true || settlementFundingVerified !== true || complianceApproved !== true || webhookVerified !== true || liveTestTransferVerified !== true || providerFeeBufferKobo <= 0)) {
+  if (mode === 'live' && enabled && (liveSettlementApproved !== true || providerBusinessVerified !== true || settlementFundingVerified !== true || complianceApproved !== true || webhookVerified !== true || liveTestTransferVerified !== true || providerFeeBufferKobo <= 0 || !safeText(liveEvidenceReference, 160))) {
     throw new HttpsError('failed-precondition', 'Live transfers require verified registered-business status, funded settlement balance, compliance approval, verified webhooks and a successful controlled live test transfer.');
   }
   if (mode !== 'live' && liveSettlementApproved) throw new HttpsError('failed-precondition', 'Live settlement approval can only be recorded with live credentials.');
   await db.collection('platformConfig').doc('ngnPayoutPolicy').set({
     provider: 'paystack', corridor: 'NG-NGN', enabled, koboPerNex, minimumNex, maximumNex,
-    liveSettlementApproved, providerFeeBufferKobo, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, mode, configuredBy: actorId, updatedAt: FieldValue.serverTimestamp(),
+    liveSettlementApproved, providerFeeBufferKobo, liveEvidenceReference: safeText(liveEvidenceReference, 160) ? liveEvidenceReference : null, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, mode, configuredBy: actorId, updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   await db.collection('creatorPayoutAuditEvents').add({
     actorId, action: 'ngn_payout_policy_updated', mode, enabled, koboPerNex, minimumNex, maximumNex,
-    liveSettlementApproved, providerFeeBufferKobo, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, createdAt: FieldValue.serverTimestamp(),
+    liveSettlementApproved, providerFeeBufferKobo, liveEvidenceReference: safeText(liveEvidenceReference, 160) ? liveEvidenceReference : null, providerBusinessVerified: providerBusinessVerified === true, settlementFundingVerified: settlementFundingVerified === true, complianceApproved: complianceApproved === true, webhookVerified: webhookVerified === true, liveTestTransferVerified: liveTestTransferVerified === true, createdAt: FieldValue.serverTimestamp(),
   });
   return { saved: true, mode, enabled, liveSettlementApproved };
 });
