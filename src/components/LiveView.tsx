@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { AnimatePresence, motion } from 'motion/react';
 import { AlertCircle, Eye, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
 import GiftLiveOverlay from './GiftLiveOverlay';
 import { User } from '../types';
 import { db } from '../lib/firebase';
-import { endLiveSession, joinLiveSession, leaveLiveSession, sendLiveChatMessage, startLiveSession, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
+import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, sendLiveChatMessage, startLiveSession, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
 
 interface LiveViewProps { currentUser: User; onClose: () => void; streamId?: string; }
 function asDate(value: any): string {
@@ -63,10 +62,12 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   useEffect(() => {
     if(!selectedId || isHost) return;
     let cancelled=false;
+    let heartbeat: ReturnType<typeof setInterval> | null = null;
     void joinLiveSession(selectedId).then(()=>{
-      if(cancelled) void leaveLiveSession(selectedId);
+      if(cancelled) { void leaveLiveSession(selectedId); return; }
+      heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId).catch(()=>setError('Your live connection needs to be refreshed.'));},30_000);
     }).catch(()=>setError('You could not join this live room.'));
-    return ()=>{cancelled=true;void leaveLiveSession(selectedId).catch(()=>undefined);};
+    return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);void leaveLiveSession(selectedId).catch(()=>undefined);};
   },[selectedId,isHost]);
 
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:'smooth'});},[messages.length]);
