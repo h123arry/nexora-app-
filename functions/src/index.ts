@@ -29,6 +29,7 @@ export { getCommunityInsights } from './communityAnalytics.js';
 export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
+export { listCreatorMembershipTiers, createCreatorMembershipTier, updateCreatorMembershipTier, archiveCreatorMembershipTier } from './creatorMemberships.js';
 export { getNexWalletSnapshot } from './nexWallet.js';
 export { getGiftCatalog, quoteNexGift } from './giftCatalog.js';
 export { sendNexGift } from './giftDelivery.js';
