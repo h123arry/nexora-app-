@@ -211,11 +211,11 @@ export const repostPublicPost = onCall({ maxInstances: 10 }, async (request) => 
     throw new HttpsError('invalid-argument', 'A valid post ID is required.');
   }
   try {
-    return await createPublicPostRepost(adminDb, request.auth.uid, postId);
+    return await createPublicPostRepost(adminDb, request.auth.uid, postId, request.data?.quoteText);
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('unavailable')) throw new HttpsError('not-found', 'This public post is unavailable.');
-    if (message.includes('Invalid')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Invalid') || message.includes('Quote text')) throw new HttpsError('invalid-argument', message);
     if (message.includes('public profile')) throw new HttpsError('failed-precondition', message);
     throw new HttpsError('internal', 'The post could not be reposted. Please retry.');
   }

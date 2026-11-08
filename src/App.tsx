@@ -1620,13 +1620,13 @@ export default function App() {
     }, 'Join Nexora to comment on posts and join community discussions.');
   };
 
-  const handleRepostPost = async (postId: string) => {
+  const handleRepostPost = async (postId: string, quoteText?: string): Promise<boolean> => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => { void handleRepostPost(postId); }, 'Sign in to repost posts.');
-      return;
+      requireAuth(() => { void handleRepostPost(postId, quoteText); }, 'Sign in to repost posts.');
+      return false;
     }
     try {
-      const result = await createPostRepost(postId);
+      const result = await createPostRepost(postId, quoteText);
       setPosts(previous => {
         const source = previous.find(post => post.id === postId);
         if (!source) return previous;
@@ -1634,10 +1634,12 @@ export default function App() {
         const updated = previous.map(post => post.id === postId ? { ...post, shares: result.shares } : post);
         return repostAlreadyLoaded ? updated : [result.post, ...updated];
       });
-      window.dispatchEvent(new CustomEvent('toast', { detail: 'Reposted to your profile and the NEXORA feed.' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: quoteText ? 'Quote posted to your profile and the NEXORA feed.' : 'Reposted to your profile and the NEXORA feed.' }));
+      return true;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'The post could not be reposted. Please try again.';
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+      return false;
     }
   };
 
@@ -2195,6 +2197,7 @@ export default function App() {
                 friendIds={friendIds}
                 onSharePost={handleSharePost}
                 onRepostPost={handleRepostPost}
+                onQuotePost={handleRepostPost}
                 activeTab={activeTab}
                 unreadMessagesCount={unreadMessagesCount}
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}
