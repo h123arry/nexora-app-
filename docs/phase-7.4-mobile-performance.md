@@ -40,3 +40,5 @@ Run cold-start, feed scroll, video playback, navigation, keyboard/input and memo
 
 - Clears the active feed-post identity when its card exits the viewport before another card crosses the activation threshold, preventing stale offscreen playback state.
 - Provides a deterministic first-video/first-post fallback for older embedded browsers without IntersectionObserver.
+
+- Clears the active player once its card falls below the same 30% visibility threshold used to activate the next card, avoiding stale playback during partial offscreen transitions.
