@@ -340,7 +340,7 @@ function cleanMemoryStrings(value: unknown, maxItems: number, maxLength: number)
 }
 
 function containsSensitiveMemoryFact(facts: string[]): boolean {
-  const sensitivePattern = /\\b(password|passcode|passphrase|secret key|one[- ]time code|otp|verification code|pin(?: number| code)?|account number|bank details|credit card|debit card|card number|cvv|cvc|bvn|nin|tin|tax identification number|tax id|private key|recovery phrase|seed phrase|api key|access token|bearer token)\\b/i;
+  const sensitivePattern = /\b(password|passcode|passphrase|secret key|one[- ]time code|otp|verification code|pin(?: number| code)?|account number|bank details|credit card|debit card|card number|cvv|cvc|bvn|nin|tin|tax identification number|tax id|private key|recovery phrase|seed phrase|api key|access token|bearer token)\b/i;
   return facts.some(fact => sensitivePattern.test(fact));
 }
 
