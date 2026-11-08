@@ -94,12 +94,12 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const exitRoom=async()=>{
     if(!selectedId)return;
     const id=selectedId;setLoading(true);setError('');
-    try { if(isHost) await endLiveSession(id); else await leaveLiveSession(id,connectionId);setSelectedId(null);setIsHost(false);setGiftSoundsEnabled(false); }
-    catch {setError(isHost?'The live room could not be ended.':'You could not leave the live room cleanly.');}
+    try { if(isHost) await endLiveSession(id); else await leaveLiveSession(id,connectionId);setSelectedId(null);setIsHost(false);setGiftSoundsEnabled(false);return true; }
+    catch {setError(isHost?'The live room could not be ended.':'You could not leave the live room cleanly.');return false;}
     finally{setLoading(false);}
   };
   const closeView=async()=>{
-    if(selectedId && isHost){await exitRoom();}
+    if(selectedId && isHost){const ended=await exitRoom();if(!ended)return;}
     onClose();
   };
   const submitMessage=async()=>{
