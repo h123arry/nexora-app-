@@ -2,26 +2,39 @@ import { User } from '../../types';
 
 export class CreatorEngine {
   static getMonetizationRecommendations(user: User): string {
-    const currentBalance = user.nexBalance || 0;
-    const earnedThisWeek = user.thisWeekEarnedNex || 0;
-    
-    return `### 🪙 VOH AI NEX-Economy Insights
-- **Current Real Balance**: **${currentBalance.toLocaleString()} NEX**
-- **Earned This Week**: **${earnedThisWeek.toLocaleString()} NEX**
-- **Monetization Status**: Eligible for Creator Pool Dividends
+    const currentBalance = Number.isFinite(user.nexBalance) ? Math.max(0, user.nexBalance || 0) : null;
+    const earnedThisWeek = Number.isFinite(user.thisWeekEarnedNex) ? Math.max(0, user.thisWeekEarnedNex || 0) : null;
 
-#### 🚀 Optimization Roadmap
-1. **NEX Spark Supercharging**: Promote a custom community challenge. High reputation participants will automatically trigger direct micro-transfers.
-2. **Premium Circles**: Lock specialized system design communities behind a 5 NEX monthly subscription to build recurring rewards.
-3. **Verified Knowledge Contributions**: Contribute system solutions or rules to trending circles to receive direct developer payouts.`;
+    return [
+      "### NEX creator account",
+      currentBalance === null
+        ? "- **NEX balance:** Not available in the loaded account data."
+        : `- **NEX balance in the loaded account profile:** ${currentBalance.toLocaleString()} NEX`,
+      earnedThisWeek === null
+        ? "- **Earned this week:** Not available in the loaded account data."
+        : `- **Earned this week in the loaded account profile:** ${earnedThisWeek.toLocaleString()} NEX`,
+      "",
+      "Creator monetization eligibility and payout readiness must be checked against the authoritative creator-economy services. They cannot be inferred from a profile balance.",
+      "",
+      "### Practical next steps",
+      "- Review your published content and verified engagement analytics.",
+      "- Check your active creator membership tiers and gift settings.",
+      "- Review payout eligibility and compliance status in the creator finance area."
+    ].join("\n");
   }
 
   static getEarningsExplanations(user: User): string {
-    return `### 💸 Earnings & Rewards breakdown
-Your NEX earnings are calculated based on your **Living Reputation Score (${user.reputationPoints} PR)** and total social engagement:
-- **Reputation Pool Splits**: 40% of rewards are distributed via on-chain contribution checkpoints.
-- **Creator Sparks**: 60% of earnings are triggered directly by user-given sparks.
+    const reputation = Number.isFinite(user.reputationPoints)
+      ? Math.max(0, user.reputationPoints || 0).toLocaleString()
+      : null;
 
-*No artificial adjustments or mock balances are used; all figures represent your actual Nexora account state.*`;
+    return [
+      "### Creator earnings",
+      reputation === null
+        ? "Your current reputation score is not available in the loaded account data."
+        : `Your loaded account profile reports **${reputation} reputation points**.`,
+      "",
+      "VOH AI will not invent revenue-sharing percentages, payout formulas, pending earnings, or settlement status. For an accurate breakdown, use the authoritative creator earnings and payout records."
+    ].join("\n");
   }
 }
