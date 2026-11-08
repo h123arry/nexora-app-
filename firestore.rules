@@ -755,6 +755,11 @@ service cloud.firestore {
       allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
       allow write: if false;
     }
+    // Creator-authored membership tier drafts are readable by their owner only; all mutations use trusted callables.
+    match /creatorMembershipTiers/{tierId} {
+      allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid;
+      allow create, update, delete: if false;
+    }
     match /checkoutAttempts/{checkoutId} {
       allow get, list: if signedIn() && resource.data.ownerId == request.auth.uid;
       allow write: if false;
