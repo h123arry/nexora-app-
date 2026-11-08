@@ -87,6 +87,7 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
               className="w-full h-full object-cover pointer-events-none"
               referrerPolicy="no-referrer"
               loading="lazy"
+              decoding="async"
               style={{ filter: (filters && filters[idx]) || 'none' }}
             />
           </div>
