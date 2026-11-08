@@ -285,8 +285,9 @@ export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KE
       type: 'nuban', name: resolved.account_name, account_number: accountNumber, bank_code: bankCode,
       currency: 'NGN', email,
     });
-    if (!safeText(recipient.recipient_code, 120) || recipient.active !== true || recipient.currency !== 'NGN'
-      || String(recipient.details?.account_number || '') !== accountNumber) {
+    if (!safeText(recipient.recipient_code, 120) || recipient.active !== true || recipient.currency !== 'NGN' || recipient.type !== 'nuban'
+      || String(recipient.details?.account_number || '') !== accountNumber || String(recipient.details?.bank_code || '') !== bankCode
+      || normalizeAccountName(String(recipient.name || '')) !== normalizeAccountName(resolved.account_name)) {
       throw new Error('Paystack did not return an active NGN beneficiary.');
     }
     const ref = db.collection('creatorPayoutBeneficiaries').doc(creatorId);
