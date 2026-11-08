@@ -49,7 +49,7 @@ export const getLiveKitToken = onCall(
       const expiry = restricted.expiresAt?.toMillis?.();
       return !expiry || expiry > Date.now();
     };
-    if (activeRestriction('suspended')) throw new HttpsError('permission-denied', 'This account cannot join live video.');
+    if (activeRestriction('suspended') || (session.data()?.hostId === userId && activeRestriction('postingRestricted'))) throw new HttpsError('permission-denied', 'This account cannot join live video.');
     const roomName = 'nexora_' + sessionId;
     const isHost = session.data()?.hostId === userId;
     if (!isHost) {
