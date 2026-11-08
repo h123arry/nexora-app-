@@ -151,8 +151,8 @@ export const finalizeNgnPayoutTransfer = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     if (providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed') {
       await applyProviderOutcome(reference, providerStatus, 'finalize_' + providerStatus + '_' + reference);
     } else {
-      await payoutRef.update({ status: 'processing', providerStatus, finalizedBy: actorId,
-        finalizedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      await updatePayoutUnlessTerminal(reference, 'processing', { providerStatus, finalizedBy: actorId,
+        finalizedAt: FieldValue.serverTimestamp() });
     }
     await db.collection('creatorPayoutAuditEvents').add({
       creatorId: payout.data()?.creatorId, actorId, action: 'provider_transfer_otp_finalized',
@@ -454,6 +454,17 @@ async function applyProviderOutcome(reference: string, outcome: 'success' | 'fai
   });
 }
 
+async function updatePayoutUnlessTerminal(reference: string, status: TransferStatus, fields: Record<string, unknown> = {}) {
+  const ref = db.collection('creatorPayoutRequests').doc(reference);
+  await db.runTransaction(async tx => {
+    const snapshot = await tx.get(ref);
+    if (!snapshot.exists) throw new Error('Payout request is missing.');
+    const current = snapshot.data()?.status;
+    if (current === 'success' || current === 'failed' || current === 'reversed') return;
+    tx.update(ref, { ...fields, status, updatedAt: FieldValue.serverTimestamp() });
+  });
+}
+
 export const paystackPayoutWebhook = onRequest({ secrets: [PAYSTACK_SECRET_KEY, PAYSTACK_WEBHOOK_SECRET], maxInstances: 10 }, async (request, response) => {
   if (request.method !== 'POST' || !request.rawBody || !verifyPaystackWebhookSignature(request.rawBody, request.headers, PAYSTACK_WEBHOOK_SECRET.value(), PAYSTACK_SECRET_KEY.value())) {
     response.status(401).send('Invalid webhook signature'); return;
@@ -549,9 +560,10 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
     const providerStatus = String(transfer.status || 'pending');
     const status: TransferStatus = providerStatus === 'otp' ? 'awaiting_provider_approval'
       : providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed' ? providerStatus : 'processing';
-    await payoutRef.update({ status: status === 'success' || status === 'failed' || status === 'reversed' ? 'submitting' : status,
+    await updatePayoutUnlessTerminal(reference, status === 'otp' ? 'awaiting_provider_approval' : 'processing', {
       providerTransferCode: transfer.transfer_code || null, providerStatus,
-      providerSubmittedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      providerSubmittedAt: FieldValue.serverTimestamp(),
+    });
     if (status === 'success' || status === 'failed' || status === 'reversed') {
       await applyProviderOutcome(reference, status, 'initiate_' + status + '_' + reference);
     }
@@ -559,7 +571,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   } catch {
     // A timeout is ambiguous: the provider may have accepted the transfer.
     // Keep the reserve until reconciliation proves whether a transfer exists.
-    await payoutRef.update({ status: 'submission_unknown', updatedAt: FieldValue.serverTimestamp() });
+    await updatePayoutUnlessTerminal(reference, 'submission_unknown');
     return { reference, status: 'submission_unknown', amountNex, amountKobo, currency: 'NGN',
       message: 'The provider response was inconclusive. Your NEX remains reserved while the transfer is reconciled.' };
   }
