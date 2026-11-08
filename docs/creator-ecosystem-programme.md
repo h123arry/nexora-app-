@@ -170,3 +170,7 @@ The changes are committed to the feature branch. Automated build, lint and emula
 - Viewer counts are updated idempotently from server-owned viewer edges. A scheduled reconciler removes stale viewers; chat is limited to five messages per member per ten-second window, with a 500-character bound.
 - Active rooms and messages are readable by signed-in members; ended rooms are host-readable only. Clients cannot mutate session, viewer or message records directly.
 - The room/session/chat layer is persistent, but video transport remains explicitly `not_configured`. This work does not claim that camera streaming or remote playback is live yet.
+
+### GIFTVERSE settlement and live-event reliability
+- Low-risk gifts receive a deterministic auto-clearance disposition; review/high-risk gifts require explicit finance clearance before creator/platform revenue settlement. Escalated gifts remain blocked. Legacy earnings without risk signals retain the existing finance-only manual settlement path.
+- Live gift overlays now query the newest 40 events for a room, ordered by server timestamp, so busy sessions do not get stuck showing an arbitrary older page.
