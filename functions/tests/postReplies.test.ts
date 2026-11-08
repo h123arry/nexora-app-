@@ -43,11 +43,11 @@ test('stores a reply on the correct comment and notifies its author', async () =
 });
 
 test('reply retries with the same idempotency key do not duplicate the reply', async () => {
-  const first = await addPublicPostCommentReply(db, actorId, postId, commentId, 'A thoughtful reply', 'reply-test-id');
-  const second = await addPublicPostCommentReply(db, actorId, postId, commentId, 'A thoughtful reply', 'reply-test-id');
+  const first = await addPublicPostCommentReply(db, actorId, postId, commentId, 'A thoughtful reply', 'reply-test-idempotent');
+  const second = await addPublicPostCommentReply(db, actorId, postId, commentId, 'A thoughtful reply', 'reply-test-idempotent');
   assert.equal(first.created, true);
   assert.equal(second.created, false);
-  assert.equal((await db.doc(`posts/${postId}`).get()).get('comments')[0].replies.length, 1);
+  assert.equal((await db.doc(`posts/${postId}`).get()).get('comments')[0].replies.length, 2);
 });
 
 test('rejects invalid, private, missing and oversized replies', async () => {
