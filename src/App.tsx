@@ -138,55 +138,8 @@ export default function App() {
       skills: []
     }));
 
-  const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>(() => {
-    const map: Record<string, User> = {};
-
-    // 1. Official Nexora Account
-    const nexoraOfficial = getRichUser({
-      id: 'nexora_official_id',
-      username: 'nexoraofficial',
-      name: 'Nexora Official',
-      avatar: '/logo.svg',
-      bio: 'Official Nexora platform account. Secure decentralized global coordination & neural persistence protocol.',
-      location: 'Global Orbit',
-      website: 'https://nexora.app',
-      followers: 0,
-      following: 0,
-      sparks: 0,
-      isVerified: true,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined June 2026',
-      reputationPoints: 0,
-      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: { 'Technology': 100, 'AI': 100 },
-      skills: ['Protocol', 'Consensus']
-    });
-    map[nexoraOfficial.id] = nexoraOfficial;
-
-    // 2. Harrison Personal Account
-    const harrison = getRichUser({
-      id: 'user_voiceofharrison',
-      username: 'voiceofharrison',
-      name: 'Voice of Harrison',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Personal creator account. Building decentralized apps and neural architectures.',
-      location: 'Earth Orbit',
-      website: 'https://nexora.app',
-      followers: 0,
-      following: 0,
-      sparks: 0,
-      isVerified: true,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined June 2026',
-      reputationPoints: 0,
-      reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
-      interestDNA: { 'Architecture': 90, 'AI': 90 },
-      skills: ['Systems Design', 'Full-Stack']
-    });
-    map[harrison.id] = harrison;
-
-    return map;
-  });
+  // Only profiles received from Firebase or the authenticated session are shown as people.
+  const [globalUsersMap, setGlobalUsersMap] = useState<Record<string, User>>({});
 
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
