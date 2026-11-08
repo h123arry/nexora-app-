@@ -30,6 +30,7 @@ interface FeedPostCardProps {
   onSpark: (postId: string) => void;
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
+  onRepostPost?: (postId: string) => void;
   onCommentToggle: (postId: string) => void;
   onToggleFollow?: (userId: string) => void;
   onViewProfile?: (userId: string) => void;
@@ -82,6 +83,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   onSpark,
   onSave,
   onSharePost,
+  onRepostPost,
   onCommentToggle,
   onToggleFollow,
   onViewProfile,
@@ -748,8 +750,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (onSharePost) onSharePost(post.id);
-                window.dispatchEvent(new CustomEvent('toast', { detail: '🔁 Post reposted!' }));
+                if (onRepostPost) void onRepostPost(post.id);
+                else window.dispatchEvent(new CustomEvent('toast', { detail: 'Reposting is unavailable right now.' }));
               }}
               className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
               title="Repost"
