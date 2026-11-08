@@ -872,7 +872,7 @@ export default function FeedView({
     // Reset onboarding values
     setMomentCaption('');
     setMomentMediaType('photo');
-    setMomentMediaUrl('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80');
+    setMomentMediaUrl('');
     setIsCreateMomentOpen(false);
   };
 
