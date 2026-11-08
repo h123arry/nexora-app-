@@ -953,6 +953,7 @@ export default function FeedView({
   // Header expansion state tracking ref to eliminate duplicate re-renders
   const isHeaderExpandedRef = useRef(true);
   const loadMoreInFlightRef = useRef(false);
+  const orderedPostsRef = useRef<RefactoredPost[]>([]);
 
   // High-performance passive scroll handler for infinite scroll & header collapse.
   // A request lock prevents repeated scroll events from issuing duplicate page loads.
@@ -976,13 +977,13 @@ export default function FeedView({
       const loadMoreDecision = getFeedLoadMoreDecision({
         distanceToBottom: scrollHeight - scrollTop - clientHeight,
         visibleCount,
-        totalCount: orderedPosts.length,
+        totalCount: orderedPostsRef.current.length,
         hasMorePosts,
         isLoadingMorePosts,
         requestInFlight: loadMoreInFlightRef.current,
       });
       if (loadMoreDecision.shouldRevealMore) {
-        setVisibleCount(prev => Math.min(prev + 6, orderedPosts.length));
+        setVisibleCount(prev => Math.min(prev + 6, orderedPostsRef.current.length));
       }
       if (loadMoreDecision.shouldRequestMore && onLoadMorePosts) {
         loadMoreInFlightRef.current = true;
@@ -1023,7 +1024,7 @@ export default function FeedView({
       container?.removeEventListener('scroll', handleScroll);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [onLoadMorePosts, hasMorePosts, isLoadingMorePosts, orderedPosts.length, visibleCount]);
+  }, [onLoadMorePosts, hasMorePosts, isLoadingMorePosts, visibleCount]);
 
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
@@ -1643,6 +1644,7 @@ export default function FeedView({
 
   // State to hold the stable cached/rendered posts list to prevent re-sorting on engagement updates
   const [orderedPosts, setOrderedPosts] = useState<RefactoredPost[]>([]);
+  orderedPostsRef.current = orderedPosts;
   const lastStateKeyRef = useRef<string>('');
 
   useEffect(() => {
