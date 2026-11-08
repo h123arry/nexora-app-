@@ -81,7 +81,7 @@ export default function CreatorGiftEarningsPanel() {
             className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 text-xs font-bold text-violet-100 disabled:opacity-40">
             <Download size={14}/> Export CSV
           </button>
-          <button type="button" onClick={() => void refresh()} disabled={loading}
+          <button type="button" onClick={() => void refresh()} disabled={loading || loadingMore}
             className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 text-xs font-bold text-white disabled:opacity-50">
             <RefreshCw size={14} className={loading ? 'animate-spin' : ''} /> Refresh
           </button>
@@ -150,7 +150,7 @@ export default function CreatorGiftEarningsPanel() {
 
       <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-black/15 p-3 text-[11px] leading-5 text-slate-400">
         <ShieldCheck size={16} className="mt-0.5 shrink-0 text-violet-300" />
-        Earnings settle into your NEX wallet only after trusted finance review. NEX-to-naira conversion and bank withdrawals are not enabled, so this dashboard never represents a bank payout as completed.
+        Earnings settle into your NEX wallet only after trusted finance review. NGN withdrawals now have a Paystack integration, but live bank payouts remain locked until provider, compliance, funding, beneficiary and live-test approvals are verified.
       </div>
     </section>
   );
