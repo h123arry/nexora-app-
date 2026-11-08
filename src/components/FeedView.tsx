@@ -22,6 +22,7 @@ import { auth } from '../services/firebase/config';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 import { getDevicePerformanceProfile } from '../utils/devicePerformance';
+import { getFeedLoadMoreDecision } from '../utils/feedPaginationPolicy';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
@@ -972,20 +973,28 @@ export default function FeedView({
         }
       }, 300);
 
-      if (scrollHeight - scrollTop - clientHeight < 350) {
+      const loadMoreDecision = getFeedLoadMoreDecision({
+        distanceToBottom: scrollHeight - scrollTop - clientHeight,
+        visibleCount,
+        totalCount: orderedPosts.length,
+        hasMorePosts,
+        isLoadingMorePosts,
+        requestInFlight: loadMoreInFlightRef.current,
+      });
+      if (loadMoreDecision.shouldRevealMore) {
         setVisibleCount(prev => Math.min(prev + 6, orderedPosts.length));
-        if (hasMorePosts && !isLoadingMorePosts && onLoadMorePosts && !loadMoreInFlightRef.current) {
-          loadMoreInFlightRef.current = true;
-          void (async () => {
-            try {
-              await onLoadMorePosts();
-            } catch {
-              window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not load more posts. Please try again.' }));
-            } finally {
-              loadMoreInFlightRef.current = false;
-            }
-          })();
-        }
+      }
+      if (loadMoreDecision.shouldRequestMore && onLoadMorePosts) {
+        loadMoreInFlightRef.current = true;
+        void (async () => {
+          try {
+            await onLoadMorePosts();
+          } catch {
+            window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not load more posts. Please try again.' }));
+          } finally {
+            loadMoreInFlightRef.current = false;
+          }
+        })();
       }
 
       const diff = scrollTop - lastScrollTopRef.current;
