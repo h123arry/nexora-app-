@@ -53,3 +53,12 @@ test('extracts hashtags, normalizes duplicates and caps per-creator engagement i
   ], { now, windowHours: 24 });
   assert.deepEqual(signals.map(signal => signal.tag), ['nexora', 'worldpulse']);
 });
+
+test('caps counted posts per creator in both windows to resist trend flooding', () => {
+  const spammerPosts = Array.from({ length: 40 }, (_, index) => post(`spam-${index}`, 'spammer', 2));
+  const independentPosts = [post('independent-1', 'u2', 2), post('independent-2', 'u3', 3)];
+  const signals = rankRisingTopics([...spammerPosts, ...independentPosts], { now, windowHours: 24 });
+  assert.equal(signals.length, 1);
+  assert.equal(signals[0].creatorCount, 3);
+  assert.equal(signals[0].currentPosts, 7);
+});

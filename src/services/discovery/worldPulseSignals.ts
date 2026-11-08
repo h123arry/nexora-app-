@@ -60,6 +60,9 @@ export function rankRisingTopics(
     currentPosts: Set<string>;
     previousPosts: Set<string>;
     currentCreators: Set<string>;
+    currentSeenPostIds: Set<string>;
+    previousSeenPostIds: Set<string>;
+    creatorPostCounts: Map<string, number>;
     creatorCounts: Map<string, number>;
     engagement: number;
   }>();
@@ -75,17 +78,30 @@ export function rankRisingTopics(
         currentPosts: new Set<string>(),
         previousPosts: new Set<string>(),
         currentCreators: new Set<string>(),
+        currentSeenPostIds: new Set<string>(),
+        previousSeenPostIds: new Set<string>(),
+        creatorPostCounts: new Map<string, number>(),
         creatorCounts: new Map<string, number>(),
         engagement: 0,
       };
-      const target = timestamp >= currentStart ? signal.currentPosts : signal.previousPosts;
-      if (target.has(post.id)) continue;
+      const isCurrent = timestamp >= currentStart;
+      const seenPostIds = isCurrent ? signal.currentSeenPostIds : signal.previousSeenPostIds;
+      if (seenPostIds.has(post.id)) continue;
+      seenPostIds.add(post.id);
+
+      // Cap counted posts per creator in each window so one prolific or
+      // coordinated account cannot manufacture a topic's apparent velocity.
+      const creatorWindowKey = `${isCurrent ? 'current' : 'previous'}:${post.userId}`;
+      const creatorPostCount = signal.creatorPostCounts.get(creatorWindowKey) || 0;
+      if (creatorPostCount >= 5) continue;
+      signal.creatorPostCounts.set(creatorWindowKey, creatorPostCount + 1);
+      const target = isCurrent ? signal.currentPosts : signal.previousPosts;
       target.add(post.id);
 
-      if (timestamp >= currentStart) {
+      if (isCurrent) {
         signal.currentCreators.add(post.userId);
         const creatorCount = signal.creatorCounts.get(post.userId) || 0;
-        // Cap engagement contribution per creator to reduce trend manipulation.
+        // Engagement is separately capped to the first three counted posts.
         if (creatorCount < 3) {
           signal.engagement += boundedEngagement(post);
           signal.creatorCounts.set(post.userId, creatorCount + 1);

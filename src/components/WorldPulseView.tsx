@@ -1,7 +1,7 @@
 import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Globe, Map, Search, Bell, X, Brain, ArrowRight } from 'lucide-react';
+import { Globe, Map, Search, Bell, X, Brain, ArrowRight, RefreshCw } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { readUserScopedJson } from '../utils/userScopedStorage';
 import { getJoinedCirclesForUser } from '../data/database';
@@ -32,6 +32,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
   const [pulsePosts, setPulsePosts] = useState<Post[]>([]);
   const [activityLoading, setActivityLoading] = useState(true);
   const [activityLoadingMore, setActivityLoadingMore] = useState(false);
+  const [activityRefreshing, setActivityRefreshing] = useState(false);
   const [activityError, setActivityError] = useState(false);
   const [activityHasMore, setActivityHasMore] = useState(false);
   const pulseCursorRef = React.useRef<Awaited<ReturnType<typeof getGlobalPostsPage>>['nextCursor']>(null);
@@ -94,7 +95,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
   }, [pulsePosts, pulseSearch, activeTab]);
 
   const loadMorePulse = async () => {
-    if (!pulseCursorRef.current || activityLoadingMore) return;
+    if (!pulseCursorRef.current || activityLoadingMore || activityRefreshing) return;
     setActivityLoadingMore(true);
     try {
       const page = await getGlobalPostsPage(pulseCursorRef.current, 30);
@@ -109,6 +110,24 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
       triggerToast('More activity could not be loaded. Please try again.');
     } finally {
       setActivityLoadingMore(false);
+    }
+  };
+
+  const refreshPulseActivity = async () => {
+    if (activityRefreshing || activityLoadingMore) return;
+    setActivityRefreshing(true);
+    try {
+      const page = await getGlobalPostsPage(null, 30);
+      setPulsePosts(page.posts);
+      pulseCursorRef.current = page.nextCursor;
+      setActivityHasMore(page.hasMore);
+      setActivityError(false);
+    } catch (error) {
+      console.error('World Pulse refresh failed:', error);
+      setActivityError(true);
+      triggerToast('World Pulse could not refresh. Please try again.');
+    } finally {
+      setActivityRefreshing(false);
     }
   };
 
@@ -420,7 +439,13 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               <h3 className="text-sm font-bold text-white">{activeTab === 'trending' ? 'Recent public activity' : `${activeTab[0].toUpperCase()}${activeTab.slice(1)} posts`}</h3>
               <p className="mt-1 text-[10px] text-violet-300/50">Loaded from public NEXORA posts. Engagement figures reflect stored post data.</p>
             </div>
-            <span className="shrink-0 text-[10px] text-violet-300/50">{visiblePulsePosts.length} loaded</span>
+            <div className="flex shrink-0 items-center gap-2">
+              <span className="text-[10px] text-violet-300/50">{visiblePulsePosts.length} loaded</span>
+              <button type="button" onClick={() => void refreshPulseActivity()} disabled={activityRefreshing || activityLoadingMore || activityLoading} aria-label="Refresh World Pulse activity" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-violet-400/20 px-2.5 text-[10px] font-semibold text-violet-200 transition-colors hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-50">
+                <RefreshCw className={`h-3 w-3 ${activityRefreshing ? 'animate-spin' : ''}`} />
+                {activityRefreshing ? 'Refreshing' : 'Refresh'}
+              </button>
+            </div>
           </div>
           {activityLoading ? (
             <div className="nx-surface rounded-2xl p-6 text-center text-xs text-violet-200/60">Loading recent public activity...</div>
@@ -456,7 +481,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               ))}
             </div>
           )}
-          {activityHasMore && !activityLoading && !activityError && <div className="text-center"><button type="button" onClick={() => void loadMorePulse()} disabled={activityLoadingMore} className="min-h-11 rounded-xl border border-violet-400/20 px-5 text-xs font-semibold text-violet-200 hover:bg-violet-500/10 disabled:opacity-50">{activityLoadingMore ? 'Loading...' : 'Load more activity'}</button></div>}
+          {activityHasMore && !activityLoading && !activityError && <div className="text-center"><button type="button" onClick={() => void loadMorePulse()} disabled={activityLoadingMore || activityRefreshing} className="min-h-11 rounded-xl border border-violet-400/20 px-5 text-xs font-semibold text-violet-200 hover:bg-violet-500/10 disabled:opacity-50">{activityLoadingMore ? 'Loading...' : 'Load more activity'}</button></div>}
         </section>
       )}
 
