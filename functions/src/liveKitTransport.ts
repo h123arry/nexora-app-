@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { createLiveKitJwt } from './liveKitTokenPolicy.js';
+import { createLiveKitJwt, createLiveKitVideoGrant } from './liveKitTokenPolicy.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
@@ -65,14 +65,7 @@ export const getLiveKitToken = onCall(
       iat: now,
       exp: now + TOKEN_TTL_SECONDS,
       name: String(session.data()?.hostName || 'NEXORA member').slice(0, 80),
-      video: {
-        roomJoin: true,
-        room: roomName,
-        canPublish: isHost,
-        canPublishData: true,
-        canSubscribe: true,
-        canUpdateOwnMetadata: false,
-      },
+      video: createLiveKitVideoGrant(roomName, isHost),
     }, secret);
     await sessionRef.update({ videoTransport: 'livekit', videoTransportConnectedAt: new Date() });
     return { token, wsUrl, roomName, role: isHost ? 'host' : 'viewer', expiresAt: (now + TOKEN_TTL_SECONDS) * 1000 };

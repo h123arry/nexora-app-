@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
-import { createLiveKitJwt } from '../src/liveKitTokenPolicy.js';
+import { createLiveKitJwt, createLiveKitVideoGrant } from '../src/liveKitTokenPolicy.js';
 
 test('LiveKit JWT signs room-scoped claims with HS256', () => {
   const secret = 'test-only-secret';
@@ -15,4 +15,31 @@ test('LiveKit JWT signs room-scoped claims with HS256', () => {
 
 test('LiveKit JWT refuses an empty signing secret', () => {
   assert.throws(() => createLiveKitJwt({ sub: 'member-1' }, ''), /secret is required/);
+});
+
+test('LiveKit host grants allow video publishing but deny data-channel publishing', () => {
+  assert.deepEqual(createLiveKitVideoGrant('nexora_room_123', true), {
+    roomJoin: true,
+    room: 'nexora_room_123',
+    canPublish: true,
+    canPublishData: false,
+    canSubscribe: true,
+    canUpdateOwnMetadata: false,
+  });
+});
+
+test('LiveKit viewer grants are subscribe-only and cannot publish media or data', () => {
+  assert.deepEqual(createLiveKitVideoGrant('nexora_room_123', false), {
+    roomJoin: true,
+    room: 'nexora_room_123',
+    canPublish: false,
+    canPublishData: false,
+    canSubscribe: true,
+    canUpdateOwnMetadata: false,
+  });
+});
+
+test('LiveKit grants reject empty or oversized room names', () => {
+  assert.throws(() => createLiveKitVideoGrant('', false), /valid LiveKit room/);
+  assert.throws(() => createLiveKitVideoGrant('x'.repeat(136), false), /valid LiveKit room/);
 });
