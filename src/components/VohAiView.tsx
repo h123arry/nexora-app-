@@ -40,8 +40,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [activeSubView, setActiveSubView] = useState<AISubView>('chat');
 
   // Engines Data State
-  const [sessions, setSessions] = useState<ChatSession[]>(() => ChatEngine.getSessions());
-  const [folders, setFolders] = useState<ChatFolder[]>(() => ChatEngine.getFolders());
+  const [sessions, setSessions] = useState<ChatSession[]>(() => ChatEngine.getSessions(currentUser.id));
+  const [folders, setFolders] = useState<ChatFolder[]>(() => ChatEngine.getFolders(currentUser.id));
   const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'default-session');
   const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(() => VoiceEngine.getConfig());
   const [memoryProfile, setMemoryProfile] = useState<UserMemoryProfile>(() => MemoryEngine.getMemory());
@@ -133,14 +133,22 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     setTerminologyState({ ...TERMINOLOGY });
   };
 
+  // Keep in-memory conversations strictly aligned with the active authenticated account.
+  useEffect(() => {
+    const accountSessions = ChatEngine.getSessions(currentUser.id);
+    setSessions(accountSessions);
+    setFolders(ChatEngine.getFolders(currentUser.id));
+    setActiveSessionId(accountSessions[0]?.id || 'default-session');
+  }, [currentUser.id]);
+
   // Chat Sessions refs & sync
   useEffect(() => {
-    ChatEngine.saveSessions(sessions);
-  }, [sessions]);
+    ChatEngine.saveSessions(sessions, currentUser.id);
+  }, [sessions, currentUser.id]);
 
   useEffect(() => {
-    ChatEngine.saveFolders(folders);
-  }, [folders]);
+    ChatEngine.saveFolders(folders, currentUser.id);
+  }, [folders, currentUser.id]);
 
   useEffect(() => {
     VoiceEngine.saveConfig(voiceConfig);
@@ -1032,12 +1040,16 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                           <button 
                             type="button"
                             onClick={() => {
+                              const nextMemory = { ...memoryProfile, interests: [], creatorGoals: [] };
+                              setMemoryProfile(nextMemory);
                               setMemoryDNA([]);
-                              showToast("AI memory wiped cleanly.");
+                              void MemoryEngine.syncWithCloud(nextMemory)
+                                .then(() => showToast("Preference memory cleared from your account."))
+                                .catch(() => showToast("Preference memory could not be cleared from your account. Please retry."));
                             }}
                             className="text-[9px] font-mono text-rose-400 hover:underline cursor-pointer"
                           >
-                            Wipe memory DNA
+                            Clear preference memory
                           </button>
                         )}
                       </div>
