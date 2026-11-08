@@ -27,6 +27,7 @@ interface RichNotification extends Notification {
   mediaThumbnail?: string;
   previewText?: string;
   isArchived?: boolean;
+  friendRequestStatus?: 'pending' | 'accepted' | 'declined';
   liveJoined?: boolean;
   reputationAwarded?: number;
   subActivities?: {
@@ -53,8 +54,6 @@ export default function NotificationsView({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [visibleCount, setVisibleCount] = useState(12);
 
   // Multi-select management state
@@ -239,6 +238,14 @@ export default function NotificationsView({
     } catch {
       addToast("Some notifications couldn't be deleted. Please try again.");
     }
+  };
+
+  const handlePullToRefresh = () => {
+    addToast('Notifications update automatically when new activity arrives.');
+  };
+
+  const handleLoadMore = () => {
+    setVisibleCount(previous => previous + 5);
   };
 
   const handleSelectAll = () => {
