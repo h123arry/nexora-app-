@@ -41,7 +41,7 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
       if (!existing.empty) throw new HttpsError('already-exists', 'You already have an active live room.');
       tx.create(ref, {
         hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, chatEnabled: true, giftsEnabled: true,
-        videoTransport: 'not_configured', startedAt: FieldValue.serverTimestamp(),
+        videoTransport: 'not_configured', hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), startedAt: FieldValue.serverTimestamp(),
         endedAt: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
     });
@@ -113,8 +113,12 @@ export const heartbeatLiveSession = onCall({ maxInstances: 20 }, async request =
       const [session, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has ended.');
       const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds : [];
-      if (session.data()?.hostId !== viewerId && (!viewer.exists || !connections.includes(connectionId))) throw new HttpsError('permission-denied', 'Join this live room before sending a heartbeat.');
-      if (viewer.exists) tx.update(viewerRef, { lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
+      if (session.data()?.hostId === viewerId) {
+        tx.update(sessionRef, { hostLastSeenAt: FieldValue.serverTimestamp(), hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), updatedAt: FieldValue.serverTimestamp() });
+        return { sessionId, active: true };
+      }
+      if (!viewer.exists || !connections.includes(connectionId)) throw new HttpsError('permission-denied', 'Join this live room before sending a heartbeat.');
+      tx.update(viewerRef, { lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
       return { sessionId, active: true };
     });
   } catch (error) {
@@ -192,9 +196,23 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
   }
 });
 
+async function endExpiredHostSessions() {
+  const now = Timestamp.now();
+  const expired = await sessions.where('status', '==', 'live').where('hostExpiresAt', '<=', now).limit(100).get();
+  for (const sessionDoc of expired.docs) {
+    await db.runTransaction(async tx => {
+      const snapshot = await tx.get(sessionDoc.ref);
+      if (!snapshot.exists || snapshot.data()?.status !== 'live') return;
+      const expiresAt = snapshot.data()?.hostExpiresAt?.toMillis?.() || 0;
+      if (expiresAt > Date.now()) return;
+      tx.update(sessionDoc.ref, { status: 'ended', viewerCount: 0, endedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), endReason: 'host_connection_expired' });
+    });
+  }
+}
 export const reconcileLiveSessionViewers = onSchedule({
   schedule: 'every 1 minutes', timeZone: 'Africa/Lagos', maxInstances: 1,
 }, async () => {
+  await endExpiredHostSessions();
   const now = Timestamp.now();
   const expired = await db.collection('liveSessionViewers').where('expiresAt', '<=', now).limit(500).get();
   for (const viewerDoc of expired.docs) {
