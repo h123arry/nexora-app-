@@ -150,3 +150,9 @@ A workstream is not complete because a screen exists. It must have:
 
 ### Verification status
 The changes are committed to the feature branch. Automated build, lint and emulator tests must be run in CI or a configured local/staging environment before merge. Do not claim those checks passed until their results are observed.
+
+
+### Creator membership tier builder
+- Creators can save up to three owner-scoped membership tier drafts, each with a name, description and up to five unique benefits.
+- Drafts are created, updated and archived only through authenticated trusted callables. Firestore client writes are denied; owner-only reads are permitted.
+- This is a tier-definition workspace, not a paid membership checkout. No price, recurring debit, entitlement grant or cash/NEX charge is created. Checkout remains disabled until a verified payment provider and subscription lifecycle are implemented.
