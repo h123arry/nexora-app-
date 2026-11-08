@@ -120,8 +120,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
   // Profile & Reputation states
 
-  // Next-generation engine simulation states
-
   // Terminology and Copy Dictionary customizer state
   const [terminologyState, setTerminologyState] = useState(() => ({ ...TERMINOLOGY }));
 
@@ -579,7 +577,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     
     const results = SearchEngine.getSuggestions(aiSearchInput, allUsers, posts, allCircles);
     setIntelligentResults(results);
-    showToast("Parsed Search DNA!");
+    showToast("Search suggestions updated from the currently loaded data.");
   };
 
   // Moderation Analysis triggers
@@ -1536,22 +1534,22 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         )}
 
         {/* ======================================================== */}
-        {/* ADMIN MODERATION SANDBOX SUBVIEW */}
+        {/* MODERATION REVIEW ASSISTANT SUBVIEW */}
         {/* ======================================================== */}
         {activeSubView === 'moderation' && (
           <div className="lg:col-span-12 space-y-4">
             <div className="bg-[#03010b] border border-white/10 rounded-3xl p-6 space-y-6">
               
               <div>
-                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">MODERATION & SECURITY INTELLIGENCE</span>
-                <p className="text-xs text-current/60">Test content safety, filter promotional spam, and prepare report review summaries.</p>
+                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">MODERATION REVIEW ASSISTANT</span>
+                <p className="text-xs text-current/60">Run a limited local text-pattern check and prepare advisory review notes. This does not submit reports, enforce moderation, or replace human review.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 
                 {/* Spam analyzer */}
                 <div className="space-y-3 bg-white/2 border border-white/5 p-4 rounded-2xl">
-                  <span className="text-[9.5px] font-black text-cyan-400 uppercase block">Content Spam Scanner</span>
+                  <span className="text-[9.5px] font-black text-cyan-400 uppercase block">Local text-pattern check</span>
                   <textarea
                     placeholder="Type or paste post text to check spam score (e.g. 'earn money quickly! click here')..."
                     value={moderationText}
