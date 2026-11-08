@@ -75,8 +75,8 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY],
   }
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   if (enabled && mode === 'unknown') throw new HttpsError('failed-precondition', 'A valid Paystack secret is required before enabling transfers.');
-  if (mode === 'live' && enabled && liveSettlementApproved !== true) {
-    throw new HttpsError('failed-precondition', 'Live transfers require explicit operational and compliance approval.');
+  if (mode === 'live' && enabled && (liveSettlementApproved !== true || providerBusinessVerified !== true || settlementFundingVerified !== true || complianceApproved !== true || webhookVerified !== true || liveTestTransferVerified !== true)) {
+    throw new HttpsError('failed-precondition', 'Live transfers require verified registered-business status, funded settlement balance, compliance approval, verified webhooks and a successful controlled live test transfer.');
   }
   if (mode !== 'live' && liveSettlementApproved) throw new HttpsError('failed-precondition', 'Live settlement approval can only be recorded with live credentials.');
   await db.collection('platformConfig').doc('ngnPayoutPolicy').set({
@@ -210,8 +210,8 @@ async function applyProviderOutcome(reference: string, outcome: 'success' | 'fai
       const wallet = await tx.get(walletRef);
       const data = wallet.data() || {};
       const pending = Number(data.pendingPayoutBalance || 0);
-      if (pending < payout.amountNex) throw new Error('Payout reserve is inconsistent.');
       const alreadyDebited = prior === 'success';
+      if (!alreadyDebited && pending < payout.amountNex) throw new Error('Payout reserve is inconsistent.');
       tx.set(walletRef, {
         availableBalance: Number(data.availableBalance || 0) + (alreadyDebited ? 0 : payout.amountNex),
         pendingPayoutBalance: pending - (alreadyDebited ? 0 : payout.amountNex),
@@ -289,7 +289,17 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   if (beneficiary.status !== 'verified' || !safeText(beneficiary.providerBeneficiaryRef, 120)) throw new HttpsError('failed-precondition', 'Add and verify a bank beneficiary first.');
   const amountKobo = amountNex * policy.koboPerNex;
   if (!Number.isSafeInteger(amountKobo) || amountKobo <= 0) throw new HttpsError('failed-precondition', 'The approved NGN conversion amount is invalid.');
-  if (mode === 'live') {\n    try {\n      const balances = await paystack('/balance?currency=NGN', 'GET');\n      const ngnBalance = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN')?.balance : undefined;\n      if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo) throw new HttpsError('failed-precondition', 'The Paystack NGN settlement balance is insufficient for this withdrawal.');\n    } catch (error) {\n      if (error instanceof HttpsError) throw error;\n      throw new HttpsError('unavailable', 'Paystack settlement balance could not be verified. No NEX was reserved.');\n    }\n  }\n  const reference = 'nxp_' + randomUUID().replace(/-/g, '');
+  if (mode === 'live') {
+    try {
+      const balances = await paystack('/balance?currency=NGN', 'GET');
+      const ngnBalance = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN')?.balance : undefined;
+      if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo) throw new HttpsError('failed-precondition', 'The Paystack NGN settlement balance is insufficient for this withdrawal.');
+    } catch (error) {
+      if (error instanceof HttpsError) throw error;
+      throw new HttpsError('unavailable', 'Paystack settlement balance could not be verified. No NEX was reserved.');
+    }
+  }
+  const reference = 'nxp_' + randomUUID().replace(/-/g, '');
   const idempotencyId = createHmac('sha256', 'nexora-payout-idempotency').update(creatorId + ':' + idempotencyKey).digest('hex');
   const payoutRef = db.collection('creatorPayoutRequests').doc(reference);
   const idemRef = db.collection('creatorPayoutIdempotency').doc(idempotencyId);
