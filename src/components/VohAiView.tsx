@@ -88,6 +88,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'default-session');
   const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(() => VoiceEngine.getConfig());
   const [memoryProfile, setMemoryProfile] = useState<UserMemoryProfile>(() => MemoryEngine.getMemory());
+  const [memoryHydrated, setMemoryHydrated] = useState(false);
   const [aiSettings, setAiSettings] = useState(() => SettingsEngine.getSettings());
 
   // Input States
@@ -109,7 +110,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
   // UI state indicators
   const [loadingAi, setLoadingAi] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [generatingMessageId, setGeneratingMessageId] = useState<string | null>(null);
   const [typingIndicator, setTypingIndicator] = useState(false);
 
@@ -246,8 +246,31 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   }, [voiceConfig]);
 
   useEffect(() => {
+    let cancelled = false;
+    void MemoryEngine.loadFromCloud().then(cloudMemory => {
+      if (cancelled) return;
+      if (cloudMemory) setMemoryProfile(cloudMemory);
+    }).catch(error => {
+      console.error('VOH cloud memory could not be loaded:', error);
+      if (!cancelled) showToast('Cloud memory could not be loaded. Your local memory remains available.');
+    }).finally(() => {
+      if (!cancelled) setMemoryHydrated(true);
+    });
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    if (!memoryHydrated) return;
     MemoryEngine.saveMemory(memoryProfile);
-  }, [memoryProfile]);
+    if (!memoryProfile.memoryEnabled) return;
+    const timer = window.setTimeout(() => {
+      void MemoryEngine.syncWithCloud(memoryProfile).catch(error => {
+        console.error('VOH cloud memory sync failed:', error);
+        showToast('VOH memory could not sync to your account.');
+      });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [memoryProfile, memoryHydrated]);
 
   useEffect(() => {
     SettingsEngine.saveSettings(aiSettings);
@@ -333,7 +356,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     }
   };
 
-  // Mic Record Audio Stream Mock & Real handler
+  // Microphone recording uses the browser's real media stream only.
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -360,16 +383,15 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
           const base64String = (base64Data as string).split(',')[1];
           try {
             const data = await VoiceEngine.uploadVoice(base64String);
-            setIsDemoMode(!!data.isDemo);
             setTranscription(data.transcription);
-            setTranslation("Region-aligned translation");
-            setSummarizedText("Transcribed voice post");
-            showToast("Voice broadcast processed!");
+            setTranslation("");
+            setSummarizedText("");
+            showToast("Voice transcription completed.");
           } catch (err) {
-            // Simulated Fallback
-            setTranscription("Expanding our local community and adding system design metrics to help co-build the feed!");
-            setTranslation("General expansion overview.");
-            setSummarizedText("Ecosystem discussion.");
+            setTranscription("");
+            setTranslation("");
+            setSummarizedText("");
+            showToast(err instanceof Error ? err.message : "Voice transcription failed. Please try again.");
           } finally {
             setIsSynthesizingVoice(false);
           }
@@ -381,17 +403,14 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       setVoiceTimer(0);
       timerRef.current = setInterval(() => {
         setVoiceTimer(prev => prev + 1);
-        setWaveformNodes(prev => prev.map(() => Math.floor(Math.random() * 45) + 10));
+        
       }, 100);
 
     } catch (err) {
-      console.warn("Using virtual audio simulator.", err);
-      setIsRecording(true);
-      setVoiceTimer(0);
-      timerRef.current = setInterval(() => {
-        setVoiceTimer(prev => prev + 1);
-        setWaveformNodes(prev => prev.map(() => Math.floor(Math.random() * 45) + 10));
-      }, 100);
+      console.warn("Microphone access is unavailable:", err);
+      showToast("Microphone access is unavailable. Check your browser permission and try again.");
+      setIsRecording(false);
+      setIsSynthesizingVoice(false);
     }
   };
 
@@ -458,7 +477,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       }
 
       const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser);
-      setIsDemoMode(!!response.isDemo);
 
       const responseText = response.text;
       const responseMessage: Message = {
@@ -551,17 +569,16 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.improved) {
-          setQuery(data.improved);
+        if (typeof data.text === 'string' && data.text.trim()) {
+          setQuery(data.text);
           showToast("Command polished successfully! ✨");
         }
       } else {
-        throw new Error("Local fallback");
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(typeof payload.error === "string" ? payload.error : "Post improvement is unavailable. Please try again.");
       }
     } catch (err) {
-      console.warn("Using localized command expansions.", err);
-      setQuery(`Analyze the current system details regarding: "${query}". Provide a highly detailed breakdown referencing regional pulse and decentralized database synchronization logs.`);
-      showToast("Expanded query structure.");
+      showToast(err instanceof Error ? err.message : "Post improvement failed. Please try again.");
     } finally {
       setLoadingAi(false);
     }
@@ -740,7 +757,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
       {/* Main navigation toolbar */}
       <div className="flex flex-wrap border-b border-current/5 gap-1.5 pb-2">
-        {(['chat', 'voice', 'assistants', 'engines', 'search', 'ecosystem', 'moderation', 'settings'] as const).map((view) => (
+        {(['chat', 'voice', 'assistants', 'search', 'ecosystem', 'moderation', 'settings'] as const).map((view) => (
           <button
             key={view}
             onClick={() => {
@@ -759,16 +776,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
           </button>
         ))}
       </div>
-
-      {/* Demo warning fallback bar */}
-      {isDemoMode && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-2 text-xs text-amber-200">
-          <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-          <p className="font-medium leading-relaxed text-[11px]">
-            VOH AI is currently using fallback responses. Some answers may be less contextual than normal.
-          </p>
-        </div>
-      )}
 
       {/* Main Work Area Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -912,9 +919,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               {/* Dialogue Header */}
               <div className="p-3 border-b border-current/5 bg-current/5 flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full animate-pulse ${isDemoMode ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+                  <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-500" />
                   <span className="text-xs font-bold text-current">{activeSession?.title || 'Dialogue Session'}</span>
-                  {isDemoMode && <span className="text-[9px] font-mono text-amber-300 border border-amber-400/20 rounded px-1.5 py-0.5">DEMO FALLBACK</span>}
                 </div>
                 {activeSession?.messages && activeSession.messages.length > 0 && (
                   <button 
@@ -1994,15 +2000,23 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <div>
                       <span className="text-[9.5px] font-black text-cyan-400 uppercase block">VOH Memory & Tone</span>
                       <p className="text-[10px] text-current/50 leading-relaxed mt-1">
-                        Memory is stored only in this browser and is not sent to VOH unless you explicitly attach it to a request. It starts disabled.
+                        With your consent, VOH memory is encrypted in transit and stored in your signed-in account so it can follow you across devices. You can disable or clear it at any time.
                       </p>
                     </div>
                     <button
                       type="button"
                       aria-pressed={memoryProfile.memoryEnabled}
                       onClick={() => {
-                        setMemoryProfile(MemoryEngine.setConsent(!memoryProfile.memoryEnabled));
-                        showToast(!memoryProfile.memoryEnabled ? 'VOH memory enabled on this device.' : 'VOH memory disabled.');
+                        const enabling = !memoryProfile.memoryEnabled;
+                        setMemoryProfile(MemoryEngine.setConsent(enabling));
+                        if (!enabling) {
+                          void MemoryEngine.clearCloudMemory().then(() => showToast('VOH memory disabled and cleared from your account.')).catch(error => {
+                            console.error('VOH cloud memory could not be cleared:', error);
+                            showToast('Cloud memory could not be cleared. Please retry.');
+                          });
+                        } else {
+                          showToast('VOH memory enabled for your account.');
+                        }
                       }}
                       className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-mono font-bold border transition-all ${memoryProfile.memoryEnabled ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/10 text-zinc-400'}`}
                     >
@@ -2036,15 +2050,36 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <p className="text-[10.5px] text-current/50 leading-relaxed mt-2">
                       VOH AI utilizes this preference as an active system modifier to custom align its generated layouts.
                     </p>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-bold uppercase tracking-wider text-current/70">Personal facts VOH should remember</label>
+                      <p className="text-[10px] text-current/45">Add facts you explicitly want VOH to use in future conversations, one per line. Avoid passwords, financial credentials, or sensitive information.</p>
+                      <textarea
+                        value={(memoryProfile.personalFacts || []).join('\\n')}
+                        onChange={(event) => setMemoryProfile(prev => ({
+                          ...prev,
+                          personalFacts: event.target.value.split('\\n').map(item => item.trim()).filter(Boolean).slice(0, 60)
+                        }))}
+                        rows={4}
+                        maxLength={12000}
+                        placeholder="Example: I'm building NEXORA as part of VOICEOFHARRISON.\\nI prefer direct, natural explanations."
+                        className="w-full bg-[#0d0a26] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-violet-500 resize-y"
+                        disabled={!memoryProfile.memoryEnabled}
+                      />
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setMemoryProfile(MemoryEngine.clearMemory());
-                        showToast('VOH memory cleared from this device.');
+                        void MemoryEngine.clearCloudMemory().then(() => {
+                          setMemoryProfile(MemoryEngine.clearMemory());
+                          showToast('VOH memory cleared from this device and your account.');
+                        }).catch(error => {
+                          console.error('VOH memory clear failed:', error);
+                          showToast('VOH cloud memory could not be cleared. Please retry.');
+                        });
                       }}
                       className="text-[10px] font-mono uppercase text-rose-300 hover:text-rose-200 border border-rose-400/20 hover:border-rose-400/40 rounded-lg px-3 py-1.5 transition-all"
                     >
-                      Clear local VOH memory
+                      Clear VOH memory
                     </button>
                   </div>
                 </div>
