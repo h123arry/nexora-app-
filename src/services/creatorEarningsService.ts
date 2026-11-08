@@ -18,8 +18,10 @@ export interface CreatorEarningsSnapshot {
   policyVersion: string;
   creatorShareBps: number;
   platformShareBps: number;
-  earningsWindow: 'latest_100';
+  earningsWindow: 'page_100';
+  pageSize: number;
   hasMoreEarnings: boolean;
+  nextCursor: string | null;
   pendingReviewGrossNex: number;
   recentAvailableCreatorShareNex: number;
   recentGrossNex: number;
@@ -28,9 +30,9 @@ export interface CreatorEarningsSnapshot {
   walletAvailableNex: number;
   earnings: CreatorGiftEarning[];
 }
-export async function getCreatorEarningsSnapshot(): Promise<CreatorEarningsSnapshot> {
-  const call = httpsCallable<void, CreatorEarningsSnapshot>(functions, 'getCreatorEarningsSnapshot');
-  return (await call()).data;
+export async function getCreatorEarningsSnapshot(cursor?: string): Promise<CreatorEarningsSnapshot> {
+  const call = httpsCallable<{ cursor?: string }, CreatorEarningsSnapshot>(functions, 'getCreatorEarningsSnapshot');
+  return (await call(cursor ? { cursor } : {})).data;
 }
 
 export interface PendingGiftEarningForFinance {
