@@ -3,8 +3,8 @@ import { functions } from '../lib/firebase';
 
 export type CreatorPayoutReadiness = {
   providerConfigured: boolean; provider: 'paystack'; providerMode: 'test' | 'live' | 'unknown'; payoutEnabled: boolean; testModeAvailable: boolean; corridor: 'NG-NGN'; currency: 'NGN';
-  beneficiaryStatus: 'verified' | 'pending' | 'not_configured'; beneficiary: { accountName: string; accountNumberLast4: string; bankName: string } | null; displayCurrency: string;
-  koboPerNex: number | null; minimumNex: number | null; maximumNex: number | null; blocker: string | null; cashWithdrawalEnabled: boolean;
+  beneficiaryStatus: 'verified' | 'pending' | 'not_configured'; complianceStatus: 'approved' | 'rejected' | 'pending'; beneficiary: { accountName: string; accountNumberLast4: string; bankName: string } | null; displayCurrency: string;
+  koboPerNex: number | null; providerFeeBufferKobo: number | null; minimumNex: number | null; maximumNex: number | null; blocker: string | null; cashWithdrawalEnabled: boolean;
 };
 export type CreatorGiftAnalytics = {
   currency: 'NEX'; windowDays: number; source: string; truncated: boolean;
@@ -60,4 +60,8 @@ export async function resolveGiftRiskSignal(signalId: string, outcome: 'cleared'
 export async function setCreatorPayoutBeneficiary(creatorId: string, providerBeneficiaryRef: string) {
   const call = httpsCallable<{creatorId:string;providerBeneficiaryRef:string}, {creatorId:string;status:'pending';provider:'paystack';currency:'NGN'}>(functions, 'setCreatorPayoutBeneficiary');
   return (await call({creatorId,providerBeneficiaryRef})).data;
+}
+
+export async function reviewCreatorPayoutCompliance(input:{creatorId:string;beneficiaryRef:string;decision:'approved'|'rejected';evidenceReference:string;bankAccountNameMatched:boolean}) {
+  return (await httpsCallable<typeof input, {creatorId:string;status:string;beneficiaryRef:string}>(functions, 'reviewCreatorPayoutCompliance')(input)).data;
 }
