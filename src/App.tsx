@@ -2044,7 +2044,7 @@ export default function App() {
   }, [posts]);
 
   // Do not render account data until the provider has resolved the current Firebase identity.
-  const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== 'demo-user-1' && currentUser.id !== firebaseUser?.uid;
+  const staleAccountVisible = currentUser.id !== 'guest_visitor_id' && currentUser.id !== firebaseUser?.uid;
   if (authInitializing || staleAccountVisible) {
     return <div className="min-h-screen flex items-center justify-center bg-[#07060b]"><NexoraLoader center label="Restoring secure session…" /></div>;
   }
