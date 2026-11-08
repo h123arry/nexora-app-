@@ -33,3 +33,8 @@ export function nextLiveChatRateState(current: LiveChatRateState | null, nowMs: 
   }
   return { windowStartedAtMs: state.windowStartedAtMs, messageCount: state.messageCount + 1 };
 }
+
+export function validateLiveConnectionId(value: unknown): string {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{8,80}$/.test(value)) throw new Error('A valid live connection reference is required.');
+  return value;
+}
