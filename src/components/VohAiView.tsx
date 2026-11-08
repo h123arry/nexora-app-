@@ -41,6 +41,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
   // Engines Data State
   const [sessions, setSessions] = useState<ChatSession[]>(() => ChatEngine.getSessions(currentUser.id));
+  const [sessionOwnerId, setSessionOwnerId] = useState(currentUser.id);
   const [folders, setFolders] = useState<ChatFolder[]>(() => ChatEngine.getFolders(currentUser.id));
   const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'default-session');
   const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(() => VoiceEngine.getConfig());
@@ -139,16 +140,19 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     setSessions(accountSessions);
     setFolders(ChatEngine.getFolders(currentUser.id));
     setActiveSessionId(accountSessions[0]?.id || 'default-session');
+    setSessionOwnerId(currentUser.id);
   }, [currentUser.id]);
 
   // Chat Sessions refs & sync
   useEffect(() => {
+    if (sessionOwnerId !== currentUser.id) return;
     ChatEngine.saveSessions(sessions, currentUser.id);
-  }, [sessions, currentUser.id]);
+  }, [sessions, currentUser.id, sessionOwnerId]);
 
   useEffect(() => {
+    if (sessionOwnerId !== currentUser.id) return;
     ChatEngine.saveFolders(folders, currentUser.id);
-  }, [folders, currentUser.id]);
+  }, [folders, currentUser.id, sessionOwnerId]);
 
   useEffect(() => {
     VoiceEngine.saveConfig(voiceConfig);
