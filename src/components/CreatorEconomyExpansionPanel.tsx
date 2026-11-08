@@ -58,7 +58,7 @@ export default function CreatorEconomyExpansionPanel() {
     const amount=Number(amountNex);
     if(!Number.isSafeInteger(amount)||amount<=0){setError('Enter a whole-number NEX withdrawal amount.');return;}
     setPayoutBusy(true);setError('');setPayoutMessage('');
-    try{const result=await requestCreatorPayout(amount,crypto.randomUUID());setPayoutMessage('Withdrawal '+result.status.replaceAll('_',' ')+'. Reference: '+result.reference+'. '+(result.status==='submission_unknown'?'Your NEX remains reserved while Paystack is checked.':''));setAmountNex('');await refresh();}
+    try{const result=await requestCreatorPayout(amount,crypto.randomUUID());setPayoutMessage((payout?.providerMode==='test'?'Sandbox transfer ': 'Paystack transfer ')+result.status.replaceAll('_',' ')+'. Reference: '+result.reference+'. '+(result.status==='submission_unknown'?'Your NEX remains reserved while Paystack is checked.':result.status==='success'&&payout?.providerMode==='live'?'Paystack reports the transfer processed; the receiving bank may take additional time to post the credit.':payout?.providerMode==='test'?'This is a simulated test transfer, not a real bank payment.':''));setAmountNex('');await refresh();}
     catch{setError('The withdrawal could not be submitted. Your NEX balance was not changed unless a request was confirmed.');}
     finally{setPayoutBusy(false);}
   };
