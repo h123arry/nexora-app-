@@ -2403,7 +2403,7 @@ export default function FeedView({
                 onSave={handleSave}
                 onSharePost={onSharePost}
                 onRepostPost={onRepostPost}
-                onQuotePost={post => { setQuoteTargetPost(post); setQuoteDraft(''); }}
+                onQuotePost={postId => { const target = localPosts.find(post => post.id === postId); if (target) { setQuoteTargetPost(target); setQuoteDraft(''); } }}
                 onCommentToggle={(postId) => setActiveCommentsPostId(activeCommentsPostId === postId ? null : postId)}
                 onToggleFollow={onToggleFollow}
                 onViewProfile={onViewProfile}
