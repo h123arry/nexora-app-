@@ -2489,7 +2489,7 @@ export default function FeedView({
                                   <button
                                     onClick={() => {
                                       if (confirm('Delete this comment?')) {
-                                        window.dispatchEvent(new CustomEvent('nexora-delete-comment', { detail: { postId: post.id, commentIndex } }));
+                                        window.dispatchEvent(new CustomEvent('nexora-delete-comment', { detail: { postId: post.id, commentId: c.id } }));
                                       }
                                     }}
                                     className="p-1 text-red-400 hover:text-red-300 transition-colors rounded-md hover:bg-white/5 cursor-pointer animate-fade-in"

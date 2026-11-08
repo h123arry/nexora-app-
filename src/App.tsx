@@ -56,6 +56,7 @@ import { migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase
 import { createPostRepost } from './services/firebase/postRepostService';
 import { addPostCommentReply } from './services/firebase/postReplyService';
 import { setPostCommentLike } from './services/firebase/postCommentReactionService';
+import { deletePostComment } from './services/firebase/postCommentDeletionService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -1173,23 +1174,23 @@ export default function App() {
     };
 
     const handleDeleteComment = (e: Event) => {
-      const { postId, commentIndex } = (e as CustomEvent).detail || {};
-      if (!postId || commentIndex === undefined) return;
-      setPosts(prev => {
-        const next = prev.map(p => {
-          if (p.id !== postId) return p;
-          const comments = [...(p.comments || [])];
-          comments.splice(commentIndex, 1);
-          return {
-            ...p,
-            comments,
-            commentsCount: Math.max(0, (p.commentsCount || 0) - 1)
-          };
+      const { postId, commentId } = (e as CustomEvent).detail || {};
+      if (!postId || !commentId) return;
+      void deletePostComment(postId, commentId).then(result => {
+        setPosts(previous => {
+          const next = previous.map(post => post.id !== postId ? post : ({
+            ...post,
+            comments: (post.comments || []).filter(comment => comment.id !== commentId),
+            commentsCount: result.commentsCount,
+          }));
+          localStorage.setItem('nexora_posts', JSON.stringify(next));
+          return next;
         });
-        localStorage.setItem('nexora_posts', JSON.stringify(next));
-        return next;
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Comment deleted.' }));
+      }).catch(error => {
+        const message = error instanceof Error ? error.message : 'The comment could not be deleted. Please retry.';
+        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       });
-      window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Comment deleted by creator.' }));
     };
 
     const handleSparkComment = (e: Event) => {

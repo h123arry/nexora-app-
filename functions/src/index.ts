@@ -7,6 +7,7 @@ import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
 import { setPublicPostCommentLike } from './postCommentReactions.js';
+import { deletePublicPostComment } from './postCommentDeletion.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
@@ -173,6 +174,19 @@ export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) =>
   }
 });
 
+
+export const deletePublicPostCommentEntry = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to delete comments.');
+  try {
+    return await deletePublicPostComment(adminDb, request.auth.uid, request.data?.postId, request.data?.commentId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid post')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('no longer available')) throw new HttpsError('not-found', message);
+    if (message.includes('permission')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The comment could not be deleted. Please retry.');
+  }
+});
 
 export const setPublicPostCommentLikeState = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to react to comments.');
