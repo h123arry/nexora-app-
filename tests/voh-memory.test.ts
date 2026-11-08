@@ -52,6 +52,20 @@ describe('VOH memory consent boundary', () => {
     assert.deepEqual(memory.savedPrompts, []);
   });
 
+  it('rejects sensitive credential and identity details from memory capture', async () => {
+    await assert.rejects(
+      MemoryEngine.rememberFact('My bank account number is 1234567890'),
+      /will not store passwords, financial credentials, or sensitive identity numbers/
+    );
+  });
+
+  it('requires memory consent before capturing an explicit remember request', async () => {
+    await assert.rejects(
+      MemoryEngine.rememberFact('I prefer concise answers'),
+      /Enable VOH Memory in settings/
+    );
+  });
+
   it('clears the complete local memory profile', () => {
     MemoryEngine.setConsent(true);
     MemoryEngine.saveMemory({
