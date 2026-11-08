@@ -597,7 +597,7 @@ export const reconcilePaystackCreatorPayouts = onSchedule({
 }, async () => {
   if (providerMode(PAYSTACK_SECRET_KEY.value()) === 'unknown') return;
   for (const status of ['submitting','processing','submission_unknown','awaiting_provider_approval']) {
-    const snapshot = await db.collection('creatorPayoutRequests').where('status', '==', status).limit(100).get();
+    const snapshot = await db.collection('creatorPayoutRequests').where('status', '==', status).orderBy('createdAt', 'asc').limit(100).get();
     for (const doc of snapshot.docs) {
       const reference = doc.id;
       try {
