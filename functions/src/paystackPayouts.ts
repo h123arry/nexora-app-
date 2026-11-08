@@ -77,8 +77,6 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
 export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
   requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
-  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
-  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
   const policy = await payoutPolicy();
   return {
     mode: providerMode(PAYSTACK_SECRET_KEY.value()), enabled: policy.enabled === true,
@@ -115,6 +113,7 @@ export const getCreatorPayoutComplianceQueue = onCall({ maxInstances: 3 }, async
 export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 2 }, async request => {
   const actorId = requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
   const { enabled, koboPerNex, liveSettlementApproved, minimumNex, maximumNex, providerBusinessVerified, settlementFundingVerified, complianceApproved, webhookVerified, liveTestTransferVerified } = request.data || {};
   const providerFeeBufferKobo = request.data?.providerFeeBufferKobo ?? 0;
   const liveEvidenceReference = request.data?.liveEvidenceReference;
@@ -223,6 +222,7 @@ export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KE
 export const reviewCreatorPayoutCompliance = onCall({ maxInstances: 3 }, async request => {
   const actorId = requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
   const creatorId = request.data?.creatorId;
   const beneficiaryRef = request.data?.beneficiaryRef;
   const decision = request.data?.decision;
