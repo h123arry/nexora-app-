@@ -34,3 +34,9 @@ Run cold-start, feed scroll, video playback, navigation, keyboard/input and memo
 
 - The video element's native poster URL is now withheld from released/offscreen players as well as the separate poster image being lazy-loaded. Active and nearby players retain their poster for a smooth playback handoff.
 - The poster visibility decision is covered by unit tests.
+
+
+## Active video visibility
+
+- Clears the active feed-post identity when its card exits the viewport before another card crosses the activation threshold, preventing stale offscreen playback state.
+- Provides a deterministic first-video/first-post fallback for older embedded browsers without IntersectionObserver.
