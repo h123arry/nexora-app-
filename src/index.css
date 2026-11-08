@@ -631,3 +631,19 @@ body {
   .nx-icon-button,
   .nx-dock-item { transition-duration: 0.01ms; }
 }
+
+
+/* Keep constrained-device feed rendering within a smaller paint/compositing budget. */
+:root[data-nx-performance="constrained"] .nx-skeleton {
+  animation: none;
+  background: rgba(138, 63, 252, 0.09);
+  background-size: auto;
+}
+
+:root[data-nx-performance="constrained"] .nx-post-card.transform-gpu {
+  transform: none;
+}
+
+:root[data-nx-performance="constrained"] .nx-dock-item[data-active="true"] svg {
+  filter: none;
+}
