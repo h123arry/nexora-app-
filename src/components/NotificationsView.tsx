@@ -941,9 +941,7 @@ export default function NotificationsView({
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           className={`nx-soft-card p-4 rounded-3xl border text-left flex flex-col gap-3.5 transition-all relative overflow-hidden group/item ${
-                            isPinned 
-                              ? 'bg-linear-to-r from-[#170a2c] via-[#100720] to-[#04010b] border-amber-500/30'
-                              : isSelected
+                            isSelected
                                 ? 'bg-[#15112f] border-amber-500/20'
                                 : notif.isRead
                                   ? 'bg-black/35 border-white/10 opacity-70 hover:opacity-100 hover:border-white/10'
