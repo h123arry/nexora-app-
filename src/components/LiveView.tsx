@@ -53,6 +53,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
       if(!snapshot.exists()) { setSession(null);setSelectedId(null);setIsHost(false);return; }
       const data={id:snapshot.id,...snapshot.data()} as LiveSessionSummary;
       setSession(data);
+      setIsHost(data.hostId===currentUser.id);
       if(data.status!=='live') { setSelectedId(null);setIsHost(false); }
     },()=>{setError('This live room is unavailable or has ended.');setSelectedId(null);setIsHost(false);});
     const messagesQuery=query(collection(db,'liveSessions',selectedId,'messages'),orderBy('createdAt','asc'),limit(50));
