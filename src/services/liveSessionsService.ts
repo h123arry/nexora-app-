@@ -3,14 +3,14 @@ import { functions } from '../lib/firebase';
 
 export interface LiveSessionSummary {
   id: string; hostId: string; hostName?: string; title: string; status: 'live' | 'ended';
-  viewerCount: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured';
+  viewerCount: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured' | 'livekit';
   startedAt?: { toDate?: () => Date } | string | null;
 }
 export interface LiveChatMessage {
   id: string; senderId: string; senderName: string; message: string; createdAt?: { toDate?: () => Date } | string | null;
 }
 export async function startLiveSession(title: string) {
-  const call = httpsCallable<{ title: string }, { sessionId: string; status: 'live'; viewerCount: number; videoTransport: 'not_configured' }>(functions, 'startLiveSession');
+  const call = httpsCallable<{ title: string }, { sessionId: string; status: 'live'; viewerCount: number; videoTransport: 'not_configured' | 'livekit' }>(functions, 'startLiveSession');
   return (await call({ title })).data;
 }
 export async function endLiveSession(sessionId: string) {
