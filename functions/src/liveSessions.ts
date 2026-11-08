@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
-import { FieldValue, getFirestore } from 'firebase-admin/firestore';
+import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
+import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { nextLiveChatRateState, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle } from './liveSessionsPolicy.js';
 
@@ -28,7 +29,8 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
   const hostId = uid(request);
   const title = valid(() => validateLiveSessionTitle(request.data?.title));
   const statusRef = db.collection('accountStatus').doc(hostId);
-  const status = await statusRef.get();
+  const profileRef = db.collection('users').doc(hostId);
+  const [status, profile] = await Promise.all([statusRef.get(), profileRef.get()]);
   if (accountRestricted(status.data(), 'suspended') || accountRestricted(status.data(), 'postingRestricted')) {
     throw new HttpsError('permission-denied', 'This account cannot start a live room right now.');
   }
@@ -38,7 +40,7 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
       const existing = await tx.get(sessions.where('hostId', '==', hostId).where('status', '==', 'live').limit(1));
       if (!existing.empty) throw new HttpsError('already-exists', 'You already have an active live room.');
       tx.create(ref, {
-        hostId, title, status: 'live', viewerCount: 0, chatEnabled: true, giftsEnabled: true,
+        hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, chatEnabled: true, giftsEnabled: true,
         videoTransport: 'not_configured', startedAt: FieldValue.serverTimestamp(),
         endedAt: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
@@ -83,11 +85,12 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
       const hostId = session.data()?.hostId;
       if (viewerId === hostId) return { sessionId, joined: true, viewerCount: Number(session.data()?.viewerCount || 0) };
       if (!viewer.exists) {
-        tx.create(viewerRef, { sessionId, viewerId, joinedAt: FieldValue.serverTimestamp() });
+        tx.create(viewerRef, { sessionId, viewerId, joinedAt: FieldValue.serverTimestamp(), lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
         const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount >= 0 ? session.data()!.viewerCount : 0;
         tx.update(sessionRef, { viewerCount: count + 1, updatedAt: FieldValue.serverTimestamp() });
         return { sessionId, joined: true, viewerCount: count + 1 };
       }
+      tx.update(viewerRef, { lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
       return { sessionId, joined: true, viewerCount: Number(session.data()?.viewerCount || 0) };
     });
   } catch (error) {
@@ -96,6 +99,24 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
   }
 });
 
+export const heartbeatLiveSession = onCall({ maxInstances: 20 }, async request => {
+  const viewerId = uid(request);
+  const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const sessionRef = sessions.doc(sessionId);
+  const viewerRef = db.collection('liveSessionViewers').doc(rateDocId(sessionId, viewerId));
+  try {
+    return await db.runTransaction(async tx => {
+      const [session, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
+      if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has ended.');
+      if (session.data()?.hostId !== viewerId && !viewer.exists) throw new HttpsError('permission-denied', 'Join this live room before sending a heartbeat.');
+      if (viewer.exists) tx.update(viewerRef, { lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
+      return { sessionId, active: true };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('unavailable', 'Your live connection could not be refreshed.');
+  }
+});
 export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
   const viewerId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
@@ -122,16 +143,18 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
   const message = valid(() => validateLiveChatMessage(request.data?.message));
   const sessionRef = sessions.doc(sessionId);
   const profileRef = db.collection('users').doc(senderId);
+  const viewerRef = db.collection('liveSessionViewers').doc(rateDocId(sessionId, senderId));
   const statusRef = db.collection('accountStatus').doc(senderId);
   const rateRef = db.collection('liveChatRateLimits').doc(rateDocId(sessionId, senderId));
   const messageRef = sessionRef.collection('messages').doc();
   try {
     return await db.runTransaction(async tx => {
-      const [session, profile, status, rate] = await Promise.all([
-        tx.get(sessionRef), tx.get(profileRef), tx.get(statusRef), tx.get(rateRef),
+      const [session, profile, status, rate, viewer] = await Promise.all([
+        tx.get(sessionRef), tx.get(profileRef), tx.get(statusRef), tx.get(rateRef), tx.get(viewerRef),
       ]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room is no longer active.');
       if (session.data()?.chatEnabled !== true) throw new HttpsError('failed-precondition', 'Live chat is disabled for this room.');
+      if (session.data()?.hostId !== senderId && !viewer.exists) throw new HttpsError('permission-denied', 'Join this live room before chatting.');
       if (accountRestricted(status.data(), 'suspended') || accountRestricted(status.data(), 'messagingRestricted')) {
         throw new HttpsError('permission-denied', 'This account cannot send live chat messages.');
       }
@@ -145,12 +168,35 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
       catch (error) { throw new HttpsError('resource-exhausted', error instanceof Error ? error.message : 'You are sending messages too quickly.'); }
       const profileData = profile.data() || {};
       const senderName = String(profileData.name || profileData.username || 'NEXORA member').slice(0, 80);
-      tx.set(rateRef, { windowStartedAt: new Date(nextRate.windowStartedAtMs), messageCount: nextRate.messageCount, updatedAt: FieldValue.serverTimestamp() });
+      tx.set(rateRef, { windowStartedAt: Timestamp.fromMillis(nextRate.windowStartedAtMs), messageCount: nextRate.messageCount, expireAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000), updatedAt: FieldValue.serverTimestamp() });
       tx.create(messageRef, { senderId, senderName, message, createdAt: FieldValue.serverTimestamp() });
       return { messageId: messageRef.id, sessionId, senderId, senderName, message, status: 'sent' as const };
     });
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     throw new HttpsError('unavailable', 'Your live chat message could not be sent. Please retry.');
+  }
+});
+
+export const reconcileLiveSessionViewers = onSchedule({
+  schedule: 'every 1 minutes', timeZone: 'Africa/Lagos', maxInstances: 1,
+}, async () => {
+  const now = Timestamp.now();
+  const expired = await db.collection('liveSessionViewers').where('expiresAt', '<=', now).limit(500).get();
+  for (const viewerDoc of expired.docs) {
+    const sessionId = viewerDoc.data().sessionId;
+    if (typeof sessionId !== 'string') { await viewerDoc.ref.delete(); continue; }
+    const sessionRef = sessions.doc(sessionId);
+    await db.runTransaction(async tx => {
+      const [viewer, session] = await Promise.all([tx.get(viewerDoc.ref), tx.get(sessionRef)]);
+      if (!viewer.exists) return;
+      const expiresAt = viewer.data()?.expiresAt?.toMillis?.() || 0;
+      if (expiresAt > Date.now()) return;
+      tx.delete(viewerDoc.ref);
+      if (session.exists && session.data()?.status === 'live' && viewer.data()?.viewerId !== session.data()?.hostId) {
+        const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount > 0 ? session.data()!.viewerCount : 0;
+        tx.update(sessionRef, { viewerCount: Math.max(0, count - 1), updatedAt: FieldValue.serverTimestamp() });
+      }
+    });
   }
 });
