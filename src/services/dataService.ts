@@ -778,13 +778,33 @@ export function subscribeToPages(callback: (pages: Page[]) => void) {
 }
 
 export function subscribeToFollows(userId: string, callback: (follows: any[]) => void) {
-  const q = query(collection(db, 'follows'), where('followerId', '==', userId), limit(250));
-  return onSnapshot(q, (snapshot) => {
-    const follows = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    callback(follows);
-  }, (error) => {
-    handleFirestoreError(error, OperationType.LIST, 'follows', auth);
-  });
+  const outgoingQuery = query(collection(db, 'follows'), where('followerId', '==', userId), limit(250));
+  const incomingQuery = query(collection(db, 'follows'), where('followingId', '==', userId), limit(250));
+  let outgoing: any[] = [];
+  let incoming: any[] = [];
+  let outgoingReady = false;
+  let incomingReady = false;
+  const emit = () => {
+    if (!outgoingReady || !incomingReady) return;
+    const byId = new Map<string, any>();
+    [...outgoing, ...incoming].forEach(follow => byId.set(follow.id, follow));
+    callback([...byId.values()]);
+  };
+  const onError = (error: unknown) => handleFirestoreError(error, OperationType.LIST, 'follows', auth);
+  const stopOutgoing = onSnapshot(outgoingQuery, snapshot => {
+    outgoing = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    outgoingReady = true;
+    emit();
+  }, onError);
+  const stopIncoming = onSnapshot(incomingQuery, snapshot => {
+    incoming = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+    incomingReady = true;
+    emit();
+  }, onError);
+  return () => {
+    stopOutgoing();
+    stopIncoming();
+  };
 }
 
 export function subscribeToChats(userId: string, callback: (chats: Chat[]) => void) {

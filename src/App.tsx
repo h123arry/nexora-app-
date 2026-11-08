@@ -53,6 +53,9 @@ import { recordRecommendationEvent } from './utils/recommendations';
 import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 import { isUserCacheReady, readUserScopedJson, writeUserScopedJson } from './utils/userScopedStorage';
 import { migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase/bookmarkService';
+import { createPostRepost } from './services/firebase/postRepostService';
+import { addPostCommentReply } from './services/firebase/postReplyService';
+import { setPostCommentLike } from './services/firebase/postCommentReactionService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -364,7 +367,10 @@ export default function App() {
       unsubFollows = subscribeToFollows(firebaseUser.uid, (dbFollows) => {
         if (dbFollows) {
           localStorage.setItem('nexora_db_follows', JSON.stringify(dbFollows));
-          setFollowingIds(dbFollows.filter((f: any) => f.followerId === firebaseUser.uid).map((f: any) => f.followingId));
+          const outgoing = dbFollows.filter((f: any) => f.followerId === firebaseUser.uid);
+          const incomingIds = new Set(dbFollows.filter((f: any) => f.followingId === firebaseUser.uid).map((f: any) => f.followerId));
+          setFollowingIds(outgoing.map((f: any) => f.followingId));
+          setFriendIds(outgoing.filter((f: any) => incomingIds.has(f.followingId)).map((f: any) => f.followingId));
         }
       });
     }
@@ -694,6 +700,7 @@ export default function App() {
   const [followingIds, setFollowingIds] = useState<string[]>(() =>
     readUserScopedJson(localStorage, 'nexora_following_ids', initialCacheUserId, [])
   );
+  const [friendIds, setFriendIds] = useState<string[]>([]);
   const [privateCacheOwnerId, setPrivateCacheOwnerId] = useState(initialCacheUserId);
 
   const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'giftverse' | 'settings'>(() => {
@@ -1186,63 +1193,45 @@ export default function App() {
     };
 
     const handleSparkComment = (e: Event) => {
-      const { postId, commentId } = (e as CustomEvent).detail || {};
-      if (!postId || !commentId) return;
-      setPosts(prev => {
-        const next = prev.map(p => {
-          if (p.id !== postId) return p;
-          const updatedPost = {
-            ...p,
-            comments: (p.comments || []).map(c => {
-              if (c.id !== commentId) return c;
-              const isLiked = !!c.isLikedByUser;
-              return {
-                ...c,
-                likes: isLiked ? Math.max(0, c.likes - 1) : c.likes + 1,
-                isLikedByUser: !isLiked
-              };
-            })
-          };
-          savePostToDb(updatedPost);
-          return updatedPost;
+      const { postId, commentId, desiredLiked } = (e as CustomEvent).detail || {};
+      if (!postId || !commentId || typeof desiredLiked !== 'boolean') return;
+      void setPostCommentLike(postId, commentId, desiredLiked).then(result => {
+        setPosts(previous => {
+          const next = previous.map(post => post.id !== postId ? post : ({
+            ...post,
+            comments: (post.comments || []).map(comment => comment.id !== commentId ? comment : ({
+              ...comment,
+              likes: result.likes,
+              isLikedByUser: result.liked,
+            })),
+          }));
+          localStorage.setItem('nexora_posts', JSON.stringify(next));
+          return next;
         });
-        localStorage.setItem('nexora_posts', JSON.stringify(next));
-        return next;
+      }).catch(error => {
+        const message = error instanceof Error ? error.message : 'Your comment reaction could not be saved. Please retry.';
+        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       });
     };
 
     const handleAddReply = (e: Event) => {
-      const { postId, commentId, replyContent } = (e as CustomEvent).detail || {};
+      const { postId, commentId, replyContent, replyId } = (e as CustomEvent).detail || {};
       if (!postId || !commentId || !replyContent) return;
-      
-      const newReply = {
-        id: `reply-${Date.now()}`,
-        userId: currentUser.id,
-        username: currentUser.username,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        content: replyContent,
-        timestamp: new Date().toISOString()
-      };
-
-      setPosts(prev => {
-        const next = prev.map(p => {
-          if (p.id !== postId) return p;
-          const updatedPost = {
-            ...p,
-            comments: (p.comments || []).map(c => {
-              if (c.id !== commentId) return c;
-              return {
-                ...c,
-                replies: [...(c.replies || []), newReply]
-              };
-            })
-          };
-          savePostToDb(updatedPost);
-          return updatedPost;
+      void addPostCommentReply(postId, commentId, replyContent, replyId).then(reply => {
+        setPosts(previous => {
+          const next = previous.map(post => post.id !== postId ? post : ({
+            ...post,
+            comments: (post.comments || []).map(comment => comment.id !== commentId ? comment : ({
+              ...comment,
+              replies: [...(comment.replies || []).filter(existing => existing.id !== reply.id), reply],
+            })),
+          }));
+          localStorage.setItem('nexora_posts', JSON.stringify(next));
+          return next;
         });
-        localStorage.setItem('nexora_posts', JSON.stringify(next));
-        return next;
+      }).catch(error => {
+        const message = error instanceof Error ? error.message : 'Your reply could not be saved. Please try again.';
+        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       });
     };
 
@@ -1629,6 +1618,27 @@ export default function App() {
         })
       );
     }, 'Join Nexora to comment on posts and join community discussions.');
+  };
+
+  const handleRepostPost = async (postId: string) => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      requireAuth(() => { void handleRepostPost(postId); }, 'Sign in to repost posts.');
+      return;
+    }
+    try {
+      const result = await createPostRepost(postId);
+      setPosts(previous => {
+        const source = previous.find(post => post.id === postId);
+        if (!source) return previous;
+        const repostAlreadyLoaded = previous.some(post => post.id === result.post.id);
+        const updated = previous.map(post => post.id === postId ? { ...post, shares: result.shares } : post);
+        return repostAlreadyLoaded ? updated : [result.post, ...updated];
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Reposted to your profile and the NEXORA feed.' }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The post could not be reposted. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    }
   };
 
   const handleSharePost = (postId: string) => {
@@ -2182,7 +2192,9 @@ export default function App() {
                 onViewProfile={handleViewProfile}
                 onToggleFollow={handleToggleFollow}
                 theme={theme}
+                friendIds={friendIds}
                 onSharePost={handleSharePost}
+                onRepostPost={handleRepostPost}
                 activeTab={activeTab}
                 unreadMessagesCount={unreadMessagesCount}
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}

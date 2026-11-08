@@ -30,6 +30,7 @@ interface FeedPostCardProps {
   onSpark: (postId: string) => void;
   onSave: (postId: string) => void;
   onSharePost?: (postId: string) => void;
+  onRepostPost?: (postId: string) => void;
   onCommentToggle: (postId: string) => void;
   onToggleFollow?: (userId: string) => void;
   onViewProfile?: (userId: string) => void;
@@ -82,6 +83,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   onSpark,
   onSave,
   onSharePost,
+  onRepostPost,
   onCommentToggle,
   onToggleFollow,
   onViewProfile,
@@ -253,6 +255,11 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                 })()}
               </span>
             </div>
+            {post.isRepost && (
+              <div className="mt-1 text-[10px] text-violet-300/80">
+                Reposted from <span className="font-semibold">@{post.sourceAuthorUsername || 'member'}</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -347,7 +354,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                           const isPinned = pinnedPostIds.includes(post.id);
                           setPinnedPostIds((prev) => {
                             const next = isPinned ? prev.filter((id) => id !== post.id) : [...prev, post.id];
-                            localStorage.setItem('nexora_pinned_posts', JSON.stringify(next));
                             return next;
                           });
                           setActiveDotsMenuPostId(null);
@@ -744,8 +750,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             <button
               type="button"
               onClick={() => {
-                if (onSharePost) onSharePost(post.id);
-                window.dispatchEvent(new CustomEvent('toast', { detail: '🔁 Post reposted!' }));
+                if (onRepostPost) void onRepostPost(post.id);
+                else window.dispatchEvent(new CustomEvent('toast', { detail: 'Reposting is unavailable right now.' }));
               }}
               className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
               title="Repost"

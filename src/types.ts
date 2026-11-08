@@ -185,6 +185,15 @@ export interface Post {
   videoDuration?: string;
   media?: string;
   opportunityType?: string;
+  isRepost?: boolean;
+  sourcePostId?: string;
+  repostedBy?: string;
+  sourcePostContent?: string;
+  sourceAuthorId?: string;
+  sourceAuthorUsername?: string;
+  sourceAuthorName?: string;
+  sourceAuthorAvatar?: string;
+  repostedAt?: unknown;
   // Collaboration Post extension
   coAuthors?: {
     id: string;

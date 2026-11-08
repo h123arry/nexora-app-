@@ -4,6 +4,9 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
+import { createPublicPostRepost } from './postReposts.js';
+import { addPublicPostCommentReply } from './postReplies.js';
+import { setPublicPostCommentLike } from './postCommentReactions.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
@@ -170,6 +173,53 @@ export const setPublicPostLike = onCall({ maxInstances: 10 }, async (request) =>
   }
 });
 
+
+export const setPublicPostCommentLikeState = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to react to comments.');
+  const { postId, commentId, liked } = request.data || {};
+  if (typeof liked !== 'boolean') throw new HttpsError('invalid-argument', 'A boolean reaction state is required.');
+  try {
+    return await setPublicPostCommentLike(adminDb, request.auth.uid, postId, commentId, liked);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid post') || message.includes('desired reaction')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('no longer available')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'Your comment reaction could not be saved. Please retry.');
+  }
+});
+
+export const replyToPublicPostComment = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to reply to comments.');
+  try {
+    return await addPublicPostCommentReply(
+      adminDb, request.auth.uid, request.data?.postId, request.data?.commentId,
+      request.data?.content, request.data?.replyId,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid post') || message.includes('between 1 and 500')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('no longer available')) throw new HttpsError('not-found', message);
+    if (message.includes('public profile')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'Your reply could not be saved. Please retry.');
+  }
+});
+
+export const repostPublicPost = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to repost.');
+  const postId = request.data?.postId;
+  if (typeof postId !== 'string' || postId.length < 1 || postId.length > 150 || postId.includes('/')) {
+    throw new HttpsError('invalid-argument', 'A valid post ID is required.');
+  }
+  try {
+    return await createPublicPostRepost(adminDb, request.auth.uid, postId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('unavailable')) throw new HttpsError('not-found', 'This public post is unavailable.');
+    if (message.includes('Invalid')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('public profile')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The post could not be reposted. Please retry.');
+  }
+});
 
 export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage Circle roles.');
