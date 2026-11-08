@@ -35,10 +35,10 @@ export function verifyPaystackWebhookSignature(
   const modern = headers['paystack-signature'];
   const legacy = headers['x-paystack-signature'];
   if (typeof modern === 'string' && webhookSecret) {
-    const parts = modern.split(',');
+    const parts = modern.split(',').map(part => part.trim());
     const timestamp = Number(parts.find(part => part.startsWith('t='))?.slice(2));
     if (!Number.isSafeInteger(timestamp) || Math.abs(nowMs / 1000 - timestamp) > 300) return false;
-    const expected = createHmac('sha512', webhookSecret).update(String(timestamp) + '.' + rawBody.toString('utf8')).digest('hex');
+    const expected = createHmac('sha512', webhookSecret).update(String(timestamp) + '.').update(rawBody).digest('hex');
     return parts.filter(part => part.startsWith('v1=')).some(part => {
       const signature = part.slice(3).split(':').at(-1) || '';
       return /^[a-f0-9]{128}$/.test(signature)
