@@ -441,7 +441,7 @@ vohRouter.post('/chat', async (req, res) => {
           `Skills: ${context.currentUser.skills.join(', ') || 'not listed'}`,
           `Profile interest signals: ${context.currentUser.interests.map((item: any) => `${item.interest} (${item.strength ?? 'strength unavailable'}/100)`).join(', ') || 'not available'}`,
           `Creator mode: ${context.currentUser.creatorModeEnabled ? 'enabled' : 'not enabled'}; Joined: ${context.currentUser.joinedDate || 'unknown'}`
-        ].join('\\n')
+        ].join('\n')
       : 'Authenticated account profile is unavailable. Do not infer account-specific facts.';
 
     const circlesStr = context.circles.length > 0
