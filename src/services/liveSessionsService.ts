@@ -21,6 +21,10 @@ export async function joinLiveSession(sessionId: string) {
   const call = httpsCallable<{ sessionId: string }, { sessionId: string; joined: boolean; viewerCount: number }>(functions, 'joinLiveSession');
   return (await call({ sessionId })).data;
 }
+export async function heartbeatLiveSession(sessionId: string) {
+  const call = httpsCallable<{ sessionId: string }, { sessionId: string; active: boolean }>(functions, 'heartbeatLiveSession');
+  return (await call({ sessionId })).data;
+}
 export async function leaveLiveSession(sessionId: string) {
   const call = httpsCallable<{ sessionId: string }, { sessionId: string; left: boolean; viewerCount: number }>(functions, 'leaveLiveSession');
   return (await call({ sessionId })).data;
