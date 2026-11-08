@@ -53,6 +53,7 @@ import { recordRecommendationEvent } from './utils/recommendations';
 import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 import { isUserCacheReady, readUserScopedJson, writeUserScopedJson } from './utils/userScopedStorage';
 import { migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase/bookmarkService';
+import { createPostRepost } from './services/firebase/postRepostService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -1631,6 +1632,27 @@ export default function App() {
     }, 'Join Nexora to comment on posts and join community discussions.');
   };
 
+  const handleRepostPost = async (postId: string) => {
+    if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
+      requireAuth(() => { void handleRepostPost(postId); }, 'Sign in to repost posts.');
+      return;
+    }
+    try {
+      const result = await createPostRepost(postId);
+      setPosts(previous => {
+        const source = previous.find(post => post.id === postId);
+        if (!source) return previous;
+        const repostAlreadyLoaded = previous.some(post => post.id === result.post.id);
+        const updated = previous.map(post => post.id === postId ? { ...post, shares: result.shares } : post);
+        return repostAlreadyLoaded ? updated : [result.post, ...updated];
+      });
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Reposted to your profile and the NEXORA feed.' }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The post could not be reposted. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    }
+  };
+
   const handleSharePost = (postId: string) => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       requireAuth(() => handleSharePost(postId), 'Sign in to share posts.');
@@ -2183,6 +2205,7 @@ export default function App() {
                 onToggleFollow={handleToggleFollow}
                 theme={theme}
                 onSharePost={handleSharePost}
+                onRepostPost={handleRepostPost}
                 activeTab={activeTab}
                 unreadMessagesCount={unreadMessagesCount}
                 onOpenMessages={() => { setActiveTab('inbox'); setViewedUser(null); }}

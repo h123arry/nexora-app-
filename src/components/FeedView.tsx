@@ -180,6 +180,7 @@ interface FeedViewProps {
   onToggleFollow?: (creatorId: string) => void;
   theme?: ThemeMood;
   onSharePost?: (postId: string) => void;
+  onRepostPost?: (postId: string) => void;
   activeTab?: string;
   unreadMessagesCount?: number;
   onOpenMessages?: () => void;
@@ -209,6 +210,7 @@ export default function FeedView({
   onToggleFollow,
   theme = 'stealth-dark',
   onSharePost,
+  onRepostPost,
   activeTab = 'feed',
   unreadMessagesCount = 0,
   onOpenMessages,
@@ -2381,6 +2383,7 @@ export default function FeedView({
                 onSpark={handleSpark}
                 onSave={handleSave}
                 onSharePost={onSharePost}
+                onRepostPost={onRepostPost}
                 onCommentToggle={(postId) => setActiveCommentsPostId(activeCommentsPostId === postId ? null : postId)}
                 onToggleFollow={onToggleFollow}
                 onViewProfile={onViewProfile}
