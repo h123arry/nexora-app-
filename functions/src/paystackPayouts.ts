@@ -4,6 +4,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
@@ -199,34 +200,80 @@ async function applyProviderOutcome(reference: string, outcome: 'success' | 'fai
     if (eventSnap.exists || !payoutSnap.exists) return;
     const payout = payoutSnap.data() || {};
     const prior = payout.status as TransferStatus;
-    if (outcome === 'success' && prior !== 'success' && prior !== 'failed' && prior !== 'reversed') {
-      const walletRef = db.collection('nexWallets').doc(payout.creatorId);
-      const wallet = await tx.get(walletRef);
-      const data = wallet.data() || {};
-      const pending = Number(data.pendingPayoutBalance || 0);
-      if (pending < payout.amountNex) throw new Error('Payout reserve is inconsistent.');
-      tx.set(walletRef, { pendingPayoutBalance: pending - payout.amountNex,
-        lifetimeDebited: Number(data.lifetimeDebited || 0) + payout.amountNex, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      tx.update(payoutRef, { status: 'success', providerCompletedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
-    } else if ((outcome === 'failed' || outcome === 'reversed') && prior !== 'failed' && prior !== 'reversed') {
-      const walletRef = db.collection('nexWallets').doc(payout.creatorId);
-      const wallet = await tx.get(walletRef);
-      const data = wallet.data() || {};
-      const pending = Number(data.pendingPayoutBalance || 0);
-      const alreadyDebited = prior === 'success';
-      if (!alreadyDebited && pending < payout.amountNex) throw new Error('Payout reserve is inconsistent.');
-      tx.set(walletRef, {
-        availableBalance: Number(data.availableBalance || 0) + (alreadyDebited ? 0 : payout.amountNex),
-        pendingPayoutBalance: pending - (alreadyDebited ? 0 : payout.amountNex),
-        lifetimeDebited: Math.max(0, Number(data.lifetimeDebited || 0) - (alreadyDebited ? payout.amountNex : 0)),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      if (alreadyDebited) tx.set(walletRef, { availableBalance: FieldValue.increment(payout.amountNex), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      tx.update(payoutRef, { status: outcome, providerCompletedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    const creatorId = String(payout.creatorId || '');
+    const amount = Number(payout.amountNex);
+    if (!/^[A-Za-z0-9._:-]{1,160}$/.test(creatorId) || !Number.isSafeInteger(amount) || amount <= 0) {
+      throw new Error('Payout record is invalid.');
     }
-    tx.create(eventRef, { reference, outcome, createdAt: FieldValue.serverTimestamp() });
-    tx.create(db.collection('creatorPayoutAuditEvents').doc(), { creatorId: payout.creatorId, action: 'provider_' + outcome,
-      provider: 'paystack', reference, createdAt: FieldValue.serverTimestamp() });
+    const creatorRef = db.collection('nexWallets').doc(creatorId);
+    const clearingId = 'nex_redemption_clearing';
+    const clearingRef = db.collection('nexWallets').doc(clearingId);
+    const [creatorSnap, clearingSnap] = await Promise.all([tx.get(creatorRef), tx.get(clearingRef)]);
+    const creator = creatorSnap.data() || {};
+    const clearing = clearingSnap.data() || {};
+    const creatorAvailable = Number(creator.availableBalance || 0);
+    const creatorPending = Number(creator.pendingPayoutBalance || 0);
+    const clearingBalance = Number(clearing.availableBalance || 0);
+    const now = FieldValue.serverTimestamp();
+    const writeLedger = (fromId: string, toId: string, transactionId: string, requestId: string, fromBalanceAfter: number, toBalanceAfter: number) => {
+      const entries = buildNexTransferEntries({ fromAccountId: fromId, toAccountId: toId, units: amount, transactionId, idempotencyKey: requestId });
+      const common = { transactionId, idempotencyKey: requestId, units: amount, currency: 'NEX',
+        type: 'creator_ngn_payout', description: 'NEXORA NGN bank withdrawal', actorId: 'paystack',
+        payoutReference: reference, status: 'posted', createdAt: now };
+      tx.create(db.collection('nexLedgerEntries').doc(entries[0].entryId), { ...common, ...entries[0] });
+      tx.create(db.collection('nexLedgerEntries').doc(entries[1].entryId), { ...common, ...entries[1] });
+      tx.create(db.collection('nexLedgerTransactions').doc(transactionId), {
+        ...common, fromAccountId: fromId, toAccountId: toId, entryIds: [entries[0].entryId, entries[1].entryId],
+      });
+      tx.create(db.collection('nexLedgerRequests').doc(requestId), {
+        transactionId, fromAccountId: fromId, toAccountId: toId, units: amount,
+        type: 'creator_ngn_payout', actorId: 'paystack', payoutReference: reference, createdAt: now,
+      });
+      tx.create(db.collection('nexWallets').doc(fromId).collection('transactions').doc(transactionId), {
+        ...common, direction: 'debit', balanceAfter: fromBalanceAfter, counterpartyAccountId: toId,
+      });
+      tx.create(db.collection('nexWallets').doc(toId).collection('transactions').doc(transactionId), {
+        ...common, direction: 'credit', balanceAfter: toBalanceAfter, counterpartyAccountId: fromId,
+      });
+    };
+    if (outcome === 'success' && prior !== 'success' && prior !== 'failed' && prior !== 'reversed') {
+      if (!creatorSnap.exists || creatorPending < amount) throw new Error('Payout reserve is inconsistent.');
+      const entries = buildNexTransferEntries({ fromAccountId: creatorId, toAccountId: clearingId, units: amount,
+        transactionId: 'payout_' + reference + '_settle', idempotencyKey: 'payout_' + reference + '_settle_req' });
+      const nextClearing = applyNexBalanceEntries(clearingBalance, entries, clearingId);
+      writeLedger(creatorId, clearingId, 'payout_' + reference + '_settle', 'payout_' + reference + '_settle_req', creatorAvailable, nextClearing);
+      tx.set(creatorRef, { pendingPayoutBalance: creatorPending - amount,
+        lifetimeDebited: Number(creator.lifetimeDebited || 0) + amount, updatedAt: now }, { merge: true });
+      tx.set(clearingRef, { currency: 'NEX', availableBalance: nextClearing,
+        lifetimeCredited: Number(clearing.lifetimeCredited || 0) + amount,
+        lifetimeDebited: Number(clearing.lifetimeDebited || 0), schemaVersion: 1,
+        createdAt: clearing.createdAt || now, updatedAt: now }, { merge: true });
+      tx.update(payoutRef, { status: 'success', providerCompletedAt: now, updatedAt: now });
+    } else if ((outcome === 'failed' || outcome === 'reversed') && prior !== 'failed' && prior !== 'reversed') {
+      if (!creatorSnap.exists) throw new Error('Creator wallet is missing.');
+      if (prior === 'success') {
+        if (outcome === 'reversed') {
+          if (clearingBalance < amount) throw new Error('NEX redemption clearing balance is insufficient for reversal.');
+          const entries = buildNexTransferEntries({ fromAccountId: clearingId, toAccountId: creatorId, units: amount,
+            transactionId: 'payout_' + reference + '_reverse', idempotencyKey: 'payout_' + reference + '_reverse_req' });
+          const nextCreator = applyNexBalanceEntries(creatorAvailable, entries, creatorId);
+          const nextClearing = applyNexBalanceEntries(clearingBalance, entries, clearingId);
+          writeLedger(clearingId, creatorId, 'payout_' + reference + '_reverse', 'payout_' + reference + '_reverse_req', nextClearing, nextCreator);
+          tx.set(creatorRef, { availableBalance: nextCreator, lifetimeCredited: Number(creator.lifetimeCredited || 0) + amount, updatedAt: now }, { merge: true });
+          tx.set(clearingRef, { availableBalance: nextClearing, lifetimeDebited: Number(clearing.lifetimeDebited || 0) + amount, updatedAt: now }, { merge: true });
+        }
+      } else {
+        if (creatorPending < amount) throw new Error('Payout reserve is inconsistent.');
+        tx.set(creatorRef, { availableBalance: creatorAvailable + amount, pendingPayoutBalance: creatorPending - amount,
+          updatedAt: now }, { merge: true });
+      }
+      if (prior !== 'success' || outcome === 'reversed') {
+        tx.update(payoutRef, { status: outcome, providerCompletedAt: now, updatedAt: now });
+      }
+    }
+    tx.create(eventRef, { reference, outcome, createdAt: now });
+    tx.create(db.collection('creatorPayoutAuditEvents').doc(), { creatorId, action: 'provider_' + outcome,
+      provider: 'paystack', reference, createdAt: now });
   });
 }
 
