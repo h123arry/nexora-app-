@@ -458,7 +458,7 @@ export default function FeedView({
   const [isCreateMomentOpen, setIsCreateMomentOpen] = useState(false);
   const [momentCaption, setMomentCaption] = useState('');
   const [momentMediaType, setMomentMediaType] = useState<'photo' | 'video' | 'voice' | 'text'>('photo');
-  const [momentMediaUrl, setMomentMediaUrl] = useState('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80');
+  const [momentMediaUrl, setMomentMediaUrl] = useState('');
   const [playingVoiceMoment, setPlayingVoiceMoment] = useState(false);
 
   // Phase 6 & Phase 7 - Interactive states
@@ -502,31 +502,13 @@ export default function FeedView({
 
   const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
   const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => {
-    const saved = localStorage.getItem('nexora_story_highlights');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && parsed.length > 0) return parsed;
-      } catch (e) {}
+    try {
+      const saved = localStorage.getItem('nexora_story_highlights');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
     }
-    return [
-      {
-        id: 'hl-sample-1',
-        title: 'Vibe check ⚡',
-        cover: '⚡',
-        stories: [
-          { mediaUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80', caption: 'Consolidating the new Nexora mobile interface!' }
-        ]
-      },
-      {
-        id: 'hl-sample-2',
-        title: 'Coding ☕',
-        cover: '☕',
-        stories: [
-          { mediaUrl: 'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=600&auto=format&fit=crop&q=80', caption: 'Early morning coffee coding sprints!' }
-        ]
-      }
-    ];
   });
 
   // Floating Composer Box
