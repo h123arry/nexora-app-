@@ -615,41 +615,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     </div>
                   </div>
                 )}
-                {activePortalTab === 'challenges' && (
-                  <div className="space-y-4 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Active Community Quests</h3>
-                    {[
-                      { id: 'ch1', title: 'Post 3 high quality updates in 5 days', reward: '50 FP points', progress: '1/3 steps completed' }
-                    ].map((ch) => {
-                      const isDone = completedChallenges.includes(ch.id);
-                      return (
-                        <div key={ch.id} className="p-4 rounded-2xl bg-white/[0.01] border border-white/10 space-y-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              <h4 className="text-xs sm:text-sm font-bold text-white">{ch.title}</h4>
-                              <p className="text-[10px] text-[#A78BFA] font-mono uppercase">🎁 REWARD: {ch.reward}</p>
-                              <p className="text-[10px] text-violet-300/40 font-mono">Status: {ch.progress}</p>
-                            </div>
-                            <button
-                              disabled={isDone}
-                              onClick={() => {
-                                setCompletedChallenges(prev => [...prev, ch.id]);
-                                alert("Quest targets submitted for validation queue! Reward will clear soon.");
-                              }}
-                              className={`px-3 py-1.5 rounded-lg text-[9.5px] font-mono font-bold uppercase transition-all cursor-pointer ${
-                                isDone 
-                                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30' 
-                                  : 'bg-violet-600 hover:bg-violet-500 text-white'
-                              }`}
-                            >
-                              {isDone ? 'Claimed ✓' : 'Submit Quest'}
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+
 
               </div>
             </motion.div>
