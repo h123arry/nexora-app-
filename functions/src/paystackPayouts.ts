@@ -3,7 +3,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { getFirebaseAdminApp, resolveFirebaseProjectId, resolveFirestoreDatabaseId, PRODUCTION_FIREBASE_PROJECT_ID } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
 import { calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
 
@@ -36,6 +36,10 @@ function safeCounter(value: unknown): number {
 }
 function safeText(value: unknown, max = 120): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= max;
+}
+function isProductionRuntime(): boolean {
+  const environment = process.env.NEXORA_ENV?.trim() || (process.env.FIRESTORE_EMULATOR_HOST ? 'local' : 'production');
+  return environment === 'production' && resolveFirebaseProjectId() === PRODUCTION_FIREBASE_PROJECT_ID;
 }
 function providerMode(secret: string): 'test' | 'live' | 'unknown' {
   if (secret.startsWith('sk_test_')) return 'test';
@@ -80,7 +84,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
     provider: 'paystack', configured: mode !== 'unknown', credentialsVerified, ngnBalanceKobo, mode,
     corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && (mode === 'test' || livePayoutGatesPassed(policy)),
     liveSettlementApproved: policy.liveSettlementApproved === true,
-    cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && livePayoutGatesPassed(policy),
+    cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && isProductionRuntime() && livePayoutGatesPassed(policy),
     rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0 && Number.isSafeInteger(policy.providerFeeBufferKobo),
     blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid' : !credentialsVerified ? 'provider_credentials_unverified'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved'
@@ -198,6 +202,8 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY, 
     throw new HttpsError('invalid-argument', 'A reviewed NEX/NGN rate, withdrawal limits and explicit enablement decision are required.');
   }
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
+  if (mode === 'live' && !isProductionRuntime()) throw new HttpsError('failed-precondition', 'Live Paystack credentials may only be enabled in the production Firebase environment.');
+  if (mode === 'test' && isProductionRuntime() && enabled) throw new HttpsError('failed-precondition', 'Test Paystack transfers are blocked in production. Use the isolated staging project.');
   if (enabled && mode !== 'unknown') {
     try { await paystack('/balance', 'GET'); }
     catch { throw new HttpsError('failed-precondition', 'Paystack credentials could not be authenticated. Verify the environment key before enabling payouts.'); }
@@ -347,7 +353,7 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     && complianceStatus === 'approved' && complianceData.bankAccountNameMatched === true
     && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && livePayoutGatesPassed(policy)));
   return {
-    providerConfigured: credentialsVerified, credentialsVerified, provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && livePayoutGatesPassed(policy), testModeAvailable: enabled && mode === 'test',
+    providerConfigured: credentialsVerified, credentialsVerified, provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && isProductionRuntime() && livePayoutGatesPassed(policy), testModeAvailable: enabled && mode === 'test' && !isProductionRuntime(),
     corridor: 'NG-NGN', currency: 'NGN', beneficiaryStatus: b.status === 'verified' ? 'verified' : 'not_configured',
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
     complianceStatus,
@@ -356,7 +362,7 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     providerFeeBufferKobo: Number.isSafeInteger(policy.providerFeeBufferKobo) ? policy.providerFeeBufferKobo : null,
     minimumNex: Number.isSafeInteger(policy.minimumNex) ? policy.minimumNex : null,
     maximumNex: Number.isSafeInteger(policy.maximumNex) ? policy.maximumNex : null,
-    cashWithdrawalEnabled: enabled && mode === 'live' && livePayoutGatesPassed(policy),
+    cashWithdrawalEnabled: enabled && mode === 'live' && isProductionRuntime() && livePayoutGatesPassed(policy),
     blocker: mode === 'unknown' ? 'provider_secret_missing' : !credentialsVerified ? 'provider_credentials_unverified' : !policy.enabled ? 'payout_policy_disabled'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required' : complianceStatus !== 'approved' ? 'creator_compliance_review_required'
       : mode === 'live' && policy.liveSettlementApproved !== true ? 'live_settlement_not_approved' : null,
@@ -498,7 +504,8 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   const policy = await payoutPolicy();
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   if (policy.enabled !== true || !Number.isSafeInteger(policy.koboPerNex) || mode === 'unknown'
-    || (mode === 'live' && !livePayoutGatesPassed(policy))) {
+    || (mode === 'live' && (!isProductionRuntime() || !livePayoutGatesPassed(policy)))
+    || (mode === 'test' && isProductionRuntime())) {
     throw new HttpsError('failed-precondition', 'NGN withdrawals are not enabled for this provider environment.');
   }
   if (amountNex < policy.minimumNex || amountNex > policy.maximumNex) throw new HttpsError('invalid-argument', 'The withdrawal amount is outside the approved limits.');
