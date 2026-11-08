@@ -143,7 +143,7 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
       tx.create(db.collection('giftRiskSignals').doc(transactionId), {
         transactionId, senderId, creatorId: input.recipientId, grossNex: units,
         score: risk.score, tier: risk.tier, reasons: risk.reasons,
-        disposition: 'review_only', createdAt: now,
+        disposition: risk.tier === 'low' ? 'auto_cleared' : 'review_only', createdAt: now,
       });
       if (activeCompetition) tx.create(db.collection('giftCompetitionContributions').doc(transactionId), {
         competitionId: activeCompetition.id, transactionId, creatorId: input.recipientId,
