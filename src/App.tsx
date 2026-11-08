@@ -1,4 +1,5 @@
 import React, { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
+import { getDevicePerformanceProfile } from './utils/devicePerformance';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, HelpCircle, X, Radio, Code, Bell, Check, Send, Home, Globe, Plus, User as UserIcon, Search, MessageSquare, Forward, Compass } from 'lucide-react';
 import VohIcon from './components/VohIcon';
@@ -88,6 +89,28 @@ import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, logout } = useFirebase();
+
+  useEffect(() => {
+    const connection = (navigator as Navigator & {
+      connection?: EventTarget & { saveData?: boolean };
+    }).connection;
+    const updatePerformanceProfile = () => {
+      const profile = getDevicePerformanceProfile({
+        saveData: connection?.saveData === true,
+        deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+        hardwareConcurrency: navigator.hardwareConcurrency,
+      });
+      document.documentElement.dataset.nxPerformance = profile.constrained ? 'constrained' : 'standard';
+      document.documentElement.dataset.nxSaveData = profile.saveData ? 'true' : 'false';
+    };
+    updatePerformanceProfile();
+    connection?.addEventListener('change', updatePerformanceProfile);
+    return () => {
+      connection?.removeEventListener('change', updatePerformanceProfile);
+      delete document.documentElement.dataset.nxPerformance;
+      delete document.documentElement.dataset.nxSaveData;
+    };
+  }, []);
   const isLoggedIn = !!firebaseUser && !firebaseUser.isAnonymous && firebaseProfile?.id === firebaseUser.uid;
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
   const [isDemoMode, setIsDemoMode] = useState(false);
