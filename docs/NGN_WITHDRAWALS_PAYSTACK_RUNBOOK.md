@@ -63,7 +63,7 @@ The creator:
 3. The creator confirms the returned account-holder name.
 4. NEXORA creates a Paystack `nuban` transfer recipient and stores only the provider recipient code, bank metadata, account name and last four account digits.
 
-The raw account number is used only for the provider request and is not persisted in NEXORA. Email verification is required. If the creator changes bank details, create and verify a new provider recipient before replacing the old one.
+The raw account number is used only for the provider request and is not persisted in NEXORA. Email verification is required. If the creator changes bank details, create and verify a new provider recipient before replacing the old one. Finance must then review the exact provider beneficiary against the creator's external KYC/identity evidence, confirm the account-holder name matches, and record a non-sensitive evidence reference in the finance operations panel. That approval is bound to the exact recipient reference and becomes pending again if the beneficiary changes.
 
 Paystack reference: https://paystack.com/docs/transfers/creating-transfer-recipients/
 
@@ -71,12 +71,13 @@ Paystack reference: https://paystack.com/docs/transfers/creating-transfer-recipi
 
 The conversion policy is intentionally not guessed or hard-coded. Finance must approve and document:
 - The exact kobo-per-NEX rate and how it is funded.
+- A conservative provider-fee reserve in kobo, in addition to the transfer principal.
 - Minimum and maximum NEX withdrawal amounts.
 - Whether the rate is fixed or time-bound, including when it expires.
 - Provider fees, who bears them, and the displayed net amount.
 - Refund/reversal treatment, creator disclosures and applicable tax/compliance obligations.
 
-The finance-only `configureNgnPayoutPolicy` callable stores the approved integer rate and limits. It must first be configured in test mode. Never configure a rate based on an arbitrary display-currency preference or an unsupported FX quote.
+The finance-only `configureNgnPayoutPolicy` callable stores the approved integer rate, provider-fee reserve and limits. The finance operations panel exposes this policy and the beneficiary compliance review queue. It must first be configured in test mode. Never configure a rate based on an arbitrary display-currency preference or an unsupported FX quote.
 
 ## 6. Test the complete sandbox lifecycle
 
@@ -106,7 +107,7 @@ Live activation is rejected unless all of these are explicitly confirmed by fina
 - A controlled live test transfer to an authorized company-owned/test beneficiary has completed and the receiving bank confirms the credit.
 - The approved rate, fees, limits, refund/reversal and support procedures are published.
 
-The finance-only policy callable requires these five live evidence flags plus explicit live settlement approval. These flags are attestations, not substitutes for retaining the supporting evidence and approvals.
+The finance-only policy callable requires these five live evidence flags, a positive provider-fee reserve, a non-sensitive evidence-bundle reference and explicit live settlement approval. These flags are attestations, not substitutes for retaining the supporting evidence and approvals. Each creator also needs a separate finance review of their current beneficiary and identity match.
 
 ## 8. Reconciliation and operations
 
