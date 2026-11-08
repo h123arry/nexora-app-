@@ -451,6 +451,29 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
     setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: updatedMessages, title: s.title.startsWith('New Dialogue') ? textToSend.slice(0, 24) + '...' : s.title } : s));
 
+    const rememberRequest = textToSend.match(/^\s*(?:please\s+)?(?:remember(?:\s+that|\s+this)?|don't forget(?:\s+that)?|keep in mind(?:\s+that)?|save this(?: about me)?)\s*[:,-]?\s*(.+)$/i);
+    if (rememberRequest?.[1]) {
+      setTypingIndicator(false);
+      const aiMsgId = `msg-${Date.now()}-voh`;
+      try {
+        const nextMemory = await MemoryEngine.rememberFact(rememberRequest[1]);
+        setMemoryProfile(nextMemory);
+        const confirmation = 'I’ll remember that for future conversations. You can review or remove it anytime in VOH Memory settings.';
+        setSessions(prev => prev.map(session => session.id === activeSessionId
+          ? { ...session, messages: [...session.messages, { id: aiMsgId, sender: 'voh', text: confirmation, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] }
+          : session));
+        showToast('Saved to your VOH account memory.');
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'I could not save that memory. Please try again.';
+        setSessions(prev => prev.map(session => session.id === activeSessionId
+          ? { ...session, messages: [...session.messages, { id: aiMsgId, sender: 'voh', text: errorMessage, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] }
+          : session));
+      } finally {
+        setLoadingAi(false);
+      }
+      return;
+    }
+
     await triggerAiResponse(activeSessionId, textToSend, updatedMessages);
   };
 
@@ -476,7 +499,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
 
-      const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser);
+      const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser, posts);
 
       const responseText = response.text;
       const responseMessage: Message = {

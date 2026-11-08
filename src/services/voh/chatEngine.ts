@@ -1,6 +1,6 @@
 import { authenticatedVohFetch } from './authenticatedVohFetch';
 import { auth } from '../../lib/firebase';
-import { User } from '../../types';
+import { Post, User } from '../../types';
 import { readUserScopedJson } from '../../utils/userScopedStorage';
 import { getJoinedCirclesForUser } from '../../data/database';
 
@@ -31,16 +31,16 @@ export interface ChatFolder {
 }
 
 const STORAGE_KEYS = { SESSIONS: 'voh_ai_sessions', FOLDERS: 'voh_ai_folders' };
-function scopedKey(key: string): string {
+function scopedKey(key: string, userId = auth.currentUser?.uid || 'guest'): string {
   // Older builds stored conversations globally, which could expose one browser user's history to another.
   localStorage.removeItem(STORAGE_KEYS.SESSIONS);
   localStorage.removeItem(STORAGE_KEYS.FOLDERS);
-  return `${key}_${auth.currentUser?.uid || 'guest'}`;
+  return `${key}_${userId}`;
 }
 
 export class ChatEngine {
-  static getSessions(): ChatSession[] {
-    const key = scopedKey(STORAGE_KEYS.SESSIONS);
+  static getSessions(userId?: string): ChatSession[] {
+    const key = scopedKey(STORAGE_KEYS.SESSIONS, userId);
     const data = localStorage.getItem(key);
     if (!data) {
       // Return a default session
@@ -51,7 +51,7 @@ export class ChatEngine {
           {
             id: 'welcome-msg',
             sender: 'voh',
-            text: "Hey, I'm **VOH AI**. I can help you think through ideas and work with information you share in this conversation. I don't have live web access, private-message access, account controls, or live World Pulse data.",
+            text: "Hey, I'm **VOH AI**. I can help you think through ideas and use the authenticated profile, visible feed, joined communities, recent notifications and loaded World Pulse snapshot when available. I cannot read private messages or execute account-changing actions.",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             reactions: []
           }
@@ -68,12 +68,12 @@ export class ChatEngine {
     return JSON.parse(data);
   }
 
-  static saveSessions(sessions: ChatSession[]): void {
-    localStorage.setItem(scopedKey(STORAGE_KEYS.SESSIONS), JSON.stringify(sessions));
+  static saveSessions(sessions: ChatSession[], userId?: string): void {
+    localStorage.setItem(scopedKey(STORAGE_KEYS.SESSIONS, userId), JSON.stringify(sessions));
   }
 
-  static getFolders(): ChatFolder[] {
-    const key = scopedKey(STORAGE_KEYS.FOLDERS);
+  static getFolders(userId?: string): ChatFolder[] {
+    const key = scopedKey(STORAGE_KEYS.FOLDERS, userId);
     const data = localStorage.getItem(key);
     if (!data) {
       const defaultFolders: ChatFolder[] = [
@@ -87,17 +87,17 @@ export class ChatEngine {
     return JSON.parse(data);
   }
 
-  static saveFolders(folders: ChatFolder[]): void {
-    localStorage.setItem(scopedKey(STORAGE_KEYS.FOLDERS), JSON.stringify(folders));
+  static saveFolders(folders: ChatFolder[], userId?: string): void {
+    localStorage.setItem(scopedKey(STORAGE_KEYS.FOLDERS, userId), JSON.stringify(folders));
   }
 
   static async sendChatMessage(
     message: string,
     history: { sender: 'user' | 'voh'; text: string }[],
-    currentUser: User
+    currentUser: User,
+    visiblePosts: Post[] = []
   ): Promise<{ text: string }> {
     // Dynamic context integration
-    const localPosts = JSON.parse(localStorage.getItem('nexora_posts') || '[]');
     const localCircles = getJoinedCirclesForUser(currentUser.id);
     const localNotifications = readUserScopedJson(localStorage, 'nexora_notifications', currentUser.id, []);
 
@@ -113,8 +113,15 @@ export class ChatEngine {
           message: message.slice(0, 4000),
           history: history.slice(-24).map(item => ({ sender: item.sender, text: item.text.slice(0, 4000) })),
           context: {
-            currentUser,
-            posts: localPosts.slice(0, 10),
+            // The server loads the authoritative private profile using the verified Firebase UID.
+            posts: visiblePosts.slice(0, 10).map(post => ({
+              id: post.id,
+              username: post.username,
+              content: post.content,
+              timestamp: post.timestamp,
+              tags: Array.isArray(post.tags) ? post.tags.slice(0, 8) : [],
+              likes: Number.isFinite(post.likes) ? post.likes : null,
+            })),
             circles: localCircles.slice(0, 12),
             notifications: localNotifications.slice(0, 5)
           }

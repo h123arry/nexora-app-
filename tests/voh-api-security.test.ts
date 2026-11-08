@@ -151,6 +151,13 @@ describe('VOH API security boundary', () => {
     });
     assert.equal(withoutConsent.status, 400);
 
+    const sensitiveFact = await request(idToken, 'PUT', {
+      memoryEnabled: true,
+      consentVersion: '2026-11',
+      personalFacts: ['My password is not safe to store'],
+    });
+    assert.equal(sensitiveFact.status, 400);
+
     const saved = await request(idToken, 'PUT', {
       memoryEnabled: true,
       consentVersion: '2026-11',
