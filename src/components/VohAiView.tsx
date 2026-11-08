@@ -2054,14 +2054,14 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                       <label className="text-[10px] font-bold uppercase tracking-wider text-current/70">Personal facts VOH should remember</label>
                       <p className="text-[10px] text-current/45">Add facts you explicitly want VOH to use in future conversations, one per line. Avoid passwords, financial credentials, or sensitive information.</p>
                       <textarea
-                        value={(memoryProfile.personalFacts || []).join('\\n')}
+                        value={(memoryProfile.personalFacts || []).join('\n')}
                         onChange={(event) => setMemoryProfile(prev => ({
                           ...prev,
-                          personalFacts: event.target.value.split('\\n').map(item => item.trim()).filter(Boolean).slice(0, 60)
+                          personalFacts: event.target.value.split('\n').map(item => item.trim()).filter(Boolean).slice(0, 60)
                         }))}
                         rows={4}
                         maxLength={12000}
-                        placeholder="Example: I'm building NEXORA as part of VOICEOFHARRISON.\\nI prefer direct, natural explanations."
+                        placeholder="Example: I'm building NEXORA as part of VOICEOFHARRISON.\nI prefer direct, natural explanations."
                         className="w-full bg-[#0d0a26] border border-white/10 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-violet-500 resize-y"
                         disabled={!memoryProfile.memoryEnabled}
                       />
