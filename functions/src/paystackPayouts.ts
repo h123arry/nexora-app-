@@ -116,6 +116,55 @@ export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_K
   };
 });
 
+export const getNgnPayoutOtpQueue = onCall({ maxInstances: 3 }, async request => {
+  requireUser(request);
+  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  const snapshot = await db.collection('creatorPayoutRequests').where('status', '==', 'awaiting_provider_approval')
+    .orderBy('createdAt', 'asc').limit(50).get();
+  return { records: snapshot.docs.map(doc => {
+    const row = doc.data();
+    return { reference: doc.id, creatorId: row.creatorId, amountNex: row.amountNex,
+      amountKobo: row.amountKobo, transferCode: row.providerTransferCode || null,
+      createdAt: row.createdAt?.toDate?.()?.toISOString?.() || null };
+  }) };
+});
+
+export const finalizeNgnPayoutTransfer = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
+  const actorId = requireUser(request);
+  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before approving a provider transfer.');
+  const reference = request.data?.reference;
+  const otp = request.data?.otp;
+  if (!safeText(reference, 80) || typeof otp !== 'string' || !/^\d{4,8}$/.test(otp)) {
+    throw new HttpsError('invalid-argument', 'A payout reference and valid provider OTP are required.');
+  }
+  const payoutRef = db.collection('creatorPayoutRequests').doc(reference);
+  const payout = await payoutRef.get();
+  if (!payout.exists || payout.data()?.status !== 'awaiting_provider_approval' || !safeText(payout.data()?.providerTransferCode, 120)) {
+    throw new HttpsError('failed-precondition', 'This payout is not waiting for provider OTP approval.');
+  }
+  try {
+    const result = await paystack('/transfer/finalize_transfer', 'POST', {
+      transfer_code: payout.data()?.providerTransferCode, otp,
+    });
+    const providerStatus = String(result.status || 'pending');
+    if (providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed') {
+      await applyProviderOutcome(reference, providerStatus, 'finalize_' + providerStatus + '_' + reference);
+    } else {
+      await payoutRef.update({ status: 'processing', providerStatus, finalizedBy: actorId,
+        finalizedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    }
+    await db.collection('creatorPayoutAuditEvents').add({
+      creatorId: payout.data()?.creatorId, actorId, action: 'provider_transfer_otp_finalized',
+      provider: 'paystack', reference, createdAt: FieldValue.serverTimestamp(),
+    });
+    return { reference, status: providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed'
+      ? providerStatus : 'processing' };
+  } catch {
+    throw new HttpsError('failed-precondition', 'Paystack did not accept the OTP. The payout remains reserved for retry or reconciliation.');
+  }
+});
+
 export const getCreatorPayoutComplianceQueue = onCall({ maxInstances: 3 }, async request => {
   requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
