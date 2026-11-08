@@ -19,6 +19,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
   const [error, setError] = useState('');
   const [cameraOn, setCameraOn] = useState(isHost);
   const [micOn, setMicOn] = useState(isHost);
+  const [audioBlocked, setAudioBlocked] = useState(false);
 
   useEffect(() => {
     let disposed = false;
@@ -52,6 +53,9 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
         });
         room.on(sdk.RoomEvent.TrackUnsubscribed, (track: any) => {
           track.detach().forEach((element: HTMLElement) => element.remove());
+        });
+        room.on(sdk.RoomEvent.AudioPlaybackStatusChanged, () => {
+          if (!disposed) setAudioBlocked(!room.canPlaybackAudio);
         });
         room.on(sdk.RoomEvent.Disconnected, () => {
           if (!disposed) setStatus('Video connection ended');
@@ -111,6 +115,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
         <div className="absolute left-3 top-3 rounded-full bg-black/70 px-3 py-1 text-[10px] font-semibold text-white">{status}</div>
         {error && <div role="alert" className="absolute inset-x-3 bottom-3 rounded-xl border border-rose-400/30 bg-rose-950/90 p-3 text-left text-xs text-rose-100">{error}</div>}
       </div>
+      {audioBlocked && <button type="button" onClick={() => { const room = roomRef.current; if (room) void room.startAudio().then(() => setAudioBlocked(false)).catch(() => setError('Audio playback is still blocked by your browser.')); }} className="mx-auto block rounded-full bg-violet-600 px-4 py-2 text-xs font-bold">Tap to enable live audio</button>}
       {isHost && <div className="flex justify-center gap-3">
         <button type="button" onClick={() => void toggleCamera()} className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold">{cameraOn ? 'Turn camera off' : 'Turn camera on'}</button>
         <button type="button" onClick={() => void toggleMic()} className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold">{micOn ? 'Mute microphone' : 'Unmute microphone'}</button>
