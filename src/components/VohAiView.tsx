@@ -424,13 +424,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     } else {
-      setIsSynthesizingVoice(true);
-      setTimeout(() => {
-        setTranscription("We are designing a gorgeous space-glass interface with high-reputation communities in Port Harcourt!");
-        setTranslation("Port Harcourt design parameters.");
-        setSummarizedText("Design token blueprint.");
-        setIsSynthesizingVoice(false);
-      }, 1200);
+      setTranscription("");
+      setTranslation("");
+      setSummarizedText("");
+      showToast("No active voice recording was available. No transcript was generated.");
+      setIsSynthesizingVoice(false);
     }
   };
 
