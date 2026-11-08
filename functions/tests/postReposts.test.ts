@@ -57,7 +57,7 @@ test('creates an attributed public repost and increments the source share count 
 
 test('retries are idempotent and do not create duplicate reposts or inflate counters', async () => {
   const first = await createPublicPostRepost(db, actorId, sourcePostId);
-  const second = await createPublicPostRepost(db, 'alice', 'public-post');
+  const second = await createPublicPostRepost(db, actorId, sourcePostId);
   assert.equal(second.repostPostId, first.repostPostId);
   assert.equal(second.shares, first.shares);
   assert.equal((await db.collection('posts').where('sourcePostId', '==', sourcePostId).get()).size, 1);

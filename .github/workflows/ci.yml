@@ -75,6 +75,9 @@ jobs:
       - name: Run engagement integration tests
         run: npm run test:engagement
 
+      - name: Run repost integration tests
+        run: npm run test:reposts
+
       - name: Run authenticated API security tests
         run: npm run test:voh-security
 
