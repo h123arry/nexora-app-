@@ -268,12 +268,12 @@ export default function App() {
   }, [showDiagnosticsOverlay]);
 
   useEffect(() => {
-    if (!currentUser || !currentUser.id) return;
+    if (!isLoggedIn || !currentUser || !currentUser.id) return;
     setGlobalUsersMap(prev => ({
       ...prev,
       [currentUser.id]: currentUser
     }));
-  }, [currentUser]);
+  }, [isLoggedIn, currentUser]);
 
   useEffect(() => {
     let unsubPosts: () => void;
