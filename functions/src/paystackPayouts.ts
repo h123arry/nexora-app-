@@ -471,9 +471,12 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   const payoutRef = db.collection('creatorPayoutRequests').doc(reference);
   const idemRef = db.collection('creatorPayoutIdempotency').doc(idempotencyId);
   const walletRef = db.collection('nexWallets').doc(creatorId);
+  const activePayoutsQuery = db.collection('creatorPayoutRequests').where('creatorId', '==', creatorId)
+    .where('status', 'in', ['submitting','processing','submission_unknown','awaiting_provider_approval']).limit(1);
   await db.runTransaction(async tx => {
-    const [idem, wallet] = await Promise.all([tx.get(idemRef), tx.get(walletRef)]);
+    const [idem, wallet, activePayouts] = await Promise.all([tx.get(idemRef), tx.get(walletRef), tx.get(activePayoutsQuery)]);
     if (idem.exists) throw new HttpsError('already-exists', 'This withdrawal request key has already been used.');
+    if (!activePayouts.empty) throw new HttpsError('failed-precondition', 'A previous withdrawal is still being processed. Wait for its provider confirmation before requesting another.');
     const data = wallet.data() || {};
     if (!Number.isSafeInteger(data.availableBalance) || data.availableBalance < amountNex) throw new HttpsError('failed-precondition', 'Your available NEX balance is insufficient.');
     const pendingBalance = safeCounter(data.pendingPayoutBalance);
@@ -510,7 +513,7 @@ export const reconcilePaystackCreatorPayouts = onSchedule({
   schedule: 'every 15 minutes', timeZone: 'Africa/Lagos', secrets: [PAYSTACK_SECRET_KEY], maxInstances: 1,
 }, async () => {
   if (providerMode(PAYSTACK_SECRET_KEY.value()) === 'unknown') return;
-  for (const status of ['processing','submission_unknown','awaiting_provider_approval']) {
+  for (const status of ['submitting','processing','submission_unknown','awaiting_provider_approval']) {
     const snapshot = await db.collection('creatorPayoutRequests').where('status', '==', status).limit(100).get();
     for (const doc of snapshot.docs) {
       const reference = doc.id;
