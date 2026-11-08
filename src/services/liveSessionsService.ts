@@ -1,16 +1,18 @@
-import { httpsCallable } from 'firebase/functions';
-import { functions } from '../lib/firebase';
+import { getFunctions, httpsCallable } from 'firebase/functions';
+import { app, functions } from '../lib/firebase';
+
+const liveKitFunctions = getFunctions(app, 'europe-west1');
 
 export interface LiveSessionSummary {
   id: string; hostId: string; hostName?: string; title: string; status: 'live' | 'ended';
-  viewerCount: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured';
+  viewerCount: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured' | 'livekit';
   startedAt?: { toDate?: () => Date } | string | null;
 }
 export interface LiveChatMessage {
   id: string; senderId: string; senderName: string; message: string; createdAt?: { toDate?: () => Date } | string | null;
 }
 export async function startLiveSession(title: string) {
-  const call = httpsCallable<{ title: string }, { sessionId: string; status: 'live'; viewerCount: number; videoTransport: 'not_configured' }>(functions, 'startLiveSession');
+  const call = httpsCallable<{ title: string }, { sessionId: string; status: 'live'; viewerCount: number; videoTransport: 'not_configured' | 'livekit' }>(functions, 'startLiveSession');
   return (await call({ title })).data;
 }
 export async function endLiveSession(sessionId: string) {
@@ -32,4 +34,9 @@ export async function leaveLiveSession(sessionId: string, connectionId: string) 
 export async function sendLiveChatMessage(sessionId: string, message: string, connectionId: string) {
   const call = httpsCallable<{ sessionId: string; message: string; connectionId: string }, { messageId: string; sessionId: string; senderId: string; senderName: string; message: string; status: 'sent' }>(functions, 'sendLiveChatMessage');
   return (await call({ sessionId, message, connectionId })).data;
+}
+
+export async function getLiveKitToken(sessionId: string, connectionId: string) {
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'viewer'; expiresAt: number }>(liveKitFunctions, 'getLiveKitToken');
+  return (await call({ sessionId, connectionId })).data;
 }
