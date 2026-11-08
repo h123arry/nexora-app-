@@ -498,9 +498,14 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
       reference, currency: 'NGN', reason: 'NEXORA creator withdrawal',
     });
     const providerStatus = String(transfer.status || 'pending');
-    const status: TransferStatus = providerStatus === 'otp' ? 'awaiting_provider_approval' : 'processing';
-    await payoutRef.update({ status, providerTransferCode: transfer.transfer_code || null, providerStatus,
+    const status: TransferStatus = providerStatus === 'otp' ? 'awaiting_provider_approval'
+      : providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed' ? providerStatus : 'processing';
+    await payoutRef.update({ status: status === 'success' || status === 'failed' || status === 'reversed' ? 'submitting' : status,
+      providerTransferCode: transfer.transfer_code || null, providerStatus,
       providerSubmittedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+    if (status === 'success' || status === 'failed' || status === 'reversed') {
+      await applyProviderOutcome(reference, status, 'initiate_' + status + '_' + reference);
+    }
     return { reference, status, amountNex, amountKobo, currency: 'NGN' };
   } catch {
     // A timeout is ambiguous: the provider may have accepted the transfer.
