@@ -472,7 +472,7 @@ When answering:
     });
 
     const rawText = response.text || 'I analyzed the systems but couldn\'t form a response. Let\'s try again!';
-    res.json({ text: replaceTerminology(rawText), isDemo: false });
+    res.json({ text: replaceTerminology(rawText) });
 
   } catch (error: any) {
     console.error('VOH AI Chat Error:', error instanceof Error ? error.name : 'unknown');
