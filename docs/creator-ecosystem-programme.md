@@ -156,3 +156,10 @@ The changes are committed to the feature branch. Automated build, lint and emula
 - Creators can save up to three owner-scoped membership tier drafts, each with a name, description and up to five unique benefits.
 - Drafts are created, updated and archived only through authenticated trusted callables. Firestore client writes are denied; owner-only reads are permitted.
 - This is a tier-definition workspace, not a paid membership checkout. No price, recurring debit, entitlement grant or cash/NEX charge is created. Checkout remains disabled until a verified payment provider and subscription lifecycle are implemented.
+
+
+### Creator Economy earnings-history expansion
+- Added authenticated, owner-scoped cursor pagination for creator gift earnings. Each page returns at most 100 records and an opaque next cursor only when another page exists.
+- Cursor documents are validated against the signed-in creator before the query advances, preventing cross-account cursor probing.
+- The creator dashboard now loads older earnings on demand without an unbounded query. Page totals remain explicitly scoped to the current page; wallet balance remains the current wallet snapshot.
+- These records represent NEX gift-ledger earnings, not NGN cash income. NGN withdrawal activation remains controlled by separate provider, beneficiary and settlement gates.
