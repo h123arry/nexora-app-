@@ -70,3 +70,18 @@ test('releases distant videos and avoids preparing non-video content', () => {
     preloadMode: 'none',
   });
 });
+
+
+import { shouldLoadVideoPoster } from '../src/utils/videoPreloadPolicy';
+
+test('loads posters for active, nearby and preloaded video players', () => {
+  assert.equal(shouldLoadVideoPoster({ isActive: true, isNearby: false, shouldPreload: false }), true);
+  assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: true, shouldPreload: false }), true);
+  assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: false, shouldPreload: true }), true);
+});
+
+test('defers posters for offscreen players and releases poster requests', () => {
+  assert.equal(shouldLoadVideoPoster({ isActive: false, isNearby: false, shouldPreload: false }), false);
+  assert.equal(shouldLoadVideoPoster({ isActive: true, isNearby: true, shouldPreload: true, isReleased: true }), false);
+  assert.equal(shouldLoadVideoPoster({ isNearby: false, shouldPreload: false }), true);
+});
