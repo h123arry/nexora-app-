@@ -36,8 +36,8 @@ export const createCreatorMembershipTier = onCall({ maxInstances: 10 }, async re
   const ref = tiers.doc();
   try {
     await db.runTransaction(async tx => {
-      const existing = await tx.get(tiers.where('creatorId', '==', creatorId));
-      const active = existing.docs.filter(doc => doc.data().status !== 'archived');
+      const existing = await tx.get(tiers.where('creatorId', '==', creatorId).where('status', '==', 'draft').limit(CREATOR_MEMBERSHIP_TIER_LIMIT + 1));
+      const active = existing.docs;
       if (active.length >= CREATOR_MEMBERSHIP_TIER_LIMIT) throw new HttpsError('resource-exhausted', 'Creators can configure up to three membership tiers.');
       tx.create(ref, { creatorId, ...input, status: 'draft', checkoutEnabled: false, version: 1,
         createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
