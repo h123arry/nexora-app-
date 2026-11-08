@@ -454,7 +454,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     const rememberRequest = textToSend.match(/^\s*(?:please\s+)?(?:remember(?:\s+that|\s+this)?|don't forget(?:\s+that)?|keep in mind(?:\s+that)?|save this(?: about me)?)\s*[:,-]?\s*(.+)$/i);
     if (rememberRequest?.[1]) {
       setTypingIndicator(false);
-      const aiMsgId = \`msg-\${Date.now()}-voh\`;
+      const aiMsgId = `msg-${Date.now()}-voh`;
       try {
         const nextMemory = await MemoryEngine.rememberFact(rememberRequest[1]);
         setMemoryProfile(nextMemory);
