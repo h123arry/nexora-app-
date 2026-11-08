@@ -18,6 +18,7 @@
     "test:rules": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-rules \"node --test tests/firestore.rules.test.js\"",
     "test:storage": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore,storage --project demo-nexora-storage-rules \"node --test tests/storage.rules.test.js\"",
     "test:migration": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-migration \"npx tsx --test functions/tests/backfillPublicPostAudience.test.ts\"",
+    "test:comment-deletion": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-comment-deletion \"npx tsx --test functions/tests/postCommentDeletion.test.ts\"",
     "test:comment-reactions": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-comment-reactions \"npx tsx --test functions/tests/postCommentReactions.test.ts\"",
     "test:post-replies": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-post-replies \"npx tsx --test functions/tests/postReplies.test.ts\"",
     "test:reposts": "npx --yes firebase-tools@15.33.0 emulators:exec --only firestore --project demo-nexora-reposts \"npx tsx --test functions/tests/postReposts.test.ts\"",

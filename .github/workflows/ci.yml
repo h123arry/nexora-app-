@@ -78,6 +78,9 @@ jobs:
       - name: Run repost integration tests
         run: npm run test:reposts
 
+      - name: Run comment deletion integration tests
+        run: npm run test:comment-deletion
+
       - name: Run comment reaction integration tests
         run: npm run test:comment-reactions
 
