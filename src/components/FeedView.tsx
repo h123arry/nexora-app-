@@ -2248,7 +2248,6 @@ export default function FeedView({
 
         {/* POST LIST */}
         {!isRefreshing && searchFilterType !== 'users' && currentDisplayList.map((post, index) => {
-          const isPlaying = playingVoiceId === post.id;
           const isCommentsOpen = activeCommentsPostId === post.id;
 
           // ─── INTENSE MEDIA MANAGEMENT AND PREDICTIVE BUFFERING ───
