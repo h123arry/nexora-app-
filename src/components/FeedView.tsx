@@ -1023,7 +1023,7 @@ export default function FeedView({
       container?.removeEventListener('scroll', handleScroll);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [onLoadMorePosts, hasMorePosts, isLoadingMorePosts, orderedPosts.length]);
+  }, [onLoadMorePosts, hasMorePosts, isLoadingMorePosts, orderedPosts.length, visibleCount]);
 
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
