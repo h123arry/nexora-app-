@@ -1,0 +1,22 @@
+# Phase 7.4: Mobile experience and performance
+
+## Implemented
+
+- Detects browser-provided Data Saver, approximate device memory and logical processor count without collecting or transmitting device information.
+- Applies a conservative constrained-device presentation profile when Data Saver is enabled, memory is at most 2 GB, or logical processor count is at most four.
+- Removes expensive backdrop filters and reduces surface shadows on constrained devices.
+- Disables skeleton shimmer when Data Saver is enabled and respects reduced-motion / slow-update preferences.
+- Reduces mobile dock blur while preserving the NEXORA midnight-indigo and violet visual system.
+- Cleans up the connection listener and root data attributes when the app unmounts.
+
+## Privacy and compatibility
+
+Signals are read locally in the browser only. No fingerprint, analytics event, account field or network request is created. Missing or invalid hints default to the standard profile. Existing devices without the Network Information API remain supported.
+
+## Validation
+
+The pure profile policy has unit coverage for missing hints, Data Saver, low-memory devices, low-core devices and invalid values. CI remains the acceptance gate for the full frontend and production build.
+
+## Remaining real-device acceptance
+
+Run cold-start, feed scroll, video playback, navigation, keyboard/input and memory checks on representative low-end Android devices and a current iOS device. Browser hints are heuristics, not a substitute for measured device profiling.

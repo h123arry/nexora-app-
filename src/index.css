@@ -594,3 +594,40 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+
+/* Phase 7.4: adapt expensive visual effects to constrained mobile devices. */
+@media (max-width: 640px) {
+  .nx-mobile-dock {
+    backdrop-filter: blur(12px) saturate(115%);
+    -webkit-backdrop-filter: blur(12px) saturate(115%);
+  }
+}
+
+:root[data-nx-performance="constrained"] .nx-glass,
+:root[data-nx-performance="constrained"] .nx-glass-strong,
+:root[data-nx-performance="constrained"] .nx-mobile-dock {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-nx-performance="constrained"] .nx-post-card,
+:root[data-nx-performance="constrained"] .nx-soft-card,
+:root[data-nx-performance="constrained"] .nx-surface {
+  box-shadow: 0 6px 18px rgba(2, 0, 16, 0.24);
+}
+
+:root[data-nx-save-data="true"] .nx-skeleton {
+  animation: none;
+  background: rgba(138, 63, 252, 0.09);
+  background-size: auto;
+}
+
+@media (prefers-reduced-motion: reduce), (update: slow) {
+  .nx-skeleton { animation: none; }
+  .nx-post-card,
+  .nx-btn-primary,
+  .nx-btn-ghost,
+  .nx-icon-button,
+  .nx-dock-item { transition-duration: 0.01ms; }
+}
