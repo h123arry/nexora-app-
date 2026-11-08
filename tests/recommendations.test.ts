@@ -4,6 +4,7 @@ import {
   getRecommendationProfile,
   saveRecommendationProfile,
   resetRecommendationProfile,
+  recordRecommendationEvent,
 } from '../src/utils/recommendations';
 
 function withLocalStorage(run: () => void): void {
@@ -77,7 +78,6 @@ test('watch-time feedback is clamped to a finite zero-to-one ratio', () => {
     Object.defineProperty(globalThis, 'window', { configurable: true, value: { dispatchEvent: () => true } });
     Object.defineProperty(globalThis, 'CustomEvent', { configurable: true, value: class CustomEventMock { constructor(public type: string) {} } });
     try {
-      const { recordRecommendationEvent } = require('../src/utils/recommendations') as typeof import('../src/utils/recommendations');
       localStorage.setItem('nexora_user', JSON.stringify({ id: 'watcher' }));
       recordRecommendationEvent('watch_partial', { tags: ['design'], watchTimeRatio: 50 });
       assert.equal(getRecommendationProfile().tags.design, 5);
