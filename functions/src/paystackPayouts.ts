@@ -29,6 +29,11 @@ function isFinance(request: { auth?: { token?: Record<string, unknown> } | null 
   const token = request.auth?.token || {};
   return token.finance_admin === true || token.admin === true || token.role === 'finance_admin' || token.role === 'founder';
 }
+function safeCounter(value: unknown): number {
+  if (value === undefined) return 0;
+  if (!Number.isSafeInteger(value) || (value as number) < 0) throw new Error('NEX wallet counters are invalid.');
+  return value as number;
+}
 function safeText(value: unknown, max = 120): value is string {
   return typeof value === 'string' && value.trim().length > 0 && value.length <= max;
 }
@@ -328,9 +333,13 @@ async function applyProviderOutcome(reference: string, outcome: 'success' | 'fai
     const [creatorSnap, clearingSnap] = await Promise.all([tx.get(creatorRef), tx.get(clearingRef)]);
     const creator = creatorSnap.data() || {};
     const clearing = clearingSnap.data() || {};
-    const creatorAvailable = Number(creator.availableBalance || 0);
-    const creatorPending = Number(creator.pendingPayoutBalance || 0);
-    const clearingBalance = Number(clearing.availableBalance || 0);
+    const creatorAvailable = safeCounter(creator.availableBalance);
+    const creatorPending = safeCounter(creator.pendingPayoutBalance);
+    const creatorLifetimeDebited = safeCounter(creator.lifetimeDebited);
+    const creatorLifetimeCredited = safeCounter(creator.lifetimeCredited);
+    const clearingBalance = safeCounter(clearing.availableBalance);
+    const clearingLifetimeCredited = safeCounter(clearing.lifetimeCredited);
+    const clearingLifetimeDebited = safeCounter(clearing.lifetimeDebited);
     const now = FieldValue.serverTimestamp();
     const writeLedger = (fromId: string, toId: string, transactionId: string, requestId: string, fromBalanceAfter: number, toBalanceAfter: number) => {
       const entries = buildNexTransferEntries({ fromAccountId: fromId, toAccountId: toId, units: amount, transactionId, idempotencyKey: requestId });
@@ -359,11 +368,12 @@ async function applyProviderOutcome(reference: string, outcome: 'success' | 'fai
         transactionId: 'payout_' + reference + '_settle', idempotencyKey: 'payout_' + reference + '_settle_req' });
       const nextClearing = applyNexBalanceEntries(clearingBalance, entries, clearingId);
       writeLedger(creatorId, clearingId, 'payout_' + reference + '_settle', 'payout_' + reference + '_settle_req', creatorAvailable, nextClearing);
+      if (creatorLifetimeDebited > Number.MAX_SAFE_INTEGER - amount || clearingLifetimeCredited > Number.MAX_SAFE_INTEGER - amount) throw new Error('NEX payout totals exceed the safe integer range.');
       tx.set(creatorRef, { pendingPayoutBalance: creatorPending - amount,
-        lifetimeDebited: Number(creator.lifetimeDebited || 0) + amount, updatedAt: now }, { merge: true });
+        lifetimeDebited: creatorLifetimeDebited + amount, updatedAt: now }, { merge: true });
       tx.set(clearingRef, { currency: 'NEX', availableBalance: nextClearing,
-        lifetimeCredited: Number(clearing.lifetimeCredited || 0) + amount,
-        lifetimeDebited: Number(clearing.lifetimeDebited || 0), schemaVersion: 1,
+        lifetimeCredited: clearingLifetimeCredited + amount,
+        lifetimeDebited: clearingLifetimeDebited, schemaVersion: 1,
         createdAt: clearing.createdAt || now, updatedAt: now }, { merge: true });
       tx.update(payoutRef, { status: 'success', providerCompletedAt: now, updatedAt: now });
     } else if ((outcome === 'failed' || outcome === 'reversed') && prior !== 'failed' && prior !== 'reversed') {
@@ -371,16 +381,17 @@ async function applyProviderOutcome(reference: string, outcome: 'success' | 'fai
       if (prior === 'success') {
         if (outcome === 'reversed') {
           if (clearingBalance < amount) throw new Error('NEX redemption clearing balance is insufficient for reversal.');
+          if (creatorLifetimeCredited > Number.MAX_SAFE_INTEGER - amount || clearingLifetimeDebited > Number.MAX_SAFE_INTEGER - amount) throw new Error('NEX reversal totals exceed the safe integer range.');
           const entries = buildNexTransferEntries({ fromAccountId: clearingId, toAccountId: creatorId, units: amount,
             transactionId: 'payout_' + reference + '_reverse', idempotencyKey: 'payout_' + reference + '_reverse_req' });
           const nextCreator = applyNexBalanceEntries(creatorAvailable, entries, creatorId);
           const nextClearing = applyNexBalanceEntries(clearingBalance, entries, clearingId);
           writeLedger(clearingId, creatorId, 'payout_' + reference + '_reverse', 'payout_' + reference + '_reverse_req', nextClearing, nextCreator);
-          tx.set(creatorRef, { availableBalance: nextCreator, lifetimeCredited: Number(creator.lifetimeCredited || 0) + amount, updatedAt: now }, { merge: true });
-          tx.set(clearingRef, { availableBalance: nextClearing, lifetimeDebited: Number(clearing.lifetimeDebited || 0) + amount, updatedAt: now }, { merge: true });
+          tx.set(creatorRef, { availableBalance: nextCreator, lifetimeCredited: creatorLifetimeCredited + amount, updatedAt: now }, { merge: true });
+          tx.set(clearingRef, { availableBalance: nextClearing, lifetimeDebited: clearingLifetimeDebited + amount, updatedAt: now }, { merge: true });
         }
       } else {
-        if (creatorPending < amount) throw new Error('Payout reserve is inconsistent.');
+        if (creatorPending < amount || creatorAvailable > Number.MAX_SAFE_INTEGER - amount) throw new Error('Payout reserve is inconsistent.');
         tx.set(creatorRef, { availableBalance: creatorAvailable + amount, pendingPayoutBalance: creatorPending - amount,
           updatedAt: now }, { merge: true });
       }
@@ -465,8 +476,10 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
     if (idem.exists) throw new HttpsError('already-exists', 'This withdrawal request key has already been used.');
     const data = wallet.data() || {};
     if (!Number.isSafeInteger(data.availableBalance) || data.availableBalance < amountNex) throw new HttpsError('failed-precondition', 'Your available NEX balance is insufficient.');
+    const pendingBalance = safeCounter(data.pendingPayoutBalance);
+    if (pendingBalance > Number.MAX_SAFE_INTEGER - amountNex) throw new HttpsError('failed-precondition', 'Your pending withdrawal total is at its safe limit.');
     tx.update(walletRef, { availableBalance: data.availableBalance - amountNex,
-      pendingPayoutBalance: Number(data.pendingPayoutBalance || 0) + amountNex, updatedAt: FieldValue.serverTimestamp() });
+      pendingPayoutBalance: pendingBalance + amountNex, updatedAt: FieldValue.serverTimestamp() });
     tx.create(idemRef, { creatorId, reference, createdAt: FieldValue.serverTimestamp() });
     tx.create(payoutRef, {
       creatorId, reference, provider: 'paystack', mode, currency: 'NGN', amountNex, amountKobo,
