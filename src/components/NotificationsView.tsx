@@ -27,7 +27,6 @@ interface RichNotification extends Notification {
   mediaThumbnail?: string;
   previewText?: string;
   isArchived?: boolean;
-  friendRequestStatus?: 'pending' | 'accepted' | 'declined';
   liveJoined?: boolean;
   reputationAwarded?: number;
   subActivities?: {
@@ -348,7 +347,6 @@ export default function NotificationsView({
       if (activeCategory === 'live') return n.type === 'pulse_alert' && n.content.includes('LIVE');
       if (activeCategory === 'verification') return n.type === 'reputation_milestone' && n.content.includes('Verification');
       if (activeCategory === 'creator') return n.type === 'reputation_milestone' && n.content.includes('Milestone');
-      if (activeCategory === 'requests') return n.type === 'follow' && n.friendRequestStatus === 'pending';
 
       return true;
     });
@@ -642,7 +640,6 @@ export default function NotificationsView({
                       { key: 'communities', label: 'Communities' },
                       { key: 'events', label: 'Events Registration' },
                       { key: 'verification', label: 'Verification Status' },
-                      { key: 'friendRequests', label: 'Friend/Connection Requests' },
                       { key: 'securityAlerts', label: 'Security & Auth Alerts' }
                     ].map(pref => {
                       const val = settingsToggles[pref.key as keyof typeof settingsToggles];
@@ -744,7 +741,6 @@ export default function NotificationsView({
             { id: 'likes', label: 'Sparks & Likes' },
             { id: 'followers', label: 'Followers' },
             { id: 'profile_views', label: 'Profile Views' },
-            { id: 'requests', label: 'Requests' },
             { id: 'live', label: 'Live Streams' },
             { id: 'communities', label: 'Communities' },
             { id: 'creator', label: 'Creator Milestones' },
