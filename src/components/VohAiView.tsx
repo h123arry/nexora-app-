@@ -569,8 +569,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       });
       if (res.ok) {
         const data = await res.json();
-        if (data.improved) {
-          setQuery(data.improved);
+        if (typeof data.text === 'string' && data.text.trim()) {
+          setQuery(data.text);
           showToast("Command polished successfully! ✨");
         }
       } else {
