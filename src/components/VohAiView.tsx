@@ -110,7 +110,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
   // UI state indicators
   const [loadingAi, setLoadingAi] = useState(false);
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [generatingMessageId, setGeneratingMessageId] = useState<string | null>(null);
   const [typingIndicator, setTypingIndicator] = useState(false);
 
@@ -384,7 +383,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
           const base64String = (base64Data as string).split(',')[1];
           try {
             const data = await VoiceEngine.uploadVoice(base64String);
-            setIsDemoMode(!!data.isDemo);
             setTranscription(data.transcription);
             setTranslation("");
             setSummarizedText("");
@@ -479,7 +477,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       }
 
       const response = await ChatEngine.sendChatMessage(contextualMessage, mappedHistory, currentUser);
-      setIsDemoMode(!!response.isDemo);
 
       const responseText = response.text;
       const responseMessage: Message = {
@@ -780,16 +777,6 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         ))}
       </div>
 
-      {/* Demo warning fallback bar */}
-      {isDemoMode && (
-        <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-start gap-2 text-xs text-amber-200">
-          <Info className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-          <p className="font-medium leading-relaxed text-[11px]">
-            VOH AI is currently using fallback responses. Some answers may be less contextual than normal.
-          </p>
-        </div>
-      )}
-
       {/* Main Work Area Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         
@@ -932,9 +919,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               {/* Dialogue Header */}
               <div className="p-3 border-b border-current/5 bg-current/5 flex justify-between items-center">
                 <div className="flex items-center gap-1.5">
-                  <div className={`w-2 h-2 rounded-full animate-pulse ${isDemoMode ? 'bg-amber-400' : 'bg-emerald-500'}`} />
+                  <div className="w-2 h-2 rounded-full animate-pulse bg-emerald-500" />
                   <span className="text-xs font-bold text-current">{activeSession?.title || 'Dialogue Session'}</span>
-                  {isDemoMode && <span className="text-[9px] font-mono text-amber-300 border border-amber-400/20 rounded px-1.5 py-0.5">DEMO FALLBACK</span>}
                 </div>
                 {activeSession?.messages && activeSession.messages.length > 0 && (
                   <button 
