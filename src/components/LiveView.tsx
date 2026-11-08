@@ -25,6 +25,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const [sending,setSending] = useState(false);
   const [error,setError] = useState('');
   const [giftSoundsEnabled,setGiftSoundsEnabled] = useState(false);
+  const [videoMembershipReady,setVideoMembershipReady] = useState(false);
   const giftAudioContext = useRef<AudioContext|null>(null);
   const bottomRef = useRef<HTMLDivElement|null>(null);
   const connectionId = useRef('live_' + Math.random().toString(36).slice(2) + Date.now().toString(36)).current;
@@ -65,16 +66,19 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   },[selectedId]);
 
   useEffect(() => {
-    if(!selectedId) return;
+    if(!selectedId) { setVideoMembershipReady(false); return; }
     let cancelled=false;
     let heartbeat: ReturnType<typeof setInterval> | null = null;
     if(isHost) {
+      setVideoMembershipReady(true);
       void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live room connection needs to be refreshed.'));
       heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live room connection needs to be refreshed.'));},30_000);
       return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);};
     }
+    setVideoMembershipReady(false);
     void joinLiveSession(selectedId,connectionId).then(()=>{
       if(cancelled) { void leaveLiveSession(selectedId,connectionId); return; }
+      setVideoMembershipReady(true);
       heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live connection needs to be refreshed.'));},30_000);
     }).catch(()=>setError('You could not join this live room.'));
     return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);void leaveLiveSession(selectedId,connectionId).catch(()=>undefined);};
@@ -134,7 +138,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
           <div className="relative flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(91,33,182,.22),transparent_60%)] p-6 text-center">
             <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-black tracking-wider"><span className="h-2 w-2 animate-pulse rounded-full bg-white"/> LIVE ROOM</div>
             <div className="absolute right-4 top-4 flex items-center gap-3 rounded-full bg-black/50 px-3 py-1.5 text-xs"><Users size={14}/>{(session?.viewerCount||0).toLocaleString()} viewers</div>
-            <div className="w-full max-w-3xl"><Radio size={36} className="mx-auto text-violet-300"/><h2 className="mt-3 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'You are hosting this broadcast.':'You are watching this creator live.'}</p>{selectedId&&<LiveKitStage sessionId={selectedId} connectionId={connectionId} isHost={isHost}/>}</div>
+            <div className="w-full max-w-3xl"><Radio size={36} className="mx-auto text-violet-300"/><h2 className="mt-3 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'You are hosting this broadcast.':'You are watching this creator live.'}</p>{selectedId&&videoMembershipReady?<LiveKitStage sessionId={selectedId} connectionId={connectionId} isHost={isHost}/>:<p className="mt-5 text-xs text-violet-200">Joining secure video room…</p>}</div>
             {selectedId&&<GiftLiveOverlay streamId={selectedId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current}/>}
             <div className="absolute bottom-5 left-5 flex items-center gap-2">
               <button type="button" onClick={()=>{if(!giftAudioContext.current&&typeof window!=='undefined'&&window.AudioContext)giftAudioContext.current=new window.AudioContext();if(!giftSoundsEnabled)void giftAudioContext.current?.resume();setGiftSoundsEnabled(v=>!v);}} className="rounded-full border border-white/10 bg-black/50 p-3" aria-label={giftSoundsEnabled?'Mute gift sounds':'Enable gift sounds'}>{giftSoundsEnabled?<Volume2 size={18}/>:<VolumeX size={18}/>}</button>
