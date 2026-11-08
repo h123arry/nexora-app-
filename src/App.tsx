@@ -2289,7 +2289,7 @@ export default function App() {
                   )}
 
                   {activeTab === 'nida' && (
-                    <NidaView currentUser={getRichUser(currentUser)} />
+                    <NidaView currentUser={getRichUser(currentUser)} posts={resolvedPosts} />
                   )}
 
                   {activeTab === 'inbox' && (
