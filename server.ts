@@ -284,6 +284,88 @@ function getGeminiClient(): { ai: GoogleGenAI; model: string } | null {
 
 // ----------------- VOH AI API ENDPOINTS -----------------
 
+// User-owned VOH memory is stored under the authenticated Firebase UID only.
+const VOH_MEMORY_COLLECTION = 'vohUserMemory';
+const VOH_MEMORY_CONSENT_VERSION = '2026-11';
+
+function cleanMemoryStrings(value: unknown, maxItems: number, maxLength: number): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.slice(0, maxItems)
+    .filter((item): item is string => typeof item === 'string')
+    .map(item => item.trim().slice(0, maxLength))
+    .filter(Boolean);
+}
+
+function shapeVohMemory(input: any) {
+  const preferences = input?.preferences && typeof input.preferences === 'object' ? input.preferences : {};
+  const savedPrompts = Array.isArray(input?.savedPrompts)
+    ? input.savedPrompts.slice(0, 30).flatMap((item: any) => {
+        if (!item || typeof item !== 'object') return [];
+        const id = clipText(item.id, 80);
+        const name = clipText(item.name, 100);
+        const content = clipText(item.content, 2000);
+        return id && name && content ? [{ id, name, content }] : [];
+      })
+    : [];
+  const tones = ['futuristic', 'concise', 'educational', 'humorous'];
+  return {
+    memoryEnabled: true,
+    consentVersion: VOH_MEMORY_CONSENT_VERSION,
+    preferences: {
+      theme: clipText(preferences.theme, 40) || 'dark',
+      aiTone: tones.includes(preferences.aiTone) ? preferences.aiTone : 'futuristic',
+      voiceAutoPlay: preferences.voiceAutoPlay === true,
+    },
+    creatorGoals: cleanMemoryStrings(input?.creatorGoals, 30, 240),
+    writingStyle: clipText(input?.writingStyle, 1000),
+    interests: cleanMemoryStrings(input?.interests, 50, 120),
+    recentHashtags: cleanMemoryStrings(input?.recentHashtags, 40, 80),
+    savedPrompts,
+  };
+}
+
+vohRouter.get('/memory', async (_req, res) => {
+  try {
+    const uid = res.locals.vohUid as string;
+    const snapshot = await serverDb.collection(VOH_MEMORY_COLLECTION).doc(uid).get();
+    if (!snapshot.exists) return res.json({ memory: null });
+    const data = snapshot.data();
+    if (data?.ownerUid !== uid || data?.memoryEnabled !== true) return res.json({ memory: null });
+    const { ownerUid: _ownerUid, updatedAt: _updatedAt, ...memory } = data;
+    return res.json({ memory });
+  } catch {
+    return res.status(500).json({ error: 'VOH memory could not be loaded. Please try again.' });
+  }
+});
+
+vohRouter.put('/memory', async (req, res) => {
+  try {
+    const uid = res.locals.vohUid as string;
+    if (req.body?.memoryEnabled !== true || req.body?.consentVersion !== VOH_MEMORY_CONSENT_VERSION) {
+      return res.status(400).json({ error: 'Explicit, current memory consent is required.' });
+    }
+    const memory = shapeVohMemory(req.body);
+    await serverDb.collection(VOH_MEMORY_COLLECTION).doc(uid).set({
+      ...memory,
+      ownerUid: uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return res.json({ saved: true, memory });
+  } catch {
+    return res.status(500).json({ error: 'VOH memory could not be saved. Please try again.' });
+  }
+});
+
+vohRouter.delete('/memory', async (_req, res) => {
+  try {
+    const uid = res.locals.vohUid as string;
+    await serverDb.collection(VOH_MEMORY_COLLECTION).doc(uid).delete();
+    return res.json({ deleted: true });
+  } catch {
+    return res.status(500).json({ error: 'VOH memory could not be cleared. Please try again.' });
+  }
+});
+
 // 1. Interactive Chat Endpoint
 vohRouter.post('/chat', async (req, res) => {
   try {
