@@ -171,10 +171,8 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
 
       if (!response.ok) throw new Error('VOH AI request failed');
       const data = await response.json();
-      const responseText = data.isDemo
-        ? 'VOH AI demo mode is active. It cannot verify current Nexora activity.'
-        : data.text;
-      setVohReplies(prev => [{ query, reply: responseText || 'No response was returned.' }, ...prev]);
+      const responseText = typeof data.text === 'string' ? data.text.trim() : '';
+      setVohReplies(prev => [{ query, reply: responseText || 'VOH AI returned no response. Please try again.' }, ...prev]);
     } catch (err) {
       console.error("VOH AI Pulse request failed:", err);
       setVohReplies(prev => [{ query, reply: 'VOH AI could not reach the service. Check your connection and try again.' }, ...prev]);
