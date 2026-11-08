@@ -3,7 +3,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { nextLiveChatRateState, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle } from './liveSessionsPolicy.js';
+import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle } from './liveSessionsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
@@ -73,6 +73,7 @@ export const endLiveSession = onCall({ maxInstances: 10 }, async request => {
 export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
   const viewerId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const sessionRef = sessions.doc(sessionId);
   const viewerRef = db.collection('liveSessionViewers').doc(rateDocId(sessionId, viewerId));
   const statusRef = db.collection('accountStatus').doc(viewerId);
@@ -85,12 +86,14 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
       const hostId = session.data()?.hostId;
       if (viewerId === hostId) return { sessionId, joined: true, viewerCount: Number(session.data()?.viewerCount || 0) };
       if (!viewer.exists) {
-        tx.create(viewerRef, { sessionId, viewerId, joinedAt: FieldValue.serverTimestamp(), lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
+        tx.create(viewerRef, { sessionId, viewerId, connectionIds: [connectionId], joinedAt: FieldValue.serverTimestamp(), lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
         const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount >= 0 ? session.data()!.viewerCount : 0;
         tx.update(sessionRef, { viewerCount: count + 1, updatedAt: FieldValue.serverTimestamp() });
         return { sessionId, joined: true, viewerCount: count + 1 };
       }
-      tx.update(viewerRef, { lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
+      const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds.filter((item: unknown): item is string => typeof item === 'string') : [];
+      const nextConnections = connections.includes(connectionId) ? connections : [...connections, connectionId];
+      tx.update(viewerRef, { connectionIds: nextConnections, lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
       return { sessionId, joined: true, viewerCount: Number(session.data()?.viewerCount || 0) };
     });
   } catch (error) {
