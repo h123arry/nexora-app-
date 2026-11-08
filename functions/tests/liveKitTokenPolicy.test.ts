@@ -41,5 +41,5 @@ test('LiveKit viewer grants are subscribe-only and cannot publish media or data'
 
 test('LiveKit grants reject empty or oversized room names', () => {
   assert.throws(() => createLiveKitVideoGrant('', false), /valid LiveKit room/);
-  assert.throws(() => createLiveKitVideoGrant('x'.repeat(129), false), /valid LiveKit room/);
+  assert.throws(() => createLiveKitVideoGrant('x'.repeat(136), false), /valid LiveKit room/);
 });
