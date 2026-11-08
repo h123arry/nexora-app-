@@ -52,7 +52,9 @@ function readPrivacyList(key: string, demoIds: string[] = []): any[] {
 }
 
 export default function PrivacySettingsModal({ 
-  isOpen, 
+  isOpen,
+  userId,
+  profilePreview,
   onClose, 
   privacy, 
   blockedUsers: syncedBlockedUsers,
