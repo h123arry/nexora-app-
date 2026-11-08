@@ -340,6 +340,8 @@ export default function FeedView({
   const [votedPolls, setVotedPolls] = useState<Record<string, string>>({});
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [activePostId, setActivePostId] = useState<string | null>(null);
+  const activePostIdRef = useRef<string | null>(null);
+  activePostIdRef.current = activePostId;
   const [isScrollingFast, setIsScrollingFast] = useState(false);
   const [userSettled, setUserSettled] = useState(false);
   const [activeVideoFullscreen, setActiveVideoFullscreen] = useState<RefactoredPost | null>(null);
@@ -1737,6 +1739,13 @@ export default function FeedView({
     const container = scrollContainerRef.current;
     if (!container) return;
 
+    // Keep playback usable in older webviews without IntersectionObserver.
+    if (typeof IntersectionObserver === 'undefined') {
+      const fallbackPost = currentDisplayList.find(post => Boolean(post.videoUrl)) || currentDisplayList[0];
+      setActivePostId(fallbackPost?.id ?? null);
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         let maxRatio = 0;
@@ -1749,7 +1758,16 @@ export default function FeedView({
         });
         if (bestPostId) {
           setActivePostId(bestPostId);
+          return;
         }
+
+        // Do not leave an offscreen video marked active while the next card
+        // is still crossing the visibility threshold.
+        const activePostExited = entries.some(entry =>
+          entry.target.getAttribute('data-post-id') === activePostIdRef.current
+          && !entry.isIntersecting
+        );
+        if (activePostExited) setActivePostId(null);
       },
       {
         root: container,
