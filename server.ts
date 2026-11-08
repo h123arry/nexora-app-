@@ -12,6 +12,7 @@ import { createHash } from 'node:crypto';
 import { randomUUID } from 'node:crypto';
 import { resolveServerFirebaseConfig } from './server/runtimeConfig';
 import { shapeWorldPulseAiContext } from './server/vohPulseContext';
+import { shapeAuthenticatedVohAccountContext } from './server/vohAccountContext';
 
 const isProduction = process.env.NEXORA_ENV === 'production' || process.env.NODE_ENV === 'production';
 // Load local environment variables only outside production. Production values
@@ -256,35 +257,10 @@ async function getVohMemoryPrompt(uid: string): Promise<string> {
 }
 
 async function getAuthenticatedVohAccountContext(uid: string) {
-  // Read the private profile from Firestore Admin using the verified Firebase UID.
-  // Never trust profile facts, balances, or counters submitted by the browser.
+  // The verified Firebase UID selects the private Firestore profile.
   const snapshot = await serverDb.collection('users').doc(uid).get();
   if (!snapshot.exists) return null;
-  const profile = snapshot.data() || {};
-  const boundedNumber = (value: unknown): number | null =>
-    typeof value === 'number' && Number.isFinite(value) ? Math.max(0, Math.min(1_000_000_000, value)) : null;
-  const skills = cleanMemoryStrings(profile.skills, 30, 80);
-  const interestDNA = profile.interestDNA && typeof profile.interestDNA === 'object' && !Array.isArray(profile.interestDNA)
-    ? Object.entries(profile.interestDNA)
-      .filter(([key, value]) => typeof value === 'number' && Number.isFinite(value) && value > 0)
-      .sort((a, b) => Number(b[1]) - Number(a[1]))
-      .slice(0, 8)
-      .map(([key, value]) => ({ interest: clipText(key, 60), strength: Math.max(0, Math.min(100, Number(value))) }))
-    : [];
-  return {
-    id: uid,
-    name: clipText(profile.name, 120),
-    username: clipText(profile.username, 80),
-    bio: clipText(profile.bio, 500),
-    followers: boundedNumber(profile.followers),
-    following: boundedNumber(profile.following),
-    sparks: boundedNumber(profile.sparks),
-    reputationPoints: boundedNumber(profile.reputationPoints),
-    skills,
-    interests: interestDNA,
-    creatorModeEnabled: profile.creatorModeEnabled === true,
-    joinedDate: clipText(profile.joinedDate, 80),
-  };
+  return shapeAuthenticatedVohAccountContext(uid, snapshot.data() || {});
 }
 
 function shapeVohContext(context: any, authenticatedUid: string) {
