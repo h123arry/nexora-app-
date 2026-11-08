@@ -17,7 +17,7 @@ const DEFAULT_LIVEKIT_URL = 'wss://nexora-live-is43sh5r.livekit.cloud';
  * The browser never receives the LiveKit API secret.
  */
 export const getLiveKitToken = onCall(
-  { secrets: [apiKey, apiSecret], maxInstances: 20 },
+  { region: 'europe-west1', secrets: [apiKey, apiSecret], maxInstances: 20 },
   async request => {
     const userId = request.auth?.uid;
     if (!userId) throw new HttpsError('unauthenticated', 'Sign in to connect to NEXORA Live.');
