@@ -26,10 +26,7 @@ interface RichNotification extends Notification {
   priorityLevel: 'high' | 'medium' | 'low';
   mediaThumbnail?: string;
   previewText?: string;
-  isPinned?: boolean;
   isArchived?: boolean;
-  friendRequestStatus?: 'pending' | 'accepted' | 'declined';
-  eventStatus?: 'unregistered' | 'registered';
   liveJoined?: boolean;
   reputationAwarded?: number;
   subActivities?: {
@@ -250,14 +247,6 @@ export default function NotificationsView({
     } catch {
       addToast("Some notifications couldn't be deleted. Please try again.");
     }
-  };
-
-  const handleArchiveSelected = () => {
-    if (selectedIds.length === 0) return;
-    setNotificationsList(prev => prev.map(n => selectedIds.includes(n.id) ? { ...n, isArchived: true } : n));
-    addToast(`📦 Archived ${selectedIds.length} notifications!`);
-    setSelectedIds([]);
-    setIsMultiSelectMode(false);
   };
 
   const handleSelectAll = () => {
@@ -604,14 +593,7 @@ export default function NotificationsView({
                 <Check className="w-3.5 h-3.5" />
                 <span>Mark Read</span>
               </button>
-              <button
-                onClick={handleArchiveSelected}
-                disabled={selectedIds.length === 0}
-                className="px-3 py-1.5 bg-indigo-900/40 hover:bg-indigo-900/60 border border-indigo-500/25 disabled:opacity-40 text-indigo-300 rounded-xl text-xs font-sans font-bold uppercase flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Archive className="w-3.5 h-3.5" />
-                <span>Archive</span>
-              </button>
+
               <button
                 onClick={handleDeleteSelected}
                 disabled={selectedIds.length === 0}
@@ -783,7 +765,7 @@ export default function NotificationsView({
       </AnimatePresence>
 
       {/* ----------------------------------------------------------------------- */}
-      {/* ⚡ REAL-TIME NOTIFICATION SYSTEM CONTROLS & LIVE POP SIMULATOR */}
+      {/* ⚡ REAL-TIME NOTIFICATION SYSTEM CONTROLS & DEVICE NOTIFICATION CONTROLS */}
       {/* ----------------------------------------------------------------------- */}
       <div className="p-4 rounded-3xl bg-linear-to-r from-[#0d0a22]/90 via-[#0a0718]/90 to-[#04010b]/90 border border-violet-500/20 shadow-[0_4px_24px_rgba(139,92,246,0.12)] text-left">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/10">
@@ -791,7 +773,7 @@ export default function NotificationsView({
             <span className="w-2 h-2 rounded-full bg-pink-400 animate-ping" />
             <span className="text-xs font-mono font-black text-violet-200 uppercase tracking-wider flex items-center gap-1.5">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
-              Live Heads-Up Pop Engine (TikTok & IG Style)
+              Browser notification permission
             </span>
           </div>
 
@@ -801,7 +783,7 @@ export default function NotificationsView({
               onClick={async () => {
                 const res = await requestPushPermission();
                 if (res === 'granted') {
-                  addToast("🔔 Native phone push notifications activated!");
+                  addToast("Browser notification permission granted. Device push delivery still requires a registered token.");
                 } else {
                   addToast("⚠️ Push permission was not granted by the browser.");
                 }
@@ -809,14 +791,14 @@ export default function NotificationsView({
               className="px-2.5 py-1 rounded-xl bg-violet-600/20 hover:bg-violet-600/40 text-violet-300 border border-violet-500/30 text-[11px] font-mono flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Bell className="w-3 h-3 text-violet-400" />
-              <span>{isPushPermissionGranted() ? 'Phone Push Active' : 'Enable Phone Push'}</span>
+              <span>{isPushPermissionGranted() ? 'Browser Permission Granted' : 'Request Browser Permission'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => {
                 playNotificationSound('spark');
-                addToast("🔊 Sound alert chime test played!");
+                addToast("Notification sound test played on this device.");
               }}
               className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white border border-white/10 transition-colors"
               title="Test chime sound"
