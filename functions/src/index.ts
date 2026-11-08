@@ -444,4 +444,4 @@ export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async r
   try { return await bookAcademyMentorshipSession(adminDb, request.auth.uid, request.data?.sessionId); } catch (error) { throw academyFailure(error); }
 });
 
-export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, sendLiveChatMessage } from './liveSessions.js';
+export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, heartbeatLiveSession, sendLiveChatMessage, reconcileLiveSessionViewers } from './liveSessions.js';
