@@ -99,6 +99,29 @@ export class MemoryEngine {
     return emptyMemory();
   }
 
+  /**
+   * Save a fact only when the user explicitly asks VOH to remember it.
+   * Credentials and high-risk identifiers are deliberately rejected.
+   */
+  static async rememberFact(fact: string): Promise<UserMemoryProfile> {
+    const cleanFact = fact.trim().replace(/\\s+/g, ' ').slice(0, 500);
+    if (!cleanFact) throw new Error('Tell VOH what you want remembered.');
+    if (/\\b(password|passcode|one[- ]time code|otp|verification code|pin number|bank account number|card number|cvv|cvc|bvn|nin|tax identification number|tax id|private key|recovery phrase|api key|secret key)\\b/i.test(cleanFact)) {
+      throw new Error('For your safety, VOH will not store passwords, financial credentials, or sensitive identity numbers.');
+    }
+    const current = this.getMemory();
+    if (!current.memoryEnabled) throw new Error('Enable VOH Memory in settings before asking me to remember something.');
+    if (!auth.currentUser || auth.currentUser.isAnonymous) throw new Error('Sign in to save personal memories to your account.');
+    const exists = current.personalFacts.some(item => item.toLocaleLowerCase() === cleanFact.toLocaleLowerCase());
+    const next = exists ? current : {
+      ...current,
+      personalFacts: [...current.personalFacts, cleanFact].slice(-60),
+    };
+    await this.syncWithCloud(next);
+    this.saveMemory(next);
+    return next;
+  }
+
   /** Load only the signed-in user's consented memory from the authenticated API. */
   static async loadFromCloud(): Promise<UserMemoryProfile | null> {
     if (!auth.currentUser || auth.currentUser.isAnonymous) return null;
