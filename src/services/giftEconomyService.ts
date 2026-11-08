@@ -2,7 +2,7 @@ import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
 
 export type CreatorPayoutReadiness = {
-  providerConfigured: boolean; provider: 'paystack'; providerMode: 'test' | 'live' | 'unknown'; payoutEnabled: boolean; testModeAvailable: boolean; corridor: 'NG-NGN'; currency: 'NGN';
+  providerConfigured: boolean; credentialsVerified: boolean; provider: 'paystack'; providerMode: 'test' | 'live' | 'unknown'; payoutEnabled: boolean; testModeAvailable: boolean; corridor: 'NG-NGN'; currency: 'NGN';
   beneficiaryStatus: 'verified' | 'pending' | 'not_configured'; complianceStatus: 'approved' | 'rejected' | 'pending'; beneficiary: { accountName: string; accountNumberLast4: string; bankName: string } | null; displayCurrency: string;
   koboPerNex: number | null; providerFeeBufferKobo: number | null; minimumNex: number | null; maximumNex: number | null; blocker: string | null; cashWithdrawalEnabled: boolean;
 };
@@ -64,7 +64,7 @@ export async function reviewCreatorPayoutCompliance(input:{creatorId:string;bene
 
 export type CreatorPayoutComplianceRecord = {creatorId:string;beneficiaryRef:string;accountName:string;accountNumberLast4:string;bankName:string;complianceStatus:string};
 export async function getNgnPayoutPolicyForFinance() {
-  return (await httpsCallable<void, {mode:string;enabled:boolean;koboPerNex:number|null;providerFeeBufferKobo:number|null;minimumNex:number|null;maximumNex:number|null;liveSettlementApproved:boolean;providerBusinessVerified:boolean;settlementFundingVerified:boolean;complianceApproved:boolean;webhookVerified:boolean;liveTestTransferVerified:boolean;liveEvidenceReference:string}>(functions, 'getNgnPayoutPolicyForFinance')()).data;
+  return (await httpsCallable<void, {mode:string;credentialsVerified:boolean;ngnBalanceKobo:number|null;enabled:boolean;koboPerNex:number|null;providerFeeBufferKobo:number|null;minimumNex:number|null;maximumNex:number|null;liveSettlementApproved:boolean;providerBusinessVerified:boolean;settlementFundingVerified:boolean;complianceApproved:boolean;webhookVerified:boolean;liveTestTransferVerified:boolean;liveEvidenceReference:string}>(functions, 'getNgnPayoutPolicyForFinance')()).data;
 }
 export async function getCreatorPayoutComplianceQueue() {
   return (await httpsCallable<void, {records:CreatorPayoutComplianceRecord[]}>(functions, 'getCreatorPayoutComplianceQueue')()).data.records;
