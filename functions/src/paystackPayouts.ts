@@ -11,7 +11,6 @@ const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
 const PAYSTACK_WEBHOOK_SECRET = defineSecret('PAYSTACK_WEBHOOK_SECRET');
 const PAYSTACK_API = 'https://api.paystack.co';
-function modeIsLiveCandidate(data: any): boolean { return typeof data?.mode === 'string' && data.mode === 'live'; }
 class PaystackApiError extends Error {
   constructor(message: string, readonly statusCode: number) { super(message); }
 }
@@ -116,7 +115,7 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY],
     || !Number.isSafeInteger(minimumNex) || minimumNex < 1000 || !Number.isSafeInteger(maximumNex)
     || maximumNex < minimumNex || maximumNex > 10000000 || typeof liveSettlementApproved !== 'boolean'
     || !Number.isSafeInteger(providerFeeBufferKobo) || providerFeeBufferKobo < 0 || providerFeeBufferKobo > 10000000
-    || (modeIsLiveCandidate(request.data) && enabled && !safeText(liveEvidenceReference, 160))) {
+   ) {
     throw new HttpsError('invalid-argument', 'A reviewed NEX/NGN rate, withdrawal limits and explicit enablement decision are required.');
   }
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
