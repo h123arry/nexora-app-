@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, TrendingUp, BarChart2, Activity, CheckCircle, AlertTriangle, RefreshCw, Play, Sliders, Shield, Search, Zap, Award, Info, Users, Target, Check, X, ChevronRight, Cpu, Eye, Heart, MessageSquare, Bookmark, ThumbsDown, Trash2, ArrowUpRight, Ban, EyeOff, Forward } from 'lucide-react';
 import { User, Post } from '../types';
-import { getRecommendationProfile, saveRecommendationProfile } from '../utils/recommendations';
+import { getRecommendationProfile, saveRecommendationProfile, resetRecommendationProfile } from '../utils/recommendations';
 
 interface NidaViewProps {
   currentUser: User;
@@ -16,16 +16,16 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
   const [interestDNA, setInterestDNA] = useState<Record<string, number>>(() => {
     const profile = getRecommendationProfile();
     return {
-      Football: profile.tags['football'] || 60,
-      Comedy: profile.tags['comedy'] || 45,
-      AI: profile.tags['ai'] || 80,
-      Gaming: profile.tags['gaming'] || 50,
-      Fashion: profile.tags['fashion'] || 30,
-      Cars: profile.tags['cars'] || 25,
-      Music: profile.tags['music'] || 75,
-      Food: profile.tags['food'] || 40,
-      Education: profile.tags['education'] || 65,
-      Travel: profile.tags['travel'] || 55,
+      Football: profile.tags['football'] ?? 0,
+      Comedy: profile.tags['comedy'] ?? 0,
+      AI: profile.tags['ai'] ?? 0,
+      Gaming: profile.tags['gaming'] ?? 0,
+      Fashion: profile.tags['fashion'] ?? 0,
+      Cars: profile.tags['cars'] ?? 0,
+      Music: profile.tags['music'] ?? 0,
+      Food: profile.tags['food'] ?? 0,
+      Education: profile.tags['education'] ?? 0,
+      Travel: profile.tags['travel'] ?? 0,
     };
   });
 
@@ -49,31 +49,18 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
   };
 
   const resetInterestDNA = () => {
-    const defaults = {
-      Football: 60,
-      Comedy: 45,
-      AI: 80,
-      Gaming: 50,
-      Fashion: 30,
-      Cars: 25,
-      Music: 75,
-      Food: 40,
-      Education: 65,
-      Travel: 55,
-    };
-    setInterestDNA(defaults);
-    const profile = getRecommendationProfile();
-    Object.entries(defaults).forEach(([k, v]) => {
-      profile.tags[k.toLowerCase()] = v;
+    resetRecommendationProfile();
+    setInterestDNA({
+      Football: 0, Comedy: 0, AI: 0, Gaming: 0, Fashion: 0,
+      Cars: 0, Music: 0, Food: 0, Education: 0, Travel: 0,
     });
-    saveRecommendationProfile(profile);
-    window.dispatchEvent(new CustomEvent('toast', { detail: '🔄 Reset Interest DNA to Nexora standard defaults.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: 'Interest preferences cleared. NEXORA will learn from your future interactions.' }));
   };
 
   // Rank only real posts supplied by the live application data layer.
   const rankedPosts = posts.map(post => {
     const topic = post.tags?.[0]?.replace(/^#/, '') || 'General';
-    const interestScore = interestDNA[topic] ?? interestDNA[topic.toLowerCase()] ?? 30;
+    const interestScore = interestDNA[topic] ?? interestDNA[topic.toLowerCase()] ?? 0;
     const engagementCount = (post.likes || 0) + (post.commentsCount || 0) * 2 + (post.shares || 0) * 3;
     const qualityScore = Math.min(100, Math.round(engagementCount / 5));
     const verificationScore = post.isVerified ? 100 : 50;
