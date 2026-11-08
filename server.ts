@@ -239,6 +239,7 @@ async function getVohMemoryPrompt(uid: string): Promise<string> {
   }
   const preferences = data.preferences && typeof data.preferences === 'object' ? data.preferences : {};
   const goals = cleanMemoryStrings(data.creatorGoals, 30, 240);
+  const personalFacts = cleanMemoryStrings(data.personalFacts, 60, 500);
   const interests = cleanMemoryStrings(data.interests, 50, 120);
   const hashtags = cleanMemoryStrings(data.recentHashtags, 40, 80);
   const writingStyle = clipText(data.writingStyle, 1000);
@@ -247,6 +248,7 @@ async function getVohMemoryPrompt(uid: string): Promise<string> {
     `Preferred AI tone: ${clipText(preferences.aiTone, 40) || 'not specified'}`,
     `Interests: ${interests.join(', ') || 'not specified'}`,
     `Creator goals: ${goals.join('; ') || 'not specified'}`,
+    `Personal facts the user explicitly asked VOH to remember: ${personalFacts.join('; ') || 'none saved'}`,
     `Writing style: ${writingStyle || 'not specified'}`,
     `Recent hashtags: ${hashtags.join(', ') || 'not specified'}`
   ].join('\\n');
@@ -338,6 +340,7 @@ function shapeVohMemory(input: any) {
       voiceAutoPlay: preferences.voiceAutoPlay === true,
     },
     creatorGoals: cleanMemoryStrings(input?.creatorGoals, 30, 240),
+    personalFacts: cleanMemoryStrings(input?.personalFacts, 60, 500),
     writingStyle: clipText(input?.writingStyle, 1000),
     interests: cleanMemoryStrings(input?.interests, 50, 120),
     recentHashtags: cleanMemoryStrings(input?.recentHashtags, 40, 80),
