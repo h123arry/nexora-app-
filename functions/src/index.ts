@@ -445,3 +445,5 @@ export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async r
 });
 
 export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, heartbeatLiveSession, sendLiveChatMessage, reconcileLiveSessionViewers } from './liveSessions.js';
+
+export { getLiveTransportToken } from './liveTransport.js';
