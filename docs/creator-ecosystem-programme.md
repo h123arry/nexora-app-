@@ -163,3 +163,10 @@ The changes are committed to the feature branch. Automated build, lint and emula
 - Cursor documents are validated against the signed-in creator before the query advances, preventing cross-account cursor probing.
 - The creator dashboard now loads older earnings on demand without an unbounded query. Page totals remain explicitly scoped to the current page; wallet balance remains the current wallet snapshot.
 - These records represent NEX gift-ledger earnings, not NGN cash income. NGN withdrawal activation remains controlled by separate provider, beneficiary and settlement gates.
+
+
+### Persistent live rooms and chat
+- Added trusted server callables for starting/ending rooms, joining/leaving as a viewer, refreshing viewer heartbeats and sending persistent live chat messages.
+- Viewer counts are updated idempotently from server-owned viewer edges. A scheduled reconciler removes stale viewers; chat is limited to five messages per member per ten-second window, with a 500-character bound.
+- Active rooms and messages are readable by signed-in members; ended rooms are host-readable only. Clients cannot mutate session, viewer or message records directly.
+- The room/session/chat layer is persistent, but video transport remains explicitly `not_configured`. This work does not claim that camera streaming or remote playback is live yet.

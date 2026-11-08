@@ -443,3 +443,5 @@ export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async r
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to book an Academy session.');
   try { return await bookAcademyMentorshipSession(adminDb, request.auth.uid, request.data?.sessionId); } catch (error) { throw academyFailure(error); }
 });
+
+export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, heartbeatLiveSession, sendLiveChatMessage, reconcileLiveSessionViewers } from './liveSessions.js';

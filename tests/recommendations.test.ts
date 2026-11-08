@@ -4,6 +4,7 @@ import {
   getRecommendationProfile,
   saveRecommendationProfile,
   resetRecommendationProfile,
+  recordRecommendationEvent,
 } from '../src/utils/recommendations';
 
 function withLocalStorage(run: () => void): void {
@@ -66,5 +67,29 @@ test('reset clears only the active account recommendation profile', () => {
     assert.deepEqual(getRecommendationProfile(), { tags: { technology: 30 }, creators: {}, communities: {} });
     localStorage.setItem('nexora_user', JSON.stringify({ id: 'account-b' }));
     assert.deepEqual(getRecommendationProfile(), { tags: {}, creators: {}, communities: {} });
+  });
+});
+
+
+test('watch-time feedback is clamped to a finite zero-to-one ratio', () => {
+  withLocalStorage(() => {
+    const originalWindow = globalThis.window;
+    const originalCustomEvent = globalThis.CustomEvent;
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: { dispatchEvent: () => true } });
+    Object.defineProperty(globalThis, 'CustomEvent', { configurable: true, value: class CustomEventMock { constructor(public type: string) {} } });
+    try {
+      localStorage.setItem('nexora_user', JSON.stringify({ id: 'watcher' }));
+      recordRecommendationEvent('watch_partial', { tags: ['design'], watchTimeRatio: 50 });
+      assert.equal(getRecommendationProfile().tags.design, 5);
+      recordRecommendationEvent('watch_partial', { tags: ['design'], watchTimeRatio: -4 });
+      assert.equal(getRecommendationProfile().tags.design, 5);
+      recordRecommendationEvent('watch_partial', { tags: ['design'], watchTimeRatio: Number.NaN });
+      assert.equal(getRecommendationProfile().tags.design, 5);
+    } finally {
+      if (originalWindow) Object.defineProperty(globalThis, 'window', { configurable: true, value: originalWindow });
+      else Reflect.deleteProperty(globalThis, 'window');
+      if (originalCustomEvent) Object.defineProperty(globalThis, 'CustomEvent', { configurable: true, value: originalCustomEvent });
+      else Reflect.deleteProperty(globalThis, 'CustomEvent');
+    }
   });
 });

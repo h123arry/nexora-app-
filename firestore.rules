@@ -756,6 +756,21 @@ service cloud.firestore {
       allow write: if false;
     }
     // Creator-authored membership tier drafts are readable by their owner only; all mutations use trusted callables.
+    // Live room state is server-authoritative. Signed-in members may read active rooms;
+    // only the host may read an ended room. Session and chat writes use trusted callables.
+    match /liveSessions/{sessionId} {
+      allow get, list: if signedIn() && (resource.data.status == 'live' || resource.data.hostId == request.auth.uid);
+      allow create, update, delete: if false;
+      match /messages/{messageId} {
+        allow get, list: if signedIn()
+          && exists(/databases/$(database)/documents/liveSessions/$(sessionId))
+          && (get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.status == 'live'
+            || get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.hostId == request.auth.uid);
+        allow create, update, delete: if false;
+      }
+    }
+    match /liveSessionViewers/{viewerId} { allow read, write: if false; }
+    match /liveChatRateLimits/{rateId} { allow read, write: if false; }
     match /creatorMembershipTiers/{tierId} {
       allow get, list: if signedIn() && resource.data.creatorId == request.auth.uid;
       allow create, update, delete: if false;

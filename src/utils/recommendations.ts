@@ -84,8 +84,11 @@ export function recordRecommendationEvent(
   let score = modifiers[type] || 0;
   
   // Apply watch time ratio for partial watches
-  if (type === 'watch_partial' && payload.watchTimeRatio) {
-    score = Math.floor(score * payload.watchTimeRatio);
+  if (type === 'watch_partial') {
+    const ratio = Number.isFinite(payload.watchTimeRatio)
+      ? Math.max(0, Math.min(1, payload.watchTimeRatio as number))
+      : 0;
+    score = Math.floor(score * ratio);
   }
 
   // Process tags

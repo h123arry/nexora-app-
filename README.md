@@ -50,7 +50,7 @@ NEXORA is being developed around meaningful interactions, secure accounts, relia
 - The Creator Dashboard provides creator-facing content and achievement surfaces. Draft and scheduling behavior includes local/mock data.
 - Analytics code records bounded client observations and can produce platform aggregates; it is not a verified creator-level analytics or revenue product. Some data is client-originated, and scheduled production aggregation has not been verified.
 - Reputation scoring and activity logic exist, but are local-first/client-side with best-effort persistence; do not treat the result as a tamper-proof trust ledger.
-- **NEX is not currently an operational currency or balance.** There is no available purchase, transfer, redemption, cash conversion, creator payout, or currency ledger.
+- **NEX is an internal platform unit with a server-authoritative wallet and immutable double-entry ledger.** The trusted gift-delivery callable validates catalogue prices, debits the sender, credits gift escrow, records creator gift earnings and delivers a GIFTVERSE event/gallery record transactionally. NEX is not a bank deposit or cash equivalent; wallet top-ups and general cash conversion are not enabled. A Paystack NGN creator-payout path exists, including beneficiary, compliance, OTP, webhook-signature and reconciliation workflows, but live withdrawals remain gated on finance approval, verified provider business, funded settlement, compliance approval, verified webhooks and a successful live test transfer. Do not describe payouts as live until all gates and a real settlement are verified.
 
 ### VOH AI
 
@@ -65,7 +65,7 @@ NEXORA is being developed around meaningful interactions, secure accounts, relia
 
 ### Monetization and payments
 
-Monetization is **not available**. The repository contains a disabled product catalog, protected billing read paths, and tested policy helpers, but no configured payment provider or working checkout. Subscriptions, paid entitlements, refunds, recognized creator earnings, payouts, and live payment processing are not enabled. No sandbox or production payment has been verified.
+Paid product checkout and subscriptions are **not enabled**: the billing module has no provider adapter and explicitly fails closed. This is separate from NEX gift transactions, which use a trusted callable and ledger, and from the Paystack creator-payout integration. Paystack transfer code, webhook verification and scheduled reconciliation are present, but production withdrawal activation is conditional on all six finance/operations gates. Provider secrets, business verification, approved NEX-to-NGN rate, settlement funding, compliance approval, webhook verification and a successful live transfer must be verified in the actual Firebase/Paystack environments. No production payout is claimed as completed.
 
 ## Technology stack
 
