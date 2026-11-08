@@ -61,7 +61,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
     corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && (mode === 'test' || livePayoutGatesPassed(policy)),
     liveSettlementApproved: policy.liveSettlementApproved === true,
     cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && livePayoutGatesPassed(policy),
-    rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0,
+    rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0 && Number.isSafeInteger(policy.providerFeeBufferKobo),
     blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved'
       : policy.enabled !== true ? 'withdrawals_not_enabled_by_finance'
@@ -466,6 +466,9 @@ export const reconcilePaystackCreatorPayouts = onSchedule({
       const reference = doc.id;
       try {
         const result = await paystack('/transfer/verify/' + encodeURIComponent(reference), 'GET');
+        if (Number(result.amount) !== Number(doc.data().amountKobo) || result.currency !== 'NGN' || result.reference !== reference) {
+          throw new Error('Provider transfer does not match the NEXORA payout record.');
+        }
         const providerStatus = String(result.status || '');
         if (providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed') {
           await applyProviderOutcome(reference, providerStatus, 'reconcile_' + providerStatus + '_' + reference);
