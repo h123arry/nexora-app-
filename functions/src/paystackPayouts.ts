@@ -178,19 +178,55 @@ export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KE
   }
 });
 
+export const reviewCreatorPayoutCompliance = onCall({ maxInstances: 3 }, async request => {
+  const actorId = requireUser(request);
+  if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  const creatorId = request.data?.creatorId;
+  const beneficiaryRef = request.data?.beneficiaryRef;
+  const decision = request.data?.decision;
+  const evidenceReference = request.data?.evidenceReference;
+  const bankAccountNameMatched = request.data?.bankAccountNameMatched;
+  if (typeof creatorId !== 'string' || !/^[A-Za-z0-9._:-]{1,160}$/.test(creatorId)
+    || !safeText(beneficiaryRef, 120) || !['approved','rejected'].includes(decision)
+    || !safeText(evidenceReference, 160) || typeof bankAccountNameMatched !== 'boolean'
+    || (decision === 'approved' && bankAccountNameMatched !== true)) {
+    throw new HttpsError('invalid-argument', 'Creator, current beneficiary, evidence reference and verified account-name match are required.');
+  }
+  const beneficiary = await db.collection('creatorPayoutBeneficiaries').doc(creatorId).get();
+  if (!beneficiary.exists || beneficiary.data()?.providerBeneficiaryRef !== beneficiaryRef || beneficiary.data()?.status !== 'verified') {
+    throw new HttpsError('failed-precondition', 'Review the creator’s current verified beneficiary before approving compliance.');
+  }
+  await db.collection('creatorPayoutCompliance').doc(creatorId).set({
+    creatorId, beneficiaryRef, status: decision, bankAccountNameMatched,
+    evidenceReference, reviewedBy: actorId, reviewedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  await db.collection('creatorPayoutAuditEvents').add({
+    creatorId, actorId, action: 'creator_payout_compliance_' + decision,
+    beneficiaryRef, evidenceReference, bankAccountNameMatched,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+  return { creatorId, status: decision, beneficiaryRef };
+});
+
 export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY] }, async request => {
   const creatorId = requireUser(request);
-  const [profile, beneficiary, policy] = await Promise.all([
-    db.collection('users').doc(creatorId).get(), db.collection('creatorPayoutBeneficiaries').doc(creatorId).get(), payoutPolicy(),
+  const [profile, beneficiary, compliance, policy] = await Promise.all([
+    db.collection('users').doc(creatorId).get(), db.collection('creatorPayoutBeneficiaries').doc(creatorId).get(),
+    db.collection('creatorPayoutCompliance').doc(creatorId).get(), payoutPolicy(),
   ]);
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   const b = beneficiary.data() || {};
+  const complianceData = compliance.data() || {};
+  const complianceStatus = complianceData.beneficiaryRef === b.providerBeneficiaryRef ? complianceData.status : 'pending';
   const enabled = policy.enabled === true && Number.isSafeInteger(policy.koboPerNex) && b.status === 'verified'
+    && complianceStatus === 'approved' && complianceData.bankAccountNameMatched === true
     && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && liveGatesPassed(policy)));
   return {
     providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && liveGatesPassed(policy), testModeAvailable: enabled && mode === 'test',
     corridor: 'NG-NGN', currency: 'NGN', beneficiaryStatus: b.status === 'verified' ? 'verified' : 'not_configured',
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
+    complianceStatus,
     displayCurrency: profile.data()?.creatorEconomyDisplayCurrency || 'NGN',
     koboPerNex: Number.isSafeInteger(policy.koboPerNex) ? policy.koboPerNex : null,
     providerFeeBufferKobo: Number.isSafeInteger(policy.providerFeeBufferKobo) ? policy.providerFeeBufferKobo : null,
@@ -198,7 +234,7 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     maximumNex: Number.isSafeInteger(policy.maximumNex) ? policy.maximumNex : null,
     cashWithdrawalEnabled: enabled && mode === 'live' && liveGatesPassed(policy),
     blocker: mode === 'unknown' ? 'provider_secret_missing' : !policy.enabled ? 'payout_policy_disabled'
-      : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required'
+      : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required' : complianceStatus !== 'approved' ? 'creator_compliance_review_required'
       : mode === 'live' && policy.liveSettlementApproved !== true ? 'live_settlement_not_approved' : null,
   };
 });
@@ -349,9 +385,15 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   }
   if (amountNex < policy.minimumNex || amountNex > policy.maximumNex) throw new HttpsError('invalid-argument', 'The withdrawal amount is outside the approved limits.');
   if (request.auth?.token?.email_verified !== true) throw new HttpsError('failed-precondition', 'Verify your email before withdrawing.');
-  const beneficiarySnap = await db.collection('creatorPayoutBeneficiaries').doc(creatorId).get();
+  const [beneficiarySnap, complianceSnap] = await Promise.all([
+    db.collection('creatorPayoutBeneficiaries').doc(creatorId).get(), db.collection('creatorPayoutCompliance').doc(creatorId).get(),
+  ]);
   const beneficiary = beneficiarySnap.data() || {};
+  const compliance = complianceSnap.data() || {};
   if (beneficiary.status !== 'verified' || !safeText(beneficiary.providerBeneficiaryRef, 120)) throw new HttpsError('failed-precondition', 'Add and verify a bank beneficiary first.');
+  if (compliance.status !== 'approved' || compliance.beneficiaryRef !== beneficiary.providerBeneficiaryRef || compliance.bankAccountNameMatched !== true) {
+    throw new HttpsError('failed-precondition', 'Finance compliance review of this exact bank beneficiary is required before withdrawal.');
+  }
   const amountKobo = amountNex * policy.koboPerNex;
   if (!Number.isSafeInteger(amountKobo) || amountKobo <= 0) throw new HttpsError('failed-precondition', 'The approved NGN conversion amount is invalid.');
   if (mode === 'live') {
