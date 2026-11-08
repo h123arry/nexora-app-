@@ -100,15 +100,15 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
               NEXORA INTELLIGENT DISCOVERY ALGORITHM
             </h1>
             <p className="text-xs text-zinc-400 max-w-2xl font-sans">
-              Nexora rejects legacy clout mechanisms. NIDA ensures content is rewarded for being engaging, authentic, and enjoyable. Every upload is given a fair initial sandbox audience of 50-200 users, matching creators based on organic content values, not fame.
+              This view exposes saved interest preferences and a transparent ranking inspection of posts currently loaded by NEXORA. It does not simulate seed audiences, guarantee reach, or replace the production feed delivery service.
             </p>
           </div>
           
           <div className="flex items-center gap-2 shrink-0 bg-white/3 border border-white/5 p-3 rounded-2xl">
             <Activity className="w-6 h-6 text-emerald-400 animate-pulse" />
             <div>
-              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Engine Status</p>
-              <p className="text-xs font-mono font-black text-emerald-400 uppercase">Optimal Syncing</p>
+              <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">Data Source</p>
+              <p className="text-xs font-mono font-black text-emerald-400 uppercase">Loaded posts & saved preferences</p>
             </div>
           </div>
         </div>
@@ -118,7 +118,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
           {[
                         { id: 'interest-dna', label: 'Evolving Interest DNA', icon: Sliders },
             { id: 'pillars', label: 'Feed Ranking', icon: Cpu },
-            { id: 'playbook', label: '12-Stage Playbook', icon: Shield },
+            { id: 'playbook', label: 'Roadmap', icon: Shield },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeSubTab === tab.id;
@@ -333,7 +333,7 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
           </motion.div>
         )}
 
-        {/* TAB 4: 12-STAGE PLAYBOOK */}
+        {/* Planned NIDA roadmap; these are design goals, not deployed feature claims. */}
         {activeSubTab === 'playbook' && (
           <motion.div
             key="playbook"
@@ -342,7 +342,10 @@ export default function NidaView({ currentUser, posts }: NidaViewProps) {
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            {/* Detailed visual checklist of the 12 stages */}
+            {/* Planned recommendation architecture */}
+            <div className="rounded-2xl border border-amber-400/20 bg-amber-500/5 p-4 text-xs leading-5 text-amber-100/80">
+              This is a product roadmap, not a live feature checklist. Individual stages may be planned, partial, or unavailable; only the live post data and preference controls elsewhere in this view are connected to current application records.
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
                 { stage: 1, title: 'Stage 1 — Initial Test Audience', tag: 'A/B Seed Sandbox', color: 'border-white/10 text-violet-400', desc: 'When you press submit, NIDA does not show it to millions instantly. Instead, it serves it strictly to 50–200 meticulously chosen users interested in that specific topic DNA to analyze baseline interaction parameters.' },
