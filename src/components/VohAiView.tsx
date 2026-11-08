@@ -88,6 +88,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'default-session');
   const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(() => VoiceEngine.getConfig());
   const [memoryProfile, setMemoryProfile] = useState<UserMemoryProfile>(() => MemoryEngine.getMemory());
+  const [memoryHydrated, setMemoryHydrated] = useState(false);
   const [aiSettings, setAiSettings] = useState(() => SettingsEngine.getSettings());
 
   // Input States
@@ -246,8 +247,31 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   }, [voiceConfig]);
 
   useEffect(() => {
+    let cancelled = false;
+    void MemoryEngine.loadFromCloud().then(cloudMemory => {
+      if (cancelled) return;
+      if (cloudMemory) setMemoryProfile(cloudMemory);
+    }).catch(error => {
+      console.error('VOH cloud memory could not be loaded:', error);
+      if (!cancelled) showToast('Cloud memory could not be loaded. Your local memory remains available.');
+    }).finally(() => {
+      if (!cancelled) setMemoryHydrated(true);
+    });
+    return () => { cancelled = true; };
+  }, [currentUser.id]);
+
+  useEffect(() => {
+    if (!memoryHydrated) return;
     MemoryEngine.saveMemory(memoryProfile);
-  }, [memoryProfile]);
+    if (!memoryProfile.memoryEnabled) return;
+    const timer = window.setTimeout(() => {
+      void MemoryEngine.syncWithCloud(memoryProfile).catch(error => {
+        console.error('VOH cloud memory sync failed:', error);
+        showToast('VOH memory could not sync to your account.');
+      });
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [memoryProfile, memoryHydrated]);
 
   useEffect(() => {
     SettingsEngine.saveSettings(aiSettings);
@@ -1990,15 +2014,23 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <div>
                       <span className="text-[9.5px] font-black text-cyan-400 uppercase block">VOH Memory & Tone</span>
                       <p className="text-[10px] text-current/50 leading-relaxed mt-1">
-                        Memory is stored only in this browser and is not sent to VOH unless you explicitly attach it to a request. It starts disabled.
+                        With your consent, VOH memory is encrypted in transit and stored in your signed-in account so it can follow you across devices. You can disable or clear it at any time.
                       </p>
                     </div>
                     <button
                       type="button"
                       aria-pressed={memoryProfile.memoryEnabled}
                       onClick={() => {
-                        setMemoryProfile(MemoryEngine.setConsent(!memoryProfile.memoryEnabled));
-                        showToast(!memoryProfile.memoryEnabled ? 'VOH memory enabled on this device.' : 'VOH memory disabled.');
+                        const enabling = !memoryProfile.memoryEnabled;
+                        setMemoryProfile(MemoryEngine.setConsent(enabling));
+                        if (!enabling) {
+                          void MemoryEngine.clearCloudMemory().then(() => showToast('VOH memory disabled and cleared from your account.')).catch(error => {
+                            console.error('VOH cloud memory could not be cleared:', error);
+                            showToast('Cloud memory could not be cleared. Please retry.');
+                          });
+                        } else {
+                          showToast('VOH memory enabled for your account.');
+                        }
                       }}
                       className={`shrink-0 px-3 py-1.5 rounded-xl text-[10px] font-mono font-bold border transition-all ${memoryProfile.memoryEnabled ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300' : 'bg-white/5 border-white/10 text-zinc-400'}`}
                     >
@@ -2035,12 +2067,17 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
                     <button
                       type="button"
                       onClick={() => {
-                        setMemoryProfile(MemoryEngine.clearMemory());
-                        showToast('VOH memory cleared from this device.');
+                        void MemoryEngine.clearCloudMemory().then(() => {
+                          setMemoryProfile(MemoryEngine.clearMemory());
+                          showToast('VOH memory cleared from this device and your account.');
+                        }).catch(error => {
+                          console.error('VOH memory clear failed:', error);
+                          showToast('VOH cloud memory could not be cleared. Please retry.');
+                        });
                       }}
                       className="text-[10px] font-mono uppercase text-rose-300 hover:text-rose-200 border border-rose-400/20 hover:border-rose-400/40 rounded-lg px-3 py-1.5 transition-all"
                     >
-                      Clear local VOH memory
+                      Clear VOH memory
                     </button>
                   </div>
                 </div>
