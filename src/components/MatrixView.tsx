@@ -85,11 +85,7 @@ export default function MatrixView({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 bg-current/5 border border-current/8 rounded-xl px-3 py-1.5 text-[10px] font-mono select-none shrink-0">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-current/75 font-semibold font-sans">VOH AI ONLINE</span>
-        </div>
-      </div>
+    </div>
 
       {/* Futuristic Menu Pills */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 select-none">

@@ -23,6 +23,7 @@ import { scheduleCreatorPost, listCreatorScheduledPosts, cancelCreatorScheduledP
 import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import CreatorMembershipPanel from './CreatorMembershipPanel';
+import { buildCreatorAchievements } from '../services/analytics/creatorAchievements';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -657,23 +658,10 @@ export default function CreatorDashboardView({
     });
   }, [localPosts, uploadedMedia, mediaSearch, mediaTypeFilter]);
 
-  // Creator Achievement criteria solver
-  const achievementsList = useMemo(() => {
-    const totalViewsCount = localPosts.reduce((sum, p) => sum + (p.views || 0), 0);
-    const totalSparksCount = localPosts.reduce((sum, p) => sum + (p.likes || 0), 0);
-    const hasTrending = localPosts.some(p => (p.views || 0) > 500);
-
-    return [
-      { id: 'first_vid', title: 'First Video', desc: 'Unlock your professional workspace with your first upload', icon: '🎥', unlocked: localPosts.length >= 1, progress: localPosts.length > 0 ? 100 : 0 },
-      { id: '100_sparks', title: '100 Sparks Milestone', desc: 'Amass 100 likes across your live streams', icon: '⚡', unlocked: totalSparksCount >= 100, progress: Math.min(100, Math.round((totalSparksCount / 100) * 100)), label: `${totalSparksCount}/100 Sparks` },
-      { id: '1k_views', title: '1,000 Views Spark', desc: 'Reach 1,000 global impressions', icon: '👁️', unlocked: totalViewsCount >= 1000, progress: Math.min(100, Math.round((totalViewsCount / 1000) * 100)), label: `${totalViewsCount}/1,000 Views` },
-      { id: '10k_views', title: 'Viral Catalyst (10k)', desc: 'Reach 10,000 views total across all nodes', icon: '🔥', unlocked: totalViewsCount >= 10000, progress: Math.min(100, Math.round((totalViewsCount / 10000) * 100)), label: `${totalViewsCount}/10,000 Views` },
-      { id: 'trending_creator', title: 'Trending Creator', desc: 'Have a post breach 500 views in 24 hours', icon: '📈', unlocked: hasTrending, progress: hasTrending ? 100 : 0 },
-      { id: 'comm_leader', title: 'Community Leader', desc: 'Establish professional community standing', icon: '🏆', unlocked: currentUser.isVerified || currentUser.reputationPoints > 400, progress: currentUser.reputationPoints >= 400 ? 100 : Math.round((currentUser.reputationPoints / 400) * 100), label: `${currentUser.reputationPoints}/400 Rep` },
-      { id: 'consistent_creator', title: 'Consistent Creator', desc: 'Keep content flowing with 3 or more uploads', icon: '📅', unlocked: localPosts.length >= 3, progress: Math.min(100, Math.round((localPosts.length / 3) * 100)), label: `${localPosts.length}/3 Uploads` },
-      { id: 'top_contrib', title: 'Top Contributor', desc: 'Earn elite living reputation points', icon: '⭐', unlocked: currentUser.reputationPoints > 500, progress: Math.min(100, Math.round((currentUser.reputationPoints / 500) * 100)), label: `${currentUser.reputationPoints}/500 Rep` }
-    ];
-  }, [localPosts, currentUser]);
+  const achievementsList = useMemo(
+    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, currentUser.isVerified === true),
+    [localPosts, currentUser.reputationPoints, currentUser.isVerified],
+  );
 
   return (
     <div className="text-white space-y-6 max-w-6xl mx-auto pb-16">
@@ -683,9 +671,7 @@ export default function CreatorDashboardView({
           <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-black text-white tracking-tight">Nexora Studio V1.2</h2>
-            <span className="flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" /> Good Standing
-            </span>
+            <span className="text-[10px] border border-violet-400/20 bg-violet-500/10 text-violet-200 font-mono font-bold uppercase px-2 py-0.5 rounded-full">Creator workspace</span>
           </div>
           <p className="text-sm text-violet-200/60 mt-1">Manage content publishing, deep metrics analysis, and platform growth.</p>
         </div>

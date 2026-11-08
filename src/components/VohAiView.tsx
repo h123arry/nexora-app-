@@ -424,13 +424,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     } else {
-      setIsSynthesizingVoice(true);
-      setTimeout(() => {
-        setTranscription("We are designing a gorgeous space-glass interface with high-reputation communities in Port Harcourt!");
-        setTranslation("Port Harcourt design parameters.");
-        setSummarizedText("Design token blueprint.");
-        setIsSynthesizingVoice(false);
-      }, 1200);
+      setTranscription("");
+      setTranslation("");
+      setSummarizedText("");
+      showToast("No active voice recording was available. No transcript was generated.");
+      setIsSynthesizingVoice(false);
     }
   };
 
@@ -736,7 +734,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             </h1>
           </div>
           <p className="text-xs text-current/60 font-sans leading-relaxed">
-            Highly optimized on-chain analytics, direct user profiling match, and automated content generation.
+            AI assistance for NEXORA conversations, creator workflows, discovery, and account context.
           </p>
         </div>
 
@@ -744,7 +742,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 bg-violet-950/40 border border-white/10 rounded-xl px-3 py-1.5 text-[10px] font-mono">
             <VohIcon size={15} animated variant="violet" />
-            <span className="font-black text-violet-300 uppercase">CORE v3.5-FLASH</span>
+            <span className="font-black text-violet-300 uppercase">NEXORA CONTEXT</span>
           </div>
 
           <button 
@@ -765,7 +763,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             onClick={() => {
               setActiveSubView(view);
               if (view === 'moderation' && currentUser.role !== 'admin' && currentUser.role !== 'founder') {
-                showToast("Moderator sandbox loaded.");
+                showToast("This text assessment does not change live moderation decisions.");
               }
             }}
             className={`px-4 py-2 rounded-xl text-xs font-bold font-sans uppercase tracking-wider transition-all cursor-pointer ${
@@ -1290,8 +1288,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               <div className="md:col-span-5 flex flex-col justify-between border border-white/5 bg-white/2 p-5 rounded-2xl min-h-[350px]">
                 <div>
                   <span className="text-[10px] font-sans font-black text-violet-400 uppercase tracking-widest block mb-1">VOICE TRANSMITTING MODULE</span>
-                  <h3 className="text-sm font-black font-sans text-white mb-2">Speak to publish or translate</h3>
-                  <p className="text-xs text-current/60 leading-relaxed">Toggle the transmitter and say what is on your mind. VOH AI automatically structures your dialetical stream.</p>
+                  <h3 className="text-sm font-black font-sans text-white mb-2">Speak to transcribe</h3>
+                  <p className="text-xs text-current/60 leading-relaxed">Record your voice and receive a transcript from the connected VOH AI transcription service. Translation and publishing are separate actions.</p>
                 </div>
 
                 <div className="my-6 flex flex-col items-center justify-center space-y-4">
@@ -1818,7 +1816,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               
               {/* Left Column: Direct Metrics dashboard (NOT fake) */}
               <div className="md:col-span-4 bg-[#03010b] border border-white/10 rounded-3xl p-5 space-y-5">
-                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">ON-CHAIN MONETIZATION</span>
+                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">NEXORA CREATOR ECONOMY</span>
                 
                 <div className="space-y-4">
                   <div className="bg-white/2 border border-white/5 rounded-2xl p-4 text-center space-y-1">
@@ -1872,7 +1870,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               
               <div>
                 <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block mb-1">MODERATION & SECURITY INTELLIGENCE</span>
-                <p className="text-xs text-current/60">Test content safety, filter promotional spam, and prepare report review summaries.</p>
+                <p className="text-xs text-current/60">Run a local text heuristic assessment. These results do not automatically moderate content, submit reports, or change live enforcement decisions.</p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
