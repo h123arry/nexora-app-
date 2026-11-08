@@ -15,6 +15,12 @@ export interface NotificationItem {
   timestamp: Date;
 }
 
+function isNotificationRecord(item: unknown): item is Record<string, any> {
+  if (!item || typeof item !== 'object') return false;
+  const record = item as Record<string, any>;
+  return record.isRead !== true && typeof record.id === 'string' && record.id.trim().length > 0;
+}
+
 function formatNotificationTimestamp(value: unknown): string {
   if (typeof value === 'string' && value.trim()) return value;
   if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString();
@@ -29,11 +35,7 @@ export class NotificationEngine {
   static extractHighImpactAlerts(notifications: unknown[]): HighImpactUpdate[] {
     const validTypes = new Set(['system', 'mention', 'spark', 'reputation']);
     return notifications
-      .filter((item): item is Record<string, any> =>
-        !!item && typeof item === 'object'
-        && item.isRead !== true
-        && typeof item.id === 'string'
-        && item.id.trim().length > 0)
+      .filter(isNotificationRecord)
       .slice(0, 3)
       .map(item => ({
         id: item.id,
