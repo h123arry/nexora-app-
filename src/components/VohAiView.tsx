@@ -101,64 +101,26 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   };
 
   // Feed Intelligence states
-  const [feedWatchTime, setFeedWatchTime] = useState<number>(24);
-  const [feedRewatches, setFeedRewatches] = useState<number>(2);
-  const [feedLiked, setFeedLiked] = useState<boolean>(true);
-  const [feedCommented, setFeedCommented] = useState<boolean>(true);
-  const [feedShared, setFeedShared] = useState<boolean>(false);
-  const [feedSaved, setFeedSaved] = useState<boolean>(true);
-  const [feedFollowed, setFeedFollowed] = useState<boolean>(false);
-  const [feedNotInterested, setFeedNotInterested] = useState<boolean>(false);
-  const [feedFreshness, setFeedFreshness] = useState<number>(4);
 
   // Creator Ranking states
-  const [creatorPostsCount, setCreatorPostsCount] = useState<number>(18);
-  const [creatorRetention, setCreatorRetention] = useState<number>(0.72);
-  const [creatorReplyRate, setCreatorReplyRate] = useState<number>(0.85);
-  const [creatorOriginal, setCreatorOriginal] = useState<boolean>(true);
-  const [creatorSpamFlags, setCreatorSpamFlags] = useState<number>(0);
 
   // Media Streaming states
-  const [streamNetwork, setStreamNetwork] = useState<'slow-2g' | '2g' | '3g' | '4g' | 'wifi'>('wifi');
-  const [streamBattery, setStreamBattery] = useState<number>(0.85);
-  const [streamMemory, setStreamMemory] = useState<number>(340);
 
   // Search & Discovery states
-  const [searchEngineQuery, setSearchEngineQuery] = useState<string>('football');
 
   // Notification states
-  const [notificationSimType, setNotificationSimType] = useState<'spark' | 'comment' | 'follow'>('spark');
-  const [notificationSimCount, setNotificationSimCount] = useState<number>(4);
 
   // Trust & Safety states
-  const [safetyAuditText, setSafetyAuditText] = useState<string>('Earn fast money! Click here for free crypto doubling now!');
 
   // Community states
-  const [communityMemberRole, setCommunityMemberRole] = useState<'founder' | 'moderator' | 'member'>('member');
 
   // Messaging states
-  const [msgSimText, setMsgSimText] = useState<string>('Hey, did you see Nigeria\'s match highlights? Send the video link!');
-  const [msgSimIsRead, setMsgSimIsRead] = useState<boolean>(false);
-  const [msgSimTyping, setMsgSimTyping] = useState<boolean>(true);
 
   // VOH AI states
-  const [vohAiTopicText, setVohAiTopicText] = useState<string>('Lagos startups networking dinner');
 
   // Profile & Reputation states
-  const [reputationSimType, setReputationSimType] = useState<'spark_received' | 'comment_received' | 'community_post' | 'reported_spam' | 'achievement_completed'>('spark_received');
 
   // Next-generation engine simulation states
-  const [trendCategory, setTrendCategory] = useState<'technology' | 'sports' | 'music' | 'business'>('technology');
-  const [distInitialLikes, setDistInitialLikes] = useState<number>(120);
-  const [distWatchPct, setDistWatchPct] = useState<number>(75);
-  const [distShares, setDistShares] = useState<number>(14);
-  const [modReportsCount, setModReportsCount] = useState<number>(0);
-  const [modDupAttempts, setModDupAttempts] = useState<number>(0);
-  const [syncLocalPackets, setSyncLocalPackets] = useState<number>(12);
-  const [syncServerPackets, setSyncServerPackets] = useState<number>(12);
-  const [securityIp, setSecurityIp] = useState<string>('192.168.1.45');
-  const [securityFingerprintMatch, setSecurityFingerprintMatch] = useState<boolean>(true);
-  const [featureFlagTier, setFeatureFlagTier] = useState<'alpha' | 'beta' | 'general'>('beta');
 
   // Terminology and Copy Dictionary customizer state
   const [terminologyState, setTerminologyState] = useState(() => ({ ...TERMINOLOGY }));
