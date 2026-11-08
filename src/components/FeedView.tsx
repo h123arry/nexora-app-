@@ -342,8 +342,6 @@ export default function FeedView({
   }, [feedTab]);
   
   // Custom interactive features
-  const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
-  const [voiceSeconds, setVoiceSeconds] = useState(0);
   const [votedPolls, setVotedPolls] = useState<Record<string, string>>({});
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [activePostId, setActivePostId] = useState<string | null>(null);
@@ -459,7 +457,6 @@ export default function FeedView({
   const [momentCaption, setMomentCaption] = useState('');
   const [momentMediaType, setMomentMediaType] = useState<'photo' | 'video' | 'voice' | 'text'>('photo');
   const [momentMediaUrl, setMomentMediaUrl] = useState('');
-  const [playingVoiceMoment, setPlayingVoiceMoment] = useState(false);
 
   // Phase 6 & Phase 7 - Interactive states
   const [expandedPostIds, setExpandedPostIds] = useState<string[]>([]);
@@ -847,98 +844,6 @@ export default function FeedView({
       return updatedLocalPosts;
     });
   }, [posts, currentUser.id]);
-
-  const audioCtxRef = useRef<any>(null);
-  const [voiceMomentSeconds, setVoiceMomentSeconds] = useState(0);
-
-  const playVoiceSynthesizer = (seconds: number) => {
-    try {
-      const AudioCtx = (window as any).AudioContext || (window as any).webkitAudioContext;
-      if (!AudioCtx) return;
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioCtx();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === 'suspended') {
-        ctx.resume();
-      }
-      
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      
-      // Warm retro triangle wave shape
-      osc.type = 'triangle';
-      
-      // Beautiful pentatonic chord scale arpeggio notes (A3, C4, D4, E4, G4, A4)
-      const frequencies = [220, 261.63, 293.66, 329.63, 392.00, 440.00];
-      const baseFreq = frequencies[seconds % frequencies.length];
-      
-      osc.frequency.setValueAtTime(baseFreq, ctx.currentTime);
-      // Soft verbal frequency modulation (speech-like vibrato)
-      osc.frequency.linearRampToValueAtTime(baseFreq + 12, ctx.currentTime + 0.25);
-      osc.frequency.linearRampToValueAtTime(baseFreq - 8, ctx.currentTime + 0.55);
-      osc.frequency.linearRampToValueAtTime(baseFreq, ctx.currentTime + 0.9);
-      
-      // Smooth pleasant volume envelope (soft attack and slow decay)
-      gain.gain.setValueAtTime(0, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 0.15); 
-      gain.gain.linearRampToValueAtTime(0.05, ctx.currentTime + 0.5);
-      gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.95);
-      
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.start();
-      osc.stop(ctx.currentTime + 1.0);
-    } catch (err) {
-      console.warn("Audio context not allowed or blocked by policy", err);
-    }
-  };
-
-  // Voice Player simulation with Web Audio synthesis
-  useEffect(() => {
-    let timer: any = null;
-    if (playingVoiceId) {
-      playVoiceSynthesizer(0);
-      timer = setInterval(() => {
-        setVoiceSeconds(s => {
-          const nextSec = s + 1;
-          if (nextSec >= 45) {
-            setPlayingVoiceId(null);
-            return 0;
-          }
-          playVoiceSynthesizer(nextSec);
-          return nextSec;
-        });
-      }, 1000);
-    } else {
-      setVoiceSeconds(0);
-    }
-    return () => clearInterval(timer);
-  }, [playingVoiceId]);
-
-  // Voice Story/Moment Player simulation with Web Audio synthesis
-  useEffect(() => {
-    let timer: any = null;
-    if (playingVoiceMoment) {
-      playVoiceSynthesizer(0);
-      setVoiceMomentSeconds(0);
-      timer = setInterval(() => {
-        setVoiceMomentSeconds(s => {
-          const nextSec = s + 1;
-          if (nextSec >= (selectedMoment?.voiceDuration || 15)) {
-            setPlayingVoiceMoment(false);
-            return 0;
-          }
-          playVoiceSynthesizer(nextSec);
-          return nextSec;
-        });
-      }, 1000);
-    } else {
-      setVoiceMomentSeconds(0);
-    }
-    return () => clearInterval(timer);
-  }, [playingVoiceMoment, selectedMoment]);
 
   const handleSaveNewMoment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -2951,47 +2856,17 @@ export default function FeedView({
             <div className="flex-1 p-6 md:p-10 flex flex-col justify-center items-center text-center relative z-10 select-none">
               
               {selectedMoment.mediaType === 'voice' ? (
-                /* Dynamic active voice moment equalizer experience */
-                <div className="max-w-md w-full space-y-8 flex flex-col items-center">
-                  <div className="relative flex items-center justify-center">
-                    {/* Pulsing ring */}
-                    <div className={`absolute w-32 h-32 rounded-full border-2 border-white/10 ${playingVoiceMoment ? 'animate-ping scale-110 opacity-70' : ''}`} style={{ animationDuration: '3s' }} />
-                    <div className="relative w-24 h-24 rounded-full bg-linear-to-r from-violet-600 to-pink-500 flex items-center justify-center shadow-lg border border-white/10 z-10">
-                      <button 
-                        onClick={() => setPlayingVoiceMoment(!playingVoiceMoment)}
-                        className="text-white hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center justify-center"
-                      >
-                        {playingVoiceMoment ? <Pause className="w-10 h-10" /> : <Play className="w-10 h-10 pl-1" />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="text-center space-y-2">
-                    <span className="text-[10px] font-mono bg-violet-500/10 border border-white/10 px-3 py-1 rounded-full text-violet-300 font-extrabold uppercase tracking-widest">
-                      {playingVoiceMoment ? '🎙️ Playing Voice Matrix...' : '🎙️ Click to Hear Broadcast'}
-                    </span>
-                    <p className="text-xs text-violet-300/60 font-mono">Duration: {selectedMoment.voiceDuration || 15} seconds</p>
-                  </div>
-
-                  {/* Equalizer animation */}
-                  <div className="flex items-end gap-1 h-12">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16].map((bar) => {
-                      const delay = bar * 0.1;
-                      return (
-                        <div 
-                          key={bar} 
-                          className="w-1.5 rounded-t bg-linear-to-t from-violet-500 to-pink-400 transition-all origin-bottom"
-                          style={{
-                            height: playingVoiceMoment ? `${Math.floor(Math.sin(bar * 0.5) * 20) + 18}px` : '4px',
-                            transition: 'height 0.1s ease-in-out',
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-
-                  <blockquote className="text-sm md:text-md italic text-violet-200/90 font-medium max-w-sm">
-                    "{selectedMoment.quotes[storyIndex]}"
+                <div className="max-w-md w-full space-y-5 text-center">
+                  <h3 className="text-sm font-bold text-white">Voice story</h3>
+                  {selectedMoment.mediaUrl ? (
+                    <audio controls preload="none" src={selectedMoment.mediaUrl} className="w-full">
+                      Your browser does not support audio playback.
+                    </audio>
+                  ) : (
+                    <p className="text-xs text-amber-200/80">This story has no uploaded audio file, so playback is unavailable.</p>
+                  )}
+                  <blockquote className="text-sm italic text-violet-200/90 font-medium max-w-sm mx-auto">
+                    "{selectedMoment.quotes?.[storyIndex] || ''}"
                   </blockquote>
                 </div>
               ) : (
