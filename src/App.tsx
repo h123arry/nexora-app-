@@ -2765,7 +2765,7 @@ export default function App() {
                   onClick={async () => {
                     try {
                       await logout();
-                      setIsDemoMode(false);
+
                       setViewedUser(null);
                       localStorage.removeItem('nexora_user');
                       localStorage.removeItem('nexora_logged_in');
