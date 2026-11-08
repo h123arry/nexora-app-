@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import { AccessToken } from 'livekit-server-sdk';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
-import { defineSecret, defineString } from 'firebase-functions/params';
+import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { resolveLiveTransportRole } from './liveTransportPolicy.js';
@@ -10,7 +10,7 @@ import { validateLiveConnectionId, validateLiveSessionId } from './liveSessionsP
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const LIVEKIT_API_KEY = defineSecret('LIVEKIT_API_KEY');
 const LIVEKIT_API_SECRET = defineSecret('LIVEKIT_API_SECRET');
-const LIVEKIT_URL = defineString('LIVEKIT_URL', { default: '' });
+const LIVEKIT_URL = defineSecret('LIVEKIT_URL');
 
 function restricted(data: Record<string, any> | undefined, field: string): boolean {
   if (!data?.[field]) return false;
@@ -19,7 +19,7 @@ function restricted(data: Record<string, any> | undefined, field: string): boole
 }
 
 export const getLiveTransportToken = onCall({
-  secrets: [LIVEKIT_API_KEY, LIVEKIT_API_SECRET],
+  secrets: [LIVEKIT_API_KEY, LIVEKIT_API_SECRET, LIVEKIT_URL],
   maxInstances: 20,
 }, async request => {
   const userId = request.auth?.uid;
