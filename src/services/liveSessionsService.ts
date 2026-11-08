@@ -17,19 +17,19 @@ export async function endLiveSession(sessionId: string) {
   const call = httpsCallable<{ sessionId: string }, { sessionId: string; status: 'ended'; replayed: boolean }>(functions, 'endLiveSession');
   return (await call({ sessionId })).data;
 }
-export async function joinLiveSession(sessionId: string) {
-  const call = httpsCallable<{ sessionId: string }, { sessionId: string; joined: boolean; viewerCount: number }>(functions, 'joinLiveSession');
-  return (await call({ sessionId })).data;
+export async function joinLiveSession(sessionId: string, connectionId: string) {
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, { sessionId: string; joined: boolean; viewerCount: number }>(functions, 'joinLiveSession');
+  return (await call({ sessionId, connectionId })).data;
 }
-export async function heartbeatLiveSession(sessionId: string) {
-  const call = httpsCallable<{ sessionId: string }, { sessionId: string; active: boolean }>(functions, 'heartbeatLiveSession');
-  return (await call({ sessionId })).data;
+export async function heartbeatLiveSession(sessionId: string, connectionId: string) {
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, { sessionId: string; active: boolean }>(functions, 'heartbeatLiveSession');
+  return (await call({ sessionId, connectionId })).data;
 }
-export async function leaveLiveSession(sessionId: string) {
-  const call = httpsCallable<{ sessionId: string }, { sessionId: string; left: boolean; viewerCount: number }>(functions, 'leaveLiveSession');
-  return (await call({ sessionId })).data;
+export async function leaveLiveSession(sessionId: string, connectionId: string) {
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, { sessionId: string; left: boolean; viewerCount: number }>(functions, 'leaveLiveSession');
+  return (await call({ sessionId, connectionId })).data;
 }
-export async function sendLiveChatMessage(sessionId: string, message: string) {
-  const call = httpsCallable<{ sessionId: string; message: string }, { messageId: string; sessionId: string; senderId: string; senderName: string; message: string; status: 'sent' }>(functions, 'sendLiveChatMessage');
-  return (await call({ sessionId, message })).data;
+export async function sendLiveChatMessage(sessionId: string, message: string, connectionId: string) {
+  const call = httpsCallable<{ sessionId: string; message: string; connectionId: string }, { messageId: string; sessionId: string; senderId: string; senderName: string; message: string; status: 'sent' }>(functions, 'sendLiveChatMessage');
+  return (await call({ sessionId, message, connectionId })).data;
 }
