@@ -24,6 +24,7 @@ describe('VOH memory consent boundary', () => {
     const memory = MemoryEngine.getMemory();
     assert.equal(memory.memoryEnabled, false);
     assert.deepEqual(memory.creatorGoals, []);
+    assert.deepEqual(memory.personalFacts, []);
     assert.deepEqual(memory.interests, []);
     assert.deepEqual(memory.savedPrompts, []);
   });
