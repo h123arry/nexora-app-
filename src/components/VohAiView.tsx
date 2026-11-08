@@ -333,7 +333,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
     }
   };
 
-  // Mic Record Audio Stream Mock & Real handler
+  // Microphone recording uses the browser's real media stream only.
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -362,14 +362,14 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
             const data = await VoiceEngine.uploadVoice(base64String);
             setIsDemoMode(!!data.isDemo);
             setTranscription(data.transcription);
-            setTranslation("Region-aligned translation");
-            setSummarizedText("Transcribed voice post");
-            showToast("Voice broadcast processed!");
+            setTranslation("");
+            setSummarizedText("");
+            showToast("Voice transcription completed.");
           } catch (err) {
-            // Simulated Fallback
-            setTranscription("Expanding our local community and adding system design metrics to help co-build the feed!");
-            setTranslation("General expansion overview.");
-            setSummarizedText("Ecosystem discussion.");
+            setTranscription("");
+            setTranslation("");
+            setSummarizedText("");
+            showToast(err instanceof Error ? err.message : "Voice transcription failed. Please try again.");
           } finally {
             setIsSynthesizingVoice(false);
           }
@@ -385,13 +385,10 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       }, 100);
 
     } catch (err) {
-      console.warn("Using virtual audio simulator.", err);
-      setIsRecording(true);
-      setVoiceTimer(0);
-      timerRef.current = setInterval(() => {
-        setVoiceTimer(prev => prev + 1);
-        setWaveformNodes(prev => prev.map(() => Math.floor(Math.random() * 45) + 10));
-      }, 100);
+      console.warn("Microphone access is unavailable:", err);
+      showToast("Microphone access is unavailable. Check your browser permission and try again.");
+      setIsRecording(false);
+      setIsSynthesizingVoice(false);
     }
   };
 
@@ -556,12 +553,11 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
           showToast("Command polished successfully! ✨");
         }
       } else {
-        throw new Error("Local fallback");
+        const payload = await res.json().catch(() => ({}));
+        throw new Error(typeof payload.error === "string" ? payload.error : "Post improvement is unavailable. Please try again.");
       }
     } catch (err) {
-      console.warn("Using localized command expansions.", err);
-      setQuery(`Analyze the current system details regarding: "${query}". Provide a highly detailed breakdown referencing regional pulse and decentralized database synchronization logs.`);
-      showToast("Expanded query structure.");
+      showToast(err instanceof Error ? err.message : "Post improvement failed. Please try again.");
     } finally {
       setLoadingAi(false);
     }
