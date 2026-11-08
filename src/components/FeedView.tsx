@@ -951,29 +951,43 @@ export default function FeedView({
 
   // Header expansion state tracking ref to eliminate duplicate re-renders
   const isHeaderExpandedRef = useRef(true);
+  const loadMoreInFlightRef = useRef(false);
 
-  // High-performance passive scroll handler for infinite scroll & header collapse
+  // High-performance passive scroll handler for infinite scroll & header collapse.
+  // A request lock prevents repeated scroll events from issuing duplicate page loads.
   useEffect(() => {
-    let debounceTimer: any = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const handleScroll = () => {
       const container = scrollContainerRef.current;
       if (!container) return;
       const { scrollTop, scrollHeight, clientHeight } = container;
-      
-      // Debounce localStorage writes to prevent main thread blocking
+
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+        try {
+          localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+        } catch {
+          // Scroll restoration is an enhancement; storage failure must not affect scrolling.
+        }
       }, 300);
 
-      // Pre-load next batch when nearing bottom (threshold 350px)
       if (scrollHeight - scrollTop - clientHeight < 350) {
-        setVisibleCount(prev => prev + 6);
-        void onLoadMorePosts?.();
+        setVisibleCount(prev => Math.min(prev + 6, orderedPosts.length));
+        if (hasMorePosts && !isLoadingMorePosts && onLoadMorePosts && !loadMoreInFlightRef.current) {
+          loadMoreInFlightRef.current = true;
+          void (async () => {
+            try {
+              await onLoadMorePosts();
+            } catch {
+              window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not load more posts. Please try again.' }));
+            } finally {
+              loadMoreInFlightRef.current = false;
+            }
+          })();
+        }
       }
 
-      // Smooth scroll direction detection for header collapse/restore
       const diff = scrollTop - lastScrollTopRef.current;
       if (scrollTop <= 15) {
         if (!isHeaderExpandedRef.current) {
@@ -993,18 +1007,14 @@ export default function FeedView({
       }
       lastScrollTopRef.current = Math.max(0, scrollTop);
     };
-    
+
     const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-    }
+    container?.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
+      container?.removeEventListener('scroll', handleScroll);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [onLoadMorePosts]);
+  }, [onLoadMorePosts, hasMorePosts, isLoadingMorePosts, orderedPosts.length]);
 
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
