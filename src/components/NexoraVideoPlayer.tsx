@@ -13,6 +13,7 @@ import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, Folder
 import { motion, AnimatePresence } from 'motion/react';
 import { recordReelReplay, recordReelSignal } from '../services/reels/reelsRanking';
 import { getCreditedWatchDelta } from '../utils/watchTimePolicy';
+import { shouldLoadVideoPoster } from '../utils/videoPreloadPolicy';
 import { hasAnalyticsObservationConsent, trackClientObservation } from '../services/analyticsService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
@@ -1029,7 +1030,7 @@ export default function NexoraVideoPlayer({
             <video
               ref={videoRef}
               src={hasVideoError || isReleased ? undefined : ((isActive ?? true) || isNearby || shouldPreload ? finalVideoUrl : undefined)}
-              poster={post?.image || undefined}
+              poster={shouldLoadVideoPoster({ isActive, isNearby, shouldPreload, isReleased }) ? (post?.image || undefined) : undefined}
               playsInline
               preload={isReleased ? "none" : (preloadMode || ((isNearby || shouldPreload) ? "auto" : "none"))}
               muted={isMuted}

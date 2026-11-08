@@ -28,3 +28,9 @@ Run cold-start, feed scroll, video playback, navigation, keyboard/input and memo
 - Video poster images load eagerly only for the active/nearby/preloaded player; offscreen posters are lazy-loaded.
 - Feed carousel images, story avatars/media, and gallery thumbnails use asynchronous image decoding; gallery thumbnails are lazy-loaded.
 - Sidebar profile imagery decodes asynchronously to reduce main-thread image decode contention during navigation.
+
+
+## Video poster request budget
+
+- The video element's native poster URL is now withheld from released/offscreen players as well as the separate poster image being lazy-loaded. Active and nearby players retain their poster for a smooth playback handoff.
+- The poster visibility decision is covered by unit tests.
