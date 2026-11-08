@@ -544,11 +544,10 @@ export default function NotificationsView({
 
           <button
             onClick={handlePullToRefresh}
-            disabled={isRefreshing}
             className="nx-icon-button inline-flex text-violet-300"
             title="Notifications update automatically"
           >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className="w-4 h-4" />
           </button>
         </div>
       </div>
@@ -1049,7 +1048,6 @@ export default function NotificationsView({
         <div className="pt-4 pb-8">
           <button
             onClick={handleLoadMore}
-            disabled={loadingMore}
             className="px-6 py-2.5 rounded-2xl bg-black/40 border border-white/10 hover:border-white/10 text-violet-300 hover:text-white text-xs font-mono font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
           >
             <>
