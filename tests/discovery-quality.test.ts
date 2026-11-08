@@ -106,3 +106,37 @@ test('For You ranking applies account-scoped positive and negative recommendatio
   assert.ok(ranked[0]?.reasons.some(reason => reason.includes('recent feedback')));
   assert.equal(ranked[1]?.post.id, 'neutral');
 });
+
+
+test('For You ranking normalizes accented and punctuated tags across interests and feedback', () => {
+  const timestamp = '2026-11-07T11:00:00.000Z';
+  const makePost = (id: string, tags: string[]) => ({
+    id, userId: id, username: id, name: id, avatar: '', isVerified: false,
+    content: 'A discovery post', tags, likes: 0, commentsCount: 0, shares: 0,
+    timestamp, comments: [],
+  }) as any;
+  const now = Date.parse('2026-11-07T12:00:00.000Z');
+  const ranked = rankPosts([
+    makePost('cafe', ['#Café-Design']),
+    makePost('neutral', ['travel']),
+  ], {
+    now,
+    interestDNA: { 'cafe design': 3 },
+    recommendationSignals: { tags: { 'CAFÉ-DESIGN': 20 }, creators: {}, communities: {} },
+  });
+  assert.equal(ranked[0]?.post.id, 'cafe');
+  assert.ok(ranked[0]?.reasons.some(reason => reason.includes('#cafe design')));
+});
+
+test('not-interested tag filters use the same Unicode normalization as ranked post tags', () => {
+  const post = {
+    id: 'cafe', userId: 'creator', username: 'creator', name: 'Creator', avatar: '',
+    isVerified: false, content: 'A post', tags: ['#Café-Design'], likes: 0,
+    commentsCount: 0, shares: 0, timestamp: '2026-11-07T11:00:00.000Z', comments: [],
+  } as any;
+  const ranked = rankPosts([post], {
+    now: Date.parse('2026-11-07T12:00:00.000Z'),
+    notInterestedTags: ['cafe design'],
+  });
+  assert.equal(ranked.length, 0);
+});

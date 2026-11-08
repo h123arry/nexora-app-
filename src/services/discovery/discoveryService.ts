@@ -44,8 +44,12 @@ function ageHours(timestamp: unknown, now: number): number {
   return 24;
 }
 
+function normalizeTag(value: unknown): string {
+  return normalizeSearchText(value).replace(/^[@#]/, '');
+}
+
 function normalizedTags(post: Post): string[] {
-  return (post.tags || []).map(tag => tag.replace(/^#/, '').trim().toLowerCase()).filter(Boolean);
+  return (post.tags || []).map(normalizeTag).filter(Boolean);
 }
 
 function engagementScore(post: Post): number {
@@ -60,10 +64,14 @@ function engagementScore(post: Post): number {
 function recommendationSignalScore(post: Post, signals?: RankingContext['recommendationSignals']): number {
   if (!signals) return 0;
   const tags = normalizedTags(post);
-  let score = tags.reduce((total, tag) => total + (signals.tags?.[tag] || 0), 0);
+  const normalizedTagSignals = Object.entries(signals.tags || {}).reduce<Record<string, number>>((result, [tag, weight]) => {
+    const key = normalizeTag(tag);
+    if (key && Number.isFinite(weight)) result[key] = (result[key] || 0) + weight;
+    return result;
+  }, {});
+  let score = tags.reduce((total, tag) => total + (normalizedTagSignals[tag] || 0), 0);
   const content = normalizeSearchText(post.content || '');
-  for (const [keyword, weight] of Object.entries(signals.tags || {})) {
-    const normalized = normalizeSearchText(keyword);
+  for (const [normalized, weight] of Object.entries(normalizedTagSignals)) {
     if (normalized.length > 2 && content.includes(normalized) && !tags.includes(normalized)) score += weight * 0.3;
   }
   score += signals.creators?.[post.userId] || 0;
@@ -83,9 +91,10 @@ export function rankPosts<T extends Post>(posts: T[], context: RankingContext = 
   const blocked = new Set(context.blockedCreatorIds || []);
   const hidden = new Set(context.hiddenPostIds || []);
   const seen = new Set(context.seenPostIds || []);
-  const notInterested = new Set((context.notInterestedTags || []).map(tag => tag.replace(/^#/, '').toLowerCase()));
+  const notInterested = new Set((context.notInterestedTags || []).map(normalizeTag).filter(Boolean));
   const interests = Object.entries(context.interestDNA || {}).reduce<Record<string, number>>((acc, [key, value]) => {
-    acc[key.replace(/^#/, '').toLowerCase()] = Number.isFinite(value) ? Math.max(0, value) : 0;
+    const normalizedKey = normalizeTag(key);
+    if (normalizedKey) acc[normalizedKey] = Number.isFinite(value) ? Math.max(0, value) : 0;
     return acc;
   }, {});
   const mode = context.mode || 'forYou';
