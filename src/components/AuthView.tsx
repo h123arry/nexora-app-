@@ -182,31 +182,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
     setVerificationCode('');
   };
 
-  // Instant Demo Access / Bypass Auth Handler
-  const handleDemoLogin = () => {
-    if (!import.meta.env.DEV) return;
-    const demoUser: User = {
-      id: 'demo-user-1',
-      username: 'nexora_explorer',
-      name: 'Nexora Explorer',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      bio: 'Exploring the future of decentralised knowledge and rich media.',
-      location: 'Global Grid',
-      website: 'https://nexora.app',
-      followers: 1250,
-      following: 340,
-      sparks: 4820,
-      isVerified: true,
-      coverImage: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1000&auto=format&fit=crop&q=80',
-      joinedDate: 'Joined August 2026',
-      reputationPoints: 940,
-      reputationBreakdown: { contributions: 42, helpfulness: 128, missionsCompleted: 15, skillsVerified: 8 },
-      interestDNA: { 'Technology': 0.85, 'AI': 0.92, 'Science': 0.78 },
-      skills: ['TypeScript', 'React', 'AI Engineering']
-    };
-    onLoginSuccess(demoUser);
-  };
-
   // Google Sign In Handler
   const handleGoogleSignInClick = async () => {
     setErrorMsg('');
@@ -991,21 +966,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                   <Smartphone className="w-4 h-4 text-violet-400 shrink-0" />
                   <span>Phone</span>
                 </button>
-              </div>
-
-              {/* Development-only read-only demo; never grants Firebase identity. */}
-              {import.meta.env.DEV && <div className="mt-3">
-                <button
-                  type="button"
-                  onClick={handleDemoLogin}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-violet-600/30 to-fuchsia-600/30 hover:from-violet-600/50 hover:to-fuchsia-600/50 border border-violet-500/30 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg shadow-violet-950/30"
-                >
-                  <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
-                  <span>Development demo (read-only)</span>
-                </button>
-              </div>}
-
-              {/* Bottom Switch to Signup */}
+              </div>{/* Bottom Switch to Signup */}
               <div className="pt-2 text-center text-xs text-zinc-400">
                 Don't have an account?{' '}
                 <button
