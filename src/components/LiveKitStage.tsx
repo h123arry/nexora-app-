@@ -20,6 +20,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
   const [cameraOn, setCameraOn] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
+  const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [busy, setBusy] = useState(false);
 
@@ -42,6 +43,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
       setError('');
       setCameraOn(false);
       setMicOn(false);
+      setHasRemoteVideo(false);
       try {
         const sdk = window.LivekitClient;
         if (!sdk?.Room || !sdk?.RoomEvent) {
@@ -66,6 +68,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
             ? 'h-full w-full rounded-xl bg-black object-contain'
             : 'hidden';
           remoteRef.current.appendChild(element);
+          if (track.kind === 'video') setHasRemoteVideo(true);
           if (track.kind === 'audio') {
             void element.play().catch(() => {
               if (!disposed) setAudioBlocked(true);
@@ -75,6 +78,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
 
         room.on(sdk.RoomEvent.TrackUnsubscribed, (track: any) => {
           track.detach().forEach((element: HTMLElement) => element.remove());
+          if (track.kind === 'video' && !disposed) setHasRemoteVideo(false);
         });
 
         room.on(sdk.RoomEvent.LocalTrackPublished, () => attachLocalVideo(room));
@@ -209,7 +213,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
             {error}
           </div>
         )}
-        {!isHost && status === 'Watching live' && !remoteRef.current?.childElementCount && (
+        {!isHost && status === 'Watching live' && !hasRemoteVideo && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center text-xs text-white/60">
             Waiting for the creator's video…
           </div>
@@ -233,7 +237,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
         </div>
       )}
 
-      {status === 'Video unavailable' && (
+      {(status === 'Video unavailable' || status === 'Video connection ended') && (
         <button type="button" disabled={busy} onClick={() => setAttempt(value => value + 1)} className="mx-auto block rounded-full border border-violet-300/30 bg-violet-500/15 px-4 py-2 text-xs font-bold text-violet-100 disabled:opacity-50">
           Retry video connection
         </button>
