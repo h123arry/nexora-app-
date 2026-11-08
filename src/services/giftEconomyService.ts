@@ -31,7 +31,7 @@ export async function setCreatorPayoutBeneficiary(accountNumber: string, bankCod
 export async function getNgnPayoutProviderStatus() {
   return (await httpsCallable<void, {provider:string;configured:boolean;mode:string;transferFeatureEnabled:boolean;cashWithdrawalsEnabled:boolean;blocker:string|null}>(functions, 'getNgnPayoutProviderStatus')()).data;
 }
-export async function configureNgnPayoutPolicy(input:{enabled:boolean;koboPerNex:number;minimumNex:number;maximumNex:number;liveSettlementApproved:boolean;providerBusinessVerified?:boolean;settlementFundingVerified?:boolean;complianceApproved?:boolean;webhookVerified?:boolean;liveTestTransferVerified?:boolean}) {
+export async function configureNgnPayoutPolicy(input:{enabled:boolean;koboPerNex:number;providerFeeBufferKobo:number;minimumNex:number;maximumNex:number;liveSettlementApproved:boolean;liveEvidenceReference?:string;providerBusinessVerified?:boolean;settlementFundingVerified?:boolean;complianceApproved?:boolean;webhookVerified?:boolean;liveTestTransferVerified?:boolean}) {
   return (await httpsCallable<typeof input, {saved:boolean;mode:string;enabled:boolean;liveSettlementApproved:boolean}>(functions, 'configureNgnPayoutPolicy')(input)).data;
 }
 export async function setCreatorEconomyDisplayCurrency(currency: string) {
@@ -64,4 +64,12 @@ export async function setCreatorPayoutBeneficiary(creatorId: string, providerBen
 
 export async function reviewCreatorPayoutCompliance(input:{creatorId:string;beneficiaryRef:string;decision:'approved'|'rejected';evidenceReference:string;bankAccountNameMatched:boolean}) {
   return (await httpsCallable<typeof input, {creatorId:string;status:string;beneficiaryRef:string}>(functions, 'reviewCreatorPayoutCompliance')(input)).data;
+}
+
+export type CreatorPayoutComplianceRecord = {creatorId:string;beneficiaryRef:string;accountName:string;accountNumberLast4:string;bankName:string;complianceStatus:string};
+export async function getNgnPayoutPolicyForFinance() {
+  return (await httpsCallable<void, {mode:string;enabled:boolean;koboPerNex:number|null;providerFeeBufferKobo:number|null;minimumNex:number|null;maximumNex:number|null;liveSettlementApproved:boolean;providerBusinessVerified:boolean;settlementFundingVerified:boolean;complianceApproved:boolean;webhookVerified:boolean;liveTestTransferVerified:boolean;liveEvidenceReference:string}>(functions, 'getNgnPayoutPolicyForFinance')()).data;
+}
+export async function getCreatorPayoutComplianceQueue() {
+  return (await httpsCallable<void, {records:CreatorPayoutComplianceRecord[]}>(functions, 'getCreatorPayoutComplianceQueue')()).data.records;
 }
