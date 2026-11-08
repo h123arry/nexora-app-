@@ -150,3 +150,10 @@ A workstream is not complete because a screen exists. It must have:
 
 ### Verification status
 The changes are committed to the feature branch. Automated build, lint and emulator tests must be run in CI or a configured local/staging environment before merge. Do not claim those checks passed until their results are observed.
+
+
+### Creator Economy earnings-history expansion
+- Added authenticated, owner-scoped cursor pagination for creator gift earnings. Each page returns at most 100 records and an opaque next cursor only when another page exists.
+- Cursor documents are validated against the signed-in creator before the query advances, preventing cross-account cursor probing.
+- Page totals are scoped to the returned page; the wallet balance remains the current wallet snapshot.
+- These records represent NEX gift-ledger earnings, not NGN cash income. NGN withdrawal activation remains controlled by separate provider, beneficiary and settlement gates.
