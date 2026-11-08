@@ -26,6 +26,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const [giftSoundsEnabled,setGiftSoundsEnabled] = useState(false);
   const giftAudioContext = useRef<AudioContext|null>(null);
   const bottomRef = useRef<HTMLDivElement|null>(null);
+  const connectionId = useRef('live_' + Math.random().toString(36).slice(2) + Date.now().toString(36)).current;
 
   useEffect(() => () => { if(giftAudioContext.current && giftAudioContext.current.state!=='closed') void giftAudioContext.current.close(); }, []);
 
@@ -65,11 +66,11 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     if(!selectedId || isHost) return;
     let cancelled=false;
     let heartbeat: ReturnType<typeof setInterval> | null = null;
-    void joinLiveSession(selectedId).then(()=>{
-      if(cancelled) { void leaveLiveSession(selectedId); return; }
-      heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId).catch(()=>setError('Your live connection needs to be refreshed.'));},30_000);
+    void joinLiveSession(selectedId,connectionId).then(()=>{
+      if(cancelled) { void leaveLiveSession(selectedId,connectionId); return; }
+      heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live connection needs to be refreshed.'));},30_000);
     }).catch(()=>setError('You could not join this live room.'));
-    return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);void leaveLiveSession(selectedId).catch(()=>undefined);};
+    return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);void leaveLiveSession(selectedId,connectionId).catch(()=>undefined);};
   },[selectedId,isHost]);
 
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:'smooth'});},[messages.length]);
@@ -99,7 +100,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const submitMessage=async()=>{
     if(!selectedId||!message.trim()||sending)return;
     setSending(true);setError('');
-    try {await sendLiveChatMessage(selectedId,message);setMessage('');}
+    try {await sendLiveChatMessage(selectedId,message,connectionId);setMessage('');}
     catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Your message could not be sent.');}
     finally{setSending(false);}
   };
