@@ -54,6 +54,7 @@ import { globalVideoPlaybackManager } from './utils/VideoPlaybackManager';
 import { isUserCacheReady, readUserScopedJson, writeUserScopedJson } from './utils/userScopedStorage';
 import { migrateLegacyPostBookmarks, setPostBookmark } from './services/firebase/bookmarkService';
 import { createPostRepost } from './services/firebase/postRepostService';
+import { addPostCommentReply } from './services/firebase/postReplyService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
