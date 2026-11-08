@@ -30,23 +30,7 @@ before(async () => {
     projectId,
     firestore: { rules: await readFile(new URL('../firestore.rules', import.meta.url), 'utf8') }
   });
-  it('protects live room sessions and persistent chat as server-owned state', async () => {
-    await seed(async (db) => {
-      await setDoc(doc(db, 'liveSessions', 'active-room'), { hostId: 'alice', status: 'live', viewerCount: 1 });
-      await setDoc(doc(db, 'liveSessions', 'ended-room'), { hostId: 'alice', status: 'ended', viewerCount: 0 });
-      await setDoc(doc(db, 'liveSessions', 'active-room', 'messages', 'message-1'), { senderId: 'bob', message: 'Hello live room' });
-      await setDoc(doc(db, 'liveSessions', 'ended-room', 'messages', 'message-2'), { senderId: 'bob', message: 'Past chat' });
-    });
-    await assertSucceeds(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room')));
-    await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'ended-room')));
-    await assertSucceeds(getDoc(doc(dbFor('alice'), 'liveSessions', 'ended-room')));
-    await assertSucceeds(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'messages', 'message-1')));
-    await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'ended-room', 'messages', 'message-2')));
-    await assertFails(setDoc(doc(dbFor('alice'), 'liveSessions', 'forged-room'), { hostId: 'alice', status: 'live' }));
-    await assertFails(setDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'messages', 'forged'), { senderId: 'bob', message: 'forged' }));
-    await assertFails(setDoc(doc(dbFor('bob'), 'liveSessionViewers', 'forged'), { sessionId: 'active-room', viewerId: 'bob' }));
-  }
-});
+
 
 after(async () => env?.cleanup());
 beforeEach(async () => env.clearFirestore());
@@ -1273,4 +1257,20 @@ const publicProfile = (uid) => ({
     }));
   });
 
+  it('protects live room sessions and persistent chat as server-owned state', async () => {
+    await seed(async (db) => {
+      await setDoc(doc(db, 'liveSessions', 'active-room'), { hostId: 'alice', status: 'live', viewerCount: 1 });
+      await setDoc(doc(db, 'liveSessions', 'ended-room'), { hostId: 'alice', status: 'ended', viewerCount: 0 });
+      await setDoc(doc(db, 'liveSessions', 'active-room', 'messages', 'message-1'), { senderId: 'bob', message: 'Hello live room' });
+      await setDoc(doc(db, 'liveSessions', 'ended-room', 'messages', 'message-2'), { senderId: 'bob', message: 'Past chat' });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'ended-room')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'liveSessions', 'ended-room')));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'messages', 'message-1')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'ended-room', 'messages', 'message-2')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'liveSessions', 'forged-room'), { hostId: 'alice', status: 'live' }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'messages', 'forged'), { senderId: 'bob', message: 'forged' }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'liveSessionViewers', 'forged'), { sessionId: 'active-room', viewerId: 'bob' }));
+  });
 });
