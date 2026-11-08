@@ -85,6 +85,7 @@ before(async () => {
 after(async () => {
   if (server && server.exitCode === null) server.kill('SIGTERM');
   await testDb.recursiveDelete(testDb.collection('chats'));
+  await Promise.all([uid, nonMemberUid].filter(Boolean).map(userId => testDb.collection('vohUserMemory').doc(userId).delete().catch(() => undefined)));
   await getAdminStorage(testAdminApp).bucket('demo-nexora-voh.firebasestorage.app').deleteFiles({ prefix: 'chats/' }).catch(() => undefined);
   await Promise.all([uid, nonMemberUid].filter(Boolean).map(userId => getAdminAuth(testAdminApp).deleteUser(userId).catch(() => undefined)));
   await deleteApp(testAdminApp);
@@ -126,6 +127,59 @@ describe('VOH API security boundary', () => {
     const result = await response.json() as { error: string; text?: string };
     assert.equal(result.text, undefined);
     assert.match(result.error, /not configured/);
+  });
+
+  it('stores consented VOH memory per authenticated account and supports deletion', async () => {
+    const memoryPath = `${baseUrl}/api/voh-ai/memory`;
+    const request = (token: string, method: string, body?: unknown) => fetch(memoryPath, {
+      method,
+      headers: {
+        authorization: `Bearer ${token}`,
+        ...(body === undefined ? {} : { 'content-type': 'application/json' }),
+      },
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    });
+
+    const empty = await request(idToken, 'GET');
+    assert.equal(empty.status, 200);
+    assert.deepEqual(await empty.json(), { memory: null });
+
+    const withoutConsent = await request(idToken, 'PUT', {
+      memoryEnabled: true,
+      consentVersion: 'outdated',
+      interests: ['must-not-save'],
+    });
+    assert.equal(withoutConsent.status, 400);
+
+    const saved = await request(idToken, 'PUT', {
+      memoryEnabled: true,
+      consentVersion: '2026-11',
+      interests: ['product design', 'AI'],
+      creatorGoals: ['Grow an educational creator community'],
+      writingStyle: 'Natural and conversational',
+      preferences: { aiTone: 'concise', voiceAutoPlay: false },
+      ownerUid: 'attacker-controlled-value',
+      hiddenAdminFlag: true,
+    });
+    assert.equal(saved.status, 200);
+    assert.equal((await saved.json() as { saved: boolean }).saved, true);
+
+    const loaded = await request(idToken, 'GET');
+    assert.equal(loaded.status, 200);
+    const payload = await loaded.json() as { memory: Record<string, any> };
+    assert.deepEqual(payload.memory.interests, ['product design', 'AI']);
+    assert.equal(payload.memory.ownerUid, undefined);
+    assert.equal(payload.memory.hiddenAdminFlag, undefined);
+
+    const isolated = await request(nonMemberToken, 'GET');
+    assert.equal(isolated.status, 200);
+    assert.deepEqual(await isolated.json(), { memory: null });
+
+    const deleted = await request(idToken, 'DELETE');
+    assert.equal(deleted.status, 200);
+    assert.equal((await deleted.json() as { deleted: boolean }).deleted, true);
+    const afterDelete = await request(idToken, 'GET');
+    assert.deepEqual(await afterDelete.json(), { memory: null });
   });
 
   it('shares a per-UID quota across route requests and rejects the excess', async () => {
