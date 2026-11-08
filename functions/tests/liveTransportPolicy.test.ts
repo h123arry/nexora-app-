@@ -24,6 +24,13 @@ test('viewer transport access requires the exact active connection and an unexpi
   }));
 });
 
+test('viewers cannot join video after host presence expires', () => {
+  assert.throws(() => resolveLiveTransportRole({
+    ...base, userId: 'viewer-1', viewerConnectionIds: ['connection_123'],
+    viewerExpiresAtMs: 2_000, hostExpiresAtMs: 900,
+  }));
+});
+
 test('ended rooms never issue video transport access', () => {
   assert.throws(() => resolveLiveTransportRole({ ...base, status: 'ended' }));
 });
