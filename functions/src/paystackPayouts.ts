@@ -158,8 +158,8 @@ export const finalizeNgnPayoutTransfer = onCall({ secrets: [PAYSTACK_SECRET_KEY]
       creatorId: payout.data()?.creatorId, actorId, action: 'provider_transfer_otp_finalized',
       provider: 'paystack', reference, createdAt: FieldValue.serverTimestamp(),
     });
-    return { reference, status: providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed'
-      ? providerStatus : 'processing' };
+    const finalPayout = await payoutRef.get();
+    return { reference, status: String(finalPayout.data()?.status || providerStatus) };
   } catch {
     throw new HttpsError('failed-precondition', 'Paystack did not accept the OTP. The payout remains reserved for retry or reconciliation.');
   }
