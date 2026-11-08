@@ -479,7 +479,7 @@ export const paystackPayoutWebhook = onRequest({ secrets: [PAYSTACK_SECRET_KEY, 
   if (request.method !== 'POST' || !request.rawBody || !verifyPaystackWebhookSignature(request.rawBody, request.headers, PAYSTACK_WEBHOOK_SECRET.value(), PAYSTACK_SECRET_KEY.value())) {
     response.status(401).send('Invalid webhook signature'); return;
   }
-  const event = request.body as { event?: string; data?: { reference?: string; status?: string } };
+  const event = request.body as { event?: string; data?: { reference?: string; status?: string; amount?: number | string; currency?: string; domain?: string } };
   const eventType = event?.event;
   const reference = event?.data?.reference;
   if (!safeText(reference, 80) || !['transfer.success','transfer.failed','transfer.reversed'].includes(String(eventType))) {
@@ -571,7 +571,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
     const providerStatus = String(transfer.status || 'pending');
     const status: TransferStatus = providerStatus === 'otp' ? 'awaiting_provider_approval'
       : providerStatus === 'success' || providerStatus === 'failed' || providerStatus === 'reversed' ? providerStatus : 'processing';
-    await updatePayoutUnlessTerminal(reference, status === 'otp' ? 'awaiting_provider_approval' : 'processing', {
+    await updatePayoutUnlessTerminal(reference, status === 'awaiting_provider_approval' ? 'awaiting_provider_approval' : 'processing', {
       providerTransferCode: transfer.transfer_code || null, providerStatus,
       providerSubmittedAt: FieldValue.serverTimestamp(),
     });
