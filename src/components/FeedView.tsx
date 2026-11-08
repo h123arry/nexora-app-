@@ -19,7 +19,6 @@ import { rankPosts } from '../services/discovery/discoveryService';
 import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
-import { ProfileService } from '../services/firebase/profileService';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 import { getDevicePerformanceProfile } from '../utils/devicePerformance';
@@ -169,6 +168,7 @@ interface FeedViewProps {
   creators?: User[];
   posts: Post[];
   followingIds: string[];
+  friendIds?: string[];
   onLikePost: (postId: string) => void;
   onBookmarkPost: (postId: string) => void;
   onAddComment: (postId: string, content: string) => void;
@@ -198,6 +198,7 @@ export default function FeedView({
   creators = [],
   posts,
   followingIds,
+  friendIds = [],
   onLikePost,
   onBookmarkPost,
   onAddComment,
@@ -459,37 +460,9 @@ export default function FeedView({
     return saved ? JSON.parse(saved) : [];
   });
   const [pinnedPostIds, setPinnedPostIds] = useState<string[]>(() => {
-    if (Array.isArray(currentUser.pinnedPosts)) return currentUser.pinnedPosts.filter(id => typeof id === 'string');
-    try {
-      const saved = localStorage.getItem(`nexora_pinned_posts_${currentUser.id}`);
-      const parsed = saved ? JSON.parse(saved) : [];
-      return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string') : [];
-    } catch {
-      return [];
-    }
+    const saved = localStorage.getItem('nexora_pinned_posts');
+    return saved ? JSON.parse(saved) : [];
   });
-  const pinnedPostIdsRef = useRef(pinnedPostIds);
-  useEffect(() => {
-    pinnedPostIdsRef.current = pinnedPostIds;
-    try {
-      localStorage.setItem(`nexora_pinned_posts_${currentUser.id}`, JSON.stringify(pinnedPostIds));
-    } catch {
-      // Firestore remains the durable source; device cache failure must not block the feed.
-    }
-  }, [pinnedPostIds, currentUser.id]);
-
-  const updatePinnedPostIds: React.Dispatch<React.SetStateAction<string[]>> = (nextOrUpdater) => {
-    const next = typeof nextOrUpdater === 'function'
-      ? nextOrUpdater(pinnedPostIdsRef.current)
-      : nextOrUpdater;
-    pinnedPostIdsRef.current = next;
-    setPinnedPostIds(next);
-    if (auth.currentUser?.uid === currentUser.id) {
-      void ProfileService.updateProfile(currentUser.id, { pinnedPosts: next }).catch(() => {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Pinned posts could not be synced. Please try again.' }));
-      });
-    }
-  };
   const [analyticsPost, setAnalyticsPost] = useState<RefactoredPost | null>(null);
   const analyticsSnapshot = analyticsPost ? buildPostAnalytics(analyticsPost) : null;
 
@@ -1443,7 +1416,7 @@ export default function FeedView({
       if (!isPostFromFollowed) return false;
     } else if (feedTab === 'friends') {
       // Friends: standard non-institutional users we follow
-      const isPostFromFriend = (followingIds.includes(post.userId) && post.userId !== 'user-0' && post.username !== 'voh_ai' && post.username !== 'nexora_ai') || post.userId === currentUser.id;
+      const isPostFromFriend = (friendIds.includes(post.userId) && post.userId !== 'user-0' && post.username !== 'voh_ai' && post.username !== 'nexora_ai') || post.userId === currentUser.id;
       if (!isPostFromFriend) return false;
     } else if (feedTab === 'trending') {
       // Trending: highly interactive posts and system updates
@@ -2417,7 +2390,7 @@ export default function FeedView({
                 setContextualMenuPost={setContextualMenuPost}
                 setMutedUserIds={setMutedUserIds}
                 setBlockedUserIds={setBlockedUserIds}
-                setPinnedPostIds={updatePinnedPostIds}
+                setPinnedPostIds={setPinnedPostIds}
                 setHiddenPostIds={setHiddenPostIds}
                 setNotInterestedTags={setNotInterestedTags}
                 setMutedCreatorIds={setMutedCreatorIds}
