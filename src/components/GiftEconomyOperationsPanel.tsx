@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, CalendarPlus, RefreshCw, ShieldCheck } from 'lucide-react';
-import { createGiftCompetition, getGiftRiskReviewQueue, resolveGiftRiskSignal, getCreatorPayoutComplianceQueue, getNgnPayoutPolicyForFinance, configureNgnPayoutPolicy, reviewCreatorPayoutCompliance, type CreatorPayoutComplianceRecord } from '../services/giftEconomyService';
+import { createGiftCompetition, getGiftRiskReviewQueue, resolveGiftRiskSignal, getCreatorPayoutComplianceQueue, getNgnPayoutPolicyForFinance, configureNgnPayoutPolicy, reviewCreatorPayoutCompliance, getNgnPayoutOtpQueue, finalizeNgnPayoutTransfer, type NgnPayoutOtpRecord, type CreatorPayoutComplianceRecord } from '../services/giftEconomyService';
 
 type RiskRecord = {id:string;senderId:string;creatorId:string;grossNex:number;score:number;tier:string;reasons:string[];createdAt:string|null};
 export default function GiftEconomyOperationsPanel(){
@@ -13,6 +13,8 @@ export default function GiftEconomyOperationsPanel(){
  const [saving,setSaving]=useState(false);
  const [reviewNotes,setReviewNotes]=useState<Record<string,string>>({});
  const [complianceRecords,setComplianceRecords]=useState<CreatorPayoutComplianceRecord[]>([]);
+ const [otpRecords,setOtpRecords]=useState<NgnPayoutOtpRecord[]>([]);
+ const [otpValues,setOtpValues]=useState<Record<string,string>>({});
  const [evidenceRefs,setEvidenceRefs]=useState<Record<string,string>>({});
  const [nameMatches,setNameMatches]=useState<Record<string,boolean>>({});
  const [payoutMode,setPayoutMode]=useState('unknown');
@@ -30,9 +32,10 @@ export default function GiftEconomyOperationsPanel(){
  const [notice,setNotice]=useState('');
  const refresh=useCallback(async()=>{
   setLoading(true);setError('');
-  const [riskResult,queueResult,policyResult]=await Promise.allSettled([getGiftRiskReviewQueue(),getCreatorPayoutComplianceQueue(),getNgnPayoutPolicyForFinance()]);
+  const [riskResult,queueResult,policyResult,otpResult]=await Promise.allSettled([getGiftRiskReviewQueue(),getCreatorPayoutComplianceQueue(),getNgnPayoutPolicyForFinance(),getNgnPayoutOtpQueue()]);
   if(riskResult.status==='fulfilled')setRecords(riskResult.value);
   if(queueResult.status==='fulfilled')setComplianceRecords(queueResult.value);
+  if(otpResult.status==='fulfilled')setOtpRecords(otpResult.value);
   if(policyResult.status==='fulfilled'){
    const p=policyResult.value;setPayoutMode(p.mode);setCredentialsVerified(p.credentialsVerified);setWebhookSecretConfigured(p.webhookSecretConfigured);setNgnBalanceKobo(p.ngnBalanceKobo);setPayoutEnabled(p.enabled);
    setKoboPerNex(p.koboPerNex===null?'':String(p.koboPerNex));setFeeBuffer(p.providerFeeBufferKobo===null?'':String(p.providerFeeBufferKobo));
@@ -42,8 +45,8 @@ export default function GiftEconomyOperationsPanel(){
     settlementFundingVerified:p.settlementFundingVerified,complianceApproved:p.complianceApproved,
     webhookVerified:p.webhookVerified,liveTestTransferVerified:p.liveTestTransferVerified});
   }
-  if(riskResult.status==='rejected'||queueResult.status==='rejected'||policyResult.status==='rejected'){
-   const reason=[riskResult,queueResult,policyResult].find(x=>x.status==='rejected');
+  if(riskResult.status==='rejected'||queueResult.status==='rejected'||policyResult.status==='rejected'||otpResult.status==='rejected'){
+   const reason=[riskResult,queueResult,policyResult,otpResult].find(x=>x.status==='rejected');
    const code=reason?.status==='rejected'?(reason.reason as {code?:string})?.code||'':'';
    setError(code.includes('permission-denied')?'Finance administrator claim required.':'Some payout or gift-operations data could not be loaded. Check provider secrets and retry.');
   }
@@ -59,6 +62,14 @@ export default function GiftEconomyOperationsPanel(){
   try{await reviewCreatorPayoutCompliance({creatorId:row.creatorId,beneficiaryRef:row.beneficiaryRef,decision,evidenceReference:evidenceReference.trim(),bankAccountNameMatched});
    setNotice('Creator beneficiary compliance '+decision+'. The decision is audit-logged.');await refresh();}
   catch{setError('Creator beneficiary compliance review could not be saved.');}
+  finally{setSaving(false);}
+ };
+ const finalizeOtp=async(reference:string)=>{
+  const otp=otpValues[reference]||'';
+  if(!/^\d{4,8}$/.test(otp)){setError('Enter the provider OTP digits.');return;}
+  setSaving(true);setError('');setNotice('');
+  try{const result=await finalizeNgnPayoutTransfer(reference,otp);setNotice('Provider transfer approval submitted: '+result.status+'.');setOtpValues(prev=>({...prev,[reference]:''}));await refresh();}
+  catch{setError('Paystack did not accept this OTP. The NEX reserve remains protected.');}
   finally{setSaving(false);}
  };
  const savePayoutPolicy=async()=>{
@@ -87,6 +98,15 @@ export default function GiftEconomyOperationsPanel(){
    <div className="flex items-center justify-between gap-2"><h4 className="flex items-center gap-2 text-sm font-bold text-white"><AlertTriangle size={15} className="text-amber-300"/> Gift risk review</h4><button type="button" onClick={()=>void refresh()} disabled={loading} className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-[10px] font-bold text-white"><RefreshCw size={12} className={loading?'animate-spin':''}/> Refresh</button></div>
    {loading?<p className="py-4 text-xs text-slate-500">Loading risk signals…</p>:records.length===0?<p className="py-4 text-xs text-slate-500">No elevated gift-risk signals require review.</p>:<div className="mt-3 space-y-2">{records.map(row=><article key={row.id} className="rounded-xl bg-white/[.03] p-3"><div className="flex items-center justify-between"><span className="text-xs font-bold text-white">{row.tier.toUpperCase()} · score {row.score}/100</span><span className="text-xs text-amber-200">{row.grossNex.toLocaleString()} NEX</span></div><p className="mt-1 break-all text-[10px] text-slate-500">Sender {row.senderId} · Creator {row.creatorId}</p><p className="mt-1 text-[10px] text-slate-400">{row.reasons.join(' · ')}</p><textarea value={reviewNotes[row.id]||''} onChange={e=>setReviewNotes(prev=>({...prev,[row.id]:e.target.value}))} placeholder="Required review note (8–500 characters)" className="mt-2 min-h-16 w-full rounded-lg border border-white/10 bg-[#15102a] p-2 text-[10px] text-white"/><div className="mt-2 flex gap-2"><button type="button" disabled={(reviewNotes[row.id]||'').trim().length<8} onClick={()=>void review(row.id,'cleared')} className="rounded-lg border border-emerald-300/20 px-3 py-2 text-[10px] font-bold text-emerald-200 disabled:opacity-40">Clear signal</button><button type="button" disabled={(reviewNotes[row.id]||'').trim().length<8} onClick={()=>void review(row.id,'escalated')} className="rounded-lg border border-amber-300/20 px-3 py-2 text-[10px] font-bold text-amber-200 disabled:opacity-40">Escalate</button></div></article>)}</div>}
    <p className="mt-3 flex items-start gap-2 text-[10px] leading-5 text-slate-500"><ShieldCheck size={13} className="mt-0.5 shrink-0"/> Risk scores prioritize human review. They do not automatically accuse users, reverse gifts or seize balances.</p>
+  </div>
+  <div className="rounded-xl border border-white/10 p-4">
+   <h4 className="text-sm font-bold text-white">Paystack transfer OTP approvals</h4>
+   <p className="mt-1 text-[10px] leading-5 text-slate-500">If the Paystack business integration requires OTP approval, the code is delivered to the business owner's registered contact. Enter it only here after re-authenticating. OTPs are not stored or audit-logged.</p>
+   {otpRecords.length===0?<p className="mt-3 text-xs text-slate-500">No transfers are waiting for provider OTP approval.</p>:<div className="mt-3 space-y-3">{otpRecords.map(row=><article key={row.reference} className="rounded-xl bg-white/[.03] p-3">
+    <p className="text-xs font-bold text-white">₦{(row.amountKobo/100).toLocaleString('en-NG',{minimumFractionDigits:2})} · {row.amountNex.toLocaleString()} NEX</p>
+    <p className="mt-1 break-all text-[10px] text-slate-500">{row.reference} · Creator {row.creatorId}</p>
+    <div className="mt-2 flex gap-2"><input type="password" inputMode="numeric" maxLength={8} value={otpValues[row.reference]||''} onChange={e=>setOtpValues(prev=>({...prev,[row.reference]:e.target.value.replace(/\D/g,'').slice(0,8)}))} placeholder="Provider OTP" className="min-h-10 min-w-0 flex-1 rounded-lg border border-white/10 bg-[#15102a] px-3 text-xs text-white"/><button type="button" disabled={saving||!/^\d{4,8}$/.test(otpValues[row.reference]||'')} onClick={()=>void finalizeOtp(row.reference)} className="rounded-lg bg-violet-600 px-3 text-[10px] font-bold text-white disabled:opacity-40">Finalize</button></div>
+   </article>)}</div>}
   </div>
   <div className="rounded-xl border border-white/10 p-4">
    <h4 className="text-sm font-bold text-white">Paystack NGN payout policy</h4>
