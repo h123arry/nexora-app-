@@ -1056,17 +1056,10 @@ export default function NotificationsView({
             disabled={loadingMore}
             className="px-6 py-2.5 rounded-2xl bg-black/40 border border-white/10 hover:border-white/10 text-violet-300 hover:text-white text-xs font-mono font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
           >
-            {loadingMore ? (
-              <>
-                <NexoraLoader size="sm" />
-                <span>Synchronizing older index layers...</span>
-              </>
-            ) : (
-              <>
-                <ChevronDown className="w-4 h-4 animate-bounce" />
-                <span>Load More Older Indices</span>
-              </>
-            )}
+            <>
+              <ChevronDown className="w-4 h-4" />
+              <span>Show More Notifications</span>
+            </>
           </button>
         </div>
       )}
