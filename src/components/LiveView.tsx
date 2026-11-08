@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
-import { AlertCircle, Eye, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
+import { AlertCircle, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
 import GiftLiveOverlay from './GiftLiveOverlay';
 import { User } from '../types';
 import { db } from '../lib/firebase';
@@ -49,9 +49,11 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     if(!selectedId) { setSession(null);setMessages([]);return; }
     const sessionRef=doc(db,'liveSessions',selectedId);
     const stopSession=onSnapshot(sessionRef,snapshot=>{
-      if(!snapshot.exists()) { setSession(null);return; }
-      setSession({id:snapshot.id,...snapshot.data()} as LiveSessionSummary);
-    },()=>setError('This live room could not be loaded.'));
+      if(!snapshot.exists()) { setSession(null);setSelectedId(null);setIsHost(false);return; }
+      const data={id:snapshot.id,...snapshot.data()} as LiveSessionSummary;
+      setSession(data);
+      if(data.status!=='live') { setSelectedId(null);setIsHost(false); }
+    },()=>{setError('This live room is unavailable or has ended.');setSelectedId(null);setIsHost(false);});
     const messagesQuery=query(collection(db,'liveSessions',selectedId,'messages'),orderBy('createdAt','asc'),limit(50));
     const stopMessages=onSnapshot(messagesQuery,snapshot=>{
       setMessages(snapshot.docs.map(item=>({id:item.id,...item.data()} as LiveChatMessage)));
