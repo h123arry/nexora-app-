@@ -113,7 +113,7 @@ export class ChatEngine {
           message: message.slice(0, 4000),
           history: history.slice(-24).map(item => ({ sender: item.sender, text: item.text.slice(0, 4000) })),
           context: {
-            currentUser,
+            // The server loads the authoritative private profile using the verified Firebase UID.
             posts: visiblePosts.slice(0, 10).map(post => ({
               id: post.id,
               username: post.username,
