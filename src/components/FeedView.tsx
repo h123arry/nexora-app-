@@ -21,6 +21,7 @@ import { normalizeFeedPreferences, resetFeedPreferences } from '../services/disc
 import { auth } from '../services/firebase/config';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
+import { getDevicePerformanceProfile } from '../utils/devicePerformance';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
@@ -1684,25 +1685,24 @@ export default function FeedView({
   const [isConnectionSlow, setIsConnectionSlow] = useState(() => {
     if (typeof navigator === 'undefined') return false;
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    const memory = (navigator as any).deviceMemory;
-    const lowMemory = typeof memory === 'number' && Number.isFinite(memory) && memory > 0 && memory <= 2;
-    const cores = navigator.hardwareConcurrency;
-    const lowCoreCount = typeof cores === 'number' && cores > 0 && cores <= 4;
-    return Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType) || lowMemory || lowCoreCount);
+    return Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType));
+  });
+  const [isConstrainedDevice] = useState(() => {
+    if (typeof navigator === 'undefined') return false;
+    return getDevicePerformanceProfile({
+      deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+      hardwareConcurrency: navigator.hardwareConcurrency,
+    }).constrained;
   });
 
-  // Re-evaluate media preparation when the network changes. Low-resource
-  // devices also use metadata-only preparation to avoid competing with playback.
+  // Network Information can change while the feed is open (for example,
+  // switching between Wi-Fi and mobile data). Keep preload decisions current.
   useEffect(() => {
     if (typeof navigator === 'undefined') return;
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
     const updateConnectionQuality = () => {
-      const memory = (navigator as any).deviceMemory;
-      const lowMemory = typeof memory === 'number' && Number.isFinite(memory) && memory > 0 && memory <= 2;
-      const cores = navigator.hardwareConcurrency;
-      const lowCoreCount = typeof cores === 'number' && cores > 0 && cores <= 4;
       setIsConnectionSlow(Boolean(
-        connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType) || lowMemory || lowCoreCount,
+        connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType),
       ));
     };
     updateConnectionQuality();
@@ -1741,7 +1741,7 @@ export default function FeedView({
     return () => {
       observer.disconnect();
     };
-  }, [currentDisplayList.length]);
+  }, [currentDisplayList]);
 
   // Settle detector (stops predictive loading to save bandwidth if paused on a post)
   useEffect(() => {
@@ -2314,7 +2314,7 @@ export default function FeedView({
             postVideoIndex,
             activeVideoIndex,
             isSlowConnection: isConnectionSlow,
-            isConstrainedDevice: isConnectionSlow,
+            isConstrainedDevice,
             isOffline,
           });
           const { shouldPreload, isReleased, preloadMode } = preloadPlan;
