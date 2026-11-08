@@ -65,7 +65,7 @@ export class VoiceEngine {
     return rec;
   }
 
-  static async uploadVoice(audioBase64: string, mimeType = 'audio/webm'): Promise<{ transcription: string; replyText: string; isDemo: boolean }> {
+  static async uploadVoice(audioBase64: string, mimeType = 'audio/webm'): Promise<{ transcription: string }> {
     const response = await authenticatedVohFetch('/api/voh-ai/voice-transcribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
