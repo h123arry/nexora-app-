@@ -16,7 +16,6 @@ interface FeedPostCardProps {
   post: Post;
   index: number;
   isActive: boolean;
-  playingVoiceId: string | null;
   activeCommentsPostId: string | null;
   followingIds: string[];
   pinnedPostIds: string[];
@@ -46,8 +45,6 @@ interface FeedPostCardProps {
   setMutedCreatorIds: React.Dispatch<React.SetStateAction<string[]>>;
   handlePublishScheduledPostNow: (postId: string) => void;
   handleBroadcastReaction: (postId: string, emoji: string) => void;
-  setPlayingVoiceId: (id: string | null) => void;
-  voiceSeconds: number;
   votedPolls: Record<string, string>;
   setVotedPolls: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   selectedTag: string | null;
@@ -70,7 +67,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   post,
   index,
   isActive,
-  playingVoiceId,
   activeCommentsPostId,
   followingIds,
   pinnedPostIds,
@@ -99,8 +95,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   setMutedCreatorIds,
   handlePublishScheduledPostNow,
   handleBroadcastReaction,
-  setPlayingVoiceId,
-  voiceSeconds,
   votedPolls,
   setVotedPolls,
   selectedTag,
@@ -118,7 +112,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   expandedPostIds,
   setExpandedPostIds
 }) => {
-  const isPlaying = playingVoiceId === post.id;
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
   const hasMediaCaptionOverlay = Boolean(post.videoUrl || ((post.image || (post.images && post.images.length > 0)) && !post.opportunityType));
@@ -587,54 +580,27 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
         </div>
       ) : null}
 
-      {/* Voice Broadcast Player */}
+      {/* Voice posts play only the audio asset actually uploaded with the post. */}
       {post.isVoice && (
         <div className="px-4 sm:px-6 mb-4">
-          <div className="p-4 rounded-2xl bg-[#070518] border border-white/10 flex items-center gap-3">
-            <button
-              onClick={() => {
-                if (isPlaying) {
-                  setPlayingVoiceId(null);
-                } else {
-                  setPlayingVoiceId(post.id);
-                }
-              }}
-              className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform active:scale-90 cursor-pointer ${
-                isPlaying ? 'bg-gradient-to-r from-violet-600 to-indigo-700 text-white' : 'bg-violet-500/20 text-violet-300'
-              }`}
-            >
-              {isPlaying ? <Pause className="w-4 h-4 text-white" /> : <Play className="w-4 h-4 text-violet-300 ml-0.5" />}
-            </button>
-            <div className="flex-1 min-w-0">
-              <div className="flex justify-between items-center text-[10px] font-mono mb-1.5">
-                <span className="text-violet-300 font-extrabold flex items-center gap-1">
-                  <Volume2 className="w-3.5 h-3.5 text-violet-300 animate-pulse" />
-                  VOICE POST
-                </span>
-                <span className="text-violet-400">
-                  {isPlaying ? `0:${voiceSeconds.toString().padStart(2, '0')}` : '0:00'} / {post.voiceDuration || '0:45'}
-                </span>
-              </div>
-              <div className="flex items-end gap-[2px] h-5.5">
-                {[...Array(20)].map((_, idx) => (
-                  <div
-                    key={idx}
-                    className={`w-[2.5px] rounded-full transition-all duration-300 ${
-                      isPlaying ? 'bg-gradient-to-t from-violet-500 via-violet-300 to-indigo-300' : 'bg-violet-500/20'
-                    }`}
-                    style={{
-                      height: isPlaying ? `${Math.floor(20 + Math.sin(idx * 1.5 + voiceSeconds) * 60 + Math.random() * 20)}%` : '15%'
-                    }}
-                  />
-                ))}
-              </div>
-              {post.voiceTranscript && (
-                <div className="mt-3 bg-violet-950/30 p-2.5 rounded-xl border border-white/10">
-                  <span className="text-[8.5px] font-mono text-violet-400 block uppercase font-bold tracking-widest mb-0.5">Captions Preview</span>
-                  <p className="text-xs font-sans text-violet-300 italic">"{post.voiceTranscript}"</p>
-                </div>
-              )}
+          <div className="p-4 rounded-2xl bg-[#070518] border border-white/10 space-y-3">
+            <div className="flex items-center gap-2 text-[10px] font-mono font-extrabold text-violet-300">
+              <Volume2 className="w-3.5 h-3.5" />
+              VOICE POST
             </div>
+            {post.voiceAudioUrl ? (
+              <audio controls preload="none" src={post.voiceAudioUrl} className="w-full" aria-label="Play voice post">
+                Your browser does not support audio playback.
+              </audio>
+            ) : (
+              <p className="text-xs text-amber-200/80">Audio file unavailable. This post has no playable voice recording.</p>
+            )}
+            {post.voiceTranscript && (
+              <div className="bg-violet-950/30 p-2.5 rounded-xl border border-white/10">
+                <span className="text-[8.5px] font-mono text-violet-400 block uppercase font-bold tracking-widest mb-0.5">Transcript</span>
+                <p className="text-xs font-sans text-violet-300 italic">{post.voiceTranscript}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -841,10 +807,6 @@ export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
   const isCommentsActive = next.activeCommentsPostId === next.post.id;
   if (wasCommentsActive !== isCommentsActive) return false;
 
-  const wasVoiceActive = prev.playingVoiceId === prev.post.id;
-  const isVoiceActive = next.playingVoiceId === next.post.id;
-  if (wasVoiceActive !== isVoiceActive) return false;
-  if (isVoiceActive && prev.voiceSeconds !== next.voiceSeconds) return false;
 
   const wasExpanded = prev.expandedPostIds.includes(prev.post.id);
   const isExpanded = next.expandedPostIds.includes(next.post.id);
