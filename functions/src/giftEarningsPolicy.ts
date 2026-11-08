@@ -24,3 +24,21 @@ export function calculateGiftRevenueSplit(grossNex: unknown): GiftRevenueSplit {
   }
   return { grossNex: gross, creatorShareNex, platformShareNex, policyVersion: GIFT_REVENUE_POLICY_VERSION };
 }
+
+export interface GiftRiskSettlementSignal {
+  tier?: unknown;
+  disposition?: unknown;
+}
+
+/**
+ * Low-risk gifts may settle automatically after deterministic risk scoring.
+ * Review/high-risk gifts require an explicit finance clearance. Escalated
+ * gifts remain blocked. Missing signals are legacy records and retain the
+ * existing finance-only manual settlement path.
+ */
+export function isGiftRiskClearedForSettlement(signal: GiftRiskSettlementSignal | null): boolean {
+  if (!signal) return true;
+  if (signal.disposition === 'escalated') return false;
+  if (signal.tier === 'low' && signal.disposition === 'auto_cleared') return true;
+  return signal.disposition === 'cleared';
+}
