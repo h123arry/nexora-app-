@@ -70,7 +70,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
   let ngnBalanceKobo: number | null = null;
   if (mode !== 'unknown') {
     try {
-      const balances = await paystack('/balance?currency=NGN', 'GET');
+      const balances = await paystack('/balance', 'GET');
       credentialsVerified = true;
       const ngn = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN') : null;
       ngnBalanceKobo = Number.isSafeInteger(ngn?.balance) ? ngn.balance : null;
@@ -96,7 +96,7 @@ export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_K
   let credentialsVerified = false;
   let ngnBalanceKobo: number | null = null;
   try {
-    const balances = await paystack('/balance?currency=NGN', 'GET');
+    const balances = await paystack('/balance', 'GET');
     credentialsVerified = true;
     const ngn = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN') : null;
     ngnBalanceKobo = Number.isSafeInteger(ngn?.balance) ? ngn.balance : null;
@@ -199,7 +199,7 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY, 
   }
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   if (enabled && mode !== 'unknown') {
-    try { await paystack('/balance?currency=NGN', 'GET'); }
+    try { await paystack('/balance', 'GET'); }
     catch { throw new HttpsError('failed-precondition', 'Paystack credentials could not be authenticated. Verify the environment key before enabling payouts.'); }
   }
   if (enabled && mode === 'unknown') throw new HttpsError('failed-precondition', 'A valid Paystack secret is required before enabling transfers.');
@@ -339,7 +339,7 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
   ]);
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   let credentialsVerified = false;
-  if (mode !== 'unknown') { try { await paystack('/balance?currency=NGN', 'GET'); credentialsVerified = true; } catch { credentialsVerified = false; } }
+  if (mode !== 'unknown') { try { await paystack('/balance', 'GET'); credentialsVerified = true; } catch { credentialsVerified = false; } }
   const b = beneficiary.data() || {};
   const complianceData = compliance.data() || {};
   const complianceStatus = complianceData.beneficiaryRef === b.providerBeneficiaryRef ? complianceData.status : 'pending';
@@ -506,7 +506,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   try { amountKobo = calculateNgnPayoutKobo(amountNex, policy.koboPerNex); }
   catch { throw new HttpsError('failed-precondition', 'The approved NGN conversion amount is invalid.'); }
   try {
-    const balances = await paystack('/balance?currency=NGN', 'GET');
+    const balances = await paystack('/balance', 'GET');
     if (mode === 'live') {
       const ngnBalance = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN')?.balance : undefined;
       if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo + Number(policy.providerFeeBufferKobo || 0)) {
