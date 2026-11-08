@@ -88,6 +88,9 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
     if (!room || !isHost) return;
     try {
       await room.localParticipant.setCameraEnabled(!cameraOn);
+      const publications = room.localParticipant.videoTrackPublications;
+      const publication = publications ? Array.from(publications.values()).find((item: any) => item.track) as any : null;
+      if (publication?.track && localRef.current) publication.track.attach(localRef.current);
       setCameraOn(value => !value);
     } catch { setError('Camera permission or device access was denied.'); }
   };
