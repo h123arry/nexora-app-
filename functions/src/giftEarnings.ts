@@ -3,7 +3,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
-import { calculateGiftRevenueSplit, CREATOR_REVENUE_SHARE_BPS, PLATFORM_REVENUE_SHARE_BPS, GIFT_REVENUE_POLICY_VERSION } from './giftEarningsPolicy.js';
+import { calculateGiftRevenueSplit, CREATOR_REVENUE_SHARE_BPS, PLATFORM_REVENUE_SHARE_BPS, GIFT_REVENUE_POLICY_VERSION, isGiftRiskClearedForSettlement } from './giftEarningsPolicy.js';
 import { CREATOR_EARNINGS_PAGE_SIZE, validateCreatorEarningsCursor } from './creatorEarningsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -121,14 +121,21 @@ export const settleGiftCreatorEarning = onCall({ maxInstances: 5 }, async (reque
         throw new HttpsError('failed-precondition', 'The creator earning record is invalid.');
       }
       const creatorRef = db.collection('nexWallets').doc(creatorId);
-      const [priorSettlement, escrowSnapshot, creatorSnapshot, platformSnapshot] = await Promise.all([
-        tx.get(settlementRef), tx.get(escrowRef), tx.get(creatorRef), tx.get(platformWalletRef),
+      const riskSignalRef = db.collection('giftRiskSignals').doc(transactionId);
+      const [priorSettlement, escrowSnapshot, creatorSnapshot, platformSnapshot, riskSignalSnapshot] = await Promise.all([
+        tx.get(settlementRef), tx.get(escrowRef), tx.get(creatorRef), tx.get(platformWalletRef), tx.get(riskSignalRef),
       ]);
       if (priorSettlement.exists || earning.status === 'available') {
         return { settlementId, replayed: true, status: 'available' as const };
       }
       if (earning.status !== 'pending_review') {
         throw new HttpsError('failed-precondition', 'Only pending-review gift earnings can be settled.');
+      }
+      const riskSignal = riskSignalSnapshot.exists ? riskSignalSnapshot.data() || {} : null;
+      if (!isGiftRiskClearedForSettlement(riskSignal)) {
+        throw new HttpsError('failed-precondition', riskSignal?.disposition === 'escalated'
+          ? 'This gift was escalated and cannot be settled.'
+          : 'Finance must clear this gift risk review before settlement.');
       }
       const split = calculateGiftRevenueSplit(earning.grossNex);
       const escrowBalance = safeBalance(escrowSnapshot.data()?.availableBalance);
