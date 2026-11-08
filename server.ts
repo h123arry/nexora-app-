@@ -420,7 +420,10 @@ vohRouter.post('/chat', async (req, res) => {
       text: clipText(item?.text, 4000),
     })) : [];
     const [accountContext, personalMemoryPrompt] = await Promise.all([
-      getAuthenticatedVohAccountContext(res.locals.vohUid),
+      getAuthenticatedVohAccountContext(res.locals.vohUid).catch(error => {
+        console.error('VOH account context unavailable:', error instanceof Error ? error.name : 'unknown');
+        return null;
+      }),
       getVohMemoryPrompt(res.locals.vohUid),
     ]);
     const context = shapeVohContext({ ...(req.body?.context || {}), currentUser: accountContext }, res.locals.vohUid);
