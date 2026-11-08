@@ -247,6 +247,8 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
   useEffect(() => {
     let cancelled = false;
+    setMemoryHydrated(false);
+    setMemoryProfile(MemoryEngine.getMemory());
     void MemoryEngine.loadFromCloud().then(cloudMemory => {
       if (cancelled) return;
       if (cloudMemory) setMemoryProfile(cloudMemory);
