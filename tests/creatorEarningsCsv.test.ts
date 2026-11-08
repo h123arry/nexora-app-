@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildCreatorEarningsCsv } from '../creatorEarningsCsv.ts';
+import { buildCreatorEarningsCsv } from '../src/utils/creatorEarningsCsv.ts';
 
 const record = (giftName: string) => ({ id: 'gift_1', giftId: 'rose', giftName, quantity: 2, grossNex: 100, creatorShareNex: 70, platformShareNex: 30, status: 'available', createdAt: '2026-11-08T00:00:00.000Z', settledAt: null });
 
