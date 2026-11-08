@@ -405,7 +405,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       setVoiceTimer(0);
       timerRef.current = setInterval(() => {
         setVoiceTimer(prev => prev + 1);
-        setWaveformNodes(prev => prev.map(() => Math.floor(Math.random() * 45) + 10));
+        
       }, 100);
 
     } catch (err) {
@@ -760,7 +760,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
       {/* Main navigation toolbar */}
       <div className="flex flex-wrap border-b border-current/5 gap-1.5 pb-2">
-        {(['chat', 'voice', 'assistants', 'engines', 'search', 'ecosystem', 'moderation', 'settings'] as const).map((view) => (
+        {(['chat', 'voice', 'assistants', 'search', 'ecosystem', 'moderation', 'settings'] as const).map((view) => (
           <button
             key={view}
             onClick={() => {
