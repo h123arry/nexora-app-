@@ -1490,22 +1490,22 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
               
               {/* Left Column: Direct Metrics dashboard (NOT fake) */}
               <div className="md:col-span-4 bg-[#03010b] border border-white/10 rounded-3xl p-5 space-y-5">
-                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">ON-CHAIN MONETIZATION</span>
+                <span className="text-[10px] font-sans font-black tracking-widest text-violet-400 uppercase block">CREATOR ECONOMY</span>
                 
                 <div className="space-y-4">
                   <div className="bg-white/2 border border-white/5 rounded-2xl p-4 text-center space-y-1">
-                    <span className="text-[9px] text-current/40 uppercase">Real NEX Wallet Balance</span>
-                    <h3 className="text-2xl font-black font-sans text-violet-300">{(currentUser.nexBalance || 0).toLocaleString()} NEX</h3>
+                    <span className="text-[9px] text-current/40 uppercase">NEX balance in loaded account profile</span>
+                    <h3 className="text-2xl font-black font-sans text-violet-300">{typeof currentUser.nexBalance === 'number' && Number.isFinite(currentUser.nexBalance) ? currentUser.nexBalance.toLocaleString() + ' NEX' : 'Not available'}</h3>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2">
                     <div className="bg-white/2 border border-white/5 rounded-xl p-3 text-center">
-                      <span className="text-[8px] text-current/40 block">This week earned</span>
-                      <span className="text-sm font-black text-white">{(currentUser.thisWeekEarnedNex || 0).toLocaleString()}</span>
+                      <span className="text-[8px] text-current/40 block">Earned this week (loaded profile)</span>
+                      <span className="text-sm font-black text-white">{typeof currentUser.thisWeekEarnedNex === 'number' && Number.isFinite(currentUser.thisWeekEarnedNex) ? currentUser.thisWeekEarnedNex.toLocaleString() : 'Not available'}</span>
                     </div>
                     <div className="bg-white/2 border border-white/5 rounded-xl p-3 text-center">
-                      <span className="text-[8px] text-current/40 block">Pending Rewards</span>
-                      <span className="text-sm font-black text-white">{(currentUser.pendingNex || 0).toLocaleString()}</span>
+                      <span className="text-[8px] text-current/40 block">Pending NEX (loaded profile)</span>
+                      <span className="text-sm font-black text-white">{typeof currentUser.pendingNex === 'number' && Number.isFinite(currentUser.pendingNex) ? currentUser.pendingNex.toLocaleString() : 'Not available'}</span>
                     </div>
                   </div>
 
