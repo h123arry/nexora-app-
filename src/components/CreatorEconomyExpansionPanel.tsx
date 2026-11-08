@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, BarChart3, CalendarDays, Globe2, RefreshCw, ShieldCheck, Trophy, Wallet } from 'lucide-react';
-import { getActiveGiftCompetitions, getCreatorGiftAnalytics, getCreatorPayoutReadiness, getGiftCompetitionLeaderboard, setCreatorEconomyDisplayCurrency, type CreatorGiftAnalytics, type CreatorPayoutReadiness, type GiftCompetition } from '../services/giftEconomyService';
+import { getActiveGiftCompetitions, getCreatorGiftAnalytics, getCreatorPayoutReadiness, getGiftCompetitionLeaderboard, setCreatorEconomyDisplayCurrency, getNgnBanks, resolveNgnBankAccount, setCreatorPayoutBeneficiary, requestCreatorPayout, type NgnBank, type CreatorGiftAnalytics, type CreatorPayoutReadiness, type GiftCompetition } from '../services/giftEconomyService';
 
 const currencies = ['NGN','USD','GBP','EUR','GHS','KES','ZAR','CAD','AUD'];
 const number = (value:number) => Number.isSafeInteger(value) && value >= 0 ? value.toLocaleString() : '—';
@@ -15,6 +15,14 @@ export default function CreatorEconomyExpansionPanel() {
   const [saving,setSaving] = useState(false);
   const [error,setError] = useState('');
   const [message,setMessage] = useState('');
+  const [banks,setBanks] = useState<NgnBank[]>([]);
+  const [bankCode,setBankCode] = useState('');
+  const [accountNumber,setAccountNumber] = useState('');
+  const [resolvedAccountName,setResolvedAccountName] = useState('');
+  const [bankBusy,setBankBusy] = useState(false);
+  const [amountNex,setAmountNex] = useState('');
+  const [payoutBusy,setPayoutBusy] = useState(false);
+  const [payoutMessage,setPayoutMessage] = useState('');
   const refresh = useCallback(async()=>{
     setLoading(true);setError('');
     try {
@@ -27,11 +35,32 @@ export default function CreatorEconomyExpansionPanel() {
     finally {setLoading(false);}
   },[]);
   useEffect(()=>{void refresh();},[refresh]);
+  useEffect(()=>{void getNgnBanks().then(items=>{setBanks(items);if(items[0])setBankCode(items[0].code);}).catch(()=>{});},[]);
   const changeCompetition=async(id:string)=>{
     setSelected(id);setLeaderboard([]);
     if(!id)return;
     try{const board=await getGiftCompetitionLeaderboard(id);setLeaderboard(board.leaderboard);}
     catch{setError('The competition leaderboard is temporarily unavailable.');}
+  };
+  const resolveBank=async()=>{
+    setBankBusy(true);setError('');setResolvedAccountName('');
+    try{const result=await resolveNgnBankAccount(accountNumber,bankCode);setResolvedAccountName(result.accountName);}
+    catch{setError('Paystack could not verify that account. Check the bank and 10-digit account number.');}
+    finally{setBankBusy(false);}
+  };
+  const saveBeneficiary=async()=>{
+    setBankBusy(true);setError('');
+    try{const result=await setCreatorPayoutBeneficiary(accountNumber,bankCode,resolvedAccountName);setPayoutMessage('Verified bank account saved: '+result.accountName+' •••• '+result.accountNumberLast4+'.');setResolvedAccountName('');setAccountNumber('');await refresh();}
+    catch{setError('The verified bank account could not be saved. Please retry.');}
+    finally{setBankBusy(false);}
+  };
+  const submitWithdrawal=async()=>{
+    const amount=Number(amountNex);
+    if(!Number.isSafeInteger(amount)||amount<=0){setError('Enter a whole-number NEX withdrawal amount.');return;}
+    setPayoutBusy(true);setError('');setPayoutMessage('');
+    try{const result=await requestCreatorPayout(amount,crypto.randomUUID());setPayoutMessage((payout?.providerMode==='test'?'Sandbox transfer ': 'Paystack transfer ')+result.status.replaceAll('_',' ')+'. Reference: '+result.reference+'. '+(result.status==='submission_unknown'?'Your NEX remains reserved while Paystack is checked.':result.status==='success'&&payout?.providerMode==='live'?'Paystack reports the transfer processed; the receiving bank may take additional time to post the credit.':payout?.providerMode==='test'?'This is a simulated test transfer, not a real bank payment.':''));setAmountNex('');await refresh();}
+    catch{setError('The withdrawal could not be submitted. Your NEX balance was not changed unless a request was confirmed.');}
+    finally{setPayoutBusy(false);}
   };
   const saveCurrency=async()=>{
     setSaving(true);setError('');setMessage('');
@@ -59,11 +88,31 @@ export default function CreatorEconomyExpansionPanel() {
       <p className="mt-1 text-xs text-slate-400">Choose how future financial summaries are labelled. This does not convert NEX or create an exchange rate.</p>
       <div className="mt-3 flex flex-wrap gap-2"><select value={currency} onChange={e=>setCurrency(e.target.value)} className="min-h-10 rounded-xl border border-white/10 bg-[#15102a] px-3 text-sm text-white">{currencies.map(code=><option key={code} value={code}>{code}</option>)}</select><button type="button" onClick={()=>void saveCurrency()} disabled={saving||loading} className="min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-50">{saving?'Saving…':'Save preference'}</button></div>
     </div>
-    <div className="rounded-2xl border border-white/10 bg-[#0a071f]/75 p-4">
-      <div className="flex items-center gap-2 text-sm font-bold text-white"><Wallet size={16} className="text-violet-300"/> Nigerian payout readiness</div>
-      <div className="mt-3 flex flex-wrap gap-2 text-[10px]"><span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-amber-200">Provider not connected</span><span className="rounded-full border border-white/10 px-3 py-1 text-slate-400">NGN corridor · Nigeria</span><span className="rounded-full border border-white/10 px-3 py-1 text-slate-400">Beneficiary: {payout?.beneficiaryStatus||'checking'}</span></div>
-      <p className="mt-3 text-xs leading-5 text-slate-400">Bank withdrawals remain disabled until a real payout provider, verified beneficiary token, approved NEX/NGN pricing and settlement funding are configured. No NEX is reserved or debited by this status screen.</p>
-      <p className="mt-2 text-[10px] text-slate-500">Status: {payout?.blocker||'checking'} · Cash withdrawals: disabled</p>
+    <div className="rounded-2xl border border-violet-400/20 bg-[#0a071f]/75 p-4">
+      <div className="flex items-center gap-2 text-sm font-bold text-white"><Wallet size={16} className="text-violet-300"/> Nigerian bank withdrawals</div>
+      <div className="mt-3 flex flex-wrap gap-2 text-[10px]">
+        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Provider: {payout?.providerConfigured?'Paystack connected':'Not connected'}</span>
+        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Mode: {(payout?.providerMode||'checking').toUpperCase()}</span>
+        <span className="rounded-full border border-white/10 px-3 py-1 text-slate-300">Beneficiary: {payout?.beneficiaryStatus||'checking'}</span>
+      </div>
+      {payout?.providerMode==='test'&&<p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-400/10 p-3 text-xs text-amber-100">Paystack test mode is connected. Test transfers do not send real money and do not count as completed NGN withdrawals.</p>}
+      {payout?.providerMode==='live'&&!payout?.cashWithdrawalEnabled&&<p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-400/10 p-3 text-xs text-amber-100">Live credentials are present, but withdrawals remain locked until the rate, business approval, compliance, webhook and live-settlement checks are complete.</p>}
+      {payout?.beneficiary&&<p className="mt-3 text-xs text-slate-300">Saved account: <strong>{payout.beneficiary.accountName}</strong>, {payout.beneficiary.bankName}, ending {payout.beneficiary.accountNumberLast4}</p>}
+      {payout?.beneficiary&&payout.complianceStatus!=='approved'&&<p className="mt-3 rounded-xl border border-amber-300/20 bg-amber-400/10 p-3 text-xs text-amber-100">Your bank account is provider-verified. Finance must still complete the creator identity and beneficiary review before withdrawals can be requested.</p>}
+      {!payout?.beneficiary&&<div className="mt-4 space-y-2">
+        <p className="text-xs text-slate-400">Add a Nigerian bank account. NEXORA asks Paystack to resolve the account name before registering it. Your full account number is not stored in NEXORA.</p>
+        <select value={bankCode} onChange={e=>{setBankCode(e.target.value);setResolvedAccountName('');}} className="min-h-11 w-full rounded-xl border border-white/10 bg-[#15102a] px-3 text-sm text-white"><option value="">Choose bank</option>{banks.map(bank=><option key={bank.code} value={bank.code}>{bank.name}</option>)}</select>
+        <input inputMode="numeric" maxLength={10} value={accountNumber} onChange={e=>{setAccountNumber(e.target.value.replace(/\D/g,'').slice(0,10));setResolvedAccountName('');}} placeholder="10-digit account number" className="min-h-11 w-full rounded-xl border border-white/10 bg-[#15102a] px-3 text-sm text-white placeholder:text-slate-500"/>
+        {!resolvedAccountName?<button type="button" onClick={()=>void resolveBank()} disabled={bankBusy||accountNumber.length!==10||!bankCode} className="min-h-11 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-50">{bankBusy?'Checking…':'Verify bank account'}</button>:<div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3"><p className="text-xs text-emerald-100">Paystack verified account name</p><p className="mt-1 text-sm font-bold text-white">{resolvedAccountName}</p><button type="button" onClick={()=>void saveBeneficiary()} disabled={bankBusy} className="mt-3 min-h-10 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-50">{bankBusy?'Saving…':'Confirm and save this account'}</button></div>}
+      </div>}
+      {(payout?.payoutEnabled||payout?.testModeAvailable)&&payout?.beneficiary&&<div className="mt-4 border-t border-white/10 pt-4">
+        <p className="text-xs text-slate-400">Approved rate: {payout.koboPerNex??'—'} kobo per NEX · Provider fee reserve: {payout.providerFeeBufferKobo??'—'} kobo · Limits: {number(payout.minimumNex??0)} to {number(payout.maximumNex??0)} NEX</p>
+        <input inputMode="numeric" value={amountNex} onChange={e=>setAmountNex(e.target.value.replace(/\D/g,''))} placeholder="Amount in NEX" className="mt-3 min-h-11 w-full rounded-xl border border-white/10 bg-[#15102a] px-3 text-sm text-white placeholder:text-slate-500"/>
+        {Number(amountNex)>0&&payout.koboPerNex&&<p className="mt-2 text-xs text-slate-300">Estimated transfer: ₦{(Number(amountNex)*payout.koboPerNex/100).toLocaleString('en-NG',{minimumFractionDigits:2,maximumFractionDigits:2})}</p>}
+        <button type="button" onClick={()=>void submitWithdrawal()} disabled={payoutBusy||!Number.isSafeInteger(Number(amountNex))||Number(amountNex)<=0} className="mt-3 min-h-11 rounded-xl bg-violet-600 px-4 text-xs font-bold text-white disabled:opacity-50">{payoutBusy?'Submitting…':payout.providerMode==='test'?'Run sandbox withdrawal':'Request NGN withdrawal'}</button>
+      </div>}
+      <p className="mt-3 text-[10px] text-slate-500">Status: {payout?.blocker||'checking'} · Real bank withdrawals: {payout?.cashWithdrawalEnabled?'enabled':'disabled'}</p>
+      {payoutMessage&&<p role="status" className="mt-3 rounded-xl border border-violet-400/20 bg-violet-500/10 p-3 text-xs text-violet-100">{payoutMessage}</p>}
     </div>
     <div className="rounded-2xl border border-white/10 bg-[#0a071f]/75 p-4">
       <div className="flex items-center gap-2 text-sm font-bold text-white"><Trophy size={16} className="text-violet-300"/> GIFTVERSE live competitions</div>
