@@ -78,6 +78,9 @@ jobs:
       - name: Run repost integration tests
         run: npm run test:reposts
 
+      - name: Run post reply integration tests
+        run: npm run test:post-replies
+
       - name: Run authenticated API security tests
         run: npm run test:voh-security
 

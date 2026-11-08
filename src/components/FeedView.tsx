@@ -1238,7 +1238,7 @@ export default function FeedView({
     };
 
     window.dispatchEvent(new CustomEvent('nexora-add-reply', {
-      detail: { postId, commentId, replyContent: content }
+      detail: { postId, commentId, replyContent: content, replyId: typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `reply-${Date.now()}-${Math.random().toString(36).slice(2)}` }
     }));
 
     setReplyInputs(prev => ({ ...prev, [commentId]: '' }));

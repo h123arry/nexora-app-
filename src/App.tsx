@@ -1216,37 +1216,23 @@ export default function App() {
     };
 
     const handleAddReply = (e: Event) => {
-      const { postId, commentId, replyContent } = (e as CustomEvent).detail || {};
+      const { postId, commentId, replyContent, replyId } = (e as CustomEvent).detail || {};
       if (!postId || !commentId || !replyContent) return;
-      
-      const newReply = {
-        id: `reply-${Date.now()}`,
-        userId: currentUser.id,
-        username: currentUser.username,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        content: replyContent,
-        timestamp: new Date().toISOString()
-      };
-
-      setPosts(prev => {
-        const next = prev.map(p => {
-          if (p.id !== postId) return p;
-          const updatedPost = {
-            ...p,
-            comments: (p.comments || []).map(c => {
-              if (c.id !== commentId) return c;
-              return {
-                ...c,
-                replies: [...(c.replies || []), newReply]
-              };
-            })
-          };
-          savePostToDb(updatedPost);
-          return updatedPost;
+      void addPostCommentReply(postId, commentId, replyContent, replyId).then(reply => {
+        setPosts(previous => {
+          const next = previous.map(post => post.id !== postId ? post : ({
+            ...post,
+            comments: (post.comments || []).map(comment => comment.id !== commentId ? comment : ({
+              ...comment,
+              replies: [...(comment.replies || []).filter(existing => existing.id !== reply.id), reply],
+            })),
+          }));
+          localStorage.setItem('nexora_posts', JSON.stringify(next));
+          return next;
         });
-        localStorage.setItem('nexora_posts', JSON.stringify(next));
-        return next;
+      }).catch(error => {
+        const message = error instanceof Error ? error.message : 'Your reply could not be saved. Please try again.';
+        window.dispatchEvent(new CustomEvent('toast', { detail: message }));
       });
     };
 
