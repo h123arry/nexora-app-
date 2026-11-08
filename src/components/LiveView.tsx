@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { AlertCircle, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
 import GiftLiveOverlay from './GiftLiveOverlay';
+import LiveVideoStage from './LiveVideoStage';
 import { User } from '../types';
 import { db } from '../lib/firebase';
 import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, sendLiveChatMessage, startLiveSession, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
@@ -20,6 +21,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const [title,setTitle] = useState('');
   const [message,setMessage] = useState('');
   const [isHost,setIsHost] = useState(false);
+  const [joined,setJoined] = useState(false);
   const [loading,setLoading] = useState(false);
   const [sending,setSending] = useState(false);
   const [error,setError] = useState('');
@@ -47,15 +49,16 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   },[streamId]);
 
   useEffect(() => {
-    if(!selectedId) { setSession(null);setMessages([]);return; }
+    if(!selectedId) { setSession(null);setMessages([]);setJoined(false);return; }
+    setJoined(false);
     const sessionRef=doc(db,'liveSessions',selectedId);
     const stopSession=onSnapshot(sessionRef,snapshot=>{
-      if(!snapshot.exists()) { setSession(null);setSelectedId(null);setIsHost(false);return; }
+      if(!snapshot.exists()) { setSession(null);setSelectedId(null);setIsHost(false);setJoined(false);return; }
       const data={id:snapshot.id,...snapshot.data()} as LiveSessionSummary;
       setSession(data);
       setIsHost(data.hostId===currentUser.id);
-      if(data.status!=='live') { setSelectedId(null);setIsHost(false); }
-    },()=>{setError('This live room is unavailable or has ended.');setSelectedId(null);setIsHost(false);});
+      if(data.status!=='live') { setSelectedId(null);setIsHost(false);setJoined(false); }
+    },()=>{setError('This live room is unavailable or has ended.');setSelectedId(null);setIsHost(false);setJoined(false);});
     const messagesQuery=query(collection(db,'liveSessions',selectedId,'messages'),orderBy('createdAt','asc'),limit(50));
     const stopMessages=onSnapshot(messagesQuery,snapshot=>{
       setMessages(snapshot.docs.map(item=>({id:item.id,...item.data()} as LiveChatMessage)));
@@ -68,12 +71,14 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     let cancelled=false;
     let heartbeat: ReturnType<typeof setInterval> | null = null;
     if(isHost) {
+      setJoined(true);
       void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live room connection needs to be refreshed.'));
       heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live room connection needs to be refreshed.'));},30_000);
       return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);};
     }
     void joinLiveSession(selectedId,connectionId).then(()=>{
       if(cancelled) { void leaveLiveSession(selectedId,connectionId); return; }
+      setJoined(true);
       heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live connection needs to be refreshed.'));},30_000);
     }).catch(()=>setError('You could not join this live room.'));
     return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);void leaveLiveSession(selectedId,connectionId).catch(()=>undefined);};
@@ -95,7 +100,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const exitRoom=async()=>{
     if(!selectedId)return;
     const id=selectedId;setLoading(true);setError('');
-    try { if(isHost) await endLiveSession(id); else await leaveLiveSession(id,connectionId);setSelectedId(null);setIsHost(false);setGiftSoundsEnabled(false);return true; }
+    try { if(isHost) await endLiveSession(id); else await leaveLiveSession(id,connectionId);setSelectedId(null);setIsHost(false);setJoined(false);setGiftSoundsEnabled(false);return true; }
     catch {setError(isHost?'The live room could not be ended.':'You could not leave the live room cleanly.');return false;}
     finally{setLoading(false);}
   };
@@ -119,7 +124,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
           <div className="w-full max-w-xl space-y-5 p-6">
             <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-violet-400/20 bg-violet-500/10"><Radio size={34} className="text-violet-200"/></div>
             <div className="text-center"><p className="text-[10px] font-black uppercase tracking-[.25em] text-violet-300">NEXORA LIVE</p><h2 className="mt-2 text-2xl font-black">Live rooms</h2><p className="mt-2 text-sm text-slate-400">Join a creator's live chat or open your own room.</p></div>
-            <div className="rounded-2xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Live room sessions, viewer counts, gifts and chat are server-backed. Camera streaming transport is not configured yet, so this room does not claim to broadcast video.</div>
+            <div className="rounded-2xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Live rooms, viewer presence, chat and GIFTVERSE are server-backed. Live video connects when the secure transport provider is configured for this environment.</div>
             <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[.03] p-4">
               <h3 className="text-sm font-bold">Start a live room</h3>
               <input value={title} onChange={e=>setTitle(e.target.value)} maxLength={80} placeholder="What are you going live about?" className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm outline-none focus:border-violet-400/50"/>
@@ -130,16 +135,19 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
             </div>
           </div>
         ) : (
-          <div className="relative flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(91,33,182,.22),transparent_60%)] p-6 text-center">
-            <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-black tracking-wider"><span className="h-2 w-2 animate-pulse rounded-full bg-white"/> LIVE ROOM</div>
-            <div className="absolute right-4 top-4 flex items-center gap-3 rounded-full bg-black/50 px-3 py-1.5 text-xs"><Users size={14}/>{(session?.viewerCount||0).toLocaleString()} viewers</div>
-            <div className="max-w-lg"><Radio size={48} className="mx-auto text-violet-300"/><h2 className="mt-4 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'Your live room is open.':'You joined this live room.'}</p><p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Video transport is not configured. Your live chat and GIFTVERSE activity are connected to this room.</p></div>
+          <div className="relative h-full w-full overflow-hidden bg-[#05030f] text-center">
+            {selectedId && joined
+              ? <LiveVideoStage sessionId={selectedId} connectionId={connectionId} isHost={isHost} onError={setError}/>
+              : <div className="absolute inset-0 flex flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(91,33,182,.22),transparent_60%)]"><Loader2 size={34} className="animate-spin text-violet-300"/><p className="mt-3 text-sm font-bold text-white">Joining live room…</p></div>}
+            <div className="absolute left-4 top-4 z-30 flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-black tracking-wider"><span className="h-2 w-2 animate-pulse rounded-full bg-white"/> LIVE ROOM</div>
+            <div className="absolute right-4 top-4 z-30 flex items-center gap-3 rounded-full bg-black/60 px-3 py-1.5 text-xs"><Users size={14}/>{(session?.viewerCount||0).toLocaleString()} viewers</div>
+            <div className="absolute left-4 top-16 z-30 max-w-[70%] text-left"><h2 className="truncate text-lg font-black text-white">{session?.title||'Live room'}</h2><p className="mt-1 text-[10px] text-slate-300">{isHost?'You are hosting':'Watching live'}</p></div>
             {selectedId&&<GiftLiveOverlay streamId={selectedId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current}/>}
-            <div className="absolute bottom-5 left-5 flex items-center gap-2">
-              <button type="button" onClick={()=>{if(!giftAudioContext.current&&typeof window!=='undefined'&&window.AudioContext)giftAudioContext.current=new window.AudioContext();if(!giftSoundsEnabled)void giftAudioContext.current?.resume();setGiftSoundsEnabled(v=>!v);}} className="rounded-full border border-white/10 bg-black/50 p-3" aria-label={giftSoundsEnabled?'Mute gift sounds':'Enable gift sounds'}>{giftSoundsEnabled?<Volume2 size={18}/>:<VolumeX size={18}/>}</button>
-              <span className="rounded-full bg-black/40 px-3 py-2 text-[10px] text-slate-300"><Gift size={12} className="mr-1 inline"/> GIFTVERSE connected</span>
+            <div className="absolute bottom-5 left-5 z-30 flex items-center gap-2">
+              <button type="button" onClick={()=>{if(!giftAudioContext.current&&typeof window!=='undefined'&&window.AudioContext)giftAudioContext.current=new window.AudioContext();if(!giftSoundsEnabled)void giftAudioContext.current?.resume();setGiftSoundsEnabled(v=>!v);}} className="rounded-full border border-white/10 bg-black/60 p-3" aria-label={giftSoundsEnabled?'Mute gift sounds':'Enable gift sounds'}>{giftSoundsEnabled?<Volume2 size={18}/>:<VolumeX size={18}/>}</button>
+              <span className="rounded-full bg-black/50 px-3 py-2 text-[10px] text-slate-300"><Gift size={12} className="mr-1 inline"/> GIFTVERSE connected</span>
             </div>
-            <button type="button" onClick={()=>void exitRoom()} disabled={loading} className="absolute bottom-5 right-5 rounded-full bg-rose-600 px-5 py-3 text-xs font-black disabled:opacity-50">{loading?(isHost?'Ending…':'Leaving…'):(isHost?'End live room':'Leave room')}</button>
+            <button type="button" onClick={()=>void exitRoom()} disabled={loading} className="absolute bottom-5 right-5 z-30 rounded-full bg-rose-600 px-5 py-3 text-xs font-black disabled:opacity-50">{loading?(isHost?'Ending…':'Leaving…'):(isHost?'End live room':'Leave room')}</button>
           </div>
         )}
         <button type="button" onClick={()=>void closeView()} className="absolute right-4 top-16 rounded-full bg-black/60 p-2 text-white hover:bg-black/80" aria-label="Close live view"><X size={20}/></button>
