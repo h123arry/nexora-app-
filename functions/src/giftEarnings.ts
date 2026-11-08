@@ -4,6 +4,7 @@ import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
 import { calculateGiftRevenueSplit, CREATOR_REVENUE_SHARE_BPS, PLATFORM_REVENUE_SHARE_BPS, GIFT_REVENUE_POLICY_VERSION } from './giftEarningsPolicy.js';
+import { CREATOR_EARNINGS_PAGE_SIZE, validateCreatorEarningsCursor } from './creatorEarningsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const ESCROW_ACCOUNT = 'gift_escrow';
@@ -34,12 +35,22 @@ function iso(value: any): string | null {
 
 export const getCreatorEarningsSnapshot = onCall({ maxInstances: 10 }, async (request) => {
   const uid = requireUid(request);
+  let cursorId: string | undefined;
+  try { cursorId = validateCreatorEarningsCursor(request.data?.cursor); }
+  catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Earnings cursor is invalid.'); }
   try {
+    const earningsQuery = db.collection('creatorEarnings').where('creatorId', '==', uid).orderBy('createdAt', 'desc');
+    const cursorSnapshot = cursorId ? await db.collection('creatorEarnings').doc(cursorId).get() : null;
+    if (cursorSnapshot && (!cursorSnapshot.exists || cursorSnapshot.data()?.creatorId !== uid)) {
+      throw new HttpsError('not-found', 'The requested earnings page is unavailable.');
+    }
     const [earnings, wallet] = await Promise.all([
-      db.collection('creatorEarnings').where('creatorId', '==', uid).orderBy('createdAt', 'desc').limit(100).get(),
+      (cursorSnapshot ? earningsQuery.startAfter(cursorSnapshot) : earningsQuery).limit(CREATOR_EARNINGS_PAGE_SIZE + 1).get(),
       db.collection('nexWallets').doc(uid).get(),
     ]);
-    const records = earnings.docs.map(snapshot => {
+    const hasMoreEarnings = earnings.docs.length > CREATOR_EARNINGS_PAGE_SIZE;
+    const pageDocs = earnings.docs.slice(0, CREATOR_EARNINGS_PAGE_SIZE);
+    const records = pageDocs.map(snapshot => {
       const data = snapshot.data();
       return {
         id: snapshot.id,
@@ -64,8 +75,10 @@ export const getCreatorEarningsSnapshot = onCall({ maxInstances: 10 }, async (re
       policyVersion: GIFT_REVENUE_POLICY_VERSION,
       creatorShareBps: CREATOR_REVENUE_SHARE_BPS,
       platformShareBps: PLATFORM_REVENUE_SHARE_BPS,
-      earningsWindow: 'latest_100' as const,
-      hasMoreEarnings: earnings.size === 100,
+      earningsWindow: 'page_100' as const,
+      pageSize: CREATOR_EARNINGS_PAGE_SIZE,
+      hasMoreEarnings,
+      nextCursor: hasMoreEarnings ? pageDocs[pageDocs.length - 1]?.id || null : null,
       pendingReviewGrossNex,
       recentAvailableCreatorShareNex,
       recentGrossNex,
