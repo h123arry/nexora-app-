@@ -11,21 +11,38 @@ export interface NotificationItem {
   type: 'spark' | 'comment' | 'mention' | 'follow' | 'community';
   senderName: string;
   targetId?: string;
+  content?: string;
   timestamp: Date;
 }
 
+function formatNotificationTimestamp(value: unknown): string {
+  if (typeof value === 'string' && value.trim()) return value;
+  if (value instanceof Date && Number.isFinite(value.getTime())) return value.toISOString();
+  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate?: unknown }).toDate === 'function') {
+    const date = (value as { toDate: () => Date }).toDate();
+    if (date instanceof Date && Number.isFinite(date.getTime())) return date.toISOString();
+  }
+  return 'Time unavailable';
+}
+
 export class NotificationEngine {
-  static extractHighImpactAlerts(notifications: any[]): HighImpactUpdate[] {
-    // Take real notifications and highlight important system updates, mentions, or milestones
+  static extractHighImpactAlerts(notifications: unknown[]): HighImpactUpdate[] {
+    const validTypes = new Set(['system', 'mention', 'spark', 'reputation']);
     return notifications
-      .filter(n => !n.isRead)
+      .filter((item): item is Record<string, any> =>
+        !!item && typeof item === 'object'
+        && item.isRead !== true
+        && typeof item.id === 'string'
+        && item.id.trim().length > 0)
       .slice(0, 3)
-      .map((n, idx) => ({
-        id: n.id || `notif-${idx}`,
-        type: n.type || 'system',
-        title: n.title || 'Platform Notification',
-        body: n.content || 'You have new activity on your profile.',
-        timestamp: n.timestamp || 'Just now'
+      .map(item => ({
+        id: item.id,
+        type: validTypes.has(item.type) ? item.type : 'system',
+        title: typeof item.title === 'string' && item.title.trim() ? item.title.trim() : 'Notification',
+        body: typeof item.content === 'string' && item.content.trim()
+          ? item.content.trim()
+          : 'Open this notification to view its details.',
+        timestamp: formatNotificationTimestamp(item.timestamp),
       }));
   }
 
@@ -35,42 +52,37 @@ export class NotificationEngine {
     count: number;
     latestSender: string;
   }[] {
-    const groups: { [key: string]: NotificationItem[] } = {};
-
-    notifications.forEach(n => {
-      const key = `${n.type}_${n.targetId || 'global'}`;
-      if (!groups[key]) groups[key] = [];
-      groups[key].push(n);
+    const groups: Record<string, NotificationItem[]> = {};
+    notifications.forEach(notification => {
+      const key = `${notification.type}_${notification.targetId || 'global'}`;
+      (groups[key] ||= []).push(notification);
     });
 
-    return Object.keys(groups).map(key => {
-      const items = groups[key];
+    return Object.values(groups).map(items => {
       const count = items.length;
-      const latest = items[0]; // Assuming pre-sorted by date desc
-      let text = '';
+      const latest = items.reduce((current, candidate) =>
+        candidate.timestamp.getTime() > current.timestamp.getTime() ? candidate : current
+      );
+      const sender = latest.senderName?.trim() || 'Unknown sender';
+      let clusteredText: string;
 
       if (latest.type === 'spark') {
-        text = count > 1 
-          ? `${latest.senderName} and ${count - 1} others sparked your post`
-          : `${latest.senderName} sparked your post`;
+        clusteredText = count > 1 ? `${sender} and ${count - 1} others sparked your post` : `${sender} sparked your post`;
       } else if (latest.type === 'comment') {
-        text = count > 1
-          ? `${latest.senderName} and ${count - 1} others commented on your discussion`
-          : `${latest.senderName} commented: "${latest.senderName === 'Nexora' ? 'Check out the update!' : 'Nice view'}"`;
+        clusteredText = count > 1
+          ? `${sender} and ${count - 1} others commented on your discussion`
+          : latest.content?.trim()
+            ? `${sender} commented: "${latest.content.trim().slice(0, 180)}"`
+            : `${sender} commented on your discussion`;
       } else if (latest.type === 'follow') {
-        text = count > 1
-          ? `${latest.senderName} and ${count - 1} others started following you`
-          : `${latest.senderName} started following you`;
+        clusteredText = count > 1 ? `${sender} and ${count - 1} others started following you` : `${sender} started following you`;
+      } else if (latest.type === 'mention') {
+        clusteredText = count > 1 ? `${sender} and ${count - 1} others mentioned you` : `${sender} mentioned you`;
       } else {
-        text = `${latest.senderName} interacted with your channel`;
+        clusteredText = count > 1 ? `${count} community updates are available` : `${sender} shared a community update`;
       }
 
-      return {
-        clusteredText: text,
-        type: latest.type,
-        count,
-        latestSender: latest.senderName
-      };
+      return { clusteredText, type: latest.type, count, latestSender: sender };
     });
   }
 }
