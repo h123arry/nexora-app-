@@ -10,6 +10,4 @@ export * from './recommendationEngine';
 export * from './searchEngine';
 export * from './profileEngine';
 export * from './notificationEngine';
-export * from './coreEngines';
-export * from './platformEngines';
 export * from '../../data/copyDictionary';
