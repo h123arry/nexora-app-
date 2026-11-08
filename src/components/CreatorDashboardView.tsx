@@ -657,21 +657,32 @@ export default function CreatorDashboardView({
     });
   }, [localPosts, uploadedMedia, mediaSearch, mediaTypeFilter]);
 
-  // Creator Achievement criteria solver
+  // Achievement progress is derived from this creator's published records only.
+  // Lifetime post views are never presented as a 24-hour trending signal.
   const achievementsList = useMemo(() => {
-    const totalViewsCount = localPosts.reduce((sum, p) => sum + (p.views || 0), 0);
-    const totalSparksCount = localPosts.reduce((sum, p) => sum + (p.likes || 0), 0);
-    const hasTrending = localPosts.some(p => (p.views || 0) > 500);
+    const publishedPosts = localPosts.filter(post => !post.isArchived);
+    const recordedViewPosts = publishedPosts.filter(post =>
+      typeof post.views === 'number' && Number.isFinite(post.views) && post.views >= 0
+    );
+    const totalViewsCount = recordedViewPosts.reduce((sum, post) => sum + Math.max(0, Math.floor(post.views || 0)), 0);
+    const totalSparksCount = publishedPosts.reduce((sum, post) =>
+      sum + (typeof post.likes === 'number' && Number.isFinite(post.likes) ? Math.max(0, Math.floor(post.likes)) : 0), 0);
+    const reputation = typeof currentUser.reputationPoints === 'number' && Number.isFinite(currentUser.reputationPoints)
+      ? Math.max(0, currentUser.reputationPoints) : 0;
+    const firstPublishedPost = publishedPosts.length > 0;
+    const firstVideo = publishedPosts.some(post => !!post.videoUrl);
+    const highestRecordedPostViews = recordedViewPosts.reduce((highest, post) =>
+      Math.max(highest, Math.max(0, Math.floor(post.views || 0))), 0);
 
     return [
-      { id: 'first_vid', title: 'First Video', desc: 'Unlock your professional workspace with your first upload', icon: '🎥', unlocked: localPosts.length >= 1, progress: localPosts.length > 0 ? 100 : 0 },
-      { id: '100_sparks', title: '100 Sparks Milestone', desc: 'Amass 100 likes across your live streams', icon: '⚡', unlocked: totalSparksCount >= 100, progress: Math.min(100, Math.round((totalSparksCount / 100) * 100)), label: `${totalSparksCount}/100 Sparks` },
-      { id: '1k_views', title: '1,000 Views Spark', desc: 'Reach 1,000 global impressions', icon: '👁️', unlocked: totalViewsCount >= 1000, progress: Math.min(100, Math.round((totalViewsCount / 1000) * 100)), label: `${totalViewsCount}/1,000 Views` },
-      { id: '10k_views', title: 'Viral Catalyst (10k)', desc: 'Reach 10,000 views total across all nodes', icon: '🔥', unlocked: totalViewsCount >= 10000, progress: Math.min(100, Math.round((totalViewsCount / 10000) * 100)), label: `${totalViewsCount}/10,000 Views` },
-      { id: 'trending_creator', title: 'Trending Creator', desc: 'Have a post breach 500 views in 24 hours', icon: '📈', unlocked: hasTrending, progress: hasTrending ? 100 : 0 },
-      { id: 'comm_leader', title: 'Community Leader', desc: 'Establish professional community standing', icon: '🏆', unlocked: currentUser.isVerified || currentUser.reputationPoints > 400, progress: currentUser.reputationPoints >= 400 ? 100 : Math.round((currentUser.reputationPoints / 400) * 100), label: `${currentUser.reputationPoints}/400 Rep` },
-      { id: 'consistent_creator', title: 'Consistent Creator', desc: 'Keep content flowing with 3 or more uploads', icon: '📅', unlocked: localPosts.length >= 3, progress: Math.min(100, Math.round((localPosts.length / 3) * 100)), label: `${localPosts.length}/3 Uploads` },
-      { id: 'top_contrib', title: 'Top Contributor', desc: 'Earn elite living reputation points', icon: '⭐', unlocked: currentUser.reputationPoints > 500, progress: Math.min(100, Math.round((currentUser.reputationPoints / 500) * 100)), label: `${currentUser.reputationPoints}/500 Rep` }
+      { id: 'first_vid', title: 'First Video', desc: 'Publish your first video post', icon: '🎥', unlocked: firstVideo, progress: firstVideo ? 100 : 0 },
+      { id: '100_sparks', title: '100 Sparks Milestone', desc: 'Earn 100 likes across your published posts', icon: '⚡', unlocked: totalSparksCount >= 100, progress: Math.min(100, Math.round((totalSparksCount / 100) * 100)), label: `${totalSparksCount}/100 Sparks` },
+      { id: '1k_views', title: '1,000 Recorded Views', desc: 'Accumulate 1,000 views recorded on your published posts', icon: '👁️', unlocked: recordedViewPosts.length > 0 && totalViewsCount >= 1000, progress: Math.min(100, Math.round((totalViewsCount / 1000) * 100)), label: `${totalViewsCount.toLocaleString()}/1,000 Views` },
+      { id: '10k_views', title: '10,000 Recorded Views', desc: 'Accumulate 10,000 views recorded on your published posts', icon: '🔥', unlocked: recordedViewPosts.length > 0 && totalViewsCount >= 10000, progress: Math.min(100, Math.round((totalViewsCount / 10000) * 100)), label: `${totalViewsCount.toLocaleString()}/10,000 Views` },
+      { id: 'trending_creator', title: '500 Views on One Post', desc: 'Reach 500 recorded lifetime views on a single published post', icon: '📈', unlocked: highestRecordedPostViews >= 500, progress: Math.min(100, Math.round((highestRecordedPostViews / 500) * 100)), label: `${highestRecordedPostViews.toLocaleString()}/500 Views` },
+      { id: 'comm_leader', title: 'Community Leader', desc: 'Reach 400 reputation points or receive creator verification', icon: '🏆', unlocked: currentUser.isVerified === true || reputation >= 400, progress: Math.min(100, Math.round((reputation / 400) * 100)), label: `${reputation.toLocaleString()}/400 Rep` },
+      { id: 'consistent_creator', title: 'Consistent Creator', desc: 'Publish at least three posts', icon: '📅', unlocked: publishedPosts.length >= 3, progress: Math.min(100, Math.round((publishedPosts.length / 3) * 100)), label: `${publishedPosts.length}/3 Posts` },
+      { id: 'top_contrib', title: 'Top Contributor', desc: 'Reach 500 reputation points', icon: '⭐', unlocked: reputation >= 500, progress: Math.min(100, Math.round((reputation / 500) * 100)), label: `${reputation.toLocaleString()}/500 Rep` }
     ];
   }, [localPosts, currentUser]);
 
@@ -683,9 +694,7 @@ export default function CreatorDashboardView({
           <span className="text-lg font-extrabold tracking-tight nx-gradient-text leading-none select-none block mb-1">NEXORA</span>
           <div className="flex items-center gap-3">
             <h2 className="text-2xl font-black text-white tracking-tight">Nexora Studio V1.2</h2>
-            <span className="flex items-center gap-1 text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-extrabold uppercase px-2 py-0.5 rounded-full shadow-xs">
-              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" /> Good Standing
-            </span>
+            <span className="text-[10px] border border-violet-400/20 bg-violet-500/10 text-violet-200 font-mono font-bold uppercase px-2 py-0.5 rounded-full">Creator workspace</span>
           </div>
           <p className="text-sm text-violet-200/60 mt-1">Manage content publishing, deep metrics analysis, and platform growth.</p>
         </div>
