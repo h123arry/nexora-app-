@@ -17,6 +17,7 @@ export default function GiftEconomyOperationsPanel(){
  const [nameMatches,setNameMatches]=useState<Record<string,boolean>>({});
  const [payoutMode,setPayoutMode]=useState('unknown');
  const [credentialsVerified,setCredentialsVerified]=useState(false);
+ const [webhookSecretConfigured,setWebhookSecretConfigured]=useState(false);
  const [ngnBalanceKobo,setNgnBalanceKobo]=useState<number|null>(null);
  const [payoutEnabled,setPayoutEnabled]=useState(false);
  const [koboPerNex,setKoboPerNex]=useState('');
@@ -33,7 +34,7 @@ export default function GiftEconomyOperationsPanel(){
   if(riskResult.status==='fulfilled')setRecords(riskResult.value);
   if(queueResult.status==='fulfilled')setComplianceRecords(queueResult.value);
   if(policyResult.status==='fulfilled'){
-   const p=policyResult.value;setPayoutMode(p.mode);setCredentialsVerified(p.credentialsVerified);setNgnBalanceKobo(p.ngnBalanceKobo);setPayoutEnabled(p.enabled);
+   const p=policyResult.value;setPayoutMode(p.mode);setCredentialsVerified(p.credentialsVerified);setWebhookSecretConfigured(p.webhookSecretConfigured);setNgnBalanceKobo(p.ngnBalanceKobo);setPayoutEnabled(p.enabled);
    setKoboPerNex(p.koboPerNex===null?'':String(p.koboPerNex));setFeeBuffer(p.providerFeeBufferKobo===null?'':String(p.providerFeeBufferKobo));
    setMinimumNex(p.minimumNex===null?'1000':String(p.minimumNex));setMaximumNex(p.maximumNex===null?'10000000':String(p.maximumNex));
    setLiveEvidenceReference(p.liveEvidenceReference||'');
@@ -89,7 +90,7 @@ export default function GiftEconomyOperationsPanel(){
   </div>
   <div className="rounded-xl border border-white/10 p-4">
    <h4 className="text-sm font-bold text-white">Paystack NGN payout policy</h4>
-   <p className="mt-1 text-[10px] leading-5 text-slate-500">Provider mode: {payoutMode.toUpperCase()} · API credentials: {credentialsVerified?'verified':'not verified'} · NGN balance: {ngnBalanceKobo===null?'unavailable':(ngnBalanceKobo/100).toLocaleString('en-NG',{style:'currency',currency:'NGN'})}. Enter only a finance-approved integer kobo-per-NEX rate and provider-fee reserve. Live mode stays locked until every evidence gate is checked.</p>
+   <p className="mt-1 text-[10px] leading-5 text-slate-500">Provider mode: {payoutMode.toUpperCase()} · API credentials: {credentialsVerified?'verified':'not verified'} · Webhook secret: {webhookSecretConfigured?'configured':'missing'} · NGN balance: {ngnBalanceKobo===null?'unavailable':(ngnBalanceKobo/100).toLocaleString('en-NG',{style:'currency',currency:'NGN'})}. Enter only a finance-approved integer kobo-per-NEX rate and provider-fee reserve. Live mode stays locked until every evidence gate is checked.</p>
    <div className="mt-3 grid gap-3 sm:grid-cols-2">
     <label className="text-[10px] text-slate-400">Kobo per NEX<input inputMode="numeric" value={koboPerNex} onChange={e=>setKoboPerNex(e.target.value.replace(/\D/g,''))} className="mt-1 min-h-10 w-full rounded-xl border border-white/10 bg-[#15102a] px-3 text-xs text-white"/></label>
     <label className="text-[10px] text-slate-400">Provider fee reserve (kobo)<input inputMode="numeric" value={feeBuffer} onChange={e=>setFeeBuffer(e.target.value.replace(/\D/g,''))} className="mt-1 min-h-10 w-full rounded-xl border border-white/10 bg-[#15102a] px-3 text-xs text-white"/></label>
