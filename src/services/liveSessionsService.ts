@@ -33,3 +33,8 @@ export async function sendLiveChatMessage(sessionId: string, message: string, co
   const call = httpsCallable<{ sessionId: string; message: string; connectionId: string }, { messageId: string; sessionId: string; senderId: string; senderName: string; message: string; status: 'sent' }>(functions, 'sendLiveChatMessage');
   return (await call({ sessionId, message, connectionId })).data;
 }
+
+export async function getLiveKitToken(sessionId: string, connectionId: string) {
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'viewer'; expiresAt: number }>(functions, 'getLiveKitToken');
+  return (await call({ sessionId, connectionId })).data;
+}
