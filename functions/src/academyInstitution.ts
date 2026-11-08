@@ -237,6 +237,7 @@ export async function revokeAcademyCertificate(db: Firestore, uid: string, certi
 }
 
 export async function getAcademyTutorContext(db: Firestore, uid: string, courseId: string, lessonIds: unknown) {
+  if (!safeId(uid)) throw new Error('Sign in to use the Academy tutor.');
   if (!safeId(courseId) || !Array.isArray(lessonIds) || lessonIds.length < 1 || lessonIds.length > 4 || lessonIds.some(id => !safeId(id))) {
     throw new Error('Choose one to four valid lessons for your tutor question.');
   }
