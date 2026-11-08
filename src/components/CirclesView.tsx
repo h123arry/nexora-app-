@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Compass, Sparkles, Users, Coins, Wand2, Check, Plus, Flame, Globe, X, Send, Volume2, Lock, FileText, Calendar, Shield, Trophy, Megaphone, UserCheck, BarChart2, Award } from 'lucide-react';
+import { Sparkles, Users, Wand2, Check, X, Send, FileText, Calendar, Shield, Megaphone, BarChart2 } from 'lucide-react';
 import { Circle, User } from '../types';
 import { recordRecommendationEvent } from '../utils/recommendations';
 import { CommunityService } from '../services/firebase/communityService';
@@ -42,13 +42,10 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   }, [currentUser.id]);
   
   // Community points are not money, are not redeemable, and have no financial value.
-  const [currencyBalances, setCurrencyBalances] = useState<{ [key: string]: number }>({});
 
   // Circle Builder States
   const [promptInput, setPromptInput] = useState('');
   const [isBuilding, setIsBuilding] = useState(false);
-  const [buildSteps, setBuildSteps] = useState<string[]>([]);
-  const [currentBuildStep, setCurrentBuildStep] = useState(0);
 
   // Filter categories
   const [activeFilter, setActiveFilter] = useState<'all' | 'joined' | 'explore'>('all');
@@ -104,12 +101,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
     );
   }, [selectedCircle?.id, selectedCircle?.isJoinedByMe, currentUser.id]);
   const [chatInput, setChatInput] = useState('');
-  const [isJoinedVoice, setIsJoinedVoice] = useState(false);
 
-  const [completedChallenges, setCompletedChallenges] = useState<string[]>([]);
-
-  // Sound simulation state
-  const [isMuted, setIsMuted] = useState(false);
 
   const handleJoinCircle = async (circleId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -234,22 +226,9 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
             Your audiences • Curated networks, close connections & shared interest groups
           </p>
         </div>
-
-        {/* Community points HUD; deliberately separate from billing and fiat money. */}
-        <div className="flex items-center gap-2 bg-[#0d071a] border border-pink-500/25 p-2 rounded-xl">
-          <Coins className="w-4 h-4 text-pink-400" />
-          <div className="flex flex-wrap gap-3 text-[10px] font-mono">
-            {Object.entries(currencyBalances).length === 0 ? <span className="text-zinc-500">Community points • not money</span> : Object.entries(currencyBalances).map(([key, value]) => (
-              <div key={key} className="flex items-center gap-1.5 border-r border-current/10 pr-3 last:border-none last:pr-0">
-                <span className="text-current/50 shrink-0">{key.split(' ')[0]}:</span>
-                <span className="font-extrabold text-pink-300">{value} pts</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* AI Community Builder Module */}
+      {/* Community Builder Module */}
       <div className="bg-[#05030c] border border-white/10 rounded-3xl p-5 relative overflow-hidden">
         {/* Background micro gradient glow */}
         <div className="absolute top-0 right-0 w-32 h-32 bg-violet-600/10 rounded-full blur-2xl pointer-events-none" />
@@ -262,7 +241,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         </div>
 
         <p className="text-xs text-violet-200/80 mb-4 leading-normal font-sans text-left">
-          Input your community idea. Create a public Circle with saved rules and topic tags. AI-assisted setup will be connected when its generation service is ready.
+          Describe your community. NEXORA will create a public Circle using the details you provide.
         </p>
 
         <form onSubmit={handleAICommunityBuild} className="space-y-3 relative z-10">
@@ -282,50 +261,10 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               className="px-5 py-2 font-mono font-black text-xs bg-[#8b5cf6] text-white rounded-xl hover:brightness-110 active:scale-97 disabled:opacity-50 flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <Wand2 className="w-3.5 h-3.5" />
-              <span>{isBuilding ? 'BUILDING...' : 'AI BUILD'}</span>
+              <span>{isBuilding ? 'BUILDING...' : 'CREATE CIRCLE'}</span>
             </button>
           </div>
         </form>
-
-        {/* Builder simulation progress tracks */}
-        <AnimatePresence>
-          {isBuilding && (
-            <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="mt-4 pt-3 border-t border-white/10 space-y-2 text-left"
-            >
-              <div className="flex items-center justify-between text-[10px] font-mono text-violet-400/60 mb-1">
-                <span>SAVING YOUR CIRCLE...</span>
-                <span>{Math.round(((currentBuildStep + 1) / buildSteps.length) * 100)}%</span>
-              </div>
-              
-              {/* Bar */}
-              <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
-                <motion.div 
-                  style={{ width: `${((currentBuildStep + 1) / buildSteps.length) * 100}%` }}
-                  className="h-full bg-linear-to-r from-violet-500 via-pink-500 to-cyan-500" 
-                />
-              </div>
-
-              <div className="space-y-1 font-mono text-[9px] text-violet-300/65 pl-1 mt-1">
-                {buildSteps.map((step, stepId) => (
-                  <div key={stepId} className="flex items-center gap-2">
-                    {stepId <= currentBuildStep ? (
-                      <Check className="w-3 h-3 text-emerald-400 shrink-0" />
-                    ) : (
-                      <span className="w-3 h-3 rounded-full border border-white/10 shrink-0 block" />
-                    )}
-                    <span className={stepId === currentBuildStep ? 'text-violet-400 font-bold' : ''}>
-                      {step}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
       {/* Tabs list to filter */}
@@ -382,11 +321,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
       ) : (
         <div id="circles-grid-wrapper" className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredCircles.map((circle) => {
-            const creator = circle.creatorId === currentUser.id 
-              ? currentUser 
-              : { id: circle.creatorId, name: (circle as any).creatorName || 'Nexora Member', username: (circle as any).creatorUsername || 'creator', avatar: (circle as any).avatar || (circle as any).avatarImage || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150' };
-
-          return (
+            return (
             <div 
               key={circle.id} 
               onClick={() => {
@@ -514,14 +449,11 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     { id: 'events', label: '📅 Events', icon: Calendar },
                     { id: 'files', label: '📁 Files', icon: FileText },
                     { id: 'polls', label: '📊 Polls', icon: BarChart2 },
-                    { id: 'voice', label: '🎙 Voice Room', icon: Volume2 },
-                    { id: 'chat', label: '💬 Chat', icon: Send },
+                                        { id: 'chat', label: '💬 Chat', icon: Send },
                     { id: 'announcements', label: '🔔 Announcements', icon: Megaphone },
                     { id: 'mods', label: '🛡 Moderators', icon: Shield },
                     { id: 'rules', label: '📋 Rules', icon: FileText },
-                    { id: 'leaderboard', label: '🏆 Leaderboard', icon: Trophy },
-                    { id: 'challenges', label: '🎯 Challenges', icon: Award },
-                    ...(selectedCircleCanManage ? [{ id: 'insights', label: '📈 Insights', icon: BarChart2 }] : [])
+                                                            ...(selectedCircleCanManage ? [{ id: 'insights', label: '📈 Insights', icon: BarChart2 }] : [])
                   ].map((tab) => {
                     const Icon = tab.icon;
                     const isActive = activePortalTab === tab.id;
@@ -614,56 +546,6 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                     })}
                   </div>
                 )}
-
-                {activePortalTab === 'voice' && (
-                  <div className="space-y-4 text-left">
-                    <div className="flex items-center justify-between border-b border-[#A78BFA]/10 pb-2">
-                      <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Spatial Audio Room</h3>
-                      <button
-                        onClick={() => setIsJoinedVoice(!isJoinedVoice)}
-                        className={`px-3 py-1.5 rounded-lg text-[10px] font-mono font-bold uppercase cursor-pointer ${
-                          isJoinedVoice ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'
-                        } text-white`}
-                      >
-                        {isJoinedVoice ? 'Leave Lounge' : 'Join Voice Channel'}
-                      </button>
-                    </div>
-
-                    {isJoinedVoice ? (
-                      <div className="p-5 rounded-2xl bg-violet-950/10 border border-white/10 flex flex-col items-center justify-center space-y-4">
-                        <div className="flex items-center gap-1.5">
-                          {[1, 2, 3, 4, 5, 6].map((bar) => (
-                            <div 
-                              key={bar} 
-                              className="w-1 bg-[#8b5cf6] rounded-full animate-pulse h-6" 
-                              style={{ 
-                                animationDelay: `${bar * 150}ms`,
-                                animationDuration: `${600 + (bar * 200)}ms` 
-                              }} 
-                            />
-                          ))}
-                        </div>
-                        <p className="text-xs text-white font-black">🎙 Connected Live in Orbit</p>
-                        <div className="flex items-center gap-4 text-xs font-mono mt-1">
-                          <button 
-                            onClick={() => setIsMuted(!isMuted)} 
-                            className={`px-3 py-1 rounded bg-black/40 ${isMuted ? 'text-rose-400' : 'text-emerald-400'}`}
-                          >
-                            {isMuted ? 'MUTED' : 'UNMUTED'}
-                          </button>
-                          <span>4 active listeners</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-8 text-center border border-dashed border-white/10 rounded-2xl bg-white/[0.01]">
-                        <Volume2 className="w-8 h-8 text-violet-400/30 mx-auto" />
-                        <p className="text-xs text-violet-300 mt-2">Voice Lobby is currently dormant.</p>
-                        <p className="text-[10px] text-violet-300/40">Click Join to coordinate sports match tactics or code deep dives.</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
                 {activePortalTab === 'chat' && (
                   <div className="space-y-3 text-left">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-[#A78BFA] font-bold">Community Group Chat Chatroom</h3>
@@ -729,38 +611,10 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                   <div className="space-y-3 text-left">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Official Conduct Guidelines</h3>
                     <div className="p-4 rounded-2xl bg-[#03010b]/50 border border-white/10 space-y-2 font-mono text-[10px] uppercase text-violet-300 leading-relaxed">
-                      <p>1. Be helpful and collaborative to other creators.</p>
-                      <p>2. Keep topics relevant to the community's theme.</p>
-                      <p>3. Do not spam links or external advertisements lists.</p>
-                      <p>4. Keep language civil, constructive, and clean.</p>
+                      {selectedCircle.rules?.length ? selectedCircle.rules.map((rule, index) => <p key={index}>{index + 1}. {rule}</p>) : <p>No community rules have been published.</p>}
                     </div>
                   </div>
                 )}
-
-                {activePortalTab === 'leaderboard' && (
-                  <div className="space-y-3 text-left max-w-sm">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Engagement Score Leaderboard</h3>
-                      <Trophy className="w-4 h-4 text-yellow-500" />
-                    </div>
-                    <div className="space-y-2">
-                      {[
-                        { name: 'voh', score: '98,000 pts', pos: '1' },
-                        { name: 'nexora_ai', score: '85,000 pts', pos: '2' },
-                        { name: 'voh_ai', score: '78,000 pts', pos: '3' }
-                      ].map((ld, i) => (
-                        <div key={i} className="p-3 rounded-xl bg-white/[0.01] border border-white/5 flex items-center justify-between text-xs">
-                          <div className="flex items-center gap-2.5">
-                            <span className="font-mono text-[10px] bg-violet-500/20 text-violet-300 w-5 h-5 rounded-md flex items-center justify-center font-bold">{ld.pos}</span>
-                            <span className="font-extrabold text-[#D1D5DB]">@{ld.name}</span>
-                          </div>
-                          <span className="font-mono font-extrabold text-pink-400">{ld.score}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 {activePortalTab === 'challenges' && (
                   <div className="space-y-4 text-left">
                     <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Active Community Quests</h3>
