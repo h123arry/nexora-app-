@@ -1765,7 +1765,7 @@ export default function FeedView({
         // is still crossing the visibility threshold.
         const activePostExited = entries.some(entry =>
           entry.target.getAttribute('data-post-id') === activePostIdRef.current
-          && !entry.isIntersecting
+          && (!entry.isIntersecting || entry.intersectionRatio < 0.3)
         );
         if (activePostExited) setActivePostId(null);
       },
