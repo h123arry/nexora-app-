@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Gift, RefreshCw, Wallet, TrendingUp, ShieldCheck } from 'lucide-react';
-import { getCreatorEarningsSnapshot, type CreatorEarningsSnapshot } from '../services/creatorEarningsService';
+import { AlertCircle, Gift, RefreshCw, Wallet, TrendingUp, ShieldCheck, Loader2, ChevronDown } from 'lucide-react';
+import { getCreatorEarningsSnapshot, type CreatorEarningsSnapshot, type CreatorGiftEarning } from '../services/creatorEarningsService';
 
 function formatNex(value: number): string {
   return Number.isSafeInteger(value) && value >= 0 ? value.toLocaleString() : '—';
@@ -15,12 +15,20 @@ export default function CreatorGiftEarningsPanel() {
   const [snapshot, setSnapshot] = useState<CreatorEarningsSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [history, setHistory] = useState<CreatorGiftEarning[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const refresh = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
-      setSnapshot(await getCreatorEarningsSnapshot());
+      const firstPage = await getCreatorEarningsSnapshot();
+      setSnapshot(firstPage);
+      setHistory(firstPage.earnings);
+      setNextCursor(firstPage.nextCursor);
+      setHasMore(firstPage.hasMoreEarnings);
     } catch {
       setError('Your creator earnings could not be loaded. Please check your connection and retry.');
     } finally {
@@ -29,6 +37,22 @@ export default function CreatorGiftEarningsPanel() {
   }, []);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  const loadMore = async () => {
+    if (!nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    setError('');
+    try {
+      const page = await getCreatorEarningsSnapshot(nextCursor);
+      setHistory(current => [...current, ...page.earnings]);
+      setNextCursor(page.nextCursor);
+      setHasMore(page.hasMoreEarnings);
+    } catch {
+      setError('Older gift earnings could not be loaded. Please retry.');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   return (
     <section className="space-y-5">
@@ -62,7 +86,7 @@ export default function CreatorGiftEarningsPanel() {
         <article className="rounded-2xl border border-white/10 bg-[#100d20] p-4">
           <div className="flex items-center gap-2 text-xs text-slate-300"><TrendingUp size={15} /> Recent creator share</div>
           <p className="mt-3 text-2xl font-black tabular-nums text-white">{loading ? '—' : snapshot ? formatNex(snapshot.recentCreatorShareNex) : '—'} <span className="text-xs text-slate-400">NEX</span></p>
-          <p className="mt-1 text-[10px] text-slate-500">Settled share in the latest 100 gift records</p>
+          <p className="mt-1 text-[10px] text-slate-500">Settled share in the first 100 gift records</p>
         </article>
       </div>
 
@@ -76,15 +100,15 @@ export default function CreatorGiftEarningsPanel() {
       <div className="overflow-hidden rounded-2xl border border-white/10 bg-[#0a071f]/75">
         <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
           <h3 className="text-sm font-bold text-white">Gift earnings history</h3>
-          <span className="text-[10px] text-slate-500">Latest 100 records</span>
+          <span className="text-[10px] text-slate-500">{history.length.toLocaleString()} records loaded</span>
         </div>
         {loading ? <div className="p-8 text-center text-sm text-slate-500">Loading verified earnings…</div>
-          : !snapshot?.earnings.length ? <div className="p-8 text-center">
+          : !history.length ? <div className="p-8 text-center">
             <Gift size={24} className="mx-auto text-violet-300/60" />
             <p className="mt-3 text-sm font-semibold text-white">Your gift earnings will appear here</p>
             <p className="mt-1 text-xs text-slate-500">When people send you GIFTVERSE gifts, their verified records will show here.</p>
           </div> : <div className="divide-y divide-white/[.06]">
-            {snapshot.earnings.map(earning => <div key={earning.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            {history.map(earning => <div key={earning.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
                 <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-500/10 text-violet-200"><Gift size={17} /></span>
                 <div className="min-w-0">
@@ -101,7 +125,7 @@ export default function CreatorGiftEarningsPanel() {
               </div>
             </div>)}
           </div>}
-        {snapshot?.hasMoreEarnings && <p className="border-t border-white/10 px-4 py-3 text-[10px] text-slate-500">Showing the latest 100 gift records. Older history is not included in this view yet.</p>}
+        {hasMore && <div className="border-t border-white/10 p-3 text-center"><button type="button" onClick={() => void loadMore()} disabled={loadingMore} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-violet-300/20 bg-violet-500/10 px-4 text-xs font-bold text-violet-100 disabled:opacity-50">{loadingMore ? <Loader2 size={14} className="animate-spin"/> : <ChevronDown size={14}/>} {loadingMore ? 'Loading older earnings…' : 'Load older earnings'}</button></div>}
       </div>
 
       <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-black/15 p-3 text-[11px] leading-5 text-slate-400">
