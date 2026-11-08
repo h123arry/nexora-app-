@@ -251,7 +251,7 @@ async function getVohMemoryPrompt(uid: string): Promise<string> {
     `Personal facts the user explicitly asked VOH to remember: ${personalFacts.join('; ') || 'none saved'}`,
     `Writing style: ${writingStyle || 'not specified'}`,
     `Recent hashtags: ${hashtags.join(', ') || 'not specified'}`
-  ].join('\\n');
+  ].join('\n');
 }
 
 function shapeVohContext(context: any, authenticatedUid: string) {
