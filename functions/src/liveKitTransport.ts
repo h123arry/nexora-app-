@@ -1,4 +1,5 @@
-import { createHash, createHmac } from 'node:crypto';
+import { createHash } from 'node:crypto';
+import { createLiveKitJwt } from './liveKitTokenPolicy.js';
 import { getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
@@ -8,17 +9,6 @@ const apiKey = defineSecret('LIVEKIT_API_KEY');
 const apiSecret = defineSecret('LIVEKIT_API_SECRET');
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const TOKEN_TTL_SECONDS = 10 * 60;
-
-function encode(value: unknown): string {
-  return Buffer.from(JSON.stringify(value)).toString('base64url');
-}
-function issueToken(claims: Record<string, unknown>, secret: string): string {
-  const header = encode({ alg: 'HS256', typ: 'JWT' });
-  const payload = encode(claims);
-  const unsigned = header + '.' + payload;
-  const signature = createHmac('sha256', secret).update(unsigned).digest('base64url');
-  return unsigned + '.' + signature;
-}
 
 /**
  * Issues short-lived LiveKit credentials only after deriving identity, room and
@@ -67,7 +57,7 @@ export const getLiveKitToken = onCall(
       throw new HttpsError('failed-precondition', 'NEXORA Live video is not configured by the server yet.');
     }
     const now = Math.floor(Date.now() / 1000);
-    const token = issueToken({
+    const token = createLiveKitJwt({
       iss: key,
       sub: userId,
       nbf: now - 5,
