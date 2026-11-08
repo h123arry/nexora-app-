@@ -9,6 +9,7 @@ import { SettingsService } from '../services/firebase/settingsService';
 import { getGlobalPostsPage } from '../services/posts/postService';
 import { rankTrendingTopics } from '../services/discovery/discoveryService';
 import { rankRisingTopics } from '../services/discovery/worldPulseSignals';
+import { summarizeWorldPulseCommunity } from '../services/discovery/worldPulseCommunity';
 import type { Post } from '../types';
 
 export interface WorldPulseViewProps {
@@ -71,6 +72,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
   }), [pulsePosts]);
 
   const risingTopics = React.useMemo(() => rankRisingTopics(pulsePosts, { windowHours: 24, minPosts: 2, minCreators: 2, limit: 5 }), [pulsePosts]);
+  const communitySignals = React.useMemo(() => summarizeWorldPulseCommunity(pulsePosts), [pulsePosts]);
 
   const categoryTerms: Record<string, string[]> = {
     sports: ['football', 'soccer', 'basketball', 'tennis', 'sports', 'match', 'goal'],
@@ -257,6 +259,33 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           ))}
         </div>
       </div>
+
+      {/* COMMUNITY SIGNALS: transparent metrics from the public posts currently loaded. */}
+      {!activityLoading && !activityError && pulsePosts.length > 0 && (
+        <section className="rounded-2xl border border-violet-400/15 bg-[#090718] p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-white"><Globe className="h-4 w-4 text-violet-300" /> Community Signals</div>
+              <p className="mt-1 text-[10px] text-violet-200/50">A live snapshot of the public posts currently loaded in this view.</p>
+            </div>
+            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Loaded sample</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[
+              { label: 'Public posts', value: communitySignals.postCount },
+              { label: 'Contributors', value: communitySignals.creatorCount },
+              { label: 'Topics', value: communitySignals.topicCount },
+              { label: 'Interactions', value: communitySignals.interactionCount },
+            ].map(metric => (
+              <div key={metric.label} className="rounded-xl border border-white/5 bg-white/[0.025] px-3 py-3">
+                <div className="text-lg font-bold tabular-nums text-white">{metric.value.toLocaleString()}</div>
+                <div className="mt-1 text-[9px] text-violet-200/55">{metric.label}</div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-violet-200/35">{communitySignals.recentPostCount} loaded posts were published in the last 24 hours. Counts are not platform-wide totals.</p>
+        </section>
+      )}
 
       {/* INTEREST RADAR: momentum is calculated only from loaded public NEXORA posts. */}
       {risingTopics.length > 0 && (
