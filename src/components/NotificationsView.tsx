@@ -928,7 +928,6 @@ export default function NotificationsView({
                   <AnimatePresence initial={false}>
                     {list.map(notif => {
                       const isSelected = selectedIds.includes(notif.id);
-                      const isPinned = notif.id === pinnedNotifId;
 
                       // Smart Expand State for grouped Likes
                       const isGroupExpanded = expandedGroups[notif.id] || false;
@@ -954,7 +953,6 @@ export default function NotificationsView({
                         >
                           {/* Top Tag detail and Drag Swipe quick visual hints */}
                           <div className="absolute top-2.5 right-4 flex items-center gap-2">
-                            {isPinned && <Pin className="w-3 h-3 text-amber-400" />}
                             {getPriorityBadge(notif.priorityLevel)}
                           </div>
 
