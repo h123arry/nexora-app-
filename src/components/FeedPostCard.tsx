@@ -253,6 +253,11 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                 })()}
               </span>
             </div>
+            {post.isRepost && (
+              <div className="mt-1 text-[10px] text-violet-300/80">
+                Reposted from <span className="font-semibold">@{post.sourceAuthorUsername || 'member'}</span>
+              </div>
+            )}
           </div>
         </div>
 

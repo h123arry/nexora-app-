@@ -188,6 +188,11 @@ export interface Post {
   isRepost?: boolean;
   sourcePostId?: string;
   repostedBy?: string;
+  sourcePostContent?: string;
+  sourceAuthorId?: string;
+  sourceAuthorUsername?: string;
+  sourceAuthorName?: string;
+  sourceAuthorAvatar?: string;
   repostedAt?: unknown;
   // Collaboration Post extension
   coAuthors?: {

@@ -43,6 +43,8 @@ test('creates an attributed public repost and increments the source share count 
   assert.equal(repost.get('userId'), 'alice');
   assert.equal(repost.get('isRepost'), true);
   assert.equal(repost.get('sourcePostId'), 'public-post');
+  assert.equal(repost.get('content'), 'Original post');
+  assert.equal(repost.get('sourceAuthorUsername'), 'bob');
   assert.equal(repost.get('image'), 'https://example.test/post.png');
   assert.equal((await db.doc('users/alice/postReposts/public-post').get()).exists, true);
   assert.equal((await db.collection('users').doc('bob').collection('notifications').get()).size, 1);
