@@ -155,7 +155,16 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           context: {
             posts: pulsePosts.slice(0, 5).map(post => ({ id: post.id, username: post.username, content: post.content, tags: post.tags, likes: post.likes, commentsCount: post.commentsCount, timestamp: post.timestamp })),
             circles: getJoinedCirclesForUser(currentUserId),
-            notifications: readUserScopedJson(localStorage, 'nexora_notifications', currentUserId, [])
+            notifications: readUserScopedJson(localStorage, 'nexora_notifications', currentUserId, []),
+            pulse: {
+              ...communitySignals,
+              risingTopics: risingTopics.map(topic => ({
+                tag: topic.tag,
+                currentPosts: topic.currentPosts,
+                creatorCount: topic.creatorCount,
+                status: topic.status,
+              })),
+            }
           }
         })
       });
