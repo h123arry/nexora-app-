@@ -52,3 +52,17 @@ export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadP
       : 'none',
   };
 }
+
+
+export interface VideoPosterLoadInput {
+  isActive?: boolean;
+  isNearby: boolean;
+  shouldPreload: boolean;
+  isReleased?: boolean;
+}
+
+/** Avoid fetching poster assets for released/offscreen video players. */
+export function shouldLoadVideoPoster(input: VideoPosterLoadInput): boolean {
+  if (input.isReleased) return false;
+  return (input.isActive ?? true) || input.isNearby || input.shouldPreload;
+}
