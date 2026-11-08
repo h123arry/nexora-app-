@@ -55,7 +55,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
     provider: 'paystack', configured: mode !== 'unknown', mode,
     corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true,
     liveSettlementApproved: policy.liveSettlementApproved === true,
-    cashWithdrawalsEnabled: policy.enabled === true && (mode === 'test' || (mode === 'live' && policy.liveSettlementApproved === true)),
+    cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && policy.liveSettlementApproved === true,
     rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0,
     blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved'
@@ -177,11 +177,11 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
   const enabled = policy.enabled === true && Number.isSafeInteger(policy.koboPerNex) && b.status === 'verified'
     && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && policy.liveSettlementApproved === true));
   return {
-    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled,
+    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && policy.liveSettlementApproved === true,
     corridor: 'NG-NGN', currency: 'NGN', beneficiaryStatus: b.status === 'verified' ? 'verified' : 'not_configured',
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
     displayCurrency: profile.data()?.creatorEconomyDisplayCurrency || 'NGN',
-    cashWithdrawalEnabled: enabled,
+    cashWithdrawalEnabled: enabled && mode === 'live' && policy.liveSettlementApproved === true,
     blocker: mode === 'unknown' ? 'provider_secret_missing' : !policy.enabled ? 'payout_policy_disabled'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required'
       : mode === 'live' && policy.liveSettlementApproved !== true ? 'live_settlement_not_approved' : null,
