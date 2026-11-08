@@ -77,6 +77,7 @@ describe('NEXORA Institute institution services', () => {
     assert.equal(published.assessments.length, 1);
     assert.equal(published.assessments[0].questions.length, 3);
     assert.equal('correctIndex' in published.assessments[0].questions[0], false);
+    await assert.rejects(getAcademyTutorContext(db, '', courseId, ['lesson-1']), /Sign in to use the Academy tutor/);
     const tutorContext = await getAcademyTutorContext(db, 'learner-one', courseId, ['lesson-1', 'lesson-2']);
     assert.equal(tutorContext.lessons.length, 2);
     assert.match(tutorContext.groundingPolicy, /only from supplied lesson sources/);
