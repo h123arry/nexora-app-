@@ -104,9 +104,9 @@ export class MemoryEngine {
    * Credentials and high-risk identifiers are deliberately rejected.
    */
   static async rememberFact(fact: string): Promise<UserMemoryProfile> {
-    const cleanFact = fact.trim().replace(/\\s+/g, ' ').slice(0, 500);
+    const cleanFact = fact.trim().replace(/\s+/g, ' ').slice(0, 500);
     if (!cleanFact) throw new Error('Tell VOH what you want remembered.');
-    if (/\\b(password|passcode|one[- ]time code|otp|verification code|pin number|bank account number|card number|cvv|cvc|bvn|nin|tax identification number|tax id|private key|recovery phrase|api key|secret key)\\b/i.test(cleanFact)) {
+    if (/\b(password|passcode|one[- ]time code|otp|verification code|pin number|bank account number|card number|cvv|cvc|bvn|nin|tax identification number|tax id|private key|recovery phrase|api key|secret key)\b/i.test(cleanFact)) {
       throw new Error('For your safety, VOH will not store passwords, financial credentials, or sensitive identity numbers.');
     }
     const current = this.getMemory();
