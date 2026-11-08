@@ -80,11 +80,14 @@ export const getLiveTransportToken = onCall({
   const profile = await db.collection('users').doc(userId).get();
   const displayName = String(profile.data()?.username || profile.data()?.name || 'NEXORA member').slice(0, 80);
   const roomName = 'nexora-live-' + sessionId;
+  const connectionHash = createHash('sha256').update(connectionId).digest('hex');
+  const participantIdentity = 'nx_' + createHash('sha256').update(userId + ':' + connectionId).digest('hex').slice(0, 32);
   const token = new AccessToken(apiKey, apiSecret, {
-    identity: userId,
+    identity: participantIdentity,
     name: displayName,
     ttl: '10m',
   });
+  token.metadata = JSON.stringify({ userId, connectionHash, role });
   token.addGrant({
     roomJoin: true,
     room: roomName,
