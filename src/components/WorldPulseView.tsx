@@ -277,7 +277,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               <div className="flex items-center gap-2 text-xs font-bold text-white"><Globe className="h-4 w-4 text-violet-300" /> Community Signals</div>
               <p className="mt-1 text-[10px] text-violet-200/50">A live snapshot of the public posts currently loaded in this view.</p>
             </div>
-            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Loaded sample</span>
+            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Current data</span>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {[
@@ -304,7 +304,7 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
               <div className="flex items-center gap-2 text-xs font-bold text-white"><Globe className="h-4 w-4 text-violet-300" /> Interest Radar</div>
               <p className="mt-1 text-[10px] text-violet-200/50">Conversations gaining momentum in the latest 24 hours versus the previous 24 hours.</p>
             </div>
-            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Loaded sample</span>
+            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Current data</span>
           </div>
           <div className="grid gap-2 sm:grid-cols-2">
             {risingTopics.map(topic => (
