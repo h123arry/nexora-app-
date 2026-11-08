@@ -10,6 +10,14 @@ const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
 const PAYSTACK_WEBHOOK_SECRET = defineSecret('PAYSTACK_WEBHOOK_SECRET');
 const PAYSTACK_API = 'https://api.paystack.co';
+class PaystackApiError extends Error {
+  constructor(message: string, readonly statusCode: number) { super(message); }
+}
+function liveGatesPassed(policy: Record<string, any>): boolean {
+  return policy.liveSettlementApproved === true && policy.providerBusinessVerified === true
+    && policy.settlementFundingVerified === true && policy.complianceApproved === true
+    && policy.webhookVerified === true && policy.liveTestTransferVerified === true;
+}
 type TransferStatus = 'processing' | 'submission_unknown' | 'awaiting_provider_approval' | 'success' | 'failed' | 'reversed';
 
 function requireUser(request: { auth?: { uid: string; token?: Record<string, unknown> } | null }): string {
@@ -36,7 +44,7 @@ async function paystack(path: string, method: 'GET' | 'POST', body?: Record<stri
     ...(body ? { body: JSON.stringify(body) } : {}), signal: AbortSignal.timeout(15000),
   });
   const payload = await response.json() as { status?: boolean; message?: string; data?: any };
-  if (!response.ok || payload.status !== true) throw new Error(typeof payload.message === 'string' ? payload.message : 'Paystack request failed.');
+  if (!response.ok || payload.status !== true) throw new PaystackApiError(typeof payload.message === 'string' ? payload.message : 'Paystack request failed.', response.status);
   return payload.data;
 }
 async function payoutPolicy() {
@@ -54,14 +62,14 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
   const policy = await payoutPolicy();
   return {
     provider: 'paystack', configured: mode !== 'unknown', mode,
-    corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true,
+    corridor: 'NG-NGN', transferFeatureEnabled: policy.enabled === true && (mode === 'test' || liveGatesPassed(policy)),
     liveSettlementApproved: policy.liveSettlementApproved === true,
-    cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && policy.liveSettlementApproved === true,
+    cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && liveGatesPassed(policy),
     rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0,
     blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved'
       : policy.enabled !== true ? 'withdrawals_not_enabled_by_finance'
-      : mode === 'live' && policy.liveSettlementApproved !== true ? 'live_settlement_not_approved' : null,
+      : mode === 'live' && !liveGatesPassed(policy) ? 'live_settlement_gates_incomplete' : null,
   };
 });
 
@@ -176,16 +184,16 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   const b = beneficiary.data() || {};
   const enabled = policy.enabled === true && Number.isSafeInteger(policy.koboPerNex) && b.status === 'verified'
-    && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && policy.liveSettlementApproved === true));
+    && safeText(b.providerBeneficiaryRef, 120) && (mode === 'test' || (mode === 'live' && liveGatesPassed(policy)));
   return {
-    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && policy.liveSettlementApproved === true, testModeAvailable: enabled && mode === 'test',
+    providerConfigured: mode !== 'unknown', provider: 'paystack', providerMode: mode, payoutEnabled: enabled && mode === 'live' && liveGatesPassed(policy), testModeAvailable: enabled && mode === 'test',
     corridor: 'NG-NGN', currency: 'NGN', beneficiaryStatus: b.status === 'verified' ? 'verified' : 'not_configured',
     beneficiary: b.status === 'verified' ? { accountName: b.accountName, accountNumberLast4: b.accountNumberLast4, bankName: b.bankName } : null,
     displayCurrency: profile.data()?.creatorEconomyDisplayCurrency || 'NGN',
     koboPerNex: Number.isSafeInteger(policy.koboPerNex) ? policy.koboPerNex : null,
     minimumNex: Number.isSafeInteger(policy.minimumNex) ? policy.minimumNex : null,
     maximumNex: Number.isSafeInteger(policy.maximumNex) ? policy.maximumNex : null,
-    cashWithdrawalEnabled: enabled && mode === 'live' && policy.liveSettlementApproved === true,
+    cashWithdrawalEnabled: enabled && mode === 'live' && liveGatesPassed(policy),
     blocker: mode === 'unknown' ? 'provider_secret_missing' : !policy.enabled ? 'payout_policy_disabled'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required'
       : mode === 'live' && policy.liveSettlementApproved !== true ? 'live_settlement_not_approved' : null,
@@ -312,6 +320,10 @@ export const paystackPayoutWebhook = onRequest({ secrets: [PAYSTACK_SECRET_KEY, 
   }
   const outcome = eventType === 'transfer.success' ? 'success' : eventType === 'transfer.failed' ? 'failed' : 'reversed';
   try {
+    const payoutSnap = await db.collection('creatorPayoutRequests').doc(reference).get();
+    if (!payoutSnap.exists) { response.status(200).send('Unknown reference ignored'); return; }
+    const payout = payoutSnap.data() || {};
+    if (Number(event.data?.amount) !== payout.amountKobo || event.data?.currency !== 'NGN') { response.status(400).send('Transfer amount or currency mismatch'); return; }
     await applyProviderOutcome(reference, outcome, createHmac('sha256', 'nexora-paystack-event').update(eventType + ':' + reference + ':' + String(event.data?.status || '')).digest('hex'));
     response.status(200).send('OK');
   } catch {
@@ -329,7 +341,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   const policy = await payoutPolicy();
   const mode = providerMode(PAYSTACK_SECRET_KEY.value());
   if (policy.enabled !== true || !Number.isSafeInteger(policy.koboPerNex) || mode === 'unknown'
-    || (mode === 'live' && policy.liveSettlementApproved !== true)) {
+    || (mode === 'live' && !liveGatesPassed(policy))) {
     throw new HttpsError('failed-precondition', 'NGN withdrawals are not enabled for this provider environment.');
   }
   if (amountNex < policy.minimumNex || amountNex > policy.maximumNex) throw new HttpsError('invalid-argument', 'The withdrawal amount is outside the approved limits.');
@@ -403,8 +415,13 @@ export const reconcilePaystackCreatorPayouts = onSchedule({
         } else {
           await doc.ref.update({ lastReconciledAt: FieldValue.serverTimestamp(), providerStatus, updatedAt: FieldValue.serverTimestamp() });
         }
-      } catch {
-        await doc.ref.update({ lastReconciledAt: FieldValue.serverTimestamp(), reconciliationError: true });
+      } catch (error) {
+        const createdAt = doc.data().createdAt?.toDate?.()?.getTime?.() || 0;
+        if (error instanceof PaystackApiError && error.statusCode === 404 && createdAt > 0 && Date.now() - createdAt > 30 * 60 * 1000) {
+          await applyProviderOutcome(reference, 'failed', 'reconcile_not_found_' + reference);
+        } else {
+          await doc.ref.update({ lastReconciledAt: FieldValue.serverTimestamp(), reconciliationError: true });
+        }
       }
     }
   }
