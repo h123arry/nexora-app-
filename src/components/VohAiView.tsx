@@ -46,6 +46,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const [activeSessionId, setActiveSessionId] = useState<string>(() => sessions[0]?.id || 'default-session');
   const [voiceConfig, setVoiceConfig] = useState<VoiceConfig>(() => VoiceEngine.getConfig());
   const [memoryProfile, setMemoryProfile] = useState<UserMemoryProfile>(() => MemoryEngine.getMemory());
+  const [memoryOwnerId, setMemoryOwnerId] = useState(currentUser.id);
   const [memoryHydrated, setMemoryHydrated] = useState(false);
   const [aiSettings, setAiSettings] = useState(() => SettingsEngine.getSettings());
 
@@ -167,6 +168,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   useEffect(() => {
     let cancelled = false;
     setMemoryHydrated(false);
+    setMemoryOwnerId(currentUser.id);
     setMemoryProfile(MemoryEngine.getMemory());
     void MemoryEngine.loadFromCloud().then(cloudMemory => {
       if (cancelled) return;
@@ -181,7 +183,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   }, [currentUser.id]);
 
   useEffect(() => {
-    if (!memoryHydrated) return;
+    if (!memoryHydrated || memoryOwnerId !== currentUser.id) return;
     MemoryEngine.saveMemory(memoryProfile);
     if (!memoryProfile.memoryEnabled) return;
     const timer = window.setTimeout(() => {
@@ -191,7 +193,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [memoryProfile, memoryHydrated]);
+  }, [memoryProfile, memoryHydrated, memoryOwnerId, currentUser.id]);
 
   useEffect(() => {
     SettingsEngine.saveSettings(aiSettings);
