@@ -49,7 +49,7 @@ test('does not label flat or declining conversations as rising', () => {
 test('extracts hashtags, normalizes duplicates and caps per-creator engagement influence', () => {
   const signals = rankRisingTopics([
     { ...post('a', 'u1', 2, ['#NEXORA', 'nexora']), content: 'New #WorldPulse launch' },
-    { ...post('b', 'u2', 3, ['worldpulse']), content: 'Following #WorldPulse' },
+    { ...post('b', 'u2', 3, ['worldpulse', 'nexora']), content: 'Following #WorldPulse' },
   ], { now, windowHours: 24 });
   assert.deepEqual(signals.map(signal => signal.tag), ['nexora', 'worldpulse']);
 });
