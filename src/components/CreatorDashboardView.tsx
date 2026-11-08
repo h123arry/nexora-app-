@@ -23,6 +23,7 @@ import { scheduleCreatorPost, listCreatorScheduledPosts, cancelCreatorScheduledP
 import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import CreatorMembershipPanel from './CreatorMembershipPanel';
+import { buildCreatorAchievements } from '../services/analytics/creatorAchievements';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -657,34 +658,10 @@ export default function CreatorDashboardView({
     });
   }, [localPosts, uploadedMedia, mediaSearch, mediaTypeFilter]);
 
-  // Achievement progress is derived from this creator's published records only.
-  // Lifetime post views are never presented as a 24-hour trending signal.
-  const achievementsList = useMemo(() => {
-    const publishedPosts = localPosts.filter(post => !post.isArchived);
-    const recordedViewPosts = publishedPosts.filter(post =>
-      typeof post.views === 'number' && Number.isFinite(post.views) && post.views >= 0
-    );
-    const totalViewsCount = recordedViewPosts.reduce((sum, post) => sum + Math.max(0, Math.floor(post.views || 0)), 0);
-    const totalSparksCount = publishedPosts.reduce((sum, post) =>
-      sum + (typeof post.likes === 'number' && Number.isFinite(post.likes) ? Math.max(0, Math.floor(post.likes)) : 0), 0);
-    const reputation = typeof currentUser.reputationPoints === 'number' && Number.isFinite(currentUser.reputationPoints)
-      ? Math.max(0, currentUser.reputationPoints) : 0;
-    const firstPublishedPost = publishedPosts.length > 0;
-    const firstVideo = publishedPosts.some(post => !!post.videoUrl);
-    const highestRecordedPostViews = recordedViewPosts.reduce((highest, post) =>
-      Math.max(highest, Math.max(0, Math.floor(post.views || 0))), 0);
-
-    return [
-      { id: 'first_vid', title: 'First Video', desc: 'Publish your first video post', icon: '🎥', unlocked: firstVideo, progress: firstVideo ? 100 : 0 },
-      { id: '100_sparks', title: '100 Sparks Milestone', desc: 'Earn 100 likes across your published posts', icon: '⚡', unlocked: totalSparksCount >= 100, progress: Math.min(100, Math.round((totalSparksCount / 100) * 100)), label: `${totalSparksCount}/100 Sparks` },
-      { id: '1k_views', title: '1,000 Recorded Views', desc: 'Accumulate 1,000 views recorded on your published posts', icon: '👁️', unlocked: recordedViewPosts.length > 0 && totalViewsCount >= 1000, progress: Math.min(100, Math.round((totalViewsCount / 1000) * 100)), label: `${totalViewsCount.toLocaleString()}/1,000 Views` },
-      { id: '10k_views', title: '10,000 Recorded Views', desc: 'Accumulate 10,000 views recorded on your published posts', icon: '🔥', unlocked: recordedViewPosts.length > 0 && totalViewsCount >= 10000, progress: Math.min(100, Math.round((totalViewsCount / 10000) * 100)), label: `${totalViewsCount.toLocaleString()}/10,000 Views` },
-      { id: 'trending_creator', title: '500 Views on One Post', desc: 'Reach 500 recorded lifetime views on a single published post', icon: '📈', unlocked: highestRecordedPostViews >= 500, progress: Math.min(100, Math.round((highestRecordedPostViews / 500) * 100)), label: `${highestRecordedPostViews.toLocaleString()}/500 Views` },
-      { id: 'comm_leader', title: 'Community Leader', desc: 'Reach 400 reputation points or receive creator verification', icon: '🏆', unlocked: currentUser.isVerified === true || reputation >= 400, progress: Math.min(100, Math.round((reputation / 400) * 100)), label: `${reputation.toLocaleString()}/400 Rep` },
-      { id: 'consistent_creator', title: 'Consistent Creator', desc: 'Publish at least three posts', icon: '📅', unlocked: publishedPosts.length >= 3, progress: Math.min(100, Math.round((publishedPosts.length / 3) * 100)), label: `${publishedPosts.length}/3 Posts` },
-      { id: 'top_contrib', title: 'Top Contributor', desc: 'Reach 500 reputation points', icon: '⭐', unlocked: reputation >= 500, progress: Math.min(100, Math.round((reputation / 500) * 100)), label: `${reputation.toLocaleString()}/500 Rep` }
-    ];
-  }, [localPosts, currentUser]);
+  const achievementsList = useMemo(
+    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, currentUser.isVerified === true),
+    [localPosts, currentUser.reputationPoints, currentUser.isVerified],
+  );
 
   return (
     <div className="text-white space-y-6 max-w-6xl mx-auto pb-16">
