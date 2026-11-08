@@ -2,6 +2,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteField,
   serverTimestamp,
   runTransaction,
 } from 'firebase/firestore';
@@ -151,14 +152,37 @@ export class SettingsService {
   static async updatePrivacy(uid: string, privacyUpdates: Partial<NexoraSettings['privacy']>): Promise<void> {
     if (!uid || auth.currentUser?.uid !== uid) throw new Error('Only the signed-in owner can update settings.');
     const settingsRef = doc(db, 'users', uid, 'settings', 'preferences');
+    const locationAudience = privacyUpdates.profileVisibility?.location;
+    const shouldSyncPublicLocation = typeof locationAudience === 'string';
+    const privateProfileRef = doc(db, 'users', uid);
+    const publicProfileRef = doc(db, 'publicProfiles', uid);
     await runTransaction(db, async transaction => {
       const snapshot = await transaction.get(settingsRef);
       const stored = snapshot.exists() ? snapshot.data() as Partial<NexoraSettings> : DEFAULT_SETTINGS;
       const currentPrivacy = { ...DEFAULT_SETTINGS.privacy, ...(stored.privacy || {}) };
-      transaction.set(settingsRef, {
-        privacy: { ...currentPrivacy, ...privacyUpdates },
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      let privateProfileSnapshot;
+      if (shouldSyncPublicLocation) {
+        privateProfileSnapshot = await transaction.get(privateProfileRef);
+      }
+      const nextPrivacy = {
+        ...currentPrivacy,
+        ...privacyUpdates,
+        profileVisibility: {
+          ...(currentPrivacy.profileVisibility || {}),
+          ...(privacyUpdates.profileVisibility || {}),
+        },
+      };
+      transaction.set(settingsRef, snapshot.exists()
+        ? { privacy: nextPrivacy, updatedAt: serverTimestamp() }
+        : { ...DEFAULT_SETTINGS, privacy: nextPrivacy, updatedAt: serverTimestamp() }, { merge: true });
+      if (shouldSyncPublicLocation) {
+        const location = privateProfileSnapshot?.get('location');
+        transaction.set(publicProfileRef, {
+          location: locationAudience === 'everyone' && typeof location === 'string' && location.trim()
+            ? location
+            : deleteField(),
+        }, { merge: true });
+      }
     });
   }
 
