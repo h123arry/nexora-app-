@@ -125,7 +125,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
 
   // Circle creation is persisted to Firestore. The name and description are user-provided;
   // no AI generation is claimed until a real generation service is connected.
-  const handleAICommunityBuild = async (e: React.FormEvent) => {
+  const handleCreateCommunity = async (e: React.FormEvent) => {
     e.preventDefault();
     const idea = promptInput.trim();
     if (!idea || isBuilding) return;
@@ -234,7 +234,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
         <div className="flex items-center gap-2 mb-3">
           <Sparkles className="w-4 h-4 text-violet-400 animate-pulse" />
           <h3 className="text-xs font-black tracking-widest uppercase font-mono text-violet-400">
-            AI Community Builder
+            Community Builder
           </h3>
         </div>
 
@@ -242,7 +242,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
           Describe your community. NEXORA will create a public Circle using the details you provide.
         </p>
 
-        <form onSubmit={handleAICommunityBuild} className="space-y-3 relative z-10">
+        <form onSubmit={handleCreateCommunity} className="space-y-3 relative z-10">
           <div className="flex gap-2">
             <input
               type="text"
@@ -313,7 +313,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
           </div>
           <h4 className="text-sm font-sans font-extrabold text-white">No Communities Found</h4>
           <p className="text-xs text-violet-300/70 max-w-md mx-auto leading-relaxed">
-            Use the AI Community Builder above to instantly launch your custom community space on Nexora.
+            Use the Community Builder above to instantly launch your custom community space on Nexora.
           </p>
         </div>
       ) : (
