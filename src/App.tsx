@@ -117,7 +117,6 @@ export default function App() {
   }, []);
   const isLoggedIn = !!firebaseUser && !firebaseUser.isAnonymous && firebaseProfile?.id === firebaseUser.uid;
   const initialCacheUserId = isLoggedIn && firebaseUser ? firebaseUser.uid : '';
-  const [isDemoMode, setIsDemoMode] = useState(false);
   const [currentUser, setCurrentUser] = useState<User>(() => getRichUser({
       id: 'guest_visitor_id',
       username: 'visitor',
@@ -185,7 +184,6 @@ export default function App() {
   useEffect(() => {
     if (authInitializing) return;
     if (isLoggedIn && firebaseProfile) {
-      setIsDemoMode(false);
       setCurrentUser(getRichUser(firebaseProfile));
       localStorage.setItem('nexora_user', JSON.stringify(firebaseProfile));
       localStorage.removeItem('nexora_logged_in');
@@ -193,7 +191,7 @@ export default function App() {
     }
     localStorage.removeItem('nexora_user');
     localStorage.removeItem('nexora_logged_in');
-    if (!isDemoMode) setCurrentUser(getRichUser({
+    setCurrentUser(getRichUser({
       id: 'guest_visitor_id', username: 'visitor', name: 'Nexora Visitor',
       avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
       bio: 'Guest visitor browsing Nexora network.', location: 'Earth Orbit', website: 'https://nexora.app',
@@ -203,7 +201,7 @@ export default function App() {
       reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 },
       interestDNA: {}, skills: []
     }));
-  }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile, isDemoMode]);
+  }, [authInitializing, isLoggedIn, firebaseUser?.uid, firebaseProfile]);
 
   useEffect(() => {
     if (isLoggedIn && pendingAuthAction) {
@@ -3346,13 +3344,6 @@ export default function App() {
               <Suspense fallback={<div className="p-8 text-center text-sm text-zinc-400">Loading secure sign-in…</div>}><AuthView
                 promptReason={authPromptReason}
                 onLoginSuccess={(loggedUser) => {
-                  if (loggedUser.id === 'demo-user-1' && import.meta.env.DEV) {
-                    setIsDemoMode(true);
-                    setCurrentUser(getRichUser(loggedUser));
-                    setShowAuthModal(false);
-                    return;
-                  }
-                  setIsDemoMode(false);
                   setCurrentUser(getRichUser(loggedUser));
                   setShowAuthModal(false);
                 }}
