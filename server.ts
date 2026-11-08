@@ -424,7 +424,10 @@ vohRouter.post('/chat', async (req, res) => {
         console.error('VOH account context unavailable:', error instanceof Error ? error.name : 'unknown');
         return null;
       }),
-      getVohMemoryPrompt(res.locals.vohUid),
+      getVohMemoryPrompt(res.locals.vohUid).catch(error => {
+        console.error('VOH personal memory unavailable:', error instanceof Error ? error.name : 'unknown');
+        return 'Persistent personal memory could not be loaded for this request. Do not claim that saved memories were consulted.';
+      }),
     ]);
     const context = shapeVohContext({ ...(req.body?.context || {}), currentUser: accountContext }, res.locals.vohUid);
 
