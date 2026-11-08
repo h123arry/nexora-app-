@@ -30,7 +30,7 @@ before(async () => {
     projectId,
     firestore: { rules: await readFile(new URL('../firestore.rules', import.meta.url), 'utf8') }
   });
-
+});
 
 after(async () => env?.cleanup());
 beforeEach(async () => env.clearFirestore());
