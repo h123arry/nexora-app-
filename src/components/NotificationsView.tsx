@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Volume2, VolumeX, AlertTriangle, RefreshCw, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock } from 'lucide-react';
+import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Volume2, VolumeX, AlertTriangle, RefreshCw, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
 import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
