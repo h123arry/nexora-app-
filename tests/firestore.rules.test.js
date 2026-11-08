@@ -970,11 +970,17 @@ const publicProfile = (uid) => ({
       await setDoc(doc(db, 'subscriptions', 'sub-1'), { ownerId: 'alice', productId: 'nexora_plus', status: 'active' });
       await setDoc(doc(db, 'entitlements', 'ent-1'), { ownerId: 'alice', key: 'nexora_plus', status: 'active' });
       await setDoc(doc(db, 'creatorEarnings', 'earn-1'), { creatorId: 'alice', creatorShareMinor: 7200, currency: 'USD' });
+      await setDoc(doc(db, 'creatorMembershipTiers', 'tier-1'), { creatorId: 'alice', name: 'Insider', status: 'draft', benefits: ['Monthly Q&A'] });
     });
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'financialTransactions', 'txn-1')));
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'subscriptions', 'sub-1')));
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'entitlements', 'ent-1')));
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'creatorEarnings', 'earn-1')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'creatorMembershipTiers', 'tier-1')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'creatorMembershipTiers', 'tier-1')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'creatorMembershipTiers', 'forged'), { creatorId: 'alice', name: 'Forged', status: 'draft' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'creatorMembershipTiers', 'tier-1'), { name: 'Client edited' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'creatorMembershipTiers', 'tier-1')));
     await assertFails(getDoc(doc(dbFor('bob'), 'financialTransactions', 'txn-1')));
     await assertFails(getDoc(doc(dbFor('bob'), 'entitlements', 'ent-1')));
     await assertFails(setDoc(doc(dbFor('alice'), 'financialTransactions', 'forged'), { ownerId: 'alice', amountMinor: 999999, currency: 'USD', status: 'payment_confirmed' }));
