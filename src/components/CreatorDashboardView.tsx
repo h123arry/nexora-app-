@@ -1431,7 +1431,7 @@ export default function CreatorDashboardView({
           )}
 
           {/* TAB 8: MONETIZATION AVAILABILITY */}
-          {activeTab === 'monetization' && <><CreatorGiftEarningsPanel /><CreatorEconomyExpansionPanel /><CreatorMembershipPanel /></>}
+          {activeTab === 'monetization' && <><CreatorGiftEarningsPanel /><CreatorEconomyExpansionPanel /></>}
         </motion.div>
       )}
 
