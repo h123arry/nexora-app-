@@ -21,3 +21,10 @@ The pure profile policy has unit coverage for missing hints, Data Saver, low-mem
 ## Remaining real-device acceptance
 
 Run cold-start, feed scroll, video playback, navigation, keyboard/input and memory checks on representative low-end Android devices and a current iOS device. Browser hints are heuristics, not a substitute for measured device profiling.
+
+
+## Media image scheduling
+
+- Video poster images load eagerly only for the active/nearby/preloaded player; offscreen posters are lazy-loaded.
+- Feed carousel images, story avatars/media, and gallery thumbnails use asynchronous image decoding; gallery thumbnails are lazy-loaded.
+- Sidebar profile imagery decodes asynchronously to reduce main-thread image decode contention during navigation.

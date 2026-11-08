@@ -60,6 +60,7 @@ export default function Sidebar({
               src={currentUser.avatar}
               alt={currentUser.name}
               referrerPolicy="no-referrer"
+              decoding="async"
               className="h-11 w-11 rounded-2xl object-cover ring-2 ring-violet-400/35"
             />
             <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#0b1224] bg-emerald-400" />

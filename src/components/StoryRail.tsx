@@ -45,6 +45,7 @@ function StoryAvatar({ story, size = 'h-14 w-14', text = 'text-base' }: { story:
         className={`${size} rounded-full object-cover`}
         referrerPolicy="no-referrer"
         loading="lazy"
+        decoding="async"
       />
     );
   }
@@ -478,7 +479,7 @@ function StoryViewer({
           </div>
           <div className="flex-1 grid place-items-center px-6">
             {story.mediaType === 'image' && story.mediaUrl ? (
-              <img src={story.mediaUrl} alt={story.caption || `Story from ${story.name || story.username}`} className="max-h-full max-w-full rounded-2xl object-contain" />
+              <img src={story.mediaUrl} alt={story.caption || `Story from ${story.name || story.username}`} loading="eager" decoding="async" className="max-h-full max-w-full rounded-2xl object-contain" />
             ) : story.mediaType === 'video' && story.mediaUrl ? (
               <video
                 ref={videoRef}

@@ -1020,6 +1020,8 @@ export default function NexoraVideoPlayer({
                 src={posterUrl}
                 alt=""
                 aria-hidden="true"
+                loading={(isActive || isNearby || shouldPreload) ? 'eager' : 'lazy'}
+                decoding="async"
                 className="nx-video-poster z-[1]"
                 style={{ opacity: isReady ? 0 : 1 }}
               />
