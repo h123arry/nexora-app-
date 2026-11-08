@@ -419,18 +419,16 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
   const stopMicRecording = () => {
     setIsRecording(false);
     if (timerRef.current) clearInterval(timerRef.current);
-    setWaveformNodes(Array(18).fill(8));
+    setWaveformNodes([]);
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
     } else {
-      setIsSynthesizingVoice(true);
-      setTimeout(() => {
-        setTranscription("We are designing a gorgeous space-glass interface with high-reputation communities in Port Harcourt!");
-        setTranslation("Port Harcourt design parameters.");
-        setSummarizedText("Design token blueprint.");
-        setIsSynthesizingVoice(false);
-      }, 1200);
+      setIsSynthesizingVoice(false);
+      setTranscription('');
+      setTranslation('');
+      setSummarizedText('');
+      showToast('No active microphone recording was found. Please record your voice again.');
     }
   };
 
@@ -453,6 +451,30 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
 
     setSessions(prev => prev.map(s => s.id === activeSessionId ? { ...s, messages: updatedMessages, title: s.title.startsWith('New Dialogue') ? textToSend.slice(0, 24) + '...' : s.title } : s));
 
+    const rememberRequest = textToSend.match(/^\s*(?:please\s+)?(?:remember(?:\s+that|\s+this)?|don't forget(?:\s+that)?|keep in mind(?:\s+that)?|save this(?: about me)?)\s*[:,-]?\s*(.+)$/i);
+    if (rememberRequest?.[1]) {
+      setLoadingAi(true);
+      setTypingIndicator(false);
+      const aiMsgId = `msg-${Date.now()}-voh`;
+      try {
+        const nextMemory = await MemoryEngine.rememberFact(rememberRequest[1]);
+        setMemoryProfile(nextMemory);
+        const confirmation = 'I’ll remember that for future conversations. You can review or remove it anytime in VOH Memory settings.';
+        setSessions(prev => prev.map(session => session.id === activeSessionId
+          ? { ...session, messages: [...session.messages, { id: aiMsgId, sender: 'voh', text: confirmation, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] }
+          : session));
+        showToast('Saved to your VOH account memory.');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'I could not save that memory. Please try again.';
+        setSessions(prev => prev.map(session => session.id === activeSessionId
+          ? { ...session, messages: [...session.messages, { id: aiMsgId, sender: 'voh', text: message, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }] }
+          : session));
+      } finally {
+        setLoadingAi(false);
+      }
+      return;
+    }
+
     await triggerAiResponse(activeSessionId, textToSend, updatedMessages);
   };
 
@@ -473,7 +495,7 @@ export default function VohAiView({ currentUser, posts, onAddPost, setActiveTab 
       if (attachedContextType === 'feed') {
         contextualMessage = `[SYSTEM CONTEXT: The user has attached their feed for context. Use only the recent post data included in the request; do not assume additional activity or regional trends.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'profile') {
-        contextualMessage = `[SYSTEM CONTEXT: The user is checking their Creator Profile dashboard. Username: @${currentUser.username}, Display: ${currentUser.name}, Reputation Points: ${currentUser.reputationPoints} PR, Wallet: ${currentUser.nexBalance || 0} NEX, Earned This Week: ${currentUser.thisWeekEarnedNex || 0} NEX, Bio: ${currentUser.bio || 'Co-building Nexora network'}.]\n\nUser query: ${message}`;
+        contextualMessage = `[CONTEXT: The user is asking about their NEXORA profile. Use the authenticated account profile supplied by the server. If a metric is unavailable, say so rather than assuming zero.]\n\nUser query: ${message}`;
       } else if (attachedContextType === 'inbox') {
         contextualMessage = `[SYSTEM CONTEXT: The user is viewing the inbox. Private message contents are not included; do not claim access to them.]\n\nUser query: ${message}`;
       }
