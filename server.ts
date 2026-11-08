@@ -558,7 +558,9 @@ vohRouter.post('/improve-post', async (req, res) => {
       }
     });
 
-    res.json({ text: response.text?.trim() || content, isDemo: false });
+    const improved = response.text?.trim();
+    if (!improved) return res.status(502).json({ error: 'VOH AI did not return an improved post. Please retry.' });
+    res.json({ text: improved });
 
   } catch (error: any) {
     console.error('VOH AI post improvement failed:', error instanceof Error ? error.name : 'unknown');
@@ -601,11 +603,8 @@ vohRouter.post('/voice-transcribe', async (req, res) => {
 
     const output = response.text || '';
     // Let's separate transcription and comment if possible, or just send the full text
-    res.json({
-      transcription: output,
-      replyText: "Transcribed and parsed successfully!",
-      isDemo: false
-    });
+    if (!output.trim()) return res.status(502).json({ error: 'VOH AI could not detect speech in that audio.' });
+    res.json({ transcription: output.trim() });
 
   } catch (error: any) {
     console.error('VOH AI voice transcription failed:', error instanceof Error ? error.name : 'unknown');
@@ -634,7 +633,9 @@ vohRouter.post('/summarize-post', async (req, res) => {
       }
     });
 
-    res.json({ text: response.text?.trim() || 'No summary generated.', isDemo: false });
+    const summary = response.text?.trim();
+    if (!summary) return res.status(502).json({ error: 'VOH AI did not return a summary. Please retry.' });
+    res.json({ text: summary });
 
   } catch (error: any) {
     console.error('VOH AI summarize failed:', error instanceof Error ? error.name : 'unknown');
