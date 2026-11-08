@@ -1,4 +1,4 @@
-import { createHmac } from 'node:crypto';
+import { createHash, createHmac } from 'node:crypto';
 import { getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
@@ -53,7 +53,7 @@ export const getLiveKitToken = onCall(
     const roomName = 'nexora_' + sessionId;
     const isHost = session.data()?.hostId === userId;
     if (!isHost) {
-      const viewerId = createHmac('sha256', apiSecret.value()).update(sessionId + ':' + userId).digest('hex');
+      const viewerId = createHash('sha256').update(sessionId + ':' + userId).digest('hex');
       const viewer = await db.collection('liveSessionViewers').doc(viewerId).get();
       const connections: unknown = viewer.data()?.connectionIds;
       if (!viewer.exists || !Array.isArray(connections) || !connections.includes(connectionId)) {
@@ -83,6 +83,7 @@ export const getLiveKitToken = onCall(
         canUpdateOwnMetadata: false,
       },
     }, secret);
+    await sessionRef.update({ videoTransport: 'livekit', videoTransportConnectedAt: new Date() });
     return { token, wsUrl, roomName, role: isHost ? 'host' : 'viewer', expiresAt: (now + TOKEN_TTL_SECONDS) * 1000 };
   },
 );
