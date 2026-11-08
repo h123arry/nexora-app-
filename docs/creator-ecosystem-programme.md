@@ -108,6 +108,12 @@ A workstream is not complete because a screen exists. It must have:
 
 ## Current implementation status
 
+### Creator Economy earnings-history expansion
+- Added authenticated, owner-scoped cursor pagination for creator gift earnings. Each page returns at most 100 records and an opaque next cursor only when another page exists.
+- Cursor documents are validated against the signed-in creator before the query advances, preventing cross-account cursor probing.
+- The first page preserves the existing summary response shape while subsequent pages can be loaded without re-fetching or unbounded reads. Page totals are explicitly scoped to the returned page; the wallet balance remains the current wallet snapshot.
+- This is NEX gift-ledger history, not NGN cash income. NGN withdrawal activation remains controlled by the separate provider/beneficiary/settlement gates.
+
 ### Delivered in the Creator Intelligence branch
 - Routed follow/unfollow actions through a trusted callable transaction that owns the canonical relationship edge and atomically updates public/private follower counters plus daily creator growth records.
 - Made repeated follow/unfollow requests idempotent by comparing the requested state with the canonical relationship document inside the transaction. Client writes to follow edges and analytics records are denied.
