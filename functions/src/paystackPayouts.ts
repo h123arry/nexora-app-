@@ -82,7 +82,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
     liveSettlementApproved: policy.liveSettlementApproved === true,
     cashWithdrawalsEnabled: policy.enabled === true && mode === 'live' && livePayoutGatesPassed(policy),
     rateConfigured: Number.isSafeInteger(policy.koboPerNex) && policy.koboPerNex > 0 && Number.isSafeInteger(policy.providerFeeBufferKobo),
-    blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid'
+    blocker: !secret ? 'provider_secret_missing' : mode === 'unknown' ? 'provider_secret_invalid' : !credentialsVerified ? 'provider_credentials_unverified'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved'
       : policy.enabled !== true ? 'withdrawals_not_enabled_by_finance'
       : mode === 'live' && !livePayoutGatesPassed(policy) ? 'live_settlement_gates_incomplete' : null,
@@ -308,7 +308,7 @@ export const getCreatorPayoutReadiness = onCall({ secrets: [PAYSTACK_SECRET_KEY]
     minimumNex: Number.isSafeInteger(policy.minimumNex) ? policy.minimumNex : null,
     maximumNex: Number.isSafeInteger(policy.maximumNex) ? policy.maximumNex : null,
     cashWithdrawalEnabled: enabled && mode === 'live' && livePayoutGatesPassed(policy),
-    blocker: mode === 'unknown' ? 'provider_secret_missing' : !policy.enabled ? 'payout_policy_disabled'
+    blocker: mode === 'unknown' ? 'provider_secret_missing' : !credentialsVerified ? 'provider_credentials_unverified' : !policy.enabled ? 'payout_policy_disabled'
       : !Number.isSafeInteger(policy.koboPerNex) ? 'ngn_rate_not_approved' : b.status !== 'verified' ? 'verified_beneficiary_required' : complianceStatus !== 'approved' ? 'creator_compliance_review_required'
       : mode === 'live' && policy.liveSettlementApproved !== true ? 'live_settlement_not_approved' : null,
   };
@@ -456,15 +456,17 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   let amountKobo: number;
   try { amountKobo = calculateNgnPayoutKobo(amountNex, policy.koboPerNex); }
   catch { throw new HttpsError('failed-precondition', 'The approved NGN conversion amount is invalid.'); }
-  if (mode === 'live') {
-    try {
-      const balances = await paystack('/balance?currency=NGN', 'GET');
+  try {
+    const balances = await paystack('/balance?currency=NGN', 'GET');
+    if (mode === 'live') {
       const ngnBalance = Array.isArray(balances) ? balances.find((entry: any) => entry.currency === 'NGN')?.balance : undefined;
-      if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo + Number(policy.providerFeeBufferKobo || 0)) throw new HttpsError('failed-precondition', 'The Paystack NGN settlement balance is insufficient for this withdrawal.');
-    } catch (error) {
-      if (error instanceof HttpsError) throw error;
-      throw new HttpsError('unavailable', 'Paystack settlement balance could not be verified. No NEX was reserved.');
+      if (!Number.isSafeInteger(ngnBalance) || ngnBalance < amountKobo + Number(policy.providerFeeBufferKobo || 0)) {
+        throw new HttpsError('failed-precondition', 'The Paystack NGN settlement balance is insufficient for this withdrawal.');
+      }
     }
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('unavailable', 'Paystack credentials or settlement balance could not be verified. No NEX was reserved.');
   }
   const reference = 'nxp_' + randomUUID().replace(/-/g, '');
   const idempotencyId = createHmac('sha256', 'nexora-payout-idempotency').update(creatorId + ':' + idempotencyKey).digest('hex');
