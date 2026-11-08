@@ -105,13 +105,15 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
 export const heartbeatLiveSession = onCall({ maxInstances: 20 }, async request => {
   const viewerId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const sessionRef = sessions.doc(sessionId);
   const viewerRef = db.collection('liveSessionViewers').doc(rateDocId(sessionId, viewerId));
   try {
     return await db.runTransaction(async tx => {
       const [session, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has ended.');
-      if (session.data()?.hostId !== viewerId && !viewer.exists) throw new HttpsError('permission-denied', 'Join this live room before sending a heartbeat.');
+      const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds : [];
+      if (session.data()?.hostId !== viewerId && (!viewer.exists || !connections.includes(connectionId))) throw new HttpsError('permission-denied', 'Join this live room before sending a heartbeat.');
       if (viewer.exists) tx.update(viewerRef, { lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
       return { sessionId, active: true };
     });
@@ -123,12 +125,19 @@ export const heartbeatLiveSession = onCall({ maxInstances: 20 }, async request =
 export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
   const viewerId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const sessionRef = sessions.doc(sessionId);
   const viewerRef = db.collection('liveSessionViewers').doc(rateDocId(sessionId, viewerId));
   try {
     return await db.runTransaction(async tx => {
       const [session, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
       if (!viewer.exists) return { sessionId, left: true, viewerCount: Math.max(0, Number(session.data()?.viewerCount || 0)) };
+      const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds.filter((item: unknown): item is string => typeof item === 'string') : [];
+      const remaining = connections.filter(item => item !== connectionId);
+      if (remaining.length > 0) {
+        tx.update(viewerRef, { connectionIds: remaining, updatedAt: FieldValue.serverTimestamp() });
+        return { sessionId, left: true, viewerCount: Number(session.data()?.viewerCount || 0) };
+      }
       tx.delete(viewerRef);
       if (!session.exists || session.data()?.status !== 'live') return { sessionId, left: true, viewerCount: 0 };
       const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount > 0 ? session.data()!.viewerCount : 0;
@@ -143,6 +152,7 @@ export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
 export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request => {
   const senderId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
   const message = valid(() => validateLiveChatMessage(request.data?.message));
   const sessionRef = sessions.doc(sessionId);
   const profileRef = db.collection('users').doc(senderId);
@@ -157,7 +167,8 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
       ]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room is no longer active.');
       if (session.data()?.chatEnabled !== true) throw new HttpsError('failed-precondition', 'Live chat is disabled for this room.');
-      if (session.data()?.hostId !== senderId && !viewer.exists) throw new HttpsError('permission-denied', 'Join this live room before chatting.');
+      const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds : [];
+      if (session.data()?.hostId !== senderId && (!viewer.exists || !connections.includes(connectionId))) throw new HttpsError('permission-denied', 'Join this live room before chatting.');
       if (accountRestricted(status.data(), 'suspended') || accountRestricted(status.data(), 'messagingRestricted')) {
         throw new HttpsError('permission-denied', 'This account cannot send live chat messages.');
       }
