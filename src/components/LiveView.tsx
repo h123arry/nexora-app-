@@ -63,9 +63,14 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   },[selectedId]);
 
   useEffect(() => {
-    if(!selectedId || isHost) return;
+    if(!selectedId) return;
     let cancelled=false;
     let heartbeat: ReturnType<typeof setInterval> | null = null;
+    if(isHost) {
+      void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live room connection needs to be refreshed.'));
+      heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live room connection needs to be refreshed.'));},30_000);
+      return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);};
+    }
     void joinLiveSession(selectedId,connectionId).then(()=>{
       if(cancelled) { void leaveLiveSession(selectedId,connectionId); return; }
       heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId,connectionId).catch(()=>setError('Your live connection needs to be refreshed.'));},30_000);
