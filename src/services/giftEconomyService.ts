@@ -64,7 +64,7 @@ export async function reviewCreatorPayoutCompliance(input:{creatorId:string;bene
 
 export type CreatorPayoutComplianceRecord = {creatorId:string;beneficiaryRef:string;accountName:string;accountNumberLast4:string;bankName:string;complianceStatus:string};
 export async function getNgnPayoutPolicyForFinance() {
-  return (await httpsCallable<void, {mode:string;credentialsVerified:boolean;ngnBalanceKobo:number|null;enabled:boolean;koboPerNex:number|null;providerFeeBufferKobo:number|null;minimumNex:number|null;maximumNex:number|null;liveSettlementApproved:boolean;providerBusinessVerified:boolean;settlementFundingVerified:boolean;complianceApproved:boolean;webhookVerified:boolean;liveTestTransferVerified:boolean;liveEvidenceReference:string}>(functions, 'getNgnPayoutPolicyForFinance')()).data;
+  return (await httpsCallable<void, {mode:string;credentialsVerified:boolean;ngnBalanceKobo:number|null;webhookSecretConfigured:boolean;enabled:boolean;koboPerNex:number|null;providerFeeBufferKobo:number|null;minimumNex:number|null;maximumNex:number|null;liveSettlementApproved:boolean;providerBusinessVerified:boolean;settlementFundingVerified:boolean;complianceApproved:boolean;webhookVerified:boolean;liveTestTransferVerified:boolean;liveEvidenceReference:string}>(functions, 'getNgnPayoutPolicyForFinance')()).data;
 }
 export async function getCreatorPayoutComplianceQueue() {
   return (await httpsCallable<void, {records:CreatorPayoutComplianceRecord[]}>(functions, 'getCreatorPayoutComplianceQueue')()).data.records;
