@@ -51,7 +51,7 @@ export class ChatEngine {
           {
             id: 'welcome-msg',
             sender: 'voh',
-            text: "Hey, I'm **VOH AI**. I can help you think through ideas and work with information you share in this conversation. I don't have live web access, private-message access, account controls, or live World Pulse data.",
+            text: "Hey, I'm **VOH AI**. I can help you think through ideas and use the authenticated profile, visible feed, joined communities, recent notifications and loaded World Pulse snapshot when available. I cannot read private messages or execute account-changing actions.",
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             reactions: []
           }
