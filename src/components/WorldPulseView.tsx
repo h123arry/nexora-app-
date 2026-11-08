@@ -8,6 +8,7 @@ import { getJoinedCirclesForUser } from '../data/database';
 import { SettingsService } from '../services/firebase/settingsService';
 import { getGlobalPostsPage } from '../services/posts/postService';
 import { rankTrendingTopics } from '../services/discovery/discoveryService';
+import { rankRisingTopics } from '../services/discovery/worldPulseSignals';
 import type { Post } from '../types';
 
 export interface WorldPulseViewProps {
@@ -67,6 +68,8 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
   const pulseTopics = React.useMemo(() => rankTrendingTopics(pulsePosts, {
     windowHours: 24 * 7, minPosts: 2, limit: 10,
   }), [pulsePosts]);
+
+  const risingTopics = React.useMemo(() => rankRisingTopics(pulsePosts, { windowHours: 24, minPosts: 2, minCreators: 2, limit: 5 }), [pulsePosts]);
 
   const categoryTerms: Record<string, string[]> = {
     sports: ['football', 'soccer', 'basketball', 'tennis', 'sports', 'match', 'goal'],
@@ -235,6 +238,34 @@ export default function WorldPulseView({ theme, currentUserId }: WorldPulseViewP
           ))}
         </div>
       </div>
+
+      {/* INTEREST RADAR: momentum is calculated only from loaded public NEXORA posts. */}
+      {risingTopics.length > 0 && (
+        <section className="rounded-2xl border border-violet-400/15 bg-linear-to-br from-violet-950/25 to-[#080614] p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-white"><Globe className="h-4 w-4 text-violet-300" /> Interest Radar</div>
+              <p className="mt-1 text-[10px] text-violet-200/50">Conversations gaining momentum in the latest 24 hours versus the previous 24 hours.</p>
+            </div>
+            <span className="shrink-0 rounded-full border border-violet-400/20 px-2 py-1 text-[9px] font-semibold text-violet-200">Loaded sample</span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {risingTopics.map(topic => (
+              <button key={topic.tag} type="button" onClick={() => { setPulseSearch(topic.tag); setActiveTab('trending'); }} className="flex min-h-16 items-center justify-between gap-3 rounded-xl border border-white/5 bg-black/20 px-3 py-2 text-left transition-colors hover:border-violet-400/25 hover:bg-violet-500/5">
+                <span className="min-w-0">
+                  <span className="block truncate text-xs font-semibold text-violet-100">#{topic.tag}</span>
+                  <span className="mt-1 block text-[10px] text-violet-200/45">{topic.currentPosts} recent posts · {topic.creatorCount} creators</span>
+                </span>
+                <span className="flex shrink-0 items-center gap-1 text-[10px] font-bold text-violet-200">
+                  <span>{topic.status === 'new' ? 'NEW' : `${topic.growthMultiplier}×`}</span>
+                  <ArrowRight className="h-3 w-3" />
+                </span>
+              </button>
+            ))}
+          </div>
+          <p className="text-[9px] text-violet-200/35">Signals reflect the public posts currently loaded in World Pulse, not all activity across the internet or all NEXORA posts.</p>
+        </section>
+      )}
 
       {/* TOP FILTERS - CATEGORY TABS */}
       <div className="flex gap-1.5 overflow-x-auto pb-1.5 scrollbar-none border-b border-white/10 items-center">
