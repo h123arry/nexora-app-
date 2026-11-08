@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { AlertCircle, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
 import GiftLiveOverlay from './GiftLiveOverlay';
+import LiveKitStage from './LiveKitStage';
 import { User } from '../types';
 import { db } from '../lib/firebase';
 import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, sendLiveChatMessage, startLiveSession, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
@@ -119,7 +120,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
           <div className="w-full max-w-xl space-y-5 p-6">
             <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-violet-400/20 bg-violet-500/10"><Radio size={34} className="text-violet-200"/></div>
             <div className="text-center"><p className="text-[10px] font-black uppercase tracking-[.25em] text-violet-300">NEXORA LIVE</p><h2 className="mt-2 text-2xl font-black">Live rooms</h2><p className="mt-2 text-sm text-slate-400">Join a creator's live chat or open your own room.</p></div>
-            <div className="rounded-2xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Live room sessions, viewer counts, gifts and chat are server-backed. Camera streaming transport is not configured yet, so this room does not claim to broadcast video.</div>
+            <div className="rounded-2xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Live rooms now connect through LiveKit video transport when the secure server credentials are configured. Hosts need camera and microphone permissions.</div>
             <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[.03] p-4">
               <h3 className="text-sm font-bold">Start a live room</h3>
               <input value={title} onChange={e=>setTitle(e.target.value)} maxLength={80} placeholder="What are you going live about?" className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm outline-none focus:border-violet-400/50"/>
@@ -133,7 +134,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
           <div className="relative flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(91,33,182,.22),transparent_60%)] p-6 text-center">
             <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-black tracking-wider"><span className="h-2 w-2 animate-pulse rounded-full bg-white"/> LIVE ROOM</div>
             <div className="absolute right-4 top-4 flex items-center gap-3 rounded-full bg-black/50 px-3 py-1.5 text-xs"><Users size={14}/>{(session?.viewerCount||0).toLocaleString()} viewers</div>
-            <div className="max-w-lg"><Radio size={48} className="mx-auto text-violet-300"/><h2 className="mt-4 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'Your live room is open.':'You joined this live room.'}</p><p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Video transport is not configured. Your live chat and GIFTVERSE activity are connected to this room.</p></div>
+            <div className="w-full max-w-3xl"><Radio size={36} className="mx-auto text-violet-300"/><h2 className="mt-3 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'You are hosting this broadcast.':'You are watching this creator live.'}</p>{selectedId&&<LiveKitStage sessionId={selectedId} connectionId={connectionId} isHost={isHost}/>}</div>
             {selectedId&&<GiftLiveOverlay streamId={selectedId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current}/>}
             <div className="absolute bottom-5 left-5 flex items-center gap-2">
               <button type="button" onClick={()=>{if(!giftAudioContext.current&&typeof window!=='undefined'&&window.AudioContext)giftAudioContext.current=new window.AudioContext();if(!giftSoundsEnabled)void giftAudioContext.current?.resume();setGiftSoundsEnabled(v=>!v);}} className="rounded-full border border-white/10 bg-black/50 p-3" aria-label={giftSoundsEnabled?'Mute gift sounds':'Enable gift sounds'}>{giftSoundsEnabled?<Volume2 size={18}/>:<VolumeX size={18}/>}</button>
