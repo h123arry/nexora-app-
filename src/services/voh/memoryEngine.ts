@@ -106,7 +106,7 @@ export class MemoryEngine {
   static async rememberFact(fact: string): Promise<UserMemoryProfile> {
     const cleanFact = fact.trim().replace(/\s+/g, ' ').slice(0, 500);
     if (!cleanFact) throw new Error('Tell VOH what you want remembered.');
-    if (/\b(password|passcode|passphrase|secret|credential|one[- ]time code|otp|verification code|pin\b|account number|bank details|credit card|debit card|card number|cvv|cvc|bvn|nin|tin|tax identification number|tax id|private key|recovery phrase|seed phrase|api key|access token|bearer token|secret key)\b/i.test(cleanFact)) {
+    if (/\b(password|passcode|passphrase|secret key|one[- ]time code|otp|verification code|pin(?: number| code)?|account number|bank details|credit card|debit card|card number|cvv|cvc|bvn|nin|tin|tax identification number|tax id|private key|recovery phrase|seed phrase|api key|access token|bearer token)\b/i.test(cleanFact)) {
       throw new Error('For your safety, VOH will not store passwords, financial credentials, or sensitive identity numbers.');
     }
     const current = this.getMemory();
