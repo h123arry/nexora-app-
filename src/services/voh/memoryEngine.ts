@@ -10,6 +10,7 @@ export interface UserMemoryProfile {
     voiceAutoPlay: boolean;
   };
   creatorGoals: string[];
+  personalFacts: string[];
   writingStyle: string;
   interests: string[];
   recentHashtags: string[];
@@ -25,6 +26,7 @@ function emptyMemory(): UserMemoryProfile {
     consentVersion: undefined,
     preferences: { theme: 'dark', aiTone: 'futuristic', voiceAutoPlay: false },
     creatorGoals: [],
+    personalFacts: [],
     writingStyle: '',
     interests: [],
     recentHashtags: [],
@@ -46,6 +48,7 @@ function normalizeMemory(value: Partial<UserMemoryProfile> | null | undefined): 
       voiceAutoPlay: preferences.voiceAutoPlay === true
     },
     creatorGoals: enabled && Array.isArray(value?.creatorGoals) ? value!.creatorGoals!.filter(x => typeof x === 'string').slice(0, 30) : [],
+    personalFacts: enabled && Array.isArray(value?.personalFacts) ? value!.personalFacts!.filter(x => typeof x === 'string').map(x => x.slice(0, 500)).slice(0, 60) : [],
     writingStyle: enabled && typeof value?.writingStyle === 'string' ? value.writingStyle.slice(0, 1000) : '',
     interests: enabled && Array.isArray(value?.interests) ? value!.interests!.filter(x => typeof x === 'string').slice(0, 50) : [],
     recentHashtags: enabled && Array.isArray(value?.recentHashtags) ? value!.recentHashtags!.filter(x => typeof x === 'string').slice(0, 40) : [],
