@@ -174,3 +174,6 @@ The changes are committed to the feature branch. Automated build, lint and emula
 ### GIFTVERSE settlement and live-event reliability
 - Low-risk gifts receive a deterministic auto-clearance disposition; review/high-risk gifts require explicit finance clearance before creator/platform revenue settlement. Escalated gifts remain blocked. Legacy earnings without risk signals retain the existing finance-only manual settlement path.
 - Live gift overlays now query the newest 40 events for a room, ordered by server timestamp, so busy sessions do not get stuck showing an arbitrary older page.
+
+### Finance settlement queue risk visibility
+- The finance settlement queue returns each gift's risk tier, disposition and review reasons. It disables settlement for review-only and escalated gifts; finance must clear the signal in Gift Economy Operations first. Low-risk auto-cleared and explicitly cleared gifts can proceed. Legacy records without a risk signal remain finance-only manual-review items.
