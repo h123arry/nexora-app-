@@ -567,13 +567,17 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
     if (status === 'success' || status === 'failed' || status === 'reversed') {
       await applyProviderOutcome(reference, status, 'initiate_' + status + '_' + reference);
     }
-    return { reference, status, amountNex, amountKobo, currency: 'NGN' };
+    const finalPayout = await payoutRef.get();
+    const finalStatus = String(finalPayout.data()?.status || status);
+    return { reference, status: finalStatus, amountNex, amountKobo, currency: 'NGN' };
   } catch {
     // A timeout is ambiguous: the provider may have accepted the transfer.
     // Keep the reserve until reconciliation proves whether a transfer exists.
     await updatePayoutUnlessTerminal(reference, 'submission_unknown');
-    return { reference, status: 'submission_unknown', amountNex, amountKobo, currency: 'NGN',
-      message: 'The provider response was inconclusive. Your NEX remains reserved while the transfer is reconciled.' };
+    const finalPayout = await payoutRef.get();
+    const finalStatus = String(finalPayout.data()?.status || 'submission_unknown');
+    return { reference, status: finalStatus, amountNex, amountKobo, currency: 'NGN',
+      message: finalStatus === 'submission_unknown' ? 'The provider response was inconclusive. Your NEX remains reserved while the transfer is reconciled.' : 'Paystack has already confirmed an outcome for this transfer.' };
   }
 });
 
