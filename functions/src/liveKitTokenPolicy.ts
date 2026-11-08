@@ -6,7 +6,7 @@ function encode(value: unknown): string {
 
 /** Build least-privilege room grants. NEXORA chat uses its authenticated backend, not LiveKit data packets. */
 export function createLiveKitVideoGrant(roomName: string, isHost: boolean) {
-  if (!roomName || roomName.length > 128) throw new Error('A valid LiveKit room is required.');
+  if (!roomName || roomName.length > 135) throw new Error('A valid LiveKit room is required.');
   return {
     roomJoin: true,
     room: roomName,
