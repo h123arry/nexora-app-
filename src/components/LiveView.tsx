@@ -1,113 +1,149 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { AlertCircle, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
 import GiftLiveOverlay from './GiftLiveOverlay';
-import { motion, AnimatePresence } from 'motion/react';
-import { Radio, Users, MessageSquare, Heart, MoreVertical, X, Mic, Video, Camera, Settings, Eye, Clock, Calendar, Bell, Forward, Volume2, VolumeX } from 'lucide-react';
-import { User, LiveStream } from '../types';
+import { User } from '../types';
+import { db } from '../lib/firebase';
+import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, sendLiveChatMessage, startLiveSession, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
 
-interface LiveViewProps {
-  currentUser: User;
-  onClose: () => void;
-  streamId?: string;
+interface LiveViewProps { currentUser: User; onClose: () => void; streamId?: string; }
+function asDate(value: any): string {
+  const date = value?.toDate?.() || (typeof value === 'string' ? new Date(value) : null);
+  return date && Number.isFinite(date.getTime()) ? date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
 }
 
 export default function LiveView({ currentUser, onClose, streamId }: LiveViewProps) {
-  const [isLive, setIsLive] = useState(false);
-  const [chatMessages, setChatMessages] = useState<string[]>([]);
-  const [message, setMessage] = useState('');
-  const [viewerCount, setViewerCount] = useState(0);
-  const [giftSoundsEnabled, setGiftSoundsEnabled] = useState(false);
-  const giftAudioContext = useRef<AudioContext | null>(null);
-  useEffect(() => () => { if (giftAudioContext.current && giftAudioContext.current.state !== 'closed') void giftAudioContext.current.close(); }, []);
+  const [rooms,setRooms] = useState<LiveSessionSummary[]>([]);
+  const [selectedId,setSelectedId] = useState<string|null>(null);
+  const [session,setSession] = useState<LiveSessionSummary|null>(null);
+  const [messages,setMessages] = useState<LiveChatMessage[]>([]);
+  const [title,setTitle] = useState('');
+  const [message,setMessage] = useState('');
+  const [isHost,setIsHost] = useState(false);
+  const [loading,setLoading] = useState(false);
+  const [sending,setSending] = useState(false);
+  const [error,setError] = useState('');
+  const [giftSoundsEnabled,setGiftSoundsEnabled] = useState(false);
+  const giftAudioContext = useRef<AudioContext|null>(null);
+  const bottomRef = useRef<HTMLDivElement|null>(null);
+
+  useEffect(() => () => { if(giftAudioContext.current && giftAudioContext.current.state!=='closed') void giftAudioContext.current.close(); }, []);
+
+  useEffect(() => {
+    const activeQuery=query(collection(db,'liveSessions'),where('status','==','live'),limit(25));
+    return onSnapshot(activeQuery,snapshot=>{
+      const next=snapshot.docs.map(item=>({id:item.id,...item.data()} as LiveSessionSummary));
+      next.sort((a,b)=>{
+        const date=(v:any)=>v?.toDate?.()?.getTime?.() || (typeof v==='string'?new Date(v).getTime():0);
+        return date(b.startedAt)-date(a.startedAt);
+      });
+      setRooms(next);
+    },()=>setError('Live rooms are temporarily unavailable.'));
+  },[]);
+
+  useEffect(() => {
+    if(streamId) { setSelectedId(streamId); setIsHost(false); }
+  },[streamId]);
+
+  useEffect(() => {
+    if(!selectedId) { setSession(null);setMessages([]);return; }
+    const sessionRef=doc(db,'liveSessions',selectedId);
+    const stopSession=onSnapshot(sessionRef,snapshot=>{
+      if(!snapshot.exists()) { setSession(null);setSelectedId(null);setIsHost(false);return; }
+      const data={id:snapshot.id,...snapshot.data()} as LiveSessionSummary;
+      setSession(data);
+      if(data.status!=='live') { setSelectedId(null);setIsHost(false); }
+    },()=>{setError('This live room is unavailable or has ended.');setSelectedId(null);setIsHost(false);});
+    const messagesQuery=query(collection(db,'liveSessions',selectedId,'messages'),orderBy('createdAt','asc'),limit(50));
+    const stopMessages=onSnapshot(messagesQuery,snapshot=>{
+      setMessages(snapshot.docs.map(item=>({id:item.id,...item.data()} as LiveChatMessage)));
+    },()=>setError('Live chat could not be loaded.'));
+    return ()=>{stopSession();stopMessages();};
+  },[selectedId]);
+
+  useEffect(() => {
+    if(!selectedId || isHost) return;
+    let cancelled=false;
+    let heartbeat: ReturnType<typeof setInterval> | null = null;
+    void joinLiveSession(selectedId).then(()=>{
+      if(cancelled) { void leaveLiveSession(selectedId); return; }
+      heartbeat=setInterval(()=>{void heartbeatLiveSession(selectedId).catch(()=>setError('Your live connection needs to be refreshed.'));},30_000);
+    }).catch(()=>setError('You could not join this live room.'));
+    return ()=>{cancelled=true;if(heartbeat)clearInterval(heartbeat);void leaveLiveSession(selectedId).catch(()=>undefined);};
+  },[selectedId,isHost]);
+
+  useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:'smooth'});},[messages.length]);
+
+  const startRoom=async()=>{
+    setLoading(true);setError('');
+    try { const result=await startLiveSession(title);setIsHost(true);setSelectedId(result.sessionId);setTitle(''); }
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Your live room could not be started.');}
+    finally{setLoading(false);}
+  };
+  const openRoom=async(room:LiveSessionSummary)=>{
+    setError('');
+    setIsHost(room.hostId===currentUser.id);
+    setSelectedId(room.id);
+  };
+  const exitRoom=async()=>{
+    if(!selectedId)return;
+    const id=selectedId;setLoading(true);setError('');
+    try { if(isHost) await endLiveSession(id); else await leaveLiveSession(id);setSelectedId(null);setIsHost(false);setGiftSoundsEnabled(false); }
+    catch {setError(isHost?'The live room could not be ended.':'You could not leave the live room cleanly.');}
+    finally{setLoading(false);}
+  };
+  const closeView=async()=>{
+    if(selectedId && isHost){await exitRoom();}
+    onClose();
+  };
+  const submitMessage=async()=>{
+    if(!selectedId||!message.trim()||sending)return;
+    setSending(true);setError('');
+    try {await sendLiveChatMessage(selectedId,message);setMessage('');}
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Your message could not be sent.');}
+    finally{setSending(false);}
+  };
+  const selectedRoom=!!selectedId && !!session && session.status==='live';
 
   return (
-    <div className="fixed inset-0 z-[100] flex bg-black">
-      {/* Immersive Video/Live Stream Area */}
-      <div className="flex-1 relative flex items-center justify-center bg-[#05030f]">
-        {isLive ? (
-          <div className="w-full h-full flex items-center justify-center bg-zinc-900">
-            <Radio className="w-16 h-16 text-rose-500 animate-pulse" />
-            <span className="absolute top-4 left-4 flex items-center gap-1.5 bg-rose-600 text-white text-[10px] font-bold px-2 py-1 rounded-md uppercase tracking-wider animate-pulse">
-              Live
-            </span>
+    <div className="fixed inset-0 z-[100] flex flex-col bg-[#05030f] text-white md:flex-row">
+      <div className="relative flex min-h-[48vh] flex-1 items-center justify-center overflow-hidden bg-[#05030f]">
+        {!selectedRoom ? (
+          <div className="w-full max-w-xl space-y-5 p-6">
+            <div className="mx-auto grid h-20 w-20 place-items-center rounded-full border border-violet-400/20 bg-violet-500/10"><Radio size={34} className="text-violet-200"/></div>
+            <div className="text-center"><p className="text-[10px] font-black uppercase tracking-[.25em] text-violet-300">NEXORA LIVE</p><h2 className="mt-2 text-2xl font-black">Live rooms</h2><p className="mt-2 text-sm text-slate-400">Join a creator's live chat or open your own room.</p></div>
+            <div className="rounded-2xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Live room sessions, viewer counts, gifts and chat are server-backed. Camera streaming transport is not configured yet, so this room does not claim to broadcast video.</div>
+            <div className="space-y-2 rounded-2xl border border-white/10 bg-white/[.03] p-4">
+              <h3 className="text-sm font-bold">Start a live room</h3>
+              <input value={title} onChange={e=>setTitle(e.target.value)} maxLength={80} placeholder="What are you going live about?" className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm outline-none focus:border-violet-400/50"/>
+              <button type="button" onClick={()=>void startRoom()} disabled={loading||title.trim().length<3} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-bold disabled:opacity-40">{loading?<Loader2 size={16} className="animate-spin"/>:<Radio size={16}/>} Start live room</button>
+            </div>
+            <div className="space-y-3"><div className="flex items-center justify-between"><h3 className="text-sm font-bold">Happening now</h3><span className="text-[10px] text-slate-500">{rooms.length} rooms</span></div>
+              {!rooms.length?<p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No live rooms right now. Start one and invite your community.</p>:rooms.map(room=><button key={room.id} type="button" onClick={()=>void openRoom(room)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3 text-left hover:border-violet-400/30"><span className="min-w-0"><span className="block truncate text-sm font-bold">{room.title}</span><span className="mt-1 block truncate text-[10px] text-slate-400">{room.hostName||'NEXORA creator'}</span></span><span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-200"><span className="h-1.5 w-1.5 rounded-full bg-rose-400"/> LIVE</span></button>)}
+            </div>
           </div>
         ) : (
-          <div className="text-center p-8">
-            <div className="w-24 h-24 nx-surface rounded-full flex items-center justify-center mx-auto mb-6 nx-glow-violet">
-              <Radio className="w-10 h-10 text-white/50" />
+          <div className="relative flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(91,33,182,.22),transparent_60%)] p-6 text-center">
+            <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-black tracking-wider"><span className="h-2 w-2 animate-pulse rounded-full bg-white"/> LIVE ROOM</div>
+            <div className="absolute right-4 top-4 flex items-center gap-3 rounded-full bg-black/50 px-3 py-1.5 text-xs"><Users size={14}/>{(session?.viewerCount||0).toLocaleString()} viewers</div>
+            <div className="max-w-lg"><Radio size={48} className="mx-auto text-violet-300"/><h2 className="mt-4 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'Your live room is open.':'You joined this live room.'}</p><p className="mt-4 rounded-xl border border-amber-300/15 bg-amber-500/[.06] p-3 text-[11px] leading-relaxed text-amber-100">Video transport is not configured. Your live chat and GIFTVERSE activity are connected to this room.</p></div>
+            {selectedId&&<GiftLiveOverlay streamId={selectedId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current}/>}
+            <div className="absolute bottom-5 left-5 flex items-center gap-2">
+              <button type="button" onClick={()=>{if(!giftAudioContext.current&&typeof window!=='undefined'&&window.AudioContext)giftAudioContext.current=new window.AudioContext();if(!giftSoundsEnabled)void giftAudioContext.current?.resume();setGiftSoundsEnabled(v=>!v);}} className="rounded-full border border-white/10 bg-black/50 p-3" aria-label={giftSoundsEnabled?'Mute gift sounds':'Enable gift sounds'}>{giftSoundsEnabled?<Volume2 size={18}/>:<VolumeX size={18}/>}</button>
+              <span className="rounded-full bg-black/40 px-3 py-2 text-[10px] text-slate-300"><Gift size={12} className="mr-1 inline"/> GIFTVERSE connected</span>
             </div>
-            <h2 className="text-2xl font-black text-white mb-2">Ready to Go Live?</h2>
-            <p className="text-zinc-400 mb-8 max-w-sm">Share your experience in real-time with your followers.</p>
-            <button
-              onClick={() => { setIsLive(true); setViewerCount(0); }}
-              className="px-8 py-3 bg-rose-600 hover:bg-rose-500 text-white rounded-full font-bold transition-all nx-glow-pink"
-            >
-              Start Broadcast
-            </button>
+            <button type="button" onClick={()=>void exitRoom()} disabled={loading} className="absolute bottom-5 right-5 rounded-full bg-rose-600 px-5 py-3 text-xs font-black disabled:opacity-50">{loading?(isHost?'Ending…':'Leaving…'):(isHost?'End live room':'Leave room')}</button>
           </div>
         )}
-
-        {/* Server-driven gift delivery overlay. A real broadcaster supplies its authoritative live session ID. */}
-        {isLive && streamId && <GiftLiveOverlay streamId={streamId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current} />}
-
-        {/* Overlay Controls */}
-        {isLive && streamId && <button type="button" onClick={() => {
-          if (!giftAudioContext.current && typeof window !== 'undefined' && window.AudioContext) giftAudioContext.current = new window.AudioContext();
-          if (!giftSoundsEnabled) void giftAudioContext.current?.resume();
-          setGiftSoundsEnabled(value => !value);
-        }} aria-label={giftSoundsEnabled ? 'Mute gift sounds' : 'Enable gift sounds'} title={giftSoundsEnabled ? 'Mute gift sounds' : 'Enable gift sounds'} className="absolute top-4 right-16 z-[110] rounded-full bg-black/60 p-2 text-white">
-          {giftSoundsEnabled ? <Volume2 className="h-5 w-5"/> : <VolumeX className="h-5 w-5"/>}
-        </button>}
-        <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full hover:bg-black/70 text-white nx-icon-button">
-          <X className="w-6 h-6" />
-        </button>
+        <button type="button" onClick={()=>void closeView()} className="absolute right-4 top-16 rounded-full bg-black/60 p-2 text-white hover:bg-black/80" aria-label="Close live view"><X size={20}/></button>
       </div>
-
-      {/* Live Chat Panel */}
-      <div className="w-80 border-l border-white/10 nx-glass-strong flex flex-col">
-        <div className="p-4 border-b border-white/10 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none select-none">NEXORA</span>
-            <h3 className="font-bold text-white text-sm">Live Chat</h3>
-          </div>
-          <div className="flex items-center gap-1.5 text-zinc-400 text-xs">
-            <Eye className="w-3.5 h-3.5" />
-            <span>{isLive ? viewerCount.toLocaleString() : '0'}</span>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
-          {chatMessages.length === 0 ? (
-            <p className="text-xs text-zinc-500 text-center pt-8">
-              {isLive ? 'Say hello to your viewers…' : 'Chat opens when you go live.'}
-            </p>
-          ) : (
-            chatMessages.map((msg, i) => (
-              <div key={i} className="text-sm text-white">
-                <span className="font-bold text-violet-400 mr-2">{currentUser.username}:</span>
-                {msg}
-              </div>
-            ))
-          )}
-        </div>
-
-        {isLive && (
-          <div className="p-4 border-t border-white/10">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && message.trim()) {
-                  setChatMessages([...chatMessages, message]);
-                  setMessage('');
-                }
-              }}
-              placeholder="Send a message..."
-              className="w-full nx-field px-4 py-2 text-sm"
-            />
-          </div>
-        )}
-      </div>
+      <aside className="flex max-h-[52vh] w-full flex-col border-t border-white/10 bg-[#0b0917] md:max-h-none md:w-80 md:border-l md:border-t-0">
+        <div className="flex items-center justify-between border-b border-white/10 p-4"><div className="flex items-center gap-2"><MessageSquare size={15} className="text-violet-300"/><h3 className="text-sm font-bold">Live chat</h3></div><span className="text-[10px] text-slate-500">{selectedRoom?messages.length+' recent':'Room preview'}</span></div>
+        <div className="flex-1 space-y-3 overflow-y-auto p-4">
+          {!selectedRoom?<p className="pt-8 text-center text-xs text-slate-500">Choose a live room to open its chat.</p>:messages.length===0?<p className="pt-8 text-center text-xs text-slate-500">Be the first to say hello.</p>:messages.map(item=><div key={item.id} className="rounded-xl bg-white/[.03] p-3"><p className="text-[10px] font-bold text-violet-300">{item.senderName||'NEXORA member'} <span className="ml-1 font-normal text-slate-600">{asDate(item.createdAt)}</span></p><p className="mt-1 whitespace-pre-wrap break-words text-xs text-slate-200">{item.message}</p></div>)}<div ref={bottomRef}/></div>
+        {selectedRoom&&<div className="border-t border-white/10 p-3"><div className="flex gap-2"><input value={message} onChange={e=>setMessage(e.target.value)} onKeyDown={e=>{if(e.key==='Enter')void submitMessage();}} maxLength={500} placeholder="Send a message…" className="min-w-0 flex-1 rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-xs outline-none focus:border-violet-400/50"/><button type="button" onClick={()=>void submitMessage()} disabled={sending||!message.trim()} className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-600 disabled:opacity-40">{sending?<Loader2 size={14} className="animate-spin"/>:<Send size={14}/>}</button></div></div>}
+      </aside>
+      {error&&<div role="alert" className="fixed bottom-4 left-4 right-4 z-[130] flex items-start gap-2 rounded-xl border border-rose-400/20 bg-[#240e1a] p-3 text-xs text-rose-100 md:right-auto md:max-w-md"><AlertCircle size={15} className="mt-0.5 shrink-0"/><span>{error}</span><button type="button" onClick={()=>setError('')} className="ml-auto"><X size={14}/></button></div>}
     </div>
   );
 }
