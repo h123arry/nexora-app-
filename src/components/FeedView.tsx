@@ -1684,23 +1684,30 @@ export default function FeedView({
   const [isConnectionSlow, setIsConnectionSlow] = useState(() => {
     if (typeof navigator === 'undefined') return false;
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    return Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType));
+    const memory = (navigator as any).deviceMemory;
+    const lowMemory = typeof memory === 'number' && Number.isFinite(memory) && memory > 0 && memory <= 2;
+    const cores = navigator.hardwareConcurrency;
+    const lowCoreCount = typeof cores === 'number' && cores > 0 && cores <= 4;
+    return Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType) || lowMemory || lowCoreCount);
   });
 
-  // Network Information can change while the feed is open (for example,
-  // switching between Wi-Fi and mobile data). Keep preload decisions current.
+  // Re-evaluate media preparation when the network changes. Low-resource
+  // devices also use metadata-only preparation to avoid competing with playback.
   useEffect(() => {
     if (typeof navigator === 'undefined') return;
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    if (!connection?.addEventListener) return;
     const updateConnectionQuality = () => {
+      const memory = (navigator as any).deviceMemory;
+      const lowMemory = typeof memory === 'number' && Number.isFinite(memory) && memory > 0 && memory <= 2;
+      const cores = navigator.hardwareConcurrency;
+      const lowCoreCount = typeof cores === 'number' && cores > 0 && cores <= 4;
       setIsConnectionSlow(Boolean(
-        connection.saveData || ['slow-2g', '2g', '3g'].includes(connection.effectiveType),
+        connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType) || lowMemory || lowCoreCount,
       ));
     };
-    connection.addEventListener('change', updateConnectionQuality);
     updateConnectionQuality();
-    return () => connection.removeEventListener('change', updateConnectionQuality);
+    connection?.addEventListener?.('change', updateConnectionQuality);
+    return () => connection?.removeEventListener?.('change', updateConnectionQuality);
   }, []);
 
   // Active Post Viewport Detection using IntersectionObserver
@@ -2307,6 +2314,7 @@ export default function FeedView({
             postVideoIndex,
             activeVideoIndex,
             isSlowConnection: isConnectionSlow,
+            isConstrainedDevice: isConnectionSlow,
             isOffline,
           });
           const { shouldPreload, isReleased, preloadMode } = preloadPlan;
