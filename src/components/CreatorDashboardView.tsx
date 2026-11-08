@@ -22,7 +22,6 @@ import { app } from '../services/firebase/config';
 import { scheduleCreatorPost, listCreatorScheduledPosts, cancelCreatorScheduledPost, type CreatorScheduledPost } from '../services/creatorSchedulingService';
 import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
-import CreatorMembershipPanel from './CreatorMembershipPanel';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
