@@ -41,8 +41,6 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
     return () => { cancelled = true; };
   }, [currentUser.id]);
   
-  // Community points are not money, are not redeemable, and have no financial value.
-
   // Circle Builder States
   const [promptInput, setPromptInput] = useState('');
   const [isBuilding, setIsBuilding] = useState(false);
