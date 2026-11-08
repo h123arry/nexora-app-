@@ -21,6 +21,8 @@ import { normalizeFeedPreferences, resetFeedPreferences } from '../services/disc
 import { auth } from '../services/firebase/config';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
+import { getDevicePerformanceProfile } from '../utils/devicePerformance';
+import { getFeedLoadMoreDecision } from '../utils/feedPaginationPolicy';
 import { TERMINOLOGY } from '../services/voh';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import StoryRail from './StoryRail';
@@ -950,29 +952,52 @@ export default function FeedView({
 
   // Header expansion state tracking ref to eliminate duplicate re-renders
   const isHeaderExpandedRef = useRef(true);
+  const loadMoreInFlightRef = useRef(false);
+  const orderedPostsRef = useRef<RefactoredPost[]>([]);
 
-  // High-performance passive scroll handler for infinite scroll & header collapse
+  // High-performance passive scroll handler for infinite scroll & header collapse.
+  // A request lock prevents repeated scroll events from issuing duplicate page loads.
   useEffect(() => {
-    let debounceTimer: any = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const handleScroll = () => {
       const container = scrollContainerRef.current;
       if (!container) return;
       const { scrollTop, scrollHeight, clientHeight } = container;
-      
-      // Debounce localStorage writes to prevent main thread blocking
+
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+        try {
+          localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+        } catch {
+          // Scroll restoration is an enhancement; storage failure must not affect scrolling.
+        }
       }, 300);
 
-      // Pre-load next batch when nearing bottom (threshold 350px)
-      if (scrollHeight - scrollTop - clientHeight < 350) {
-        setVisibleCount(prev => prev + 6);
-        void onLoadMorePosts?.();
+      const loadMoreDecision = getFeedLoadMoreDecision({
+        distanceToBottom: scrollHeight - scrollTop - clientHeight,
+        visibleCount,
+        totalCount: orderedPostsRef.current.length,
+        hasMorePosts,
+        isLoadingMorePosts,
+        requestInFlight: loadMoreInFlightRef.current,
+      });
+      if (loadMoreDecision.shouldRevealMore) {
+        setVisibleCount(prev => Math.min(prev + 6, orderedPostsRef.current.length));
+      }
+      if (loadMoreDecision.shouldRequestMore && onLoadMorePosts) {
+        loadMoreInFlightRef.current = true;
+        void (async () => {
+          try {
+            await onLoadMorePosts();
+          } catch {
+            window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not load more posts. Please try again.' }));
+          } finally {
+            loadMoreInFlightRef.current = false;
+          }
+        })();
       }
 
-      // Smooth scroll direction detection for header collapse/restore
       const diff = scrollTop - lastScrollTopRef.current;
       if (scrollTop <= 15) {
         if (!isHeaderExpandedRef.current) {
@@ -992,18 +1017,14 @@ export default function FeedView({
       }
       lastScrollTopRef.current = Math.max(0, scrollTop);
     };
-    
+
     const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-    }
+    container?.addEventListener('scroll', handleScroll, { passive: true });
     return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
+      container?.removeEventListener('scroll', handleScroll);
       if (debounceTimer) clearTimeout(debounceTimer);
     };
-  }, [onLoadMorePosts]);
+  }, [onLoadMorePosts, hasMorePosts, isLoadingMorePosts, visibleCount]);
 
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
@@ -1623,6 +1644,7 @@ export default function FeedView({
 
   // State to hold the stable cached/rendered posts list to prevent re-sorting on engagement updates
   const [orderedPosts, setOrderedPosts] = useState<RefactoredPost[]>([]);
+  orderedPostsRef.current = orderedPosts;
   const lastStateKeyRef = useRef<string>('');
 
   useEffect(() => {
@@ -1686,21 +1708,27 @@ export default function FeedView({
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
     return Boolean(connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType));
   });
+  const [isConstrainedDevice] = useState(() => {
+    if (typeof navigator === 'undefined') return false;
+    return getDevicePerformanceProfile({
+      deviceMemory: (navigator as Navigator & { deviceMemory?: number }).deviceMemory,
+      hardwareConcurrency: navigator.hardwareConcurrency,
+    }).constrained;
+  });
 
   // Network Information can change while the feed is open (for example,
   // switching between Wi-Fi and mobile data). Keep preload decisions current.
   useEffect(() => {
     if (typeof navigator === 'undefined') return;
     const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
-    if (!connection?.addEventListener) return;
     const updateConnectionQuality = () => {
       setIsConnectionSlow(Boolean(
-        connection.saveData || ['slow-2g', '2g', '3g'].includes(connection.effectiveType),
+        connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType),
       ));
     };
-    connection.addEventListener('change', updateConnectionQuality);
     updateConnectionQuality();
-    return () => connection.removeEventListener('change', updateConnectionQuality);
+    connection?.addEventListener?.('change', updateConnectionQuality);
+    return () => connection?.removeEventListener?.('change', updateConnectionQuality);
   }, []);
 
   // Active Post Viewport Detection using IntersectionObserver
@@ -1734,7 +1762,7 @@ export default function FeedView({
     return () => {
       observer.disconnect();
     };
-  }, [currentDisplayList.length]);
+  }, [currentDisplayList]);
 
   // Settle detector (stops predictive loading to save bandwidth if paused on a post)
   useEffect(() => {
@@ -2307,6 +2335,7 @@ export default function FeedView({
             postVideoIndex,
             activeVideoIndex,
             isSlowConnection: isConnectionSlow,
+            isConstrainedDevice,
             isOffline,
           });
           const { shouldPreload, isReleased, preloadMode } = preloadPlan;

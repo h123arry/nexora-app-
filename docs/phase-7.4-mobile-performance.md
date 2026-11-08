@@ -7,6 +7,7 @@
 - Removes expensive backdrop filters and reduces surface shadows on constrained devices.
 - Disables skeleton shimmer when Data Saver is enabled and respects reduced-motion / slow-update preferences.
 - Reduces mobile dock blur while preserving the NEXORA midnight-indigo and violet visual system.
+- Extends conservative media preparation to low-memory and low-core devices, not only slow/data-saving connections; adjacent videos remain metadata-only on constrained devices.
 - Cleans up the connection listener and root data attributes when the app unmounts.
 
 ## Privacy and compatibility

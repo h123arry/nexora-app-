@@ -32,6 +32,19 @@ test('prepares only an adjacent video and downgrades it on a slow connection', (
   });
 });
 
+test('uses metadata-only preparation on constrained devices', () => {
+  assert.deepEqual(getVideoPreloadPlan({
+    ...base,
+    isActive: false,
+    postVideoIndex: 2,
+    isConstrainedDevice: true,
+  }), {
+    shouldPreload: true,
+    isReleased: false,
+    preloadMode: 'metadata',
+  });
+});
+
 test('does not start speculative video requests while offline', () => {
   assert.deepEqual(getVideoPreloadPlan({
     ...base,

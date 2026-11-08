@@ -9,6 +9,7 @@ export interface VideoPreloadPlanInput {
   activeVideoIndex: number;
   isSlowConnection: boolean;
   isOffline?: boolean;
+  isConstrainedDevice?: boolean;
 }
 
 export interface VideoPreloadPlan {
@@ -47,7 +48,7 @@ export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadP
     shouldPreload,
     isReleased,
     preloadMode: shouldPreload
-      ? (input.isSlowConnection ? 'metadata' : 'auto')
+      ? (input.isSlowConnection || input.isConstrainedDevice ? 'metadata' : 'auto')
       : 'none',
   };
 }
