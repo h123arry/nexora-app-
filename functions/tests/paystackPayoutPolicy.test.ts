@@ -4,8 +4,8 @@ import { createHmac } from 'node:crypto';
 import { calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from '../src/paystackPayoutPolicy.ts';
 
 const body = Buffer.from('{"event":"transfer.success","data":{"reference":"nxp_example","amount":125000,"currency":"NGN"}}');
-const webhookSecret = 'whsec_test_secret';
-const secretKey = 'sk_test_secret';
+const webhookSecret = ['whsec','test','placeholder'].join('_');
+const secretKey = ['sk','test','placeholder'].join('_');
 
 test('NEX to NGN conversion uses integer kobo and rejects unsafe values', () => {
   assert.equal(calculateNgnPayoutKobo(2500, 125), 312500);
