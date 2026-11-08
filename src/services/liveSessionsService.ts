@@ -3,7 +3,7 @@ import { functions } from '../lib/firebase';
 
 export interface LiveSessionSummary {
   id: string; hostId: string; hostName?: string; title: string; status: 'live' | 'ended';
-  viewerCount: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured';
+  viewerCount: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured' | 'livekit';
   startedAt?: { toDate?: () => Date } | string | null;
 }
 export interface LiveChatMessage {
@@ -32,4 +32,17 @@ export async function leaveLiveSession(sessionId: string, connectionId: string) 
 export async function sendLiveChatMessage(sessionId: string, message: string, connectionId: string) {
   const call = httpsCallable<{ sessionId: string; message: string; connectionId: string }, { messageId: string; sessionId: string; senderId: string; senderName: string; message: string; status: 'sent' }>(functions, 'sendLiveChatMessage');
   return (await call({ sessionId, message, connectionId })).data;
+}
+
+export interface LiveTransportCredentials {
+  provider: 'livekit';
+  serverUrl: string;
+  roomName: string;
+  role: 'host' | 'viewer';
+  participantToken: string;
+  expiresInSeconds: number;
+}
+export async function getLiveTransportToken(sessionId: string, connectionId: string): Promise<LiveTransportCredentials> {
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, LiveTransportCredentials>(functions, 'getLiveTransportToken');
+  return (await call({ sessionId, connectionId })).data;
 }
