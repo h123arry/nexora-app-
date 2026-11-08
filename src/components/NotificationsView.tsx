@@ -86,14 +86,6 @@ export default function NotificationsView({
     creatorUploads: true,
     friendRequests: true,
     securityAlerts: true,
-    channels: {
-      push: true,
-      email: false,
-      inApp: true,
-    },
-    sound: true,
-    vibration: true,
-    pushDelay: 'batch_5m' // 'immediate' | 'batch_5m' | 'batch_1h'
   });
 
   // Notifications are hydrated from the real notification prop; no sample activity is seeded.
@@ -622,7 +614,7 @@ export default function NotificationsView({
               <div className="flex items-center justify-between border-b border-white/10 pb-3">
                 <span className="text-xs font-mono font-black text-violet-300 uppercase flex items-center gap-1.5">
                   <Sliders className="w-4 h-4 text-violet-400" />
-                  Premium Activity Preferences Manager
+                  Inbox display filters
                 </span>
                 <button onClick={() => setIsSettingsOpen(false)} className="text-violet-400 hover:text-white transition-colors">
                   <X className="w-4.5 h-4.5" />
@@ -631,7 +623,7 @@ export default function NotificationsView({
 
               {/* Grid of Toggle preferences */}
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {/* 1. Category notifications */}
+                {/* Local display filters only */}
                 <div className="p-3.5 rounded-2xl bg-black/45 border border-white/5 space-y-3">
                   <span className="text-[10px] font-mono text-violet-400/60 uppercase tracking-widest font-bold block">Activity Categories</span>
                   <div className="space-y-2 text-xs font-sans">
@@ -662,102 +654,7 @@ export default function NotificationsView({
                   </div>
                 </div>
 
-                {/* 2. Channel settings */}
-                <div className="p-3.5 rounded-2xl bg-black/45 border border-white/5 space-y-3">
-                  <span className="text-[10px] font-mono text-violet-400/60 uppercase tracking-widest font-bold block">Delivery Channels</span>
-                  <div className="space-y-2 text-xs font-sans">
-                    <label className="flex items-center justify-between cursor-pointer group">
-                      <span className="text-zinc-300">Push Notifications</span>
-                      <input
-                        type="checkbox"
-                        checked={settingsToggles.channels.push}
-                        onChange={() => setSettingsToggles(prev => ({
-                          ...prev,
-                          channels: { ...prev.channels, push: !prev.channels.push }
-                        }))}
-                        className="w-4 h-4 text-violet-600 rounded-sm"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between cursor-pointer group">
-                      <span className="text-zinc-300">Email Updates</span>
-                      <input
-                        type="checkbox"
-                        checked={settingsToggles.channels.email}
-                        onChange={() => setSettingsToggles(prev => ({
-                          ...prev,
-                          channels: { ...prev.channels, email: !prev.channels.email }
-                        }))}
-                        className="w-4 h-4 text-violet-600 rounded-sm"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between cursor-pointer group">
-                      <span className="text-zinc-300">In-App Ledger</span>
-                      <input
-                        type="checkbox"
-                        checked={settingsToggles.channels.inApp}
-                        onChange={() => setSettingsToggles(prev => ({
-                          ...prev,
-                          channels: { ...prev.channels, inApp: !prev.channels.inApp }
-                        }))}
-                        className="w-4 h-4 text-violet-600 rounded-sm"
-                      />
-                    </label>
-                  </div>
-
-                  {/* Vibration / Haptic */}
-                  <div className="pt-2 border-t border-white/5 space-y-2">
-                    <label className="flex items-center justify-between cursor-pointer text-xs font-sans">
-                      <span className="text-zinc-300">Sound Effects</span>
-                      <input
-                        type="checkbox"
-                        checked={settingsToggles.sound}
-                        onChange={() => setSettingsToggles(prev => ({ ...prev, sound: !prev.sound }))}
-                        className="w-4 h-4 text-violet-600 rounded-sm"
-                      />
-                    </label>
-                    <label className="flex items-center justify-between cursor-pointer text-xs font-sans">
-                      <span className="text-zinc-300">Vibration Feedback</span>
-                      <input
-                        type="checkbox"
-                        checked={settingsToggles.vibration}
-                        onChange={() => setSettingsToggles(prev => ({ ...prev, vibration: !prev.vibration }))}
-                        className="w-4 h-4 text-violet-600 rounded-sm"
-                      />
-                    </label>
-                  </div>
-                </div>
-
-                {/* 3. Push intelligence delay (Anti-Spam) */}
-                <div className="p-3.5 rounded-2xl bg-black/45 border border-white/5 space-y-4">
-                  <div>
-                    <span className="text-[10px] font-mono text-violet-400/60 uppercase tracking-widest font-bold block">Push Intelligence Engine</span>
-                    <p className="text-[10px] text-zinc-500 leading-relaxed mt-1">
-                      Instead of spamming 15 separate notifications, we intelligently queue and batch similar actions before sending.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-mono text-zinc-400 block">Delay & Grouping Strategy</span>
-                    <div className="grid grid-cols-3 gap-1 bg-black/60 p-1 rounded-xl">
-                      {[
-                        { id: 'immediate', label: 'None' },
-                        { id: 'batch_5m', label: '5 Mins' },
-                        { id: 'batch_1h', label: 'Hourly' }
-                      ].map(strat => (
-                        <button
-                          key={strat.id}
-                          onClick={() => setSettingsToggles(prev => ({ ...prev, pushDelay: strat.id }))}
-                          className={`py-1.5 rounded-lg text-[9px] font-mono uppercase tracking-wider ${
-                            settingsToggles.pushDelay === strat.id
-                              ? 'bg-violet-600 text-white font-extrabold'
-                              : 'text-zinc-500 hover:text-zinc-300'
-                          }`}
-                        >
-                          {strat.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                <p className="text-[10px] leading-relaxed text-zinc-500">These switches only filter which activity appears in this inbox view. They do not change push, email, sound, vibration, or server delivery settings.</p>
               </div>
             </div>
           </motion.div>
