@@ -84,7 +84,7 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
   };
 });
 
-export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
+export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_KEY, PAYSTACK_WEBHOOK_SECRET], maxInstances: 3 }, async request => {
   requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   const policy = await payoutPolicy();
@@ -97,7 +97,7 @@ export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_K
     ngnBalanceKobo = Number.isSafeInteger(ngn?.balance) ? ngn.balance : null;
   } catch { credentialsVerified = false; }
   return {
-    credentialsVerified, ngnBalanceKobo,
+    credentialsVerified, ngnBalanceKobo, webhookSecretConfigured: PAYSTACK_WEBHOOK_SECRET.value().startsWith('whsec_'),
     mode: providerMode(PAYSTACK_SECRET_KEY.value()), enabled: policy.enabled === true,
     koboPerNex: policy.koboPerNex ?? null, providerFeeBufferKobo: policy.providerFeeBufferKobo ?? null,
     minimumNex: policy.minimumNex ?? null, maximumNex: policy.maximumNex ?? null,
@@ -129,7 +129,7 @@ export const getCreatorPayoutComplianceQueue = onCall({ maxInstances: 3 }, async
   return { records: rows.filter(row => row.complianceStatus !== 'approved') };
 });
 
-export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 2 }, async request => {
+export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY, PAYSTACK_WEBHOOK_SECRET], maxInstances: 2 }, async request => {
   const actorId = requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
   if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
@@ -149,6 +149,9 @@ export const configureNgnPayoutPolicy = onCall({ secrets: [PAYSTACK_SECRET_KEY],
     catch { throw new HttpsError('failed-precondition', 'Paystack credentials could not be authenticated. Verify the environment key before enabling payouts.'); }
   }
   if (enabled && mode === 'unknown') throw new HttpsError('failed-precondition', 'A valid Paystack secret is required before enabling transfers.');
+  if (mode === 'live' && enabled && !PAYSTACK_WEBHOOK_SECRET.value().startsWith('whsec_')) {
+    throw new HttpsError('failed-precondition', 'A production Paystack webhook signing secret is required before live withdrawals can be enabled.');
+  }
   if (mode === 'live' && enabled && (liveSettlementApproved !== true || providerBusinessVerified !== true || settlementFundingVerified !== true || complianceApproved !== true || webhookVerified !== true || liveTestTransferVerified !== true || providerFeeBufferKobo <= 0 || !safeText(liveEvidenceReference, 160))) {
     throw new HttpsError('failed-precondition', 'Live transfers require verified registered-business status, funded settlement balance, compliance approval, verified webhooks and a successful controlled live test transfer.');
   }
