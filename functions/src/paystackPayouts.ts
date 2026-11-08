@@ -20,6 +20,11 @@ function requireUser(request: { auth?: { uid: string; token?: Record<string, unk
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to continue.');
   return request.auth.uid;
 }
+function recentlyAuthenticated(request: { auth?: { token?: Record<string, unknown> } | null }): boolean {
+  const authTime = request.auth?.token?.auth_time;
+  const now = Date.now() / 1000;
+  return typeof authTime === 'number' && Number.isSafeInteger(authTime) && authTime <= now && now - authTime <= 300;
+}
 function isFinance(request: { auth?: { token?: Record<string, unknown> } | null }): boolean {
   const token = request.auth?.token || {};
   return token.finance_admin === true || token.admin === true || token.role === 'finance_admin' || token.role === 'founder';
@@ -72,6 +77,8 @@ export const getNgnPayoutProviderStatus = onCall({ secrets: [PAYSTACK_SECRET_KEY
 export const getNgnPayoutPolicyForFinance = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 3 }, async request => {
   requireUser(request);
   if (!isFinance(request)) throw new HttpsError('permission-denied', 'Finance administrator access is required.');
+  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
+  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Re-authenticate before changing payout controls.');
   const policy = await payoutPolicy();
   return {
     mode: providerMode(PAYSTACK_SECRET_KEY.value()), enabled: policy.enabled === true,
@@ -166,6 +173,7 @@ export const resolveNgnBankAccount = onCall({ secrets: [PAYSTACK_SECRET_KEY] }, 
 export const setCreatorPayoutBeneficiary = onCall({ secrets: [PAYSTACK_SECRET_KEY], maxInstances: 5 }, async request => {
   const creatorId = requireUser(request);
   if (request.auth?.token?.email_verified !== true) throw new HttpsError('failed-precondition', 'Verify your NEXORA email before adding a withdrawal account.');
+  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Sign in again before changing your withdrawal account.');
   const accountNumber = request.data?.accountNumber;
   const bankCode = request.data?.bankCode;
   const expectedAccountName = request.data?.confirmedAccountName;
@@ -396,6 +404,7 @@ export const requestCreatorPayout = onCall({ secrets: [PAYSTACK_SECRET_KEY], max
   }
   if (amountNex < policy.minimumNex || amountNex > policy.maximumNex) throw new HttpsError('invalid-argument', 'The withdrawal amount is outside the approved limits.');
   if (request.auth?.token?.email_verified !== true) throw new HttpsError('failed-precondition', 'Verify your email before withdrawing.');
+  if (!recentlyAuthenticated(request)) throw new HttpsError('failed-precondition', 'Sign in again before requesting a withdrawal.');
   const [beneficiarySnap, complianceSnap] = await Promise.all([
     db.collection('creatorPayoutBeneficiaries').doc(creatorId).get(), db.collection('creatorPayoutCompliance').doc(creatorId).get(),
   ]);
