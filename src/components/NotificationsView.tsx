@@ -157,15 +157,6 @@ export default function NotificationsView({
 
     hydrateNotifications();
 
-    // Load watch history
-    const savedHistory = localStorage.getItem('nexora_watch_history');
-    if (savedHistory) {
-      try {
-        setWatchHistory(JSON.parse(savedHistory));
-      } catch (err) {
-        console.error("Failed to parse watch history", err);
-      }
-    }
   }, [propNotifications]);
 
   // ---------------------------------------------------------------------------
@@ -1058,90 +1049,15 @@ export default function NotificationsView({
         </div>
       )}
 
-      {/* ----------------------------------------------------------------------- */}
-      {/* WATCH HISTORY (Symmetrically layouted with existing custom player) */}
-      {/* ----------------------------------------------------------------------- */}
-      <div className="p-5 rounded-3xl bg-[#09071c]/55 border border-white/10 text-left space-y-4 shadow-md">
-        <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-          <div className="flex items-center gap-2">
-            <History className="w-4 h-4 text-pink-400" />
-            <span className="text-xs font-mono font-black text-violet-200 uppercase tracking-wider">
-              Continue Watching Session Logs
-            </span>
-          </div>
-
-          {watchHistory.length > 0 && (
-            <button
-              onClick={() => {
-                localStorage.removeItem('nexora_watch_history');
-                setWatchHistory([]);
-                addToast("🗑️ Watch sessions permanently cleared!");
-              }}
-              className="text-[10px] font-mono font-bold text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors uppercase cursor-pointer"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span>Flush Logs</span>
-            </button>
-          )}
+      <section className="rounded-2xl border border-white/10 bg-[#09071c]/55 p-5 text-left" aria-labelledby="watch-history-title">
+        <div className="flex items-center gap-2">
+          <History className="h-4 w-4 text-violet-300" />
+          <h2 id="watch-history-title" className="text-xs font-bold uppercase tracking-wider text-violet-100">Watch history</h2>
         </div>
-
-        {watchHistory.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {watchHistory.map((item: any) => {
-              const progressPercentage = item.duration ? Math.min(100, Math.floor((item.progress / item.duration) * 100)) : 0;
-              return (
-                <div 
-                  key={item.postId}
-                  className="bg-black/40 border border-white/5 rounded-2xl p-3 flex flex-col justify-between hover:border-white/10 transition-all group relative overflow-hidden text-left"
-                >
-                  <div className="space-y-2.5">
-                    {/* Saved watch-progress preview; playback controls are not connected yet. */}
-                    <div className="relative aspect-video rounded-xl overflow-hidden bg-zinc-950 border border-white/10">
-                      <div className="absolute inset-0 bg-black/45 flex items-center justify-center">
-                        <span
-                          aria-hidden="true"
-                          className="w-9 h-9 rounded-xl bg-white/10 text-zinc-300 flex items-center justify-center"
-                        >
-                          <Play className="w-4 h-4 fill-current ml-0.5" />
-                        </span>
-                      </div>
-
-                      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[9px] font-mono text-zinc-300 bg-black/75 px-2 py-1 rounded-md">
-                        <span>@{item.username}</span>
-                        <span>{progressPercentage}% watched</span>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <p className="text-[11px] text-zinc-100 font-sans line-clamp-2 leading-relaxed">
-                        {item.content || "Awesome tech segment on Nexora!"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2 mt-4">
-                    <div className="h-1 w-full bg-zinc-800 rounded-lg overflow-hidden">
-                      <div 
-                        className="h-full bg-linear-to-r from-purple-500 to-pink-500 rounded-lg" 
-                        style={{ width: `${progressPercentage}%` }}
-                      />
-                    </div>
-                    <p className="text-[9px] text-zinc-500 text-center font-mono">
-                      Watch progress saved locally. Resume playback is not available yet.
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="py-4 text-center text-violet-400/30 font-mono text-[10px] flex flex-col items-center justify-center gap-2">
-            <Tv className="w-8 h-8 opacity-25" />
-            <span>Play short videos on home feed to log active playback landmarks here!</span>
-          </div>
-        )}
-      </div>
-
+        <p className="mt-3 text-sm leading-relaxed text-zinc-400">
+          Account-scoped watch history and resume playback are not connected to this inbox yet. No local or cross-account playback records are displayed here.
+        </p>
+      </section>
 
     </div>
   );
