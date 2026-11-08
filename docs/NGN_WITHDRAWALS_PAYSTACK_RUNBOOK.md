@@ -33,6 +33,7 @@ firebase functions:secrets:set PAYSTACK_WEBHOOK_SECRET
 Enter the values at the secure CLI prompts. Use the Paystack test secret key (`sk_test_...`) and the webhook signing secret (`whsec_...`) from the matching test integration. Deploy the Functions after setting secrets:
 
 ```bash
+firebase deploy --only firestore:indexes
 firebase deploy --only functions
 ```
 
