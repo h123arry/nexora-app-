@@ -6,7 +6,7 @@ import { User, Post, Chat, Message } from '../types';
 import VohAiView from './VohAiView';
 import CirclesView from './CirclesView';
 import SocialMissionsView from './SocialMissionsView';
-import MessagesView from './MessagesView';
+import NewInboxView from './NewInboxView';
 
 interface MatrixViewProps {
   currentUser: User;
@@ -14,8 +14,7 @@ interface MatrixViewProps {
   onAddPost: (content: string, imageUrl?: string, tagsString?: string) => void;
   chats: Chat[];
   messages: { [chatId: string]: Message[] };
-  onSendMessage: (chatId: string, content: string) => void;
-  onReceiveBotMessage: (chatId: string, content: string, senderId: string) => void;
+  creators?: User[];
   initialSubTab?: MatrixSubTab;
 }
 
@@ -27,8 +26,7 @@ export default function MatrixView({
   onAddPost,
   chats,
   messages,
-  onSendMessage,
-  onReceiveBotMessage,
+  creators = [],
   initialSubTab
 }: MatrixViewProps) {
   const [activeSubTab, setActiveSubTab] = useState<MatrixSubTab>(initialSubTab || 'ai');
@@ -234,13 +232,11 @@ export default function MatrixView({
             )}
 
             {activeSubTab === 'messages' && (
-              <MessagesView
+              <NewInboxView
                 currentUser={currentUser}
                 chats={chats}
                 messages={messages}
-                onSendMessage={onSendMessage}
-                onReceiveBotMessage={onReceiveBotMessage}
-                onViewProfile={() => {}}
+                creators={creators}
               />
             )}
           </motion.div>
