@@ -1176,7 +1176,7 @@ export default function MessagesView({
     if (activeTab === 'requests') return chat.unreadCount > 3 && !archivedChats.includes(chat.id) && !ignoredRequestIds.includes(chat.id) && !chat.isBroadcast;
     if (activeTab === 'broadcasts') return chat.isBroadcast === true && !archivedChats.includes(chat.id);
     if (activeTab === 'archived') return archivedChats.includes(chat.id);
-    if (activeTab === 'calls') return false; // Handled separately with CallTestingConsole in UI
+    if (activeTab === 'calls') return false; // Shown as unavailable until real-time calling is integrated
 
     // Standard list
     return !archivedChats.includes(chat.id);
