@@ -310,18 +310,7 @@ export default function MessagesView({
       broadcastMode: newBroadcast.broadcastMode || 'standard',
       broadcastRecipients: newBroadcast.broadcastRecipients || [],
       welcomeMessage: newBroadcast.welcomeMessage || "Broadcast channel initialized.",
-      broadcastDeliveryStats: newBroadcast.broadcastDeliveryStats || {
-        delivered: (newBroadcast.broadcastRecipients || []).length,
-        read: 0,
-        failed: 0,
-        pending: (newBroadcast.broadcastRecipients || []).length,
-        reactionCount: {},
-        repliesCount: 0,
-        averageReadTime: '0s',
-        linkClicks: 0,
-        pollParticipation: 0,
-        mediaDownloads: 0
-      },
+      ...(newBroadcast.broadcastDeliveryStats ? { broadcastDeliveryStats: newBroadcast.broadcastDeliveryStats } : {}),
       lastMessage: newBroadcast.welcomeMessage || 'Broadcast List initialized.',
       lastTimestamp: 'Just now'
     };
