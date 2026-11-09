@@ -121,7 +121,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
   };
 
   const markAsRead = async (id: string) => {
-    if (!auth.currentUser || auth.currentUser.uid !== currentUser.id) return;
+    if (!db || !auth.currentUser || auth.currentUser.uid !== currentUser.id) return;
     try {
       await updateDoc(doc(db, 'users', currentUser.id, 'notifications', id), { isRead: true });
     } catch {
