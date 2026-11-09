@@ -234,8 +234,6 @@ export default function MatrixView({
             {activeSubTab === 'messages' && (
               <NewInboxView
                 currentUser={currentUser}
-                chats={chats}
-                messages={messages}
                 creators={creators}
               />
             )}
