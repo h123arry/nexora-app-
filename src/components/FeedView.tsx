@@ -130,8 +130,8 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
   );
 }
 
-// Seed function to generate 150+ realistic posts from 1000 users deterministically
-function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
+// Normalize the actual posts supplied by the authenticated feed source.
+function normalizeFeedPosts(parentPosts: Post[]): RefactoredPost[] {
   const blended: RefactoredPost[] = [];
 
   // First append parent posts (if any)
@@ -738,13 +738,13 @@ export default function FeedView({
 
   // 1. Hydrate the feed and synchronize with Parent posts
   useEffect(() => {
-    const seeded = seedWorldFeed(posts);
+    const normalizedPosts = normalizeFeedPosts(posts);
     
     setLocalPosts(currentLocalPosts => {
-      if (seeded.length === 0) return [];
+      if (normalizedPosts.length === 0) return [];
       if (currentLocalPosts.length === 0) {
         // Initial load
-        return seeded;
+        return normalizedPosts;
       }
       
       // Separate existing and new posts
