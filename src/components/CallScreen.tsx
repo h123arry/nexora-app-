@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, PhoneOff, Video } from 'lucide-react';
+import { AlertTriangle, PhoneOff } from 'lucide-react';
 
 interface CallScreenProps {
   isOpen: boolean;
