@@ -64,7 +64,10 @@ export default function RightSidebar({
             return (
               <div key={creator.id} className="flex items-center gap-3 rounded-2xl p-2.5 transition-colors hover:bg-white/[0.04]">
                 <button type="button" onClick={() => onViewProfile?.(creator.id)} aria-label={`View ${creator.name}'s profile`} className="shrink-0 rounded-2xl focus-visible:outline-2 focus-visible:outline-violet-300">
-                  <img src={creator.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'} alt="" referrerPolicy="no-referrer" className="h-10 w-10 rounded-2xl object-cover ring-2 ring-violet-400/20" />
+                  <span className="relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-2xl bg-violet-500/15 text-sm font-bold text-violet-200 ring-2 ring-violet-400/20">
+                    {creator.name?.trim().charAt(0).toUpperCase() || '?'}
+                    {creator.avatar && <img src={creator.avatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} className="absolute inset-0 h-full w-full rounded-2xl object-cover" />}
+                  </span>
                 </button>
                 <div className="min-w-0 flex-1">
                   <button type="button" onClick={() => onViewProfile?.(creator.id)} className="flex min-h-9 max-w-full items-center gap-1 rounded-lg text-left text-xs font-bold text-white hover:text-violet-200 focus-visible:outline-2 focus-visible:outline-violet-300"><span className="truncate">{creator.name}</span>{(creator.username === 'voh' || creator.isVerified) && <PurpleVerifiedBadge className="h-3.5 w-3.5 shrink-0" />}</button>
