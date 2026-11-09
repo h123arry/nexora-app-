@@ -6,7 +6,7 @@ import {
   Paperclip, Image as ImageIcon, Video, Mic, Smile, MoreVertical,
   Phone, Archive, Pin, Trash2, Globe, Quote, Eye, EyeOff, Volume2, Pause, Play, Download
 } from 'lucide-react';
-import { User, Chat, Message, ExtendedMessage } from '../types';
+import { User, Chat, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
 import { setInboxChatPreference, watchInboxPreferences } from '../services/firebase/inboxPreferencesService';
 import { watchInboxChats } from '../services/firebase/chatDirectoryService';
@@ -45,8 +45,6 @@ import CallScreen from './CallScreen';
 
 interface NewInboxViewProps {
   currentUser: User;
-  chats: Chat[];
-  messages: { [chatId: string]: Message[] };
   creators?: User[];
   locale?: string;
 }
@@ -58,34 +56,34 @@ function readChatIdList(userId: string, key: string): string[] {
   } catch { return []; }
 }
 
+function chatInitials(name?: string): string {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  return parts.length ? parts.slice(0, 2).map(part => part[0]).join('').toUpperCase() : '?';
+}
+
 export default function NewInboxView({
   currentUser,
-  chats: initialChats,
-  messages: initialMessages,
   creators = [],
   locale = 'en'
 }: NewInboxViewProps) {
   const copy = getTranslations(locale);
+  const isServerBackedInbox = auth.currentUser?.uid === currentUser.id;
   const [chats, setChats] = useState<Chat[]>(() => {
+    if (!isServerBackedInbox) return [];
     const saved = localStorage.getItem(`nexora_chats_${currentUser.id}`);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
-    return initialChats || [];
+    return [];
   });
 
   const [localMessages, setLocalMessages] = useState<{ [chatId: string]: ExtendedMessage[] }>(() => {
+    if (!isServerBackedInbox) return {};
     const saved = localStorage.getItem(`nexora_messages_${currentUser.id}`);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
-    const mapped: { [chatId: string]: ExtendedMessage[] } = {};
-    if (initialMessages) {
-      Object.keys(initialMessages).forEach(k => {
-        mapped[k] = (initialMessages[k] || []).map(m => ({ ...m }));
-      });
-    }
-    return mapped;
+    return {};
   });
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -94,7 +92,6 @@ export default function NewInboxView({
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const isServerBackedInbox = auth.currentUser?.uid === currentUser.id;
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const creatorsRef = useRef(creators);
   useEffect(() => { creatorsRef.current = creators; }, [creators]);
@@ -458,10 +455,10 @@ export default function NewInboxView({
       partnerId: user.id,
       partnerName: user.name,
       partnerAvatar: user.avatar,
-      partnerBio: user.bio || 'Secure Node connection.',
-      isPartnerOnline: true,
+      partnerBio: user.bio || '',
+      isPartnerOnline: false,
       unreadCount: 0,
-      lastMessage: 'Started secure conversation',
+      lastMessage: '',
       lastTimestamp: new Date().toISOString(),
       username: user.username,
       isGroup: false,
@@ -553,6 +550,7 @@ export default function NewInboxView({
             </button>
             <button
               onClick={() => setShowNewMessageModal(true)}
+              disabled={!isServerBackedInbox}
               className="nx-icon-button inline-flex bg-violet-600 text-white hover:bg-violet-500"
               title={copy.inboxNewMessage}
               aria-label={copy.inboxNewMessage}
@@ -607,11 +605,11 @@ export default function NewInboxView({
               <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-4 shadow-md">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <h3 className="text-sm font-bold text-white mb-1">{searchQuery ? copy.inboxNoMatchingConversations : inboxTab === 'requests' ? copy.inboxNoMessageRequests : inboxTab === 'archived' ? copy.inboxNoArchivedConversations : copy.inboxNoConversations}</h3>
+              <h3 className="text-sm font-bold text-white mb-1">{!isServerBackedInbox ? 'Sign in to view your conversations' : searchQuery ? copy.inboxNoMatchingConversations : inboxTab === 'requests' ? copy.inboxNoMessageRequests : inboxTab === 'archived' ? copy.inboxNoArchivedConversations : copy.inboxNoConversations}</h3>
               <p className="text-xs text-zinc-400 max-w-xs mb-6 font-sans">
-                {searchQuery ? copy.inboxTryDifferent : inboxTab === 'requests' ? copy.inboxNewRequestsHint : inboxTab === 'archived' ? copy.inboxArchivedHint : copy.inboxStartConversationHint}
+                {!isServerBackedInbox ? 'Your inbox shows real account conversations only. Sample conversations are not displayed.' : searchQuery ? copy.inboxTryDifferent : inboxTab === 'requests' ? copy.inboxNewRequestsHint : inboxTab === 'archived' ? copy.inboxArchivedHint : copy.inboxStartConversationHint}
               </p>
-              {!searchQuery && inboxTab === 'chats' && <button
+              {isServerBackedInbox && !searchQuery && inboxTab === 'chats' && <button
                 onClick={() => setShowNewMessageModal(true)}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
               >
@@ -639,13 +637,9 @@ export default function NewInboxView({
                   }`}
                 >
                   {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <img
-                      src={chat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                      alt={chat.partnerName}
-                      className="w-12 h-12 rounded-2xl object-cover border border-white/10 shadow-md"
-                      referrerPolicy="no-referrer"
-                    />
+                  <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-violet-500/15 text-sm font-bold text-violet-200 shadow-md">
+                    {chatInitials(chat.partnerName)}
+                    {chat.partnerAvatar && <img src={chat.partnerAvatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} className="absolute inset-0 h-full w-full rounded-2xl object-cover" />}
                     {chat.isPartnerOnline && (
                       <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black shadow-sm" />
                     )}
@@ -703,13 +697,9 @@ export default function NewInboxView({
                   <span className="sr-only">{copy.inboxBack}</span>
                 </button>
 
-                <div className="relative shrink-0">
-                  <img
-                    src={activeChat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                    alt={activeChat.partnerName}
-                    className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-md"
-                    referrerPolicy="no-referrer"
-                  />
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-violet-500/15 text-xs font-bold text-violet-200 shadow-md">
+                  {chatInitials(activeChat.partnerName)}
+                  {activeChat.partnerAvatar && <img src={activeChat.partnerAvatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} className="absolute inset-0 h-full w-full rounded-xl object-cover" />}
                   {activeChat.isPartnerOnline && (
                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black" />
                   )}
@@ -951,12 +941,10 @@ export default function NewInboxView({
                       aria-label={`Start a conversation with ${user.name}`}
                       className="w-full text-left flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]"
                     >
-                      <img
-                        src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-xl object-cover border border-white/10"
-                        referrerPolicy="no-referrer"
-                      />
+                      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-violet-500/15 text-xs font-bold text-violet-200">
+                        {chatInitials(user.name)}
+                        {user.avatar && <img src={user.avatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} className="absolute inset-0 h-full w-full rounded-xl object-cover" />}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-bold text-white truncate font-sans">{user.name}</span>
