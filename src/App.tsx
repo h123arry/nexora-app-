@@ -1617,106 +1617,6 @@ export default function App() {
   };
 
   // 6. Messaging pipelines
-  const handleSendMessage = (chatId: string, content: string) => {
-    requireAuth(() => {
-      const msgId = `msg-${Date.now()}`;
-      const newMsg: Message = {
-        id: msgId,
-        chatId,
-        senderId: currentUser.id,
-        content,
-        timestamp: new Date().toISOString(),
-        status: 'sent'
-      };
-
-      setMessages(prev => ({
-        ...prev,
-        [chatId]: [...(prev[chatId] || []), newMsg]
-      }));
-
-      setChats(prevChats =>
-        prevChats.map(c => {
-          if (c.id === chatId) {
-            return {
-              ...c,
-              lastMessage: content,
-              lastTimestamp: new Date().toISOString()
-            };
-          }
-          return c;
-        })
-      );
-
-      // Simulate transition to 'delivered' (double check)
-      setTimeout(() => {
-        setMessages(prev => {
-          const list = prev[chatId] || [];
-          return {
-            ...prev,
-            [chatId]: list.map(m => m.id === msgId ? { ...m, status: 'delivered' } : m)
-          };
-        });
-      }, 600);
-
-      // Simulate transition to 'read' (cyan double check) when the receiver consumes the message
-      setTimeout(() => {
-        setMessages(prev => {
-          const list = prev[chatId] || [];
-          return {
-            ...prev,
-            [chatId]: list.map(m => m.id === msgId ? { ...m, status: 'read' } : m)
-          };
-        });
-      }, 1500);
-    }, 'Join Nexora to send messages and chat directly with creators.');
-  };
-
-  const handleReceiveBotMessage = (chatId: string, content: string, senderId: string) => {
-    const newMsg: Message = {
-      id: `msg-${Date.now()}`,
-      chatId,
-      senderId,
-      content,
-      timestamp: new Date().toISOString(),
-      status: 'read'
-    };
-
-    setMessages(prev => ({
-      ...prev,
-      [chatId]: [...(prev[chatId] || []), newMsg]
-    }));
-
-    const senderUser = (Object.values(globalUsersMap) as User[]).find(c => c.id === senderId) || { name: 'VOH AI', username: 'voh_ai', avatar: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=150&auto=format&fit=crop&q=80' };
-    const newNotif: Notification = {
-      id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-      type: 'message',
-      userId: senderId,
-      username: senderUser.username,
-      avatar: senderUser.avatar,
-      targetId: chatId,
-      content: `sent you a direct message: "${content.slice(0, 30)}..."`,
-      timestamp: new Date().toISOString(),
-      isRead: false
-    };
-    setNotifications(prev => [newNotif, ...prev]);
-
-    // Update global chats array stats
-    setChats(prevChats =>
-      prevChats.map(c => {
-        if (c.id === chatId) {
-          const isStillCurrentActive = activeTab === 'inbox' && chatId === c.id;
-          return {
-            ...c,
-            lastMessage: content,
-            lastTimestamp: new Date().toISOString(),
-            unreadCount: isStillCurrentActive ? 0 : c.unreadCount + 1
-          };
-        }
-        return c;
-      })
-    );
-  };
-
   // 7. Discovery Align Switch
   const handleToggleFollow = (creatorId: string) => {
     requireAuth(() => {
@@ -2216,8 +2116,7 @@ export default function App() {
                       onAddPost={handleAddPost}
                       chats={resolvedChats}
                       messages={messages}
-                      onSendMessage={handleSendMessage}
-                      onReceiveBotMessage={handleReceiveBotMessage}
+                      creators={Object.values(globalUsersMap) as User[]}
                       initialSubTab={matrixSubTabRedirect}
                     />
                   )}
