@@ -20,6 +20,7 @@ import { SettingsService } from '../services/firebase/settingsService';
 import { normalizeFeedPreferences, resetFeedPreferences } from '../services/discovery/feedPreferences';
 import { auth } from '../services/firebase/config';
 import { ProfileService } from '../services/firebase/profileService';
+import { readUserScopedJson, writeUserScopedJson } from '../utils/userScopedStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import { getVideoPreloadPlan } from '../utils/videoPreloadPolicy';
 import { getDevicePerformanceProfile } from '../utils/devicePerformance';
@@ -130,8 +131,8 @@ function PostCarousel({ images, filters }: { images: string[], filters?: string[
   );
 }
 
-// Seed function to generate 150+ realistic posts from 1000 users deterministically
-function seedWorldFeed(parentPosts: Post[]): RefactoredPost[] {
+// Normalize the actual posts supplied by the authenticated feed source.
+function normalizeFeedPosts(parentPosts: Post[]): RefactoredPost[] {
   const blended: RefactoredPost[] = [];
 
   // First append parent posts (if any)
@@ -230,7 +231,7 @@ export default function FeedView({
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
   const [feedTab, setFeedTab] = useState<'posts' | 'following' | 'friends' | 'trending' | 'reels'>(() => {
-    const saved = localStorage.getItem('nexora_feed_tab');
+    const saved = readUserScopedJson<string | null>(localStorage, 'nexora_feed_tab', currentUser.id, null);
     if (!saved || ['communities', 'polls', 'contributions', 'broadcast', 'pulse', 'for_you', 'forYou', 'local'].includes(saved)) return 'posts';
     return (saved as any) || 'posts';
   });
@@ -263,7 +264,7 @@ export default function FeedView({
     setActivePostId(null);
 
     return () => clearTimeout(timer);
-  }, [feedTab]);
+  }, [feedTab, currentUser.id]);
 
   // Online/Offline tracking
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
@@ -322,7 +323,7 @@ export default function FeedView({
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('nexora_feed_tab', feedTab);
+    writeUserScopedJson(localStorage, 'nexora_feed_tab', currentUser.id, feedTab);
   }, [feedTab]);
   
   // Custom interactive features
@@ -422,10 +423,7 @@ export default function FeedView({
 
   // Phase 6 & Phase 7 - Interactive states
   const [expandedPostIds, setExpandedPostIds] = useState<string[]>([]);
-  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_muted_creators');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_muted_creators', currentUser.id, []));
   const [pinnedPostIds, setPinnedPostIds] = useState<string[]>(() => {
     if (Array.isArray(currentUser.pinnedPosts)) return currentUser.pinnedPosts.filter(id => typeof id === 'string');
     try {
@@ -459,16 +457,6 @@ export default function FeedView({
   const [analyticsPost, setAnalyticsPost] = useState<RefactoredPost | null>(null);
   const analyticsSnapshot = analyticsPost ? buildPostAnalytics(analyticsPost) : null;
 
-  const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
-  const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('nexora_story_highlights');
-      const parsed = saved ? JSON.parse(saved) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
 
   // Floating Composer Box
   const [composerOpen, setComposerOpen] = useState(false);
@@ -481,22 +469,10 @@ export default function FeedView({
   const [composerLocation, setComposerLocation] = useState('');
 
   // 1. Advanced Moderation States
-  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_hidden_posts');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [blockedUserIds, setBlockedUserIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_blocked_users');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [mutedUserIds, setMutedUserIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_muted_users');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [notInterestedTags, setNotInterestedTags] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_not_interested_tags');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_hidden_posts', currentUser.id, []));
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_blocked_users', currentUser.id, []));
+  const [mutedUserIds, setMutedUserIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_muted_users', currentUser.id, []));
+  const [notInterestedTags, setNotInterestedTags] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_not_interested_tags', currentUser.id, []));
   const feedPreferencesHydratedRef = useRef(false);
   const impressedPostIdsRef = useRef<Set<string>>(new Set());
   const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(() => currentUser.id === 'guest_visitor_id');
@@ -564,16 +540,9 @@ export default function FeedView({
   };
 
   // 2. Custom Pinterest-style collection state
-  const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => {
-    const saved = localStorage.getItem('nexora_saved_collections');
-    return saved ? JSON.parse(saved) : {
-      'Favorites ❤️': [],
-      'Football ⚽': [],
-      'Business 💼': [],
-      'Inspiration ⚡': [],
-      'Custom Collections 📂': []
-    };
-  });
+  const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => readUserScopedJson(localStorage, 'nexora_saved_collections', currentUser.id, {
+    'Favorites ❤️': [], 'Football ⚽': [], 'Business 💼': [], 'Inspiration ⚡': [], 'Custom Collections 📂': [],
+  }));
   const [activeCollectionFolder, setActiveCollectionFolder] = useState<string | null>(null);
   const [showSaveToCollectionModalId, setShowSaveToCollectionModalId] = useState<string | null>(null);
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -583,10 +552,23 @@ export default function FeedView({
   const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'nearby'>('latest');
 
   // Premium Search States
-  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_search_history');
-    return saved ? JSON.parse(saved) : ['Sarah 🌸', 'David ⚔️', 'Quantum', 'Physics', 'FC Barcelona', 'Austin'];
-  });
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_search_history', currentUser.id, []));
+  const [feedCacheOwnerId, setFeedCacheOwnerId] = useState(currentUser.id);
+  useEffect(() => {
+    if (feedCacheOwnerId === currentUser.id) return;
+    setMutedCreatorIds(readUserScopedJson(localStorage, 'nexora_muted_creators', currentUser.id, []));
+    setSavedCollections(readUserScopedJson(localStorage, 'nexora_saved_collections', currentUser.id, {
+      'Favorites ❤️': [], 'Football ⚽': [], 'Business 💼': [], 'Inspiration ⚡': [], 'Custom Collections 📂': [],
+    }));
+    setSearchHistory(readUserScopedJson(localStorage, 'nexora_search_history', currentUser.id, []));
+    setHiddenPostIds(readUserScopedJson(localStorage, 'nexora_hidden_posts', currentUser.id, []));
+    setBlockedUserIds(readUserScopedJson(localStorage, 'nexora_blocked_users', currentUser.id, []));
+    setMutedUserIds(readUserScopedJson(localStorage, 'nexora_muted_users', currentUser.id, []));
+    setNotInterestedTags(readUserScopedJson(localStorage, 'nexora_not_interested_tags', currentUser.id, []));
+    setPinnedPostIds(Array.isArray(currentUser.pinnedPosts) ? currentUser.pinnedPosts.filter(id => typeof id === 'string') : readUserScopedJson(localStorage, 'nexora_pinned_posts', currentUser.id, []));
+    setFeedCacheOwnerId(currentUser.id);
+  }, [currentUser.id, currentUser.pinnedPosts, feedCacheOwnerId]);
+
 
   const addToSearchHistory = (q: string) => {
     if (!q || !q.trim()) return;
@@ -594,7 +576,7 @@ export default function FeedView({
     setSearchHistory(prev => {
       const filtered = prev.filter(h => h.toLowerCase() !== query.toLowerCase());
       const updated = [query, ...filtered].slice(0, 10);
-      localStorage.setItem('nexora_search_history', JSON.stringify(updated));
+      writeUserScopedJson(localStorage, 'nexora_search_history', feedCacheOwnerId, updated);
       return updated;
     });
   };
@@ -602,14 +584,14 @@ export default function FeedView({
   const removeFromSearchHistory = (q: string) => {
     setSearchHistory(prev => {
       const updated = prev.filter(h => h !== q);
-      localStorage.setItem('nexora_search_history', JSON.stringify(updated));
+      writeUserScopedJson(localStorage, 'nexora_search_history', feedCacheOwnerId, updated);
       return updated;
     });
   };
 
   const clearAllSearchHistory = () => {
     setSearchHistory([]);
-    localStorage.removeItem('nexora_search_history');
+    writeUserScopedJson(localStorage, 'nexora_search_history', feedCacheOwnerId, []);
     window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Clear Search history packet successfully executed!' }));
   };
 
@@ -679,20 +661,20 @@ export default function FeedView({
 
   // Sync back state modifications to localStorage
   useEffect(() => {
-    localStorage.setItem('nexora_hidden_posts', JSON.stringify(hiddenPostIds));
-  }, [hiddenPostIds]);
+    writeUserScopedJson(localStorage, 'nexora_hidden_posts', feedCacheOwnerId, hiddenPostIds);
+  }, [hiddenPostIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_blocked_users', JSON.stringify(blockedUserIds));
-  }, [blockedUserIds]);
+    writeUserScopedJson(localStorage, 'nexora_blocked_users', feedCacheOwnerId, blockedUserIds);
+  }, [blockedUserIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_muted_users', JSON.stringify(mutedUserIds));
-  }, [mutedUserIds]);
+    writeUserScopedJson(localStorage, 'nexora_muted_users', feedCacheOwnerId, mutedUserIds);
+  }, [mutedUserIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_not_interested_tags', JSON.stringify(notInterestedTags));
-  }, [notInterestedTags]);
+    writeUserScopedJson(localStorage, 'nexora_not_interested_tags', feedCacheOwnerId, notInterestedTags);
+  }, [notInterestedTags, feedCacheOwnerId]);
   useEffect(() => {
     if (!feedPreferencesHydratedRef.current || currentUser.id === 'guest_visitor_id' || auth.currentUser?.uid !== currentUser.id) return;
     const timer = window.setTimeout(() => {
@@ -708,8 +690,8 @@ export default function FeedView({
   }, [currentUser.id, feedTab, notInterestedTags, blockedUserIds, mutedCreatorIds, hiddenPostIds]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_saved_collections', JSON.stringify(savedCollections));
-  }, [savedCollections]);
+    writeUserScopedJson(localStorage, 'nexora_saved_collections', feedCacheOwnerId, savedCollections);
+  }, [savedCollections, feedCacheOwnerId]);
 
   // Handle global updates
   useEffect(() => {
@@ -738,22 +720,22 @@ export default function FeedView({
 
   // 1. Hydrate the feed and synchronize with Parent posts
   useEffect(() => {
-    const seeded = seedWorldFeed(posts);
+    const normalizedPosts = normalizeFeedPosts(posts);
     
     setLocalPosts(currentLocalPosts => {
-      if (seeded.length === 0) return [];
+      if (normalizedPosts.length === 0) return [];
       if (currentLocalPosts.length === 0) {
         // Initial load
-        return seeded;
+        return normalizedPosts;
       }
       
       // Separate existing and new posts
       const currentIds = new Set(currentLocalPosts.map(p => p.id));
-      const newSeededPosts = seeded.filter(p => !currentIds.has(p.id));
+      const newIncomingPosts = normalizedPosts.filter(p => !currentIds.has(p.id));
       
       // Update existing posts in-place to preserve their exact order and indices
       const updatedLocalPosts = currentLocalPosts.map(existingPost => {
-        const matchingIncoming = seeded.find(p => p.id === existingPost.id);
+        const matchingIncoming = normalizedPosts.find(p => p.id === existingPost.id);
         if (matchingIncoming) {
           const hasChanged = 
             existingPost.likes !== matchingIncoming.likes ||
@@ -779,17 +761,17 @@ export default function FeedView({
       });
 
       // Handle new incoming posts
-      if (newSeededPosts.length > 0) {
+      if (newIncomingPosts.length > 0) {
         // Split new posts into user-created posts (prepend immediately) and background posts (queue as pending)
-        const currentUserNewPosts = newSeededPosts.filter(p => p.userId === currentUser.id);
-        const otherNewPosts = newSeededPosts.filter(p => p.userId !== currentUser.id);
+        const currentUserNewPosts = newIncomingPosts.filter(p => p.userId === currentUser.id);
+        const otherNewPosts = newIncomingPosts.filter(p => p.userId !== currentUser.id);
         
         // Also check if user is at the top of the feed to allow immediate update for background posts
         const isAtTop = scrollContainerRef.current ? scrollContainerRef.current.scrollTop <= 20 : true;
         
         if (isAtTop && otherNewPosts.length > 0) {
           // Prepend all new posts since user is at top
-          return [...newSeededPosts, ...updatedLocalPosts];
+          return [...newIncomingPosts, ...updatedLocalPosts];
         } else {
           // Add other users' posts to pendingPosts and prepend current user's own posts immediately
           if (otherNewPosts.length > 0) {
@@ -825,7 +807,7 @@ export default function FeedView({
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         try {
-          localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+          localStorage.setItem(`nexora_feed_scroll_pos_${currentUser.id}`, String(scrollTop));
         } catch {
           // Scroll restoration is an enhancement; storage failure must not affect scrolling.
         }
@@ -886,7 +868,7 @@ export default function FeedView({
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
     if (activeTab === 'feed') {
-      const savedPos = localStorage.getItem('nexora_feed_scroll_pos');
+      const savedPos = localStorage.getItem(`nexora_feed_scroll_pos_${currentUser.id}`);
       if (savedPos && scrollContainerRef.current) {
         const timer = setTimeout(() => {
           if (scrollContainerRef.current) {
@@ -904,7 +886,7 @@ export default function FeedView({
   useEffect(() => {
     if (prevActiveTabRef.current === 'feed' && activeTab !== 'feed') {
       if (scrollContainerRef.current) {
-        localStorage.setItem('nexora_feed_scroll_pos', String(scrollContainerRef.current.scrollTop));
+        localStorage.setItem(`nexora_feed_scroll_pos_${currentUser.id}`, String(scrollContainerRef.current.scrollTop));
       }
     }
     prevActiveTabRef.current = activeTab;

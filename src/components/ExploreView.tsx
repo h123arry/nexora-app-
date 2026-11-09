@@ -10,6 +10,7 @@ import MiniServicesHub from './MiniServicesHub';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
 import { getTranslations } from '../utils/translations';
+import { readUserScopedJson } from '../utils/userScopedStorage';
 
 function readExploreRecentSearches(userId: string): string[] {
   if (!userId) return [];
@@ -50,12 +51,13 @@ export default function ExploreView({
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities'>('all');
   const [showAllPulse, setShowAllPulse] = useState(false);
-  const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => {
-    try { const value = JSON.parse(localStorage.getItem('nexora_blocked_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
-  });
-  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
-    try { const value = JSON.parse(localStorage.getItem('nexora_muted_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
-  });
+  const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_blocked_users', currentUserId, []));
+  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_muted_users', currentUserId, []));
+
+  useEffect(() => {
+    setBlockedCreatorIds(readUserScopedJson(localStorage, 'nexora_blocked_users', currentUserId, []));
+    setMutedCreatorIds(readUserScopedJson(localStorage, 'nexora_muted_users', currentUserId, []));
+  }, [currentUserId]);
 
   // Use the same owner-scoped relationship preferences as For You. Local
   // storage is only the offline/guest fallback, never the signed-in source.
