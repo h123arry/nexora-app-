@@ -12,6 +12,7 @@ interface ActivityViewProps {
 export default function ActivityView({ currentUser }: ActivityViewProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loadError, setLoadError] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'All' | 'Social' | 'Missions' | 'Rewards' | 'System'>('All');
 
   useEffect(() => {
@@ -19,6 +20,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
     if (!db || !uid || uid !== currentUser.id) {
       setNotifications([]);
       setLoadError('Sign in to view your account activity.');
+      setIsLoading(false);
       return;
     }
 
@@ -29,6 +31,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
     );
 
     setLoadError('');
+    setIsLoading(true);
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const notifs: Notification[] = [];
       snapshot.forEach(doc => {
@@ -36,8 +39,10 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       });
       setNotifications(notifs);
       setLoadError('');
+      setIsLoading(false);
     }, (error: any) => {
       console.warn('[ActivityView] Notifications snapshot error; details redacted.');
+      setIsLoading(false);
       setLoadError(error?.code === 'permission-denied'
         ? 'You do not have permission to read this activity feed.'
         : 'Activity could not be loaded. Check your connection and try again.');
@@ -148,7 +153,9 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-2">
-        {loadError ? (
+        {isLoading ? (
+          <div role="status" className="flex h-full items-center justify-center p-6 text-sm text-zinc-400">Loading account activity…</div>
+        ) : loadError ? (
           <div role="status" className="flex flex-col items-center justify-center h-full p-6 text-center space-y-3">
             <Shield className="h-8 w-8 text-zinc-600" />
             <p className="max-w-sm text-sm text-zinc-300">{loadError}</p>
