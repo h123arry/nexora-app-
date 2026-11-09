@@ -16,7 +16,6 @@ import NexoraLoader from './NexoraLoader';
 import NewGroupModal from './NewGroupModal';
 import PrivacySettingsModal from './PrivacySettingsModal';
 import StorageDataCenterModal from './StorageDataCenterModal';
-import CallTestingConsole from './CallTestingConsole';
 import AttachmentGrid from './AttachmentGrid';
 import AttachmentMenu from './AttachmentMenu';
 import VoiceRecorder from './VoiceRecorder';
@@ -211,13 +210,6 @@ export default function MessagesView({
     readReceipts: true,
     mediaQuality: 'saver' as 'hd' | 'saver'
   });
-  const [showCallTestingConsole, setShowCallTestingConsole] = useState(false);
-  const [callLogs, setCallLogs] = useState<any[]>([
-    { id: 'cl-1', name: 'Sophia', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', type: 'video', direction: 'missed', timestamp: 'Yesterday, 10:45 AM' },
-    { id: 'cl-2', name: 'Harrison', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100', type: 'voice', direction: 'incoming', duration: '5m 24s', timestamp: '2 days ago' },
-    { id: 'cl-3', name: 'Luna', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100', type: 'video', direction: 'outgoing', timestamp: '3 days ago' },
-    { id: 'cl-4', name: 'Marcus', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100', type: 'video', direction: 'incoming', duration: '12m 40s', timestamp: 'Last week' }
-  ]);
   const [starredMessages, setStarredMessages] = useState<string[]>([]);
   const [partnerPresenceAction, setPartnerPresenceAction] = useState<'typing' | 'recording' | 'uploading' | null>(null);
   const [isComposerAttachmentOpen, setIsComposerAttachmentOpen] = useState(false);
@@ -475,13 +467,11 @@ export default function MessagesView({
     const recoveryChats = localStorage.getItem(`nexora_chats_v3_${currentUser.id}`);
     const recoveryMsgs = localStorage.getItem(`nexora_msgs_v3_${currentUser.id}`);
     const recoveryStarred = localStorage.getItem(`nexora_starred_v3_${currentUser.id}`);
-    const recoveryCallLogs = localStorage.getItem(`nexora_calls_v3_${currentUser.id}`);
     const recoveryPrivacy = localStorage.getItem(`nexora_privacy_v3_${currentUser.id}`);
 
     if (recoveryChats) setChatsList(JSON.parse(recoveryChats));
     if (recoveryMsgs) setLocalMessages(JSON.parse(recoveryMsgs));
     if (recoveryStarred) setStarredMessages(JSON.parse(recoveryStarred));
-    if (recoveryCallLogs) setCallLogs(JSON.parse(recoveryCallLogs));
     if (recoveryPrivacy) setPrivacySettings(JSON.parse(recoveryPrivacy));
   }, []);
 
@@ -490,9 +480,8 @@ export default function MessagesView({
     localStorage.setItem(`nexora_chats_v3_${currentUser.id}`, JSON.stringify(chatsList));
     localStorage.setItem(`nexora_msgs_v3_${currentUser.id}`, JSON.stringify(localMessages));
     localStorage.setItem(`nexora_starred_v3_${currentUser.id}`, JSON.stringify(starredMessages));
-    localStorage.setItem(`nexora_calls_v3_${currentUser.id}`, JSON.stringify(callLogs));
     localStorage.setItem(`nexora_privacy_v3_${currentUser.id}`, JSON.stringify(privacySettings));
-  }, [chatsList, localMessages, starredMessages, callLogs, privacySettings]);
+  }, [chatsList, localMessages, starredMessages, privacySettings]);
 
   // 1. Online presence sync
   useEffect(() => {
@@ -1462,25 +1451,15 @@ export default function MessagesView({
         {/* Dynamic Contacts Card stream */}
         <div ref={listContainerRef} className="flex-1 overflow-y-auto divide-y divide-violet-500/5">
           {activeTab === 'calls' ? (
-            <CallTestingConsole 
-              logs={callLogs} 
-              onClearLogs={() => {
-                setCallLogs([]);
-                window.dispatchEvent(new CustomEvent('toast', { detail: "🧹 Call logs registry purged." }));
-              }} 
-              onTriggerSimulatedCall={(partner, type) => {
-                const avatarUrl = partner === 'Sophia' 
-                  ? 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100' 
-                  : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100';
-                setActiveCall({ 
-                  type, 
-                  direction: 'incoming',
-                  partnerName: partner, 
-                  partnerAvatar: avatarUrl,
-                  partnerUsername: partner === 'Sophia' ? '@sophia_cyber' : '@luna_stellar'
-                });
-              }}
-            />
+            <div className="flex h-full min-h-64 flex-col items-center justify-center px-6 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-violet-400/15 bg-violet-500/10 text-violet-300">
+                <Phone className="h-6 w-6" aria-hidden="true" />
+              </div>
+              <h3 className="mt-4 text-sm font-semibold text-white">Call history isn't available yet</h3>
+              <p className="mt-2 max-w-xs text-xs leading-relaxed text-zinc-400">
+                NEXORA calling is not connected to a verified real-time call service. No sample contacts or simulated call records are shown.
+              </p>
+            </div>
           ) : (
             filteredChats.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-64 p-4 text-center">
@@ -2067,88 +2046,11 @@ export default function MessagesView({
 
       </div>
 
-      {/* Simulated Call Screen Modal overlays */}
-      <CallScreen 
-        isOpen={activeCall !== null} 
-        type={activeCall?.type || 'voice'} 
-        direction={activeCall?.direction || 'outgoing'}
-        partnerName={activeCall?.partnerName || ''} 
-        partnerAvatar={activeCall?.partnerAvatar || ''} 
-        partnerUsername={activeCall?.partnerUsername}
-        currentUser={currentUser}
-        onSendMessage={(content) => {
-          if (!activeChatId) return;
-          const newMsg: ExtendedMessage = {
-            id: 'msg-' + Date.now(),
-            chatId: activeChatId,
-            senderId: currentUser.id,
-            content: content,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            status: isOffline ? 'sent' : 'delivered'
-          };
-          setLocalMessages(prev => ({
-            ...prev,
-            [activeChatId]: [...(prev[activeChatId] || []), newMsg]
-          }));
-        }}
-        onClose={(completedDuration, endState) => {
-          if (activeCall) {
-            let logDirection: 'incoming' | 'outgoing' | 'missed' = activeCall.direction;
-            if (activeCall.direction === 'incoming') {
-              if (endState === 'declined' || endState === 'missed') {
-                logDirection = 'missed';
-              } else {
-                logDirection = 'incoming';
-              }
-            } else {
-              if (endState === 'declined' || endState === 'missed') {
-                logDirection = 'outgoing';
-              }
-            }
-
-            const newLog = {
-              id: 'cl-' + Date.now(),
-              name: activeCall.partnerName,
-              avatar: activeCall.partnerAvatar,
-              username: activeCall.partnerUsername,
-              type: activeCall.type,
-              direction: logDirection,
-              duration: completedDuration !== '00:00' ? completedDuration : undefined,
-              timestamp: 'Just now'
-            };
-            setCallLogs(prev => [newLog, ...prev]);
-
-            if (activeChatId) {
-              const callText = activeCall.type === 'video' ? 'video call' : 'voice call';
-              let systemText = '';
-              if (logDirection === 'missed') {
-                systemText = `📞 Missed ${callText}`;
-              } else if (logDirection === 'incoming') {
-                systemText = `📞 Incoming ${callText} ended (${completedDuration})`;
-              } else {
-                systemText = `📞 Outgoing ${callText} ended (${completedDuration})`;
-              }
-
-              const systemMsg: ExtendedMessage = {
-                id: 'sys-call-' + Date.now(),
-                chatId: activeChatId,
-                senderId: 'system',
-                content: systemText,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                status: 'read'
-              };
-
-              setLocalMessages(prev => {
-                const chatMsgs = prev[activeChatId] || [];
-                return {
-                  ...prev,
-                  [activeChatId]: [...chatMsgs, systemMsg]
-                };
-              });
-            }
-          }
-          setActiveCall(null);
-        }} 
+      <CallScreen
+        isOpen={activeCall !== null}
+        type={activeCall?.type || 'voice'}
+        partnerName={activeCall?.partnerName || ''}
+        onClose={() => setActiveCall(null)}
       />
 
       {/* Premium Reaction Details Bottom Sheet */}
