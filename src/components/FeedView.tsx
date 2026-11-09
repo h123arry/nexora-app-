@@ -247,7 +247,7 @@ export default function FeedView({
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
   const [feedTab, setFeedTab] = useState<'posts' | 'following' | 'friends' | 'trending' | 'reels'>(() => {
-    const saved = localStorage.getItem('nexora_feed_tab');
+    const saved = readFeedUserValue<string | null>('nexora_feed_tab', currentUser.id, null);
     if (!saved || ['communities', 'polls', 'contributions', 'broadcast', 'pulse', 'for_you', 'forYou', 'local'].includes(saved)) return 'posts';
     return (saved as any) || 'posts';
   });
@@ -280,7 +280,7 @@ export default function FeedView({
     setActivePostId(null);
 
     return () => clearTimeout(timer);
-  }, [feedTab]);
+  }, [feedTab, currentUser.id]);
 
   // Online/Offline tracking
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
@@ -339,7 +339,7 @@ export default function FeedView({
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('nexora_feed_tab', feedTab);
+    writeFeedUserValue('nexora_feed_tab', currentUser.id, feedTab);
   }, [feedTab]);
   
   // Custom interactive features
@@ -823,7 +823,7 @@ export default function FeedView({
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         try {
-          localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+          localStorage.setItem(`nexora_feed_scroll_pos:${currentUser.id}`, String(scrollTop));
         } catch {
           // Scroll restoration is an enhancement; storage failure must not affect scrolling.
         }
@@ -884,7 +884,7 @@ export default function FeedView({
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
     if (activeTab === 'feed') {
-      const savedPos = localStorage.getItem('nexora_feed_scroll_pos');
+      const savedPos = localStorage.getItem(`nexora_feed_scroll_pos:${currentUser.id}`);
       if (savedPos && scrollContainerRef.current) {
         const timer = setTimeout(() => {
           if (scrollContainerRef.current) {
@@ -902,7 +902,7 @@ export default function FeedView({
   useEffect(() => {
     if (prevActiveTabRef.current === 'feed' && activeTab !== 'feed') {
       if (scrollContainerRef.current) {
-        localStorage.setItem('nexora_feed_scroll_pos', String(scrollContainerRef.current.scrollTop));
+        localStorage.setItem(`nexora_feed_scroll_pos:${currentUser.id}`, String(scrollContainerRef.current.scrollTop));
       }
     }
     prevActiveTabRef.current = activeTab;
