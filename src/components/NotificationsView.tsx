@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Volume2, VolumeX, AlertTriangle, RefreshCw, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check } from 'lucide-react';
+import { Bell, Heart, MessageSquare, UserPlus, ShieldAlert, CheckCheck, AtSign, Zap, Users, Building, Target, Award, Globe, Brain, Settings, X, Search, Bookmark, BookmarkCheck, Eye, ArrowRight, Sparkle, History, Volume2, VolumeX, AlertTriangle, Layers, Trash, Star, Radio, Info, ChevronDown, ChevronUp, Sliders, MoreVertical, SlidersHorizontal, Flame, Activity, Maximize2, ThumbsUp, Volume, Clock, CheckSquare, Square, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Notification, User } from '../types';
 import { deleteOwnNotification, deleteOwnNotifications, setNotificationReadState, setNotificationsReadState } from '../services/dataService';
@@ -228,10 +228,6 @@ export default function NotificationsView({
     } catch {
       addToast("Some notifications couldn't be deleted. Please try again.");
     }
-  };
-
-  const handlePullToRefresh = () => {
-    addToast('Notifications update automatically when new activity arrives.');
   };
 
   const handleLoadMore = () => {
@@ -533,13 +529,6 @@ export default function NotificationsView({
             <Settings className="w-4 h-4" />
           </button>
 
-          <button
-            onClick={handlePullToRefresh}
-            className="nx-icon-button inline-flex text-violet-300"
-            title="Notifications update automatically"
-          >
-            <RefreshCw className="w-4 h-4" />
-          </button>
         </div>
       </div>
 
@@ -783,15 +772,6 @@ export default function NotificationsView({
             </p>
           </div>
 
-          <button
-            onClick={() => {
-              handlePullToRefresh();
-            }}
-            className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-colors flex items-center gap-2 mx-auto cursor-pointer"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-            <span>Refresh</span>
-          </button>
         </motion.div>
       ) : (
         <div className="space-y-6">
