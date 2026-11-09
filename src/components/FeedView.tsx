@@ -749,11 +749,11 @@ export default function FeedView({
       
       // Separate existing and new posts
       const currentIds = new Set(currentLocalPosts.map(p => p.id));
-      const newSeededPosts = seeded.filter(p => !currentIds.has(p.id));
+      const newIncomingPosts = normalizedPosts.filter(p => !currentIds.has(p.id));
       
       // Update existing posts in-place to preserve their exact order and indices
       const updatedLocalPosts = currentLocalPosts.map(existingPost => {
-        const matchingIncoming = seeded.find(p => p.id === existingPost.id);
+        const matchingIncoming = normalizedPosts.find(p => p.id === existingPost.id);
         if (matchingIncoming) {
           const hasChanged = 
             existingPost.likes !== matchingIncoming.likes ||
@@ -779,17 +779,17 @@ export default function FeedView({
       });
 
       // Handle new incoming posts
-      if (newSeededPosts.length > 0) {
+      if (newIncomingPosts.length > 0) {
         // Split new posts into user-created posts (prepend immediately) and background posts (queue as pending)
-        const currentUserNewPosts = newSeededPosts.filter(p => p.userId === currentUser.id);
-        const otherNewPosts = newSeededPosts.filter(p => p.userId !== currentUser.id);
+        const currentUserNewPosts = newIncomingPosts.filter(p => p.userId === currentUser.id);
+        const otherNewPosts = newIncomingPosts.filter(p => p.userId !== currentUser.id);
         
         // Also check if user is at the top of the feed to allow immediate update for background posts
         const isAtTop = scrollContainerRef.current ? scrollContainerRef.current.scrollTop <= 20 : true;
         
         if (isAtTop && otherNewPosts.length > 0) {
           // Prepend all new posts since user is at top
-          return [...newSeededPosts, ...updatedLocalPosts];
+          return [...newIncomingPosts, ...updatedLocalPosts];
         } else {
           // Add other users' posts to pendingPosts and prepend current user's own posts immediately
           if (otherNewPosts.length > 0) {
