@@ -6,7 +6,7 @@ import {
   Paperclip, Image as ImageIcon, Video, Mic, Smile, MoreVertical,
   Phone, Archive, Pin, Trash2, Globe, Quote, Eye, EyeOff, Volume2, Pause, Play, Download
 } from 'lucide-react';
-import { User, Chat, Message, ExtendedMessage } from '../types';
+import { User, Chat, ExtendedMessage } from '../types';
 import { db } from '../lib/firebase';
 import { setInboxChatPreference, watchInboxPreferences } from '../services/firebase/inboxPreferencesService';
 import { watchInboxChats } from '../services/firebase/chatDirectoryService';
@@ -45,8 +45,6 @@ import CallScreen from './CallScreen';
 
 interface NewInboxViewProps {
   currentUser: User;
-  chats: Chat[];
-  messages: { [chatId: string]: Message[] };
   creators?: User[];
   locale?: string;
 }
@@ -65,8 +63,6 @@ function chatInitials(name?: string): string {
 
 export default function NewInboxView({
   currentUser,
-  chats: initialChats,
-  messages: initialMessages,
   creators = [],
   locale = 'en'
 }: NewInboxViewProps) {
@@ -78,7 +74,7 @@ export default function NewInboxView({
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
-    return initialChats || [];
+    return [];
   });
 
   const [localMessages, setLocalMessages] = useState<{ [chatId: string]: ExtendedMessage[] }>(() => {
@@ -87,13 +83,7 @@ export default function NewInboxView({
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
     }
-    const mapped: { [chatId: string]: ExtendedMessage[] } = {};
-    if (initialMessages) {
-      Object.keys(initialMessages).forEach(k => {
-        mapped[k] = (initialMessages[k] || []).map(m => ({ ...m }));
-      });
-    }
-    return mapped;
+    return {};
   });
 
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
