@@ -11,12 +11,14 @@ interface ActivityViewProps {
 
 export default function ActivityView({ currentUser }: ActivityViewProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loadError, setLoadError] = useState('');
   const [activeTab, setActiveTab] = useState<'All' | 'Social' | 'Missions' | 'Rewards' | 'System'>('All');
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!db || !uid || uid !== currentUser.id) {
       setNotifications([]);
+      setLoadError('Sign in to view your account activity.');
       return;
     }
 
@@ -26,15 +28,19 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
       limit(100)
     );
 
+    setLoadError('');
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const notifs: Notification[] = [];
       snapshot.forEach(doc => {
         notifs.push({ id: doc.id, ...doc.data() } as Notification);
       });
       setNotifications(notifs);
+      setLoadError('');
     }, (error: any) => {
-      if (error?.code === 'permission-denied') return;
       console.warn('[ActivityView] Notifications snapshot error; details redacted.');
+      setLoadError(error?.code === 'permission-denied'
+        ? 'You do not have permission to read this activity feed.'
+        : 'Activity could not be loaded. Check your connection and try again.');
     });
 
     return () => unsubscribe();
@@ -106,7 +112,7 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
   };
 
   const deleteNotification = async (id: string) => {
-    if (!auth.currentUser || auth.currentUser.uid !== currentUser.id) return;
+    if (!db || !auth.currentUser || auth.currentUser.uid !== currentUser.id) return;
     try {
       await deleteDoc(doc(db, 'users', currentUser.id, 'notifications', id));
     } catch {
@@ -142,7 +148,12 @@ export default function ActivityView({ currentUser }: ActivityViewProps) {
 
       {/* List */}
       <div className="flex-1 overflow-y-auto px-2">
-        {groupedNotifications.length === 0 ? (
+        {loadError ? (
+          <div role="status" className="flex flex-col items-center justify-center h-full p-6 text-center space-y-3">
+            <Shield className="h-8 w-8 text-zinc-600" />
+            <p className="max-w-sm text-sm text-zinc-300">{loadError}</p>
+          </div>
+        ) : groupedNotifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center space-y-4">
             <div className="w-20 h-20 nx-surface rounded-full flex items-center justify-center">
               <Bell className="w-10 h-10 text-zinc-700" />
