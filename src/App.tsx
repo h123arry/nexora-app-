@@ -2213,8 +2213,6 @@ export default function App() {
                         key={currentUser.id}
                         locale={resolveLocale(currentUser.preferredLanguage)}
                         currentUser={getRichUser(currentUser)}
-                        chats={readUserScopedJson(localStorage, 'nexora_chats', currentUser.id, INITIAL_CHATS)}
-                        messages={readUserScopedJson(localStorage, 'nexora_messages', currentUser.id, INITIAL_MESSAGES)}
                         creators={Object.values(globalUsersMap) as User[]}
                       />
                     </div>
