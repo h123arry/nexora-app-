@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Paintbrush, Compass, Users, Target, Terminal, Mic, MicOff, Search, Send, PlusCircle, User as UserIcon, Settings, Layers, CheckCircle, TrendingUp, MessageSquare, ArrowRight } from 'lucide-react';
 import VohIcon from './VohIcon';
-import { User, Post, Chat, Message } from '../types';
+import { User, Post } from '../types';
 import VohAiView from './VohAiView';
 import CirclesView from './CirclesView';
 import SocialMissionsView from './SocialMissionsView';
@@ -12,8 +12,6 @@ interface MatrixViewProps {
   currentUser: User;
   posts: Post[];
   onAddPost: (content: string, imageUrl?: string, tagsString?: string) => void;
-  chats: Chat[];
-  messages: { [chatId: string]: Message[] };
   creators?: User[];
   initialSubTab?: MatrixSubTab;
 }
@@ -24,8 +22,6 @@ export default function MatrixView({
   currentUser,
   posts,
   onAddPost,
-  chats,
-  messages,
   creators = [],
   initialSubTab
 }: MatrixViewProps) {
