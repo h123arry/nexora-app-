@@ -71,7 +71,9 @@ export default function NewInboxView({
   locale = 'en'
 }: NewInboxViewProps) {
   const copy = getTranslations(locale);
+  const isServerBackedInbox = auth.currentUser?.uid === currentUser.id;
   const [chats, setChats] = useState<Chat[]>(() => {
+    if (!isServerBackedInbox) return [];
     const saved = localStorage.getItem(`nexora_chats_${currentUser.id}`);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
@@ -80,6 +82,7 @@ export default function NewInboxView({
   });
 
   const [localMessages, setLocalMessages] = useState<{ [chatId: string]: ExtendedMessage[] }>(() => {
+    if (!isServerBackedInbox) return {};
     const saved = localStorage.getItem(`nexora_messages_${currentUser.id}`);
     if (saved) {
       try { return JSON.parse(saved); } catch (e) {}
@@ -99,7 +102,6 @@ export default function NewInboxView({
   const [newMessageText, setNewMessageText] = useState('');
   const [showNewMessageModal, setShowNewMessageModal] = useState(false);
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const isServerBackedInbox = auth.currentUser?.uid === currentUser.id;
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const creatorsRef = useRef(creators);
   useEffect(() => { creatorsRef.current = creators; }, [creators]);
@@ -558,6 +560,7 @@ export default function NewInboxView({
             </button>
             <button
               onClick={() => setShowNewMessageModal(true)}
+              disabled={!isServerBackedInbox}
               className="nx-icon-button inline-flex bg-violet-600 text-white hover:bg-violet-500"
               title={copy.inboxNewMessage}
               aria-label={copy.inboxNewMessage}
@@ -612,11 +615,11 @@ export default function NewInboxView({
               <div className="w-14 h-14 rounded-2xl bg-violet-500/10 border border-white/10 flex items-center justify-center text-violet-400 mb-4 shadow-md">
                 <MessageSquare className="w-7 h-7" />
               </div>
-              <h3 className="text-sm font-bold text-white mb-1">{searchQuery ? copy.inboxNoMatchingConversations : inboxTab === 'requests' ? copy.inboxNoMessageRequests : inboxTab === 'archived' ? copy.inboxNoArchivedConversations : copy.inboxNoConversations}</h3>
+              <h3 className="text-sm font-bold text-white mb-1">{!isServerBackedInbox ? 'Sign in to view your conversations' : searchQuery ? copy.inboxNoMatchingConversations : inboxTab === 'requests' ? copy.inboxNoMessageRequests : inboxTab === 'archived' ? copy.inboxNoArchivedConversations : copy.inboxNoConversations}</h3>
               <p className="text-xs text-zinc-400 max-w-xs mb-6 font-sans">
-                {searchQuery ? copy.inboxTryDifferent : inboxTab === 'requests' ? copy.inboxNewRequestsHint : inboxTab === 'archived' ? copy.inboxArchivedHint : copy.inboxStartConversationHint}
+                {!isServerBackedInbox ? 'Your inbox shows real account conversations only. Sample conversations are not displayed.' : searchQuery ? copy.inboxTryDifferent : inboxTab === 'requests' ? copy.inboxNewRequestsHint : inboxTab === 'archived' ? copy.inboxArchivedHint : copy.inboxStartConversationHint}
               </p>
-              {!searchQuery && inboxTab === 'chats' && <button
+              {isServerBackedInbox && !searchQuery && inboxTab === 'chats' && <button
                 onClick={() => setShowNewMessageModal(true)}
                 className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-bold text-xs rounded-xl shadow-lg transition-all flex items-center gap-2 cursor-pointer"
               >
