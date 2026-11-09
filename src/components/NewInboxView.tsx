@@ -58,6 +58,11 @@ function readChatIdList(userId: string, key: string): string[] {
   } catch { return []; }
 }
 
+function chatInitials(name?: string): string {
+  const parts = (name || '').trim().split(/\s+/).filter(Boolean);
+  return parts.length ? parts.slice(0, 2).map(part => part[0]).join('').toUpperCase() : '?';
+}
+
 export default function NewInboxView({
   currentUser,
   chats: initialChats,
@@ -458,10 +463,10 @@ export default function NewInboxView({
       partnerId: user.id,
       partnerName: user.name,
       partnerAvatar: user.avatar,
-      partnerBio: user.bio || 'Secure Node connection.',
-      isPartnerOnline: true,
+      partnerBio: user.bio || '',
+      isPartnerOnline: false,
       unreadCount: 0,
-      lastMessage: 'Started secure conversation',
+      lastMessage: '',
       lastTimestamp: new Date().toISOString(),
       username: user.username,
       isGroup: false,
@@ -639,13 +644,9 @@ export default function NewInboxView({
                   }`}
                 >
                   {/* Avatar */}
-                  <div className="relative shrink-0">
-                    <img
-                      src={chat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                      alt={chat.partnerName}
-                      className="w-12 h-12 rounded-2xl object-cover border border-white/10 shadow-md"
-                      referrerPolicy="no-referrer"
-                    />
+                  <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-violet-500/15 text-sm font-bold text-violet-200 shadow-md">
+                    {chatInitials(chat.partnerName)}
+                    {chat.partnerAvatar && <img src={chat.partnerAvatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} className="absolute inset-0 h-full w-full rounded-2xl object-cover" />}
                     {chat.isPartnerOnline && (
                       <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 rounded-full border-2 border-black shadow-sm" />
                     )}
@@ -703,13 +704,9 @@ export default function NewInboxView({
                   <span className="sr-only">{copy.inboxBack}</span>
                 </button>
 
-                <div className="relative shrink-0">
-                  <img
-                    src={activeChat.partnerAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                    alt={activeChat.partnerName}
-                    className="w-10 h-10 rounded-xl object-cover border border-white/10 shadow-md"
-                    referrerPolicy="no-referrer"
-                  />
+                <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-violet-500/15 text-xs font-bold text-violet-200 shadow-md">
+                  {chatInitials(activeChat.partnerName)}
+                  {activeChat.partnerAvatar && <img src={activeChat.partnerAvatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} className="absolute inset-0 h-full w-full rounded-xl object-cover" />}
                   {activeChat.isPartnerOnline && (
                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full border-2 border-black" />
                   )}
@@ -951,12 +948,10 @@ export default function NewInboxView({
                       aria-label={`Start a conversation with ${user.name}`}
                       className="w-full text-left flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl cursor-pointer transition-all focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-[-2px]"
                     >
-                      <img
-                        src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100'}
-                        alt={user.name}
-                        className="w-10 h-10 rounded-xl object-cover border border-white/10"
-                        referrerPolicy="no-referrer"
-                      />
+                      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-white/10 bg-violet-500/15 text-xs font-bold text-violet-200">
+                        {chatInitials(user.name)}
+                        {user.avatar && <img src={user.avatar} alt="" referrerPolicy="no-referrer" onError={event => { event.currentTarget.hidden = true; }} className="absolute inset-0 h-full w-full rounded-xl object-cover" />}
+                      </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-1.5">
                           <span className="text-xs font-bold text-white truncate font-sans">{user.name}</span>
