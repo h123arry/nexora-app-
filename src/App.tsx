@@ -2114,8 +2114,6 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       posts={resolvedPosts}
                       onAddPost={handleAddPost}
-                      chats={resolvedChats}
-                      messages={messages}
                       creators={Object.values(globalUsersMap) as User[]}
                       initialSubTab={matrixSubTabRedirect}
                     />
