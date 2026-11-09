@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { 
-  BarChart2, X, RefreshCw, Send, CheckCircle2, AlertCircle, Clock, 
+  BarChart2, X, Send, CheckCircle2, AlertCircle, Clock, 
   Smile, MessageSquare, ExternalLink, Download, Share2, Sparkles, Zap
 } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -19,7 +19,6 @@ export default function BroadcastAnalyticsView({
   broadcast
 }: BroadcastAnalyticsViewProps) {
   const [activeTab, setActiveTab] = useState<'delivery' | 'engagement' | 'retention'>('delivery');
-  const [isRefreshing, setIsRefreshing] = useState(false);
   
   // Only display analytics fields persisted on the broadcast record.
   const [liveStats, setLiveStats] = useState<any>(null);
@@ -30,10 +29,7 @@ export default function BroadcastAnalyticsView({
     }
   }, [broadcast, isOpen]);
 
-  const handleRefresh = () => {
-    // This component has no analytics subscription yet; refresh from its current persisted record only.
-    setLiveStats(broadcast?.broadcastDeliveryStats || {});
-  };
+
 
   if (!isOpen || !broadcast || !liveStats) return null;
 
@@ -60,20 +56,11 @@ export default function BroadcastAnalyticsView({
               <BarChart2 className="w-4 h-4" />
             </div>
             <div className="text-left">
-              <h3 className="text-xs font-black uppercase tracking-wider text-white">Broadcast Real-Time Analytics</h3>
-              <p className="text-[9px] font-mono text-emerald-400 uppercase">Live Node Ledger: {broadcast.partnerName}</p>
+              <h3 className="text-xs font-black uppercase tracking-wider text-white">Broadcast Delivery Snapshot</h3>
+              <p className="text-[9px] font-mono text-emerald-400 uppercase">Recorded metrics: {broadcast.partnerName}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <button 
-              onClick={handleRefresh}
-              className={`p-1.5 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition-all cursor-pointer ${
-                isRefreshing ? 'animate-spin text-emerald-400' : ''
-              }`}
-              title="Refresh ledger records"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-            </button>
             <button 
               onClick={onClose}
               className="p-1.5 hover:bg-white/5 rounded-xl text-zinc-400 hover:text-white transition-colors cursor-pointer"

@@ -1050,10 +1050,7 @@ export default function NewInboxView({
         <CallScreen
           isOpen={Boolean(activeCall)}
           type={activeCall.type}
-          direction="outgoing"
           partnerName={activeCall.partnerName}
-          partnerAvatar={activeCall.partnerAvatar}
-          currentUser={currentUser}
           onClose={() => setActiveCall(null)}
         />
       )}
