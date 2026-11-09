@@ -16,6 +16,16 @@ function readExploreRecentSearches(userId: string): string[] {
   try { const saved = localStorage.getItem('nexora_recent_searches_' + userId); const parsed = saved ? JSON.parse(saved) : []; return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === 'string').slice(0, 8) : []; } catch { return []; }
 }
 
+function readExploreIdList(key: string, userId: string): string[] {
+  if (!userId) return [];
+  try {
+    const value = JSON.parse(localStorage.getItem(`${key}:${userId}`) || '[]');
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
 interface ExploreViewProps {
   creators: User[];
   posts: Post[];
@@ -50,12 +60,13 @@ export default function ExploreView({
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities'>('all');
   const [showAllPulse, setShowAllPulse] = useState(false);
-  const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => {
-    try { const value = JSON.parse(localStorage.getItem('nexora_blocked_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
-  });
-  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
-    try { const value = JSON.parse(localStorage.getItem('nexora_muted_users') || '[]'); return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []; } catch { return []; }
-  });
+  const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => readExploreIdList('nexora_blocked_users', currentUserId));
+  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => readExploreIdList('nexora_muted_users', currentUserId));
+
+  useEffect(() => {
+    setBlockedCreatorIds(readExploreIdList('nexora_blocked_users', currentUserId));
+    setMutedCreatorIds(readExploreIdList('nexora_muted_users', currentUserId));
+  }, [currentUserId]);
 
   // Use the same owner-scoped relationship preferences as For You. Local
   // storage is only the offline/guest fallback, never the signed-in source.
