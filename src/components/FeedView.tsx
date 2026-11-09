@@ -473,8 +473,6 @@ export default function FeedView({
   const [analyticsPost, setAnalyticsPost] = useState<RefactoredPost | null>(null);
   const analyticsSnapshot = analyticsPost ? buildPostAnalytics(analyticsPost) : null;
 
-  const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
-  const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => readFeedUserValue('nexora_story_highlights', currentUser.id, []));
 
   // Floating Composer Box
   const [composerOpen, setComposerOpen] = useState(false);
@@ -575,7 +573,6 @@ export default function FeedView({
   useEffect(() => {
     if (feedCacheOwnerId === currentUser.id) return;
     setMutedCreatorIds(readFeedUserValue('nexora_muted_creators', currentUser.id, []));
-    setStoryHighlightsList(readFeedUserValue('nexora_story_highlights', currentUser.id, []));
     setSavedCollections(readFeedUserValue('nexora_saved_collections', currentUser.id, {
       'Favorites ❤️': [], 'Football ⚽': [], 'Business 💼': [], 'Inspiration ⚡': [], 'Custom Collections 📂': [],
     }));
