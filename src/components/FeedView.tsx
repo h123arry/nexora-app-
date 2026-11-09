@@ -164,6 +164,23 @@ function FeedHydrationSkeleton() {
   );
 }
 
+const readFeedUserValue = <T,>(key: string, userId: string, fallback: T): T => {
+  try {
+    const raw = localStorage.getItem(`${key}:${userId || 'guest'}`);
+    return raw === null ? fallback : JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+};
+
+const writeFeedUserValue = (key: string, userId: string, value: unknown) => {
+  try {
+    localStorage.setItem(`${key}:${userId || 'guest'}`, JSON.stringify(value));
+  } catch {
+    // Device cache is optional; account-owned Firestore data remains authoritative.
+  }
+};
+
 interface FeedViewProps {
   currentUser: User;
   creators?: User[];
@@ -230,7 +247,7 @@ export default function FeedView({
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
   const [feedTab, setFeedTab] = useState<'posts' | 'following' | 'friends' | 'trending' | 'reels'>(() => {
-    const saved = localStorage.getItem('nexora_feed_tab');
+    const saved = readFeedUserValue<string | null>('nexora_feed_tab', currentUser.id, null);
     if (!saved || ['communities', 'polls', 'contributions', 'broadcast', 'pulse', 'for_you', 'forYou', 'local'].includes(saved)) return 'posts';
     return (saved as any) || 'posts';
   });
@@ -263,7 +280,7 @@ export default function FeedView({
     setActivePostId(null);
 
     return () => clearTimeout(timer);
-  }, [feedTab]);
+  }, [feedTab, currentUser.id]);
 
   // Online/Offline tracking
   const [isOffline, setIsOffline] = useState(() => typeof navigator !== 'undefined' ? !navigator.onLine : false);
@@ -322,7 +339,7 @@ export default function FeedView({
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('nexora_feed_tab', feedTab);
+    writeFeedUserValue('nexora_feed_tab', currentUser.id, feedTab);
   }, [feedTab]);
   
   // Custom interactive features
@@ -422,10 +439,7 @@ export default function FeedView({
 
   // Phase 6 & Phase 7 - Interactive states
   const [expandedPostIds, setExpandedPostIds] = useState<string[]>([]);
-  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_muted_creators');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => readFeedUserValue('nexora_muted_creators', currentUser.id, []));
   const [pinnedPostIds, setPinnedPostIds] = useState<string[]>(() => {
     if (Array.isArray(currentUser.pinnedPosts)) return currentUser.pinnedPosts.filter(id => typeof id === 'string');
     try {
@@ -460,15 +474,7 @@ export default function FeedView({
   const analyticsSnapshot = analyticsPost ? buildPostAnalytics(analyticsPost) : null;
 
   const [isCreatingHighlight, setIsCreatingHighlight] = useState(false);
-  const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('nexora_story_highlights');
-      const parsed = saved ? JSON.parse(saved) : [];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
+  const [storyHighlightsList, setStoryHighlightsList] = useState<any[]>(() => readFeedUserValue('nexora_story_highlights', currentUser.id, []));
 
   // Floating Composer Box
   const [composerOpen, setComposerOpen] = useState(false);
@@ -481,22 +487,10 @@ export default function FeedView({
   const [composerLocation, setComposerLocation] = useState('');
 
   // 1. Advanced Moderation States
-  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_hidden_posts');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [blockedUserIds, setBlockedUserIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_blocked_users');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [mutedUserIds, setMutedUserIds] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_muted_users');
-    return saved ? JSON.parse(saved) : [];
-  });
-  const [notInterestedTags, setNotInterestedTags] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_not_interested_tags');
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [hiddenPostIds, setHiddenPostIds] = useState<string[]>(() => readFeedUserValue('nexora_hidden_posts', currentUser.id, []));
+  const [blockedUserIds, setBlockedUserIds] = useState<string[]>(() => readFeedUserValue('nexora_blocked_users', currentUser.id, []));
+  const [mutedUserIds, setMutedUserIds] = useState<string[]>(() => readFeedUserValue('nexora_muted_users', currentUser.id, []));
+  const [notInterestedTags, setNotInterestedTags] = useState<string[]>(() => readFeedUserValue('nexora_not_interested_tags', currentUser.id, []));
   const feedPreferencesHydratedRef = useRef(false);
   const impressedPostIdsRef = useRef<Set<string>>(new Set());
   const [recommendationsPersonalizationEnabled, setRecommendationsPersonalizationEnabled] = useState(() => currentUser.id === 'guest_visitor_id');
@@ -564,16 +558,9 @@ export default function FeedView({
   };
 
   // 2. Custom Pinterest-style collection state
-  const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => {
-    const saved = localStorage.getItem('nexora_saved_collections');
-    return saved ? JSON.parse(saved) : {
-      'Favorites ❤️': [],
-      'Football ⚽': [],
-      'Business 💼': [],
-      'Inspiration ⚡': [],
-      'Custom Collections 📂': []
-    };
-  });
+  const [savedCollections, setSavedCollections] = useState<Record<string, string[]>>(() => readFeedUserValue('nexora_saved_collections', currentUser.id, {
+    'Favorites ❤️': [], 'Football ⚽': [], 'Business 💼': [], 'Inspiration ⚡': [], 'Custom Collections 📂': [],
+  }));
   const [activeCollectionFolder, setActiveCollectionFolder] = useState<string | null>(null);
   const [showSaveToCollectionModalId, setShowSaveToCollectionModalId] = useState<string | null>(null);
   const [newCollectionName, setNewCollectionName] = useState('');
@@ -583,10 +570,24 @@ export default function FeedView({
   const [sortBy, setSortBy] = useState<'latest' | 'popular' | 'nearby'>('latest');
 
   // Premium Search States
-  const [searchHistory, setSearchHistory] = useState<string[]>(() => {
-    const saved = localStorage.getItem('nexora_search_history');
-    return saved ? JSON.parse(saved) : ['Sarah 🌸', 'David ⚔️', 'Quantum', 'Physics', 'FC Barcelona', 'Austin'];
-  });
+  const [searchHistory, setSearchHistory] = useState<string[]>(() => readFeedUserValue('nexora_search_history', currentUser.id, []));
+  const [feedCacheOwnerId, setFeedCacheOwnerId] = useState(currentUser.id);
+  useEffect(() => {
+    if (feedCacheOwnerId === currentUser.id) return;
+    setMutedCreatorIds(readFeedUserValue('nexora_muted_creators', currentUser.id, []));
+    setStoryHighlightsList(readFeedUserValue('nexora_story_highlights', currentUser.id, []));
+    setSavedCollections(readFeedUserValue('nexora_saved_collections', currentUser.id, {
+      'Favorites ❤️': [], 'Football ⚽': [], 'Business 💼': [], 'Inspiration ⚡': [], 'Custom Collections 📂': [],
+    }));
+    setSearchHistory(readFeedUserValue('nexora_search_history', currentUser.id, []));
+    setHiddenPostIds(readFeedUserValue('nexora_hidden_posts', currentUser.id, []));
+    setBlockedUserIds(readFeedUserValue('nexora_blocked_users', currentUser.id, []));
+    setMutedUserIds(readFeedUserValue('nexora_muted_users', currentUser.id, []));
+    setNotInterestedTags(readFeedUserValue('nexora_not_interested_tags', currentUser.id, []));
+    setPinnedPostIds(Array.isArray(currentUser.pinnedPosts) ? currentUser.pinnedPosts.filter(id => typeof id === 'string') : readFeedUserValue('nexora_pinned_posts', currentUser.id, []));
+    setFeedCacheOwnerId(currentUser.id);
+  }, [currentUser.id, currentUser.pinnedPosts, feedCacheOwnerId]);
+
 
   const addToSearchHistory = (q: string) => {
     if (!q || !q.trim()) return;
@@ -594,7 +595,7 @@ export default function FeedView({
     setSearchHistory(prev => {
       const filtered = prev.filter(h => h.toLowerCase() !== query.toLowerCase());
       const updated = [query, ...filtered].slice(0, 10);
-      localStorage.setItem('nexora_search_history', JSON.stringify(updated));
+      writeFeedUserValue('nexora_search_history', feedCacheOwnerId, updated);
       return updated;
     });
   };
@@ -609,7 +610,7 @@ export default function FeedView({
 
   const clearAllSearchHistory = () => {
     setSearchHistory([]);
-    localStorage.removeItem('nexora_search_history');
+    writeFeedUserValue('nexora_search_history', feedCacheOwnerId, []);
     window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Clear Search history packet successfully executed!' }));
   };
 
@@ -679,20 +680,20 @@ export default function FeedView({
 
   // Sync back state modifications to localStorage
   useEffect(() => {
-    localStorage.setItem('nexora_hidden_posts', JSON.stringify(hiddenPostIds));
-  }, [hiddenPostIds]);
+    writeFeedUserValue('nexora_hidden_posts', feedCacheOwnerId, hiddenPostIds);
+  }, [hiddenPostIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_blocked_users', JSON.stringify(blockedUserIds));
-  }, [blockedUserIds]);
+    writeFeedUserValue('nexora_blocked_users', feedCacheOwnerId, blockedUserIds);
+  }, [blockedUserIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_muted_users', JSON.stringify(mutedUserIds));
-  }, [mutedUserIds]);
+    writeFeedUserValue('nexora_muted_users', feedCacheOwnerId, mutedUserIds);
+  }, [mutedUserIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_not_interested_tags', JSON.stringify(notInterestedTags));
-  }, [notInterestedTags]);
+    writeFeedUserValue('nexora_not_interested_tags', feedCacheOwnerId, notInterestedTags);
+  }, [notInterestedTags, feedCacheOwnerId]);
   useEffect(() => {
     if (!feedPreferencesHydratedRef.current || currentUser.id === 'guest_visitor_id' || auth.currentUser?.uid !== currentUser.id) return;
     const timer = window.setTimeout(() => {
@@ -708,8 +709,8 @@ export default function FeedView({
   }, [currentUser.id, feedTab, notInterestedTags, blockedUserIds, mutedCreatorIds, hiddenPostIds]);
 
   useEffect(() => {
-    localStorage.setItem('nexora_saved_collections', JSON.stringify(savedCollections));
-  }, [savedCollections]);
+    writeFeedUserValue('nexora_saved_collections', feedCacheOwnerId, savedCollections);
+  }, [savedCollections, feedCacheOwnerId]);
 
   // Handle global updates
   useEffect(() => {
@@ -825,7 +826,7 @@ export default function FeedView({
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         try {
-          localStorage.setItem('nexora_feed_scroll_pos', String(scrollTop));
+          localStorage.setItem(`nexora_feed_scroll_pos:${currentUser.id}`, String(scrollTop));
         } catch {
           // Scroll restoration is an enhancement; storage failure must not affect scrolling.
         }
@@ -886,7 +887,7 @@ export default function FeedView({
   // Restore scroll position on load and activeTab change back to 'feed'
   useEffect(() => {
     if (activeTab === 'feed') {
-      const savedPos = localStorage.getItem('nexora_feed_scroll_pos');
+      const savedPos = localStorage.getItem(`nexora_feed_scroll_pos:${currentUser.id}`);
       if (savedPos && scrollContainerRef.current) {
         const timer = setTimeout(() => {
           if (scrollContainerRef.current) {
@@ -904,7 +905,7 @@ export default function FeedView({
   useEffect(() => {
     if (prevActiveTabRef.current === 'feed' && activeTab !== 'feed') {
       if (scrollContainerRef.current) {
-        localStorage.setItem('nexora_feed_scroll_pos', String(scrollContainerRef.current.scrollTop));
+        localStorage.setItem(`nexora_feed_scroll_pos:${currentUser.id}`, String(scrollContainerRef.current.scrollTop));
       }
     }
     prevActiveTabRef.current = activeTab;
