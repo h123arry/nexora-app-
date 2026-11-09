@@ -571,6 +571,23 @@ export default function FeedView({
 
   // Premium Search States
   const [searchHistory, setSearchHistory] = useState<string[]>(() => readFeedUserValue('nexora_search_history', currentUser.id, []));
+  const [feedCacheOwnerId, setFeedCacheOwnerId] = useState(currentUser.id);
+  useEffect(() => {
+    if (feedCacheOwnerId === currentUser.id) return;
+    setMutedCreatorIds(readFeedUserValue('nexora_muted_creators', currentUser.id, []));
+    setStoryHighlightsList(readFeedUserValue('nexora_story_highlights', currentUser.id, []));
+    setSavedCollections(readFeedUserValue('nexora_saved_collections', currentUser.id, {
+      'Favorites ❤️': [], 'Football ⚽': [], 'Business 💼': [], 'Inspiration ⚡': [], 'Custom Collections 📂': [],
+    }));
+    setSearchHistory(readFeedUserValue('nexora_search_history', currentUser.id, []));
+    setHiddenPostIds(readFeedUserValue('nexora_hidden_posts', currentUser.id, []));
+    setBlockedUserIds(readFeedUserValue('nexora_blocked_users', currentUser.id, []));
+    setMutedUserIds(readFeedUserValue('nexora_muted_users', currentUser.id, []));
+    setNotInterestedTags(readFeedUserValue('nexora_not_interested_tags', currentUser.id, []));
+    setPinnedPostIds(Array.isArray(currentUser.pinnedPosts) ? currentUser.pinnedPosts.filter(id => typeof id === 'string') : readFeedUserValue('nexora_pinned_posts', currentUser.id, []));
+    setFeedCacheOwnerId(currentUser.id);
+  }, [currentUser.id, currentUser.pinnedPosts, feedCacheOwnerId]);
+
 
   const addToSearchHistory = (q: string) => {
     if (!q || !q.trim()) return;
@@ -578,7 +595,7 @@ export default function FeedView({
     setSearchHistory(prev => {
       const filtered = prev.filter(h => h.toLowerCase() !== query.toLowerCase());
       const updated = [query, ...filtered].slice(0, 10);
-      writeFeedUserValue('nexora_search_history', currentUser.id, updated);
+      writeFeedUserValue('nexora_search_history', feedCacheOwnerId, updated);
       return updated;
     });
   };
@@ -593,7 +610,7 @@ export default function FeedView({
 
   const clearAllSearchHistory = () => {
     setSearchHistory([]);
-    writeFeedUserValue('nexora_search_history', currentUser.id, []);
+    writeFeedUserValue('nexora_search_history', feedCacheOwnerId, []);
     window.dispatchEvent(new CustomEvent('toast', { detail: '🗑️ Clear Search history packet successfully executed!' }));
   };
 
@@ -663,20 +680,20 @@ export default function FeedView({
 
   // Sync back state modifications to localStorage
   useEffect(() => {
-    writeFeedUserValue('nexora_hidden_posts', currentUser.id, hiddenPostIds);
-  }, [hiddenPostIds]);
+    writeFeedUserValue('nexora_hidden_posts', feedCacheOwnerId, hiddenPostIds);
+  }, [hiddenPostIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    writeFeedUserValue('nexora_blocked_users', currentUser.id, blockedUserIds);
-  }, [blockedUserIds]);
+    writeFeedUserValue('nexora_blocked_users', feedCacheOwnerId, blockedUserIds);
+  }, [blockedUserIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    writeFeedUserValue('nexora_muted_users', currentUser.id, mutedUserIds);
-  }, [mutedUserIds]);
+    writeFeedUserValue('nexora_muted_users', feedCacheOwnerId, mutedUserIds);
+  }, [mutedUserIds, feedCacheOwnerId]);
 
   useEffect(() => {
-    writeFeedUserValue('nexora_not_interested_tags', currentUser.id, notInterestedTags);
-  }, [notInterestedTags]);
+    writeFeedUserValue('nexora_not_interested_tags', feedCacheOwnerId, notInterestedTags);
+  }, [notInterestedTags, feedCacheOwnerId]);
   useEffect(() => {
     if (!feedPreferencesHydratedRef.current || currentUser.id === 'guest_visitor_id' || auth.currentUser?.uid !== currentUser.id) return;
     const timer = window.setTimeout(() => {
@@ -692,8 +709,8 @@ export default function FeedView({
   }, [currentUser.id, feedTab, notInterestedTags, blockedUserIds, mutedCreatorIds, hiddenPostIds]);
 
   useEffect(() => {
-    writeFeedUserValue('nexora_saved_collections', currentUser.id, savedCollections);
-  }, [savedCollections]);
+    writeFeedUserValue('nexora_saved_collections', feedCacheOwnerId, savedCollections);
+  }, [savedCollections, feedCacheOwnerId]);
 
   // Handle global updates
   useEffect(() => {
