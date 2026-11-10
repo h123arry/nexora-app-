@@ -1330,6 +1330,50 @@ export default function CommunitiesHubView({
                   </div>
                 )}
 
+                {/* 1. Persisted Circle polls */}
+                {activePortalTab === 'polls' && (
+                  <div className="space-y-4 text-left">
+                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle polls</h3>
+                    <form onSubmit={handleCreateCommunityPoll} className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-white">Create a poll</p>
+                      <input value={pollQuestion} onChange={e => setPollQuestion(e.target.value)} maxLength={240} required placeholder="Ask your Circle a question" className="w-full rounded-lg border border-white/10 bg-zinc-900 p-2 text-xs text-white" />
+                      <textarea value={pollOptionsText} onChange={e => setPollOptionsText(e.target.value)} required rows={4} placeholder={"One answer per line\nFirst option\nSecond option"} className="w-full rounded-lg border border-white/10 bg-zinc-900 p-2 text-xs text-white" />
+                      <p className="text-[10px] text-zinc-500">Add 2 to 5 distinct options, one per line. Votes are recorded once per member.</p>
+                      <div className="flex justify-end">
+                        <button type="submit" disabled={pollSubmitting || !pollQuestion.trim() || !pollOptionsText.trim()} className="rounded-lg bg-violet-600 px-4 py-2 text-[10px] font-bold text-white disabled:opacity-50">{pollSubmitting ? 'PUBLISHING…' : 'PUBLISH POLL'}</button>
+                      </div>
+                    </form>
+                    {communityPollsError && <p role="alert" className="text-xs text-rose-300">{communityPollsError}</p>}
+                    {communityPollsLoading && <p className="py-6 text-center text-xs text-zinc-400">Loading polls…</p>}
+                    {!communityPollsLoading && communityPolls.length === 0 && <p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-zinc-400">No polls have been published in this Circle.</p>}
+                    {communityPolls.map(poll => {
+                      const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
+                      return (
+                        <article key={poll.id} className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <h4 className="text-sm font-semibold text-white">{poll.question}</h4>
+                            <span className="rounded-full border border-white/10 px-2 py-1 text-[9px] uppercase text-zinc-400">{poll.status}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500">{totalVotes.toLocaleString()} votes · {poll.createdAt}</p>
+                          <div className="space-y-2">
+                            {poll.options.map(option => {
+                              const selected = poll.myVote === option.id;
+                              const percent = totalVotes > 0 ? Math.round(option.votes / totalVotes * 100) : 0;
+                              return (
+                                <button key={option.id} type="button" disabled={Boolean(poll.myVote) || poll.status !== 'open'} onClick={() => void handleVoteCommunityPoll(poll.id, option.id)} className={`relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left text-xs disabled:cursor-default ${selected ? 'border-violet-400/50 text-white' : 'border-white/10 text-zinc-200'}`}>
+                                  <span className="absolute inset-y-0 left-0 bg-violet-500/15" style={{ width: `${percent}%` }} />
+                                  <span className="relative flex items-center justify-between gap-2"><span>{option.text}</span><span className="text-[10px] text-zinc-400">{percent}% · {option.votes}</span></span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {poll.myVote && <p className="text-[10px] text-emerald-300">Your vote is recorded.</p>}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* 2. Shared media storage is not connected to a downloadable asset source. */}
                 {activePortalTab === 'media' && (
                   <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center space-y-2">
