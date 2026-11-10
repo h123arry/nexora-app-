@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f4de" role="img" aria-label="Nexora Telephone Receiver" focusable="false">
+<title>Nexora Telephone Receiver</title><desc>A crafted collectible inspired by telephone receiver, curated as Nexora Telephone Receiver in the NEXORA midnight-violet universe. Original artwork by Kai Wanschura.</desc><defs><radialGradient id="bg-1F4DE"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F4DE" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F4DE)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F4DE)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DDD6FE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#d0cfce" d="m13.6707,21.3098c1.4142,9.8995,26.8701,35.3553,36.7696,36.7696,0,0,5.6569,0,8.4853-5.6569l-9.1924-9.1924-3.5355,3.5355c-7.0711-1.4142-19.799-14.1421-21.2132-21.2132l3.5355-3.5355-9.1924-9.1924c-5.6569,2.8284-5.6569,8.4853-5.6569,8.4853Z"/>
+    <path fill="#9b9b9a" d="m25,26l-9.0844-8.9594,2.0831-2.729c.364-.4769,1.06-.5357,1.4989-.1267l8.2523,7.6901-2.75,4.125Z"/>
+    <polygon fill="#9b9b9a" points="54.8934 55.9074 46.4524 47.5733 49.68 44.3223 58.1993 52.8075 54.8934 55.9074"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m13.6707,21.3098c1.4142,9.8995,26.8701,35.3553,36.7696,36.7696,0,0,5.6569,0,8.4853-5.6569l-9.1924-9.1924-3.5355,3.5355c-7.0711-1.4142-19.799-14.1421-21.2132-21.2132l3.5355-3.5355-9.1924-9.1924c-5.6569,2.8284-5.6569,8.4853-5.6569,8.4853Z"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m13.6707,21.3098c1.4142,9.8995,26.8701,35.3553,36.7696,36.7696,0,0,5.6569,0,8.4853-5.6569l-9.1924-9.1924-3.5355,3.5355c-7.0711-1.4142-19.799-14.1421-21.2132-21.2132l3.5355-3.5355-9.1924-9.1924c-5.6569,2.8284-5.6569,8.4853-5.6569,8.4853Z"/>
+  </g>
+</g>
+</svg>

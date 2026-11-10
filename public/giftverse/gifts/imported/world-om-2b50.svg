@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-2b50" role="img" aria-label="Nexora Star" focusable="false">
+<title>Nexora Star</title><desc>A world collectible inspired by star, curated as Nexora Star in the NEXORA midnight-violet universe. Original artwork by Vanessa Boutzikoudi.</desc><defs><radialGradient id="bg-2B50"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-2B50" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-2B50)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-2B50)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DBEAFE"/><circle cx="256" cy="474" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <polygon fill="#FCEA2B" stroke="none" points="35.9928,10.7363 27.7913,27.3699 9.4394,30.0436 22.7245,42.9838 19.5962,61.2637 36.0084,52.6276 52.427,61.2515 49.2851,42.9739 62.5606,30.0239 44.2067,27.3638"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="35.9928,10.7363 27.7913,27.3699 9.4394,30.0436 22.7245,42.9838 19.5962,61.2637 36.0084,52.6276 52.427,61.2515 49.2851,42.9739 62.5606,30.0239 44.2067,27.3638"/>
+  </g>
+</g>
+</svg>

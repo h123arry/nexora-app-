@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1fae5" role="img" aria-label="Nexora Dotted Line Face" focusable="false">
+<title>Nexora Dotted Line Face</title><desc>A expressive collectible inspired by dotted line face, curated as Nexora Dotted Line Face in the NEXORA midnight-violet universe. Original artwork by Liz Bravo.</desc><defs><radialGradient id="bg-1FAE5"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1FAE5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1FAE5)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1FAE5)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#E9D5FF" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <circle cx="35.9773" cy="35.9583" r="23" fill="none" stroke="#000" stroke-dasharray="0 0 0 0 0 0 5.1598 5.1598" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+  <g>
+    <circle cx="35.93" cy="36.0066" r="23.4291" fill="#fff"/>
+    <circle cx="35.9773" cy="35.9583" r="23" fill="none" stroke="#f4aa41" stroke-dasharray="0 0 0 0 0 0 5.1598 5.1598" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+  <g>
+    <path d="m29.9772,32.9583c0,1.6569-1.3431,3-3,3s-3-1.3431-3-3,1.3431-3,3-3c1.6566.0006,2.9994,1.3434,3,3"/>
+    <path d="m47.9772,32.9583c0,1.6569-1.3431,3-3,3s-3-1.3431-3-3,1.3431-3,3-3c1.6566.0006,2.9994,1.3434,3,3"/>
+    <line x1="29.9772" x2="41.9772" y1="43.7964" y2="43.7964" fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+</g>
+</svg>

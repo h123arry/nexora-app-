@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1faea" role="img" aria-label="Nexora Distorted Face" focusable="false">
+<title>Nexora Distorted Face</title><desc>A expressive collectible inspired by distorted face, curated as Nexora Distorted Face in the NEXORA midnight-violet universe. Original artwork by Natalia Kenig.</desc><defs><radialGradient id="bg-1FAEA"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1FAEA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1FAEA)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1FAEA)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#E9D5FF"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#fcea2b" d="m36 13c-12.68 0-23 10.32-23 23s10.32 23 23 23 23-10.32 23-23-10.32-23-23-23z"/>
+    <path fill="#fff" stroke-miterlimit="10" d="m30.4 29.24c-0.6985 5.002-4.822 9.057-9.199 9.057s-7.368-4.055-6.67-9.057c0.6977-4.996 4.822-9.057 9.199-9.057s7.368 4.06 6.67 9.057"/>
+    <path fill="#fff" stroke-miterlimit="10" d="m41.63 29.24c0.6985 5.002 4.822 9.057 9.199 9.057s7.368-4.055 6.67-9.057c-0.6977-4.996-4.822-9.057-9.199-9.057s-7.368 4.06-6.67 9.057"/>
+  </g>
+  <g>
+    <path stroke-width="1.322" d="m23.96 28.74c-0.2363 2.06-1.8 3.731-3.488 3.731s-2.868-1.67-2.632-3.731c0.2362-2.058 1.8-3.731 3.488-3.731s2.868 1.673 2.632 3.731"/>
+    <path stroke-width="1.322" d="m48.04 28.74c0.2363 2.06 1.8 3.731 3.488 3.731s2.868-1.67 2.632-3.731c-0.2362-2.058-1.8-3.731-3.488-3.731s-2.868 1.673-2.632 3.731"/>
+    <circle cx="36" cy="36" r="23" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2" d="m30.4 29.24c-0.6985 5.002-4.822 9.057-9.199 9.057s-7.368-4.055-6.67-9.057c0.6977-4.996 4.822-9.057 9.199-9.057s7.368 4.06 6.67 9.057"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m41.63 29.24c0.6985 5.002 4.822 9.057 9.199 9.057s7.368-4.055 6.67-9.057c-0.6977-4.996-4.822-9.057-9.199-9.057s-7.368 4.06-6.67 9.057"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m42.5 52.1c-1.284 0.6376-11.83 0.5835-13 0"/>
+  </g>
+</g>
+</svg>

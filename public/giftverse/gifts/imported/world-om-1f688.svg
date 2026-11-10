@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f688" role="img" aria-label="Nexora Light Rail" focusable="false">
+<title>Nexora Light Rail</title><desc>A world collectible inspired by light rail, curated as Nexora Light Rail in the NEXORA midnight-violet universe. Original artwork by Nadja Grün.</desc><defs><radialGradient id="bg-1F688"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F688" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F688)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F688)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DBEAFE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#d0cfce" d="M68.1967,49H18.769c-6.2907,0-11.4375-4.4743-11.4375-9.9429h0C7.3315,33.5886,21.0565,20,27.3471,20H68.3315V48.8828A.1273.1273,0,0,1,68.1967,49Z"/>
+    <polyline fill="#92d3f5" points="30.331 38 40.92 29 45.331 29 45.331 38 30.331 38"/>
+    <polyline fill="#92d3f5" points="49.331 38 59.92 29 64.331 29 64.331 38 49.331 38"/>
+    <path fill="#92d3f5" d="M10.3315,37s5-7,10-8a22.7948,22.7948,0,0,1,8,0l-7.569,7.7824Z"/>
+    <line x1="64.3315" x2="12.3315" y1="43" y2="43" fill="none" stroke="#ea5a47" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polygon fill="#3f3f3f" points="68.331 56 11.331 56 17.566 52 68.331 52 68.331 56"/>
+  </g>
+  <g>
+    <polygon fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="68.331 56 11.331 56 17.566 52 68.331 52 68.331 56"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="31.331 38 45.331 38 45.331 29.643"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="50.331 38 64.331 38 64.331 29.643"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="28.331 30 21.331 37 11.331 37"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M68.1967,49H18.769c-6.2907,0-11.4375-4.4743-11.4375-9.9429h0C7.3315,33.5886,21.0565,20,27.3471,20H68.3315V48.8828A.1273.1273,0,0,1,68.1967,49Z"/>
+  </g>
+</g>
+</svg>

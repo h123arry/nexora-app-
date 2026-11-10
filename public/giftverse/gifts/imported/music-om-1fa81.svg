@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="music-om-1fa81" role="img" aria-label="Nexora Kite" focusable="false">
+<title>Nexora Kite</title><desc>A celebration collectible inspired by kite, curated as Nexora Kite in the NEXORA midnight-violet universe. Original artwork by Evelyn Soos.</desc><defs><radialGradient id="bg-1FA81"><stop offset="0" stop-color="#C084FC" stop-opacity=".28"/><stop offset="1" stop-color="#38204F"/></radialGradient><linearGradient id="rim-1FA81" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3E8FF"/><stop offset=".52" stop-color="#C084FC"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1FA81)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1FA81)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#F3E8FF" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#F3E8FF"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#C084FC"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <polygon fill="#ffa7c0" points="15.036 4.719 5.696 26.061 32.289 45.27 36.889 12.789 15.036 4.719"/>
+    <polyline fill="#e67a94" points="32.289 45.27 36.889 12.789 15.036 4.719"/>
+  </g>
+  <g>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="32.289 45.27 36.889 12.789 15.036 4.719 5.696 26.061 32.289 45.27"/>
+    <line x1="15.3978" x2="31.7804" y1="5.5225" y2="44.1129" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="6.4419" x2="36.3676" y1="25.7642" y2="13.3134" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M31.78,44.523s4.0231,9.2382,16.9864,6.5561C57.6253,49.2464,60.8478,55.6239,62,59.8466a16.0263,16.0263,0,0,1,.4933,4.83"/>
+  </g>
+</g>
+</svg>

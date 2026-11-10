@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f6fa" role="img" aria-label="Nexora Auto Rickshaw" focusable="false">
+<title>Nexora Auto Rickshaw</title><desc>A world collectible inspired by auto rickshaw, curated as Nexora Auto Rickshaw in the NEXORA midnight-violet universe. Original artwork by Evelyn Soos.</desc><defs><radialGradient id="bg-1F6FA"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F6FA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F6FA)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F6FA)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DBEAFE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#fff" d="m21.1281,18.9106s1.3542,23.9889,7.4804,25.4076l34.7581-1.2897.0645-22.1833s-.2579-1.5477-1.8056-1.8056-40.4974-.129-40.4974-.129Z"/>
+    <path fill="#6a462f" d="m20.2992,19s-1.1617,18.5109,9.2929,25.5631h-10.5921s-7.0974-7.155,1.2992-25.5631Z"/>
+    <polygon fill="#6a462f" points="44 38 64.22 38 64.22 43.514 43 43.514 43 38 44 38"/>
+    <circle cx="17.0818" cy="49.5632" r="5.0001" fill="#d0cfce"/>
+    <circle cx="54.6092" cy="49.5632" r="5.0001" fill="#d0cfce"/>
+  </g>
+  <g>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="23.718 37 27.588 37 28.389 29.575"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.0875" d="m64.22,44.5631H19l-1.5978-2.9631c-.9203-1.7066-1.4022-3.6152-1.4022-5.5542v-.7653c-.0462-1.5163.1564-3.0298.6-4.4805l2.4-8.8c0-1.4712,1.5288-4,3-4l39.5557.3893c1.4712-.0003,2.664,1.1921,2.6643,2.6633v23.5105Z"/>
+    <line x1="45.7985" x2="25.2182" y1="48.4706" y2="48.4706" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <circle cx="17.0818" cy="49.5632" r="5.0001" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <circle cx="54.6092" cy="49.5632" r="5.0001" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="43" x2="43" y1="19" y2="44" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.0875"/>
+    <line x1="44" x2="64.2195" y1="35" y2="35" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.0875"/>
+    <polygon fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.0875" points="44 38 64.22 38 64.22 43.514 43 43.514 43 38 44 38"/>
+    <line x1="61" x2="62" y1="37" y2="32" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.0875"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m20.2992,19s-1.1617,18.5109,9.2929,25.5631"/>
+    <line x1="25.6419" x2="25.6419" y1="37" y2="39.7847" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <path d="m60.072,44.5631h0c0-.5795.4697-1.0492,1.0492-1.0492h4.1967c.5794,0,1.0491.4698,1.0492,1.0492h0c0,.5795-.4697,1.0492-1.0492,1.0492h-4.1967c-.5794,0-1.0491-.4696-1.0492-1.049v-.0002Z"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m18,42.5319c-2.4819-1.901-4.8514.3691-5,.4681"/>
+  </g>
+</g>
+</svg>

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-26fa" role="img" aria-label="Nexora Tent" focusable="false">
+<title>Nexora Tent</title><desc>A world collectible inspired by tent, curated as Nexora Tent in the NEXORA midnight-violet universe. Original artwork by Martin Wehl.</desc><defs><radialGradient id="bg-26FA"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-26FA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-26FA)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-26FA)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DBEAFE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <polygon fill="#FCEA2B" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="36,18 14.54,55 57.46,55"/>
+    <polygon fill="#F1B31C" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="36,18 14.54,55 36,55"/>
+    <path fill="#8967AA" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M36,46.12c-1.48,0-4.44,1.48-7.4,1.48c-4.087,0-7.4,3.3131-7.4,7.4H36V46.12z"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="36,18 14.54,55 57.46,55"/>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="36,18 14.54,55 36,55"/>
+    <line x1="36" x2="36" y1="55" y2="18" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M36,46.12c-1.48,0-4.44,1.48-7.4,1.48c-4.087,0-7.4,3.3131-7.4,7.4H36V46.12z"/>
+    <line x1="36" x2="36" y1="55" y2="18" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+</g>
+</svg>

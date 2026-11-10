@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f4d5" role="img" aria-label="Nexora Closed Book" focusable="false">
+<title>Nexora Closed Book</title><desc>A crafted collectible inspired by closed book, curated as Nexora Closed Book in the NEXORA midnight-violet universe. Original artwork by Jonas Roßner.</desc><defs><radialGradient id="bg-1F4D5"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F4D5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F4D5)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F4D5)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#fff" d="m15.0085,57.9906l41.8485-.3812c1.6527-.0052,2.9897-1.0964,2.9897-2.7491V15.1491c0-1.6564-1.3427-2.9991-2.9991-2.9991H16.9535c-.8205,0-1.6052.3362-2.1712.9302l-1.9544,2.051c-.5314.5577-.8279,1.2985-.8279,2.0689v37.7914c0,1.66,1.3485,3.0043,3.0085,2.9991Z"/>
+    <path fill="#d22f27" d="m55.0015,61H11.9985c-.5515,0-.9985-.447-.9985-.9985V16.9985c0-.5515.447-.9985.9985-.9985h43.003c.5515,0,.9985.447.9985.9985v43.003c0,.5515-.447.9985-.9985.9985Z"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m11.164,16.4512l4.8345-4.4512h43.003c.5515,0,.9985.447.9985.9985v43.003c0,.5515-.447.9985-.9985.9985"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m55.0015,61H11.9985c-.5515,0-.9985-.447-.9985-.9985V16.9985c0-.5515.447-.9985.9985-.9985h43.003c.5515,0,.9985.447.9985.9985v43.003c0,.5515-.447.9985-.9985.9985Z"/>
+  </g>
+</g>
+</svg>

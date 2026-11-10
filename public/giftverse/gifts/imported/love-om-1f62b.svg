@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1f62b" role="img" aria-label="Nexora Tired Face" focusable="false">
+<title>Nexora Tired Face</title><desc>A expressive collectible inspired by tired face, curated as Nexora Tired Face in the NEXORA midnight-violet universe. Original artwork by Mariella Steeb.</desc><defs><radialGradient id="bg-1F62B"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1F62B" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F62B)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F62B)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#E9D5FF" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#FCEA2B" d="M36,13.2002c-12.5719,0-22.7998,10.2279-22.7998,22.7998c0,12.5718,10.2279,22.7998,22.7998,22.7998 c12.5718,0,22.7998-10.228,22.7998-22.7998C58.7998,23.4281,48.5718,13.2002,36,13.2002z"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <circle cx="36" cy="36" r="23" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m21.88 23.92c5.102-0.06134 7.273-1.882 8.383-3.346"/>
+    <path stroke="#000" stroke-miterlimit="10" stroke-width="2" d="m46.24 47.56c0-2.592-2.867-7.121-10.25-6.93-6.974 0.1812-10.22 4.518-10.22 7.111s4.271-1.611 10.05-1.492c6.317 0.13 10.43 3.903 10.43 1.311z"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m23.16 28.47c5.215 1.438 5.603 0.9096 8.204 1.207 1.068 0.1221-2.03 2.67-7.282 4.397"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m50.12 23.92c-5.102-0.06134-7.273-1.882-8.383-3.346"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m48.84 28.47c-5.215 1.438-5.603 0.9096-8.204 1.207-1.068 0.1221 2.03 2.67 7.282 4.397"/>
+  </g>
+</g>
+</svg>

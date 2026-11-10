@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="music-om-1f397" role="img" aria-label="Nexora Reminder Ribbon" focusable="false">
+<title>Nexora Reminder Ribbon</title><desc>A celebration collectible inspired by reminder ribbon, curated as Nexora Reminder Ribbon in the NEXORA midnight-violet universe. Original artwork by Laura Humpfer.</desc><defs><radialGradient id="bg-1F397"><stop offset="0" stop-color="#C084FC" stop-opacity=".28"/><stop offset="1" stop-color="#38204F"/></radialGradient><linearGradient id="rim-1F397" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3E8FF"/><stop offset=".52" stop-color="#C084FC"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F397)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F397)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#F3E8FF" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#F3E8FF"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#C084FC"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#D22F27" d="M21.8,62.4L33,66l20-42.7c2.9-6,0-13.4-5.7-15.3"/>
+    <polyline fill="#EA5A47" points="45,48.5 38.5,61.6 40.2,65 51.4,61.5"/>
+    <path fill="#EA5A47" d="M25,8c-5.8,1.9-8.6,9.2-5.8,15.3L28,42.2l6.4-13.8"/>
+    <polygon fill="#D22F27" points="41,20 46.9,7.2 25.3,7.2 31.3,20"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.8125" d="M21.8,62.4L33,66l20-42.7c2.9-6,0-13.4-5.7-15.3L21.8,62.4z"/>
+    <polyline fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.8125" points="38.9,62.4 40.2,65 51.4,61.5 45.4,49.3"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.8125" d="M34.2,27.6L25,8c-5.8,1.9-8.6,9.2-5.8,15.3l8.5,18.3"/>
+    <line x1="33.7" x2="38.3" y1="19.1" y2="19.1" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.8125"/>
+    <line x1="43.7" x2="28.6" y1="8.1" y2="8.1" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.8125"/>
+  </g>
+</g>
+</svg>

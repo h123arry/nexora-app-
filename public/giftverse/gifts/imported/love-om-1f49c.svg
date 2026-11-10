@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1f49c" role="img" aria-label="Nexora Purple Heart" focusable="false">
+<title>Nexora Purple Heart</title><desc>A expressive collectible inspired by purple heart, curated as Nexora Purple Heart in the NEXORA midnight-violet universe. Original artwork by Laura Humpfer.</desc><defs><radialGradient id="bg-1F49C"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1F49C" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F49C)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F49C)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#E9D5FF"/><circle cx="256" cy="474" r="5" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <g>
+      <path fill="#8967aa" d="m59.5 25c0-6.904-5.596-12.5-12.5-12.5-4.753 0-8.886 2.654-11 6.56-2.114-3.906-6.247-6.56-11-6.56-6.904 0-12.5 5.596-12.5 12.5 0 2.97 1.04 5.694 2.77 7.839l-0.0043 0.0034 20.73 25.7 20.73-25.7-0.0043-0.0034c1.73-2.145 2.77-4.869 2.77-7.839z"/>
+    </g>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m59.5 25c0-6.904-5.596-12.5-12.5-12.5-4.753 0-8.886 2.654-11 6.56-2.114-3.906-6.247-6.56-11-6.56-6.904 0-12.5 5.596-12.5 12.5 0 2.97 1.04 5.694 2.77 7.839l-0.0043 0.0034 20.73 25.7 20.73-25.7-0.0043-0.0034c1.73-2.145 2.77-4.869 2.77-7.839z"/>
+  </g>
+</g>
+</svg>

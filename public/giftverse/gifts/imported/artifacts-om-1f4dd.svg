@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f4dd" role="img" aria-label="Nexora Memo" focusable="false">
+<title>Nexora Memo</title><desc>A crafted collectible inspired by memo, curated as Nexora Memo in the NEXORA midnight-violet universe. Original artwork by Rana Cakir.</desc><defs><radialGradient id="bg-1F4DD"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F4DD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F4DD)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F4DD)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <rect x="16.4055" y="11.3783" width="39.5645" height="49.0659" fill="#fff"/>
+    <polyline fill="#f4aa41" points="39.9312 40.2224 51.2252 28.9284 56.8562 36.3591 46.3562 46.8706"/>
+    <polyline fill="#a57939" points="37.9415 46.8185 39.902 41.17 46.3562 47.624 40.7075 49.5846"/>
+    <polyline fill="#ea5a47" points="55.3215 25.5799 59.3001 21.6013 66.0352 28.1847 62.0904 32.1296"/>
+    <polyline fill="#d0cfce" points="50.4943 29.6593 55.1018 25.0519 61.7836 31.7907 57.2152 36.3591"/>
+  </g>
+  <g>
+    <polygon points="38.0702 47.191 40.4564 49.5772 36.9921 50.8566 38.0702 47.191"/>
+    <line x1="22.3215" x2="49.3215" y1="19.875" y2="19.875" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="22.3215" x2="47.9215" y1="27.875" y2="27.875" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="22.3215" x2="39.4312" y1="35.875" y2="35.875" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="22.3215" x2="34.5284" y1="43.875" y2="43.875" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="22.3215" x2="32.4675" y1="51.875" y2="51.875" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polygon points="38.0702 47.191 40.4564 49.5772 36.9921 50.8566 38.0702 47.191"/>
+    <polygon fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="40.6919 49.591 46.3562 47.624 61.9461 32.034 55.492 25.5799 39.902 41.17 37.9282 46.841 40.6919 49.591"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="58.0856 22.9863 59.6411 21.4309 66.0952 27.885 64.4634 29.5168"/>
+    <line x1="40.2788" x2="46.7329" y1="40.7932" y2="47.2473" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="37.9323 46.8277 36.5493 50.9768 40.7075 49.5846"/>
+    <line x1="51.3023" x2="57.1946" y1="30.1572" y2="36.0495" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.0206" points="55.3215 44.228 55.3215 59.875 16.3215 59.875 16.3215 11.875 55.3215 11.875 55.3215 20.3309"/>
+  </g>
+</g>
+</svg>

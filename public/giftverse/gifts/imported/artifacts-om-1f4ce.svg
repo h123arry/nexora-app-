@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f4ce" role="img" aria-label="Nexora Paperclip" focusable="false">
+<title>Nexora Paperclip</title><desc>A crafted collectible inspired by paperclip, curated as Nexora Paperclip in the NEXORA midnight-violet universe. Original artwork by Sina Schulz.</desc><defs><radialGradient id="bg-1F4CE"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F4CE" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F4CE)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F4CE)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DDD6FE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m27.1001,30.3606s11.8183,12.2773,16.0293,16.0846c2.0768,1.8777,3.811,1.4778,4.7703.4926,1.1251-1.1555,1.5673-2.9854.1144-4.4427-5.8084-5.8261-23.0688-23.0704-23.0688-23.0704-2.3431-2.3432-6.8921-2.0932-9.2353.25s-2.3431,6.1421,0,8.4852l25.1983,25.3054c3.9053,3.9052,10.2369,3.9052,14.1422,0,3.9053-3.9052,3.9052-10.2369,0-14.1421l-12.5032-12.5032"/>
+  </g>
+  <g/>
+</g>
+</svg>

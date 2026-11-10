@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f507" role="img" aria-label="Nexora Muted Speaker" focusable="false">
+<title>Nexora Muted Speaker</title><desc>A crafted collectible inspired by muted speaker, curated as Nexora Muted Speaker in the NEXORA midnight-violet universe. Original artwork by Rana Cakir.</desc><defs><radialGradient id="bg-1F507"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F507" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F507)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F507)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#d0cfce" stroke="#d0cfce" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M33.7701,47.4133l16.436,13.128l-0.001-49.166l-16.435,13.346"/>
+    <line x1="33.7149" x2="33.7149" y1="24.8011" y2="46.0511" fill="#d0cfce" stroke="#d0cfce" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="#9b9b9a" stroke="#9b9b9a" stroke-miterlimit="10" stroke-width="1.9381" d="M32.7926,24.7213H20.8553 c-1.554,0.005-2.8125,1.3452-2.8172,3v16.692c0.0047,1.6548,1.2632,2.995,2.8172,3h11.9373"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M50.2195,45.4881 l-0.0007-34.1129l-16.435,13.346h-4.1277"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.2294,24.8434 c-1.2445,0.3664-2.1535,1.5155-2.1576,2.8778v16.692c0.005,1.6548,1.3452,2.995,3,3h12.712l16.436,13.128l-0.0001-5.659"/>
+    <line x1="33.7838" x2="33.7838" y1="25.3332" y2="29" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="33.7838" x2="33.7838" y1="39" y2="47.051" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="11.6048" x2="60.1048" y1="11.7825" y2="60.2825" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
+</g>
+</svg>

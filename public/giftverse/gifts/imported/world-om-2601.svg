@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-2601" role="img" aria-label="Nexora Cloud" focusable="false">
+<title>Nexora Cloud</title><desc>A world collectible inspired by cloud, curated as Nexora Cloud in the NEXORA midnight-violet universe. Original artwork by Vanessa Boutzikoudi.</desc><defs><radialGradient id="bg-2601"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-2601" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-2601)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-2601)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#DBEAFE"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#D0CFCE" stroke="none" d="M15.9345,30.2552c-0.0372,0.4242-0.3809,0.7675-0.8065,0.8131C9.9685,31.621,6,36.7013,6,42.8852 c0,6.553,4.5445,11.8652,10.1505,11.8652h38.6977C61.0072,54.7504,66,49.1365,66,42.2114c0-6.6366-4.5855-12.069-10.3883-12.5101 c-0.4439-0.0337-0.804-0.3445-0.8887-0.7793c-1.2963-6.6567-7.2763-11.659-14.3464-11.659c-4.5948,0-8.6879,2.0802-11.3459,5.3894 c-0.2597,0.3234-0.6956,0.4715-1.079,0.3107c-1.0228-0.4289-2.103-0.6365-3.3117-0.6365 C20.0727,22.3266,16.3237,25.8122,15.9345,30.2552z"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M15.9345,30.2552c-0.0372,0.4242-0.3794,0.7675-0.8028,0.8127C9.9704,31.6186,6,36.6998,6,42.8852 c0,6.553,4.5445,11.8652,10.1505,11.8652h38.6977C61.0072,54.7504,66,49.1365,66,42.2114c0-6.6379-4.5872-12.0711-10.3916-12.5103 c-0.4421-0.0335-0.8008-0.3444-0.8855-0.7796c-1.2964-6.6564-7.2763-11.6585-14.3462-11.6585 c-4.5964,0-8.6908,2.0817-11.3486,5.3929c-0.2582,0.3217-0.6903,0.4696-1.0705,0.3097c-1.0245-0.4306-2.1065-0.639-3.3175-0.639 C20.0727,22.3266,16.3237,25.8122,15.9345,30.2552z"/>
+  </g>
+</g>
+</svg>

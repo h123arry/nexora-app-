@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="culinary-om-1f956" role="img" aria-label="Nexora Baguette Bread" focusable="false">
+<title>Nexora Baguette Bread</title><desc>A culinary collectible inspired by baguette bread, curated as Nexora Baguette Bread in the NEXORA midnight-violet universe. Original artwork by Miriam Vollmeier.</desc><defs><radialGradient id="bg-1F956"><stop offset="0" stop-color="#F59E0B" stop-opacity=".28"/><stop offset="1" stop-color="#4A2B18"/></radialGradient><linearGradient id="rim-1F956" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".52" stop-color="#F59E0B"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F956)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F956)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#FDE68A" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#FDE68A"/><circle cx="256" cy="474" r="5" fill="#F59E0B"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#f4aa41" stroke="none" d="M11.9307,45.9297c-3.9043,3.9043-3.9063,10.2363,0,14.1416c3.9043,3.9053,10.2382,3.9053,14.1425,0.001 l33.9991-34.001c3.9043-3.9063,3.9043-10.2373,0-14.1416c-3.9063-3.9063-10.2373-3.9063-14.1426-0.001L11.9307,45.9297z"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M11.9307,45.9297c-3.9043,3.9043-3.9063,10.2363,0,14.1416c3.9043,3.9053,10.2382,3.9053,14.1425,0.001l33.9991-34.001 c3.9043-3.9063,3.9043-10.2373,0-14.1416c-3.9063-3.9063-10.2373-3.9063-14.1426-0.001L11.9307,45.9297z"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M45.9297,11.9287c-3.9043,3.9053-3.9043,10.2373,0,14.1426"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M37.4297,20.4287c-3.9043,3.9053-3.9043,10.2373,0,14.1426"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M28.9297,28.9287c-3.9033,3.9063-3.9033,10.2383,0,14.1426"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M20.4307,37.4297c-3.9043,3.9053-3.9043,10.2373,0,14.1426"/>
+  </g>
+</g>
+</svg>

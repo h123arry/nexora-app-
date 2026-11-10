@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="wildlife-om-1f995" role="img" aria-label="Nexora Sauropod" focusable="false">
+<title>Nexora Sauropod</title><desc>A wildlife collectible inspired by sauropod, curated as Nexora Sauropod in the NEXORA midnight-violet universe. Original artwork by Selina Bauder.</desc><defs><radialGradient id="bg-1F995"><stop offset="0" stop-color="#22C55E" stop-opacity=".28"/><stop offset="1" stop-color="#123B32"/></radialGradient><linearGradient id="rim-1F995" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D1FAE5"/><stop offset=".52" stop-color="#22C55E"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F995)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F995)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#D1FAE5" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#D1FAE5"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#22C55E"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#A57939" stroke="none" d="M5,52c0,0,15-3,17-10s14.6667-11.1667,20.8333-8.5833c0,0,6.3333,0.5833,8.25-7.4167C53,18,55,9,62,10 s6.1667,6.3333,4.0833,7.1667C64,18,61,18,60,19.5s-2.1667,16.1667-6.5833,19.8333c0,0-4.9167,6.5-4.6667,9.5833 C49,52,50.5833,61.25,47,61c-3.6293-0.2532-3-7-3-8s-8-3-11-1s-2.1667,8-4.5833,8.5S23.5,60.8333,22.75,59.9167 C22,59,23.3494,53.229,22.25,51.25"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5,52c0,0,15-3,17-10 s14.6667-11.1667,20.8333-8.5833c0,0,6.3333,0.5833,8.25-7.4167C53,18,55,9,62,10s6.1667,6.3333,4.0833,7.1667C64,18,61,18,60,19.5 s-2.1667,16.1667-6.5833,19.8333c0,0-4.9167,6.5-4.6667,9.5833C49,52,50.5833,61.25,47,61c-3.6293-0.2532-3-7-3-8s-8-3-11-1 s-2.1667,8-4.5833,8.5S23.5,60.8333,22.75,59.9167C22,59,23.3494,53.229,22.25,51.25"/>
+  </g>
+</g>
+</svg>

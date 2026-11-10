@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-2763" role="img" aria-label="Nexora Heart Exclamation" focusable="false">
+<title>Nexora Heart Exclamation</title><desc>A expressive collectible inspired by heart exclamation, curated as Nexora Heart Exclamation in the NEXORA midnight-violet universe. Original artwork by Laura Humpfer.</desc><defs><radialGradient id="bg-2763"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-2763" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-2763)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-2763)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#E9D5FF" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <g>
+      <path fill="#FFA7C0" d="M52,20.65c0-4.7003-3.8103-8.5106-8.5106-8.5106c-3.2363,0-6.0501,1.8067-7.4894,4.4662 c-1.4392-2.6595-4.2531-4.4662-7.4894-4.4662C23.8103,12.1394,20,15.9497,20,20.65c0,2.0221,0.7083,3.8769,1.8862,5.337 l-0.0029,0.0023L36,43.4855l14.1167-17.4962l-0.0029-0.0023C51.2917,24.5268,52,22.672,52,20.65z"/>
+    </g>
+    <ellipse cx="36.0216" cy="55.007" rx="5.0001" ry="5.0001" fill="#FFA7C0"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <ellipse cx="36.0216" cy="55.007" rx="5.0001" ry="5.0001" fill="none" stroke="#000000" stroke-miterlimit="10.0003" stroke-width="2.0001"/>
+    <g>
+      <path fill="none" stroke="#000000" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M52,20.65 c0-4.7003-3.8103-8.5106-8.5106-8.5106c-3.2363,0-6.0501,1.8067-7.4894,4.4662c-1.4392-2.6595-4.2531-4.4662-7.4894-4.4662 C23.8103,12.1394,20,15.9497,20,20.65c0,2.0221,0.7083,3.8769,1.8862,5.337l-0.0029,0.0023L36,43.4855l14.1167-17.4962 l-0.0029-0.0023C51.2917,24.5268,52,22.672,52,20.65z"/>
+    </g>
+  </g>
+</g>
+</svg>

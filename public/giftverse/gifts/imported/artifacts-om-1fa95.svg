@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1fa95" role="img" aria-label="Nexora Banjo" focusable="false">
+<title>Nexora Banjo</title><desc>A crafted collectible inspired by banjo, curated as Nexora Banjo in the NEXORA midnight-violet universe. Original artwork by Sam Eckert.</desc><defs><radialGradient id="bg-1FA95"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1FA95" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1FA95)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1FA95)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#a57939" d="M59.65,9.6142c-.0625.0039-4.9,4.8677-5.9621,5.5117-1.541,1.0313-2.5045,3.7789-2.6432,3.9146L29.1194,39.7588a15.9732,15.9732,0,0,1,1.9548,2.1867l22.8869-21.65a7.5276,7.5276,0,0,0,3.3142-1.9664c.3054-.3617,4.6013-4.24,4.97-4.97C63.0017,11.8616,60.1521,9.5815,59.65,9.6142Z"/>
+    <path fill="#ea5a47" d="M34.708,38.4357a.8932.8932,0,0,0-.2148.2158.9811.9811,0,0,1,.2163-.2139Z"/>
+    <path fill="#ea5a47" d="M30.4344,41.4778c-.0324-.0472-.0661-.0932-.1-.14C30.3683,41.3846,30.402,41.4307,30.4344,41.4778Z"/>
+    <circle cx="21.3487" cy="49.3419" r="12" fill="#d0cfce"/>
+  </g>
+  <g>
+    <line x1="15.2475" x2="20.3487" y1="50.252" y2="55.1946" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M54.6873,19.6056a5.0443,5.0443,0,0,0,2.2362-.58c.6314-.3969,3.5323-3.3609,5.1821-5.068a1.6979,1.6979,0,0,0-.0232-2.3817l-1.529-1.5289a1.6943,1.6943,0,0,0-2.379-.0257c-1.8269,1.7649-5.1332,4.9724-5.4614,5.3846a3.3166,3.3166,0,0,0-.4651,1.4471,1.7237,1.7237,0,0,1-.4994,1.0055L29.5532,39.4956"/>
+    <circle cx="21.3487" cy="49.3419" r="12" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
+</g>
+</svg>

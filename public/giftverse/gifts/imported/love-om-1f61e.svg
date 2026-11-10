@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1f61e" role="img" aria-label="Nexora Disappointed Face" focusable="false">
+<title>Nexora Disappointed Face</title><desc>A expressive collectible inspired by disappointed face, curated as Nexora Disappointed Face in the NEXORA midnight-violet universe. Original artwork by Mariella Steeb.</desc><defs><radialGradient id="bg-1F61E"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1F61E" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F61E)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F61E)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#E9D5FF" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#fcea2b" d="m12 36a24 24 0 1 0 24-24 24.027 24.027 0 0 0-24 24z"/>
+  </g>
+  <g fill="none" stroke="#000" stroke-width="2">
+    <circle cx="36" cy="36" r="23" stroke-miterlimit="10"/>
+    <path stroke-linecap="round" stroke-linejoin="round" d="m42.786 49.6a12.449 12.449 0 0 0-6.8422-1.8532 10.389 10.389 0 0 0-6.1578 1.8532"/>
+    <path stroke-linecap="round" stroke-linejoin="round" d="m51.422 39.497a7.4028 7.4028 0 0 1-5.3048-0.3243 7.4 7.4 0 0 1-4.11-3.4111"/>
+    <path stroke-linecap="round" stroke-linejoin="round" d="m21.185 39.487a8.44 8.44 0 0 0 9.413-3.7176"/>
+  </g>
+</g>
+</svg>

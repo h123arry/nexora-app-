@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f555" role="img" aria-label="Nexora Six O’clock" focusable="false">
+<title>Nexora Six O’clock</title><desc>A world collectible inspired by six o’clock, curated as Nexora Six O’clock in the NEXORA midnight-violet universe. Original artwork by Rana Cakir.</desc><defs><radialGradient id="bg-1F555"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F555" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F555)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F555)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#DBEAFE"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <circle cx="35.958" cy="35.9901" r="23" fill="#FFFFFF" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="36" x2="36" y1="18.9893" y2="35.9893" fill="#FFFFFF" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="36" x2="36" y1="35.9528" y2="47.4998" fill="#FFFFFF" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <circle cx="35.958" cy="35.9901" r="23" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="36" x2="36" y1="18.9893" y2="35.9893" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="36" x2="36" y1="35.9528" y2="47.4998" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+</g>
+</svg>

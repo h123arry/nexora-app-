@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f313" role="img" aria-label="Nexora First Quarter Moon" focusable="false">
+<title>Nexora First Quarter Moon</title><desc>A world collectible inspired by first quarter moon, curated as Nexora First Quarter Moon in the NEXORA midnight-violet universe. Original artwork by Lois Proksch.</desc><defs><radialGradient id="bg-1F313"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F313" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F313)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F313)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DBEAFE"/><circle cx="256" cy="474" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#000000" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8,36A28,28,0,0,0,36,64V8A28,28,0,0,0,8,36Z"/>
+  </g>
+  <g>
+    <path fill="#fcea2b" d="M49.4515,44.8757a1.5009,1.5009,0,0,0,0-3,1.5009,1.5009,0,0,0,0,3Z"/>
+    <path fill="#fcea2b" stroke="#fcea2b" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M64,36A28,28,0,0,0,36,8V64A28,28,0,0,0,64,36Z"/>
+    <path fill="#3f3f3f" stroke="#3f3f3f" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8,36A28,28,0,0,0,36,64V8A28,28,0,0,0,8,36Z"/>
+  </g>
+  <g>
+    <circle cx="36" cy="36" r="28" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M64,36A28,28,0,0,0,36,8V64A28,28,0,0,0,64,36Z"/>
+  </g>
+</g>
+</svg>

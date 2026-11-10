@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1f619" role="img" aria-label="Nexora Kissing Face With Smiling Eyes" focusable="false">
+<title>Nexora Kissing Face With Smiling Eyes</title><desc>A expressive collectible inspired by kissing face with smiling eyes, curated as Nexora Kissing Face With Smiling Eyes in the NEXORA midnight-violet universe. Original artwork by Emily Jäger.</desc><defs><radialGradient id="bg-1F619"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1F619" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F619)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F619)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#E9D5FF" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <circle cx="36" cy="36" r="23" fill="#FCEA2B"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M36.4152,41.0924c0,0,10.5248,3.1956,0,5.5637c0,0,10.4577,2.9883,0,4.9125"/>
+    <ellipse cx="36" cy="36" rx="23.0001" ry="23.0001" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M31.6941,32.4036 c-1.0598-2.3854-3.8527-3.46-6.238-2.4002c-1.0697,0.4752-1.9249,1.3305-2.4002,2.4002"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M48.9441,32.4036 c-1.0598-2.3854-3.8527-3.46-6.238-2.4002c-1.0697,0.4752-1.9249,1.3305-2.4002,2.4002"/>
+  </g>
+</g>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f516" role="img" aria-label="Nexora Bookmark" focusable="false">
+<title>Nexora Bookmark</title><desc>A crafted collectible inspired by bookmark, curated as Nexora Bookmark in the NEXORA midnight-violet universe. Original artwork by Jonas Roßner.</desc><defs><radialGradient id="bg-1F516"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F516" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F516)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F516)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#DDD6FE"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <polygon fill="#EA5A47" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="46.5,56 36.5,44.8488 26.5,56 26.5,10.9583 46.5,10.9583"/>
+    <polygon fill="#D22F27" stroke="none" points="41.8638,12.0303 41.8638,49.8841 46.387,54.928 46.387,12.0303"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="46.5,56 36.5,44.8488 26.5,56 26.5,10.9583 46.5,10.9583"/>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="46.5,56 36.5,44.8488 26.5,56 26.5,10.9583 46.5,10.9583"/>
+  </g>
+</g>
+</svg>

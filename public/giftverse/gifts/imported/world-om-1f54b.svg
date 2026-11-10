@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f54b" role="img" aria-label="Nexora Kaaba" focusable="false">
+<title>Nexora Kaaba</title><desc>A world collectible inspired by kaaba, curated as Nexora Kaaba in the NEXORA midnight-violet universe. Original artwork by Martin Wehl.</desc><defs><radialGradient id="bg-1F54B"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F54B" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F54B)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F54B)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DBEAFE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <rect x="16.5" y="16" width="39" height="39" fill="#3F3F3F" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <rect x="16.5" y="23" width="39" height="4" fill="#F1B31C" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <rect x="22.5" y="47" width="5" height="8" fill="#9B9B9A" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <polygon fill="#F1B31C" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="36,31 34,34.5 36,38 38,34.5"/>
+    <circle cx="25" cy="34.5" r="2.5" fill="#F1B31C" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <circle cx="46.5" cy="34.5" r="2.5" fill="#F1B31C" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <rect x="16.5" y="16" width="39" height="39" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <rect x="16.5" y="23" width="39" height="4" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <rect x="22.5" y="47" width="5" height="8" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="36,31 34,34.5 36,38 38,34.5"/>
+    <circle cx="25" cy="34.5" r="2.5" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <circle cx="46.5" cy="34.5" r="2.5" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+</g>
+</svg>

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1f629" role="img" aria-label="Nexora Weary Face" focusable="false">
+<title>Nexora Weary Face</title><desc>A expressive collectible inspired by weary face, curated as Nexora Weary Face in the NEXORA midnight-violet universe. Original artwork by Mariella Steeb.</desc><defs><radialGradient id="bg-1F629"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1F629" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F629)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F629)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#E9D5FF"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#FCEA2B" d="m36 12c-13.23 0-24 10.77-24 24 0 13.23 10.77 24 24 24 13.23 0 24-10.77 24-24 0-13.23-10.77-24-24-24z"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <circle cx="36" cy="36" r="23" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m22.88 23.92c5.102-0.06134 7.273-1.882 8.383-3.346"/>
+    <path stroke="#000" stroke-miterlimit="10" stroke-width="2" d="m46.24 47.56c0-2.592-2.867-7.121-10.25-6.93-6.974 0.1812-10.22 4.518-10.22 7.111s4.271-1.611 10.05-1.492c6.317 0.13 10.43 3.903 10.43 1.311z"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m49.12 23.92c-5.102-0.06134-7.273-1.882-8.383-3.346"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m48.24 30.51c-6.199 1.47-7.079 1.059-8.868-1.961"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m23.76 30.51c6.199 1.47 7.079 1.059 8.868-1.961"/>
+  </g>
+</g>
+</svg>
