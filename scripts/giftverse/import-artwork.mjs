@@ -12,10 +12,10 @@ const ALLOWED_LICENSES = new Set([
 ]);
 
 const FORBIDDEN_SVG_PATTERNS = [
-  /<\\s*script\\b[^>]*>[\\s\\S]*?<\\s*\\/\\s*script\\s*>/gi,
-  /<\\s*foreignObject\\b[^>]*>[\\s\\S]*?<\\s*\\/\\s*foreignObject\\s*>/gi,
-  /<!DOCTYPE[\\s\\S]*?>/gi,
-  /<!ENTITY[\\s\\S]*?>/gi
+  /<\s*script\b[^>]*>[\s\S]*?<\s*\/\s*script\s*>/gi,
+  /<\s*foreignObject\b[^>]*>[\s\S]*?<\s*\/\s*foreignObject\s*>/gi,
+  /<!DOCTYPE[\s\S]*?>/gi,
+  /<!ENTITY[\s\S]*?>/gi
 ];
 
 function escapeXml(value) {
@@ -32,7 +32,7 @@ function requireText(value, field) {
 }
 
 export function transformImportedSvg(source, record) {
-  if (typeof source !== 'string' || !/<svg\\b/i.test(source)) {
+  if (typeof source !== 'string' || !/<svg\b/i.test(source)) {
     throw new Error('The source artwork must be an SVG document.');
   }
 
@@ -50,32 +50,32 @@ export function transformImportedSvg(source, record) {
   if (!ALLOWED_LICENSES.has(license)) {
     throw new Error('Unsupported or unverified artwork licence: ' + license);
   }
-  if (!/^https:\\/\\//i.test(sourceUrl) || !/^https:\\/\\//i.test(licenseUrl)) {
+  if (!/^https:\/\//i.test(sourceUrl) || !/^https:\/\//i.test(licenseUrl)) {
     throw new Error('Source and licence references must use HTTPS URLs.');
   }
   if (license === 'CC-BY-SA-4.0' && !/share[- ]alike/i.test(modifications)) {
     throw new Error('CC BY-SA adaptations must explicitly retain share-alike terms.');
   }
 
-  let svg = source.replace(/^\\uFEFF/, '').trim();
+  let svg = source.replace(/^\uFEFF/, '').trim();
   for (const pattern of FORBIDDEN_SVG_PATTERNS) svg = svg.replace(pattern, '');
-  svg = svg.replace(/\\s+on[a-z]+\\s*=\\s*("[^"]*"|'[^']*')/gi, '');
-  svg = svg.replace(/\\s+(?:href|xlink:href)\\s*=\\s*("|')\\s*(?:https?:|data:|javascript:)[^"']*\\1/gi, '');
-  svg = svg.replace(/url\\(\\s*(['"]?)(?:https?:|data:|javascript:)[^)]+\\)/gi, 'none');
+  svg = svg.replace(/\s+on[a-z]+\s*=\s*("[^"]*"|'[^']*')/gi, '');
+  svg = svg.replace(/\s+(?:href|xlink:href)\s*=\s*("|')\s*(?:https?:|data:|javascript:)[^"']*\1/gi, '');
+  svg = svg.replace(/url\(\s*(['"]?)(?:https?:|data:|javascript:)[^)]+\)/gi, 'none');
 
-  const root = svg.match(/<svg\\b[^>]*>/i);
+  const root = svg.match(/<svg\b[^>]*>/i);
   if (!root) throw new Error('Could not locate an SVG root element.');
 
   const title = '<title id="gift-title">' + escapeXml(giftName) + '</title>';
   const description = '<desc id="gift-description">NEXORA GiftVerse artwork adapted from a licensed source.</desc>';
   const accessibility = ' role="img" aria-labelledby="gift-title gift-description" data-gift-id="' + escapeXml(giftId) + '"';
-  const rootTag = root[0].replace(/\\s+(?:role|aria-labelledby|data-gift-id)\\s*=\\s*("[^"]*"|'[^']*')/gi, '');
-  svg = svg.replace(root[0], rootTag.replace(/>$/, accessibility + '>').replace(/\\s+viewBox="[^"]*"/i, match => match));
+  const rootTag = root[0].replace(/\s+(?:role|aria-labelledby|data-gift-id)\s*=\s*("[^"]*"|'[^']*')/gi, '');
+  svg = svg.replace(root[0], rootTag.replace(/>$/, accessibility + '>').replace(/\s+viewBox="[^"]*"/i, match => match));
 
   if (!/viewBox=/i.test(rootTag)) {
-    svg = svg.replace(/<svg\\b([^>]*)>/i, '<svg$1 viewBox="0 0 512 512">');
+    svg = svg.replace(/<svg\b([^>]*)>/i, '<svg$1 viewBox="0 0 512 512">');
   }
-  svg = svg.replace(/<svg\\b[^>]*>/i, match => match + title + description);
+  svg = svg.replace(/<svg\b[^>]*>/i, match => match + title + description);
 
   const provenance = {
     giftId,
@@ -132,18 +132,18 @@ async function run() {
     const { svg, provenance: item } = transformImportedSvg(source, record);
     const outputPath = join(resolve(outputDir), record.giftId + '.svg');
     await mkdir(dirname(outputPath), { recursive: true });
-    await writeFile(outputPath, svg + '\\n', 'utf8');
+    await writeFile(outputPath, svg + '\n', 'utf8');
     provenance.push({ ...item, sourceFile: record.sourceFile, outputFile: record.giftId + '.svg' });
   }
 
   await mkdir(dirname(resolve(provenancePath)), { recursive: true });
-  await writeFile(resolve(provenancePath), JSON.stringify(provenance, null, 2) + '\\n', 'utf8');
-  process.stdout.write('Imported ' + provenance.length + ' licensed GiftVerse artworks.\\n');
+  await writeFile(resolve(provenancePath), JSON.stringify(provenance, null, 2) + '\n', 'utf8');
+  process.stdout.write('Imported ' + provenance.length + ' licensed GiftVerse artworks.\n');
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   run().catch(error => {
-    process.stderr.write(error.message + '\\n');
+    process.stderr.write(error.message + '\n');
     process.exitCode = 1;
   });
 }

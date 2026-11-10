@@ -16,7 +16,7 @@ test('licensed SVG imports are labelled, accessible and traceable', () => {
   const source = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path fill="#000" d="M0 0h100v100H0z"/></svg>';
   const result = transformImportedSvg(source, baseRecord);
   assert.match(result.svg, /data-gift-id="nebula-heart"/);
-  assert.match(result.svg, /<title id="gift-title">Nebula Heart<\\/title>/);
+  assert.match(result.svg, /<title id="gift-title">Nebula Heart<\/title>/);
   assert.match(result.svg, /<desc id="gift-description">/);
   assert.equal(result.provenance.license, 'CC-BY-4.0');
   assert.equal(result.provenance.attributionRequired, true);
@@ -25,7 +25,7 @@ test('licensed SVG imports are labelled, accessible and traceable', () => {
 test('unsafe embedded content and remote references are removed', () => {
   const source = '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><foreignObject><div>bad</div></foreignObject><image href="https://evil.example/x.png"/><path onclick="alert(1)" d="M0 0"/></svg>';
   const result = transformImportedSvg(source, baseRecord);
-  assert.doesNotMatch(result.svg, /<script|foreignObject|onclick=|evil\\.example/);
+  assert.doesNotMatch(result.svg, /<script|foreignObject|onclick=|evil\.example/);
 });
 
 test('imports fail closed when the licence is missing or not approved', () => {
