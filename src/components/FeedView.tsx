@@ -2255,7 +2255,6 @@ export default function FeedView({
                 handlePublishScheduledPostNow={handlePublishScheduledPostNow}
                 handleBroadcastReaction={handleBroadcastReaction}
                 votedPolls={votedPolls}
-                setVotedPolls={setVotedPolls}
                 selectedTag={selectedTag}
                 setSelectedTag={setSelectedTag}
                 setNidaDiagnosticPost={setNidaDiagnosticPost}
