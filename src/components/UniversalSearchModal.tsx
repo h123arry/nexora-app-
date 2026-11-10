@@ -472,7 +472,7 @@ export default function UniversalSearchModal({
 
                   {universalSearchLoading && <p role="status" className="text-xs text-violet-200/70">Searching all indexed NEXORA content…</p>}
                   {universalSearchError && <p role="status" className="text-xs text-amber-200/80">{universalSearchError}</p>}
-                  {universalSearchResults && (
+                  {universalSearchResults?.results.length ? (
                     <section className="space-y-3 rounded-2xl border border-violet-400/25 bg-violet-500/[0.06] p-4" aria-label="NEXORA-wide search results">
                       <div className="flex items-center justify-between gap-2"><h4 className="text-xs font-mono uppercase tracking-widest text-violet-200">Across NEXORA ({universalSearchResults.results.length})</h4><span className="text-[9px] font-mono uppercase text-zinc-500">Ranked results</span></div>
                       <div className="space-y-2">
@@ -493,7 +493,7 @@ export default function UniversalSearchModal({
                   )}
                   {serverSearchLoading && <p className="text-xs text-violet-200/70">Searching the live NEXORA directory…</p>}
                   {serverSearchError && <p role="status" className="text-xs text-amber-200/80">{serverSearchError}</p>}
-                  {!universalSearchResults && serverResults && (
+                  {!universalSearchResults?.results.length && serverResults && (
                     <section className="space-y-4 rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] p-4" aria-label="Live directory results">
                       <h4 className="text-xs font-mono uppercase tracking-widest text-violet-300">Live NEXORA directory</h4>
                       {serverResults.people.length > 0 && <div className="space-y-2">
@@ -533,7 +533,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 1. PEOPLE */}
-                  {!universalSearchResults && matchedUsers.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedUsers.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
@@ -568,7 +568,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 2. POSTS */}
-                  {!universalSearchResults && matchedPosts.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedPosts.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-pink-400 flex items-center gap-2">
@@ -604,7 +604,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 3. WORLD PULSE */}
-                  {!universalSearchResults && matchedPulse.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedPulse.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-cyan-400 flex items-center gap-2">
@@ -634,7 +634,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 4. COMMUNITIES */}
-                  {!universalSearchResults && matchedCommunities.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedCommunities.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-emerald-400 flex items-center gap-2">
@@ -665,7 +665,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 5. OPPORTUNITIES */}
-                  {!universalSearchResults && matchedOpportunities.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedOpportunities.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-amber-400 flex items-center gap-2">
