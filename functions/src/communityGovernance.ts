@@ -155,3 +155,32 @@ export async function moderateCircleMember(
 
   return { userId: targetUid, action, status };
 }
+
+
+export async function listCircleBans(
+  db: Firestore,
+  actorUid: string,
+  communityId: string,
+): Promise<Array<{ userId: string; name: string; username: string; reason: string; bannedAt: string }>> {
+  if (!actorUid || !validId(communityId)) throw new Error('A valid Circle is required.');
+  const communityRef = db.collection('communities').doc(communityId);
+  const actor = await communityRef.collection('members').doc(actorUid).get();
+  if (!actor.exists || actor.get('status') !== 'active'
+    || !['owner', 'admin', 'moderator'].includes(String(actor.get('role') || ''))) {
+    throw new Error('Only active Circle managers can review the ban list.');
+  }
+  const bans = await communityRef.collection('bans').orderBy('createdAt', 'desc').limit(100).get();
+  return Promise.all(bans.docs.map(async ban => {
+    const userId = ban.id;
+    const profile = await db.collection('publicProfiles').doc(userId).get();
+    const profileData = profile.data() || {};
+    const createdAt = ban.get('createdAt')?.toDate?.();
+    return {
+      userId,
+      name: String(profileData.name || profileData.username || 'NEXORA member').slice(0, 80),
+      username: String(profileData.username || '').slice(0, 40),
+      reason: String(ban.get('reason') || '').slice(0, REASON_LIMIT),
+      bannedAt: createdAt instanceof Date ? createdAt.toISOString() : '',
+    };
+  }));
+}
