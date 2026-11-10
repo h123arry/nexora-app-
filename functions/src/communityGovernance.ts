@@ -96,13 +96,15 @@ export async function moderateCircleMember(
   const communityRef = db.collection('communities').doc(communityId);
   const actorRef = communityRef.collection('members').doc(actorUid);
   const targetRef = communityRef.collection('members').doc(targetUid);
+  const banRef = communityRef.collection('bans').doc(targetUid);
   const auditRef = communityRef.collection('auditEvents').doc(randomUUID());
 
   const status = await db.runTransaction(async transaction => {
-    const [community, actor, target] = await Promise.all([
+    const [community, actor, target, ban] = await Promise.all([
       transaction.get(communityRef),
       transaction.get(actorRef),
       transaction.get(targetRef),
+      transaction.get(banRef),
     ]);
     if (!community.exists || !actor.exists || actor.get('status') !== 'active'
       || !['owner', 'admin', 'moderator'].includes(String(actor.get('role') || ''))) {
@@ -110,41 +112,39 @@ export async function moderateCircleMember(
     }
 
     const actorRole = String(actor.get('role'));
-    const targetRole = target.exists ? String(target.get('role') || 'member') : 'member';
-    if (target.exists && target.get('status') !== 'active' && action !== 'unban') {
-      throw new Error('The target is not an active Circle member.');
-    }
+    const targetRole = action === 'unban'
+      ? String(ban.get('previousRole') || 'member')
+      : String(target.get('role') || 'member');
     if (targetRole === 'owner' || (ROLE_POWER[targetRole] || 0) >= ROLE_POWER[actorRole]) {
       throw new Error('You cannot moderate a member with an equal or higher role.');
     }
+
     if (action === 'unban') {
-      const banned = Array.isArray(community.get('bannedUsers')) ? community.get('bannedUsers') as string[] : [];
-      if (!banned.includes(targetUid)) throw new Error('This member is not banned from the Circle.');
-      transaction.update(communityRef, { bannedUsers: banned.filter(uid => uid !== targetUid) });
-      if (target.exists && target.get('status') === 'banned') {
-        transaction.delete(targetRef);
-      }
+      if (!ban.exists) throw new Error('This member is not banned from the Circle.');
+      transaction.delete(banRef);
       transaction.create(auditRef, {
         id: auditRef.id, actorUid, targetUid, action: 'member_unbanned',
-        reason: reason.trim(), createdAt: new Date(),
+        previousRole: targetRole, reason: reason.trim(), createdAt: new Date(),
       });
       return 'unbanned';
     }
 
-    if (!target.exists) throw new Error('The target must be an existing Circle member.');
-    const admins = Array.isArray(community.get('admins')) ? community.get('admins') as string[] : [];
-    const moderators = Array.isArray(community.get('moderators')) ? community.get('moderators') as string[] : [];
-    const banned = Array.isArray(community.get('bannedUsers')) ? community.get('bannedUsers') as string[] : [];
-    transaction.update(communityRef, {
-      admins: admins.filter(uid => uid !== targetUid),
-      moderators: moderators.filter(uid => uid !== targetUid),
-      ...(action === 'ban' ? { bannedUsers: [...new Set([...banned, targetUid])] } : {}),
-    });
-    if (action === 'ban') {
-      transaction.update(targetRef, { status: 'banned', role: 'member', bannedAt: new Date() });
-    } else {
-      transaction.delete(targetRef);
+    if (!target.exists || target.get('status') !== 'active') {
+      throw new Error('The target must be an active Circle member.');
     }
+    if (ban.exists) throw new Error('This member is already banned from the Circle.');
+
+    if (action === 'ban') {
+      transaction.create(banRef, {
+        userId: targetUid,
+        bannedBy: actorUid,
+        bannedByRole: actorRole,
+        previousRole: targetRole,
+        reason: reason.trim(),
+        createdAt: new Date(),
+      });
+    }
+    transaction.delete(targetRef);
     transaction.create(auditRef, {
       id: auditRef.id, actorUid, targetUid,
       action: action === 'ban' ? 'member_banned' : 'member_removed',
