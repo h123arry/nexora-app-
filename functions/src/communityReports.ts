@@ -103,17 +103,18 @@ export async function listCircleReports(
     const reporterUid = String(report.get('reporterUid') || '');
     const targetType = String(report.get('targetType') || 'post') as CircleReportTarget;
     const targetId = String(report.get('targetId') || '');
+    const targetRef = targetType === 'member'
+      ? db.collection('publicProfiles').doc(targetId)
+      : db.collection('communities').doc(communityId)
+        .collection(targetType === 'post' ? 'posts' : 'messages').doc(targetId);
     const [reporter, target] = await Promise.all([
       db.collection('publicProfiles').doc(reporterUid).get(),
-      db.collection(targetType === 'member' ? 'publicProfiles' : 'communities').doc(targetType === 'member' ? targetId : communityId)
-        .collection(targetType === 'member' ? 'unused' : targetType === 'post' ? 'posts' : 'messages')
-        .doc(targetType === 'member' ? '__unused__' : targetId).get(),
+      targetRef.get(),
     ]);
     const profile = reporter.data() || {};
     const targetData = target.data() || {};
-    const targetProfile = targetType === 'member' ? await db.collection('publicProfiles').doc(targetId).get() : null;
     const summary = targetType === 'member'
-      ? String(targetProfile?.data()?.name || targetProfile?.data()?.username || 'Circle member')
+      ? String(targetData.name || targetData.username || 'Circle member')
       : String(targetData.content || targetData.title || '').slice(0, 180);
     const createdAt = report.get('createdAt')?.toDate?.();
     return {
