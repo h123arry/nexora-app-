@@ -15,6 +15,7 @@ import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './com
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary } from './referrals.js';
+import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
@@ -836,7 +837,46 @@ export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId
   }
 });
 
-export const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
+
+export const createSocialChallenge = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to start a challenge.');
+  try { return await createSocialChallenge(adminDb, request.auth.uid, request.data || {}); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('invalid') || message.includes('limits')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'The challenge could not be created. Please retry.');
+  }
+});
+
+export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to join a challenge.');
+  try { return await joinSocialChallenge(adminDb, request.auth.uid, request.data?.challengeId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid challenge')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('closed or unavailable')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The challenge could not be joined. Please retry.');
+  }
+});
+
+export const listSocialChallenges = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore challenges.');
+  try { return await listSocialChallenges(adminDb); }
+  catch { throw new HttpsError('unavailable', 'Challenges are temporarily unavailable.'); }
+});
+
+export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', async event => {
+  const post = event.data?.data();
+  if (!post || post.audience !== 'public' || typeof post.userId !== 'string') return;
+  const source = [post.content, ...(Array.isArray(post.tags) ? post.tags : [])].filter(value => typeof value === 'string').join(' ');
+  const matches = [...source.matchAll(/#nxchallenge_([A-Za-z0-9_-]{1,150})/g)];
+  for (const match of matches.slice(0, 3)) {
+    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, match[1]); }
+    catch (error) { console.error('[Challenges] Contribution tracking failed.', error); }
+  }
+});
+
+\nexport const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create your referral link.');
   try { return await createReferralCode(adminDb, request.auth.uid); }
   catch (error) {
