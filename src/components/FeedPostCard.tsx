@@ -15,6 +15,7 @@ import RelativeTime from './RelativeTime';
 
 interface FeedPostCardProps {
   post: Post;
+  feedReasons?: string[];
   index: number;
   isActive: boolean;
   activeCommentsPostId: string | null;
@@ -66,6 +67,7 @@ interface FeedPostCardProps {
 
 const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   post,
+  feedReasons,
   index,
   isActive,
   activeCommentsPostId,
@@ -259,6 +261,22 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             )}
           </div>
         </div>
+
+        {feedReasons && feedReasons.length > 0 && (
+          <details className="mx-4 sm:mx-6 mb-2 group/feed-reason rounded-xl border border-violet-400/10 bg-violet-500/[0.035] px-3 py-2">
+            <summary className="cursor-pointer list-none text-[10px] font-semibold text-violet-200/80 focus-visible:outline-2 focus-visible:outline-violet-300">
+              Why am I seeing this?
+            </summary>
+            <ul className="mt-2 space-y-1.5 border-t border-violet-400/10 pt-2">
+              {feedReasons.slice(0, 4).map((reason, reasonIndex) => (
+                <li key={reasonIndex} className="flex items-start gap-2 text-[10px] leading-relaxed text-zinc-400">
+                  <span aria-hidden="true" className="mt-1 h-1 w-1 shrink-0 rounded-full bg-violet-400" />
+                  {reason}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
 
         {/* Badges & Menu Button */}
         <div className="flex flex-col items-end gap-1.5 text-[9.5px] font-mono shrink-0">
