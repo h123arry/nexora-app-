@@ -50,3 +50,17 @@ test('consistent creator counts only non-archived published posts', () => {
   assert.equal(result.consistent_creator.progress, 67);
   assert.equal(result.consistent_creator.unlocked, false);
 });
+
+test('creator progression levels use clamped reputation and expose the next milestone', async () => {
+  const { buildCreatorProgressionLevel } = await import('../src/services/analytics/creatorAchievements');
+  assert.equal(buildCreatorProgressionLevel(0).title, 'Newcomer');
+  assert.equal(buildCreatorProgressionLevel(100).title, 'Contributor');
+  assert.equal(buildCreatorProgressionLevel(250).title, 'Community Voice');
+  const next = buildCreatorProgressionLevel(400);
+  assert.equal(next.title, 'Community Leader');
+  assert.equal(next.nextLevel, 'NEXORA Ambassador');
+  assert.equal(next.pointsToNext, 350);
+  assert.equal(buildCreatorProgressionLevel(1200).nextLevel, null);
+  assert.equal(buildCreatorProgressionLevel(-10).currentReputation, 0);
+  assert.equal(buildCreatorProgressionLevel(Number.NaN).currentReputation, 0);
+});
