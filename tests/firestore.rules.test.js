@@ -110,6 +110,18 @@ const publicProfile = (uid) => ({
       weaveId: 'private-weave', authorId: 'charlie', authorName: 'Charlie', authorUsername: 'charlie',
       authorAvatar: '', text: 'Not a member', mediaType: 'text', createdAt: serverTimestamp()
     }));
+
+    await assertFails(updateDoc(doc(bobDb, 'worldWeaves', 'private-weave', 'moments', 'bob-moment'), {
+      authorId: 'alice', text: 'Attempted attribution change'
+    }));
+    await assertFails(deleteDoc(doc(dbFor('charlie'), 'worldWeaves', 'private-weave', 'moments', 'bob-moment')));
+    await assertSucceeds(deleteDoc(doc(bobDb, 'worldWeaves', 'private-weave', 'moments', 'bob-moment')));
+    await seed(async adminDb => setDoc(doc(adminDb, 'worldWeaves', 'private-weave', 'moments', 'alice-moment'), {
+      weaveId: 'private-weave', authorId: 'alice', authorName: 'Alice', authorUsername: 'alice',
+      authorAvatar: '', text: 'Owner perspective', mediaType: 'text', createdAt: Timestamp.now()
+    }));
+    await assertFails(deleteDoc(doc(bobDb, 'worldWeaves', 'private-weave', 'moments', 'alice-moment')));
+    await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'worldWeaves', 'private-weave', 'moments', 'alice-moment')));
   });
 
   it('allows owners to read retention summaries but reserves all writes to trusted server code', async () => {
