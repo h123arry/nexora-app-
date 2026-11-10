@@ -64,3 +64,11 @@ export async function getLiveKitToken(sessionId: string, connectionId: string) {
   const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'guest' | 'viewer'; expiresAt: number }>(liveKitFunctions, 'getLiveKitToken');
   return (await call({ sessionId, connectionId })).data;
 }
+
+export async function moderateLiveParticipant(sessionId: string, participantId: string, action: 'mute_chat' | 'unmute_chat' | 'remove' | 'ban' | 'unban') {
+  const call = httpsCallable<
+    { sessionId: string; participantId: string; action: 'mute_chat' | 'unmute_chat' | 'remove' | 'ban' | 'unban' },
+    { sessionId: string; participantId: string; action: string; updated: true }
+  >(liveKitFunctions, 'moderateLiveParticipant');
+  return (await call({ sessionId, participantId, action })).data;
+}
