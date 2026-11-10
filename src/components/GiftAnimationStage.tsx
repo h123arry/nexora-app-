@@ -112,6 +112,7 @@ const STAGE_STYLES = `
 @keyframes gift-flight-trail{0%{left:-110%;opacity:0}25%{opacity:1}80%{opacity:.5}100%{left:110%;opacity:0}}
 @keyframes gift-ground-pulse{0%,100%{transform:scaleX(.75);opacity:.35}50%{transform:scaleX(1.15);opacity:.8}}
 @keyframes gift-flare{0%,100%{opacity:.25;transform:scale(.9) rotate(0)}50%{opacity:.9;transform:scale(1.08) rotate(18deg)}}
-.gift-stage[data-reduced-motion="true"] *{animation:none!important;transition:none!important}\n.gift-stage[data-paused="true"] *{animation-play-state:paused!important;transition:none!important}
+.gift-stage[data-reduced-motion="true"] *{animation:none!important;transition:none!important}
+.gift-stage[data-paused="true"] *{animation-play-state:paused!important;transition:none!important}
 @media(prefers-reduced-motion:reduce){.gift-stage *{animation:none!important;transition:none!important}}
 `;
