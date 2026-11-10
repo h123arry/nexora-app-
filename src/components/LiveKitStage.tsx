@@ -21,6 +21,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
   const [error, setError] = useState('');
   const [cameraOn, setCameraOn] = useState(false);
   const [micOn, setMicOn] = useState(false);
+  const [screenShareOn, setScreenShareOn] = useState(false);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const [hasRemoteVideo, setHasRemoteVideo] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -29,7 +30,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
   const attachLocalVideo = useCallback((room: any) => {
     const publications = room?.localParticipant?.videoTrackPublications;
     const publication = publications
-      ? Array.from(publications.values()).find((item: any) => item.track) as any
+      ? Array.from(publications.values()).find((item: any) => item.track && !String(item.source || '').toLowerCase().includes('screen')) as any
       : null;
     if (publication?.track && localRef.current) {
       publication.track.detach?.(localRef.current);
@@ -45,6 +46,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
       setError('');
       setCameraOn(false);
       setMicOn(false);
+      setScreenShareOn(false);
       setHasRemoteVideo(false);
       try {
         const sdk = window.LivekitClient;
@@ -83,11 +85,15 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
           if (track.kind === 'video' && !disposed) setHasRemoteVideo(false);
         });
 
-        room.on(sdk.RoomEvent.LocalTrackPublished, () => attachLocalVideo(room));
+        room.on(sdk.RoomEvent.LocalTrackPublished, (publication: any) => {
+          attachLocalVideo(room);
+          if (String(publication?.source || '').toLowerCase().includes('screen') && !disposed) setScreenShareOn(true);
+        });
         room.on(sdk.RoomEvent.LocalTrackUnpublished, (publication: any) => {
           if (publication?.track && localRef.current) {
             publication.track.detach(localRef.current);
           }
+          if (String(publication?.source || '').toLowerCase().includes('screen') && !disposed) setScreenShareOn(false);
         });
 
         room.on(sdk.RoomEvent.Reconnecting, () => {
@@ -182,6 +188,29 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
     }
   };
 
+  const toggleScreenShare = async () => {
+    const room = roomRef.current;
+    if (!room || !canPublish || busy) return;
+    if (typeof room.localParticipant?.setScreenShareEnabled !== 'function') {
+      setError('Screen sharing is not supported by this video connection.');
+      return;
+    }
+    setBusy(true);
+    try {
+      const next = !screenShareOn;
+      await room.localParticipant.setScreenShareEnabled(next, { audio: false });
+      setScreenShareOn(next);
+      setError('');
+    } catch (cause: any) {
+      const message = String(cause?.message || '');
+      setError(message.toLowerCase().includes('permission') || message.toLowerCase().includes('denied')
+        ? 'Screen sharing permission was denied. Allow screen capture and try again.'
+        : 'Screen sharing could not be started on this device or browser.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const enableAudio = async () => {
     const room = roomRef.current;
     if (!room) return;
@@ -235,6 +264,9 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
           </button>
           <button type="button" disabled={busy || status === 'Video unavailable'} onClick={() => void toggleMic()} className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold disabled:opacity-50">
             {micOn ? 'Mute microphone' : 'Unmute microphone'}
+          </button>
+          <button type="button" disabled={busy || status === 'Video unavailable'} onClick={() => void toggleScreenShare()} className="rounded-full border border-violet-300/30 bg-violet-500/15 px-4 py-2 text-xs font-bold text-violet-100 disabled:opacity-50">
+            {screenShareOn ? 'Stop screen sharing' : 'Share screen'}
           </button>
         </div>
       )}

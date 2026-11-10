@@ -4,6 +4,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { calculateLiveWatchDurationMs } from './liveSessionsPolicy.js';
 
 const apiKey = defineSecret('LIVEKIT_API_KEY');
 const apiSecret = defineSecret('LIVEKIT_API_SECRET');
@@ -50,18 +51,6 @@ export const moderateLiveParticipant = onCall(
     const viewerKey = createHashId(sessionId, participantId);
     const viewerRef = db.collection('liveSessionViewers').doc(viewerKey);
     const moderationRef = sessionRef.collection('moderation').doc(participantId);
-    if (action === 'remove' || action === 'ban') {
-      const key = apiKey.value();
-      const secret = apiSecret.value();
-      if (session.data()?.videoTransport === 'livekit' && key && secret) {
-        try {
-          const baseUrl = (process.env.LIVEKIT_URL || 'wss://nexora-live-is43sh5r.livekit.cloud').replace(/^wss:/i, 'https:');
-          await removeFromLiveKit('nexora_' + sessionId, participantId, key, secret, baseUrl);
-        } catch {
-          throw new HttpsError('unavailable', 'The participant could not be removed from the live video room. Please retry.');
-        }
-      }
-    }
     const update: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp(), updatedBy: hostId };
     if (action === 'mute_chat') update.chatMuted = true;
     if (action === 'unmute_chat') update.chatMuted = false;
@@ -69,17 +58,51 @@ export const moderateLiveParticipant = onCall(
     if (action === 'unban') { update.banned = false; update.chatMuted = false; update.unbannedAt = FieldValue.serverTimestamp(); }
     if (action === 'remove') { update.removed = true; update.removedAt = FieldValue.serverTimestamp(); }
     if (action === 'unban') update.removed = false;
-    await moderationRef.set(update, { merge: true });
-    if (action === 'remove' || action === 'ban') {
-      await viewerRef.delete();
-      await sessionRef.collection('guestRequests').doc(participantId).set({
-        guestId: participantId, guestName: String(profile.data()?.name || profile.data()?.username || 'NEXORA member').slice(0, 80),
-        status: 'denied', reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
+    await db.runTransaction(async tx => {
+      const [currentSession, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
+      if (!currentSession.exists || currentSession.data()?.hostId !== hostId || currentSession.data()?.status !== 'live') {
+        throw new HttpsError('failed-precondition', 'This live room is no longer available for moderation.');
+      }
+      tx.set(moderationRef, update, { merge: true });
+      if (action === 'remove' || action === 'ban') {
+        if (viewer.exists) {
+          tx.delete(viewerRef);
+          const currentCount = Number.isSafeInteger(currentSession.data()?.viewerCount) && currentSession.data()!.viewerCount >= 0
+            ? currentSession.data()!.viewerCount : 0;
+          const watchDurationMs = calculateLiveWatchDurationMs(viewer.data()?.joinedAt, Date.now());
+          tx.update(sessionRef, {
+            viewerCount: Math.max(0, currentCount - 1),
+            ...(watchDurationMs > 0 ? {
+              totalWatchMs: FieldValue.increment(watchDurationMs),
+              completedViewerSessions: FieldValue.increment(1),
+            } : {}),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
+        }
+        tx.set(sessionRef.collection('guestRequests').doc(participantId), {
+          guestId: participantId, guestName: String(profile.data()?.name || profile.data()?.username || 'NEXORA member').slice(0, 80),
+          status: 'denied', reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    });
     await db.collection('liveModerationAudit').add({
       sessionId, hostId, participantId, action, createdAt: FieldValue.serverTimestamp(),
     });
+    if (action === 'remove' || action === 'ban') {
+      const key = apiKey.value();
+      const secret = apiSecret.value();
+      if (session.data()?.videoTransport === 'livekit') {
+        if (!key || !secret) {
+          throw new HttpsError('failed-precondition', 'The moderation action was saved, but LiveKit removal credentials are not configured.');
+        }
+        try {
+          const baseUrl = (process.env.LIVEKIT_URL || 'wss://nexora-live-is43sh5r.livekit.cloud').replace(/^wss:/i, 'https:');
+          await removeFromLiveKit('nexora_' + sessionId, participantId, key, secret, baseUrl);
+        } catch {
+          throw new HttpsError('unavailable', 'The moderation action was saved, but the active video connection could not be removed. Retry the action.');
+        }
+      }
+    }
     return { sessionId, participantId, action, updated: true as const };
   },
 );

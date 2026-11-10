@@ -4,7 +4,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from './liveSessionsPolicy.js';
+import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId, calculateLiveWatchDurationMs } from './liveSessionsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
@@ -26,8 +26,12 @@ function rateDocId(sessionId: string, userId: string): string {
   return createHash('sha256').update(sessionId + ':' + userId).digest('hex');
 }
 
-export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
+export const startLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey, liveKitApiSecret] }, async request => {
   const hostId = uid(request);
+  const liveKitUrl = process.env.LIVEKIT_URL?.trim() || 'wss://nexora-live-is43sh5r.livekit.cloud';
+  if (!liveKitApiKey.value().trim() || !liveKitApiSecret.value().trim() || !/^wss:\/\//i.test(liveKitUrl)) {
+    throw new HttpsError('failed-precondition', 'NEXORA Live video is not configured on the server yet. Please try again later.');
+  }
   const title = valid(() => validateLiveSessionTitle(request.data?.title));
   const statusRef = db.collection('accountStatus').doc(hostId);
   const profileRef = db.collection('users').doc(hostId);
@@ -41,12 +45,12 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
       const existing = await tx.get(sessions.where('hostId', '==', hostId).where('status', '==', 'live').limit(1));
       if (!existing.empty) throw new HttpsError('already-exists', 'You already have an active live room.');
       tx.create(ref, {
-        hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, peakViewerCount: 0, uniqueViewerCount: 0, messageCount: 0, giftCount: 0, giftNexTotal: 0, chatEnabled: true, giftsEnabled: true,
-        videoTransport: 'not_configured', hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), startedAt: FieldValue.serverTimestamp(),
+        hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, peakViewerCount: 0, uniqueViewerCount: 0, messageCount: 0, giftCount: 0, giftNexTotal: 0, totalWatchMs: 0, completedViewerSessions: 0, chatEnabled: true, giftsEnabled: true,
+        videoTransport: 'livekit', hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), startedAt: FieldValue.serverTimestamp(),
         endedAt: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
     });
-    return { sessionId: ref.id, status: 'live' as const, viewerCount: 0, videoTransport: 'not_configured' as const };
+    return { sessionId: ref.id, status: 'live' as const, viewerCount: 0, videoTransport: 'livekit' as const };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     throw new HttpsError('unavailable', 'Your live room could not be started. Please retry.');
@@ -103,14 +107,17 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
   const statusRef = db.collection('accountStatus').doc(viewerId);
   const account = await statusRef.get();
   const moderationRef = sessionRef.collection('moderation').doc(viewerId);
-  const moderation = await moderationRef.get();
-  if (moderation.data()?.banned === true || moderation.data()?.removed === true) throw new HttpsError('permission-denied', 'You are not allowed to join this live room.');
   if (accountRestricted(account.data(), 'suspended')) throw new HttpsError('permission-denied', 'This account cannot join live rooms.');
   try {
     return await db.runTransaction(async tx => {
       const audienceRef = sessionRef.collection('audience').doc(viewerId);
-      const [session, viewer, audience] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef), tx.get(audienceRef)]);
+      const [session, viewer, audience, moderation] = await Promise.all([
+        tx.get(sessionRef), tx.get(viewerRef), tx.get(audienceRef), tx.get(moderationRef),
+      ]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has ended.');
+      if (moderation.data()?.banned === true || moderation.data()?.removed === true) {
+        throw new HttpsError('permission-denied', 'You are not allowed to join this live room.');
+      }
       const hostId = session.data()?.hostId;
       if (viewerId === hostId) return { sessionId, joined: true, viewerCount: Number(session.data()?.viewerCount || 0) };
       if (!viewer.exists) {
@@ -239,10 +246,19 @@ export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
         return { sessionId, left: true, viewerCount: Number(session.data()?.viewerCount || 0) };
       }
       tx.delete(viewerRef);
-      if (!session.exists || session.data()?.status !== 'live') return { sessionId, left: true, viewerCount: 0 };
+      if (!session.exists) return { sessionId, left: true, viewerCount: 0 };
+      const watchDurationMs = calculateLiveWatchDurationMs(viewer.data()?.joinedAt, Date.now());
+      const isLive = session.data()?.status === 'live';
       const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount > 0 ? session.data()!.viewerCount : 0;
-      tx.update(sessionRef, { viewerCount: Math.max(0, count - 1), updatedAt: FieldValue.serverTimestamp() });
-      return { sessionId, left: true, viewerCount: Math.max(0, count - 1) };
+      tx.update(sessionRef, {
+        ...(isLive ? { viewerCount: Math.max(0, count - 1) } : {}),
+        ...(watchDurationMs > 0 ? {
+          totalWatchMs: FieldValue.increment(watchDurationMs),
+          completedViewerSessions: FieldValue.increment(1),
+        } : {}),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { sessionId, left: true, viewerCount: isLive ? Math.max(0, count - 1) : 0 };
     });
   } catch {
     throw new HttpsError('unavailable', 'You could not leave this live room cleanly. Please retry.');
@@ -260,16 +276,19 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
   const statusRef = db.collection('accountStatus').doc(senderId);
   const rateRef = db.collection('liveChatRateLimits').doc(rateDocId(sessionId, senderId));
   const moderationRef = sessionRef.collection('moderation').doc(senderId);
-  const moderation = await moderationRef.get();
-  if (moderation.data()?.banned === true || moderation.data()?.removed === true) throw new HttpsError('permission-denied', 'You are not allowed to participate in this live room.');
-  if (moderation.data()?.chatMuted === true) throw new HttpsError('permission-denied', 'The host has temporarily muted your live chat.');
   const messageRef = sessionRef.collection('messages').doc();
   try {
     return await db.runTransaction(async tx => {
-      const [session, profile, status, rate, viewer] = await Promise.all([
-        tx.get(sessionRef), tx.get(profileRef), tx.get(statusRef), tx.get(rateRef), tx.get(viewerRef),
+      const [session, profile, status, rate, viewer, moderation] = await Promise.all([
+        tx.get(sessionRef), tx.get(profileRef), tx.get(statusRef), tx.get(rateRef), tx.get(viewerRef), tx.get(moderationRef),
       ]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room is no longer active.');
+      if (moderation.data()?.banned === true || moderation.data()?.removed === true) {
+        throw new HttpsError('permission-denied', 'You are not allowed to participate in this live room.');
+      }
+      if (moderation.data()?.chatMuted === true) {
+        throw new HttpsError('permission-denied', 'The host has temporarily muted your live chat.');
+      }
       if (session.data()?.chatEnabled !== true) throw new HttpsError('failed-precondition', 'Live chat is disabled for this room.');
       const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds : [];
       if (session.data()?.hostId !== senderId && (!viewer.exists || !connections.includes(connectionId))) throw new HttpsError('permission-denied', 'Join this live room before chatting.');
@@ -327,9 +346,18 @@ export const reconcileLiveSessionViewers = onSchedule({
       const expiresAt = viewer.data()?.expiresAt?.toMillis?.() || 0;
       if (expiresAt > Date.now()) return;
       tx.delete(viewerDoc.ref);
-      if (session.exists && session.data()?.status === 'live' && viewer.data()?.viewerId !== session.data()?.hostId) {
+      if (session.exists) {
+        const watchDurationMs = calculateLiveWatchDurationMs(viewer.data()?.joinedAt, Date.now());
+        const isActiveViewer = session.data()?.status === 'live' && viewer.data()?.viewerId !== session.data()?.hostId;
         const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount > 0 ? session.data()!.viewerCount : 0;
-        tx.update(sessionRef, { viewerCount: Math.max(0, count - 1), updatedAt: FieldValue.serverTimestamp() });
+        tx.update(sessionRef, {
+          ...(isActiveViewer ? { viewerCount: Math.max(0, count - 1) } : {}),
+          ...(watchDurationMs > 0 ? {
+            totalWatchMs: FieldValue.increment(watchDurationMs),
+            completedViewerSessions: FieldValue.increment(1),
+          } : {}),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
       }
     });
   }
