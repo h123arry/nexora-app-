@@ -106,6 +106,17 @@ const publicProfile = (uid) => ({
       momentCount: 1, lastMomentId: 'bob-moment', updatedAt: serverTimestamp()
     });
     await assertSucceeds(contributionBatch.commit());
+    const audioBatch = writeBatch(bobDb);
+    audioBatch.set(doc(bobDb, 'worldWeaves', 'private-weave', 'moments', 'bob-voice-note'), {
+      weaveId: 'private-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'A quick voice note from the ceremony.', mediaType: 'audio',
+      mediaUrl: 'https://storage.example.test/voice-note', storagePath: 'users/bob/media/voice-note',
+      createdAt: serverTimestamp()
+    });
+    audioBatch.update(doc(bobDb, 'worldWeaves', 'private-weave'), {
+      momentCount: 2, lastMomentId: 'bob-voice-note', updatedAt: serverTimestamp()
+    });
+    await assertSucceeds(audioBatch.commit());
     await assertFails(setDoc(doc(dbFor('charlie'), 'worldWeaves', 'private-weave', 'moments', 'charlie-moment'), {
       weaveId: 'private-weave', authorId: 'charlie', authorName: 'Charlie', authorUsername: 'charlie',
       authorAvatar: '', text: 'Not a member', mediaType: 'text', createdAt: serverTimestamp()
