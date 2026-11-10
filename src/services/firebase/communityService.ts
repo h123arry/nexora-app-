@@ -473,6 +473,50 @@ export const CommunityService = {
     await moderate({ communityId, targetUid, action, reason: reason.trim() });
   },
 
+
+  async reportContent(
+    communityId: string,
+    targetType: 'member' | 'post' | 'message',
+    targetId: string,
+    reason: string,
+  ): Promise<void> {
+    if (!communityId || communityId.includes('/') || !targetId || targetId.includes('/')
+      || !['member', 'post', 'message'].includes(targetType)
+      || typeof reason !== 'string' || reason.trim().length < 10 || reason.trim().length > 1000) {
+      throw new Error('A report reason between 10 and 1,000 characters is required.');
+    }
+    const submit = httpsCallable(functions, 'submitCommunityReport');
+    await submit({ communityId, targetType, targetId, reason: reason.trim() });
+  },
+
+  async listReports(communityId: string): Promise<Array<{
+    id: string; reporterUid: string; reporterName: string; targetType: 'member' | 'post' | 'message';
+    targetId: string; targetSummary: string; reason: string; createdAt: string;
+  }>> {
+    if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
+    const list = httpsCallable(functions, 'listCommunityReports');
+    const result = await list({ communityId });
+    return Array.isArray(result.data) ? result.data as Array<{
+      id: string; reporterUid: string; reporterName: string; targetType: 'member' | 'post' | 'message';
+      targetId: string; targetSummary: string; reason: string; createdAt: string;
+    }> : [];
+  },
+
+  async resolveReport(
+    communityId: string,
+    reportId: string,
+    action: 'dismiss' | 'remove_content' | 'ban_member',
+    reviewReason: string,
+  ): Promise<void> {
+    if (!communityId || communityId.includes('/') || !reportId || reportId.includes('/')
+      || !['dismiss', 'remove_content', 'ban_member'].includes(action)
+      || typeof reviewReason !== 'string' || reviewReason.trim().length < 3 || reviewReason.trim().length > 500) {
+      throw new Error('A valid report decision and review reason are required.');
+    }
+    const resolve = httpsCallable(functions, 'resolveCommunityReport');
+    await resolve({ communityId, reportId, action, reviewReason: reviewReason.trim() });
+  },
+
   async leaveCommunity(userId: string, communityId: string): Promise<void> {
     if (!userId || !communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const memberRef = doc(db, 'communities', communityId, 'members', userId);

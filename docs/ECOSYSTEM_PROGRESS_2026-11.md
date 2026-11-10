@@ -18,7 +18,7 @@ This is an implementation snapshot, not a release-readiness certification.
 - Paid creator subscriptions remain unavailable until a payment provider adapter, signed webhooks, settlement, refunds and entitlement activation are implemented and verified.
 - Broadcast channels need delivery notifications, richer media, moderation workflows and creator analytics.
 - Directory search still needs server-backed posts, events, tags and service indexing, cursor pagination and production ranking.
-- Circle mute enforcement, report-driven Circle moderation, secure Circle media upload/download, and multi-account moderation acceptance tests remain incomplete.
+- Timed Circle mute enforcement, secure Circle media upload/download, and multi-account moderation acceptance tests remain incomplete. Circle member reports, private report review, content removal and report-driven member bans are now connected.
 - Group messaging still needs trusted group creation, invitations, roles, removal/leave lifecycle and end-to-end acceptance tests.
 - Saved content needs richer presentation and more entry points beyond Circle and event views.
 - Business services need availability/slot management, customer cancellation, owner scheduling and operational notifications. Payment collection is intentionally disabled.

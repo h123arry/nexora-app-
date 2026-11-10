@@ -19,6 +19,10 @@ The public Circle document does not store banned user IDs. Ban markers are store
 
 Each successful action creates an append-only `auditEvents` record containing the actor UID, target UID, action, prior role when relevant, reason, and timestamp. Audit records are written by the Admin SDK and are not client-writable. The reason is required and limited to 500 characters.
 
+## Member reporting and review
+
+Active Circle members can submit one private report per target with a reason between 10 and 1,000 characters. Self-reports are rejected. Reports are stored in a server-only `reports` subcollection; clients cannot read, forge, or edit them. Managers can review up to 50 open reports from a bounded recent-record scan, then dismiss a report, remove the reported post/message, or ban the reported member through the same role-safe moderation path. Every content removal and member ban writes its own moderation audit event. Report decisions require a review reason.
+
 ## Limits and release checks
 
 - Ban-list retrieval is capped at 100 most recent records.
