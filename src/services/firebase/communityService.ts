@@ -153,7 +153,7 @@ export const CommunityService = {
     pageSize = 40,
     cursor?: QueryDocumentSnapshot,
   ): Promise<{
-    members: Array<{ userId: string; name: string; username: string; avatar: string; role: string }>;
+    members: Array<{ userId: string; name: string; username: string; avatar: string; role: string; mutedUntil: string | null }>;
     nextCursor?: QueryDocumentSnapshot;
   }> {
     if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
@@ -169,12 +169,15 @@ export const CommunityService = {
     const members = await Promise.all(page.map(async member => {
       const profile = await getDoc(doc(db, 'publicProfiles', member.id));
       const data = profile.exists() ? profile.data() : {};
+      const muted = member.data().mutedUntil;
+      const mutedDate = muted instanceof Date ? muted : muted?.toDate?.();
       return {
         userId: member.id,
         name: typeof data.name === 'string' && data.name ? data.name : 'NEXORA member',
         username: typeof data.username === 'string' && data.username ? data.username : '',
         avatar: typeof data.avatar === 'string' ? data.avatar : '',
         role: String(member.data().role || 'member'),
+        mutedUntil: mutedDate instanceof Date && Number.isFinite(mutedDate.getTime()) ? mutedDate.toISOString() : null,
       };
     }));
     return { members, nextCursor };
