@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Music2, Pause, Play, Plus, Scissors, Trash2, Type, Upload, Volume2, X } from 'lucide-react';
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Scissors, Trash2, Type, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
-type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; caption: string; overlay: string; overlayColor: string; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
+type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; voiceoverVolume: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string) => Promise<void> };
 
 const DB_NAME = 'nexora-studio-projects';
@@ -46,6 +46,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [clips, setClips] = useState<StudioClip[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [soundtrack, setSoundtrack] = useState<Blob | null>(null);
+  const [voiceover, setVoiceover] = useState<Blob | null>(null);
+  const [voiceoverVolume, setVoiceoverVolume] = useState(1);
+  const [voiceoverStart, setVoiceoverStart] = useState(0);
+  const [recordingVoiceover, setRecordingVoiceover] = useState(false);
   const [caption, setCaption] = useState('');
   const [overlay, setOverlay] = useState('');
   const [overlayColor, setOverlayColor] = useState('#FFFFFF');
@@ -64,6 +68,9 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const projectUrls = useRef<string[]>([]);
+  const voiceoverRecorderRef = useRef<MediaRecorder | null>(null);
+  const voiceoverStreamRef = useRef<MediaStream | null>(null);
+  const voiceoverChunksRef = useRef<Blob[]>([]);
   const selectedClip = clips.find(clip => clip.id === selectedId) || clips[0] || null;
   const totalDuration = useMemo(() => clips.reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips]);
 
@@ -75,6 +82,9 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       setClips((project.clips || []).map(clip => ({ ...clip, volume: typeof clip.volume === 'number' ? Math.min(1, Math.max(0, clip.volume)) : 1 })));
       setSelectedId(project.clips?.[0]?.id || null);
       setSoundtrack(project.soundtrack || null);
+      setVoiceover(project.voiceover || null);
+      setVoiceoverVolume(typeof project.voiceoverVolume === 'number' ? Math.min(1, Math.max(0, project.voiceoverVolume)) : 1);
+      setVoiceoverStart(typeof project.voiceoverStart === 'number' ? Math.max(0, project.voiceoverStart) : 0);
       setCaption(project.caption || '');
       setOverlay(project.overlay || '');
       setOverlayColor(project.overlayColor || '#FFFFFF');
@@ -86,19 +96,25 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       setOverlayPosition(project.overlayPosition || 'bottom');
     }).catch(() => { if (active) setMessage('A previous Studio draft could not be restored. You can still start a new project.'); })
       .finally(() => { if (active) setReady(true); });
-    return () => { active = false; projectUrls.current.forEach(URL.revokeObjectURL); };
+    return () => {
+      active = false;
+      projectUrls.current.forEach(URL.revokeObjectURL);
+      const recorder = voiceoverRecorderRef.current;
+      if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
+      voiceoverStreamRef.current?.getTracks().forEach(track => track.stop());
+    };
   }, [currentUser.id]);
 
   useEffect(() => {
     if (!ready) return;
     setExportBlob(null);
     const timer = window.setTimeout(() => {
-      void saveProject({ clips, soundtrack, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, overlayStart, overlayEnd, overlayPosition, updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
+      void saveProject({ clips, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, voiceoverVolume, voiceoverStart, overlayStart, overlayEnd, overlayPosition, updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
         .then(() => setMessage('Draft saved on this device'))
         .catch(() => setMessage('This draft could not be saved on this device.'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [ready, clips, soundtrack, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
+  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, voiceoverVolume, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
 
   const getUrl = useCallback((blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -126,6 +142,52 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     setClips(previous => [...previous, ...additions]);
     setSelectedId(previous => previous || additions[0].id);
     setMessage(`${additions.length} clip${additions.length === 1 ? '' : 's'} added to your timeline.`);
+  };
+
+  const startVoiceover = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setMessage('Voice recording is not supported by this browser. Try a secure browser context with microphone access.');
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+      voiceoverStreamRef.current = stream;
+      voiceoverChunksRef.current = [];
+      const mimeType = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'].find(type => MediaRecorder.isTypeSupported(type));
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      voiceoverRecorderRef.current = recorder;
+      recorder.ondataavailable = event => { if (event.data.size) voiceoverChunksRef.current.push(event.data); };
+      recorder.onerror = () => {
+        setMessage('Voiceover recording stopped because the microphone recorder reported an error.');
+        stream.getTracks().forEach(track => track.stop());
+        voiceoverStreamRef.current = null;
+        setRecordingVoiceover(false);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(voiceoverChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        if (blob.size) {
+          setVoiceover(blob);
+          setMessage(`Voiceover captured · ${(blob.size / 1024).toFixed(0)} KB`);
+        }
+        stream.getTracks().forEach(track => track.stop());
+        voiceoverStreamRef.current = null;
+        voiceoverRecorderRef.current = null;
+        setRecordingVoiceover(false);
+      };
+      recorder.start(250);
+      setRecordingVoiceover(true);
+      setMessage('Recording voiceover… speak naturally, then stop when you are done.');
+    } catch (error) {
+      voiceoverStreamRef.current?.getTracks().forEach(track => track.stop());
+      voiceoverStreamRef.current = null;
+      setRecordingVoiceover(false);
+      setMessage(error instanceof Error ? error.message : 'Microphone permission was not granted.');
+    }
+  };
+
+  const stopVoiceover = () => {
+    const recorder = voiceoverRecorderRef.current;
+    if (recorder && recorder.state !== 'inactive') recorder.stop();
   };
 
   const updateSelected = (patch: Partial<StudioClip>) => {
@@ -198,8 +260,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let audioContext: AudioContext | null = null;
     let audioElement: HTMLAudioElement | null = null;
     let audioObjectUrl: string | null = null;
+    let voiceoverElement: HTMLAudioElement | null = null;
+    let voiceoverObjectUrl: string | null = null;
     let clipGain: GainNode | null = null;
     let soundtrackGain: GainNode | null = null;
+    let voiceoverGain: GainNode | null = null;
     let elapsed = 0;
     let fadeOpacity = transition === 'fade' ? 1 : 0;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -221,6 +286,14 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         soundtrackGain.gain.value = soundtrackVolume;
         source.connect(soundtrackGain);
         soundtrackGain.connect(mixedAudio);
+      }
+      if (voiceover) {
+        voiceoverElement = new Audio();
+        voiceoverElement.src = voiceoverObjectUrl = URL.createObjectURL(voiceover);
+        voiceoverGain = audioContext.createGain();
+        voiceoverGain.gain.value = voiceoverVolume;
+        audioContext.createMediaElementSource(voiceoverElement).connect(voiceoverGain);
+        voiceoverGain.connect(mixedAudio);
       }
       mixedAudio.stream.getAudioTracks().forEach(track => stream.addTrack(track));
     }
@@ -283,6 +356,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       recorder.start(250);
       draw();
       if (audioElement) await audioElement.play().catch(() => undefined);
+      if (voiceoverElement) window.setTimeout(() => { void voiceoverElement?.play().catch(() => undefined); }, Math.max(0, voiceoverStart * 1000));
       for (const [clipIndex, clip] of clips.entries()) {
         if (clipGain) clipGain.gain.value = clip.volume;
         if (soundtrackGain) soundtrackGain.gain.value = soundtrackVolume;
@@ -326,6 +400,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       preview.pause();
       if (audioElement) audioElement.pause();
       if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
+      if (voiceoverElement) voiceoverElement.pause();
+      if (voiceoverObjectUrl) URL.revokeObjectURL(voiceoverObjectUrl);
       audioContext?.close();
       stream.getTracks().forEach(track => track.stop());
     }
@@ -412,7 +488,14 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#44376F] px-3 py-2 text-xs text-[#D7CCF7]"><Plus size={13}/>{soundtrack?'Replace audio track':'Add music or voiceover'}<input className="hidden" type="file" accept="audio/*" onChange={event => {const file=event.target.files?.[0]; if(file) setSoundtrack(file); event.target.value='';}}/></label>
               {soundtrack && <div className="flex items-center justify-between text-[10px] text-emerald-300"><span className="truncate">{(soundtrack as File).name || 'Audio track selected'}</span><button onClick={() => setSoundtrack(null)} className="text-rose-300">Remove</button></div>}
               {soundtrack && <label className="block text-[10px] text-[#A39BBF]">Music volume · {Math.round(soundtrackVolume * 100)}%<input type="range" min="0" max="1" step=".05" value={soundtrackVolume} onChange={event => setSoundtrackVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label>}
-              <p className="text-[10px] leading-relaxed text-[#827B9C]">Adjust source audio and soundtrack separately. The mix is baked into your exported video.</p>
+              <p className="text-[10px] leading-relaxed text-[#827B9C]">Music and source audio are mixed into your exported video.</p>
+            </div>
+            <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
+              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Mic size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Voiceover</h2></div>{recordingVoiceover && <span className="text-[10px] font-semibold text-rose-300">Recording</span>}</div>
+              <button type="button" onClick={recordingVoiceover ? stopVoiceover : startVoiceover} className={`w-full rounded-lg border px-3 py-2 text-xs font-semibold ${recordingVoiceover?'border-rose-400/40 bg-rose-500/10 text-rose-200':'border-[#44376F] text-[#D7CCF7]'}`}>{recordingVoiceover?'Stop recording':'Record voiceover'}</button>
+              {voiceover && <div className="flex items-center justify-between gap-2 text-[10px] text-emerald-300"><span className="truncate">Voiceover ready · {(voiceover.size/1024).toFixed(0)} KB</span><button type="button" onClick={()=>setVoiceover(null)} className="shrink-0 text-rose-300">Remove</button></div>}
+              {voiceover && <><label className="block text-[10px] text-[#A39BBF]">Voice volume · {Math.round(voiceoverVolume*100)}%<input type="range" min="0" max="1" step=".05" value={voiceoverVolume} onChange={event=>setVoiceoverVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Start voiceover at (seconds)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={voiceoverStart} onChange={event=>setVoiceoverStart(Math.max(0,Math.min(totalDuration,Number(event.target.value)||0)))} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label></>}
+              <p className="text-[10px] leading-relaxed text-[#827B9C]">Record narration with your microphone. It is saved as a separate track and mixed during export.</p>
             </div>
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <h2 className="text-xs font-bold">Video format</h2>
