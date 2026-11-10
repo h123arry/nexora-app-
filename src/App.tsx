@@ -2501,7 +2501,7 @@ export default function App() {
               setIsCreateMenuOpen(true);
             }, 'Sign in to create and publish posts.');
           }}
-          className="nx-create-dock relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
+          className="nx-create-dock relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] cursor-pointer border border-[#B69BFF]/50 shadow-[0_4px_20px_rgba(113,56,255,0.42)] shrink-0"
           id="nav-create-post-center"
           title="Create"
           aria-label="Create a post"
