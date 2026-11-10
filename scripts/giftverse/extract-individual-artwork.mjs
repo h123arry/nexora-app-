@@ -11,7 +11,7 @@ const escapeXml = value => String(value).replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
 }[c]));
 
-export function extractSymbolSvg(symbolMarkup, accessibleName) {
+export function extractSymbolSvg(symbolMarkup, accessibleName, giftId = '') {
   const opening = symbolMarkup.match(/^<symbol\b([^>]*)>/);
   if (!opening) throw new Error('Expected an SVG symbol element');
   const viewBox = opening[1].match(/\bviewBox=["']([^"']+)["']/);
@@ -21,7 +21,7 @@ export function extractSymbolSvg(symbolMarkup, accessibleName) {
     throw new Error('Unsafe or empty SVG symbol');
   }
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + viewBox[1] +
-    '" role="img" aria-label="' + escapeXml(accessibleName) +
+    '" data-gift-id="' + escapeXml(giftId) + '" role="img" aria-label="' + escapeXml(accessibleName) +
     '" focusable="false">\n' + inner + '\n</svg>\n';
 }
 
@@ -52,7 +52,7 @@ export function extractGiftSpriteAssets(expansionText, spriteTexts, expectedCoun
     assets.push({
       path: resolve(ROOT, 'public' + outputPath),
       relativePath: 'public' + outputPath,
-      svg: extractSymbolSvg(symbol, name),
+      svg: extractSymbolSvg(symbol, name, giftId),
       giftId,
       outputPath
     });
