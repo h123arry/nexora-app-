@@ -101,7 +101,7 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
   const account = await statusRef.get();
   const moderationRef = sessionRef.collection('moderation').doc(viewerId);
   const moderation = await moderationRef.get();
-  if (moderation.data()?.banned === true) throw new HttpsError('permission-denied', 'You are not allowed to join this live room.');
+  if (moderation.data()?.banned === true || moderation.data()?.removed === true) throw new HttpsError('permission-denied', 'You are not allowed to join this live room.');
   if (accountRestricted(account.data(), 'suspended')) throw new HttpsError('permission-denied', 'This account cannot join live rooms.');
   try {
     return await db.runTransaction(async tx => {
@@ -255,7 +255,7 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
   const rateRef = db.collection('liveChatRateLimits').doc(rateDocId(sessionId, senderId));
   const moderationRef = sessionRef.collection('moderation').doc(senderId);
   const moderation = await moderationRef.get();
-  if (moderation.data()?.banned === true) throw new HttpsError('permission-denied', 'You are not allowed to participate in this live room.');
+  if (moderation.data()?.banned === true || moderation.data()?.removed === true) throw new HttpsError('permission-denied', 'You are not allowed to participate in this live room.');
   if (moderation.data()?.chatMuted === true) throw new HttpsError('permission-denied', 'The host has temporarily muted your live chat.');
   const messageRef = sessionRef.collection('messages').doc();
   try {
