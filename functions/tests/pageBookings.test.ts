@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { createPageBookingRequest, respondToPageBookingRequest } from '../src/pageBookings.js';
+import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from '../src/pageBookings.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'page-booking-tests');
