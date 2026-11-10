@@ -16,6 +16,7 @@ import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
 import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
+import MyReportsPanel from './MyReportsPanel';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import { AuthService } from '../services/firebase/authService';
 import StorageDataCenterModal from './StorageDataCenterModal';
@@ -2382,6 +2383,7 @@ export default function ProfileView({
                     {/* Drill down Panel 7: Technical support desk */}
                     {settingsActiveSubPanel === 'support' && (
                       <div className="space-y-4 text-left">
+                        <MyReportsPanel userId={currentUser.id} />
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">💬 Lagos Technical Grid Support</span>
                           
