@@ -1208,6 +1208,33 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
   });
 
+  it('keeps Academy lesson notes private, bounded and tied to valid bundled lessons', async () => {
+    const alice = dbFor('alice');
+    const note = {
+      userId: 'alice', courseId: 'creator-foundations', lessonId: 'identity',
+      note: 'My audience promise and examples.', updatedAt: serverTimestamp(), schemaVersion: 1
+    };
+    await assertSucceeds(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), note));
+    await assertSucceeds(getDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity')));
+    await assertSucceeds(getDocs(query(collection(alice, 'academyLessonNotes'), where('userId', '==', 'alice'))));
+    await assertFails(getDoc(doc(dbFor('bob'), 'academyLessonNotes', 'alice_creator-foundations_identity')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'academyLessonNotes', 'bob_creator-foundations_identity'), note));
+    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_unknown'), {
+      ...note, lessonId: 'unknown'
+    }));
+    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), {
+      ...note, note: 'x'.repeat(5001)
+    }));
+    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), {
+      ...note, isInstructor: true
+    }));
+    await assertFails(updateDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), {
+      userId: 'bob'
+    }));
+    await assertSucceeds(deleteDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity')));
+    await assertFails(getDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity')));
+  });
+
   it('keeps Academy institution content, grading and credentials server-authoritative', async () => {
     await assertFails(setDoc(doc(dbFor('alice'), 'academyCourses', 'forged-course'), {
       id: 'forged-course', ownerId: 'alice', status: 'published', title: 'Forged'
