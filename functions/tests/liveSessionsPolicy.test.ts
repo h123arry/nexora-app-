@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LIVE_CHAT_MESSAGE_MAX, LIVE_CHAT_WINDOW_MAX_MESSAGES, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle, validateLiveConnectionId, nextLiveChatRateState, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from '../src/liveSessionsPolicy.ts';
+import { LIVE_CHAT_MESSAGE_MAX, LIVE_CHAT_WINDOW_MAX_MESSAGES, LIVE_WATCH_DURATION_MAX_MS, calculateLiveWatchDurationMs, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle, validateLiveConnectionId, nextLiveChatRateState, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from '../src/liveSessionsPolicy.ts';
 
 test('live room titles and IDs are normalized and bounded', () => {
   assert.equal(validateLiveSessionTitle('  Creator Q&A  '), 'Creator Q&A');
@@ -52,4 +52,15 @@ test('live guest account identifiers accept safe UID characters only', () => {
   assert.equal(validateLiveGuestId('user.name-123'), 'user.name-123');
   assert.throws(() => validateLiveGuestId('../other-user'));
   assert.throws(() => validateLiveGuestId(''));
+});
+
+
+test('live watch-time accounting accepts Firestore timestamps and clamps corrupt durations', () => {
+  assert.equal(calculateLiveWatchDurationMs(1_000, 181_000), 180_000);
+  assert.equal(calculateLiveWatchDurationMs({ toMillis: () => 2_000 }, 62_000), 60_000);
+  assert.equal(calculateLiveWatchDurationMs({ toDate: () => new Date(3_000) }, 63_000), 60_000);
+  assert.equal(calculateLiveWatchDurationMs('invalid-date', 100_000), 0);
+  assert.equal(calculateLiveWatchDurationMs(200_000, 100_000), 0);
+  assert.equal(calculateLiveWatchDurationMs(1_000, 1_000 + LIVE_WATCH_DURATION_MAX_MS * 4), LIVE_WATCH_DURATION_MAX_MS);
+  assert.equal(calculateLiveWatchDurationMs(1_000, Number.NaN), 0);
 });
