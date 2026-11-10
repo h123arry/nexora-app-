@@ -420,6 +420,45 @@ export default function ExploreView({
             </div>
           ) : (
             <div className="space-y-8">
+              {universalResults && (
+                <section aria-label="NEXORA-wide search results" className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-violet-400/20 pb-2">
+                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-violet-300">Across NEXORA ({filteredServerHits.length})</h3>
+                    <span className="text-[9px] font-mono uppercase text-zinc-500">Ranked · privacy-filtered</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {filteredServerHits.map(hit => (
+                      <button key={hit.id} type="button" onClick={() => {
+                        if (hit.kind === 'person') onViewProfile?.(hit.targetId);
+                        else if (hit.kind === 'hashtag') setSelectedTag(hit.targetId);
+                        else if (hit.kind === 'post' || hit.kind === 'video') setActiveTab('feed');
+                        else if (hit.kind === 'live') setActiveTab('live');
+                        else setActiveTab('communities');
+                      }} className="nx-soft-card min-h-24 p-3 text-left transition-colors hover:border-violet-400/40">
+                        <div className="flex items-start gap-3">
+                          {hit.image ? <img src={hit.image} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-xl object-cover" referrerPolicy="no-referrer" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-xs font-bold text-violet-200">{hit.kind === 'hashtag' ? '#' : hit.kind.slice(0,1).toUpperCase()}</span>}
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2">
+                              <span className="truncate text-xs font-bold text-white">{hit.title}</span>
+                              <span className="shrink-0 rounded-md border border-violet-400/20 px-1.5 py-0.5 text-[8px] font-mono uppercase text-violet-300">{hit.kind}</span>
+                            </span>
+                            {hit.subtitle && <span className="mt-0.5 block truncate text-[10px] text-violet-300">{hit.subtitle}</span>}
+                            {hit.excerpt && <span className="mt-1 block line-clamp-2 text-[10px] leading-relaxed text-zinc-400">{hit.excerpt}</span>}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {filteredServerHits.length === 0 && !universalLoading && <p className="rounded-2xl nx-surface p-5 text-center text-xs text-zinc-400">No indexed matches in this category. Try another filter or search term.</p>}
+                  {universalResults.nextCursor && (
+                    <div className="flex justify-center">
+                      <button type="button" disabled={universalLoadingMore} onClick={() => void loadMoreUniversalResults()} className="min-h-11 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-2 text-xs font-mono font-bold uppercase text-violet-200 hover:bg-violet-500/20 disabled:opacity-60">
+                        {universalLoadingMore ? 'Loading more…' : 'Load more NEXORA results'}
+                      </button>
+                    </div>
+                  )}
+                </section>
+              )}
               
               {/* Users Section */}
               {(searchFilterType === 'all' || searchFilterType === 'users') && searchPeople.length > 0 && (
