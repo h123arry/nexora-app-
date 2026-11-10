@@ -87,6 +87,12 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'invites', 'bob')));
     await assertSucceeds(getDocs(query(collectionGroup(dbFor('bob'), 'invites'), where('inviteeId', '==', 'bob'))));
     await assertFails(getDocs(query(collectionGroup(dbFor('charlie'), 'invites'), where('inviteeId', '==', 'bob'))));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'worldWeaves', 'private-weave', 'invites', 'charlie'), {
+      weaveId: 'private-weave', inviteeId: 'charlie', invitedBy: 'alice',
+      ownerName: 'Alice', weaveTitle: 'Graduation Day', status: 'pending', createdAt: serverTimestamp()
+    }));
+    await assertFails(deleteDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'invites', 'charlie')));
+    await assertSucceeds(deleteDoc(doc(dbFor('charlie'), 'worldWeaves', 'private-weave', 'invites', 'charlie')));
 
     const bobDb = dbFor('bob');
     const batch = writeBatch(bobDb);
