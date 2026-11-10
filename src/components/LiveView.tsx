@@ -3,6 +3,7 @@ import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'fireb
 import { AlertCircle, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
 import GiftLiveOverlay from './GiftLiveOverlay';
 import LiveKitStage from './LiveKitStage';
+import { scoreLiveRoom } from '../services/liveDiscoveryPolicy';
 import { User } from '../types';
 import { db } from '../lib/firebase';
 import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, requestLiveGuestAccess, reviewLiveGuestAccess, sendLiveChatMessage, startLiveSession, updateLiveSessionSettings, moderateLiveParticipant, startLiveRecording, stopLiveRecording, getLiveReplayPlayback, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
@@ -125,8 +126,8 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     const time=(value:any)=>value?.toDate?.()?.getTime?.()||(typeof value==='string'?new Date(value).getTime():0);
     if(roomSort==='popular')return Number(b.viewerCount||0)-Number(a.viewerCount||0)||time(b.startedAt)-time(a.startedAt);
     if(roomSort==='newest')return time(b.startedAt)-time(a.startedAt);
-    const score=(room:LiveSessionSummary)=>Math.log1p(Math.max(0,Number(room.viewerCount||0)))*2+Math.max(0,4-(Date.now()-time(room.startedAt))/3_600_000);
-    return score(b)-score(a);
+    const score=(room:LiveSessionSummary)=>scoreLiveRoom(room,Date.now());
+    return score(b)-score(a)||time(b.startedAt)-time(a.startedAt);
   });
   const startRoom=async()=>{
     setLoading(true);setError('');
