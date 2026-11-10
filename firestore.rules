@@ -710,8 +710,9 @@ service cloud.firestore {
     // Academy lesson progress is a learner-owned record, not a credential.
     // Course completion and certificates must be assessed by trusted backend code.
     match /academyProgress/{progressId} {
-      // Progress writes go through academyCompleteLesson, which validates the
-      // published lesson and merges completion atomically across devices.
+      // Learners may read only their own progress. Writes are performed by
+      // academyCompleteLesson after validating the published lesson.
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
       allow create, update, delete: if false;
     }
 
