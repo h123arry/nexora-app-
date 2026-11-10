@@ -31,8 +31,8 @@ NEXORA is being developed around meaningful interactions, secure accounts, relia
 
 - The Communities hub reads public and owner-managed community records from Firestore and supports search, browsing, creation, and per-user membership records in each community's `members` subcollection. Public join/leave state is Firestore-backed and cross-device; private or invite-only access requests are not yet available.
 - Circle discussion posts are written through an authenticated server callable to `communities/{communityId}/posts` and read through a membership-scoped Firestore subscription. Active-member rules protect the feed; Circle posts are not published into the global public-post feed. Circle polls and events use authenticated callables, transactional vote/RSVP records, and real-time Firestore subscriptions. Active-member directory and member counts are also read from Firestore.
-- The Circle media upload/download pipeline and community moderation controls are not connected to this workspace yet. It deliberately shows honest unavailable states instead of local-only file downloads, fabricated member rosters, simulated moderation actions, or invented analytics totals.
-- The separate Matrix **Circles** experience is a local prototype. Its builder, seeded polls, chat, voice controls, and several interactions are simulated or browser-local rather than live community services.
+- The Matrix **Circles** experience uses the same persisted community services: Firestore-backed discovery and membership, member-scoped discussion posts, real-time group messages and polls, transactional voting, events and RSVPs, announcements, member directory, invite links, role delegation, and server-aggregated activity insights. These are not seeded demo records. Insight streams report when a query reaches its cap rather than inventing totals.
+- Circle owner/admin role delegation and invite governance are connected. The secure media upload/download pipeline and content-enforcement actions such as member bans, mutes, and report-based removal are not yet available in this workspace; role delegation should not be mistaken for full moderation enforcement.
 
 ### Messaging and communication
 
@@ -52,6 +52,17 @@ NEXORA is being developed around meaningful interactions, secure accounts, relia
 - Analytics code records bounded client observations and can produce platform aggregates; it is not a verified creator-level analytics or revenue product. Some data is client-originated, and scheduled production aggregation has not been verified.
 - Reputation scoring and activity logic exist, but are local-first/client-side with best-effort persistence; do not treat the result as a tamper-proof trust ledger.
 - **NEX is an internal platform unit with a server-authoritative wallet and immutable double-entry ledger.** The trusted gift-delivery callable validates catalogue prices, debits the sender, credits gift escrow, records creator gift earnings and delivers a GIFTVERSE event/gallery record transactionally. NEX is not a bank deposit or cash equivalent; wallet top-ups and general cash conversion are not enabled. A Paystack NGN creator-payout path exists, including beneficiary, compliance, OTP, webhook-signature and reconciliation workflows, but live withdrawals remain gated on finance approval, verified provider business, funded settlement, compliance approval, verified webhooks and a successful live test transfer. Do not describe payouts as live until all gates and a real settlement are verified.
+
+### Business Pages and bookings
+
+- Business service listings and booking requests are stored in Firestore. A booking remains pending until the business owner accepts or declines it; service duration is snapshotted on the request so later listing edits do not change an existing appointment.
+- The trusted booking flow prevents overlapping confirmed appointments, lets either participant cancel a pending request or future confirmed appointment, and sends an idempotent reminder notification to both parties before an accepted appointment. The reminder worker runs every 15 minutes and uses the existing notification/push pipeline when web push is enabled.
+- The scheduled reminder function and its Firestore index require deployment before reminders run in production. This does not add checkout, payment collection, external calendar sync, email or SMS reminders.
+
+### Creator Academy
+
+- The bundled creator curriculum and the published institutional-course system use account-scoped Firestore progress. Lesson completion is validated by a trusted callable against the bundled curriculum or a currently published institutional lesson.
+- Progress is merged transactionally to protect concurrent updates from multiple devices. Progress is not a credential: certificates are issued only through the separately assessed server-side course/assessment workflow.
 
 ### VOH AI
 
