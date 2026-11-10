@@ -82,7 +82,7 @@ export async function syncUniversalSearchRecord(
     (kind === 'person' && data.isBanned !== true && data.isSuspended !== true && data.isSeedProfile !== true) ||
     (kind === 'post' && (data.audience === 'public' || (!!parent && parent.isPrivate !== true && parent.type !== 'private' && parent.privacy !== 'private' && parent.visibility !== 'private')) && status !== 'deleted' && status !== 'removed') ||
     (kind === 'video' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
-    (kind === 'page' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
+    (kind === 'page' && data.isPrivate !== true && data.privacy !== 'private' && status !== 'private' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
     (kind === 'circle' && data.isPrivate !== true && data.type !== 'private' && data.privacy !== 'private' && data.visibility !== 'private' && status !== 'suspended' && status !== 'deleted') ||
     (kind === 'live' && status === 'live') ||
     (kind === 'event' && status === 'scheduled' && parent?.isPrivate !== true && parent?.type !== 'private' && parent?.privacy !== 'private' && parent?.visibility !== 'private') ||
@@ -212,7 +212,8 @@ export async function searchNexoraContent(
     });
   }
   const hashtagGroups = new Map<string, {count:number;creators:Set<string>;score:number;createdAt:string}>();
-  for (const candidate of candidates) {
+  for (const candidate of visibleCandidates) {
+    if (!candidate) continue;
     const data = candidate.data();
     const score = relevance(queryWords, data);
     if (score === null || !Array.isArray(data.tags)) continue;
