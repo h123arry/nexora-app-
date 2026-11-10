@@ -53,7 +53,18 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   useEffect(() => {
     if (!selected) { setMoments([]); setHasMoreMoments(false); return; }
-    return subscribeToWorldWeaveMoments(selected.id, items => { setMoments(items); setHasMoreMoments(items.length === 100); }, err => setError(err.message));
+    return subscribeToWorldWeaveMoments(selected.id, items => {
+      setMoments(current => {
+        const liveIds = new Set(items.map(item => item.id));
+        const older = current.filter(item => !liveIds.has(item.id));
+        return [...older, ...items].sort((a, b) => {
+          const aTime = a.createdAt && typeof a.createdAt === 'object' && 'toMillis' in a.createdAt ? (a.createdAt as {toMillis:()=>number}).toMillis() : 0;
+          const bTime = b.createdAt && typeof b.createdAt === 'object' && 'toMillis' in b.createdAt ? (b.createdAt as {toMillis:()=>number}).toMillis() : 0;
+          return aTime - bTime || a.id.localeCompare(b.id);
+        });
+      });
+      setHasMoreMoments(items.length === 100);
+    }, err => setError(err.message));
   }, [selected?.id]);
 
   const weaves = useMemo(() => {
@@ -136,6 +147,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
     setBusy(true); setError(''); setNotice('');
     try {
       await deleteWorldWeaveMoment(selected.id, moment);
+      setMoments(current => current.filter(item => item.id !== moment.id));
       setNotice('Moment removed from the timeline.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this moment.'); }
     finally { setBusy(false); }
