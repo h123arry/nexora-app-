@@ -97,6 +97,9 @@ const publicProfile = (uid) => ({
       weaveId: 'private-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
       authorAvatar: '', text: 'I saw it from the front row.', mediaType: 'text', createdAt: serverTimestamp()
     }));
+    await assertSucceeds(updateDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave'), {
+      momentCount: 1, updatedAt: serverTimestamp()
+    }));
     await assertFails(setDoc(doc(dbFor('charlie'), 'worldWeaves', 'private-weave', 'moments', 'charlie-moment'), {
       weaveId: 'private-weave', authorId: 'charlie', authorName: 'Charlie', authorUsername: 'charlie',
       authorAvatar: '', text: 'Not a member', mediaType: 'text', createdAt: serverTimestamp()
