@@ -62,10 +62,16 @@ const syncSearch = (kind: Parameters<typeof syncUniversalSearchRecord>[1], id: s
   syncUniversalSearchRecord(adminDb, kind, id, path, data, parent);
 
 export const indexPublicPostForSearch = onDocumentWritten('posts/{postId}', async event => {
-  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const after = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
   const id = event.params.postId;
-  const kind: 'video' | 'post' = data && (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
-  await syncSearch(kind, id, 'posts/' + id, data);
+  const path = 'posts/' + id;
+  const resolveKind = (data: Record<string, unknown> | null): 'video' | 'post' =>
+    data && (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
+  const previousKind = resolveKind(before);
+  const nextKind = resolveKind(after);
+  if (before && (!after || previousKind !== nextKind)) await syncSearch(previousKind, id, path, null);
+  if (after) await syncSearch(nextKind, id, path, after);
 });
 export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', async event => {
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
