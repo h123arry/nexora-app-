@@ -27,6 +27,11 @@ export function validateLiveSessionSettings(value: unknown): LiveSessionSettings
 
 export type LiveGuestDecision = 'approved' | 'denied';
 
+export function validateLiveGuestId(value: unknown): string {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9._-]{1,128}$/.test(value)) throw new Error('A valid guest account is required.');
+  return value;
+}
+
 export function validateLiveGuestDecision(value: unknown): LiveGuestDecision {
   if (value !== 'approved' && value !== 'denied') throw new Error('Choose approve or deny for the guest request.');
   return value;
