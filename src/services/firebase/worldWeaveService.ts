@@ -11,7 +11,8 @@ export interface WorldWeave {
   visibility: WorldWeaveVisibility; participantIds: string[]; memberCount: number;
   momentCount: number; createdAt?: unknown; updatedAt?: unknown;
 }
-export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; weaveDescription: string; visibility: WorldWeaveVisibility; status: 'pending' | 'accepted'; createdAt?: unknown; }\nexport interface WorldWeaveMoment {
+export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; weaveDescription: string; visibility: WorldWeaveVisibility; status: 'pending' | 'accepted'; createdAt?: unknown; }
+export interface WorldWeaveMoment {
   id: string; weaveId: string; authorId: string; authorName: string; authorUsername: string;
   authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video';
   mediaUrl?: string; storagePath?: string; createdAt?: unknown;
