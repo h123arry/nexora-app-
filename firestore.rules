@@ -966,6 +966,16 @@ service cloud.firestore {
         );
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
 
+      function circleMemberNotMuted() {
+        let mutePath = /databases/$(database)/documents/communities/$(communityId)/mutes/$(request.auth.uid);
+        return !exists(mutePath) || get(mutePath).data.expiresAt <= request.time;
+      }
+
+      // Active mute records and their reasons are private to trusted Circle callables.
+      match /mutes/{memberId} {
+        allow read, write: if false;
+      }
+
       // Circle reports contain private reporter identities and review notes.
       match /reports/{reportId} {
         allow read, write: if false;
@@ -1065,6 +1075,7 @@ service cloud.firestore {
         }
         allow get, list: if activeCircleMember();
         allow create: if activeCircleMember()
+          && circleMemberNotMuted()
           && request.resource.data.keys().hasOnly(['id', 'senderId', 'content', 'createdAt'])
           && request.resource.data.id == messageId
           && request.resource.data.senderId == request.auth.uid
