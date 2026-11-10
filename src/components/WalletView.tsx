@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Wallet, Coins, Zap, History, ShieldCheck, RefreshCw,
   ArrowDownLeft, ArrowUpRight, AlertCircle,
@@ -22,26 +22,41 @@ function formatDate(value: string | null): string {
 
 export default function WalletView({ currentUser }: WalletViewProps) {
   const [snapshot, setSnapshot] = useState<NexWalletSnapshot | null>(null);
+  const [snapshotOwnerId, setSnapshotOwnerId] = useState<string | null>(null);
+  const requestSequence = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refreshWallet = useCallback(async () => {
+    const sequence = ++requestSequence.current;
+    const requestedOwnerId = currentUser.id;
     setLoading(true);
     setError(null);
     try {
       const result = await getNexWalletSnapshot();
+      if (sequence !== requestSequence.current) return;
       setSnapshot(result);
+      setSnapshotOwnerId(requestedOwnerId);
     } catch {
-      setError('We could not securely load your wallet. Check your connection and try again.');
+      if (sequence === requestSequence.current) {
+        setError('We could not securely load your wallet. Check your connection and try again.');
+      }
     } finally {
-      setLoading(false);
+      if (sequence === requestSequence.current) setLoading(false);
     }
-  }, []);
+  }, [currentUser.id]);
 
   useEffect(() => {
+    // Invalidate any in-flight response from the previous signed-in account.
+    requestSequence.current += 1;
     setSnapshot(null);
+    setSnapshotOwnerId(null);
     void refreshWallet();
-  }, [refreshWallet, currentUser.id]);
+    return () => { requestSequence.current += 1; };
+  }, [refreshWallet]);
+
+  // Never render a wallet snapshot captured for a different account.
+  const visibleSnapshot = snapshotOwnerId === currentUser.id ? snapshot : null;
 
   const sparks = typeof currentUser.sparks === 'number' && Number.isFinite(currentUser.sparks)
     ? currentUser.sparks.toLocaleString()
@@ -64,7 +79,7 @@ export default function WalletView({ currentUser }: WalletViewProps) {
       <section className="grid gap-4 sm:grid-cols-2" aria-label="Current balances">
         <article className="rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--nx-muted)]"><Coins className="h-4 w-4 text-[var(--nx-violet-bright)]" aria-hidden="true" />Nex Coin balance</h2>
-          <p className="mt-5 text-3xl font-bold tracking-tight text-white">{loading ? '…' : snapshot ? formatUnits(snapshot.availableBalance) : '—'}<span className="ml-2 text-base text-[var(--nx-muted)]">NEX</span></p>
+          <p className="mt-5 text-3xl font-bold tracking-tight text-white">{loading ? '…' : visibleSnapshot ? formatUnits(visibleSnapshot.availableBalance) : '—'}<span className="ml-2 text-base text-[var(--nx-muted)]">NEX</span></p>
           <p className="mt-2 text-xs text-[var(--nx-muted)]">Server-confirmed available balance</p>
         </article>
         <article className="rounded-2xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-5 text-left">
@@ -81,15 +96,15 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         </div>
       )}
 
-      {snapshot && (
+      {visibleSnapshot && (
         <section className="grid gap-3 sm:grid-cols-2" aria-label="Wallet totals">
           <div className="rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-4 text-left">
             <p className="text-xs text-[var(--nx-muted)]">Lifetime credited</p>
-            <p className="mt-1 text-lg font-semibold text-white">{formatUnits(snapshot.lifetimeCredited)} NEX</p>
+            <p className="mt-1 text-lg font-semibold text-white">{formatUnits(visibleSnapshot.lifetimeCredited)} NEX</p>
           </div>
           <div className="rounded-xl border border-[var(--nx-edge)] bg-[var(--nx-surface)] p-4 text-left">
             <p className="text-xs text-[var(--nx-muted)]">Lifetime debited</p>
-            <p className="mt-1 text-lg font-semibold text-white">{formatUnits(snapshot.lifetimeDebited)} NEX</p>
+            <p className="mt-1 text-lg font-semibold text-white">{formatUnits(visibleSnapshot.lifetimeDebited)} NEX</p>
           </div>
         </section>
       )}
@@ -101,9 +116,9 @@ export default function WalletView({ currentUser }: WalletViewProps) {
         </div>
         {loading ? (
           <p className="mt-4 text-sm text-[var(--nx-muted)]">Loading verified wallet activity…</p>
-        ) : snapshot?.transactions.length ? (
+        ) : visibleSnapshot?.transactions.length ? (
           <ul className="mt-3 divide-y divide-[var(--nx-edge)]">
-            {snapshot.transactions.map((entry) => (
+            {visibleSnapshot.transactions.map((entry) => (
               <li key={entry.id} className="flex items-center gap-3 py-3">
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--nx-surface-2)] text-[var(--nx-violet-bright)]">
                   {entry.direction === 'credit' ? <ArrowDownLeft className="h-4 w-4" aria-hidden="true" /> : <ArrowUpRight className="h-4 w-4" aria-hidden="true" />}
