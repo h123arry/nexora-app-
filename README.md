@@ -128,6 +128,10 @@ Security-related controls present in the repository include:
 
 These are source and test artifacts—not proof of production enforcement. Email/Password and Google are enabled, but Phone Auth is disabled and no custom domain is listed. Published Firestore rules/indexes, App Check (Console still shows `Get started`), IAM, rate limits, secrets, backups, and live data behavior remain unverified or incomplete. Storage is not set up in the project. Do not disable checks or deploy broad allow rules to work around configuration failures.
 
+## Final integration and launch readiness
+
+See [Phase 6 integration and launch-readiness matrix](docs/phase-6-integration-and-launch-readiness.md) for the final verification contract, evidence boundaries, and owner-controlled release gates.
+
 ## Getting started
 
 ### Prerequisites
