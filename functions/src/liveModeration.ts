@@ -50,18 +50,6 @@ export const moderateLiveParticipant = onCall(
     const viewerKey = createHashId(sessionId, participantId);
     const viewerRef = db.collection('liveSessionViewers').doc(viewerKey);
     const moderationRef = sessionRef.collection('moderation').doc(participantId);
-    if (action === 'remove' || action === 'ban') {
-      const key = apiKey.value();
-      const secret = apiSecret.value();
-      if (session.data()?.videoTransport === 'livekit' && key && secret) {
-        try {
-          const baseUrl = (process.env.LIVEKIT_URL || 'wss://nexora-live-is43sh5r.livekit.cloud').replace(/^wss:/i, 'https:');
-          await removeFromLiveKit('nexora_' + sessionId, participantId, key, secret, baseUrl);
-        } catch {
-          throw new HttpsError('unavailable', 'The participant could not be removed from the live video room. Please retry.');
-        }
-      }
-    }
     const update: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp(), updatedBy: hostId };
     if (action === 'mute_chat') update.chatMuted = true;
     if (action === 'unmute_chat') update.chatMuted = false;
@@ -91,6 +79,21 @@ export const moderateLiveParticipant = onCall(
     await db.collection('liveModerationAudit').add({
       sessionId, hostId, participantId, action, createdAt: FieldValue.serverTimestamp(),
     });
+    if (action === 'remove' || action === 'ban') {
+      const key = apiKey.value();
+      const secret = apiSecret.value();
+      if (session.data()?.videoTransport === 'livekit') {
+        if (!key || !secret) {
+          throw new HttpsError('failed-precondition', 'The moderation action was saved, but LiveKit removal credentials are not configured.');
+        }
+        try {
+          const baseUrl = (process.env.LIVEKIT_URL || 'wss://nexora-live-is43sh5r.livekit.cloud').replace(/^wss:/i, 'https:');
+          await removeFromLiveKit('nexora_' + sessionId, participantId, key, secret, baseUrl);
+        } catch {
+          throw new HttpsError('unavailable', 'The moderation action was saved, but the active video connection could not be removed. Retry the action.');
+        }
+      }
+    }
     return { sessionId, participantId, action, updated: true as const };
   },
 );
