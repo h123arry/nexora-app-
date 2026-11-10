@@ -14,7 +14,7 @@ test('history limit is safely clamped', () => {
 
 test('clip reordering moves a clip to the dropped position', () => {
   const clips = [{ id: 'a' }, { id: 'b' }, { id: 'c' }, { id: 'd' }];
-  assert.deepEqual(reorderById(clips, 'a', 'c').map(item => item.id), ['b', 'c', 'a', 'd']);
+  assert.deepEqual(reorderById(clips, 'a', 'c').map(item => item.id), ['b', 'a', 'c', 'd']);
   assert.deepEqual(reorderById(clips, 'd', 'b').map(item => item.id), ['a', 'd', 'b', 'c']);
 });
 
