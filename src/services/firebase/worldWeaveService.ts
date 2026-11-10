@@ -99,6 +99,17 @@ export async function inviteToWorldWeave(weaveId: string, inviteeId: string): Pr
   await setDoc(inviteRef, { weaveId, inviteeId, invitedBy: user.uid, ownerName: weave.ownerName,
     weaveTitle: weave.title, status: 'pending', createdAt: serverTimestamp() });
 }
+export function subscribeToWorldWeaveInvites(weaveId: string, onItems: (items: WorldWeaveInvite[]) => void, onError: (error: Error) => void): Unsubscribe {
+  const user = requireUser();
+  return onSnapshot(query(collection(db, 'worldWeaves', weaveId, 'invites'), where('status', '==', 'pending'), limit(50)),
+    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveInvite))), onError);
+}
+export async function revokeWorldWeaveInvite(weaveId: string, inviteeId: string): Promise<void> {
+  const user = requireUser();
+  const weave = await getDoc(doc(db, 'worldWeaves', weaveId));
+  if (!weave.exists() || weave.data().ownerId !== user.uid) throw new Error('Only the WorldWeave owner can revoke invitations.');
+  await deleteDoc(doc(db, 'worldWeaves', weaveId, 'invites', inviteeId));
+}
 export function subscribeToMyWorldWeaveInvites(userId: string, onItems: (items: WorldWeaveInvite[]) => void, onError: (error: Error) => void): Unsubscribe {
   if (auth.currentUser?.uid !== userId) throw new Error('Your account must match the invitation recipient.');
   return onSnapshot(query(collectionGroup(db, 'invites'), where('inviteeId', '==', userId)),
