@@ -180,6 +180,11 @@ export async function deleteWorldWeaveMoment(weaveId: string, moment: WorldWeave
   }
   await deleteDoc(doc(db, 'worldWeaves', weaveId, 'moments', moment.id));
   if (moment.storagePath) {
-    await Promise.allSettled([deleteMediaFile(moment.storagePath)]);
+    // Uploads create a mediaAssets document keyed by the moment/media ID.
+    // Remove both the Storage object and its Firestore index after the moment is gone.
+    await Promise.allSettled([
+      deleteMediaFile(moment.storagePath),
+      deleteDoc(doc(db, 'mediaAssets', moment.id)),
+    ]);
   }
 }
