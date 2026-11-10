@@ -139,16 +139,17 @@ export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSecond
   if (cursor !== undefined && cursor !== null && (typeof cursor !== 'string' || cursor.length > 500 || cursor.includes('..'))) {
     throw new HttpsError('invalid-argument', 'The backfill cursor is invalid.');
   }
+  const isCollectionGroup = ['circlePosts','circleEvents','pageServices','pageUpdates'].includes(source);
   const collectionName = source === 'circlePosts' ? 'posts'
     : source === 'circleEvents' ? 'events'
       : source === 'pageServices' ? 'services'
         : source === 'pageUpdates' ? 'channelUpdates' : source;
-  let query = source.startsWith('circle') || source.startsWith('page')
+  let query: FirebaseFirestore.Query = isCollectionGroup
     ? adminDb.collectionGroup(collectionName)
     : adminDb.collection(collectionName);
   query = query.orderBy(FieldPath.documentId());
   if (cursor) {
-    if (source.startsWith('circle') || source.startsWith('page')) {
+    if (isCollectionGroup) {
       const previous = await adminDb.doc(cursor).get();
       if (!previous.exists) throw new HttpsError('invalid-argument', 'The backfill cursor is stale. Restart this source.');
       query = query.startAfter(previous);
@@ -180,7 +181,7 @@ export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSecond
     processed++;
   }
   const nextCursor = snapshot.size === 100
-    ? (source.startsWith('circle') || source.startsWith('page') ? snapshot.docs[snapshot.docs.length - 1].ref.path : snapshot.docs[snapshot.docs.length - 1].id)
+    ? (isCollectionGroup ? snapshot.docs[snapshot.docs.length - 1].ref.path : snapshot.docs[snapshot.docs.length - 1].id)
     : null;
   return { source, processed, nextCursor, done: nextCursor === null };
 });
