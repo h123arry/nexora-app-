@@ -615,8 +615,8 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           <div className="space-y-2">
             {post.interactivePoll.options.map((opt) => {
               const userVote = votedPolls[post.id];
-              const totalVotes = post.interactivePoll!.options.reduce((acc, o) => acc + o.votes + (userVote === o.id ? 1 : 0), 0);
-              const currentVotes = opt.votes + (userVote === opt.id ? 1 : 0);
+              const totalVotes = post.interactivePoll!.options.reduce((acc, o) => acc + o.votes, 0);
+              const currentVotes = opt.votes;
               const percentage = totalVotes > 0 ? Math.round((currentVotes / totalVotes) * 100) : 0;
 
               return (
