@@ -13,7 +13,7 @@ const replayBucket = defineString('LIVE_REPLAY_GCS_BUCKET');
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
 const DEFAULT_LIVEKIT_URL = 'wss://nexora-live-is43sh5r.livekit.cloud';
-const SIGNED_URL_TTL_MS = 5 * 60 * 1000;
+const SIGNED_URL_TTL_MS = 2 * 60 * 60 * 1000;
 
 type EgressFileResult = { filename?: string; location?: string; duration?: number; size?: number };
 type EgressResult = { egress_id?: string; status?: string; file_results?: EgressFileResult[]; items?: EgressResult[] };
@@ -109,7 +109,7 @@ export const startLiveRecording = onCall(
       const roomName = 'nexora_' + sessionId;
       const result = await egressRequest<EgressResult>('StartEgress', {
         room_name: roomName,
-        template: { layout: 'grid' },
+        template: { layout: 'grid-dark' },
         outputs: [{ file: { file_type: 'MP4', filepath: 'nexora-live/' + sessionId + '/{time}.mp4' } }],
         storage: { gcp: { credentials: JSON.stringify(credentials), bucket } },
       });
