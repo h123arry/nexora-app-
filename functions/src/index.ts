@@ -831,7 +831,7 @@ export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId
   const post = event.data?.data();
   if (!post || post.audience !== 'public' || typeof post.userId !== 'string') return;
   try {
-    const identity = await getAuth().getUser(post.userId);
+    const identity = await getAuth(getFirebaseAdminApp()).getUser(post.userId);
     await qualifyReferral(adminDb, post.userId, identity.emailVerified, event.params.postId);
   } catch (error) {
     // Referral failures must never block post creation; pending attribution is retained.
@@ -954,7 +954,7 @@ export const createMyReferralCode = onCall({ maxInstances: 10 }, async request =
 export const claimMyReferral = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to accept a referral.');
   try {
-    const identity = await getAuth().getUser(request.auth.uid);
+    const identity = await getAuth(getFirebaseAdminApp()).getUser(request.auth.uid);
     const createdAt = Date.parse(identity.metadata.creationTime);
     if (!Number.isFinite(createdAt) || Date.now() - createdAt > 7 * 86400000) {
       throw new HttpsError('failed-precondition', 'Referral invitations can only be applied to newly created accounts.');
