@@ -39,3 +39,6 @@ The shared gift stage now observes its own viewport intersection and the documen
 The reaction picker and branded loader also use Motion's reduced-motion preference hook so JavaScript-driven transitions do not bypass the operating-system accessibility setting. The existing global CSS reduced-motion rules remain a second layer, not the only protection.
 
 This tranche improves lifecycle and accessibility behaviour in existing product surfaces. It does not add remote animation downloads, autoplay sound, or claim new 3D/rigged artwork.
+
+
+Creator milestone cards use a restrained staggered entrance and hover lift for unlocked achievements, with the same reduced-motion preference disabling those effects. Notification banners also stop their countdown while the browser tab is hidden and use a non-spatial fade when reduced motion is requested.
