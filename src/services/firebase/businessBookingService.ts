@@ -13,7 +13,7 @@ export interface BusinessBookingRequest {
   ownerId: string;
   requestedAt: Date | { toDate(): Date };
   note: string;
-  status: 'pending' | 'accepted' | 'declined';
+  status: 'pending' | 'accepted' | 'declined' | 'cancelled';
   createdAt?: unknown;
 }
 
@@ -49,6 +49,12 @@ export async function respondToBusinessBooking(
   if (!auth.currentUser) throw new Error('Sign in to manage bookings.');
   const callable = httpsCallable(functions, 'respondToBusinessBookingRequest');
   await callable({ bookingId, decision });
+}
+
+export async function cancelBusinessBooking(bookingId: string): Promise<void> {
+  if (!auth.currentUser) throw new Error('Sign in to manage bookings.');
+  const callable = httpsCallable(functions, 'cancelBusinessBookingRequest');
+  await callable({ bookingId });
 }
 
 export function watchCustomerBookings(
