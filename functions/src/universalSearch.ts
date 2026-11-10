@@ -192,19 +192,31 @@ export async function searchNexoraContent(
     ...(Array.isArray(viewerData?.messaging?.blockedUserIds) ? viewerData.messaging.blockedUserIds : []),
   ].filter((item): item is string => typeof item === 'string'));
   const ownerPolicyCache = new Map<string, Promise<{privateProfile:boolean; blocks:string[]; restricted:boolean}>>();
+  const parentPolicyCache = new Map<string, Promise<{exists:boolean; data:Record<string, unknown>}>>();
+  const readParentPolicy = (collectionName: string, id: string) => {
+    const key = collectionName + '/' + id;
+    let pending = parentPolicyCache.get(key);
+    if (!pending) {
+      pending = db.collection(collectionName).doc(id).get().then(snapshot => ({
+        exists: snapshot.exists, data: (snapshot.data() || {}) as Record<string, unknown>,
+      }));
+      parentPolicyCache.set(key, pending);
+    }
+    return pending;
+  };
   const visibleCandidates = await Promise.all(candidates.map(async candidate => {
     const data = candidate.data();
     const ownerId = String(data.ownerId || '');
     const sourceSegments = String(data.targetPath || '').split('/');
     if (sourceSegments[0] === 'communities' && sourceSegments.length >= 2) {
-      const parent = await db.collection('communities').doc(sourceSegments[1]).get();
-      const community = parent.data() || {};
+      const parent = await readParentPolicy('communities', sourceSegments[1]);
+      const community = parent.data;
       if (!parent.exists || community.isPrivate === true || community.type !== 'public') return null;
       if (Array.isArray(community.bannedUsers) && community.bannedUsers.includes(viewerUid)) return null;
     }
     if (sourceSegments[0] === 'pages' && sourceSegments.length >= 2) {
-      const parent = await db.collection('pages').doc(sourceSegments[1]).get();
-      const page = parent.data() || {};
+      const parent = await readParentPolicy('pages', sourceSegments[1]);
+      const page = parent.data;
       if (!parent.exists || page.isPrivate === true || page.privacy === 'private' || ['private','suspended','deleted','draft'].includes(String(page.status || '').toLowerCase())) return null;
       if (data.kind === 'service' && page.category !== 'Business') return null;
     }
