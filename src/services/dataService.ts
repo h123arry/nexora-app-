@@ -192,7 +192,7 @@ class BackgroundSyncEngine {
         await reportContentDirect(payload.reporterId, payload.targetType, payload.targetId, payload.reason);
         break;
       case 'saveDraft':
-        await saveDraftDirect(payload.userId, payload.caption, payload.videoUrl);
+        await saveDraftDirect(payload.userId, payload.caption, payload.videoUrl, payload.type, payload.tags);
         break;
       case 'logActivity':
         await logActivityDirect(payload.userId, payload.type, payload.targetId);
@@ -344,13 +344,15 @@ async function reportContentDirect(reporterId: string, targetType: string, targe
   }
 }
 
-async function saveDraftDirect(userId: string, caption: string, videoUrl: string) {
+async function saveDraftDirect(userId: string, caption: string, videoUrl: string, type = 'text', tags: string[] = []) {
   const path = 'drafts';
   try {
     return await addDoc(collection(db, path), {
       userId,
-      caption,
-      videoUrl,
+      caption: caption.slice(0, 10000),
+      videoUrl: videoUrl.slice(0, 1000),
+      type: ['video', 'image', 'text'].includes(type) ? type : 'text',
+      tags: tags.slice(0, 30).map(tag => String(tag).replace(/^#/, '').slice(0, 40)),
       updatedAt: serverTimestamp()
     });
   } catch (error) {
@@ -449,8 +451,26 @@ export async function reviewModerationReport(reportId: string, action: 'dismiss'
   await reviewReport({ reportId, action, decisionNote: decisionNote.trim().slice(0, 1000) });
 }
 
-export async function saveDraft(userId: string, caption: string, videoUrl: string) {
-  await syncEngine.enqueue('saveDraft', { userId, caption, videoUrl });
+export async function saveDraft(userId: string, caption: string, videoUrl: string, type = 'text', tags: string[] = []) {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('Only the signed-in account owner can save this draft.');
+  }
+  if (typeof navigator !== 'undefined' && navigator.onLine) {
+    return await saveDraftDirect(userId, caption, videoUrl, type, tags);
+  }
+  await syncEngine.enqueue('saveDraft', { userId, caption, videoUrl, type, tags });
+  return null;
+}
+
+export async function deleteDraft(draftId: string, userId: string) {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('Only the signed-in account owner can delete this draft.');
+  }
+  const reference = doc(db, 'drafts', draftId);
+  const snapshot = await getDoc(reference);
+  if (!snapshot.exists()) return;
+  if (snapshot.data().userId !== userId) throw new Error('This draft belongs to another account.');
+  await deleteDoc(reference);
 }
 
 export async function logActivity(userId: string, type: string, targetId: string) {
