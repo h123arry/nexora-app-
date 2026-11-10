@@ -17,7 +17,7 @@ import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './co
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary } from './referrals.js';
 import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
-import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries, listContentSeriesEpisodes } from './contentSeries.js';
+import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries as listMyContentSeriesRecord, listContentSeriesEpisodes } from './contentSeries.js';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
@@ -863,7 +863,7 @@ export const addPostToMyContentSeries = onCall({ maxInstances: 10 }, async reque
 
 export const listMyContentSeries = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view your content series.');
-  try { return await listMyContentSeries(adminDb, request.auth.uid); }
+  try { return await listMyContentSeriesRecord(adminDb, request.auth.uid); }
   catch { throw new HttpsError('unavailable', 'Your content series are temporarily unavailable.'); }
 });
 
