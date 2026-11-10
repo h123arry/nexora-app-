@@ -159,16 +159,17 @@ export async function searchNexoraContent(
     if (!previous.exists) throw new Error('Search cursor is stale. Restart your search.');
     base = base.startAfter(previous) as typeof base;
   }
-  let snapshot = await base.get();
+  const snapshot = await base.get();
+  let candidateDocs: QueryDocumentSnapshot[] = [...snapshot.docs];
   let usedTypoFallback = false;
   if (snapshot.empty && !after && typoKeys.length) {
     const typoSnapshots = await Promise.all(typoKeys.map(searchKey => db.collection(INDEX).where('searchKeys','array-contains',searchKey).limit(60).get()));
     const docs = new Map<string, QueryDocumentSnapshot>();
     typoSnapshots.forEach(result => result.docs.forEach(doc => docs.set(doc.id, doc)));
-    snapshot = { ...snapshot, docs: [...docs.values()], size: docs.size, empty: docs.size === 0 } as typeof snapshot;
+    candidateDocs = [...docs.values()];
     usedTypoFallback = true;
   }
-  const candidates = snapshot.docs.filter(doc => requestedKinds.includes(doc.get('kind')) && doc.get('isPublic') === true);
+  const candidates = candidateDocs.filter(doc => requestedKinds.includes(doc.get('kind')) && doc.get('isPublic') === true);
   const [viewerSettings, accountStatus] = await Promise.all([
     db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get(),
     db.collection('accountStatus').doc(viewerUid).get(),
