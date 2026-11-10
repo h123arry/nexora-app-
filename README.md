@@ -211,3 +211,5 @@ Connection, creativity, community, and intelligent experiences.
 ## NEXORA Live recordings and replays
 
 See [private GCS recording and replay setup](docs/live-recordings-and-replays.md) for bucket provisioning, service-account permissions, secret configuration, deployment, and end-to-end verification.
+
+See [NEXORA Live streaming operations](docs/live-streaming-operations.md) for LiveKit setup, host moderation, screen sharing, discovery behavior, and the real-device production acceptance checklist.
