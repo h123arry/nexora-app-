@@ -582,7 +582,7 @@ export default function CommunitiesHubView({
   const handleCreateCommunityPoll = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedCircle || pollSubmitting) return;
-    const options = pollOptionsText.split(/\\r?\\n/).map(option => option.trim()).filter(Boolean);
+    const options = pollOptionsText.split(/\r?\n/).map(option => option.trim()).filter(Boolean);
     setPollSubmitting(true);
     setCommunityPollsError('');
     try {
