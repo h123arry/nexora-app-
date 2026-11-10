@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { 
   Zap, 
   Flame, 
@@ -48,10 +48,19 @@ export default function NotificationPopBanner({
     return localStorage.getItem('nexora_notif_sound') === 'false';
   });
   const [hasPush, setHasPush] = useState(false);
+  const reduceMotion = useReducedMotion();
 
   const activePop = queue[0] || null;
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const [progress, setProgress] = useState(100);
+
+  // Keep notification timing in sync with the browser page lifecycle.
+  useEffect(() => {
+    const updateVisibility = () => setIsPaused(document.visibilityState !== 'visible');
+    document.addEventListener('visibilitychange', updateVisibility);
+    updateVisibility();
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
 
   // Check native push status
   useEffect(() => {
@@ -240,10 +249,10 @@ export default function NotificationPopBanner({
       <AnimatePresence mode="wait">
         <motion.div
           key={activePop.id}
-          initial={{ y: -70, opacity: 0, scale: 0.93, filter: 'blur(4px)' }}
-          animate={{ y: 0, opacity: 1, scale: 1, filter: 'blur(0px)' }}
-          exit={{ y: -50, opacity: 0, scale: 0.94, filter: 'blur(4px)', transition: { duration: 0.22 } }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+          initial={reduceMotion ? false : { y: -70, opacity: 0, scale: 0.93, filter: 'blur(4px)' }}
+          animate={{ y: 0, opacity: 1, scale: 1, filter: reduceMotion ? 'blur(0px)' : 'blur(0px)' }}
+          exit={reduceMotion ? { opacity: 0 } : { y: -50, opacity: 0, scale: 0.94, filter: 'blur(4px)', transition: { duration: 0.22 } }}
+          transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 28 }}
           drag="y"
           dragConstraints={{ top: -100, bottom: 0 }}
           dragElastic={0.4}
@@ -436,7 +445,7 @@ export default function NotificationPopBanner({
             <motion.div
               className={`h-full bg-gradient-to-r ${badgeBg}`}
               style={{ width: `${progress}%` }}
-              transition={{ ease: 'linear' }}
+              transition={{ ease: 'linear', duration: reduceMotion ? 0 : 0.12 }}
             />
           </div>
         </motion.div>
