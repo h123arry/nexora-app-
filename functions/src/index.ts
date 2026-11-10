@@ -12,6 +12,7 @@ import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
 import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './communityGovernance.js';
+import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
@@ -298,6 +299,52 @@ export const moderateCommunityMember = onCall({ maxInstances: 10 }, async reques
       throw new HttpsError('failed-precondition', message);
     }
     throw new HttpsError('internal', 'The Circle moderation action could not be completed. Please retry.');
+  }
+});
+
+export const submitCommunityReport = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to report Circle content.');
+  try {
+    return await submitCircleReport(
+      adminDb, request.auth.uid, request.data?.communityId,
+      request.data?.targetType, request.data?.targetId, request.data?.reason,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Circle') || message.includes('Choose valid')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Join this Circle')) throw new HttpsError('permission-denied', message);
+    if (message.includes('already reported') || message.includes('unavailable')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'Your Circle report could not be submitted. Please retry.');
+  }
+});
+
+export const listCommunityReports = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle reports.');
+  try {
+    return await listCircleReports(adminDb, request.auth.uid, request.data?.communityId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Circle')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only active Circle managers')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'Circle reports could not be loaded. Please retry.');
+  }
+});
+
+export const resolveCommunityReport = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle reports.');
+  try {
+    return await resolveCircleReport(
+      adminDb, request.auth.uid, request.data?.communityId,
+      request.data?.reportId, request.data?.action, request.data?.reviewReason,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid report') || message.includes('valid Circle')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only active Circle managers')) throw new HttpsError('permission-denied', message);
+    if (message.includes('no longer open') || message.includes('Only member reports') || message.includes('Member reports')) {
+      throw new HttpsError('failed-precondition', message);
+    }
+    throw new HttpsError('internal', 'The Circle report could not be resolved. Please retry.');
   }
 });
 
