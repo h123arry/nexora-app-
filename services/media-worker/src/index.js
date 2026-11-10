@@ -68,19 +68,18 @@ async function processObject(event){
   const work=await mkdtemp(path.join(tmpdir(),'nexora-media-'));
   try {
     const input=path.join(work,'source');
-    await bucket.file(name).download({destination:input});
+    await bucket.file(object.name).download({destination:input});
     if(isImage) {
       const sourceMetadata=await sharp(input,{limitInputPixels:100_000_000}).metadata();
       if(!sourceMetadata.width || !sourceMetadata.height || sourceMetadata.width>20_000 || sourceMetadata.height>20_000) throw new Error('Image dimensions are outside supported limits');
       const outputRoot=`processed/${ownerId}/${mediaId}/${generation}`;
       const variants=[];
-      for(const width of [320,640,1280]) {
-        if(sourceMetadata.width<width && width!==320) continue;
+      for(const width of imageRenditionWidths(sourceMetadata.width)){
         const output=path.join(work,`image-${width}.webp`);
-        await sharp(input,{limitInputPixels:100_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:82,effort:4}).toFile(output);
-        const objectPath=`${outputRoot}/image-${width}.webp`;
+        const outputInfo=await sharp(input,{limitInputPixels:100_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:82,effort:4}).toFile(output);
+        const objectPath=`${outputRoot}/image-${outputInfo.width}.webp`;
         await upload(output,objectPath,'image/webp');
-        variants.push({width,path:objectPath});
+        variants.push({width:outputInfo.width,height:outputInfo.height,path:objectPath});
       }
       const result=await db.runTransaction(async tx=>{
         const snap=await tx.get(ref); const current=snap.data();
@@ -91,7 +90,7 @@ async function processObject(event){
       return {ready:result,mediaId,imageVariants:variants.length};
     }
     const metadata=await probe(input);
-    const outputRoot=`processed/${ownerId}/${mediaId}/${object.generation || 'current'}`;
+    const outputRoot=`processed/${ownerId}/${mediaId}/${generation}`;
     const master=[];
     const actual=[];
     for(const rendition of videoRenditionsForHeight(metadata.height,RENDITIONS)){
