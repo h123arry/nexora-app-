@@ -215,7 +215,8 @@ export default function NewInboxView({
         .filter(message => message.senderId !== currentUser.id && (activeChat?.isGroup
           ? message.recipientReceipts?.[currentUser.id]?.status !== 'read'
           : message.status !== 'read'))
-        .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read', Boolean(activeChat?.isGroup))));
+        .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read', Boolean(activeChat?.isGroup))))
+        .catch(() => console.warn('[Inbox] Read receipt sync failed; details redacted.'));
     }, () => {
       console.warn('[Inbox] Message snapshot error; details redacted.');
     });
