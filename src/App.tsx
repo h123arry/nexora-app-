@@ -184,6 +184,26 @@ export default function App() {
   }, [isLoggedIn, currentUser.id]);
 
   useEffect(() => {
+    if (!isLoggedIn || !currentUser.id || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const referralCode = params.get('ref');
+    if (!referralCode) return;
+    params.delete('ref');
+    window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`);
+    let active = true;
+    const claim = httpsCallable<{ code: string }, { claimed: boolean }>(functions, 'claimMyReferral');
+    claim({ code: referralCode })
+      .then(result => {
+        if (!active || !result.data.claimed) return;
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your NEXORA invitation has been applied. Complete your first public post to qualify.' }));
+      })
+      .catch(() => {
+        if (active) window.dispatchEvent(new CustomEvent('toast', { detail: 'This NEXORA invitation could not be applied.' }));
+      });
+    return () => { active = false; };
+  }, [isLoggedIn, currentUser.id]);
+
+  useEffect(() => {
     if (authInitializing) return;
     if (isLoggedIn && firebaseProfile) {
       setCurrentUser(getRichUser(firebaseProfile));
