@@ -926,7 +926,7 @@ export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request =>
 
 export const listSocialChallenges = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore challenges.');
-  try { return await listSocialChallengesRecords(adminDb); }
+  try { return await listSocialChallengesRecords(adminDb, request.auth.uid); }
   catch { throw new HttpsError('unavailable', 'Challenges are temporarily unavailable.'); }
 });
 
