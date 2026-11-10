@@ -72,7 +72,7 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       const maxWidth = canvas.width - padding * 2;
-      const words = options.text.trim().split(/\\s+/);
+      const words = options.text.trim().split(/\s+/);
       const lines: string[] = [];
       let line = '';
       for (const word of words) {
@@ -1725,6 +1725,7 @@ export default function MediaCreationEngine({
                     <label className="text-[10px] font-mono text-[#A39BBF] uppercase">Write a caption</label>
                     <textarea
                       rows={3}
+                      maxLength={500}
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
                       placeholder="Tell people what this is about..."
@@ -1846,14 +1847,22 @@ export default function MediaCreationEngine({
                     <p className="text-xs text-[#EEEAF8] leading-relaxed font-sans">{caption || "Your caption will appear here."}</p>
 
                     {selectedImages.length > 0 && (
-                      <div className="aspect-video rounded-xl border border-[#292244] bg-black overflow-hidden">
-                        <img src={selectedImages[0]?.url} className="w-full h-full object-cover" style={{ filter: selectedImages[0]?.filterStyle || 'none' }} />
+                      <div className={`grid gap-2 ${selectedImages.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        {selectedImages.map((photo, index) => (
+                          <div key={`preview-photo-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#292244] bg-black">
+                            <img src={photo.url} alt={index === 0 ? imageAltText || 'Selected post photo' : `Selected post photo ${index + 1}`} className="h-full w-full object-cover" style={{ filter: `${photo.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`, transform: `rotate(${photo.rotation}deg) scale(${photo.zoom})` }} />
+                            {stickerOverlay && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl">{stickerOverlay}</span>}
+                            {textOverlay.trim() && <span className="pointer-events-none absolute bottom-3 inset-x-3 rounded-lg bg-black/70 px-2 py-2 text-center text-xs font-bold" style={{ color: textOverlayColor }}>{textOverlay}</span>}
+                          </div>
+                        ))}
                       </div>
                     )}
                     {(videoFileUrl || recordedVideoUrl) && (
                       <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[460px] w-full rounded-xl border border-[#292244] bg-black object-contain" />
                     )}
 
+                    {location.trim() && <p className="text-[10px] text-[#A39BBF]">📍 {location}</p>}
+                    {taggedUsernames.trim() && <p className="text-[10px] text-[#B69BFF]">Mentioned: {taggedUsernames}</p>}
                     {voiceFileUrl && (
                       <div className="p-3 bg-[#120E2B] border border-[#292244] rounded-xl flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
@@ -1916,6 +1925,10 @@ export default function MediaCreationEngine({
                           </div>
                           <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[10px] font-semibold text-[#C7B5FF]">Everyone</span>
                         </div>
+                        <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
+                          <span>Allow comments</span>
+                          <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
+                        </label>
                         <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
                       </div>
 
