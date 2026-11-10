@@ -3,25 +3,13 @@ import { getAuth } from 'firebase-admin/auth';
 import { FieldValue, getFirestore, Query, Timestamp } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { accountStoragePrefixes, deleteUserOwnedDocuments } from './accountDeletionPolicy.js';
 
 const PAGE_SIZE = 200;
 const LEASE_MS = 10 * 60 * 1000;
 const RETENTION_NOTE = 'Backups, legal records, and third-party systems may retain data for a limited period.';
 
-const ownedCollections: Array<{ name: string; field: string }> = [
-  { name: 'posts', field: 'userId' },
-  { name: 'drafts', field: 'userId' },
-  { name: 'activities', field: 'userId' },
-  { name: 'creatorAnalytics', field: 'userId' },
-  { name: 'analyticsEvents', field: 'actorId' },
-  { name: 'notifications', field: 'userId' },
-  { name: 'moderationReports', field: 'reporterId' },
-  { name: 'moderationAppeals', field: 'userId' },
-  { name: 'privacySettings', field: 'userId' },
-  { name: 'presence', field: 'userId' },
-  { name: 'pages', field: 'ownerId' },
-  { name: 'communities', field: 'ownerId' },
-];
+
 
 export interface LifecycleRequest {
   type?: string;
@@ -141,13 +129,7 @@ async function cleanSharedChats(userId: string): Promise<{ deletedDocuments: num
 }
 
 async function deleteOwnedDocuments(userId: string): Promise<{ deletedDocuments: number; deletedFiles: number }> {
-  let deleted = 0;
-  for (const collection of ownedCollections) {
-    deleted += await deleteQuery(
-      db.collection(collection.name).where(collection.field, '==', userId),
-      async () => undefined,
-    );
-  }
+  let deleted = await deleteUserOwnedDocuments(db, userId);
   deleted += await deleteQuery(
     db.collection('follows').where('followerId', '==', userId),
     async () => undefined,
@@ -166,7 +148,7 @@ async function deleteOwnedDocuments(userId: string): Promise<{ deletedDocuments:
 
 async function deleteStorageObjects(userId: string): Promise<number> {
   let deleted = 0;
-  for (const prefix of [`users/${userId}/`, `media/${userId}/`]) {
+  for (const prefix of accountStoragePrefixes(userId)) {
     deleted += await deleteStoragePrefix(prefix);
   }
   return deleted;
