@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 
 interface NexoraLoaderProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -9,6 +9,7 @@ interface NexoraLoaderProps {
 }
 
 export default function NexoraLoader({ size = 'md', className = '', center = false, label }: NexoraLoaderProps) {
+  const reduceMotion = useReducedMotion();
   const gradientId = `nexora-loader-${useId().replace(/:/g, '')}`;
   const sizeMap = {
     xs: { box: 'w-4 h-4', stroke: 2, ring: 'w-4 h-4' },
@@ -29,8 +30,8 @@ export default function NexoraLoader({ size = 'md', className = '', center = fal
         {/* Rotating gradient arc */}
         <motion.div
           className="absolute inset-0 rounded-full"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 0.85, repeat: Infinity, ease: "linear" }}
+          animate={reduceMotion ? { rotate: 0 } : { rotate: 360 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.85, repeat: Infinity, ease: "linear" }}
         >
           <svg className="w-full h-full overflow-visible" viewBox="0 0 32 32">
             <defs>

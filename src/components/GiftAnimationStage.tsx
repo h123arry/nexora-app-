@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
 import GiftArtwork from './GiftArtwork';
 
@@ -20,10 +20,32 @@ export default function GiftAnimationStage({
   giftId, giftImage, giftName, animation, rarity, reducedMotion = false, size = 'live',
 }: GiftAnimationStageProps) {
   const profile = getGiftAnimationProfile(giftId, animation);
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(true);
+  const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || document.visibilityState === 'visible');
+
+  useEffect(() => {
+    const node = stageRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(([entry]) => setIsInView(entry.isIntersecting), { rootMargin: '80px', threshold: 0.01 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const updateVisibility = () => setPageVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', updateVisibility);
+    updateVisibility();
+    return () => document.removeEventListener('visibilitychange', updateVisibility);
+  }, []);
+
+  const paused = reducedMotion || !isInView || !pageVisible;
   return (
     <div
+      ref={stageRef}
       className={['gift-stage', `gift-stage--${profile.category}`, `gift-stage--${animation}`, `gift-stage--${size}`].join(' ')}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
+      data-paused={paused ? 'true' : 'false'}
       data-rarity={rarity}
       role="img"
       aria-label={giftName}
@@ -89,6 +111,6 @@ const STAGE_STYLES = `
 @keyframes gift-flight-trail{0%{left:-110%;opacity:0}25%{opacity:1}80%{opacity:.5}100%{left:110%;opacity:0}}
 @keyframes gift-ground-pulse{0%,100%{transform:scaleX(.75);opacity:.35}50%{transform:scaleX(1.15);opacity:.8}}
 @keyframes gift-flare{0%,100%{opacity:.25;transform:scale(.9) rotate(0)}50%{opacity:.9;transform:scale(1.08) rotate(18deg)}}
-.gift-stage[data-reduced-motion="true"] *{animation:none!important;transition:none!important}
+.gift-stage[data-reduced-motion="true"] *{animation:none!important;transition:none!important}\n.gift-stage[data-paused="true"] *{animation-play-state:paused!important;transition:none!important}
 @media(prefers-reduced-motion:reduce){.gift-stage *{animation:none!important;transition:none!important}}
 `;

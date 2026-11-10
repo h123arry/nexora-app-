@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ChevronRight, Plus, Search, Check } from 'lucide-react';
 
 const COMMON_REACTIONS = ['👍', '❤️', '😂', '😮', '🔥', '🙏'];
@@ -12,6 +12,7 @@ interface ReactionBarProps {
 }
 
 export default function ReactionBar({ onSelect, onClose }: ReactionBarProps) {
+  const reduceMotion = useReducedMotion();
   const [showExtended, setShowExtended] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -41,9 +42,10 @@ export default function ReactionBar({ onSelect, onClose }: ReactionBarProps) {
   return (
     <motion.div
       ref={containerRef}
-      initial={{ opacity: 0, scale: 0.9, y: 10 }}
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.9, y: 10 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.9, y: 10 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 10 }}
+      transition={{ duration: reduceMotion ? 0 : 0.16 }}
       className="bg-[#09071c]/95 backdrop-blur-xl border border-white/10 rounded-2xl p-2 shadow-md z-50 flex flex-col gap-2 w-[280px] md:w-[320px] select-none"
     >
       <div className="relative flex items-center w-full">
@@ -91,9 +93,10 @@ export default function ReactionBar({ onSelect, onClose }: ReactionBarProps) {
       <AnimatePresence>
         {showExtended && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
+            initial={reduceMotion ? false : { opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.18 }}
             className="overflow-hidden border-t border-white/10 pt-2 flex flex-col gap-2"
           >
             {/* Search Input */}
