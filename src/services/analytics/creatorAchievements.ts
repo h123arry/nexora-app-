@@ -24,6 +24,7 @@ export function buildCreatorAchievements(
   posts: Array<Pick<Post, 'isArchived' | 'videoUrl' | 'views' | 'likes'>>,
   reputationPoints: unknown,
   isVerified: boolean,
+  helpfulnessPoints: unknown = 0,
 ): CreatorAchievement[] {
   const published = posts.filter(post => post.isArchived !== true);
   const withRecordedViews = published.filter(post =>
@@ -33,6 +34,7 @@ export function buildCreatorAchievements(
   const totalLikes = published.reduce((sum, post) => sum + count(post.likes), 0);
   const highestPostViews = withRecordedViews.reduce((highest, post) => Math.max(highest, count(post.views)), 0);
   const reputation = count(reputationPoints);
+  const helpfulness = count(helpfulnessPoints);
   const hasVideo = published.some(post => typeof post.videoUrl === 'string' && post.videoUrl.trim().length > 0);
 
   return [
@@ -44,6 +46,8 @@ export function buildCreatorAchievements(
     { id: 'comm_leader', title: 'Community Leader', desc: 'Reach 400 reputation points or receive creator verification', icon: '🏆', unlocked: isVerified === true || reputation >= 400, progress: Math.min(100, Math.round(reputation / 400 * 100)), label: `${reputation.toLocaleString()}/400 Rep` },
     { id: 'consistent_creator', title: 'Consistent Creator', desc: 'Publish at least three posts', icon: '📅', unlocked: published.length >= 3, progress: Math.min(100, Math.round(published.length / 3 * 100)), label: `${published.length}/3 Posts` },
     { id: 'top_contrib', title: 'Top Contributor', desc: 'Reach 500 reputation points', icon: '⭐', unlocked: reputation >= 500, progress: Math.min(100, Math.round(reputation / 500 * 100)), label: `${reputation.toLocaleString()}/500 Rep` },
+    { id: 'helpful_contributor', title: 'Helpful Contributor', desc: 'Earn 25 helpfulness reputation points from community contributions', icon: '🤝', unlocked: helpfulness >= 25, progress: Math.min(100, Math.round(helpfulness / 25 * 100)), label: `${helpfulness.toLocaleString()}/25 Helpfulness` },
+    { id: 'trusted_guide', title: 'Trusted Guide', desc: 'Earn 100 helpfulness reputation points from community contributions', icon: '🧭', unlocked: helpfulness >= 100, progress: Math.min(100, Math.round(helpfulness / 100 * 100)), label: `${helpfulness.toLocaleString()}/100 Helpfulness` },
   ];
 }
 
