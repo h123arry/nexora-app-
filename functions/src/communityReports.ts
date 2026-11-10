@@ -64,6 +64,9 @@ export async function submitCircleReport(
     if (!target.exists || (targetType === 'member' && target.get('status') !== 'active')) {
       throw new Error('The reported Circle content is unavailable.');
     }
+    const contentOwner = targetType === 'member' ? targetId
+      : String(target.get(targetType === 'post' ? 'authorId' : 'senderId') || '');
+    if (contentOwner === reporterUid) throw new Error('You cannot report your own Circle content.');
     if (existing.exists) throw new Error('You have already reported this item.');
     transaction.create(reportRef, {
       id: reportId,
