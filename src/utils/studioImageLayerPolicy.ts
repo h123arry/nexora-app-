@@ -34,3 +34,9 @@ export function isStudioImageLayerVisible(layer: StudioImageLayer, elapsed: numb
   const safeTotal = Math.max(0, Number.isFinite(totalDuration) ? totalDuration : 0);
   return safeElapsed >= layer.start && safeElapsed <= (layer.end > 0 ? layer.end : safeTotal);
 }
+
+export function canAddStudioImageLayer(existing: readonly StudioImageLayer[], image: Blob): boolean {
+  if (!['image/png', 'image/jpeg', 'image/webp'].includes(image.type)) return false;
+  if (image.size <= 0 || image.size > 10 * 1024 * 1024 || existing.length >= 20) return false;
+  return existing.reduce((total, layer) => total + layer.blob.size, 0) + image.size <= 40 * 1024 * 1024;
+}
