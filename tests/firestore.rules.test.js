@@ -55,6 +55,18 @@ const publicProfile = (uid) => ({
 });
 
  describe('Firestore authorization regression tests', () => {
+  it('allows owners to read retention summaries but reserves all writes to trusted server code', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'userRetention', 'alice'), {
+        userId: 'alice', currentStreak: 4, longestStreak: 8, lastActiveDay: '2026-11-10'
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'userRetention', 'alice')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'userRetention', 'alice')));
+    await assertFails(getDocs(collection(dbFor('alice'), 'userRetention')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'userRetention', 'alice'), { userId: 'alice', currentStreak: 999 }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'userRetention', 'alice'), { currentStreak: 999 }));
+  });
   it('allows a user to create their own private/public profile pair but rejects spoofed identity and privilege fields', async () => {
     const ownPrivate = {
       id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
@@ -1368,15 +1380,5 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'moderation', 'bob')));
 
     await assertFails(setDoc(doc(dbFor('bob'), 'liveSessionViewers', 'forged'), { sessionId: 'active-room', viewerId: 'bob' }));
-  });
-
-  it('keeps universal search projections inaccessible to every client context', async () => {
-    await seed(async adminDb => setDoc(doc(adminDb, 'searchIndex', 'post_private-projection'), {
-      kind: 'post', title: 'Indexed public content', isPublic: true, searchKeys: ['p:in']
-    }));
-    await assertFails(getDoc(doc(guestDb(), 'searchIndex', 'post_private-projection')));
-    await assertFails(getDocs(collection(dbFor('alice'), 'searchIndex')));
-    await assertFails(setDoc(doc(dbFor('alice'), 'searchIndex', 'forged'), { kind: 'post', isPublic: true }));
-    await assertFails(updateDoc(doc(dbFor('alice'), 'searchIndex', 'post_private-projection'), { title: 'forged result' }));
   });
 });

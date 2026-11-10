@@ -10,6 +10,7 @@ import { revokeObjectUrl, validateMediaFile } from '../utils/mediaValidation';
 import { uploadMediaFile } from '../services/firebase/storageService';
 import { VoiceEngine } from '../services/voh/voiceEngine';
 import NexoraLoader from './NexoraLoader';
+import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
 
 interface MediaCreationEngineProps {
   currentUser: User;
@@ -39,6 +40,7 @@ interface MediaCreationEngineProps {
   onToggleOffline?: () => void;
   initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null;
   initialTab?: 'feed' | 'story' | 'drafts';
+  initialCaption?: string;
 }
 
 interface SelectedImage {
@@ -61,6 +63,8 @@ interface DraftItem {
   audience: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
   type: string;
   timestamp: string;
+  cloudSynced?: boolean;
+  cloudOnly?: boolean;
 }
 
 function readLocalDrafts(key: string): DraftItem[] {
@@ -120,7 +124,8 @@ export default function MediaCreationEngine({
   isOffline = false,
   onToggleOffline,
   initialMode = null,
-  initialTab = undefined
+  initialTab = undefined,
+  initialCaption = ''
 }: MediaCreationEngineProps) {
   const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
   const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'visitor'}`;
@@ -136,7 +141,7 @@ export default function MediaCreationEngine({
   });
 
   // Form Fields
-  const [caption, setCaption] = useState(() => initialAutosave?.caption || '');
+  const [caption, setCaption] = useState(() => initialAutosave?.caption || initialCaption);
   const [topics, setTopics] = useState(() => initialAutosave?.topics || '');
   const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>(() => 'public');
   const [location, setLocation] = useState(() => initialAutosave?.location || '');
@@ -333,6 +338,36 @@ export default function MediaCreationEngine({
     }, 1000);
     return () => clearTimeout(timer);
   }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur, composerStateOwnerId, currentUser.id]);
+
+  // Restore account-owned text drafts across devices. Media bytes and browser object URLs
+  // intentionally remain on the originating device unless they have a durable HTTPS URL.
+  useEffect(() => {
+    if (!currentUser.id || currentUser.id === 'guest_visitor_id') return;
+    let active = true;
+    getDrafts(currentUser.id, 50).then(records => {
+      if (!active || !Array.isArray(records)) return;
+      const cloudDrafts: DraftItem[] = records.map((record: any) => {
+        const updatedAt = record.updatedAt?.toDate?.() || new Date();
+        return {
+          id: String(record.id),
+          caption: typeof record.caption === 'string' ? record.caption : '',
+          images: [],
+          videoUrl: typeof record.videoUrl === 'string' && /^https:\/\//i.test(record.videoUrl) ? record.videoUrl : undefined,
+          topics: Array.isArray(record.tags) ? record.tags.join(' ') : '',
+          audience: 'public',
+          type: typeof record.type === 'string' ? record.type : 'text',
+          timestamp: updatedAt.toISOString(),
+          cloudSynced: true,
+          cloudOnly: true,
+        };
+      });
+      setDraftsList(previous => {
+        const existing = new Set(previous.map(item => item.id));
+        return [...previous, ...cloudDrafts.filter(item => !existing.has(item.id))].slice(0, 50);
+      });
+    }).catch(error => console.warn('[Composer] Cloud drafts could not be restored.', error));
+    return () => { active = false; };
+  }, [currentUser.id]);
 
   // Camera preview management
   useEffect(() => {
@@ -634,7 +669,7 @@ export default function MediaCreationEngine({
   };
 
   // Save Draft
-  const saveAsDraftLocally = () => {
+  const saveAsDraftLocally = async () => {
     if (composerStateOwnerId !== currentUser.id) return;
     const draft: DraftItem = {
       id: `draft-${Date.now()}`,
@@ -648,10 +683,24 @@ export default function MediaCreationEngine({
       type: activeMode || 'text',
       timestamp: new Date().toLocaleDateString()
     };
+    let cloudSynced = false;
+    if (currentUser.id && currentUser.id !== 'guest_visitor_id' && navigator.onLine) {
+      try {
+        const durableVideoUrl = [videoFileUrl, recordedVideoUrl, voiceFileUrl].find(value => typeof value === 'string' && /^https:\/\//i.test(value)) || '';
+        const saved = await saveDraft(currentUser.id, caption, durableVideoUrl, activeMode === 'video' || activeMode === 'reel' ? 'video' : activeMode === 'photo' || activeMode === 'carousel' ? 'image' : 'text', topics.split(/[ ,]+/).filter(Boolean));
+        if (saved?.id) {
+          draft.id = saved.id;
+          draft.cloudSynced = true;
+          cloudSynced = true;
+        }
+      } catch (error) {
+        console.warn('[Composer] Draft remains local because cloud sync failed.', error);
+      }
+    }
     setDraftsList(prev => [draft, ...prev]);
-    localStorage.removeItem('nexora_creation_autosave_v1');
+    localStorage.removeItem(autosaveKey);
     resetStates();
-    window.dispatchEvent(new CustomEvent('toast', { detail: '💾 Draft saved on this account’s device. Media drafts remain device-local.' }));
+    window.dispatchEvent(new CustomEvent('toast', { detail: cloudSynced ? 'Draft saved to your account. Browser-only media stays on this device.' : 'Draft saved on this device. Sign in and reconnect to sync text drafts across devices.' }));
   };
 
   const handleSelectDraft = (draft: DraftItem) => {
@@ -666,6 +715,9 @@ export default function MediaCreationEngine({
     if (draft.voiceUrl) {
       setVoiceFileUrl(draft.voiceUrl);
       setVoiceTranscript(draft.transcript || '');
+    }
+    if (draft.cloudSynced && currentUser.id !== 'guest_visitor_id') {
+      deleteDraft(draft.id, currentUser.id).catch(error => console.warn('[Composer] Restored draft could not be removed from cloud.', error));
     }
     setDraftsList(prev => prev.filter(d => d.id !== draft.id));
     setCurrentStep(2);
@@ -1119,7 +1171,7 @@ export default function MediaCreationEngine({
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[9px] font-mono text-violet-400 uppercase bg-violet-950/25 px-2 py-0.5 rounded border border-violet-800/20">{d.type}</span>
                         <button 
-                          onClick={(e) => { e.stopPropagation(); setDraftsList(prev => prev.filter(item => item.id !== d.id)); }}
+                          onClick={(e) => { e.stopPropagation(); if (d.cloudSynced && currentUser.id !== 'guest_visitor_id') deleteDraft(d.id, currentUser.id).catch(error => console.warn('[Composer] Draft delete failed.', error)); setDraftsList(prev => prev.filter(item => item.id !== d.id)); }}
                           className="p-1 hover:bg-rose-900/10 text-rose-400 rounded transition-colors"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

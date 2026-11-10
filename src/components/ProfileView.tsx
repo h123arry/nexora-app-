@@ -1085,7 +1085,7 @@ export default function ProfileView({
       <div className="w-full max-w-4xl mx-auto px-2.5 sm:px-4 md:px-6 pt-0 sm:pt-0.5 pb-0.5 text-left">
         
           {/* Profile Completion Prompts */}
-          {isOwnProfile && (!currentUser.name || currentUser.name === 'New User' || !currentUser.username || !currentUser.bio || !currentUser.avatar || currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')) && (
+          {isOwnProfile && (
             <div className="mb-4 p-4 bg-violet-950/40 border border-white/10 rounded-2xl space-y-2.5">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-mono font-bold text-violet-300 uppercase tracking-wider">✨ Profile Setup & Completion</span>
@@ -1097,6 +1097,17 @@ export default function ProfileView({
                     currentUser.avatar && !currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')
                   ].filter(Boolean).length}/4 completed
                 </span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-600 to-purple-400 transition-[width] duration-500"
+                  style={{ width: `${([
+                    currentUser.name && currentUser.name !== 'New User',
+                    currentUser.username,
+                    currentUser.bio,
+                    currentUser.avatar && !currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')
+                  ].filter(Boolean).length / 4) * 100}%` }}
+                />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 {(!currentUser.avatar || currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')) && (
