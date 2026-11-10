@@ -41,7 +41,11 @@ describe('trusted Circle invitations', () => {
 
   it('denies banned users and rejects revoked invitations', async () => {
     const invite = await createCircleInvite(db, 'alice', 'invite-test-circle', 1, 5);
+    await circle.collection('bans').doc('eve').set({
+      userId: 'eve', bannedBy: 'alice', previousRole: 'member', reason: 'Repeated abuse', createdAt: new Date(),
+    });
     await assert.rejects(redeemCircleInvite(db, 'mallory', invite.token), /cannot join/);
+    await assert.rejects(redeemCircleInvite(db, 'eve', invite.token), /cannot join/);
     await revokeCircleInvite(db, 'alice', invite.token);
     await assert.rejects(redeemCircleInvite(db, 'dave', invite.token), /Invalid or expired/);
   });
