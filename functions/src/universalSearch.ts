@@ -53,7 +53,7 @@ function publicRecord(kind: SearchKind, id: string, path: string, data: Record<s
   const tags = Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 24) : [];
   const ownerId = safeString(data.userId || data.authorId || data.ownerId || data.hostId || data.createdBy, 150);
   const createdAt = asDate(data.timestamp || data.createdAt || data.startedAt || data.updatedAt);
-  const subtitle = safeString(data.username || data.category || data.hostName || data.authorUsername || data.location, 120);
+  const subtitle = safeString(data.username || data.category || data.hostName || data.authorUsername || (kind === 'event' ? data.location : ''), 120);
   const image = safeString(data.avatar || data.authorAvatar || data.thumbnailUrl || data.coverImage || data.bannerImage, 1200);
   const searchText = [title, body, subtitle, safeString(data.username, 80), safeString(data.category, 80), ...tags].join(' ');
   return {
@@ -80,10 +80,10 @@ export async function syncUniversalSearchRecord(
     (kind === 'person' && data.isBanned !== true && data.isSuspended !== true && data.isSeedProfile !== true) ||
     (kind === 'post' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
     (kind === 'video' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
-    (kind === 'page' && status !== 'suspended' && status !== 'deleted') ||
-    (kind === 'circle' && data.isPrivate !== true && data.type !== 'private' && status !== 'suspended' && status !== 'deleted') ||
+    (kind === 'page' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
+    (kind === 'circle' && data.isPrivate !== true && data.type !== 'private' && data.privacy !== 'private' && data.visibility !== 'private' && status !== 'suspended' && status !== 'deleted') ||
     (kind === 'live' && status === 'live') ||
-    (kind === 'event' && status === 'scheduled' && parent?.isPrivate !== true && parent?.type !== 'private') ||
+    (kind === 'event' && status === 'scheduled' && parent?.isPrivate !== true && parent?.type !== 'private' && parent?.privacy !== 'private' && parent?.visibility !== 'private') ||
     (kind === 'service' && status === 'active' && parent?.category === 'Business') ||
     (kind === 'update' && status !== 'deleted' && parent?.status !== 'suspended');
   if (!isEligible) { await ref.delete().catch(() => undefined); return; }
@@ -183,7 +183,7 @@ export async function searchNexoraContent(
   for (const candidate of candidates) {
     const data = candidate.data();
     const ownerId = String(data.ownerId || '');
-    if (ownerId && blocked.has(ownerId)) continue;
+    if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) continue;
     if (ownerId) {
       const [ownerSettings, follow] = await Promise.all([
         db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
