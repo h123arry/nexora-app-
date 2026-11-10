@@ -19,6 +19,7 @@ before(async () => {
   await db.doc('users/creator-two').set({ username: 'creator_two', name: 'Creator Two' });
   await db.doc('users/blocked-user/settings/preferences').set({ privacy: { blockedUserIds: ['viewer'] } });
   await db.doc('users/viewer/settings/preferences').set({ privacy: { blockedUserIds: [] }, messaging: { blockedUserIds: [] } });
+  await db.doc('communities/search-circle').set({ id:'search-circle', type:'public', name:'Nexora Public Circle', description:'Public discovery space', bannedUsers:[] });
   await db.doc('posts/public-video').set({ id:'public-video', userId:'public-user', content:'Nexora video discovery', audience:'public', mediaType:'video', timestamp:new Date(), tags:['nexora','design'], likes:24 });
   await db.doc('posts/private-post').set({ id:'private-post', userId:'private-user', content:'Nexora private content', audience:'public', timestamp:new Date(), tags:['nexora'] });
   await db.doc('posts/blocked-post').set({ id:'blocked-post', userId:'blocked-user', content:'Nexora blocked content', audience:'public', timestamp:new Date(), tags:['nexora'] });
@@ -32,6 +33,7 @@ before(async () => {
   await syncUniversalSearchRecord(db,'video','public-video','posts/public-video',(await db.doc('posts/public-video').get()).data()!);
   await syncUniversalSearchRecord(db,'post','private-post','posts/private-post',(await db.doc('posts/private-post').get()).data()!);
   await syncUniversalSearchRecord(db,'post','blocked-post','posts/blocked-post',(await db.doc('posts/blocked-post').get()).data()!);
+  await syncUniversalSearchRecord(db,'circle','search-circle','communities/search-circle',(await db.doc('communities/search-circle').get()).data()!);
 });
 after(async () => {
   for (const [kind, path] of [['person','users/public-user'],['person','users/private-user'],['person','users/blocked-user'],['video','posts/public-video'],['post','posts/private-post'],['post','posts/blocked-post']]) {
@@ -47,6 +49,8 @@ after(async () => {
   for (const id of ['trend-a','trend-b','private-trend-a','private-trend-b']) await db.doc('posts/' + id).delete().catch(() => undefined);
   await db.recursiveDelete(db.doc('users/creator-two')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/public-user')).catch(() => undefined);
+  await db.doc('searchIndex/circle_' + createHash('sha256').update('communities/search-circle').digest('hex')).delete().catch(() => undefined);
+  await db.doc('communities/search-circle').delete().catch(() => undefined);
   await deleteApp(app);
 });
 describe('NEXORA universal search', () => {
@@ -55,6 +59,13 @@ describe('NEXORA universal search', () => {
     assert.ok(result.results.some(hit => hit.kind === 'person' && hit.targetId === 'public-user'));
     assert.ok(result.results.some(hit => hit.kind === 'video' && hit.targetId === 'public-video'));
     assert.ok(!result.results.some(hit => hit.targetId === 'private-user' || hit.targetId === 'blocked-user' || hit.targetId === 'private-post' || hit.targetId === 'blocked-post'));
+  });
+  it('rechecks Circle visibility at query time after a Circle becomes private', async () => {
+    const before = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(before.results.some(hit => hit.kind === 'circle' && hit.targetId === 'search-circle'));
+    await db.doc('communities/search-circle').update({ type: 'invite-only' });
+    const afterPrivacyChange = await searchNexoraContent(db,'viewer','nexora');
+    assert.ok(!afterPrivacyChange.results.some(hit => hit.targetId === 'search-circle'));
   });
   it('returns hashtag discoveries from matching public posts', async () => {
     const result = await searchNexoraContent(db,'viewer','nexora');
