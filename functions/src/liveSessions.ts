@@ -3,9 +3,12 @@ import { createHash } from 'node:crypto';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import { defineSecret } from 'firebase-functions/params';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from './liveSessionsPolicy.js';
 
+const liveKitApiKey = defineSecret('LIVEKIT_API_KEY');
+const liveKitApiSecret = defineSecret('LIVEKIT_API_SECRET');
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
 
@@ -53,7 +56,7 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
   }
 });
 
-export const endLiveSession = onCall({ maxInstances: 10 }, async request => {
+export const endLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey, liveKitApiSecret] }, async request => {
   const hostId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const ref = sessions.doc(sessionId);
@@ -312,7 +315,7 @@ async function endExpiredHostSessions() {
   }
 }
 export const reconcileLiveSessionViewers = onSchedule({
-  schedule: 'every 1 minutes', timeZone: 'Africa/Lagos', maxInstances: 1,
+  schedule: 'every 1 minutes', timeZone: 'Africa/Lagos', maxInstances: 1, secrets: [liveKitApiKey, liveKitApiSecret],
 }, async () => {
   await endExpiredHostSessions();
   const now = Timestamp.now();
