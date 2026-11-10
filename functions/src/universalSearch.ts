@@ -245,23 +245,41 @@ export async function searchNexoraContent(
 
 export async function getNexoraTrending(db: Firestore): Promise<Array<{tag:string;score:number;postCount:number;creatorCount:number}>> {
   const posts = await db.collection('posts').where('audience','==','public').orderBy('timestamp','desc').limit(250).get();
-  const groups = new Map<string,{score:number;posts:Set<string>;creators:Set<string>}>();
+  const creatorIds = [...new Set(posts.docs.map(post => String(post.get('userId') || post.get('authorId') || '')).filter(Boolean))];
+  const [privacySnapshots, statusSnapshots] = await Promise.all([
+    Promise.all(creatorIds.map(id => db.collection('users').doc(id).collection('settings').doc('preferences').get())),
+    Promise.all(creatorIds.map(id => db.collection('accountStatus').doc(id).get())),
+  ]);
+  const hiddenCreators = new Set<string>();
+  creatorIds.forEach((id,index) => {
+    const privacy = privacySnapshots[index].data() || {};
+    const status = statusSnapshots[index].data() || {};
+    if (privacy?.privacy?.isPrivate === true || status.suspended === true || status.banned === true) hiddenCreators.add(id);
+  });
+  const groups = new Map<string,{posts:Set<string>;creators:Map<string,number>}>();
   const now = Date.now();
   for (const post of posts.docs) {
     const data = post.data();
-    const ageHours = Math.max(0,(now-asDate(data.timestamp).getTime())/3600000);
-    const tags = Array.isArray(data.tags) ? data.tags : [];
     const creator = String(data.userId || data.authorId || '');
+    if (!creator || hiddenCreators.has(creator)) continue;
+    const ageHours = Math.max(0,(now-asDate(data.timestamp).getTime())/3600000);
+    const tags = Array.isArray(data.tags) ? [...new Set(data.tags)] : [];
     for (const raw of tags) {
-      const tag = normalizeSearchText(String(raw).replace(/^#/,'')).replace(/\s+/g,' ').slice(0,40);
+      if (typeof raw !== 'string') continue;
+      const tag = normalizeSearchText(raw.replace(/^#/,'')).replace(/\\s+/g,' ').slice(0,40);
       if (!tag || tag.length < 2) continue;
-      const entry = groups.get(tag) || {score:0,posts:new Set<string>(),creators:new Set<string>()};
-      entry.posts.add(post.id); if (creator) entry.creators.add(creator);
-      entry.score += Math.min(30,Math.log1p(Number(data.likes)||0)*2 + Math.log1p(Number(data.commentsCount)||0)*3) * Math.pow(0.5,ageHours/12);
+      const entry = groups.get(tag) || {posts:new Set<string>(),creators:new Map<string,number>()};
+      entry.posts.add(post.id);
+      const contribution = Math.min(30,Math.log1p(Number(data.likes)||0)*2 + Math.log1p(Number(data.commentsCount)||0)*3)
+        * Math.pow(0.5,ageHours/12);
+      entry.creators.set(creator, Math.min(18, (entry.creators.get(creator) || 0) + contribution));
       groups.set(tag,entry);
     }
   }
   return [...groups.entries()].filter(([,entry])=>entry.posts.size>=2 && entry.creators.size>=2)
-    .map(([tag,entry])=>({tag,score:Math.round(entry.score*100)/100,postCount:entry.posts.size,creatorCount:entry.creators.size}))
-    .sort((a,b)=>b.score-a.score).slice(0,20);
+    .map(([tag,entry])=>({
+      tag, score:Math.round([...entry.creators.values()].reduce((sum,value)=>sum+value,0)*100)/100,
+      postCount:entry.posts.size, creatorCount:entry.creators.size,
+    }))
+    .sort((a,b)=>b.score-a.score || b.creatorCount-a.creatorCount || a.tag.localeCompare(b.tag)).slice(0,20);
 }
