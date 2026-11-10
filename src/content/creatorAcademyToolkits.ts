@@ -66,5 +66,36 @@ export const CREATOR_ACADEMY_TOOLKITS: CreatorTemplate[] = [
     { id: 'result', label: 'Result and evidence', prompt: 'Use only outcomes you can substantiate. Include timeframe and source.', multiline: true },
     { id: 'permission', label: 'Permission and privacy check', prompt: 'Confirm what can be shared and remove confidential information.' },
   ]},
+  { id: 'production-shotlist', title: 'Video production shot list', category: 'Production', description: 'Turn a story outline into a practical capture plan for a small production.', outcome: 'A shot-by-shot plan with audio, consent and continuity checks.', fields: [
+    { id: 'story', label: 'Story beats', prompt: 'List the beginning, progression and payoff the viewer needs.', multiline: true },
+    { id: 'shots', label: 'Required shots', prompt: 'Describe framing, subject, movement and purpose for each shot.', multiline: true },
+    { id: 'location', label: 'Location and setup', prompt: 'Record location, available light, sound risks and access needs.', multiline: true },
+    { id: 'audio', label: 'Audio plan', prompt: 'Choose microphone placement, room checks and backup recording.', multiline: true },
+    { id: 'permissions', label: 'Consent and permissions', prompt: 'List people, locations, music and assets that need permission.', multiline: true },
+    { id: 'review', label: 'Capture review', prompt: 'Define how you will check coverage before leaving the location.', multiline: true },
+  ]},
+  { id: 'creator-budget', title: 'Creator monthly budget', category: 'Finance', description: 'Estimate income, costs, reserves and obligations without confusing revenue with cash.', outcome: 'A monthly operating view with conservative cash-flow assumptions.', fields: [
+    { id: 'income', label: 'Income by source', prompt: 'Separate confirmed receipts, pending balances and estimates.', multiline: true },
+    { id: 'fixed-costs', label: 'Recurring costs', prompt: 'List software, subscriptions, data, equipment and regular support.', multiline: true },
+    { id: 'variable-costs', label: 'Variable costs', prompt: 'Record production, transport, payment fees, refunds and commissions.', multiline: true },
+    { id: 'reserve', label: 'Reserve target', prompt: 'Set a practical reserve for taxes, refunds and essential operations.', multiline: true },
+    { id: 'commitments', label: 'Upcoming commitments', prompt: 'List due dates and amounts for the next 90 days.', multiline: true },
+    { id: 'review', label: 'Monthly reconciliation', prompt: 'Describe how statements, receipts and bank deposits will be checked.', multiline: true },
+  ]},
+  { id: 'rights-register', title: 'Creative rights register', category: 'Legal practice', description: 'Track permissions and licence terms for third-party material and collaborators.', outcome: 'An asset register that helps prevent avoidable rights and consent problems.', fields: [
+    { id: 'asset', label: 'Asset and owner', prompt: 'Identify the work, creator or rights holder.', multiline: true },
+    { id: 'source', label: 'Source and proof', prompt: 'Record where the asset came from and where permission is documented.', multiline: true },
+    { id: 'scope', label: 'Permitted use', prompt: 'Record platform, territory, duration, commercial use and editing limits.', multiline: true },
+    { id: 'people', label: 'People and consent', prompt: 'List appearance, voice, location or story permissions needed.', multiline: true },
+    { id: 'expiry', label: 'Expiry and restrictions', prompt: 'Record renewal dates, attribution and any use restrictions.', multiline: true },
+    { id: 'decision', label: 'Publish decision', prompt: 'Mark approved, needs clarification or do not use, with the reason.', multiline: true },
+  ]},
+  { id: 'accessibility-audit', title: 'Content accessibility audit', category: 'Accessibility', description: 'Review a post for caption quality, contrast, readability and alternative ways to understand it.', outcome: 'A practical accessibility checklist and a prioritised improvement plan.', fields: [
+    { id: 'captions', label: 'Caption accuracy', prompt: 'Check names, timing, punctuation, speakers and meaningful sounds.', multiline: true },
+    { id: 'transcript', label: 'Transcript and description', prompt: 'Record transcript availability and essential visual information.', multiline: true },
+    { id: 'contrast', label: 'Contrast and text', prompt: 'Check text size, contrast, background complexity and reading time.', multiline: true },
+    { id: 'motion', label: 'Motion and flashing', prompt: 'Identify rapid flashing, unnecessary animation or motion barriers.', multiline: true },
+    { id: 'participation', label: 'Participation options', prompt: 'Provide alternatives to public comments or audio-only participation.', multiline: true },
+    { id: 'fixes', label: 'Priority fixes', prompt: 'List the changes, owner and recheck date.', multiline: true },
+  ]},
 ];
-

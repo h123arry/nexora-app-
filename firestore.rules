@@ -766,7 +766,8 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.templateId in [
             'content-brief', 'publishing-plan', 'audience-interview', 'partnership-proposal',
-            'live-run-sheet', 'community-charter', 'content-experiment', 'portfolio-case-study'
+            'live-run-sheet', 'community-charter', 'content-experiment', 'portfolio-case-study',
+            'production-shotlist', 'creator-budget', 'rights-register', 'accessibility-audit'
           ]
           && workbookId == request.auth.uid + '_' + request.resource.data.templateId
           && request.resource.data.content is string

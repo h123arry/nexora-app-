@@ -150,4 +150,76 @@ export const CREATOR_ACADEMY_LESSONS: Record<string, AcademyLessonEnrichment> = 
     exercise: "Write a creator wellbeing agreement with working hours, notification windows, private topics, weekly rest time and one person you can contact when pressure becomes difficult.",
     reflection: "What boundary would make your creative work healthier immediately?"
   }
+  'shot-planning': {
+    body: "Video is easier to produce when the story is planned before the camera is opened. Start with the audience outcome and write the sequence of information or emotion the viewer needs. Convert each beat into a shot: a wide view for context, a medium view for action, a close view for detail, and supporting footage that proves or illustrates the point. Create a shot list with location, subject, framing, movement, audio and permissions. Check continuity and obtain consent before filming people or private spaces. A plan should remain flexible, but it prevents missing the detail that makes the story understandable.",
+    objectives: ["Identify the audience outcome and story beats.", "Translate story beats into a practical shot list.", "Check consent, continuity and production constraints."],
+    exercise: "Draft a 45-second sequence with an opening image, three supporting shots and a closing payoff. For every shot, write what information it adds and how you will capture it. Remove any shot that is decorative but does not help the story.",
+    reflection: "Which image would make the story clearer if the viewer watched with the sound off?"
+  },
+  'sound-lighting': {
+    body: "Clear sound is often more important to comprehension than expensive camera equipment. Record a short test in the actual environment and listen with headphones for echo, traffic, wind, clipping and background music. Move the microphone closer before increasing gain. Use available light deliberately: face a soft source where possible, avoid a bright window directly behind the subject, and check that important details remain visible. Lock exposure and focus when automatic changes would distract. Keep a backup recording when the interview or event cannot easily be repeated. Respect quiet spaces and never record private conversations without permission.",
+    objectives: ["Recognise common recording problems before a shoot.", "Improve microphone placement and basic lighting.", "Create a repeatable sound and image check."],
+    exercise: "Record a 20-second test in two locations. Compare echo, background noise, face visibility and exposure. Choose the better setup and write a five-point pre-recording checklist.",
+    reflection: "Can every important sentence be understood on an ordinary phone speaker?"
+  },
+  'editing-workflow': {
+    body: "Editing helps the audience follow the idea; it is not an invitation to add effects to every second. Build a rough cut around the central message, remove repeated explanations and keep transitions that show a meaningful change in time, place or perspective. Use music only when you have the rights and it supports rather than competes with speech. Check titles, names, facts and captions before export. Choose resolution and bitrate that fit the platform and source footage without needlessly enlarging files. Watch the final export from beginning to end, including opening, ending and audio levels, before publishing.",
+    objectives: ["Build a rough cut around a clear message.", "Use pacing, transitions and sound intentionally.", "Review the exported file before publishing."],
+    exercise: "Edit a one-minute sequence in three passes: story structure, pacing and accessibility. Record the changes made in each pass and export a review copy for a full watch-through.",
+    reflection: "What can be removed without reducing the audience's understanding?"
+  },
+  'income-costs': {
+    body: "Creator revenue is not the same as profit. Record each source separately, including platform payouts, memberships, gifts, sponsorships, services, product sales and licensing. Then record direct costs such as equipment, software, data, transport, production help, payment fees, refunds and promotion. Include irregular costs and the value of your own time when comparing offers. Do not treat pending balances as cash received, and do not assume a displayed gross figure is withdrawable. Keep personal and business spending distinguishable where practical. A simple, consistent record is more useful than an elaborate spreadsheet that is never updated.",
+    objectives: ["Distinguish gross revenue, net income and cash received.", "Identify direct and recurring creator costs.", "Compare offers using realistic contribution margins."],
+    exercise: "Create a monthly income-and-cost table with three revenue sources and five expense categories. Mark pending amounts separately from money actually received, then estimate the net contribution of each activity.",
+    reflection: "Which revenue stream looks attractive before costs but less useful after fees and delivery time?"
+  },
+  'cash-flow': {
+    body: "Cash flow describes when money enters and leaves, not just whether a business is profitable on paper. Creator income can be irregular, while subscriptions, production costs and contractor payments recur. Forecast expected receipts conservatively and separate confirmed funds from estimates. Build a reserve for essential costs and obligations before committing to upgrades or new projects. Set aside amounts for taxes and refunds according to local professional guidance. Review upcoming commitments weekly and avoid spending money that is still subject to platform review, chargebacks or settlement delays. A small, updated forecast can prevent a timing gap from becoming a crisis.",
+    objectives: ["Explain the difference between profit and cash flow.", "Forecast near-term receipts and obligations conservatively.", "Plan reserves for refunds, taxes and essential costs."],
+    exercise: "Prepare a 90-day cash-flow forecast with confirmed, probable and speculative income clearly separated. Add recurring costs, one-off commitments and a reserve target, then identify the month with the tightest balance.",
+    reflection: "What would happen if your largest expected payment arrived thirty days late?"
+  },
+  'records-tax': {
+    body: "Good records help creators understand their work and prepare accurate reports. Save invoices, receipts, platform statements, contracts, payment confirmations and evidence of refunds in a secure, organised system. Record date, counterparty, purpose, amount, currency and status for each transaction. Reconcile platform statements with actual bank receipts because fees, withholding and settlement timing may differ. Keep copies of important records and limit access to people who need them. Tax rules vary by country and business structure; use official local guidance or a qualified adviser for filing decisions rather than relying on generic social-media advice.",
+    objectives: ["List the records needed to explain creator transactions.", "Reconcile platform statements with actual receipts.", "Recognise when local tax advice is required."],
+    exercise: "Design a monthly close checklist covering income statements, receipts, fees, refunds, bank deposits and secure backups. Use sample figures only and note which tax questions require local advice.",
+    reflection: "Could another authorised person understand how you arrived at the totals?"
+  },
+  'ownership-permissions': {
+    body: "Original work can involve several rights at once: the recording, script, photograph, performance, logo, location and a person's likeness. Owning one element does not automatically give permission to reuse every other element. Agree who owns new material, what each collaborator may publish, how credits work and whether the work can be edited or licensed elsewhere. Obtain clear consent before using someone's image, voice or private story, especially in commercial content. Keep written permissions and respect limits on duration, territory, platforms and purpose. When the rights position is unclear, pause publication until it is resolved.",
+    objectives: ["Identify the different rights that may exist in one post.", "Obtain informed permission for people and third-party material.", "Keep a usable record of licences and consent."],
+    exercise: "Choose a recent piece of content and list every person, image, sound, location and brand appearing in it. For each, record the owner, permission source, permitted use and any expiry or restriction.",
+    reflection: "What part of this work could you not ethically reuse if a collaborator withdrew permission?"
+  },
+  'music-image-licensing': {
+    body: "A file being easy to download does not mean it is free to use. Music, photographs, illustrations, fonts and stock footage may have licences that limit commercial use, editing, redistribution, attribution or platform placement. Read the licence for the exact asset and save a copy or reference to its terms. Check whether a platform's built-in music permission applies only inside that platform. Do not remove watermarks or assume credit replaces permission. For user-submitted material, ask what rights the person actually controls. If a claim arrives, preserve the notice and respond through the proper rights process rather than re-uploading the same material repeatedly.",
+    objectives: ["Read the scope and restrictions of a media licence.", "Distinguish attribution from permission.", "Keep evidence of rights for published assets."],
+    exercise: "Create an asset register for five pieces of media. Record source, creator, licence, allowed platforms, commercial-use status, attribution and proof of permission. Flag any asset whose terms are unclear.",
+    reflection: "Could you show the permission record for every third-party asset in your next campaign?"
+  },
+  'contracts-deliverables': {
+    body: "A creator agreement should describe the work clearly enough that both sides can tell when it is complete. Define deliverables, formats, deadlines, revision limits, approval process, compensation, payment timing, expenses, cancellation, usage rights, exclusivity and disclosure obligations. Clarify whether a brand can edit or reuse content and whether paid advertising is included. Do not accept vague promises such as exposure in place of clear terms. Keep signed copies and written changes. Contract law differs across jurisdictions, so obtain local legal advice for high-value, exclusive or complex agreements.",
+    objectives: ["Identify core clauses in a creator agreement.", "Define scope, payment and usage rights clearly.", "Recognise when specialist legal advice is appropriate."],
+    exercise: "Review a sample campaign brief and write a list of missing terms. Draft a plain-language scope summary that includes deliverables, revisions, payment dates, usage, disclosure and cancellation.",
+    reflection: "Which vague clause could create the biggest disagreement after delivery?"
+  },
+  'captions-transcripts': {
+    body: "Captions make spoken content easier to follow for people who are deaf or hard of hearing, people watching without sound and viewers using a second language. Auto-generated captions are a starting point, not a final review. Correct names, numbers, technical terms, speaker changes and punctuation. Include meaningful non-speech audio when it changes meaning, such as [applause] or [alarm]. A transcript should preserve spoken information and identify speakers where useful. Keep captions synchronised, readable and positioned so they do not cover important visual information. Never invent words that were not spoken.",
+    objectives: ["Explain the difference between captions and transcripts.", "Correct auto-caption errors and speaker labels.", "Check timing, readability and meaningful sound cues."],
+    exercise: "Take a short recording and review every caption against the audio. Correct names and numbers, add meaningful sound cues, then test readability on a small phone screen.",
+    reflection: "What information would be lost if someone relied only on your current captions?"
+  },
+  'visual-accessibility': {
+    body: "Accessible visual design uses contrast, readable type, predictable structure and more than colour alone to communicate meaning. Avoid placing small text over busy footage and keep essential information on screen long enough to read. Describe important visual information in narration or a concise description when the audience would otherwise miss it. Avoid rapid flashing and unnecessary motion. Check that controls and text remain usable on a small screen and that the message still makes sense when sound is off. Accessibility improves clarity for everyone, including people with temporary constraints or low-quality connections.",
+    objectives: ["Use contrast and readable type for mobile viewing.", "Describe important visual information when needed.", "Avoid motion and layout choices that block comprehension."],
+    exercise: "Audit one post for text size, contrast, flashing, caption placement and information conveyed only through colour. Revise two issues and ask another person to review the result.",
+    reflection: "Could someone understand the central point if they could not hear the audio or distinguish the colours?"
+  },
+  'inclusive-community': {
+    body: "Inclusive participation is designed into the way a creator invites, moderates and responds to people. Use language that does not assume every viewer shares the same background, ability, resources or experience. Offer more than one way to participate and avoid making public disclosure a condition of belonging. Explain community rules in plain language and apply them consistently. When a person points out a barrier, listen before defending the design. Do not promise that a space is safe for everyone; explain safeguards, limits and reporting options honestly. Inclusion is an ongoing practice of noticing who is missing and reducing avoidable barriers.",
+    objectives: ["Recognise assumptions that can exclude audience members.", "Offer multiple, low-pressure ways to participate.", "Respond constructively to accessibility and inclusion feedback."],
+    exercise: "Review a community prompt, event invitation and moderation rule. Rewrite each to remove unnecessary barriers and add a private route for people who cannot participate publicly.",
+    reflection: "Who might find your current format difficult to access, and what practical alternative can you provide?"
+  },
 };

@@ -11,6 +11,18 @@ const expectedLessonIds = [
   'metrics', 'retention', 'experiments',
   'positioning', 'portfolio', 'reputation',
   'security', 'rights', 'wellbeing',
+  'shot-planning',
+  'sound-lighting',
+  'editing-workflow',
+  'income-costs',
+  'cash-flow',
+  'records-tax',
+  'ownership-permissions',
+  'music-image-licensing',
+  'contracts-deliverables',
+  'captions-transcripts',
+  'visual-accessibility',
+  'inclusive-community',
 ];
 
 describe('NEXORA Creator Academy practical curriculum', () => {
@@ -29,6 +41,6 @@ describe('NEXORA Creator Academy practical curriculum', () => {
   it('does not expose empty or duplicate lesson enrichment records', () => {
     const ids = Object.keys(CREATOR_ACADEMY_LESSONS);
     assert.equal(new Set(ids).size, ids.length);
-    assert.ok(ids.length >= 24);
+    assert.ok(ids.length >= 36);
   });
 });

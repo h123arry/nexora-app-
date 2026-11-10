@@ -137,6 +137,8 @@ describe('NEXORA Institute institution services', () => {
       /unavailable/,
     );
     await completeAcademyLesson(db, 'learner-progress', 'creator-foundations', 'identity');
+    const newTrackProgress = await completeAcademyLesson(db, 'learner-progress', 'video-production', 'shot-planning');
+    assert.equal(newTrackProgress.alreadyCompleted, false);
     await assert.rejects(
       completeAcademyLesson(db, 'learner-progress', 'creator-foundations', 'not-a-lesson'),
       /not part of the selected course/,

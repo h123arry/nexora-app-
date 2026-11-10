@@ -15,6 +15,10 @@ const BUNDLED_ACADEMY_LESSONS: Record<string, readonly string[]> = {
   'creator-analytics': ['metrics', 'retention', 'experiments'],
   'personal-brand': ['positioning', 'portfolio', 'reputation'],
   'creator-safety': ['security', 'rights', 'wellbeing'],
+  'video-production': ["shot-planning", "sound-lighting", "editing-workflow"],
+  'creator-finance': ["income-costs", "cash-flow", "records-tax"],
+  'creative-rights': ["ownership-permissions", "music-image-licensing", "contracts-deliverables"],
+  'inclusive-creation': ["captions-transcripts", "visual-accessibility", "inclusive-community"],
 };
 
 async function instructor(db: Firestore, uid: string, minimum: 'instructor' | 'editor' | 'admin' = 'instructor') {

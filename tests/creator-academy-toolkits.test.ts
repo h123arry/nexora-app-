@@ -5,6 +5,7 @@ import { CREATOR_ACADEMY_TOOLKITS } from '../src/content/creatorAcademyToolkits'
 const approvedTemplateIds = [
   'content-brief', 'publishing-plan', 'audience-interview', 'partnership-proposal',
   'live-run-sheet', 'community-charter', 'content-experiment', 'portfolio-case-study',
+  'production-shotlist', 'creator-budget', 'rights-register', 'accessibility-audit',
 ];
 
 describe('NEXORA Creator Academy workbooks', () => {
