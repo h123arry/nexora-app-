@@ -14,6 +14,8 @@ import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communi
 import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './communityGovernance.js';
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
+import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary } from './referrals.js';
+import { getAuth } from 'firebase-admin/auth';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
@@ -819,6 +821,46 @@ export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, he
 export { getLiveKitToken } from './liveKitTransport.js';
 
 export { startLiveRecording, stopLiveRecording, getLiveReplayPlayback } from './liveReplays.js';
+
+
+export const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create your referral link.');
+  try { return await createReferralCode(adminDb, request.auth.uid); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('not currently available')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'Your referral link could not be created. Please retry.');
+  }
+});
+
+export const claimMyReferral = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to accept a referral.');
+  try { return await claimReferral(adminDb, request.auth.uid, request.data?.code); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid referral') || message.includes('own account')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('reached its limit')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The referral could not be applied. Please retry.');
+  }
+});
+
+export const qualifyMyReferral = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to qualify your referral.');
+  try {
+    const identity = await getAuth().getUser(request.auth.uid);
+    return await qualifyReferral(adminDb, request.auth.uid, identity.emailVerified, request.data?.postId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('verified account') || message.includes('public post')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'Referral qualification could not be completed. Please retry.');
+  }
+});
+
+export const getMyReferralSummary = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view referral activity.');
+  try { return await getReferralSummary(adminDb, request.auth.uid); }
+  catch { throw new HttpsError('unavailable', 'Referral activity is temporarily unavailable.'); }
+});
 
 export const recordDailySession = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to record your NEXORA session.');
