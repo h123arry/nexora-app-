@@ -36,14 +36,14 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Independent soundtrack and voiceover fade-in/fade-out envelopes, with optional automatic music ducking during narration.
 - Pure audio-mix and waveform policies covered by focused unit tests.
 - Decoded voiceover waveform preview and in-editor audio playback for supported recordings.
-- Multi-layer title placement, timing and transform controls, with policy validation tests.
+- Multi-layer title placement, timing, transforms and interpolated fade, zoom, slide-up and pop entrance/exit animation presets, with policy validation tests.
 - Optional fade-through-black scene transitions between clips.
 
 ## Remaining delivery phases
 
 ### Phase 3 · Timeline and motion
 - Independent video, audio and sticker lanes with a shared, seekable playhead.
-- Keyframe interpolation for animated movement, scale and opacity.
+- User-authored keyframes for independent animation of text, sticker and video layers.
 - Cross-dissolve and selected transition presets beyond fade-through-black.
 
 ### Phase 4 · Audio and captions
