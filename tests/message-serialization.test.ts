@@ -60,20 +60,20 @@ describe('message reaction persistence model', () => {
   });
 
   it('toggles only the acting user and preserves every other member reaction', () => {
-    const initial = { bob: ['😂'] };
+    const initial = { charlie: ['😂'] };
     const legacy = [{ emoji: '❤️', userIds: ['alice', 'bob'] }];
     assert.deepEqual(toggleMessageReaction(initial, legacy, 'alice', '❤️'), {
-      bob: ['😂'], alice: [],
+      charlie: ['😂'], alice: [],
     });
     assert.deepEqual(aggregateMessageReactions(
       toggleMessageReaction(initial, legacy, 'alice', '❤️'),
       legacy,
     ), [
       { emoji: '❤️', userIds: ['bob'] },
-      { emoji: '😂', userIds: ['bob'] },
+      { emoji: '😂', userIds: ['charlie'] },
     ]);
     assert.deepEqual(toggleMessageReaction(initial, undefined, 'alice', '🔥'), {
-      bob: ['😂'], alice: ['🔥'],
+      charlie: ['😂'], alice: ['🔥'],
     });
   });
 });
