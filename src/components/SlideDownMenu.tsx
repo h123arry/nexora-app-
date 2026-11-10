@@ -14,6 +14,7 @@ import {
   BarChart2, 
   Wallet, 
   Gift, 
+  Orbit,
   Sliders, 
   X, 
   ChevronRight 
@@ -88,6 +89,15 @@ export default function SlideDownMenu({
       tab: 'communities',
       badge: 0,
       iconColor: 'text-purple-400 bg-purple-500/10'
+    },
+    {
+      id: 'worldweave',
+      label: 'WorldWeave',
+      desc: 'Shared experiences, many perspectives',
+      icon: Orbit,
+      tab: 'worldweave',
+      badge: 0,
+      iconColor: 'text-violet-300 bg-violet-500/10'
     },
     {
       id: 'circles',
