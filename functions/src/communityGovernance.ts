@@ -76,8 +76,17 @@ export async function setCircleMemberRole(
 }
 
 
-const MODERATION_ACTIONS = new Set(['remove', 'ban', 'unban']);
+const MODERATION_ACTIONS = new Set(['remove', 'ban', 'unban', 'mute', 'unmute']);
 const ROLE_POWER: Record<string, number> = { owner: 4, admin: 3, moderator: 2, member: 1 };
+const MAX_MUTE_MINUTES = 7 * 24 * 60;
+
+export function isCircleMuteActive(data: Record<string, unknown> | undefined, now = new Date()): boolean {
+  if (!data) return false;
+  const expiresAt = (data.expiresAt as { toDate?: () => Date } | Date | undefined);
+  const expiry = expiresAt instanceof Date ? expiresAt : expiresAt?.toDate?.();
+  // A malformed private mute record fails closed instead of silently restoring posting access.
+  return !(expiry instanceof Date) || expiry.getTime() > now.getTime();
+}
 
 export async function moderateCircleMember(
   db: Firestore,
@@ -86,25 +95,29 @@ export async function moderateCircleMember(
   targetUid: string,
   action: string,
   reason: string,
+  durationMinutes = 60,
 ): Promise<{ userId: string; action: string; status: string }> {
   if (!actorUid || !validId(communityId) || !validId(targetUid) || actorUid === targetUid
     || !MODERATION_ACTIONS.has(action) || typeof reason !== 'string'
-    || reason.trim().length < 3 || reason.trim().length > REASON_LIMIT) {
-    throw new Error('A valid member, moderation action, and reason are required.');
+    || reason.trim().length < 3 || reason.trim().length > REASON_LIMIT
+    || (action === 'mute' && (!Number.isInteger(durationMinutes) || durationMinutes < 1 || durationMinutes > MAX_MUTE_MINUTES))) {
+    throw new Error('A valid member, moderation action, reason, and mute duration are required.');
   }
 
   const communityRef = db.collection('communities').doc(communityId);
   const actorRef = communityRef.collection('members').doc(actorUid);
   const targetRef = communityRef.collection('members').doc(targetUid);
   const banRef = communityRef.collection('bans').doc(targetUid);
+  const muteRef = communityRef.collection('mutes').doc(targetUid);
   const auditRef = communityRef.collection('auditEvents').doc(randomUUID());
 
   const status = await db.runTransaction(async transaction => {
-    const [community, actor, target, ban] = await Promise.all([
+    const [community, actor, target, ban, mute] = await Promise.all([
       transaction.get(communityRef),
       transaction.get(actorRef),
       transaction.get(targetRef),
       transaction.get(banRef),
+      transaction.get(muteRef),
     ]);
     if (!community.exists || !actor.exists || actor.get('status') !== 'active'
       || !['owner', 'admin', 'moderator'].includes(String(actor.get('role') || ''))) {
@@ -114,25 +127,51 @@ export async function moderateCircleMember(
     const actorRole = String(actor.get('role'));
     const targetRole = action === 'unban'
       ? String(ban.get('previousRole') || 'member')
-      : String(target.get('role') || 'member');
+      : action === 'unmute'
+        ? String(mute.get('previousRole') || 'member')
+        : String(target.get('role') || 'member');
     if (targetRole === 'owner' || (ROLE_POWER[targetRole] || 0) >= ROLE_POWER[actorRole]) {
       throw new Error('You cannot moderate a member with an equal or higher role.');
     }
 
-    if (action === 'unban') {
-      if (!ban.exists) throw new Error('This member is not banned from the Circle.');
-      transaction.delete(banRef);
+    if (action === 'unban' || action === 'unmute') {
+      const restriction = action === 'unban' ? ban : mute;
+      if (!restriction.exists || (action === 'unmute' && !isCircleMuteActive(restriction.data(), new Date()))) {
+        throw new Error(action === 'unban' ? 'This member is not banned from the Circle.' : 'This member does not have an active Circle mute.');
+      }
+      transaction.delete(action === 'unban' ? banRef : muteRef);
       transaction.create(auditRef, {
-        id: auditRef.id, actorUid, targetUid, action: 'member_unbanned',
+        id: auditRef.id, actorUid, targetUid,
+        action: action === 'unban' ? 'member_unbanned' : 'member_unmuted',
         previousRole: targetRole, reason: reason.trim(), createdAt: new Date(),
       });
-      return 'unbanned';
+      return action === 'unban' ? 'unbanned' : 'unmuted';
     }
 
     if (!target.exists || target.get('status') !== 'active') {
       throw new Error('The target must be an active Circle member.');
     }
     if (ban.exists) throw new Error('This member is already banned from the Circle.');
+
+    if (action === 'mute') {
+      if (isCircleMuteActive(mute.data(), new Date())) throw new Error('This member already has an active Circle mute.');
+      const now = new Date();
+      const expiresAt = new Date(now.getTime() + durationMinutes * 60_000);
+      transaction.set(muteRef, {
+        userId: targetUid,
+        mutedBy: actorUid,
+        mutedByRole: actorRole,
+        previousRole: targetRole,
+        reason: reason.trim(),
+        createdAt: now,
+        expiresAt,
+      });
+      transaction.create(auditRef, {
+        id: auditRef.id, actorUid, targetUid, action: 'member_muted',
+        previousRole: targetRole, durationMinutes, expiresAt, reason: reason.trim(), createdAt: now,
+      });
+      return 'muted';
+    }
 
     if (action === 'ban') {
       transaction.create(banRef, {
@@ -144,6 +183,7 @@ export async function moderateCircleMember(
         createdAt: new Date(),
       });
     }
+    if (mute.exists) transaction.delete(muteRef);
     const admins = Array.isArray(community.get('admins')) ? community.get('admins') as string[] : [];
     const moderators = Array.isArray(community.get('moderators')) ? community.get('moderators') as string[] : [];
     transaction.update(communityRef, {
