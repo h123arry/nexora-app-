@@ -1,4 +1,4 @@
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
@@ -18,6 +18,7 @@ import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookin
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
 import { searchPublicDirectory } from './directorySearch.js';
+import { syncUniversalSearchRecord, searchNexoraContent, getNexoraTrending } from './universalSearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
@@ -56,6 +57,76 @@ const firestoreDatabaseId = resolveFirestoreDatabaseId();
 const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 
 export const deliverNotificationPush = createNotificationPushDelivery(adminDb, adminApp);
+
+const syncSearch = (kind: Parameters<typeof syncUniversalSearchRecord>[1], id: string, path: string, data: Record<string, unknown> | null, parent?: Record<string, unknown>) =>
+  syncUniversalSearchRecord(adminDb, kind, id, path, data, parent);
+
+export const indexPublicPostForSearch = onDocumentWritten('posts/{postId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const id = event.params.postId;
+  const kind = data && (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
+  await syncSearch(kind, id, 'posts/' + id, data);
+});
+export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  await syncSearch('person', event.params.userId, 'users/' + event.params.userId, data);
+});
+export const indexPageForSearch = onDocumentWritten('pages/{pageId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  await syncSearch('page', event.params.pageId, 'pages/' + event.params.pageId, data);
+});
+export const indexCircleForSearch = onDocumentWritten('communities/{communityId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  await syncSearch('circle', event.params.communityId, 'communities/' + event.params.communityId, data);
+});
+export const indexLiveRoomForSearch = onDocumentWritten('liveSessions/{sessionId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  await syncSearch('live', event.params.sessionId, 'liveSessions/' + event.params.sessionId, data);
+});
+export const indexCirclePostForSearch = onDocumentWritten('communities/{communityId}/posts/{postId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('post', event.params.postId, event.data?.after.exists ? event.data.after.ref.path : 'communities/' + event.params.communityId + '/posts/' + event.params.postId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexCircleEventForSearch = onDocumentWritten('communities/{communityId}/events/{eventId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('event', event.params.eventId, 'communities/' + event.params.communityId + '/events/' + event.params.eventId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexPageServiceForSearch = onDocumentWritten('pages/{pageId}/services/{serviceId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const parentSnapshot = await adminDb.collection('pages').doc(event.params.pageId).get();
+  await syncSearch('service', event.params.serviceId, 'pages/' + event.params.pageId + '/services/' + event.params.serviceId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexPageChannelUpdateForSearch = onDocumentWritten('pages/{pageId}/channelUpdates/{updateId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const parentSnapshot = await adminDb.collection('pages').doc(event.params.pageId).get();
+  await syncSearch('update', event.params.updateId, 'pages/' + event.params.pageId + '/channelUpdates/' + event.params.updateId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+
+export const searchNexora = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to search NEXORA.');
+  try {
+    return await searchNexoraContent(adminDb, request.auth.uid, request.data?.query, request.data?.cursor, request.data?.kinds);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Search terms') || message.includes('Enter a search term') || message.includes('cursor is invalid') || message.includes('cursor is stale')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    throw new HttpsError('internal', 'NEXORA search is temporarily unavailable.');
+  }
+});
+export const getNexoraTrendingTopics = onCall({ maxInstances: 5 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to view NEXORA trends.');
+  try { return { topics: await getNexoraTrending(adminDb) }; }
+  catch { throw new HttpsError('unavailable', 'Trending topics are temporarily unavailable.'); }
+});
+
+
 setGlobalOptions({
   region: 'us-central1',
   maxInstances: 5,
