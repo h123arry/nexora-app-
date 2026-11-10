@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Chat, User } from '../types';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../lib/firebase';
+import { renderPostShareCard } from '../services/shareCardService';
 
 interface ShareSheetProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ export default function ShareSheet({
   const [copied, setCopied] = useState(false);
   const [realChats, setRealChats] = useState<Chat[]>([]);
   const [creatingReferral, setCreatingReferral] = useState(false);
+  const [creatingShareCard, setCreatingShareCard] = useState(false);
 
   // Load real chats from localStorage for friend list
   useEffect(() => {
@@ -105,6 +107,30 @@ export default function ShareSheet({
     setCopied(true);
     window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Link copied to clipboard.' }));
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleCreateShareCard = async () => {
+    if (creatingShareCard) return;
+    setCreatingShareCard(true);
+    try {
+      const blob = await renderPostShareCard({ name: post?.name || currentUser?.name, username: post?.username || currentUser?.username, content: post?.content });
+      const file = new File([blob], 'nexora-share-card.png', { type: 'image/png' });
+      if (navigator.share && navigator.canShare?.({ files: [file] })) {
+        await navigator.share({ title: 'NEXORA post', text: 'Shared from NEXORA', files: [file] });
+      } else {
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = 'nexora-share-card.png';
+        anchor.click();
+        URL.revokeObjectURL(url);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your NEXORA share card is ready.' }));
+      }
+    } catch (error) {
+      if (!(error instanceof Error && error.name === 'AbortError')) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'The share card could not be created on this device.' }));
+      }
+    } finally { setCreatingShareCard(false); }
   };
 
   const handleInviteFriends = async () => {
@@ -408,7 +434,16 @@ export default function ShareSheet({
         {/* NEXORA QUICK ACTIONS */}
         <div className="border-t border-white/10 pt-4">
           <h4 className="text-[11px] font-mono tracking-wider text-violet-400 font-bold uppercase mb-2 px-1">Nexora Quick Actions</h4>
-          <div className="grid grid-cols-3 gap-2.5">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+            <button
+              onClick={handleCreateShareCard}
+              disabled={creatingShareCard}
+              className="flex flex-col items-center justify-center p-3.5 rounded-full bg-violet-500/10 hover:bg-violet-500/20 border border-violet-400/20 text-white text-xs transition-all active:scale-95 cursor-pointer shadow-md backdrop-blur-md disabled:opacity-50"
+            >
+              <Sparkles className="w-4 h-4 text-violet-300 mb-1" />
+              <span className="font-sans font-bold text-xs">{creatingShareCard ? 'Creating…' : 'Share Card'}</span>
+            </button>
+
             {/* Repost */}
             <button
               onClick={handleRepost}
