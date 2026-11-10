@@ -4,8 +4,9 @@ import { ArrowLeft, Camera, Globe2, LockKeyhole, Plus, Send, Sparkles, Users, Vi
 import type { User } from '../types';
 import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave,
-  inviteToWorldWeaveByUsername, subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves,
-  subscribeToWorldWeaveMoments, type WorldWeave, type WorldWeaveMoment,
+  acceptWorldWeaveInvite, inviteToWorldWeaveByUsername, subscribeToMyWorldWeaveInvites,
+  subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
+  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -19,6 +20,7 @@ const timeLabel = (value: unknown) => {
 export default function WorldWeaveView({ currentUser }: Props) {
   const [myWeaves, setMyWeaves] = useState<WorldWeave[]>([]);
   const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);
+  const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
@@ -44,7 +46,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
     const stopPublic = subscribeToPublicWorldWeaves(items => {
       if (active) { setPublicWeaves(items); setLoading(false); }
     }, err => { if (active) { setError(err.message); setLoading(false); } });
-    return () => { active = false; stopMine(); stopPublic(); };
+    const stopInvites = subscribeToMyWorldWeaveInvites(currentUser.id, items => { if (active) setInvitations(items); }, err => { if (active) setError(err.message); });
+    return () => { active = false; stopMine(); stopPublic(); stopInvites(); };
   }, [currentUser.id]);
 
   useEffect(() => {
@@ -61,6 +64,15 @@ export default function WorldWeaveView({ currentUser }: Props) {
       return bTime - aTime;
     });
   }, [myWeaves, publicWeaves]);
+
+  const handleAcceptInvite = async (invite: WorldWeaveInvite) => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const weave = await acceptWorldWeaveInvite(invite.weaveId);
+      setSelected(weave); setNotice('You joined the WorldWeave. Add your perspective to the timeline.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not accept this invitation.'); }
+    finally { setBusy(false); }
+  };
 
   const handleAcceptInvite = async (invite: WorldWeaveInvite) => {
     setBusy(true); setError(''); setNotice('');
@@ -168,6 +180,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
       </section>
       {notice && <p role="status" className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">{notice}</p>}
       {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>}
+      {invitations.length > 0 && <section className="rounded-3xl border border-violet-400/20 bg-violet-500/[.06] p-5">
+        <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white"><Users size={16} className="text-violet-300"/> WorldWeave invitations <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] text-violet-100">{invitations.length}</span></div>
+        <div className="space-y-2">{invitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#090e1b] p-3">
+          <div><p className="text-sm font-semibold text-white">{invite.weaveTitle}</p><p className="mt-1 text-xs text-slate-400">Invited by {invite.ownerName}</p></div>
+          <button disabled={busy} onClick={() => void handleAcceptInvite(invite)} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Accept invitation</button>
+        </div>)}</div>
+      </section>}
       {invitations.length > 0 && <section className="rounded-3xl border border-violet-400/20 bg-violet-500/[.06] p-5">
         <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white"><Users size={16} className="text-violet-300"/> WorldWeave invitations <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] text-violet-100">{invitations.length}</span></div>
         <div className="space-y-2">{invitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#090e1b] p-3">
