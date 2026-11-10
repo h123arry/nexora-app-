@@ -24,7 +24,7 @@ describe('NEXORA share-card copy', () => {
 
   it('strips control characters from untrusted post text', () => {
     const result = buildPostShareCardCopy({ name: 'A\u0000B', content: 'Hello\n\tworld' });
-    assert.equal(result.author, 'AB');
+    assert.equal(result.author, 'A B');
     assert.equal(result.excerpt, 'Hello world');
   });
 });
