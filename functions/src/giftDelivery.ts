@@ -75,6 +75,7 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
       if (input.contextType === 'live') {
         const session = liveSession?.data() || {};
         const ownerId = session.creatorId || session.hostId;
+        if (session.giftsEnabled !== true) throw new HttpsError('failed-precondition', 'Gifting is disabled for this live room.');
         if (!liveSession?.exists || ownerId !== input.recipientId || session.status !== 'live') {
           throw new HttpsError('failed-precondition', 'This creator is not currently live in that session.');
         }
