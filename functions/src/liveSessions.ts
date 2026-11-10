@@ -1,14 +1,11 @@
-import { stopLiveRecordingForSession } from './liveReplays.js';
+import { stopLiveRecordingForSession, liveKitApiKey, liveKitApiSecret } from './liveReplays.js';
 import { createHash } from 'node:crypto';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
-import { defineSecret } from 'firebase-functions/params';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from './liveSessionsPolicy.js';
 
-const liveKitApiKey = defineSecret('LIVEKIT_API_KEY');
-const liveKitApiSecret = defineSecret('LIVEKIT_API_SECRET');
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
 
