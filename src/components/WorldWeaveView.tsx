@@ -128,7 +128,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-violet-200"><Sparkles size={13}/> NEXORA WORLDWEAVE <span className="text-white/30">·</span>{selected.visibility === 'public' ? 'Public experience' : 'Private experience'}</div>
           <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">{selected.title}</h1>
           {selected.description && <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">{selected.description}</p>}
-          <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1} contributors</span><span>{moments.length} moments</span><span>Started by {selected.ownerName}</span></div>
+          <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1} contributors</span><span>{moments.length} of {selected.momentCount || moments.length} recent moments loaded</span><span>Started by {selected.ownerName}</span></div>
         </section>
         {notice && <p role="status" className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">{notice}</p>}
         {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>}
@@ -158,7 +158,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
           )}
         </div>}
         <section className="space-y-4">
-          <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-white">The shared timeline</h2><span className="text-xs text-slate-500">Oldest to newest</span></div>
+          <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-white">The shared timeline</h2><span className="text-xs text-slate-500">Latest 100 · chronological</span></div>
           {moments.length === 0 ? <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">No moments yet. The first perspective starts the story.</div> :
             <div className="relative space-y-4 before:absolute before:bottom-4 before:left-[19px] before:top-4 before:w-px before:bg-violet-400/20">
               {moments.map(moment => <motion.article key={moment.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="relative ml-1 rounded-3xl border border-white/10 bg-[#0b1221] p-4 pl-12 md:p-5 md:pl-14">
@@ -199,7 +199,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={500} rows={2} placeholder="What is this experience about?" className="mt-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60"/>
         <div className="mt-3 flex justify-end"><button disabled={busy || title.trim().length < 3} className="rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-40">{busy ? 'Creating…' : 'Create WorldWeave'}</button></div>
       </form>}
-      <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold text-white">Experiences unfolding</h2><p className="mt-1 text-xs text-slate-500">Your contributions and public stories from the NEXORA community</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-slate-400">{weaves.length} found</span></div>
+      <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold text-white">Experiences unfolding</h2><p className="mt-1 text-xs text-slate-500">Your contributions and public stories from the NEXORA community</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-slate-400">{weaves.length} shown</span></div>
       {loading && <div className="py-10 text-center text-sm text-slate-400">Loading WorldWeaves…</div>}
       {!loading && weaves.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center"><Globe2 className="mx-auto mb-3 text-violet-300" size={28}/><p className="font-semibold text-white">Your next great story starts here.</p><p className="mt-2 text-sm text-slate-400">Create an experience and invite the people who saw it differently.</p></div>}
       <div className="grid gap-4 md:grid-cols-2">
