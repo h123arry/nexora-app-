@@ -80,12 +80,12 @@ export async function syncUniversalSearchRecord(
   const status = safeString(data.status, 40).toLowerCase();
   const isEligible =
     (kind === 'person' && data.isBanned !== true && data.isSuspended !== true && data.isSeedProfile !== true) ||
-    (kind === 'post' && (data.audience === 'public' || (!!parent && parent.isPrivate !== true && parent.type !== 'private' && parent.privacy !== 'private' && parent.visibility !== 'private')) && status !== 'deleted' && status !== 'removed') ||
+    (kind === 'post' && (data.audience === 'public' || (!!parent && parent.type === 'public' && parent.isPrivate !== true)) && status !== 'deleted' && status !== 'removed') ||
     (kind === 'video' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
     (kind === 'page' && data.isPrivate !== true && data.privacy !== 'private' && status !== 'private' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
-    (kind === 'circle' && data.isPrivate !== true && data.type !== 'private' && data.privacy !== 'private' && data.visibility !== 'private' && status !== 'suspended' && status !== 'deleted') ||
+    (kind === 'circle' && data.type === 'public' && data.isPrivate !== true && status !== 'suspended' && status !== 'deleted') ||
     (kind === 'live' && status === 'live') ||
-    (kind === 'event' && status === 'scheduled' && parent?.isPrivate !== true && parent?.type !== 'private' && parent?.privacy !== 'private' && parent?.visibility !== 'private') ||
+    (kind === 'event' && status === 'scheduled' && parent?.type === 'public' && parent?.isPrivate !== true) ||
     (kind === 'service' && status === 'active' && parent?.category === 'Business') ||
     (kind === 'update' && status !== 'deleted' && parent?.status !== 'suspended');
   if (!isEligible) { await ref.delete().catch(() => undefined); return; }
@@ -185,7 +185,7 @@ export async function searchNexoraContent(
     if (sourceSegments[0] === 'communities' && sourceSegments.length >= 2) {
       const parent = await db.collection('communities').doc(sourceSegments[1]).get();
       const community = parent.data() || {};
-      if (!parent.exists || community.isPrivate === true || community.type === 'private' || community.privacy === 'private' || community.visibility === 'private') return null;
+      if (!parent.exists || community.isPrivate === true || community.type !== 'public') return null;
       if (Array.isArray(community.bannedUsers) && community.bannedUsers.includes(viewerUid)) return null;
     }
     if (sourceSegments[0] === 'pages' && sourceSegments.length >= 2) {
