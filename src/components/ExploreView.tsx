@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe, Users, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
@@ -81,6 +81,8 @@ export default function ExploreView({
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [directoryError, setDirectoryError] = useState('');
   const [directoryLoadingMore, setDirectoryLoadingMore] = useState(false);
+  const directoryRequestKey = useRef('');
+  directoryRequestKey.current = currentUserId + ':' + debouncedSearch.trim();
 
   // Signed-in discovery uses the privacy-filtered server directory for people,
   // Pages and public Circles. Local post search remains scoped to loaded public posts.
@@ -114,14 +116,16 @@ export default function ExploreView({
   const loadMoreDirectoryResults = async () => {
     const cursor = directoryResults?.nextCursor;
     const term = debouncedSearch.trim();
+    const requestKey = directoryRequestKey.current;
     if (!currentUserId || !cursor || directoryLoadingMore || term.length < 2) return;
     setDirectoryLoadingMore(true);
     setDirectoryError('');
     try {
       const next = await searchPublicDirectory(term, cursor);
+      if (directoryRequestKey.current !== requestKey) return;
       setDirectoryResults(current => {
         if (!current) return next;
-        const mergeById = <T extends { id: string }>(previous: T[], incoming: T[]) =>
+        const mergeById = <T extends { id: string },>(previous: T[], incoming: T[]) =>
           [...new Map([...previous, ...incoming].map(item => [item.id, item])).values()];
         return {
           people: mergeById(current.people, next.people),
@@ -131,9 +135,9 @@ export default function ExploreView({
         };
       });
     } catch (error) {
-      setDirectoryError(error instanceof Error ? error.message : 'More directory results could not be loaded.');
+      if (directoryRequestKey.current === requestKey) setDirectoryError(error instanceof Error ? error.message : 'More directory results could not be loaded.');
     } finally {
-      setDirectoryLoadingMore(false);
+      if (directoryRequestKey.current === requestKey) setDirectoryLoadingMore(false);
     }
   };
 
