@@ -632,3 +632,13 @@ export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, he
 export { getLiveKitToken } from './liveKitTransport.js';
 
 export { startLiveRecording, stopLiveRecording, getLiveReplayPlayback } from './liveReplays.js';
+
+export const recordDailySession = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to record your NEXORA session.');
+  try {
+    return await createDailySessionRecorder(adminDb)(request.auth.uid);
+  } catch (error) {
+    console.error('[Retention] Unable to record daily session.', error);
+    throw new HttpsError('internal', 'Your session could not be recorded. Please try again.');
+  }
+});
