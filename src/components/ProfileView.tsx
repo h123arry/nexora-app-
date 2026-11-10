@@ -1098,6 +1098,17 @@ export default function ProfileView({
                   ].filter(Boolean).length}/4 completed
                 </span>
               </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-violet-600 to-purple-400 transition-[width] duration-500"
+                  style={{ width: `${([
+                    currentUser.name && currentUser.name !== 'New User',
+                    currentUser.username,
+                    currentUser.bio,
+                    currentUser.avatar && !currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')
+                  ].filter(Boolean).length / 4) * 100}%` }}
+                />
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                 {(!currentUser.avatar || currentUser.avatar.includes('photo-1535713875002-d1d0cf377fde')) && (
                   <button
