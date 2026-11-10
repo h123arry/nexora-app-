@@ -55,7 +55,8 @@ function publicRecord(kind: SearchKind, id: string, path: string, data: Record<s
   const ownerId = kind === 'person' ? id : safeString(data.userId || data.authorId || data.ownerId || data.hostId || data.createdBy, 150);
   const createdAt = asDate(data.timestamp || data.createdAt || data.startedAt || data.updatedAt);
   const subtitle = safeString(data.username || data.category || data.hostName || data.authorUsername || (kind === 'event' ? data.location : ''), 120);
-  const image = safeString(data.avatar || data.authorAvatar || data.thumbnailUrl || data.coverImage || data.bannerImage, 1200);
+  const firstImage = Array.isArray(data.images) ? data.images.find(item => typeof item === 'string') : '';
+  const image = safeString(data.avatar || data.authorAvatar || data.thumbnailUrl || data.videoThumbnail || data.image || firstImage || data.coverImage || data.bannerImage, 1200);
   const searchText = [title, body, subtitle, safeString(data.username, 80), safeString(data.category, 80), ...tags, ...(Array.isArray(data.options) ? data.options.map(option => typeof option === 'string' ? option : (option && typeof option === 'object' ? String((option as Record<string, unknown>).text || '') : '')) : [])].join(' ');
   return {
     id, kind, title: title || 'NEXORA', subtitle, excerpt: body.slice(0, 260), image,
