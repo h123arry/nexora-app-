@@ -247,6 +247,7 @@ export interface ExtendedMessage extends Message {
   fileSize?: string;
   replyToQuote?: string;
   reactions?: { emoji: string, userIds: string[] }[];
+  reactionUsers?: Record<string, string[]>;
   isEdited?: boolean;
   translation?: string;
   isTranslating?: boolean;
