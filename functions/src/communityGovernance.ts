@@ -230,3 +230,36 @@ export async function listCircleBans(
     };
   }));
 }
+
+
+export async function listCircleMutes(
+  db: Firestore,
+  actorUid: string,
+  communityId: string,
+  now = new Date(),
+): Promise<Array<{ userId: string; name: string; username: string; reason: string; mutedAt: string; expiresAt: string }>> {
+  if (!actorUid || !validId(communityId)) throw new Error('A valid Circle is required.');
+  const communityRef = db.collection('communities').doc(communityId);
+  const actor = await communityRef.collection('members').doc(actorUid).get();
+  if (!actor.exists || actor.get('status') !== 'active'
+    || !['owner', 'admin', 'moderator'].includes(String(actor.get('role') || ''))) {
+    throw new Error('Only active Circle managers can review the mute list.');
+  }
+  const records = await communityRef.collection('mutes').orderBy('createdAt', 'desc').limit(100).get();
+  const active = records.docs.filter(record => isCircleMuteActive(record.data(), now));
+  return Promise.all(active.map(async record => {
+    const userId = record.id;
+    const profile = await db.collection('publicProfiles').doc(userId).get();
+    const profileData = profile.data() || {};
+    const mutedAt = record.get('createdAt')?.toDate?.();
+    const expiresAt = record.get('expiresAt')?.toDate?.();
+    return {
+      userId,
+      name: String(profileData.name || profileData.username || 'NEXORA member').slice(0, 80),
+      username: String(profileData.username || '').slice(0, 40),
+      reason: String(record.get('reason') || '').slice(0, REASON_LIMIT),
+      mutedAt: mutedAt instanceof Date ? mutedAt.toISOString() : '',
+      expiresAt: expiresAt instanceof Date ? expiresAt.toISOString() : '',
+    };
+  }));
+}
