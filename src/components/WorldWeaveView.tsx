@@ -18,7 +18,7 @@ const timeLabel = (value: unknown) => {
 
 export default function WorldWeaveView({ currentUser }: Props) {
   const [myWeaves, setMyWeaves] = useState<WorldWeave[]>([]);
-  const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);
+  const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);\n  const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +60,15 @@ export default function WorldWeaveView({ currentUser }: Props) {
       return bTime - aTime;
     });
   }, [myWeaves, publicWeaves]);
+
+  const handleAcceptInvite = async (invite: WorldWeaveInvite) => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const weave = await acceptWorldWeaveInvite(invite.weaveId);
+      setSelected(weave); setNotice('You joined the WorldWeave. Add your perspective to the timeline.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not accept this invitation.'); }
+    finally { setBusy(false); }
+  };
 
   const handleCreate = async (event: React.FormEvent) => {
     event.preventDefault(); setBusy(true); setError(''); setNotice('');
@@ -158,6 +167,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
       </section>
       {notice && <p role="status" className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">{notice}</p>}
       {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>}
+      {invitations.length > 0 && <section className="rounded-3xl border border-violet-400/20 bg-violet-500/[.06] p-5">
+        <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white"><Users size={16} className="text-violet-300"/> WorldWeave invitations <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] text-violet-100">{invitations.length}</span></div>
+        <div className="space-y-2">{invitations.map(invite => <div key={invite.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#090e1b] p-3">
+          <div><p className="text-sm font-semibold text-white">{invite.weaveTitle}</p><p className="mt-1 text-xs text-slate-400">Invited by {invite.ownerName}</p></div>
+          <button disabled={busy} onClick={() => void handleAcceptInvite(invite)} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Accept invitation</button>
+        </div>)}</div>
+      </section>}
       {showCreate && <form onSubmit={handleCreate} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-5">
         <div className="mb-4 flex items-center justify-between"><h2 className="font-bold text-white">Create a shared experience</h2><button type="button" onClick={() => setShowCreate(false)} aria-label="Close" className="text-slate-400"><X size={18}/></button></div>
         <div className="grid gap-3 md:grid-cols-2"><input value={title} onChange={e => setTitle(e.target.value)} minLength={3} maxLength={90} required placeholder="Give this moment a name" className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60"/><select value={visibility} onChange={e => setVisibility(e.target.value as 'public'|'private')} className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white"><option value="public">Public · Anyone can follow the story</option><option value="private">Private · Invited contributors only</option></select></div>
