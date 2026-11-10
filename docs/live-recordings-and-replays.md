@@ -1,6 +1,6 @@
 # NEXORA Live recordings and replays
 
-NEXORA Live recordings are optional host-controlled MP4 captures. LiveKit Egress writes directly to a **private Google Cloud Storage bucket in europe-west1**. The browser never receives the bucket credentials. Playback is issued by a callable function as a five-minute V4 signed URL after the backend verifies that the requester hosted or attended the room.
+NEXORA Live recordings are optional host-controlled MP4 captures. LiveKit Egress writes directly to a **private Google Cloud Storage bucket in europe-west1**. The browser never receives the bucket credentials. Playback is issued by a callable function as a two-hour V4 signed URL after the backend verifies that the requester hosted or attended the room.
 
 ## Infrastructure target
 
@@ -88,7 +88,7 @@ If Firebase prompts for `LIVE_REPLAY_GCS_BUCKET`, enter the bucket name above. T
 - Concurrent start requests are reserved transactionally to avoid duplicate Egress jobs.
 - The host can start recording while a room is live; ending a room or expiring the host lease requests Egress stop.
 - Replays are not public bucket objects. Only the host or a user with a server-created attendance record can request playback.
-- Signed playback URLs expire after five minutes.
+- Signed playback URLs expire after two hours to support long-form replay viewing while remaining time-limited.
 - Replay object paths are restricted to the `nexora-live/` prefix.
 - Egress failures are recorded on the live-session document; no fake replay is generated.
 - The service-account key is stored as a Firebase Functions secret and is passed to LiveKit Egress only from the server.
