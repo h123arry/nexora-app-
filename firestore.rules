@@ -1203,8 +1203,23 @@ service cloud.firestore {
             && nextReceipt.get('updatedAt', null) == request.time
             && (previousReceipt.get('status', '') != 'read' || nextReceipt.status == 'read');
         }
+        function validMessageReactionUpdate() {
+          let previousUsers = resource.data.get('reactionUsers', {});
+          let nextUsers = request.resource.data.get('reactionUsers', {});
+          let ownReactions = nextUsers.get(request.auth.uid, []);
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactionUsers'])
+            && nextUsers.diff(previousUsers).affectedKeys().hasOnly([request.auth.uid])
+            && ownReactions is list
+            && ownReactions.size() <= 12
+            && ownReactions.hasOnly([
+              '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '🥹', '😊', '😇', '🙂',
+              '🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮',
+              '🍏', '🍎', '🍐', '🍊', '🍋', '🍌', '🍉', '🍇', '🍓', '🫐', '🍈', '🍒', '❤️'
+            ]);
+        }
         allow update: if chatMember(chatId) && (
-          (
+          validMessageReactionUpdate()
+          || (
             get(/databases/$(database)/documents/chats/$(chatId)).data.get('isGroup', false) != true
             && resource.data.senderId != request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
