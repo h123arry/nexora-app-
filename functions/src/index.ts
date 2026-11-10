@@ -823,6 +823,19 @@ export { getLiveKitToken } from './liveKitTransport.js';
 export { startLiveRecording, stopLiveRecording, getLiveReplayPlayback } from './liveReplays.js';
 
 
+
+export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId}', async event => {
+  const post = event.data?.data();
+  if (!post || post.audience !== 'public' || typeof post.userId !== 'string') return;
+  try {
+    const identity = await getAuth().getUser(post.userId);
+    await qualifyReferral(adminDb, post.userId, identity.emailVerified, event.params.postId);
+  } catch (error) {
+    // Referral failures must never block post creation; pending attribution is retained.
+    console.error('[Referrals] Public-post qualification did not complete.', error);
+  }
+});
+
 export const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create your referral link.');
   try { return await createReferralCode(adminDb, request.auth.uid); }
@@ -841,18 +854,6 @@ export const claimMyReferral = onCall({ maxInstances: 10 }, async request => {
     if (message.includes('valid referral') || message.includes('own account')) throw new HttpsError('invalid-argument', message);
     if (message.includes('unavailable') || message.includes('reached its limit')) throw new HttpsError('failed-precondition', message);
     throw new HttpsError('internal', 'The referral could not be applied. Please retry.');
-  }
-});
-
-export const qualifyMyReferral = onCall({ maxInstances: 10 }, async request => {
-  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to qualify your referral.');
-  try {
-    const identity = await getAuth().getUser(request.auth.uid);
-    return await qualifyReferral(adminDb, request.auth.uid, identity.emailVerified, request.data?.postId);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : '';
-    if (message.includes('verified account') || message.includes('public post')) throw new HttpsError('failed-precondition', message);
-    throw new HttpsError('internal', 'Referral qualification could not be completed. Please retry.');
   }
 });
 
