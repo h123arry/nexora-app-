@@ -11,6 +11,7 @@ This document describes the real LiveKit-backed broadcast path and the checks re
 - Ban/removal state is checked by the admission, chat and LiveKit-token paths. Moderation is saved before an active LiveKit participant is disconnected.
 - Host and approved guest clients can share their screen where the browser/device supports screen capture.
 - Live discovery ranks rooms using freshness, actual viewers, peak audience and chat activity. Gift count is deliberately a low-weight signal.
+- Viewer watch time is accumulated when a viewer leaves, is removed, or their heartbeat lease expires. Hosts see a persisted average completed viewer-session duration; unfinished sessions are not fabricated into the average.
 - Optional host-controlled recording and private replays use the separate GCS setup in [live-recordings-and-replays.md](./live-recordings-and-replays.md).
 
 ## Required server configuration
