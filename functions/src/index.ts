@@ -888,9 +888,17 @@ export const createMyReferralCode = onCall({ maxInstances: 10 }, async request =
 
 export const claimMyReferral = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to accept a referral.');
-  try { return await claimReferral(adminDb, request.auth.uid, request.data?.code); }
+  try {
+    const identity = await getAuth().getUser(request.auth.uid);
+    const createdAt = Date.parse(identity.metadata.creationTime);
+    if (!Number.isFinite(createdAt) || Date.now() - createdAt > 7 * 86400000) {
+      throw new HttpsError('failed-precondition', 'Referral invitations can only be applied to newly created accounts.');
+    }
+    return await claimReferral(adminDb, request.auth.uid, request.data?.code);
+  }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
+    if (error instanceof HttpsError) throw error;
     if (message.includes('valid referral') || message.includes('own account')) throw new HttpsError('invalid-argument', message);
     if (message.includes('unavailable') || message.includes('reached its limit')) throw new HttpsError('failed-precondition', message);
     throw new HttpsError('internal', 'The referral could not be applied. Please retry.');
