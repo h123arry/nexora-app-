@@ -67,6 +67,7 @@ type MentorshipSession = { sessionId: string; title: string; description: string
 export default function CreatorAcademyView({ currentUser }: { currentUser: User }) {
   const [progress, setProgress] = useState<Record<string, string[]>>({});
   const [lessonNotes, setLessonNotes] = useState<Record<string, string>>({});
+  const [savedNoteIds, setSavedNoteIds] = useState<string[]>([]);
   const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
   const [noteMessage, setNoteMessage] = useState('');
   const [courses, setCourses] = useState<Course[]>(COURSES);
@@ -99,6 +100,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       setLoadError(false);
       setProgress({});
       setLessonNotes({});
+      setSavedNoteIds([]);
       setNoteMessage('');
       const progressQuery = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(50));
       const notesQuery = query(collection(db, 'academyLessonNotes'), where('userId', '==', currentUser.id), limit(100));
@@ -112,13 +114,16 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       if (!active) return;
       if (notesResult.status === 'fulfilled') {
         const nextNotes: Record<string, string> = {};
+        const nextSavedNoteIds: string[] = [];
         notesResult.value.docs.forEach(item => {
           const data = item.data();
+          nextSavedNoteIds.push(item.id);
           if (typeof data.courseId === 'string' && typeof data.lessonId === 'string' && typeof data.note === 'string') {
             nextNotes[data.courseId + ':' + data.lessonId] = data.note;
           }
         });
         setLessonNotes(nextNotes);
+        setSavedNoteIds(nextSavedNoteIds);
       } else setNoteMessage('Your saved study notes could not be loaded.');
       if (progressResult.status === 'fulfilled') {
         const next: Record<string, string[]> = {};
@@ -200,10 +205,11 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       const ref = doc(db, 'academyLessonNotes', noteId);
       if (note.trim()) {
         await setDoc(ref, { userId: currentUser.id, courseId: course.id, lessonId: lesson.id, note: note.slice(0, 5000), updatedAt: serverTimestamp(), schemaVersion: 1 });
+        setSavedNoteIds(previous => previous.includes(noteId) ? previous : [...previous, noteId]);
         setNoteMessage('Study note saved to your account.');
       } else {
-        const existing = await getDoc(ref);
-        if (existing.exists()) await deleteDoc(ref);
+        if (savedNoteIds.includes(noteId)) await deleteDoc(ref);
+        setSavedNoteIds(previous => previous.filter(id => id !== noteId));
         setNoteMessage('Study note cleared.');
       }
     } catch {
