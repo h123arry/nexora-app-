@@ -933,3 +933,24 @@ export async function updateMessageReadReceipt(
   // Preserve the established direct-message receipt contract.
   await updateDoc(messageRef, { status });
 }
+
+
+export interface MyModerationReport {
+  id: string;
+  targetType: string;
+  category: string;
+  status: 'pending' | 'under_review' | 'escalated' | 'resolved' | 'dismissed';
+  action: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  reviewedAt: string | null;
+}
+
+export async function getMyModerationReports(userId: string): Promise<MyModerationReport[]> {
+  if (!auth.currentUser || auth.currentUser.uid !== userId) {
+    throw new Error('Sign in to view your report history.');
+  }
+  const listReports = httpsCallable< Record<string, never>, { reports: MyModerationReport[] }>(functions, 'listMyModerationReports');
+  const result = await listReports({});
+  return Array.isArray(result.data.reports) ? result.data.reports : [];
+}
