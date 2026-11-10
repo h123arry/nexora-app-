@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { setCircleMemberRole, moderateCircleMember } from '../src/communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember, listCircleBans } from '../src/communityGovernance.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'community-governance-tests');
@@ -61,6 +61,11 @@ describe('trusted Circle member enforcement', () => {
     assert.deepEqual(banned, { userId: 'bob', action: 'ban', status: 'banned' });
     assert.equal((await circle.collection('members').doc('bob').get()).get('status'), 'banned');
     assert.equal((await circle.collection('bans').doc('bob').get()).exists, true);
+    const banList = await listCircleBans(db, 'alice', 'governance-circle');
+    assert.equal(banList.length, 1);
+    assert.equal(banList[0].userId, 'bob');
+    assert.equal(banList[0].reason, 'Repeated harassment reports');
+    await assert.rejects(listCircleBans(db, 'bob', 'governance-circle'), /Only active Circle managers/);
     const banEvents = await circle.collection('auditEvents').where('targetUid', '==', 'bob').where('action', '==', 'member_banned').get();
     assert.equal(banEvents.size, 1);
     assert.equal(banEvents.docs[0].get('reason'), 'Repeated harassment reports');
