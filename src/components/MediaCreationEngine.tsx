@@ -947,7 +947,6 @@ export default function MediaCreationEngine({
   // Accessibility Checks
   const hasContrastIssue = theme === 'platinum-light' && caption.trim().length > 0;
   const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
-  const isVideoTrimCheck = (videoFileUrl || recordedVideoUrl) && videoTrimEnd - videoTrimStart > 15;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-4 backdrop-blur-md bg-black/75 overflow-y-auto">
@@ -1220,7 +1219,7 @@ export default function MediaCreationEngine({
                 /* STEP 2: MEDIA IMPORT & RECORDING */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase">You're adding</span>
+                    <span className="text-[10px] font-semibold text-[#B69BFF]">Step 2 of 6 · Add your content</span>
                     <button 
                       onClick={() => setCurrentStep(1)} 
                       className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold"
@@ -1252,7 +1251,7 @@ export default function MediaCreationEngine({
                         </div>
                         <button 
                           onClick={captureCameraSnapshot}
-                          className="w-full py-2.5 bg-linear-to-r from-[#7138FF] to-[#3B16B8] text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                          className="w-full py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                         >
                           Take photo
                         </button>
@@ -1327,7 +1326,7 @@ export default function MediaCreationEngine({
                       </label>
                       {videoFileUrl && (
                         <div className="max-w-xs mx-auto p-2 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
-                          <p className="text-[10px] text-emerald-400 font-mono truncate">✓ {videoFileUrl}</p>
+                          <p className="text-[10px] text-emerald-300 font-semibold">✓ Video selected</p>
                           <video src={videoFileUrl} controls className="w-full rounded-lg" />
                         </div>
                       )}
@@ -1453,6 +1452,11 @@ export default function MediaCreationEngine({
               {currentStep === 3 && (
                 /* STEP 3: CREATIVE EDIT WORKSPACE */
                 <div className="space-y-4 animate-fadeIn">
+                  <div>
+                    <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#B69BFF]">STEP 3 OF 6</span>
+                    <h3 className="text-base font-bold text-white">Review your photo or video</h3>
+                    <p className="mt-1 text-xs leading-relaxed text-zinc-400">Check your media before adding a caption and sharing it.</p>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Media render wrapper */}
                     <div className="aspect-square rounded-2xl border border-zinc-800 bg-black flex items-center justify-center relative overflow-hidden">
@@ -1774,13 +1778,15 @@ export default function MediaCreationEngine({
                           <span className="text-emerald-400">✓ Text contrast looks good</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        {isAltTextMissing ? (
-                          <span className="text-amber-400">⚠️ Add a short photo description to help people using screen readers.</span>
-                        ) : (
-                          <span className="text-emerald-400">✓ Photo description added</span>
-                        )}
-                      </div>
+                      {selectedImages.length > 0 && (
+                        <div className="flex items-center gap-2 text-xs">
+                          {isAltTextMissing ? (
+                            <span className="text-amber-400">Add a short photo description to help people using screen readers.</span>
+                          ) : (
+                            <span className="text-emerald-400">✓ Photo description added</span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -1917,7 +1923,7 @@ export default function MediaCreationEngine({
                 <button 
                   onClick={nextStep}
                   disabled={currentStep === 2 && !activeMode}
-                  className="px-5 py-2.5 bg-linear-to-r from-[#7138FF] to-[#3B16B8] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
+                  className="px-5 py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
                 >
                   Continue →
                 </button>
@@ -1925,7 +1931,7 @@ export default function MediaCreationEngine({
                 <button 
                   onClick={triggerPublishMedia}
                   disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
-                  className="px-6 py-2.5 bg-linear-to-r from-[#7138FF] to-[#3B16B8] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
+                  className="px-6 py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
                 >
                   Share post
                 </button>
