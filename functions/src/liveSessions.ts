@@ -3,7 +3,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision } from './liveSessionsPolicy.js';
+import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from './liveSessionsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
@@ -164,7 +164,7 @@ export const requestLiveGuestAccess = onCall({ maxInstances: 20 }, async request
 export const reviewLiveGuestAccess = onCall({ maxInstances: 10 }, async request => {
   const hostId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
-  const guestId = valid(() => validateLiveSessionId(request.data?.guestId));
+  const guestId = valid(() => validateLiveGuestId(request.data?.guestId));
   const decision = valid(() => validateLiveGuestDecision(request.data?.decision));
   const sessionRef = sessions.doc(sessionId);
   const requestRef = sessionRef.collection('guestRequests').doc(guestId);
