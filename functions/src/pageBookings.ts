@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 
 const ID_LIMIT = 150;
 const NOTE_LIMIT = 1000;
@@ -132,8 +132,10 @@ export async function respondToPageBookingRequest(
       throw new Error('This booking request has already been resolved.');
     }
     const customerUid = String(booking.get('customerId') || '');
+    let acceptedStartsAt: Date | null = null;
     if (booking.get('status') === 'pending' && decision === 'accepted') {
       const startsAt = bookingDate(booking.get('requestedAt'));
+      acceptedStartsAt = startsAt;
       if (!startsAt || startsAt.getTime() <= Date.now()) {
         throw new Error('This booking time is no longer valid. Ask the customer to submit a new request.');
       }
@@ -162,7 +164,12 @@ export async function respondToPageBookingRequest(
     const notification = await tx.get(notificationRef);
     const now = new Date();
     if (booking.get('status') === 'pending') {
-      tx.update(ref, { status: decision, respondedAt: now, updatedAt: now });
+      tx.update(ref, {
+        status: decision, respondedAt: now, updatedAt: now,
+        ...(decision === 'accepted' && acceptedStartsAt
+          ? { reminderDueAt: new Date(Math.max(now.getTime(), acceptedStartsAt.getTime() - 24 * 60 * 60_000)) }
+          : {}),
+      });
     }
     if (!notification.exists) {
       const pageName = String(booking.get('pageName') || 'Business Page');
@@ -214,7 +221,7 @@ export async function cancelPageBookingRequest(
     const now = new Date();
     const pageName = String(booking.get('pageName') || 'Business Page');
     const serviceName = String(booking.get('serviceName') || 'your service');
-    tx.update(ref, { status: 'cancelled', cancelledBy: requesterUid, cancelledAt: now, updatedAt: now });
+    tx.update(ref, { status: 'cancelled', cancelledBy: requesterUid, cancelledAt: now, reminderDueAt: FieldValue.delete(), updatedAt: now });
     if (!notification.exists) {
       tx.create(notificationRef, {
         id: notificationId,

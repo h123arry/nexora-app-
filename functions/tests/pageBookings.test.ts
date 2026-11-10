@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from '../src/pageBookings.js';
+import { dispatchDuePageBookingReminders } from '../src/pageBookingReminders.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'page-booking-tests');
@@ -34,6 +35,8 @@ after(async () => {
       db.collection('users').doc(customerId).collection('notifications').doc('booking_response_' + item.id + '_declined').delete(),
       db.collection('users').doc(ownerId).collection('notifications').doc('booking_cancelled_' + item.id).delete(),
       db.collection('users').doc(customerId).collection('notifications').doc('booking_cancelled_' + item.id).delete(),
+      db.collection('users').doc(ownerId).collection('notifications').doc('booking_reminder_' + item.id).delete(),
+      db.collection('users').doc(customerId).collection('notifications').doc('booking_reminder_' + item.id).delete(),
       item.ref.delete(),
     ]);
   }));
@@ -135,6 +138,7 @@ describe('trusted business booking requests', () => {
     );
     await respondToPageBookingRequest(db, 'business-owner', accepted.bookingId, 'accepted');
     await cancelPageBookingRequest(db, 'business-owner', accepted.bookingId);
+    assert.equal((await db.collection('pageBookings').doc(accepted.bookingId).get()).get('reminderDueAt'), undefined);
     const customerNotification = await db.collection('users').doc('customer-booking-cancel-owner').collection('notifications').doc('booking_cancelled_' + accepted.bookingId).get();
     assert.equal(customerNotification.exists, true);
     assert.equal((await db.collection('pageBookings').doc(accepted.bookingId).get()).get('status'), 'cancelled');
@@ -147,6 +151,25 @@ describe('trusted business booking requests', () => {
     );
     await respondToPageBookingRequest(db, 'business-owner', declined.bookingId, 'declined');
     await assert.rejects(cancelPageBookingRequest(db, 'customer-booking-declined', declined.bookingId), /Only pending or confirmed/);
+  });
+
+  it('sends one persisted reminder to both participants for due confirmed appointments', async () => {
+    const now = new Date();
+    const bookingRef = db.collection('pageBookings').doc('booking-reminder-test');
+    await bookingRef.set({
+      pageId: 'booking-test-page', pageName: 'Test Business', pageUsername: 'test-business', pageAvatar: '',
+      serviceId: 'consultation', serviceName: 'Consultation', durationMinutes: 30,
+      ownerId: 'business-owner', customerId: 'customer-reminder-test',
+      requestedAt: new Date(now.getTime() + 12 * 60 * 60_000),
+      reminderDueAt: new Date(now.getTime() - 60_000),
+      status: 'accepted', createdAt: now, updatedAt: now,
+    });
+    const first = await dispatchDuePageBookingReminders(db, now);
+    assert.deepEqual(first, { sentCount: 1, skippedCount: 0 });
+    assert.equal((await db.collection('users').doc('business-owner').collection('notifications').doc('booking_reminder_booking-reminder-test').get()).exists, true);
+    assert.equal((await db.collection('users').doc('customer-reminder-test').collection('notifications').doc('booking_reminder_booking-reminder-test').get()).exists, true);
+    assert.ok((await bookingRef.get()).get('reminderSentAt'));
+    assert.deepEqual(await dispatchDuePageBookingReminders(db, now), { sentCount: 0, skippedCount: 0 });
   });
 
   it('rate-limits repeated booking requests per customer', async () => {
