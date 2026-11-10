@@ -78,6 +78,14 @@ describe('trusted Circle role delegation', () => {
     assert.equal((await circle.collection('members').doc('bob').get()).get('mutedUntil'), undefined);
     const events = await circle.collection('auditEvents').where('targetUid', '==', 'bob').get();
     assert.equal(events.docs.filter(event => ['member_muted', 'member_unmuted'].includes(event.get('action'))).length, 2);
+
+    const moderatorMute = await moderateCircleMember(
+      db, 'carol', 'governance-circle', 'bob', 'mute', 1440, 'Moderator applied a temporary mute',
+    );
+    assert.ok(moderatorMute.mutedUntil);
+    await moderateCircleMember(db, 'alice', 'governance-circle', 'bob', 'unmute', 0, 'Owner lifted moderator mute');
+    const allEvents = await circle.collection('auditEvents').where('targetUid', '==', 'bob').get();
+    assert.equal(allEvents.docs.filter(event => ['member_muted', 'member_unmuted'].includes(event.get('action'))).length, 4);
   });
 
   it('denies non-owners, inactive targets, ownership changes, self-assignment, and invalid roles', async () => {
