@@ -8,8 +8,8 @@ export interface SearchHit {
 }
 export interface UniversalSearchResult { results: SearchHit[]; nextCursor: string | null; query: string; }
 const INDEX = 'searchIndex';
-const PAGE_SIZE = 30;
-const CANDIDATE_LIMIT = 121;
+const PAGE_SIZE = 120;
+const CANDIDATE_LIMIT = PAGE_SIZE + 1;
 const MAX_CURSOR = 2048;
 
 export function normalizeSearchText(value: unknown): string {
@@ -78,7 +78,7 @@ export async function syncUniversalSearchRecord(
   const status = safeString(data.status, 40).toLowerCase();
   const isEligible =
     (kind === 'person' && data.isBanned !== true && data.isSuspended !== true && data.isSeedProfile !== true) ||
-    (kind === 'post' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
+    (kind === 'post' && (data.audience === 'public' || (parent?.isPrivate !== true && parent?.type !== 'private' && parent?.privacy !== 'private' && parent?.visibility !== 'private')) && status !== 'deleted' && status !== 'removed') ||
     (kind === 'video' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
     (kind === 'page' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
     (kind === 'circle' && data.isPrivate !== true && data.type !== 'private' && data.privacy !== 'private' && data.visibility !== 'private' && status !== 'suspended' && status !== 'deleted') ||
@@ -170,39 +170,42 @@ export async function searchNexoraContent(
     usedTypoFallback = true;
   }
   const candidates = candidateDocs.filter(doc => requestedKinds.includes(doc.get('kind')) && doc.get('isPublic') === true);
-  const [viewerSettings, accountStatus] = await Promise.all([
-    db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get(),
-    db.collection('accountStatus').doc(viewerUid).get(),
-  ]);
+  const viewerSettings = await db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get();
   const viewerData = viewerSettings.data() || {};
   const blocked = new Set<string>([
     ...(Array.isArray(viewerData?.privacy?.blockedUserIds) ? viewerData.privacy.blockedUserIds : []),
     ...(Array.isArray(viewerData?.messaging?.blockedUserIds) ? viewerData.messaging.blockedUserIds : []),
   ].filter((item): item is string => typeof item === 'string'));
-  const hits: SearchHit[] = [];
-  for (const candidate of candidates) {
+  const visibleCandidates = await Promise.all(candidates.map(async candidate => {
     const data = candidate.data();
     const ownerId = String(data.ownerId || '');
-    if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) continue;
-    if (ownerId) {
+    if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) return null;
+    if (ownerId && ['person','post','video','live'].includes(String(data.kind))) {
       const [ownerSettings, follow] = await Promise.all([
         db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
         db.collection('follows').doc(viewerUid + '_' + ownerId).get(),
       ]);
       const privacy = ownerSettings.data() || {};
-      const ownerBlocks = [...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
-        ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : [])];
-      if (ownerBlocks.includes(viewerUid)) continue;
-      if (privacy?.privacy?.isPrivate === true && !follow.exists && ['person','post','video','live'].includes(String(data.kind))) continue;
-      if (accountStatus.get('suspended') === true && ownerId === viewerUid) continue;
+      const ownerBlocks = [
+        ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
+        ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
+      ];
+      if (ownerBlocks.includes(viewerUid)) return null;
+      if (privacy?.privacy?.isPrivate === true && !follow.exists) return null;
     }
-    if (data.kind === 'circle' && Array.isArray(data.bannedUsers) && data.bannedUsers.includes(viewerUid)) continue;
+    if (data.kind === 'circle' && Array.isArray(data.bannedUsers) && data.bannedUsers.includes(viewerUid)) return null;
+    return candidate;
+  }));
+  const hits: SearchHit[] = [];
+  for (const candidate of visibleCandidates) {
+    if (!candidate) continue;
+    const data = candidate.data();
     const score = relevance(queryWords, data);
     if (score === null) continue;
     hits.push({
       id: candidate.id, kind: data.kind, title: String(data.title || ''), subtitle: String(data.subtitle || ''),
       excerpt: String(data.excerpt || ''), image: String(data.image || ''), targetId: String(data.targetId || ''),
-      targetPath: String(data.targetPath || ''), ownerId, verified: data.verified === true,
+      targetPath: String(data.targetPath || ''), ownerId: String(data.ownerId || ''), verified: data.verified === true,
       createdAt: asDate(data.createdAt).toISOString(), score, tags: Array.isArray(data.tags) ? data.tags.slice(0, 12) : [],
     });
   }
@@ -233,7 +236,7 @@ export async function searchNexoraContent(
   }
   hits.sort((a,b) => b.score - a.score || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
   const results = hits.slice(0, PAGE_SIZE);
-  const lastDoc = snapshot.docs.length >= CANDIDATE_LIMIT && !usedTypoFallback ? snapshot.docs[snapshot.docs.length - 1].id : null;
+  const lastDoc = snapshot.docs.length >= CANDIDATE_LIMIT && !usedTypoFallback ? snapshot.docs[PAGE_SIZE - 1].id : null;
   return { results, nextCursor: encodeCursor(query,key,lastDoc), query };
 }
 
