@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LIVE_CHAT_MESSAGE_MAX, LIVE_CHAT_WINDOW_MAX_MESSAGES, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle, validateLiveConnectionId, nextLiveChatRateState, validateLiveSessionSettings, validateLiveGuestDecision } from '../src/liveSessionsPolicy.ts';
+import { LIVE_CHAT_MESSAGE_MAX, LIVE_CHAT_WINDOW_MAX_MESSAGES, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle, validateLiveConnectionId, nextLiveChatRateState, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from '../src/liveSessionsPolicy.ts';
 
 test('live room titles and IDs are normalized and bounded', () => {
   assert.equal(validateLiveSessionTitle('  Creator Q&A  '), 'Creator Q&A');
@@ -45,4 +45,11 @@ test('live guest access decisions accept only approve or deny', () => {
   assert.equal(validateLiveGuestDecision('denied'), 'denied');
   assert.throws(() => validateLiveGuestDecision('pending'));
   assert.throws(() => validateLiveGuestDecision(true));
+});
+
+
+test('live guest account identifiers accept safe UID characters only', () => {
+  assert.equal(validateLiveGuestId('user.name-123'), 'user.name-123');
+  assert.throws(() => validateLiveGuestId('../other-user'));
+  assert.throws(() => validateLiveGuestId(''));
 });
