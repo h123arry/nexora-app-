@@ -10,6 +10,6 @@ export function reorderById<T extends { id: string }>(items: T[], sourceId: stri
   if (sourceIndex < 0 || targetIndex < 0) return items;
   const next = [...items];
   const [moved] = next.splice(sourceIndex, 1);
-  next.splice(targetIndex, 0, moved);
+  next.splice(sourceIndex < targetIndex ? targetIndex - 1 : targetIndex, 0, moved);
   return next;
 }
