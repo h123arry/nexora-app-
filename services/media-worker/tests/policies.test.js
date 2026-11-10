@@ -71,3 +71,10 @@ describe('NEXORA media rendition planning', () => {
   });
 });
 
+it('processing leases are protected while active and recover after expiry', () => {
+  const now = 2_000_000;
+  assert.equal(canClaimMediaProcessing({ status: 'processing', processingStartedAt: { toMillis: () => now - 60_000 } }, now), false);
+  assert.equal(canClaimMediaProcessing({ status: 'processing', processingStartedAt: { toMillis: () => now - 16 * 60_000 } }, now), true);
+  assert.equal(canClaimMediaProcessing({ status: 'ready' }, now), false);
+  assert.equal(canClaimMediaProcessing({ status: 'failed' }, now), true);
+});

@@ -5,7 +5,7 @@ import {
   uploadBytesResumable,
   type UploadMetadata,
 } from 'firebase/storage';
-import { deleteDoc, doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db, storage } from './config';
 import { mediaStoragePath } from './storagePaths';
 
@@ -96,10 +96,10 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
   };
   return new Promise((resolve, reject) => {
     const assetRef = doc(db, 'mediaAssets', mediaId);
-    const cleanupFailedUpload = async () => {
+    const cleanupFailedUpload = async (reason: string) => {
       await Promise.allSettled([
-        deleteDoc(assetRef),
         deleteObject(ref(storage, storagePath)),
+        updateDoc(assetRef, { status: 'failed', failureCategory: signal?.aborted ? 'upload_cancelled' : 'upload_failed', failureMessage: reason.slice(0, 240), updatedAt: serverTimestamp() }),
       ]);
     };
     void setDoc(assetRef, {
@@ -126,7 +126,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
         },
         error => {
           signal?.removeEventListener('abort', abortUpload);
-          void cleanupFailedUpload().finally(() => reject(error));
+          void cleanupFailedUpload(error?.message || 'Upload interrupted').finally(() => reject(error));
         },
         async () => {
           signal?.removeEventListener('abort', abortUpload);
@@ -139,7 +139,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
               size: file.size,
             });
           } catch (error) {
-            await cleanupFailedUpload();
+            await cleanupFailedUpload(error instanceof Error ? error.message : 'Upload finalization failed');
             reject(error);
           }
         },
