@@ -2,7 +2,6 @@ import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID } from 'node:crypto';
 
 const MAX_DURATION_DAYS = 30;
-const MAX_ACTIVE_CHALLENGES = 5;
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,150}$/;
 
 function clean(value: unknown, max: number): string {
@@ -37,6 +36,8 @@ export async function createSocialChallenge(db: Firestore, creatorId: string, in
   const challengeId = randomUUID();
   const challengeRef = db.collection('socialChallenges').doc(challengeId);
   const participantRef = challengeRef.collection('participants').doc(creatorId);
+  const activeChallenges = await db.collection('socialChallenges').where('creatorId', '==', creatorId).where('status', '==', 'active').limit(5).get();
+  if (activeChallenges.size >= 5) throw new Error('You have reached the active challenge limit.');
   await db.runTransaction(async tx => {
     tx.create(challengeRef, {
       id: challengeId, creatorId, title, description, topic,
@@ -68,14 +69,13 @@ export async function joinSocialChallenge(db: Firestore, uid: string, challengeI
 }
 
 export async function listSocialChallenges(db: Firestore) {
-  const snapshot = await db.collection('socialChallenges').where('status', '==', 'active')
-    .orderBy('createdAt', 'desc').limit(40).get();
+  const snapshot = await db.collection('socialChallenges').where('status', '==', 'active').limit(40).get();
   const now = Date.now();
   return {
     challenges: snapshot.docs.filter(doc => {
       const endAt = doc.get('endAt')?.toDate?.()?.getTime?.() || 0;
       return endAt > now;
-    }).map(doc => ({
+    }).sort((a, b) => (b.get('createdAt')?.toDate?.()?.getTime?.() || 0) - (a.get('createdAt')?.toDate?.()?.getTime?.() || 0)).map(doc => ({
       id: doc.id, creatorId: doc.get('creatorId'), title: doc.get('title'),
       description: doc.get('description'), topic: doc.get('topic'),
       targetPosts: doc.get('targetPosts'), participantCount: doc.get('participantCount') || 0,
@@ -100,7 +100,12 @@ export async function recordSocialChallengePost(db: Firestore, uid: string, post
       return { recorded: false };
     }
     tx.create(entryRef, { postId, userId: uid, createdAt: FieldValue.serverTimestamp() });
-    tx.update(challengeRef, { contributionCount: FieldValue.increment(1) });
+    const nextContributionCount = Number(challenge.get('contributionCount') || 0) + 1;
+    tx.update(challengeRef, {
+      contributionCount: nextContributionCount,
+      ...(nextContributionCount >= Number(challenge.get('targetPosts') || 1)
+        ? { status: 'completed', completedAt: FieldValue.serverTimestamp() } : {}),
+    });
     tx.update(participantRef, { contributionCount: FieldValue.increment(1), lastContributionAt: FieldValue.serverTimestamp() });
     return { recorded: true };
   });
