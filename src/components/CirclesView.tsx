@@ -10,6 +10,7 @@ import CircleInsightsPanel from './CircleInsightsPanel';
 import CircleMembersPanel from './CircleMembersPanel';
 import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 import CircleGovernancePanel from './CircleGovernancePanel';
+import CircleReportsPanel from './CircleReportsPanel';
 import SaveToCollectionButton from './SaveToCollectionButton';
 
 interface CirclesViewProps {
@@ -601,12 +602,20 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 )}
 
                 {activePortalTab === 'mods' && (
-                  <CircleGovernancePanel
-                    communityId={selectedCircle.id}
-                    currentUserId={currentUser.id}
-                    isOwner={selectedCircle.ownerId === currentUser.id}
-                    canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
-                  />
+                  <div className="space-y-6">
+                    <CircleGovernancePanel
+                      communityId={selectedCircle.id}
+                      currentUserId={currentUser.id}
+                      isOwner={selectedCircle.ownerId === currentUser.id}
+                      canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
+                    />
+                    <div className="border-t border-white/10 pt-5">
+                      <CircleReportsPanel
+                        communityId={selectedCircle.id}
+                        canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
+                      />
+                    </div>
+                  </div>
                 )}
 
                 {activePortalTab === 'rules' && (
