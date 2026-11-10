@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Chat, User } from '../types';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../lib/firebase';
 
 interface ShareSheetProps {
   isOpen: boolean;
@@ -38,6 +40,7 @@ export default function ShareSheet({
   const [isSaved, setIsSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [realChats, setRealChats] = useState<Chat[]>([]);
+  const [creatingReferral, setCreatingReferral] = useState(false);
 
   // Load real chats from localStorage for friend list
   useEffect(() => {
@@ -102,6 +105,26 @@ export default function ShareSheet({
     setCopied(true);
     window.dispatchEvent(new CustomEvent('toast', { detail: '🔗 Link copied to clipboard.' }));
     setTimeout(() => setCopied(false), 2500);
+  };
+
+  const handleInviteFriends = async () => {
+    if (!currentUser?.id || currentUser.id === 'guest_visitor_id' || creatingReferral) return;
+    setCreatingReferral(true);
+    try {
+      const createCode = httpsCallable<Record<string, never>, { code: string }>(functions, 'createMyReferralCode');
+      const response = await createCode({});
+      const inviteUrl = new URL(window.location.origin + '/');
+      inviteUrl.searchParams.set('ref', response.data.code);
+      const message = `Join me on NEXORA, the world's living social network. ${inviteUrl.toString()}`;
+      if (navigator.share) await navigator.share({ title: 'Join me on NEXORA', text: message, url: inviteUrl.toString() });
+      else {
+        await navigator.clipboard.writeText(message);
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your personal NEXORA invitation link has been copied.' }));
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') return;
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your referral link is unavailable right now. Please try again.' }));
+    } finally { setCreatingReferral(false); }
   };
 
   const handleSaveToggle = () => {
@@ -238,6 +261,13 @@ export default function ShareSheet({
         window.open(`sms:?body=${encodeURIComponent(`Check out this post on Nexora: ${shareUrl}`)}`, '_blank');
       }
     },
+    {
+      id: 'referral',
+      name: 'Invite to Nexora',
+      bg: 'bg-violet-600/15 hover:bg-violet-600/25 border-violet-400/30 text-violet-300',
+      icon: <Rocket className="w-5 h-5" />,
+      action: handleInviteFriends
+    },
     { 
       id: 'copy', 
       name: 'Copy Link', 
@@ -363,10 +393,11 @@ export default function ShareSheet({
               <button
                 key={chan.id}
                 onClick={chan.action}
+                disabled={chan.id === 'referral' && creatingReferral}
                 className="flex flex-col items-center gap-2 cursor-pointer group"
               >
                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-sm border ${chan.bg}`}>
-                  {chan.icon}
+                  {chan.id === 'referral' && creatingReferral ? <span className="text-[10px]">...</span> : chan.icon}
                 </div>
                 <span className="font-sans font-medium text-[10px] text-zinc-300 truncate w-full text-center">{chan.name}</span>
               </button>
