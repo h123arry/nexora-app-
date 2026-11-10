@@ -1,4 +1,5 @@
 import { Notification, User, Post } from '../types';
+import { playNexoraSound } from './soundExperience';
 
 // ============================================================================
 // 1. CRYSTAL SYNTHESIS AUDIO ENGINE (Zero External Assets Required)
@@ -20,121 +21,12 @@ function getAudioContext(): AudioContext | null {
 }
 
 export function playNotificationSound(type: 'spark' | 'comment' | 'follow' | 'profile_view' | 'sync' | 'default' = 'default') {
-  try {
-    const soundEnabled = localStorage.getItem('nexora_notif_sound') !== 'false';
-    if (!soundEnabled) return;
-
-    const ctx = getAudioContext();
-    if (!ctx) return;
-
-    const now = ctx.currentTime;
-    const gainNode = ctx.createGain();
-    gainNode.connect(ctx.destination);
-
-    if (type === 'spark') {
-      // Warm euphoric spark chord (587Hz -> 880Hz -> 1174Hz)
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      osc1.type = 'sine';
-      osc2.type = 'triangle';
-      
-      osc1.frequency.setValueAtTime(587.33, now);
-      osc1.frequency.exponentialRampToValueAtTime(1174.66, now + 0.18);
-      osc2.frequency.setValueAtTime(880.00, now);
-      osc2.frequency.exponentialRampToValueAtTime(1760.00, now + 0.22);
-
-      gainNode.gain.setValueAtTime(0.12, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-
-      osc1.connect(gainNode);
-      osc2.connect(gainNode);
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + 0.35);
-      osc2.stop(now + 0.35);
-
-    } else if (type === 'comment') {
-      // Bubbly double chime (659.25Hz -> 783.99Hz)
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(659.25, now);
-      osc.frequency.setValueAtTime(783.99, now + 0.08);
-
-      gainNode.gain.setValueAtTime(0.14, now);
-      gainNode.gain.setValueAtTime(0.14, now + 0.08);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
-
-      osc.connect(gainNode);
-      osc.start(now);
-      osc.stop(now + 0.28);
-
-    } else if (type === 'follow') {
-      // Uplifting tri-tone (523.25Hz -> 659.25Hz -> 783.99Hz)
-      const osc = ctx.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(523.25, now);
-      osc.frequency.setValueAtTime(659.25, now + 0.07);
-      osc.frequency.setValueAtTime(783.99, now + 0.14);
-
-      gainNode.gain.setValueAtTime(0.12, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
-
-      osc.connect(gainNode);
-      osc.start(now);
-      osc.stop(now + 0.32);
-
-    } else if (type === 'profile_view') {
-      // Resonant ambient scanner ping (880Hz -> 1046Hz)
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, now);
-      osc.frequency.exponentialRampToValueAtTime(1046.5, now + 0.12);
-
-      gainNode.gain.setValueAtTime(0.10, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
-
-      osc.connect(gainNode);
-      osc.start(now);
-      osc.stop(now + 0.38);
-
-    } else if (type === 'sync') {
-      // Cyber harmonic data stream sweep (440Hz -> 880Hz -> 1320Hz)
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, now);
-      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.20);
-
-      gainNode.gain.setValueAtTime(0.15, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.40);
-
-      osc.connect(gainNode);
-      osc.start(now);
-      osc.stop(now + 0.40);
-
-    } else {
-      // Default soft blip
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(600, now);
-      osc.frequency.exponentialRampToValueAtTime(900, now + 0.1);
-
-      gainNode.gain.setValueAtTime(0.10, now);
-      gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-
-      osc.connect(gainNode);
-      osc.start(now);
-      osc.stop(now + 0.25);
-    }
-
-    // Trigger mobile haptics if supported
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate([35, 25, 45]);
-      } catch (_) {}
-    }
-  } catch (err) {
-    console.debug('[Audio] Audio synthesis not yet unlocked by user interaction:', err);
-  }
+  const soundType = type === 'spark' ? 'notification.spark'
+    : type === 'comment' ? 'notification.comment'
+    : type === 'follow' ? 'notification.follow'
+    : type === 'sync' ? 'interface.confirmation'
+    : 'notification.default';
+  playNexoraSound(soundType);
 }
 
 // ============================================================================
