@@ -64,3 +64,16 @@ test('creator progression levels use clamped reputation and expose the next mile
   assert.equal(buildCreatorProgressionLevel(-10).currentReputation, 0);
   assert.equal(buildCreatorProgressionLevel(Number.NaN).currentReputation, 0);
 });
+
+
+test('helpfulness badges depend on the separate helpfulness reputation signal, not likes or views', () => {
+  const posts = [{ videoUrl: '', views: 100000, likes: 100000, isArchived: false }];
+  const noHelpfulness = buildCreatorAchievements(posts, 0, false, 0);
+  const helpful = buildCreatorAchievements(posts, 0, false, 25);
+  const guide = buildCreatorAchievements(posts, 0, false, 100);
+  const byId = (items: typeof noHelpfulness, id: string) => items.find(item => item.id === id)!;
+  assert.equal(byId(noHelpfulness, 'helpful_contributor').unlocked, false);
+  assert.equal(byId(helpful, 'helpful_contributor').unlocked, true);
+  assert.equal(byId(helpful, 'trusted_guide').unlocked, false);
+  assert.equal(byId(guide, 'trusted_guide').unlocked, true);
+});
