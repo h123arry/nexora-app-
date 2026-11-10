@@ -5,6 +5,25 @@ const ID_LIMIT = 150;
 const NOTE_LIMIT = 1000;
 const KEY_PATTERN = /^[A-Za-z0-9_-]{16,100}$/;
 
+function bookingDate(value: unknown): Date | null {
+  if (value instanceof Date) return Number.isFinite(value.getTime()) ? value : null;
+  if (typeof value === 'string') {
+    const parsed = new Date(value);
+    return Number.isFinite(parsed.getTime()) ? parsed : null;
+  }
+  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as { toDate?: unknown }).toDate === 'function') {
+    try {
+      const parsed = (value as { toDate: () => Date }).toDate();
+      return parsed instanceof Date && Number.isFinite(parsed.getTime()) ? parsed : null;
+    } catch { return null; }
+  }
+  return null;
+}
+
+function bookingDuration(value: unknown): number {
+  return Number.isInteger(value) && Number(value) >= 5 && Number(value) <= 1440 ? Number(value) : 30;
+}
+
 function validId(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= ID_LIMIT && !value.includes('/');
 }
@@ -78,7 +97,7 @@ export async function createPageBookingRequest(
       pageId, pageName: String(page.get('name') || 'Business'),
       pageUsername: String(page.get('username') || ''),
       pageAvatar: String(page.get('avatar') || ''),
-      serviceId, serviceName, customerId: customerUid,
+      serviceId, serviceName, durationMinutes: bookingDuration(service.get('durationMinutes')), customerId: customerUid,
       ownerId: ownerUid, requestedAt: new Date(requestedAt),
       note: note.trim(), status: 'pending', createdAt: now, updatedAt: now,
     });
@@ -113,6 +132,31 @@ export async function respondToPageBookingRequest(
       throw new Error('This booking request has already been resolved.');
     }
     const customerUid = String(booking.get('customerId') || '');
+    if (booking.get('status') === 'pending' && decision === 'accepted') {
+      const startsAt = bookingDate(booking.get('requestedAt'));
+      if (!startsAt || startsAt.getTime() <= Date.now()) {
+        throw new Error('This booking time is no longer valid. Ask the customer to submit a new request.');
+      }
+      const durationMinutes = bookingDuration(booking.get('durationMinutes'));
+      const endsAt = new Date(startsAt.getTime() + durationMinutes * 60_000);
+      // Services are capped at 24 hours, so this window includes every earlier
+      // confirmed booking that could overlap this requested interval.
+      const earliestPossibleOverlap = new Date(startsAt.getTime() - 24 * 60 * 60_000);
+      const overlapping = await tx.get(db.collection('pageBookings')
+        .where('pageId', '==', String(booking.get('pageId') || ''))
+        .where('status', '==', 'accepted')
+        .where('requestedAt', '>=', earliestPossibleOverlap)
+        .where('requestedAt', '<', endsAt));
+      for (const existing of overlapping.docs) {
+        if (existing.id === bookingId) continue;
+        const existingStart = bookingDate(existing.get('requestedAt'));
+        if (!existingStart) continue;
+        const existingEnd = new Date(existingStart.getTime() + bookingDuration(existing.get('durationMinutes')) * 60_000);
+        if (existingStart < endsAt && existingEnd > startsAt) {
+          throw new Error('This time overlaps another confirmed booking. Choose a different time.');
+        }
+      }
+    }
     const notificationId = 'booking_response_' + bookingId + '_' + decision;
     const notificationRef = db.collection('users').doc(customerUid).collection('notifications').doc(notificationId);
     const notification = await tx.get(notificationRef);
