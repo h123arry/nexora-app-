@@ -195,11 +195,17 @@ export async function searchNexoraContent(
     }
     if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) return null;
     if (ownerId && ['person','post','video','live'].includes(String(data.kind))) {
-      const [ownerSettings, follow] = await Promise.all([
+      const [ownerSettings, follow, ownerStatus] = await Promise.all([
         db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
         db.collection('follows').doc(viewerUid + '_' + ownerId).get(),
+        db.collection('accountStatus').doc(ownerId).get(),
       ]);
       const privacy = ownerSettings.data() || {};
+      const restriction = ownerStatus.data() || {};
+      const restrictionExpiry = asDate(restriction.expiresAt);
+      const restrictionActive = (restriction.banned === true || restriction.suspended === true)
+        && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now());
+      if (restrictionActive) return null;
       const ownerBlocks = [
         ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
         ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
