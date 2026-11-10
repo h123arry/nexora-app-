@@ -480,7 +480,7 @@ export default function UniversalSearchModal({
                           if (hit.kind === 'person') onViewProfile({ id: hit.targetId, username: hit.subtitle, name: hit.title, avatar: hit.image, bio: hit.excerpt, location: '', website: '', followers: 0, following: 0, isVerified: hit.verified, coverImage: '', joinedDate: '', reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 }, interestDNA: {}, skills: [] });
                           else if (hit.kind === 'hashtag') onSelectTab('explore');
                           else if (hit.kind === 'live') onSelectTab('live');
-                          else if (hit.kind === 'event' || hit.kind === 'page' || hit.kind === 'circle' || hit.kind === 'service' || hit.kind === 'update') onSelectTab('communities');
+                          else if (hit.kind === 'event' || hit.kind === 'page' || hit.kind === 'circle' || hit.kind === 'poll' || hit.kind === 'announcement' || hit.kind === 'service' || hit.kind === 'update') onSelectTab('communities');
                           else onSelectTab('feed');
                           handleSaveSearch(query); onClose();
                         }} className="flex w-full items-start gap-3 rounded-xl border border-white/5 bg-white/[0.025] p-3 text-left transition-colors hover:border-violet-400/30 hover:bg-white/[0.05]">
