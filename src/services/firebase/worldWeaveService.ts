@@ -118,7 +118,7 @@ export async function addWorldWeaveTextMoment(weaveId: string, author: { id: str
   batch.set(momentRef, { weaveId, authorId: user.uid,
     authorName: author.name.slice(0, 80), authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '',
     text: cleanText, mediaType: 'text', createdAt: serverTimestamp() });
-  batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp(), lastMomentId: momentRef.id });
   await batch.commit();
 }
 export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: string; name: string; username: string; avatar: string },
