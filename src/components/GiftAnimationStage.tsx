@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
+import { shouldPauseMotion } from '../utils/motionLifecycle';
 import GiftArtwork from './GiftArtwork';
 
 export interface GiftAnimationStageProps {
@@ -39,7 +40,7 @@ export default function GiftAnimationStage({
     return () => document.removeEventListener('visibilitychange', updateVisibility);
   }, []);
 
-  const paused = reducedMotion || !isInView || !pageVisible;
+  const paused = shouldPauseMotion({ reducedMotion, inViewport: isInView, pageVisible });
   return (
     <div
       ref={stageRef}
