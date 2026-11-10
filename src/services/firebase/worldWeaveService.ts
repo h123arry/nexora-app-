@@ -58,6 +58,17 @@ export async function createWorldWeave(input: { title: string; description: stri
     createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   return ref.id;
 }
+export async function updateWorldWeaveDetails(weaveId: string, input: { title: string; description: string; visibility: WorldWeaveVisibility }): Promise<void> {
+  const user = requireUser();
+  const title = input.title.trim();
+  const description = input.description.trim();
+  if (title.length < 3 || title.length > 90) throw new Error('Title must be between 3 and 90 characters.');
+  if (description.length > 500) throw new Error('Description must be 500 characters or fewer.');
+  const weaveRef = doc(db, 'worldWeaves', weaveId);
+  const snapshot = await getDoc(weaveRef);
+  if (!snapshot.exists() || snapshot.data().ownerId !== user.uid) throw new Error('Only the owner can edit this WorldWeave.');
+  await updateDoc(weaveRef, { title, description, visibility: input.visibility, updatedAt: serverTimestamp() });
+}
 export async function joinPublicWorldWeave(weaveId: string): Promise<WorldWeave> {
   const user = requireUser();
   return runTransaction(db, async transaction => {
