@@ -226,9 +226,11 @@ export async function searchNexoraContent(
       let policy = ownerPolicyCache.get(ownerId);
       if (!policy) {
         policy = Promise.all([
+          db.collection('users').doc(ownerId).get(),
           db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
           db.collection('accountStatus').doc(ownerId).get(),
-        ]).then(([ownerSettings, ownerStatus]) => {
+        ]).then(([ownerProfile, ownerSettings, ownerStatus]) => {
+          const profile = ownerProfile.data() || {};
           const privacy = ownerSettings.data() || {};
           const restriction = ownerStatus.data() || {};
           const restrictionExpiry = asDate(restriction.expiresAt);
@@ -238,8 +240,9 @@ export async function searchNexoraContent(
               ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
               ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
             ],
-            restricted: (restriction.banned === true || restriction.suspended === true)
-              && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now()),
+            restricted: profile.isBanned === true || profile.isSuspended === true
+              || ((restriction.banned === true || restriction.suspended === true)
+                && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now())),
           };
         });
         ownerPolicyCache.set(ownerId, policy);
