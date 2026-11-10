@@ -58,6 +58,7 @@ import { createPostRepost } from './services/firebase/postRepostService';
 import { addPostCommentReply } from './services/firebase/postReplyService';
 import { setPostCommentLike } from './services/firebase/postCommentReactionService';
 import { deletePostComment } from './services/firebase/postCommentDeletionService';
+import { uploadMediaFile } from './services/firebase/storageService';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -77,6 +78,7 @@ const ActivityView = lazy(() => import('./components/ActivityView'));
 const OnboardingTour = lazy(() => import('./components/OnboardingTour'));
 const RetentionWelcomePanel = lazy(() => import('./components/RetentionWelcomePanel'));
 const MediaCreationEngine = lazy(() => import('./components/MediaCreationEngine'));
+const NexoraStudio = lazy(() => import('./components/NexoraStudio'));
 const ExploreView = lazy(() => import('./components/ExploreView'));
 const NewInboxView = lazy(() => import('./components/NewInboxView'));
 const LiveView = lazy(() => import('./components/LiveView'));
@@ -768,6 +770,7 @@ export default function App() {
   
   // Dialog overlays
   const [isCreatePostModalOpen, setIsCreatePostModalOpen] = useState(false);
+  const [isNexoraStudioOpen, setIsNexoraStudioOpen] = useState(false);
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [creationInitialMode, setCreationInitialMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
   const [creationInitialTab, setCreationInitialTab] = useState<'feed' | 'story' | 'drafts' | undefined>(undefined);
@@ -2371,6 +2374,31 @@ export default function App() {
         </div>
       </div>
 
+      <AnimatePresence>
+        {isNexoraStudioOpen && currentUser && (
+          <Suspense fallback={<div className="fixed inset-0 z-[140] grid place-items-center bg-[#05040D] text-sm text-violet-200">Opening NEXORA Studio…</div>}>
+            <NexoraStudio
+              key={currentUser.id}
+              currentUser={currentUser}
+              onClose={() => setIsNexoraStudioOpen(false)}
+              onPublish={async (video, caption) => {
+                const file = new File([video], `nexora-studio-${Date.now()}.webm`, { type: video.type || 'video/webm' });
+                const uploaded = await uploadMediaFile({
+                  file,
+                  userId: currentUser.id,
+                  fileName: file.name,
+                  onProgress: () => undefined,
+                });
+                const postId = handleAddPost(caption || 'Created with NEXORA Studio', undefined, undefined, undefined, uploaded.downloadUrl);
+                if (!postId) throw new Error('The video uploaded, but the post could not be created. Your Studio draft is still saved.');
+                setIsNexoraStudioOpen(false);
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Studio video is now on NEXORA.' }));
+              }}
+            />
+          </Suspense>
+        )}
+      </AnimatePresence>
+
       {/* Create Post Global Overlay Modal Dialog */}
       <AnimatePresence>
         {isCreatePostModalOpen && (
@@ -2792,6 +2820,12 @@ export default function App() {
               <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('video'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="group mb-3 flex w-full items-center gap-4 rounded-2xl border border-[#7138FF]/45 bg-[linear-gradient(115deg,rgba(113,56,255,0.22),rgba(22,0,163,0.12))] p-4 text-left transition hover:border-[#B69BFF]/70 hover:bg-[#7138FF]/20">
                 <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#8A3FFC,#3B16B8)] text-white shadow-[0_8px_24px_rgba(113,56,255,0.28)]"><VideoIcon className="h-6 w-6" /></span>
                 <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">Share a video</span><span className="mt-1 block text-xs leading-relaxed text-[#B8AED4]">Choose a video from your device and get it ready to share.</span></span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-[#B69BFF] transition group-hover:translate-x-1" />
+              </button>
+
+              <button type="button" onClick={() => { setIsCreateMenuOpen(false); setIsNexoraStudioOpen(true); }} className="group mb-3 flex w-full items-center gap-4 rounded-2xl border border-[#B69BFF]/35 bg-[linear-gradient(110deg,rgba(138,63,252,.22),rgba(22,0,163,.16))] p-4 text-left transition hover:border-[#B69BFF]/70">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#7138FF]/20 text-[#D7C7FF]"><Sparkles className="h-6 w-6" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">Open NEXORA Studio</span><span className="mt-1 block text-xs leading-relaxed text-[#B8AED4]">Edit multiple clips, trim scenes, add a soundtrack and titles, then export your video.</span></span>
                 <ChevronRight className="h-5 w-5 shrink-0 text-[#B69BFF] transition group-hover:translate-x-1" />
               </button>
 
