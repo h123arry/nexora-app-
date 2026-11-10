@@ -14,7 +14,7 @@ export interface WorldWeave {
 export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; status: 'pending' | 'accepted'; createdAt?: unknown; }
 export interface WorldWeaveMoment {
   id: string; weaveId: string; authorId: string; authorName: string; authorUsername: string;
-  authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video';
+  authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video' | 'audio';
   mediaUrl?: string; storagePath?: string; createdAt?: unknown;
 }
 function requireUser() {
@@ -127,8 +127,8 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
   if (user.uid !== author.id) throw new Error('The signed-in account must own this contribution.');
   if (!file || file.size <= 0) throw new Error('Choose a photo or video first.');
   if (text.trim().length > 2000) throw new Error('Moment text must be 2,000 characters or fewer.');
-  const mediaType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : null;
-  if (!mediaType) throw new Error('WorldWeave supports image and video contributions.');
+  const mediaType = file.type.startsWith('image/') ? 'image' : file.type.startsWith('video/') ? 'video' : file.type.startsWith('audio/') ? 'audio' : null;
+  if (!mediaType) throw new Error('Choose a supported photo, video or voice note.');
   const momentRef = doc(collection(db, 'worldWeaves', weaveId, 'moments'));
   let uploaded: Awaited<ReturnType<typeof uploadMediaFile>> | null = null;
   try {
