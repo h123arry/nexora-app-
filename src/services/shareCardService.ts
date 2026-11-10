@@ -83,9 +83,17 @@ export async function renderPostShareCard(input: PostShareCardInput): Promise<Bl
   context.fillStyle = '#C4B5FD';
   context.font = '700 30px Arial, sans-serif';
   context.fillText('THE WORLD’S LIVING SOCIAL NETWORK', 100, 160);
+  let logoDrawn = false;
+  try {
+    const logo = new Image();
+    logo.src = '/logo.svg';
+    await logo.decode();
+    context.drawImage(logo, 96, 190, 112, 112);
+    logoDrawn = true;
+  } catch { /* The approved wordmark remains available if the mark asset cannot load. */ }
   context.fillStyle = '#FFFFFF';
   context.font = '900 82px Arial, sans-serif';
-  context.fillText('NEXORA', 96, 270);
+  context.fillText('NEXORA', logoDrawn ? 230 : 96, 270);
   context.fillStyle = '#A78BFA';
   context.fillRect(100, 330, 140, 8);
 
