@@ -72,3 +72,16 @@ export async function moderateLiveParticipant(sessionId: string, participantId: 
   >(liveKitFunctions, 'moderateLiveParticipant');
   return (await call({ sessionId, participantId, action })).data;
 }
+
+export async function startLiveRecording(sessionId: string) {
+  const call = httpsCallable<{ sessionId: string }, { sessionId: string; status: string; egressId?: string; replayed: boolean }>(liveKitFunctions, 'startLiveRecording');
+  return (await call({ sessionId })).data;
+}
+export async function stopLiveRecording(sessionId: string) {
+  const call = httpsCallable<{ sessionId: string }, { sessionId: string; status: string; stopped: true }>(liveKitFunctions, 'stopLiveRecording');
+  return (await call({ sessionId })).data;
+}
+export async function getLiveReplayPlayback(sessionId: string) {
+  const call = httpsCallable<{ sessionId: string }, { sessionId: string; url: string; expiresAt: number }>(liveKitFunctions, 'getLiveReplayPlayback');
+  return (await call({ sessionId })).data;
+}
