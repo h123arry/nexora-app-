@@ -1235,6 +1235,33 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity')));
   });
 
+  it('keeps Creator Academy workbooks private and restricts them to approved templates', async () => {
+    const alice = dbFor('alice');
+    const workbook = {
+      userId: 'alice', templateId: 'content-brief',
+      content: JSON.stringify({ audience: 'New creators', goal: 'Teach a useful skill.' }),
+      updatedAt: serverTimestamp(), schemaVersion: 1
+    };
+    await assertSucceeds(setDoc(doc(alice, 'academyCreatorWorkbooks', 'alice_content-brief'), workbook));
+    await assertSucceeds(getDoc(doc(alice, 'academyCreatorWorkbooks', 'alice_content-brief')));
+    await assertSucceeds(getDocs(query(collection(alice, 'academyCreatorWorkbooks'), where('userId', '==', 'alice'))));
+    await assertFails(getDoc(doc(dbFor('bob'), 'academyCreatorWorkbooks', 'alice_content-brief')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'academyCreatorWorkbooks', 'bob_content-brief'), workbook));
+    await assertFails(setDoc(doc(alice, 'academyCreatorWorkbooks', 'alice_unapproved'), {
+      ...workbook, templateId: 'unapproved'
+    }));
+    await assertFails(setDoc(doc(alice, 'academyCreatorWorkbooks', 'alice_content-brief'), {
+      ...workbook, content: 'x'.repeat(16001)
+    }));
+    await assertFails(setDoc(doc(alice, 'academyCreatorWorkbooks', 'alice_content-brief'), {
+      ...workbook, isInstructor: true
+    }));
+    await assertFails(updateDoc(doc(alice, 'academyCreatorWorkbooks', 'alice_content-brief'), {
+      userId: 'bob'
+    }));
+    await assertSucceeds(deleteDoc(doc(alice, 'academyCreatorWorkbooks', 'alice_content-brief')));
+  });
+
   it('keeps Academy institution content, grading and credentials server-authoritative', async () => {
     await assertFails(setDoc(doc(dbFor('alice'), 'academyCourses', 'forged-course'), {
       id: 'forged-course', ownerId: 'alice', status: 'published', title: 'Forged'
