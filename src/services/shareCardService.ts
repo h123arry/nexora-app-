@@ -45,7 +45,6 @@ function drawWrappedText(
     } else line = candidate;
   }
   if (lines < maxLines && line) {
-    const remaining = words.slice(words.indexOf(line.split(' ')[0])).join(' ');
     const finalLine = lines === maxLines - 1 && context.measureText(line).width > maxWidth
       ? line.slice(0, 90) + '…' : line;
     context.fillText(finalLine, x, y + lines * lineHeight);
