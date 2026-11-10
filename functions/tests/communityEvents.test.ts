@@ -14,6 +14,7 @@ before(async () => {
   await db.doc('communities/event-circle').set({ id: 'event-circle', ownerId: 'alice', type: 'public' });
   await db.doc('communities/event-circle/members/alice').set({ userId: 'alice', role: 'owner', status: 'active' });
   await db.doc('communities/event-circle/members/bob').set({ userId: 'bob', role: 'member', status: 'active' });
+  await db.doc('communities/event-circle/members/muted-event-user').set({ userId: 'muted-event-user', role: 'member', status: 'active' });
 });
 
 after(async () => {
@@ -29,6 +30,18 @@ describe('trusted Circle events and RSVPs', () => {
     assert.equal(event.get('attendeeCount'), 0);
     await assert.rejects(createCircleEvent(db, 'mallory', 'event-circle', 'No access', new Date(Date.now() + 86400000).toISOString()), /Join this Circle/);
     await assert.rejects(createCircleEvent(db, 'alice', 'event-circle', 'Past event', new Date(Date.now() - 1000).toISOString()), /future date/);
+  });
+
+  it('blocks event creation during an active mute and restores it after expiry', async () => {
+    const muteRef = db.doc('communities/event-circle/mutes/muted-event-user');
+    await muteRef.set({ userId: 'muted-event-user', reason: 'Temporary event mute', createdAt: new Date(), expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
+    await assert.rejects(
+      createCircleEvent(db, 'muted-event-user', 'event-circle', 'Muted event', new Date(Date.now() + 86400000).toISOString()),
+      /temporarily muted/,
+    );
+    await muteRef.update({ expiresAt: new Date(Date.now() - 1000) });
+    const created = await createCircleEvent(db, 'muted-event-user', 'event-circle', 'After expiry', new Date(Date.now() + 86400000).toISOString());
+    assert.equal((await db.doc(`communities/event-circle/events/${created.eventId}`).get()).exists, true);
   });
 
   it('adds and removes each member RSVP exactly once with transactional counts', async () => {
