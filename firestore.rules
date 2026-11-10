@@ -1188,10 +1188,29 @@ service cloud.firestore {
       match /messages/{messageId} {
         allow get, list: if chatMember(chatId);
         allow create: if chatMember(chatId) && accountMayMessage() && recipientAllowsMessage(chatId) && validMessageCreate(chatId, messageId);
-        allow update: if chatMember(chatId)
-          && resource.data.senderId != request.auth.uid
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
-          && request.resource.data.status in ['delivered', 'read'];
+        function validGroupReceiptUpdate() {
+          let chat = get(/databases/$(database)/documents/chats/$(chatId)).data;
+          let previousReceipts = resource.data.get('recipientReceipts', {});
+          let nextReceipts = request.resource.data.get('recipientReceipts', {});
+          let previousReceipt = previousReceipts.get(request.auth.uid, {});
+          let nextReceipt = nextReceipts.get(request.auth.uid, {});
+          return chat.get('isGroup', false) == true
+            && resource.data.senderId != request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipientReceipts'])
+            && nextReceipts.diff(previousReceipts).affectedKeys().hasOnly([request.auth.uid])
+            && nextReceipt.keys().hasOnly(['status', 'updatedAt'])
+            && nextReceipt.get('status', '') in ['delivered', 'read']
+            && nextReceipt.get('updatedAt', null) == request.time
+            && (previousReceipt.get('status', '') != 'read' || nextReceipt.status == 'read');
+        }
+        allow update: if chatMember(chatId) && (
+          (
+            resource.data.senderId != request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.status in ['delivered', 'read']
+          )
+          || validGroupReceiptUpdate()
+        );
         allow delete: if chatMember(chatId) && resource.data.senderId == request.auth.uid;
       }
     match /presence/{userId} {
