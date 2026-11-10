@@ -102,7 +102,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       setLessonNotes({});
       setSavedNoteIds([]);
       setNoteMessage('');
-      const progressQuery = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(50));
+      const progressQuery = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(100));
       const notesQuery = query(collection(db, 'academyLessonNotes'), where('userId', '==', currentUser.id), limit(100));
       const [progressResult, catalogResult, instructorResult, mentorshipResult, notesResult] = await Promise.allSettled([
         getDocs(progressQuery),
