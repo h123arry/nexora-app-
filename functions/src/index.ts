@@ -11,7 +11,7 @@ import { deletePublicPostComment } from './postCommentDeletion.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
-import { setCircleMemberRole } from './communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember } from './communityGovernance.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
@@ -262,6 +262,26 @@ export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (reques
   }
 });
 
+
+export const moderateCommunityMember = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to moderate Circle members.');
+  try {
+    return await moderateCircleMember(
+      adminDb, request.auth.uid, request.data?.communityId, request.data?.targetUid,
+      request.data?.action, request.data?.durationMinutes, request.data?.reason,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Circle member')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only an active Circle') || message.includes('Only the Circle owner')) {
+      throw new HttpsError('permission-denied', message);
+    }
+    if (message.includes('active Circle member') || message.includes('ownership cannot')) {
+      throw new HttpsError('failed-precondition', message);
+    }
+    throw new HttpsError('internal', 'The Circle moderation action could not be saved. Please retry.');
+  }
+});
 
 export const createCommunityInvite = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to invite people to a Circle.');
