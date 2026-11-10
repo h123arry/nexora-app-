@@ -97,13 +97,15 @@ const publicProfile = (uid) => ({
       participantIds: ['alice', 'bob'], memberCount: 2, updatedAt: serverTimestamp()
     });
     await assertSucceeds(batch.commit());
-    await assertSucceeds(setDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'moments', 'bob-moment'), {
+    const contributionBatch = writeBatch(bobDb);
+    contributionBatch.set(doc(bobDb, 'worldWeaves', 'private-weave', 'moments', 'bob-moment'), {
       weaveId: 'private-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
       authorAvatar: '', text: 'I saw it from the front row.', mediaType: 'text', createdAt: serverTimestamp()
-    }));
-    await assertSucceeds(updateDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave'), {
-      momentCount: 1, updatedAt: serverTimestamp()
-    }));
+    });
+    contributionBatch.update(doc(bobDb, 'worldWeaves', 'private-weave'), {
+      momentCount: 1, lastMomentId: 'bob-moment', updatedAt: serverTimestamp()
+    });
+    await assertSucceeds(contributionBatch.commit());
     await assertFails(setDoc(doc(dbFor('charlie'), 'worldWeaves', 'private-weave', 'moments', 'charlie-moment'), {
       weaveId: 'private-weave', authorId: 'charlie', authorName: 'Charlie', authorUsername: 'charlie',
       authorAvatar: '', text: 'Not a member', mediaType: 'text', createdAt: serverTimestamp()
