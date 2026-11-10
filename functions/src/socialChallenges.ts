@@ -36,8 +36,8 @@ export async function createSocialChallenge(db: Firestore, creatorId: string, in
   const challengeId = randomUUID();
   const challengeRef = db.collection('socialChallenges').doc(challengeId);
   const participantRef = challengeRef.collection('participants').doc(creatorId);
-  const creatorChallenges = await db.collection('socialChallenges').where('creatorId', '==', creatorId).limit(30).get();
-  if (creatorChallenges.docs.filter(doc => doc.get('status') === 'active').length >= 5) throw new Error('You have reached the active challenge limit.');
+  const activeChallenges = await db.collection('socialChallenges').where('creatorId', '==', creatorId).where('status', '==', 'active').limit(5).get();
+  if (activeChallenges.size >= 5) throw new Error('You have reached the active challenge limit.');
   await db.runTransaction(async tx => {
     tx.create(challengeRef, {
       id: challengeId, creatorId, title, description, topic,
