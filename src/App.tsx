@@ -2501,7 +2501,7 @@ export default function App() {
               setIsCreateMenuOpen(true);
             }, 'Sign in to create and publish posts.');
           }}
-          className="nx-create-dock relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-linear-to-tr from-violet-600 via-pink-500 to-cyan-400 cursor-pointer border border-white/20 shadow-[0_4px_16px_rgba(139,92,246,0.35)] shrink-0"
+          className="nx-create-dock relative -top-3.5 flex items-center justify-center w-11 h-11 rounded-full text-white outline-hidden bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] cursor-pointer border border-[#B69BFF]/50 shadow-[0_4px_20px_rgba(113,56,255,0.42)] shrink-0"
           id="nav-create-post-center"
           title="Create"
           aria-label="Create a post"
@@ -2713,193 +2713,46 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* ☰ BEAUTIFUL CREATION CHANNELS BOTTOM SHEET */}
+      {/* NEXORA CREATE MENU */}
       <AnimatePresence>
         {isCreateMenuOpen && (
-          <div className="fixed inset-0 z-[100] overflow-hidden flex items-end justify-center">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsCreateMenuOpen(false)}
-              className="absolute inset-0 bg-black/85 backdrop-blur-sm"
-            />
-
-            {/* Bottom Sheet Panel */}
-            <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="relative w-full max-w-lg bg-[#070514] border-t border-white/10 rounded-t-[2.5rem] p-6 pb-12 max-h-[85vh] overflow-y-auto shadow-md space-y-6 z-10 scrollbar-none text-left"
+          <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-hidden sm:items-center sm:p-4">
+            <motion.button type="button" aria-label="Close create menu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsCreateMenuOpen(false)} className="absolute inset-0 bg-[#03020A]/85 backdrop-blur-md" />
+            <motion.section
+              role="dialog" aria-modal="true" aria-labelledby="nexora-create-title"
+              initial={{ y: "100%", opacity: 0.8 }} animate={{ y: 0, opacity: 1 }} exit={{ y: "100%", opacity: 0.8 }}
+              transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              className="relative z-10 max-h-[90dvh] w-full max-w-xl overflow-y-auto rounded-t-[2rem] border border-[#44376F]/70 bg-[#090714] p-5 pb-8 text-left shadow-[0_-20px_80px_rgba(40,16,100,0.32)] sm:rounded-[2rem] sm:p-6"
             >
-              {/* Header with pull tab */}
-              <div className="flex flex-col items-center">
-                <div className="w-12 h-1.5 rounded-full bg-zinc-800 mb-4 cursor-pointer" onClick={() => setIsCreateMenuOpen(false)} />
-                <div className="flex items-center justify-between w-full border-b border-white/5 pb-3">
-                  <div>
-                    <h3 className="text-sm font-sans font-black text-white uppercase tracking-wider flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-violet-400" />
-                      Create Node Broadcast
-                    </h3>
-                    <span className="text-[9px] font-mono text-purple-400 uppercase tracking-widest block mt-0.5">
-                      Choose what you want to construct in the matrix
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setIsCreateMenuOpen(false)}
-                    className="p-1.5 rounded-lg hover:bg-white/5 text-zinc-500 hover:text-white cursor-pointer transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+              <div className="mx-auto mb-5 h-1.5 w-12 rounded-full bg-[#44376F] sm:hidden" />
+              <div className="mb-5 flex items-start justify-between gap-4">
+                <div>
+                  <span className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#7138FF]/30 bg-[#7138FF]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[#B69BFF]"><Sparkles className="h-3.5 w-3.5" /> Your creative space</span>
+                  <h2 id="nexora-create-title" className="text-2xl font-extrabold tracking-tight text-white sm:text-3xl">What would you like to share?</h2>
+                  <p className="mt-1.5 max-w-md text-sm leading-relaxed text-[#A39BBF]">Choose a starting point. You can make changes before you share.</p>
                 </div>
+                <button type="button" onClick={() => setIsCreateMenuOpen(false)} aria-label="Close" className="rounded-xl border border-white/10 bg-white/[0.04] p-2 text-[#A39BBF] transition hover:border-[#7138FF]/50 hover:text-white"><X className="h-4 w-4" /></button>
               </div>
 
-              {/* Grid of options */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-                
-                {/* 1. Write Post */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateMenuOpen(false);
-                    setCreationInitialMode('text');
-                    setCreationInitialTab(undefined);
-                    setIsCreatePostModalOpen(true);
-                  }}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-violet-950/20 border border-white/5 hover:border-white/10 transition-all cursor-pointer text-left group"
-                >
-                  <div className="p-2.5 rounded-xl bg-violet-600/10 text-violet-400 group-hover:scale-110 group-hover:bg-violet-600/20 transition-all shrink-0">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Write Post / Thread</span>
-                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
-                      Share thoughts, formatted text, dynamic polls, and voice.
-                    </span>
-                  </div>
-                </button>
+              <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('video'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="group mb-3 flex w-full items-center gap-4 rounded-2xl border border-[#7138FF]/45 bg-[linear-gradient(115deg,rgba(113,56,255,0.22),rgba(22,0,163,0.12))] p-4 text-left transition hover:border-[#B69BFF]/70 hover:bg-[#7138FF]/20">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[linear-gradient(135deg,#8A3FFC,#3B16B8)] text-white shadow-[0_8px_24px_rgba(113,56,255,0.28)]"><VideoIcon className="h-6 w-6" /></span>
+                <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-white">Share a video</span><span className="mt-1 block text-xs leading-relaxed text-[#B8AED4]">Choose a video from your device and get it ready to share.</span></span>
+                <ChevronRight className="h-5 w-5 shrink-0 text-[#B69BFF] transition group-hover:translate-x-1" />
+              </button>
 
-                {/* 2. Upload Media */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateMenuOpen(false);
-                    setCreationInitialMode('photo');
-                    setCreationInitialTab(undefined);
-                    setIsCreatePostModalOpen(true);
-                  }}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-emerald-950/20 border border-white/5 hover:border-emerald-500/30 transition-all cursor-pointer text-left group"
-                >
-                  <div className="p-2.5 rounded-xl bg-emerald-600/10 text-emerald-400 group-hover:scale-110 group-hover:bg-emerald-600/20 transition-all shrink-0">
-                    <Camera className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Upload Media</span>
-                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
-                      Publish premium image carousels with beautiful custom shaders.
-                    </span>
-                  </div>
-                </button>
-
-                {/* 3. Record Reel */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateMenuOpen(false);
-                    setCreationInitialMode('reel');
-                    setCreationInitialTab(undefined);
-                    setIsCreatePostModalOpen(true);
-                  }}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-cyan-950/20 border border-white/5 hover:border-cyan-500/30 transition-all cursor-pointer text-left group"
-                >
-                  <div className="p-2.5 rounded-xl bg-cyan-600/10 text-cyan-400 group-hover:scale-110 group-hover:bg-cyan-600/20 transition-all shrink-0">
-                    <VideoIcon className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Cinematic Reel</span>
-                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
-                      Capture short, vertical high-fidelity cinematic video logs.
-                    </span>
-                  </div>
-                </button>
-
-                {/* 4. Go Live */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateMenuOpen(false);
-                    setCreationInitialMode('video');
-                    setCreationInitialTab(undefined);
-                    setIsCreatePostModalOpen(true);
-                    setTimeout(() => {
-                      window.dispatchEvent(new CustomEvent('toast', { detail: '🔴 Connected to VOH live-streaming relay. Stream is ready!' }));
-                    }, 500);
-                  }}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-rose-950/20 border border-white/5 hover:border-rose-500/30 transition-all cursor-pointer text-left group"
-                >
-                  <div className="p-2.5 rounded-xl bg-rose-600/10 text-rose-400 group-hover:scale-110 group-hover:bg-rose-600/20 transition-all shrink-0 relative">
-                    <Radio className="w-5 h-5 animate-pulse" />
-                    <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide flex items-center gap-1.5">
-                      Go Live
-                      <span className="px-1 py-0.2 text-[7px] font-mono bg-rose-600 text-white font-extrabold rounded-sm uppercase tracking-widest">LIVE</span>
-                    </span>
-                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
-                      Broadcast raw voice & video streams directly to subscribers.
-                    </span>
-                  </div>
-                </button>
-
-                {/* 5. Create Story */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateMenuOpen(false);
-                    setCreationInitialMode(null);
-                    setCreationInitialTab('story');
-                    setIsCreatePostModalOpen(true);
-                  }}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-pink-950/20 border border-white/5 hover:border-pink-500/30 transition-all cursor-pointer text-left group"
-                >
-                  <div className="p-2.5 rounded-xl bg-pink-600/10 text-pink-400 group-hover:scale-110 group-hover:bg-pink-600/20 transition-all shrink-0">
-                    <Sparkles className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Temporary Story</span>
-                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
-                      Post an ephemeral visual, audio, or text trace lasting 24 hours.
-                    </span>
-                  </div>
-                </button>
-
-                {/* 6. Drafts */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsCreateMenuOpen(false);
-                    setCreationInitialMode(null);
-                    setCreationInitialTab('drafts');
-                    setIsCreatePostModalOpen(true);
-                  }}
-                  className="flex items-start gap-3 p-4 rounded-2xl bg-black/40 hover:bg-amber-950/20 border border-white/5 hover:border-amber-500/30 transition-all cursor-pointer text-left group"
-                >
-                  <div className="p-2.5 rounded-xl bg-amber-600/10 text-amber-400 group-hover:scale-110 group-hover:bg-amber-600/20 transition-all shrink-0">
-                    <FolderOpen className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <span className="block text-xs font-sans font-black text-zinc-100 uppercase tracking-wide">Saved Drafts</span>
-                    <span className="block text-[10px] text-zinc-400 font-sans mt-0.5 leading-relaxed">
-                      Access, edit, or publish your unpublished, offline drafts.
-                    </span>
-                  </div>
-                </button>
-
+              <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('text'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><FileText className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Write a post</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Share a thought or update.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('photo'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><Camera className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Share photos</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Post one photo or a collection.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('reel'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><Play className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Record a quick clip</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Capture a quick moment in your own style.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('voice'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><Mic className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Record a voice note</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Let people hear from you.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('poll'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><BarChart2 className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Ask a question</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Let people vote in a poll.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode('pulse'); setCreationInitialTab(undefined); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><MapPin className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Share a local update</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Tell your area what's happening.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode(null); setCreationInitialTab('story'); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><Sparkles className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Add to your story</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Share a moment for 24 hours.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); setCreationInitialMode(null); setCreationInitialTab('drafts'); setIsCreatePostModalOpen(true); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A]"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><FolderOpen className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Your drafts</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Continue something you saved.</span></span></button>
+                <button type="button" onClick={() => { setIsCreateMenuOpen(false); navigateTo('live'); }} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-[#120E2B] p-3.5 text-left transition hover:border-[#7138FF]/50 hover:bg-[#19143A] sm:col-span-2"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#7138FF]/15 text-[#B69BFF]"><Radio className="h-5 w-5" /></span><span><span className="block text-sm font-semibold text-white">Go live</span><span className="mt-0.5 block text-xs text-[#A39BBF]">Start your own live room or join someone who's live.</span></span><ChevronRight className="ml-auto h-4 w-4 text-[#A39BBF]" /></button>
               </div>
-            </motion.div>
+              <p className="mt-4 text-center text-[11px] text-[#756D91]">Your work is yours. Save a draft and come back whenever you're ready.</p>
+            </motion.section>
           </div>
         )}
       </AnimatePresence>
