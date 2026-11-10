@@ -181,6 +181,18 @@ export async function searchNexoraContent(
   const visibleCandidates = await Promise.all(candidates.map(async candidate => {
     const data = candidate.data();
     const ownerId = String(data.ownerId || '');
+    const sourceSegments = String(data.targetPath || '').split('/');
+    if (sourceSegments[0] === 'communities' && sourceSegments.length >= 2) {
+      const parent = await db.collection('communities').doc(sourceSegments[1]).get();
+      const community = parent.data() || {};
+      if (!parent.exists || community.isPrivate === true || community.type === 'private' || community.privacy === 'private' || community.visibility === 'private') return null;
+      if (Array.isArray(community.bannedUsers) && community.bannedUsers.includes(viewerUid)) return null;
+    }
+    if (sourceSegments[0] === 'pages' && sourceSegments.length >= 2) {
+      const parent = await db.collection('pages').doc(sourceSegments[1]).get();
+      const page = parent.data() || {};
+      if (!parent.exists || page.isPrivate === true || page.privacy === 'private' || ['private','suspended','deleted','draft'].includes(String(page.status || '').toLowerCase())) return null;
+    }
     if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) return null;
     if (ownerId && ['person','post','video','live'].includes(String(data.kind))) {
       const [ownerSettings, follow] = await Promise.all([
