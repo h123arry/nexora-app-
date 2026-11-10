@@ -256,7 +256,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
               <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Pending invitations</h3><span className="text-[10px] text-slate-500">{sentInvitations.length}/50</span></div>
               {sentInvitations.length === 0 ? <p className="text-xs text-slate-500">No pending invitations.</p> : <div className="space-y-2">
                 {sentInvitations.map(invite => <div key={invite.inviteeId} className="flex items-center justify-between gap-2 rounded-xl border border-white/5 bg-black/10 px-3 py-2">
-                  <span className="truncate text-xs text-slate-300">@{invite.inviteeId}</span>
+                  <span className="truncate text-xs text-slate-300">Pending member invitation</span>
                   <button type="button" disabled={busy} onClick={() => void handleRevokeInvite(invite)} className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-40">Revoke</button>
                 </div>)}
               </div>}
