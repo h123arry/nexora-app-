@@ -144,6 +144,12 @@ export async function moderateCircleMember(
         createdAt: new Date(),
       });
     }
+    const admins = Array.isArray(community.get('admins')) ? community.get('admins') as string[] : [];
+    const moderators = Array.isArray(community.get('moderators')) ? community.get('moderators') as string[] : [];
+    transaction.update(communityRef, {
+      admins: admins.filter(uid => uid !== targetUid),
+      moderators: moderators.filter(uid => uid !== targetUid),
+    });
     transaction.delete(targetRef);
     transaction.create(auditRef, {
       id: auditRef.id, actorUid, targetUid,
