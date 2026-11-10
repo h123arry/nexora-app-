@@ -145,6 +145,7 @@ export default function App() {
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
   const [authPromptReason, setAuthPromptReason] = useState<string>('Join Nexora to like, comment, follow creators, and personalize your experience.');
 
@@ -159,6 +160,23 @@ export default function App() {
     action();
     return true;
   };
+
+  useEffect(() => {
+    const referralCode = new URLSearchParams(window.location.search).get('ref');
+    if (!referralCode) return;
+    let active = true;
+    const preview = httpsCallable<{ code: string }, { valid: boolean; inviterName?: string; inviterUsername?: string; inviterAvatar?: string }>(functions, 'previewReferralInvite');
+    preview({ code: referralCode }).then(result => {
+      if (active && result.data.valid) {
+        setReferralInvitePreview({
+          inviterName: result.data.inviterName || 'A NEXORA member',
+          inviterUsername: result.data.inviterUsername || '',
+          inviterAvatar: result.data.inviterAvatar || '',
+        });
+      }
+    }).catch(() => { /* Invalid or unavailable invites keep the generic landing message. */ });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn || !currentUser.id || typeof window === 'undefined') return;
@@ -2007,7 +2025,7 @@ export default function App() {
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Sparkles className="h-5 w-5" /></div>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-bold text-white">You’ve been invited to NEXORA</p>
-              <p className="mt-0.5 text-xs text-violet-100/70">Join your friend on the world’s living social network.</p>
+              <p className="mt-0.5 text-xs text-violet-100/70">{referralInvitePreview ? `Invited by ${referralInvitePreview.inviterName}${referralInvitePreview.inviterUsername ? ` (@${referralInvitePreview.inviterUsername})` : ''}. Join them on the world’s living social network.` : 'Join your friend on the world’s living social network.'}</p>
             </div>
             <button onClick={() => { setAuthPromptReason('Create your NEXORA account to accept this personal invitation.'); setShowAuthModal(true); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white hover:bg-violet-500">Join</button>
           </div>
