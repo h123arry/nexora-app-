@@ -966,6 +966,11 @@ service cloud.firestore {
         );
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
 
+      // Circle reports contain private reporter identities and review notes.
+      match /reports/{reportId} {
+        allow read, write: if false;
+      }
+
       // Circle ban markers contain private member IDs and are managed only by trusted callables.
       match /bans/{memberId} {
         allow read, write: if false;
