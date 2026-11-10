@@ -146,7 +146,27 @@ export default function CommunitiesHubView({
 
   // 10. Community Discussion Feed Composer Input
   const [communityPostInput, setCommunityPostInput] = useState('');
-  const [communityPostImage, setCommunityPostImage] = useState('');
+  const [communityFeedPosts, setCommunityFeedPosts] = useState<Array<{ id: string; authorId: string; authorName: string; authorUsername: string; authorAvatar: string; content: string; createdAt: string }>>([]);
+  const [communityFeedLoading, setCommunityFeedLoading] = useState(false);
+  const [communityFeedError, setCommunityFeedError] = useState('');
+  const [communityPostSubmitting, setCommunityPostSubmitting] = useState(false);
+  const [communityEvents, setCommunityEvents] = useState<Array<{ id: string; title: string; startsAt: string; location: string; attendeeCount: number; createdBy: string; myRsvp: boolean }>>([]);
+  const [communityEventsLoading, setCommunityEventsLoading] = useState(false);
+  const [communityEventsError, setCommunityEventsError] = useState('');
+  const [eventTitle, setEventTitle] = useState('');
+  const [eventStartsAt, setEventStartsAt] = useState('');
+  const [eventLocation, setEventLocation] = useState('');
+  const [eventSubmitting, setEventSubmitting] = useState(false);
+  const [communityPolls, setCommunityPolls] = useState<Array<{ id: string; question: string; options: Array<{ id: string; text: string; votes: number }>; createdBy: string; status: string; myVote: string | null; createdAt: string }>>([]);
+  const [communityPollsLoading, setCommunityPollsLoading] = useState(false);
+  const [communityPollsError, setCommunityPollsError] = useState('');
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptionsText, setPollOptionsText] = useState('');
+  const [pollSubmitting, setPollSubmitting] = useState(false);
+  const [communityMembers, setCommunityMembers] = useState<Array<{ userId: string; name: string; username: string; avatar: string; role: string }>>([]);
+  const [communityMembersLoading, setCommunityMembersLoading] = useState(false);
+  const [communityMembersError, setCommunityMembersError] = useState('');
+  const [communityMemberCount, setCommunityMemberCount] = useState<number | null>(null);
 
   // 11. Community Moderation State Variables
   const [banInput, setBanInput] = useState('');
@@ -177,6 +197,111 @@ export default function CommunitiesHubView({
       unsubFollows();
     };
   }, [followActorId]);
+
+  useEffect(() => {
+    if (!selectedCircle?.id) {
+      setCommunityFeedPosts([]);
+      setCommunityFeedLoading(false);
+      setCommunityFeedError('');
+      return;
+    }
+    let active = true;
+    setCommunityFeedLoading(true);
+    setCommunityFeedError('');
+    const stop = CommunityService.watchPosts(
+      selectedCircle.id,
+      followActorId,
+      nextPosts => {
+        if (!active) return;
+        setCommunityFeedPosts(nextPosts);
+        setCommunityFeedLoading(false);
+      },
+      error => {
+        if (!active) return;
+        setCommunityFeedError(error.message || 'The Circle feed could not be loaded.');
+        setCommunityFeedLoading(false);
+      },
+    );
+    return () => { active = false; stop(); };
+  }, [selectedCircle?.id, followActorId]);
+
+  useEffect(() => {
+    if (!selectedCircle?.id) {
+      setCommunityEvents([]);
+      setCommunityEventsLoading(false);
+      setCommunityEventsError('');
+      return;
+    }
+    let active = true;
+    setCommunityEventsLoading(true);
+    const stop = CommunityService.watchEvents(selectedCircle.id, followActorId, events => {
+      if (!active) return;
+      setCommunityEvents(events);
+      setCommunityEventsLoading(false);
+    }, error => {
+      if (!active) return;
+      setCommunityEventsError(error.message || 'Circle events could not be loaded.');
+      setCommunityEventsLoading(false);
+    });
+    return () => { active = false; stop(); };
+  }, [selectedCircle?.id, followActorId]);
+
+  useEffect(() => {
+    if (!selectedCircle?.id) {
+      setCommunityPolls([]);
+      setCommunityPollsLoading(false);
+      setCommunityPollsError('');
+      return;
+    }
+    let active = true;
+    setCommunityPollsLoading(true);
+    const stop = CommunityService.watchPolls(selectedCircle.id, followActorId, polls => {
+      if (!active) return;
+      setCommunityPolls(polls);
+      setCommunityPollsLoading(false);
+    }, error => {
+      if (!active) return;
+      setCommunityPollsError(error.message || 'Circle polls could not be loaded.');
+      setCommunityPollsLoading(false);
+    });
+    return () => { active = false; stop(); };
+  }, [selectedCircle?.id, followActorId]);
+
+  useEffect(() => {
+    if (!selectedCircle?.id || activePortalTab !== 'roles') {
+      setCommunityMembers([]);
+      setCommunityMembersLoading(false);
+      setCommunityMembersError('');
+      return;
+    }
+    let active = true;
+    setCommunityMembersLoading(true);
+    setCommunityMembersError('');
+    CommunityService.listActiveMembersPage(selectedCircle.id, 40).then(result => {
+      if (!active) return;
+      setCommunityMembers(result.members);
+      setCommunityMembersLoading(false);
+    }).catch(error => {
+      if (!active) return;
+      setCommunityMembersError(error instanceof Error ? error.message : 'Circle members could not be loaded.');
+      setCommunityMembersLoading(false);
+    });
+    return () => { active = false; };
+  }, [selectedCircle?.id, activePortalTab, followActorId]);
+
+  useEffect(() => {
+    if (!selectedCircle?.id) {
+      setCommunityMemberCount(null);
+      return;
+    }
+    let active = true;
+    CommunityService.getActiveMemberCount(selectedCircle.id).then(count => {
+      if (active) setCommunityMemberCount(count);
+    }).catch(() => {
+      if (active) setCommunityMemberCount(null);
+    });
+    return () => { active = false; };
+  }, [selectedCircle?.id, communityMembers.length]);
 
   // 12. Backup Personal User for Identity Switching
   useEffect(() => {
@@ -343,35 +468,37 @@ export default function CommunitiesHubView({
     }
   };
 
-  // 18. Community Post Submit (Dynamic global synchronization)
-  const handleCommunityPostSubmit = (e: React.FormEvent) => {
+  // 18. Circle posts are private to the active membership boundary.
+  const handleCommunityPostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!communityPostInput.trim() || !selectedCircle) return;
-
-    // Use parent onAddPost to publish. Community is specified as a parameter!
-    onAddPost(
-      communityPostInput,
-      communityPostImage || undefined,
-      selectedCircle.tags.join(','),
-      selectedCircle.name
-    );
-
-    setCommunityPostInput('');
-    setCommunityPostImage('');
-    window.dispatchEvent(new CustomEvent('toast', { detail: `📢 Update published to ${selectedCircle.name} Feed` }));
+    const content = communityPostInput.trim();
+    if (!content || !selectedCircle || communityPostSubmitting) return;
+    setCommunityPostSubmitting(true);
+    setCommunityFeedError('');
+    try {
+      await CommunityService.createPost(selectedCircle.id, content);
+      setCommunityPostInput('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Published to ${selectedCircle.name}` }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Your Circle post could not be published. Please retry.';
+      setCommunityFeedError(message);
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    } finally {
+      setCommunityPostSubmitting(false);
+    }
   };
 
   // 19. Join/Leave Community
-  const handleJoinCircleToggle = async (circleId: string, e?: React.MouseEvent) => {
+  const handleJoinCircleToggle = async (circleId: string, e?: React.MouseEvent): Promise<boolean> => {
     if (e) e.stopPropagation();
     
     const target = communities.find(c => c.id === circleId);
-    if (!target) return;
+    if (!target) return false;
     const willJoin = !target.isJoinedByMe;
     const access = target.type ?? 'unknown';
     if (willJoin && access !== 'public' && target.ownerId !== followActorId) {
       window.dispatchEvent(new CustomEvent('toast', { detail: access === 'unknown' ? 'Access settings are unavailable for this community.' : 'Access requests are not available yet.' }));
-      return;
+      return false;
     }
 
     try {
@@ -392,9 +519,11 @@ export default function CommunitiesHubView({
         return c;
       }));
       window.dispatchEvent(new CustomEvent('toast', { detail: willJoin ? `✓ Joined ${target.name}` : `✓ Left ${target.name}` }));
+      return true;
     } catch (err) {
       console.error('Failed community join/leave:', err);
-      window.dispatchEvent(new CustomEvent('toast', { detail: `❌ Failed to update membership. Please try again.` }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Failed to update membership. Please try again.` }));
+      return false;
     }
   };
 
@@ -408,26 +537,74 @@ export default function CommunitiesHubView({
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This community is restricted. Access requests are not available yet.' }));
       return;
     }
-    if (access === 'public' && !community.isJoinedByMe) await handleJoinCircleToggle(community.id);
+    if (access === 'public' && !community.isJoinedByMe) {
+      const joined = await handleJoinCircleToggle(community.id);
+      if (!joined) return;
+    }
     setSelectedCircle(community);
     setActivePortalTab('feed');
   };
 
-  // 20. Voting helper
-  const [votedPollOption, setVotedPollOption] = useState<{ [key: string]: string }>({});
-  const handleVoteCommunityPoll = (circleId: string, optionId: string) => {
-    setVotedPollOption(prev => ({ ...prev, [circleId]: optionId }));
-    ActivityService.recordActivityEvent(currentUser.id, 'poll_vote', `poll_${circleId}_${optionId}`);
-    window.dispatchEvent(new CustomEvent('toast', { detail: `🗳️ Vote registered! Activity recorded.` }));
+  // 20. Circle events and polls use authenticated Firestore operations.
+  const handleCreateCommunityEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCircle || eventSubmitting) return;
+    const start = new Date(eventStartsAt);
+    if (!eventTitle.trim() || !Number.isFinite(start.getTime()) || start.getTime() <= Date.now()) {
+      setCommunityEventsError('Enter an event title and a future date.');
+      return;
+    }
+    setEventSubmitting(true);
+    setCommunityEventsError('');
+    try {
+      await CommunityService.createEvent(selectedCircle.id, eventTitle, start.toISOString(), eventLocation);
+      setEventTitle('');
+      setEventStartsAt('');
+      setEventLocation('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Circle event created.' }));
+    } catch (error) {
+      setCommunityEventsError(error instanceof Error ? error.message : 'The Circle event could not be created.');
+    } finally {
+      setEventSubmitting(false);
+    }
   };
 
-  // 21. RSVP Community Event
-  const [rsvps, setRsvps] = useState<{ [key: string]: boolean }>({});
-  const handleRsvpEvent = (circleId: string, eventId: string) => {
-    const key = `${circleId}-${eventId}`;
-    const active = !rsvps[key];
-    setRsvps(prev => ({ ...prev, [key]: active }));
-    window.dispatchEvent(new CustomEvent('toast', { detail: active ? `📅 RSVP Registered! Added to community calendar.` : `📅 RSVP cancelled.` }));
+  const handleRsvpEvent = async (event: { id: string; myRsvp: boolean }) => {
+    if (!selectedCircle) return;
+    try {
+      await CommunityService.rsvpEvent(selectedCircle.id, event.id, !event.myRsvp);
+      window.dispatchEvent(new CustomEvent('toast', { detail: event.myRsvp ? 'RSVP cancelled.' : 'You are registered for this Circle event.' }));
+    } catch (error) {
+      setCommunityEventsError(error instanceof Error ? error.message : 'Your RSVP could not be saved.');
+    }
+  };
+
+  const handleCreateCommunityPoll = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCircle || pollSubmitting) return;
+    const options = pollOptionsText.split(/\r?\n/).map(option => option.trim()).filter(Boolean);
+    setPollSubmitting(true);
+    setCommunityPollsError('');
+    try {
+      await CommunityService.createPoll(selectedCircle.id, pollQuestion, options);
+      setPollQuestion('');
+      setPollOptionsText('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Circle poll published.' }));
+    } catch (error) {
+      setCommunityPollsError(error instanceof Error ? error.message : 'The Circle poll could not be created.');
+    } finally {
+      setPollSubmitting(false);
+    }
+  };
+
+  const handleVoteCommunityPoll = async (pollId: string, optionId: string) => {
+    if (!selectedCircle) return;
+    try {
+      await CommunityService.votePoll(selectedCircle.id, pollId, optionId);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your vote has been recorded.' }));
+    } catch (error) {
+      setCommunityPollsError(error instanceof Error ? error.message : 'Your vote could not be recorded.');
+    }
   };
 
   // 22. Voice Room Toggle
@@ -1079,21 +1256,15 @@ export default function CommunitiesHubView({
                 <div className="flex gap-1 px-3 py-2">
                   {[
                     { id: 'feed', label: '📢 Discussion Feed' },
+                    { id: 'polls', label: '🗳️ Polls' },
                     { id: 'media', label: '📁 Media Library' },
-                    { id: 'events', label: '📅 Event Cal' },
-                    { id: 'roles', label: '🛡️ Roles & Members' },
-                    { id: 'moderation', label: '🔧 Moderation Deck' },
-                    { id: 'insights', label: '📈 Community Insights' }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActivePortalTab(tab.id)}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                        activePortalTab === tab.id 
-                          ? 'bg-[#8b5cf6] text-white shadow-lg' 
-                          : 'text-violet-300/60 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
+                    { id: 'events', label: '📅 Events' },
+                    { id: 'roles', label: '🛡️ Members' },
+                    { id: 'moderation', label: '🔧 Moderation' },
+                    { id: 'insights', label: '📈 Insights' }
+                  ].map(tab => (
+                    <button key={tab.id} onClick={() => setActivePortalTab(tab.id)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold font-mono uppercase tracking-wider transition-all duration-200 cursor-pointer ${activePortalTab === tab.id ? 'bg-[#8b5cf6] text-white shadow-lg' : 'text-violet-300/60 hover:text-white hover:bg-white/5'}`}>
                       {tab.label}
                     </button>
                   ))}
@@ -1119,312 +1290,177 @@ export default function CommunitiesHubView({
                         rows={3}
                         className="w-full bg-zinc-900 border border-white/5 rounded-xl p-3 text-xs focus:outline-none focus:border-white/10 text-white text-left font-sans"
                       />
-                      <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
-                        <input
-                          type="text"
-                          placeholder="Include cover image link (optional)"
-                          value={communityPostImage}
-                          onChange={(e) => setCommunityPostImage(e.target.value)}
-                          className="px-3 py-1.5 bg-zinc-900 border border-white/5 rounded-lg text-[10px] focus:outline-none text-left"
-                        />
+                      <div className="flex justify-end">
                         <button
                           type="submit"
-                          className="px-4 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-mono font-black uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          disabled={communityPostSubmitting || !communityPostInput.trim()}
+                          className="px-4 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-[10px] font-mono font-black uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                           <Send className="w-3 h-3" />
-                          <span>PUBLISH POST</span>
+                          <span>{communityPostSubmitting ? 'PUBLISHING…' : 'PUBLISH TO CIRCLE'}</span>
                         </button>
                       </div>
                     </form>
 
-                    {/* Announcements Sticky section */}
-                    <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs sm:text-sm text-amber-200 leading-relaxed font-sans space-y-1">
-                      <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-                        <Megaphone className="w-4 h-4" />
-                        <span>COMMUNITY BULLETIN</span>
+                    {communityFeedError && (
+                      <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs text-rose-200">{communityFeedError}</div>
+                    )}
+                    {communityFeedLoading && <p className="py-8 text-center text-xs text-zinc-400">Loading Circle posts…</p>}
+                    {!communityFeedLoading && !communityFeedError && communityFeedPosts.length === 0 && (
+                      <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-8 text-center">
+                        <p className="text-sm font-semibold text-white">A fresh start for {selectedCircle.name}</p>
+                        <p className="mt-1 text-xs text-zinc-400">Posts shared here are visible to this Circle&apos;s active members.</p>
                       </div>
-                      <p>All members are invited to participate in the upcoming local tech roundtable scheduler. Read details in the calendar deck.</p>
-                    </div>
-
-                    {/* Dynamic Synchronized Feed */}
-                    <div className="space-y-4">
-                      {posts.filter(p => p.communityName === selectedCircle.name).map((post) => {
-                        const isPinned = selectedCircle.pinnedPosts?.includes(post.id);
-                        return (
-                          <div key={post.id} className="p-4 bg-zinc-900/60 border border-white/5 rounded-2xl space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div 
-                                className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-opacity"
-                                onClick={() => (post.userId || post.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: post.userId || post.username } }))}
-                              >
-                                <img src={post.avatar} className="w-8 h-8 rounded-xl object-cover" />
-                                <div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs font-bold text-white hover:underline">{post.name}</span>
-                                    {post.isVerified && <CheckCircle className="w-3 h-3 text-purple-400" />}
-                                  </div>
-                                  <p className="text-[9px] text-current/40 font-mono hover:underline">@{post.username} • {new Date(post.timestamp).toLocaleTimeString()}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                {isPinned && (
-                                  <span className="text-[8px] font-mono bg-pink-500/20 text-pink-300 border border-pink-500/20 px-1.5 py-0.5 rounded">PINNED</span>
-                                )}
-                                <button 
-                                  onClick={() => handlePinPost(selectedCircle.id, post.id)}
-                                  className="text-[9px] font-mono text-violet-400 hover:text-white"
-                                >
-                                  Pin
-                                </button>
-                                <button 
-                                  onClick={() => setReportedPostId(post.id)}
-                                  className="text-[9px] font-mono text-rose-400 hover:text-white"
-                                >
-                                  Report
-                                </button>
-                              </div>
-                            </div>
-
-                            <p className="text-xs sm:text-sm leading-relaxed">{post.content}</p>
-                            
-                            {post.image && (
-                              <img src={post.image} className="w-full max-h-60 object-cover rounded-xl border border-white/5" />
-                            )}
-
-                            {/* Feed comments & likes synchronization */}
-                            <div className="flex items-center gap-4 text-[11px] font-mono text-current/50 pt-2 border-t border-white/5">
-                              <button onClick={() => onLikePost(post.id)} className="flex items-center gap-1 hover:text-pink-400">
-                                <Heart className={`w-3.5 h-3.5 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : ''}`} />
-                                <span>{post.likes}</span>
-                              </button>
-                              <span className="flex items-center gap-1">
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                <span>{post.comments?.length || 0}</span>
-                              </span>
-                            </div>
-
-                            {/* Inside post comments */}
-                            <div className="space-y-1.5 pl-3 border-l border-white/5">
-                              {post.comments?.map((comment) => (
-                                <div key={comment.id} className="text-[10px] text-current/80">
-                                  <span 
-                                    className="font-bold text-violet-300 hover:underline cursor-pointer"
-                                    onClick={() => (comment.userId || comment.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: comment.userId || comment.username } }))}
-                                  >
-                                    @{comment.username}: 
-                                  </span>
-                                  <span>{comment.content}</span>
-                                </div>
-                              ))}
-                              
-                              <div className="flex gap-1.5 pt-1.5">
-                                <input
-                                  type="text"
-                                  placeholder="Add comments..."
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                                      onAddComment(post.id, (e.target as HTMLInputElement).value);
-                                      (e.target as HTMLInputElement).value = '';
-                                    }
-                                  }}
-                                  className="flex-1 bg-[#18181b]/50 border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Report post form inline helper */}
-                            {reportedPostId === post.id && (
-                              <div className="p-3 bg-zinc-950 rounded-xl space-y-2 border border-rose-500/20">
-                                <span className="block text-[10px] font-mono text-rose-400 uppercase font-bold">Report Content Form</span>
-                                <input
-                                  type="text"
-                                  placeholder="Enter reporting reason (e.g. Spam, Harassment...)"
-                                  value={reportReasonInput}
-                                  onChange={(e) => setReportReasonInput(e.target.value)}
-                                  className="w-full bg-zinc-900 border border-white/5 p-2 rounded text-[10px] focus:outline-none"
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button onClick={() => setReportedPostId(null)} className="text-[9px] font-mono text-current/50">Cancel</button>
-                                  <button onClick={() => handleReportPost(selectedCircle.id, post.id, post.content)} className="px-3 py-1 bg-rose-600 text-white rounded text-[9px] font-mono">SUBMIT REPORT</button>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-
-                      {posts.filter(p => p.communityName === selectedCircle.name).length === 0 && (
-                        <p className="text-center py-8 text-[11px] text-current/40 italic">Nothing published yet. Be the first to share an update!</p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. SHARED MEDIA LIBRARY */}
-                {activePortalTab === 'media' && (
-                  <div className="space-y-4 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Media Vault & Shared Resources</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {selectedCircle.mediaLibrary?.map((fl, i) => (
-                        <div key={i} className="p-3 bg-black/40 border border-white/5 rounded-2xl flex items-center justify-between">
+                    )}
+                    <div className="space-y-3">
+                      {communityFeedPosts.map(post => (
+                        <article key={post.id} className="rounded-2xl border border-white/10 bg-zinc-900/60 p-4 space-y-3">
                           <div className="flex items-center gap-2">
-                            <FileText className="w-5 h-5 text-violet-400 shrink-0" />
-                            <div>
-                              <p className="text-xs font-bold text-white truncate max-w-[180px]">{fl.name}</p>
-                              <p className="text-[9px] text-violet-300/40 font-mono">{fl.size} • Uploaded by @{fl.uploadedBy}</p>
+                            {post.authorAvatar ? <img src={post.authorAvatar} alt="" className="h-9 w-9 rounded-xl object-cover" /> : <div className="h-9 w-9 rounded-xl bg-violet-500/15" />}
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-white">{post.authorName}</p>
+                              <p className="text-[10px] text-zinc-400">{post.authorUsername ? `@${post.authorUsername} · ` : ''}{post.createdAt}</p>
                             </div>
+                            <span className="ml-auto rounded-full border border-violet-400/20 px-2 py-1 text-[9px] text-violet-200">CIRCLE ONLY</span>
                           </div>
-                          <button 
-                            onClick={() => alert(`Beginning secure download of "${fl.name}"...`)}
-                            className="p-1.5 bg-violet-600/20 hover:bg-[#8b5cf6] text-white border border-white/10 rounded-lg transition-colors cursor-pointer"
-                          >
-                            <Download className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-100">{post.content}</p>
+                        </article>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {/* 3. COMMUNITY EVENTS FOUNDATION */}
+                {/* 1. Persisted Circle polls */}
+                {activePortalTab === 'polls' && (
+                  <div className="space-y-4 text-left">
+                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle polls</h3>
+                    <form onSubmit={handleCreateCommunityPoll} className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-white">Create a poll</p>
+                      <input value={pollQuestion} onChange={e => setPollQuestion(e.target.value)} maxLength={240} required placeholder="Ask your Circle a question" className="w-full rounded-lg border border-white/10 bg-zinc-900 p-2 text-xs text-white" />
+                      <textarea value={pollOptionsText} onChange={e => setPollOptionsText(e.target.value)} required rows={4} placeholder={"One answer per line\nFirst option\nSecond option"} className="w-full rounded-lg border border-white/10 bg-zinc-900 p-2 text-xs text-white" />
+                      <p className="text-[10px] text-zinc-500">Add 2 to 5 distinct options, one per line. Votes are recorded once per member.</p>
+                      <div className="flex justify-end">
+                        <button type="submit" disabled={pollSubmitting || !pollQuestion.trim() || !pollOptionsText.trim()} className="rounded-lg bg-violet-600 px-4 py-2 text-[10px] font-bold text-white disabled:opacity-50">{pollSubmitting ? 'PUBLISHING…' : 'PUBLISH POLL'}</button>
+                      </div>
+                    </form>
+                    {communityPollsError && <p role="alert" className="text-xs text-rose-300">{communityPollsError}</p>}
+                    {communityPollsLoading && <p className="py-6 text-center text-xs text-zinc-400">Loading polls…</p>}
+                    {!communityPollsLoading && communityPolls.length === 0 && <p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-zinc-400">No polls have been published in this Circle.</p>}
+                    {communityPolls.map(poll => {
+                      const totalVotes = poll.options.reduce((sum, option) => sum + option.votes, 0);
+                      return (
+                        <article key={poll.id} className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <h4 className="text-sm font-semibold text-white">{poll.question}</h4>
+                            <span className="rounded-full border border-white/10 px-2 py-1 text-[9px] uppercase text-zinc-400">{poll.status}</span>
+                          </div>
+                          <p className="text-[10px] text-zinc-500">{totalVotes.toLocaleString()} votes · {poll.createdAt}</p>
+                          <div className="space-y-2">
+                            {poll.options.map(option => {
+                              const selected = poll.myVote === option.id;
+                              const percent = totalVotes > 0 ? Math.round(option.votes / totalVotes * 100) : 0;
+                              return (
+                                <button key={option.id} type="button" disabled={Boolean(poll.myVote) || poll.status !== 'open'} onClick={() => void handleVoteCommunityPoll(poll.id, option.id)} className={`relative w-full overflow-hidden rounded-lg border px-3 py-2 text-left text-xs disabled:cursor-default ${selected ? 'border-violet-400/50 text-white' : 'border-white/10 text-zinc-200'}`}>
+                                  <span className="absolute inset-y-0 left-0 bg-violet-500/15" style={{ width: `${percent}%` }} />
+                                  <span className="relative flex items-center justify-between gap-2"><span>{option.text}</span><span className="text-[10px] text-zinc-400">{percent}% · {option.votes}</span></span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                          {poll.myVote && <p className="text-[10px] text-emerald-300">Your vote is recorded.</p>}
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* 2. Shared media storage is not connected to a downloadable asset source. */}
+                {activePortalTab === 'media' && (
+                  <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-6 text-center space-y-2">
+                    <h3 className="text-sm font-semibold text-white">Circle media library</h3>
+                    <p className="text-xs text-zinc-400">A secure, member-scoped upload and download pipeline is not connected to this library yet. No placeholder files or fake download actions are shown.</p>
+                  </div>
+                )}
+
+                {/* 3. Persisted community events */}
                 {activePortalTab === 'events' && (
                   <div className="space-y-4 text-left">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Scheduled Gatherings Calendar</h3>
-                      <span className="text-[8px] font-mono bg-violet-600/20 border border-white/10 px-1.5 py-0.5 rounded text-violet-300 uppercase">EVENTS ACTIVE</span>
-                    </div>
-
-                    <div className="space-y-3">
-                      {selectedCircle.events?.map((evt) => {
-                        const hasRsvped = rsvps[`${selectedCircle.id}-${evt.id}`];
-                        return (
-                          <div key={evt.id} className="p-4 rounded-2xl bg-black/40 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="space-y-1">
-                              <h4 className="text-xs sm:text-sm font-bold text-white">{evt.title}</h4>
-                              <p className="text-[10.5px] text-violet-300/80">{evt.date} • {evt.time}</p>
-                              <p className="text-[9.5px] text-violet-300/40 font-mono">📍 {evt.location}</p>
-                            </div>
-                            <button
-                              onClick={() => handleRsvpEvent(selectedCircle.id, evt.id)}
-                              className={`px-3 py-1.5 rounded-lg text-[9.5px] font-mono font-bold uppercase transition-all shrink-0 cursor-pointer ${
-                                hasRsvped 
-                                  ? 'bg-emerald-600/30 text-emerald-400 border border-emerald-500/30' 
-                                  : 'bg-violet-600 hover:bg-violet-500 text-white'
-                              }`}
-                            >
-                              {hasRsvped ? 'Registered ✓' : 'Register RSVP'}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Dormant components warning indicators / foundations */}
-                    <div className="p-4 border border-dashed border-white/5 rounded-2xl bg-zinc-950/40 text-center space-y-1">
-                      <Volume2 className="w-6 h-6 text-violet-400/20 mx-auto" />
-                      <p className="text-[10px] font-mono text-violet-400 uppercase font-bold">Virtual Audio Spaces & Livestreaming Framework</p>
-                      <p className="text-[9px] text-current/30 leading-normal max-w-sm mx-auto">Foundational bindings for decentralized spatial audio systems and peer-to-peer screenshare relays. Currently dormant until V1.3 launch.</p>
-                    </div>
+                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle events</h3>
+                    <form onSubmit={handleCreateCommunityEvent} className="rounded-2xl border border-white/10 bg-black/30 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-white">Create an event</p>
+                      <input value={eventTitle} onChange={e => setEventTitle(e.target.value)} maxLength={120} required placeholder="Event title" className="w-full rounded-lg border border-white/10 bg-zinc-900 p-2 text-xs text-white" />
+                      <input type="datetime-local" value={eventStartsAt} onChange={e => setEventStartsAt(e.target.value)} required className="w-full rounded-lg border border-white/10 bg-zinc-900 p-2 text-xs text-white" />
+                      <input value={eventLocation} onChange={e => setEventLocation(e.target.value)} maxLength={180} placeholder="Location or online meeting details (optional)" className="w-full rounded-lg border border-white/10 bg-zinc-900 p-2 text-xs text-white" />
+                      <div className="flex justify-end">
+                        <button type="submit" disabled={eventSubmitting || !eventTitle.trim() || !eventStartsAt} className="rounded-lg bg-violet-600 px-4 py-2 text-[10px] font-bold text-white disabled:opacity-50">{eventSubmitting ? 'CREATING…' : 'CREATE EVENT'}</button>
+                      </div>
+                    </form>
+                    {communityEventsError && <p role="alert" className="text-xs text-rose-300">{communityEventsError}</p>}
+                    {communityEventsLoading && <p className="py-6 text-center text-xs text-zinc-400">Loading events…</p>}
+                    {!communityEventsLoading && communityEvents.length === 0 && <p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-zinc-400">No upcoming events have been created for this Circle.</p>}
+                    {communityEvents.map(event => (
+                      <article key={event.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-black/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-bold text-white">{event.title}</h4>
+                          <p className="text-[10px] text-violet-200/70">{event.startsAt}</p>
+                          {event.location && <p className="text-[10px] text-zinc-400">{event.location}</p>}
+                          <p className="text-[10px] text-zinc-400">{event.attendeeCount.toLocaleString()} attending</p>
+                        </div>
+                        <button type="button" onClick={() => void handleRsvpEvent(event)} className={`rounded-lg px-3 py-2 text-[10px] font-bold ${event.myRsvp ? 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-300' : 'bg-violet-600 text-white'}`}>
+                          {event.myRsvp ? 'CANCEL RSVP' : 'RSVP'}
+                        </button>
+                      </article>
+                    ))}
                   </div>
                 )}
 
-                {/* 4. ROLES AND PERMISSIONS */}
+                {/* 4. Firestore-backed Circle members */}
                 {activePortalTab === 'roles' && (
                   <div className="space-y-4 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Community Member Hierarchies</h3>
-                    
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Active Circle members</h3>
+                      <span className="text-xs text-violet-200">{communityMemberCount === null ? 'Count unavailable' : `${communityMemberCount.toLocaleString()} members`}</span>
+                    </div>
+                    {communityMembersError && <p role="alert" className="text-xs text-rose-300">{communityMembersError}</p>}
+                    {communityMembersLoading && <p className="py-6 text-center text-xs text-zinc-400">Loading members…</p>}
+                    {!communityMembersLoading && communityMembers.length === 0 && <p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-zinc-400">No member records are available to display.</p>}
                     <div className="space-y-2">
-                      {[
-                        { username: 'voh', role: 'Owner', badge: 'bg-red-500/20 text-red-300 border-red-500/20' },
-                        { username: 'nexora_official', role: 'Administrator', badge: 'bg-violet-500/20 text-violet-300 border-white/10' },
-                        { username: currentUser.username, role: selectedCircle.ownerId === currentUser.id ? 'Owner' : 'Member', badge: 'bg-zinc-800 text-zinc-300' }
-                      ].map((mbr, i) => (
-                        <div key={i} className="p-3 bg-black/40 border border-white/5 rounded-2xl flex items-center justify-between">
-                          <span className="text-xs font-bold text-white">@{mbr.username}</span>
-                          <span className={`text-[8px] font-mono font-bold border px-1.5 py-0.5 rounded uppercase ${mbr.badge}`}>
-                            {mbr.role}
-                          </span>
+                      {communityMembers.map(member => (
+                        <div key={member.userId} className="flex items-center gap-3 rounded-xl border border-white/10 bg-black/30 p-3">
+                          {member.avatar ? <img src={member.avatar} alt="" className="h-9 w-9 rounded-xl object-cover" /> : <div className="h-9 w-9 rounded-xl bg-violet-500/15" />}
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-xs font-semibold text-white">{member.name}</p>
+                            <p className="text-[10px] text-zinc-400">{member.username ? `@${member.username}` : member.userId}</p>
+                          </div>
+                          <span className="rounded-full border border-violet-400/20 px-2 py-1 text-[9px] uppercase text-violet-200">{member.role}</span>
                         </div>
                       ))}
                     </div>
+                    {communityMembers.length >= 40 && <p className="text-center text-[10px] text-zinc-500">Showing the first 40 active members.</p>}
                   </div>
                 )}
 
-                {/* 5. MODERATION DECK */}
+                {/* 5. Moderation availability is explicit; no local-only actions are presented as enforcement. */}
                 {activePortalTab === 'moderation' && (
-                  <div className="space-y-4 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Community Shield Moderation Console</h3>
-                    
-                    {/* Ban and mute forms */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-3">
-                        <span className="block text-[10px] font-mono text-rose-400 uppercase font-black">Restrict / Ban user</span>
-                        <div className="flex gap-1.5">
-                          <input
-                            type="text"
-                            placeholder="username"
-                            value={banInput}
-                            onChange={(e) => setBanInput(e.target.value)}
-                            className="flex-1 bg-zinc-900 border border-white/5 p-1.5 text-xs rounded focus:outline-none focus:border-rose-500/40"
-                          />
-                          <button 
-                            onClick={() => handleBanUser(selectedCircle.id, banInput)}
-                            className="px-3 bg-rose-600 text-white rounded text-[10px] font-mono font-bold"
-                          >
-                            BAN
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="p-4 bg-black/40 border border-white/5 rounded-2xl space-y-3">
-                        <span className="block text-[10px] font-mono text-yellow-400 uppercase font-black">Audit Activity Log</span>
-                        <div className="h-20 overflow-y-auto space-y-1 pl-1 border-l border-white/5 text-[9px] font-mono text-current/50 uppercase">
-                          {selectedCircle.activityLog?.map((lg, idx) => (
-                            <p key={idx}>• {lg}</p>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Pending Reports Audit Queue */}
-                    <div className="space-y-2">
-                      <span className="block text-[10px] font-mono text-amber-400 uppercase font-black">Reported Content Moderation Queue</span>
-                      {selectedCircle.reports?.filter(r => r.status === 'pending').map((rep) => (
-                        <div key={rep.id} className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                          <div>
-                            <p className="font-bold text-amber-300">Reason: {rep.reason}</p>
-                            <p className="text-current/60 font-sans italic line-clamp-1">Content: "{rep.targetContent}"</p>
-                          </div>
-                          <div className="flex gap-1">
-                            <button onClick={() => handleResolveReport(selectedCircle.id, rep.id, 'keep')} className="px-2.5 py-1 bg-emerald-600 text-white rounded text-[9px] font-mono uppercase font-bold">Approve</button>
-                            <button onClick={() => handleResolveReport(selectedCircle.id, rep.id, 'delete')} className="px-2.5 py-1 bg-rose-600 text-white rounded text-[9px] font-mono uppercase font-bold">Remove Post</button>
-                          </div>
-                        </div>
-                      ))}
-
-                      {selectedCircle.reports?.filter(r => r.status === 'pending').length === 0 && (
-                        <p className="text-[10px] font-mono text-emerald-400 text-center py-2 bg-emerald-500/5 rounded-xl border border-emerald-500/10">🛡️ ALL CLEAR: No reported content pending review.</p>
-                      )}
-                    </div>
+                  <div className="rounded-2xl border border-amber-400/20 bg-amber-400/5 p-5 space-y-2">
+                    <h3 className="text-sm font-bold text-amber-200">Circle moderation controls</h3>
+                    <p className="text-xs leading-relaxed text-zinc-300">Ban, mute, report-review and content-removal controls are not available in this Circle workspace yet. This panel will not claim that a restriction has been applied unless a trusted moderation operation confirms it.</p>
                   </div>
                 )}
 
-                {/* 6. COMMUNITY INSIGHTS */}
+                {/* 6. Measured Circle activity only */}
                 {activePortalTab === 'insights' && (
                   <div className="space-y-4 text-left">
-                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Workspace Engagement Metrics</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="p-3 bg-black/40 border border-white/5 rounded-xl space-y-1">
-                        <span className="text-[9px] font-mono text-current/50 uppercase">Active Contributions</span>
-                        <p className="text-base font-black text-pink-400">142 updates</p>
+                    <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle activity snapshot</h3>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                        <span className="text-[10px] uppercase text-zinc-400">Active members</span>
+                        <p className="mt-1 text-2xl font-black text-violet-200">{communityMemberCount === null ? 'Unavailable' : communityMemberCount.toLocaleString()}</p>
                       </div>
-                      <div className="p-3 bg-black/40 border border-white/5 rounded-xl space-y-1">
-                        <span className="text-[9px] font-mono text-current/50 uppercase">Monthly Spark Shift</span>
-                        <p className="text-base font-black text-emerald-400">+1,240 sparks</p>
-                      </div>
-                      <div className="p-3 bg-black/40 border border-white/5 rounded-xl space-y-1">
-                        <span className="text-[9px] font-mono text-current/50 uppercase">Completeness Quota</span>
-                        <p className="text-base font-black text-cyan-400">94.8% SLA</p>
+                      <div className="rounded-xl border border-white/10 bg-black/30 p-4">
+                        <span className="text-[10px] uppercase text-zinc-400">Recent posts loaded</span>
+                        <p className="mt-1 text-2xl font-black text-violet-200">{communityFeedPosts.length.toLocaleString()}</p>
+                        <p className="mt-1 text-[10px] text-zinc-500">Latest feed window, not a lifetime total.</p>
                       </div>
                     </div>
                   </div>
