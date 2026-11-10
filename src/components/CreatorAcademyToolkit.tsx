@@ -85,7 +85,7 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
 
   return <section className="space-y-5 rounded-3xl border border-violet-400/15 bg-[#090d1b] p-5 md:p-6">
     <div className="flex flex-wrap items-end justify-between gap-3">
-      <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-300">Creator workbench</p><h3 className="mt-2 text-xl font-black text-white">Practical creator toolkits</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-white/50">Eight reusable workbooks for planning content, researching your audience, building partnerships and running a safer creator business. Drafts are private to your account.</p></div>
+      <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-300">Creator workbench</p><h3 className="mt-2 text-xl font-black text-white">Practical creator toolkits</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-white/50">Twelve reusable workbooks for planning content, researching your audience, building partnerships and running a safer creator business. Drafts are private to your account.</p></div>
       <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-white/45">{CREATOR_ACADEMY_TOOLKITS.length} workbooks</span>
     </div>
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
