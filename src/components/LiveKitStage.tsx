@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { getLiveKitToken } from '../services/liveSessionsService';
+import { playNexoraSound } from '../services/soundExperience';
 
 declare global {
   interface Window { LivekitClient?: any; }
@@ -118,6 +119,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
           return;
         }
         setStatus(isHost ? 'You are broadcasting' : isGuest ? 'You are on stage' : 'Watching live');
+        playNexoraSound('live.join');
 
         if (canPublish) {
           // Camera and microphone are requested independently so one denied

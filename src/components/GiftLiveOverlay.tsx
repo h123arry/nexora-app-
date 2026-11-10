@@ -3,6 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { subscribeToLiveGiftEvents, type LiveGiftEvent } from '../services/giftDeliveryService';
 import GiftAnimationStage from './GiftAnimationStage';
 import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
+import { playNexoraSound } from '../services/soundExperience';
 
 interface GiftLiveOverlayProps { streamId: string; soundEnabled?: boolean; audioContext?: AudioContext | null; }
 export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioContext = null }: GiftLiveOverlayProps) {
@@ -35,21 +36,9 @@ export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioC
     return () => window.clearTimeout(timer);
   }, [active]);
   useEffect(() => {
-    if (!active || !soundEnabled || !audioContext || audioContext.state !== 'running') return;
-    const base = active.rarity === 'legendary' ? 660 : active.rarity === 'epic' ? 554 : 440;
-    [0, 0.13, 0.26].forEach((offset, index) => {
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.value = base * (index === 1 ? 1.25 : index === 2 ? 1.5 : 1);
-      gain.gain.setValueAtTime(0.0001, audioContext.currentTime + offset);
-      gain.gain.exponentialRampToValueAtTime(0.075, audioContext.currentTime + offset + 0.025);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + offset + 0.22);
-      oscillator.connect(gain); gain.connect(audioContext.destination);
-      oscillator.start(audioContext.currentTime + offset);
-      oscillator.stop(audioContext.currentTime + offset + 0.24);
-    });
-  }, [active, soundEnabled, audioContext]);
+    if (!active || !soundEnabled) return;
+    playNexoraSound(active.rarity === 'legendary' ? 'gift.legendary' : 'gift.arrival');
+  }, [active, soundEnabled]);
   if (!active) return null;
   const cinematic = active.animation === 'cinematic' || active.animation === 'legendary';
   return <div className="pointer-events-none absolute inset-0 z-[80] flex items-center justify-center overflow-hidden" aria-live="polite" aria-atomic="true">

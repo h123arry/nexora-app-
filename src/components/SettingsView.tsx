@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { Sliders, User, Lock, Bell, Palette, ShieldCheck, Link2, Info, Bug } from 'lucide-react';
 import { User as UserType, ThemeMood } from '../types';
 import { SettingsService } from '../services/firebase/settingsService';
+import { readSoundPreferences, saveSoundPreferences, playNexoraSound, type SoundPreferences } from '../services/soundExperience';
 
 const PrivacySettingsModal = lazy(() => import('./PrivacySettingsModal'));
 
@@ -28,6 +29,7 @@ export default function SettingsView({
   const [savingSetting, setSavingSetting] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState('');
   const [settingsReady, setSettingsReady] = useState(false);
+  const [soundPreferences, setSoundPreferences] = useState<SoundPreferences>(() => readSoundPreferences());
 
   useEffect(() => {
     let active = true;
@@ -65,6 +67,14 @@ export default function SettingsView({
   const togglePrivacy = (key: 'isPrivateAccount' | 'allowDms', value: boolean) => {
     if (key === 'isPrivateAccount') setIsPrivateAccount(value); else setAllowDms(value);
     void saveSetting(key, () => SettingsService.updatePrivacy(currentUser.id, { [key]: value }));
+  };
+
+  const updateSoundPreference = (key: keyof SoundPreferences, value: boolean) => {
+    setSoundPreferences(previous => {
+      const next = { ...previous, [key]: value };
+      saveSoundPreferences(next);
+      return next;
+    });
   };
 
   const toggleNotification = (key: 'pushEnabled' | 'emailDigests', value: boolean) => {
@@ -285,6 +295,23 @@ export default function SettingsView({
                   </button>
                 </div>
               ))}
+              <div className="mt-5 border-t border-white/10 pt-5 space-y-3">
+                <div><h4 className="text-xs font-bold text-white">Sound experience</h4><p className="mt-1 text-[10px] text-zinc-400">These controls apply on this device. Sounds only play after your browser allows audio playback.</p></div>
+                {[
+                  { key: 'notifications' as const, label: 'Notification sounds', description: 'New messages, replies and social activity' },
+                  { key: 'interface' as const, label: 'Interface feedback', description: 'Soft confirmation and interaction cues' },
+                  { key: 'gifts' as const, label: 'Gift delivery sounds', description: 'Gift arrival and creator celebration cues' },
+                  { key: 'live' as const, label: 'Live session sounds', description: 'Audience and room interaction cues' },
+                ].map(item => (
+                  <div key={item.key} className="flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/5 p-3.5">
+                    <div><span className="block text-xs font-bold text-white">{item.label}</span><span className="mt-1 block text-[10px] text-zinc-400">{item.description}</span></div>
+                    <button type="button" aria-label={item.label} aria-pressed={soundPreferences[item.key]} onClick={() => updateSoundPreference(item.key, !soundPreferences[item.key])} className={'h-6 w-11 shrink-0 rounded-full p-1 transition-colors ' + (soundPreferences[item.key] ? 'bg-violet-600' : 'bg-zinc-700')}>
+                      <span className={'block h-4 w-4 rounded-full bg-white transition-transform ' + (soundPreferences[item.key] ? 'translate-x-5' : 'translate-x-0')} />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={() => playNexoraSound('interface.confirmation')} className="rounded-xl border border-violet-400/30 bg-violet-500/10 px-4 py-2 text-[11px] font-semibold text-violet-200 hover:bg-violet-500/20">Preview interface sound</button>
+              </div>
             </div>
           )}
 
