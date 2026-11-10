@@ -1189,6 +1189,9 @@ const publicProfile = (uid) => ({
     await seed(async admin => setDoc(doc(admin, 'academyProgress', 'alice_creator-foundations'), ownProgress));
     await assertSucceeds(getDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
     await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), ownProgress));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_creator-business'), {
+      ...ownProgress, courseId: 'creator-business', completedLessonIds: ['value']
+    }));
     await assertSucceeds(getDocs(query(collection(alice, 'academyProgress'), where('userId', '==', 'alice'))));
     await assertFails(getDoc(doc(dbFor('bob'), 'academyProgress', 'alice_creator-foundations')));
     await assertFails(setDoc(doc(dbFor('bob'), 'academyProgress', 'bob_creator-foundations'), {
