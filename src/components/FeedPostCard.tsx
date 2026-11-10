@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { getMotionPreset } from '../utils/motionPresets';
 import { 
   Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
   Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, 
@@ -112,6 +113,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   expandedPostIds,
   setExpandedPostIds
 }) => {
+  const reduceMotion = useReducedMotion();
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
   const hasMediaCaptionOverlay = Boolean(post.videoUrl || ((post.image || (post.images && post.images.length > 0)) && !post.opportunityType));
@@ -308,9 +310,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                       }} 
                     />
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                      {...getMotionPreset('menu', Boolean(reduceMotion))}
                       id={`post-options-${post.id}`}
                       role="menu"
                       aria-label={`Post options for ${post.name}`}

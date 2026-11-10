@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical, MoreHorizontal, Radio, ShieldCheck, Gift } from 'lucide-react';
 import VohIcon from './VohIcon';
 import ShareSheet from './ShareSheet';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { User, Post } from '../types';
 import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
@@ -243,6 +243,7 @@ export default function ProfileView({
   showPWAInstallPrompt,
   onOpenVohAi
 }: ProfileViewProps) {
+  const reduceMotion = useReducedMotion();
   // Navigation State
   const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections' | 'subscriptions' | 'linked-accounts' | 'other-profile-menu'>('profile');
   const [profileTab, setProfileTab] = useState<string>('media');
@@ -1356,10 +1357,10 @@ export default function ProfileView({
         {activePanel === 'other-profile-menu' && !isOwnProfile && (
           <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex justify-end" onClick={() => setActivePanel('profile')}>
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              initial={reduceMotion ? false : { x: "100%", opacity: 0 }}
+              animate={reduceMotion ? { opacity: 1 } : { x: 0, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { x: "100%", opacity: 0 }}
+              transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 30, stiffness: 300 }}
               className="w-full max-w-sm h-full bg-[#080614] border-l border-white/10 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1426,10 +1427,10 @@ export default function ProfileView({
         {activePanel === 'menu' && (
           <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex justify-end" onClick={() => { setActivePanel('profile'); setSettingsActiveSubPanel('main'); setSettingsSearchQuery(''); }}>
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              initial={reduceMotion ? false : { x: "100%", opacity: 0 }}
+              animate={reduceMotion ? { opacity: 1 } : { x: 0, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { x: "100%", opacity: 0 }}
+              transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 30, stiffness: 300 }}
               className="w-full max-w-md h-full bg-[#080614] border-l border-white/10 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
               onClick={(e) => e.stopPropagation()}
             >
@@ -1437,7 +1438,7 @@ export default function ProfileView({
                 {/* Header Row */}
                 <div className="flex items-center justify-between border-b border-white/5 pb-3">
                   <div className="flex items-center gap-2">
-                    <Settings className="w-5 h-5 text-violet-400 animate-spin" style={{ animationDuration: '10s' }} />
+                    <Settings className={`w-5 h-5 text-violet-400 ${reduceMotion ? '' : 'animate-spin'}`} style={reduceMotion ? undefined : { animationDuration: '10s' }} />
                     <div>
                       <span className="text-[10px] font-mono text-zinc-400 font-extrabold tracking-widest uppercase block leading-none">NEXORA SYSTEM</span>
                       <h3 className="text-xs font-mono text-violet-300 font-black uppercase tracking-wider">SETTINGS & PRIVACY HUB</h3>
@@ -2464,9 +2465,10 @@ export default function ProfileView({
         {confirmingLogout && (
           <div className="fixed inset-0 z-210 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
             <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
+              initial={reduceMotion ? false : { scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { scale: 0.95, opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.16 }}
               className="bg-[#0c0926] border border-red-500/25 rounded-3xl p-6 max-w-sm w-full text-center space-y-5 shadow-md relative"
             >
               <div className="w-12 h-12 rounded-full bg-red-600/10 text-red-500 flex items-center justify-center mx-auto">

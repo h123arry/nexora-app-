@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Zap, Repeat, MessageCircle, Bookmark, Cpu, Play, Pause, Volume2, Mic, Send, Briefcase, Users, Award, Star, Search, X, Plus, Filter, Trash, RefreshCw, Globe, MapPin, Sliders, VolumeX, CheckCircle, ChevronDown, ChevronUp, MoreHorizontal, EyeOff, FolderPlus, Folder, ShieldAlert, Edit2, UserPlus, ThumbsDown, BarChart2, Pin, BookOpen, Archive, Heart, Bell, Wifi, WifiOff, Info, Undo2, Sparkles, TrendingUp, Activity, Menu } from 'lucide-react';
 import { User, Post, Comment, ThemeMood } from '../types';
 import ReportModal from './ReportModal';
@@ -228,6 +228,7 @@ export default function FeedView({
   hasMorePosts = false,
   isLoadingMorePosts = false
 }: FeedViewProps) {
+  const reduceMotion = useReducedMotion();
   // Database states
   const [localPosts, setLocalPosts] = useState<RefactoredPost[]>([]);
   const [feedTab, setFeedTab] = useState<'posts' | 'following' | 'friends' | 'trending' | 'reels'>(() => {
@@ -1954,9 +1955,10 @@ export default function FeedView({
         <AnimatePresence>
           {pullY > 0 && (
             <motion.div 
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: pullY, opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
+              initial={reduceMotion ? false : { height: 0, opacity: 0 }}
+              animate={reduceMotion ? { opacity: 1 } : { height: pullY, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.16 }}
               className="w-full overflow-hidden flex flex-col items-center justify-center bg-violet-950/20 border-b border-white/10 shrink-0 select-none"
             >
               <div className="flex items-center gap-2 text-violet-300 font-mono text-[10px] uppercase tracking-widest font-extrabold py-2">
@@ -1972,8 +1974,8 @@ export default function FeedView({
               <div className="w-48 h-1 bg-white/10 rounded-full overflow-hidden mb-2">
                 <motion.div 
                   className="h-full bg-linear-to-r from-violet-500 to-pink-400"
-                  animate={pullState === 'refreshing' ? { x: [-192, 192] } : { width: `${(pullY / 50) * 100}%` }}
-                  transition={pullState === 'refreshing' ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0.1 }}
+                  animate={pullState === 'refreshing' && !reduceMotion ? { x: [-192, 192] } : { width: `${(pullY / 50) * 100}%` }}
+                  transition={reduceMotion ? { duration: 0 } : pullState === 'refreshing' ? { repeat: Infinity, duration: 1, ease: 'linear' } : { duration: 0.1 }}
                 />
               </div>
             </motion.div>

@@ -30,3 +30,17 @@ The animation profile is derived from the trusted gift ID and catalogue animatio
 ## Honest capability boundary
 
 This phase adds category choreography, layered visual effects, motion timing, and shared preview/live rendering around the existing original SVG artwork. It does **not** claim to add skeletal character rigs, frame-by-frame character animation, 3D models, or cinematic video assets. Those require separately authored character artwork/animation assets. The current dragon flight and wildlife walk are composed motion effects around the bundled artwork, not independently articulated wing or leg animation.
+
+
+## Phase 2 interaction-library hardening
+
+The shared gift stage now observes its own viewport intersection and the document visibility state. Decorative choreography pauses when the stage leaves the viewport or the tab is backgrounded, and resumes when it becomes visible again. The observer is disconnected on unmount; browsers without IntersectionObserver retain the safe visible default.
+
+The reaction picker and branded loader also use Motion's reduced-motion preference hook so JavaScript-driven transitions do not bypass the operating-system accessibility setting. The existing global CSS reduced-motion rules remain a second layer, not the only protection.
+
+This tranche improves lifecycle and accessibility behaviour in existing product surfaces. It does not add remote animation downloads, autoplay sound, or claim new 3D/rigged artwork.
+
+
+## Shared motion presets
+
+The interaction layer now exposes a small typed preset library for menus, panels, toast notifications and celebrations. Components consume the same reduced-motion-aware configuration rather than independently recreating entrance and exit values. Keep high-frequency or long-running effects out of generic presets; those require component-specific lifecycle controls and must pause when hidden.
