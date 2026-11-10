@@ -901,10 +901,7 @@ export default function MediaCreationEngine({
   };
 
   // Dynamic Styles
-  const getModalBg = () => {
-    if (theme === 'platinum-light') return 'bg-[#F8F6FF] border-[#D8CCFF] text-[#211B49]';
-    return 'bg-[#090714]/98 border-[#44376F]/70 text-white';
-  };
+  const getModalBg = () => 'bg-[#090714]/98 border-[#44376F]/70 text-white';
 
   const getStepButtonColor = (step: number) => {
     if (step === currentStep) return 'bg-violet-600 text-white shadow-lg shadow-violet-600/20';
@@ -945,7 +942,6 @@ export default function MediaCreationEngine({
   };
 
   // Accessibility Checks
-  const hasContrastIssue = theme === 'platinum-light' && caption.trim().length > 0;
   const isAltTextMissing = selectedImages.length > 0 && !imageAltText.trim();
 
   return (
@@ -1771,13 +1767,6 @@ export default function MediaCreationEngine({
                   <div className="p-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-2.5 text-left">
                     <span className="text-[9.5px] font-mono text-amber-400 uppercase font-black tracking-widest block">A quick final check</span>
                     <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 text-xs">
-                        {hasContrastIssue ? (
-                          <span className="text-amber-400">⚠️ Soft background contrast warnings in Light Theme.</span>
-                        ) : (
-                          <span className="text-emerald-400">✓ Text contrast looks good</span>
-                        )}
-                      </div>
                       {selectedImages.length > 0 && (
                         <div className="flex items-center gap-2 text-xs">
                           {isAltTextMissing ? (
