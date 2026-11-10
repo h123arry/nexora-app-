@@ -137,7 +137,7 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
     batch.set(momentRef, { weaveId, authorId: user.uid, authorName: author.name.slice(0, 80),
       authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '', text: text.trim(),
       mediaType, mediaUrl: uploaded.downloadUrl, storagePath: uploaded.storagePath, createdAt: serverTimestamp() });
-    batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp() });
+    batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp(), lastMomentId: momentRef.id });
     await batch.commit();
   } catch (error) {
     if (uploaded) await Promise.allSettled([deleteMediaFile(uploaded.storagePath), deleteDoc(doc(db, 'mediaAssets', uploaded.mediaId))]);
