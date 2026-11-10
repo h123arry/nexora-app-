@@ -122,7 +122,7 @@ export async function moderateCircleMember(
       if (!banned.includes(targetUid)) throw new Error('This member is not banned from the Circle.');
       transaction.update(communityRef, { bannedUsers: banned.filter(uid => uid !== targetUid) });
       if (target.exists && target.get('status') === 'banned') {
-        transaction.update(targetRef, { status: 'removed', role: 'member', unbannedAt: new Date() });
+        transaction.delete(targetRef);
       }
       transaction.create(auditRef, {
         id: auditRef.id, actorUid, targetUid, action: 'member_unbanned',
