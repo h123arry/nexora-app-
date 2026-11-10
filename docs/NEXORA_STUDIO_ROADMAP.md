@@ -21,7 +21,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Bounded 40-step project-wide undo/redo history, including keyboard shortcuts and edit restoration across timeline, audio and title settings.
 - Browser-side canvas + MediaRecorder WebM export.
 - Source clip audio and optional soundtrack mixed through Web Audio when supported.
-- On-screen title overlay and post caption.
+- Multiple independently timed text layers with separate colour, placement, font size, opacity, scale and rotation; edits are previewed and baked into export.
+- On-screen post caption.
 - Per-account IndexedDB project autosave.
 - Export upload through the authenticated Firebase media service and post creation through the existing NEXORA post path.
 - Explicit capability errors when the browser cannot render the selected output.
@@ -35,19 +36,14 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Independent soundtrack and voiceover fade-in/fade-out envelopes, with optional automatic music ducking during narration.
 - Pure audio-mix and waveform policies covered by focused unit tests.
 - Decoded voiceover waveform preview and in-editor audio playback for supported recordings.
-- Title placement (top, centre, bottom), start time and end time.
+- Multi-layer title placement, timing and transform controls, with policy validation tests.
 - Optional fade-through-black scene transitions between clips.
 
 ## Remaining delivery phases
 
 ### Phase 3 · Timeline and motion
-- True multi-track timeline with independent video, audio, text and sticker layers.
-- Drag-to-reorder and trim handles with a shared playhead.
-- Per-layer start/end, position, scale, rotation and opacity.
-- Keyframe interpolation for movement, scale and opacity.
-- Cross-dissolve and selected transition presets beyond fade-through-black.
-- Multi-track timeline with independent video, audio, text and sticker layers.
-- Keyframe interpolation for movement, scale and opacity.
+- Independent video, audio and sticker lanes with a shared, seekable playhead.
+- Keyframe interpolation for animated movement, scale and opacity.
 - Cross-dissolve and selected transition presets beyond fade-through-black.
 
 ### Phase 4 · Audio and captions
@@ -86,7 +82,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Current project drafts are local to the same browser/device; cloud draft sync is not implemented.
 - The preview focuses on the selected clip; a full synchronized multi-layer timeline preview is still part of the timeline phase.
 - Fade-through-black is not a cross-dissolve.
-- Text is a single title layer, not a multi-layer caption/subtitle system.
+- The editor supports multiple title layers; a dedicated caption/subtitle track with timed segments remains future work.
 - Browser export has not been manually verified on every supported mobile browser; CI type-check/build and repository tests do not replace device acceptance testing.
 
 ## Release gates
