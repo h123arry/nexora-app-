@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Users, X } from 'lucide-react';
+import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Trash2, Users, X } from 'lucide-react';
 import type { User } from '../types';
 import {
-  addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave,
+  addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment,
   acceptWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
@@ -109,6 +109,16 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setBusy(false); setProgress(0); }
   };
 
+  const handleDeleteMoment = async (moment: WorldWeaveMoment) => {
+    if (!selected || !window.confirm('Remove this moment from the shared timeline?')) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await deleteWorldWeaveMoment(selected.id, moment);
+      setNotice('Moment removed from the timeline.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove this moment.'); }
+    finally { setBusy(false); }
+  };
+
   const handleInvite = async (event: React.FormEvent) => {
     event.preventDefault(); if (!selected) return;
     setBusy(true); setError(''); setNotice('');
@@ -163,7 +173,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
             <div className="relative space-y-4 before:absolute before:bottom-4 before:left-[19px] before:top-4 before:w-px before:bg-violet-400/20">
               {moments.map(moment => <motion.article key={moment.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="relative ml-1 rounded-3xl border border-white/10 bg-[#0b1221] p-4 pl-12 md:p-5 md:pl-14">
                 <span className="absolute left-[12px] top-6 h-3.5 w-3.5 rounded-full border-2 border-[#0b1221] bg-violet-400 shadow-[0_0_14px_rgba(139,92,246,.7)]"/>
-                <div className="flex items-center gap-2"><img src={moment.authorAvatar || '/logo.svg'} alt="" className="h-8 w-8 rounded-full object-cover"/><div className="min-w-0"><p className="truncate text-xs font-bold text-white">{moment.authorName}</p><p className="text-[10px] text-slate-500">@{moment.authorUsername} · {timeLabel(moment.createdAt)}</p></div></div>
+                <div className="flex items-center justify-between gap-2"><div className="flex min-w-0 items-center gap-2"><img src={moment.authorAvatar || '/logo.svg'} alt="" className="h-8 w-8 rounded-full object-cover"/><div className="min-w-0"><p className="truncate text-xs font-bold text-white">{moment.authorName}</p><p className="text-[10px] text-slate-500">@{moment.authorUsername} · {timeLabel(moment.createdAt)}</p></div></div>{(moment.authorId === currentUser.id || selected.ownerId === currentUser.id) && <button type="button" disabled={busy} onClick={() => void handleDeleteMoment(moment)} aria-label="Remove moment" title="Remove moment" className="rounded-lg p-2 text-slate-500 transition hover:bg-red-500/10 hover:text-red-300 disabled:opacity-40"><Trash2 size={14}/></button>}</div>
                 {moment.text && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{moment.text}</p>}
                 {moment.mediaType === 'image' && moment.mediaUrl && <img src={moment.mediaUrl} alt="WorldWeave contribution" loading="lazy" className="mt-3 max-h-[520px] w-full rounded-2xl object-cover"/>}
                 {moment.mediaType === 'video' && moment.mediaUrl && <video src={moment.mediaUrl} controls playsInline preload="metadata" className="mt-3 max-h-[520px] w-full rounded-2xl bg-black"/>}
