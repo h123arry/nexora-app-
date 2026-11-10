@@ -278,22 +278,6 @@ export interface Chat {
   username?: string;
   inviteLink?: string;
   isVerified?: boolean;
-  // Upgraded Broadcast System properties
-  isBroadcast?: boolean;
-  broadcastMode?: 'standard' | 'announcement' | 'creator' | 'community' | 'business';
-  broadcastRecipients?: string[];
-  broadcastDeliveryStats?: {
-    delivered: number;
-    read: number;
-    failed: number;
-    pending: number;
-    reactionCount: { [emoji: string]: number };
-    repliesCount: number;
-    averageReadTime: string;
-    linkClicks: number;
-    pollParticipation: number;
-    mediaDownloads: number;
-  };
 }
 
 export interface Notification {

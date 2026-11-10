@@ -28,7 +28,6 @@ export function mapInboxChatRecord(id: string, raw: Record<string, unknown>, uid
     : participants.find(participantId => participantId !== uid) || '';
   const partner = creators.find(creator => creator.id === partnerId);
   const isGroup = raw.isGroup === true || participants.length > 2;
-  const isBroadcast = raw.isBroadcast === true;
 
   return {
     id,
@@ -46,7 +45,6 @@ export function mapInboxChatRecord(id: string, raw: Record<string, unknown>, uid
     unreadCount: Number.isSafeInteger(raw.unreadCount) && Number(raw.unreadCount) >= 0
       ? Number(raw.unreadCount) : 0,
     isGroup,
-    isBroadcast,
     ...(typeof raw.groupBanner === 'string' ? { groupBanner: raw.groupBanner } : {}),
     ...(typeof raw.groupCategory === 'string' ? { groupCategory: raw.groupCategory } : {}),
     ...(raw.groupPrivacy === 'public' || raw.groupPrivacy === 'private' || raw.groupPrivacy === 'invite'
