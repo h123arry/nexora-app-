@@ -29,8 +29,8 @@ NEXORA is being developed around meaningful interactions, secure accounts, relia
 
 ### Communities and Circles
 
-- The Communities hub reads public and owner-managed community records from Firestore and supports search, browsing, and creation. Community posts use the regular public-post path with community labels; they are not a separate member-only feed.
-- Community membership is currently stored per browser in `localStorage`, not as cross-device membership. Private or invite-only access requests and member-scoped permissions are not implemented; private records are owner-readable under the current rules.
+- The Communities hub reads public and owner-managed community records from Firestore and supports search, browsing, creation, and per-user membership records in each community's `members` subcollection. Public join/leave state is Firestore-backed and cross-device; private or invite-only access requests are not yet available.
+- Circle discussion posts are written through an authenticated server callable to `communities/{communityId}/posts` and read through a membership-scoped Firestore subscription. Active-member rules protect the feed; Circle posts are not published into the global public-post feed. Community polls, events, announcements, governance, and invite redemption also have trusted server-side operations.
 - The separate Matrix **Circles** experience is a local prototype. Its builder, seeded polls, chat, voice controls, and several interactions are simulated or browser-local rather than live community services.
 
 ### Messaging and communication
