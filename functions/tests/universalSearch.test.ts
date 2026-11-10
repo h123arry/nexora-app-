@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { createHash } from 'node:crypto';
-import { searchNexoraContent, syncUniversalSearchRecord } from '../src/universalSearch.js';
+import { getNexoraTrending, searchNexoraContent, syncUniversalSearchRecord } from '../src/universalSearch.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-search' }, 'universal-search-tests');
 const db = getFirestore(app);
@@ -16,11 +16,16 @@ before(async () => {
   await db.doc('users/private-user').set({ username: 'nexora_private', name: 'Nexora Private' });
   await db.doc('users/private-user/settings/preferences').set({ privacy: { isPrivate: true } });
   await db.doc('users/blocked-user').set({ username: 'nexora_blocked', name: 'Nexora Blocked' });
+  await db.doc('users/creator-two').set({ username: 'creator_two', name: 'Creator Two' });
   await db.doc('users/blocked-user/settings/preferences').set({ privacy: { blockedUserIds: ['viewer'] } });
   await db.doc('users/viewer/settings/preferences').set({ privacy: { blockedUserIds: [] }, messaging: { blockedUserIds: [] } });
   await db.doc('posts/public-video').set({ id:'public-video', userId:'public-user', content:'Nexora video discovery', audience:'public', mediaType:'video', timestamp:new Date(), tags:['nexora','design'], likes:24 });
   await db.doc('posts/private-post').set({ id:'private-post', userId:'private-user', content:'Nexora private content', audience:'public', timestamp:new Date(), tags:['nexora'] });
   await db.doc('posts/blocked-post').set({ id:'blocked-post', userId:'blocked-user', content:'Nexora blocked content', audience:'public', timestamp:new Date(), tags:['nexora'] });
+  await db.doc('posts/trend-a').set({ id:'trend-a', userId:'public-user', content:'A trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:20 });
+  await db.doc('posts/trend-b').set({ id:'trend-b', userId:'creator-two', content:'Another trending design post', audience:'public', timestamp:new Date(), tags:['trending'], likes:15 });
+  await db.doc('posts/private-trend-a').set({ id:'private-trend-a', userId:'private-user', content:'Private-only trend', audience:'public', timestamp:new Date(), tags:['private-only'] });
+  await db.doc('posts/private-trend-b').set({ id:'private-trend-b', userId:'private-user', content:'Private-only trend', audience:'public', timestamp:new Date(), tags:['private-only'] });
   await syncUniversalSearchRecord(db,'person','public-user','users/public-user',(await db.doc('users/public-user').get()).data()!);
   await syncUniversalSearchRecord(db,'person','private-user','users/private-user',(await db.doc('users/private-user').get()).data()!);
   await syncUniversalSearchRecord(db,'person','blocked-user','users/blocked-user',(await db.doc('users/blocked-user').get()).data()!);
@@ -39,6 +44,8 @@ after(async () => {
   await db.doc('posts/public-video').delete().catch(() => undefined);
   await db.doc('posts/private-post').delete().catch(() => undefined);
   await db.doc('posts/blocked-post').delete().catch(() => undefined);
+  for (const id of ['trend-a','trend-b','private-trend-a','private-trend-b']) await db.doc('posts/' + id).delete().catch(() => undefined);
+  await db.recursiveDelete(db.doc('users/creator-two')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/public-user')).catch(() => undefined);
   await deleteApp(app);
 });
@@ -56,6 +63,11 @@ describe('NEXORA universal search', () => {
   it('uses typo fallback for a one-character search misspelling', async () => {
     const result = await searchNexoraContent(db,'viewer','nexorra');
     assert.ok(result.results.some(hit => hit.targetId === 'public-video'));
+  });
+  it('calculates platform trends across distinct public creators and ignores private creators', async () => {
+    const trends = await getNexoraTrending(db);
+    assert.ok(trends.some(item => item.tag === 'trending' && item.postCount === 2 && item.creatorCount === 2));
+    assert.ok(!trends.some(item => item.tag === 'private only'));
   });
   it('rejects unauthenticated, short and malformed cursor requests', async () => {
     await assert.rejects(searchNexoraContent(db,'','nexora'),/Sign in/);
