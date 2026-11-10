@@ -68,7 +68,8 @@ export const moderateLiveParticipant = onCall(
     if (action === 'unmute_chat') update.chatMuted = false;
     if (action === 'ban') { update.banned = true; update.chatMuted = true; update.bannedAt = FieldValue.serverTimestamp(); }
     if (action === 'unban') { update.banned = false; update.chatMuted = false; update.unbannedAt = FieldValue.serverTimestamp(); }
-    if (action === 'remove') update.removedAt = FieldValue.serverTimestamp();
+    if (action === 'remove') { update.removed = true; update.removedAt = FieldValue.serverTimestamp(); }
+    if (action === 'unban') update.removed = false;
     await moderationRef.set(update, { merge: true });
     if (action === 'remove' || action === 'ban') {
       await viewerRef.delete();
