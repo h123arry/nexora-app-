@@ -128,8 +128,8 @@ export const getNexoraTrendingTopics = onCall({ maxInstances: 5 }, async request
 
 /** Admin-only, cursor-based one-time index backfill. Invoke once per source until done=true. */
 export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSeconds: 540 }, async request => {
-  const claims = request.auth?.token || {};
-  if (!request.auth?.uid || !(claims.admin === true || claims.role === 'admin' || claims.role === 'founder' || claims.role === 'super_admin')) {
+  const claims = request.auth?.token as Record<string, unknown> | undefined;
+  if (!request.auth?.uid || !(claims?.admin === true || claims?.role === 'admin' || claims?.role === 'founder' || claims?.role === 'super_admin')) {
     throw new HttpsError('permission-denied', 'Only NEXORA administrators can rebuild the search index.');
   }
   const source = request.data?.source;
@@ -150,6 +150,12 @@ export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSecond
   query = query.orderBy(FieldPath.documentId());
   if (cursor) {
     if (isCollectionGroup) {
+      const cursorSegments = cursor.split('/');
+      const expectedCollection = source === 'circlePosts' ? 'posts' : source === 'circleEvents' ? 'events' : source === 'pageServices' ? 'services' : 'channelUpdates';
+      const expectedRoot = source.startsWith('circle') ? 'communities' : 'pages';
+      if (cursorSegments.length !== 4 || cursorSegments[0] !== expectedRoot || cursorSegments[2] !== expectedCollection) {
+        throw new HttpsError('invalid-argument', 'The backfill cursor does not belong to this source.');
+      }
       const previous = await adminDb.doc(cursor).get();
       if (!previous.exists) throw new HttpsError('invalid-argument', 'The backfill cursor is stale. Restart this source.');
       query = query.startAfter(previous);
