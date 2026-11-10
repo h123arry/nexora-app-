@@ -196,7 +196,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
 
   const saveLessonNote = async (course: Course, lesson: Lesson) => {
     const key = course.id + ':' + lesson.id;
-    const noteId = currentUser.id + '_' + course.id + '_' + lesson.id;
+    const noteId = currentUser.id + '_' + course.id.length + '_' + course.id + '_' + lesson.id.length + '_' + lesson.id;
     const note = lessonNotes[key] || '';
     if (savingNoteId) return;
     setSavingNoteId(key);
