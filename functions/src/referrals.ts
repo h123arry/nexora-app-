@@ -29,6 +29,16 @@ export async function createReferralCode(db: Firestore, uid: string): Promise<{ 
   if (!validUid(uid)) throw new Error('A valid account is required.');
   const config = await db.collection('referralProgramConfig').doc('current').get();
   if (!config.exists || config.get('enabled') !== true) throw new Error('The referral programme is not currently available.');
+  const rewardNex = config.get('rewardNex');
+  const maxSuccessfulReferrals = config.get('maxSuccessfulReferrals');
+  if (!Number.isSafeInteger(rewardNex) || rewardNex <= 0
+    || !Number.isSafeInteger(maxSuccessfulReferrals) || maxSuccessfulReferrals <= 0) {
+    throw new Error('The referral programme is not currently available.');
+  }
+  const treasury = await db.collection('nexWallets').doc(PROMO_ACCOUNT).get();
+  if (validBalance(treasury.data()?.availableBalance) < rewardNex) {
+    throw new Error('The referral programme is not currently available.');
+  }
   const existingCodes = await db.collection('referralCodes').where('ownerId', '==', uid).limit(5).get();
   if (existingCodes.size >= 5) throw new Error('You have reached the referral-code limit.');
   const code = randomBytes(32).toString('base64url');
@@ -37,6 +47,7 @@ export async function createReferralCode(db: Firestore, uid: string): Promise<{ 
     createdAt: FieldValue.serverTimestamp(),
     redemptionCount: 0,
     maxRedemptions: MAX_REDEMPTIONS,
+    expiresAt: new Date(Date.now() + 30 * 86400000),
     status: 'active',
   });
   return { code };
@@ -52,7 +63,8 @@ export async function claimReferral(db: Firestore, inviteeUid: string, code: str
   return db.runTransaction(async tx => {
     const [codeSnapshot, attribution] = await Promise.all([tx.get(codeRef), tx.get(attributionRef)]);
     if (attribution.exists) return { claimed: false };
-    if (!codeSnapshot.exists || codeSnapshot.get('status') !== 'active') throw new Error('This referral invitation is unavailable.');
+    if (!codeSnapshot.exists || codeSnapshot.get('status') !== 'active'
+      || codeSnapshot.get('expiresAt')?.toDate?.() <= new Date()) throw new Error('This referral invitation is unavailable.');
     const ownerId = String(codeSnapshot.get('ownerId') || '');
     if (!validUid(ownerId) || ownerId === inviteeUid) throw new Error('You cannot refer your own account.');
     const count = Number(codeSnapshot.get('redemptionCount') || 0);
