@@ -761,7 +761,10 @@ const publicProfile = (uid) => ({
   it('enforces self-scoped Circle membership and prevents client-assigned elevated roles', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'communities', 'member-circle'), {
-        id: 'member-circle', ownerId: 'alice', creatorId: 'alice', type: 'public', name: 'Members', bannedUsers: ['mallory']
+        id: 'member-circle', ownerId: 'alice', creatorId: 'alice', type: 'public', name: 'Members'
+      });
+      await setDoc(doc(db, 'communities', 'member-circle', 'bans', 'mallory'), {
+        userId: 'mallory', bannedBy: 'alice', reason: 'Repeated abuse', createdAt: Timestamp.now()
       });
     });
 
@@ -785,6 +788,11 @@ const publicProfile = (uid) => ({
     }));
     await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'members', 'mallory'), {
       userId: 'mallory', role: 'member', status: 'active', joinedAt: serverTimestamp()
+    }));
+    await assertFails(getDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'bans', 'mallory')));
+    await assertFails(getDoc(doc(dbFor('alice'), 'communities', 'member-circle', 'bans', 'mallory')));
+    await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'bans', 'self-created'), {
+      userId: 'mallory', reason: 'fake'
     }));
     await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'members', 'alice'), {
       userId: 'alice', role: 'member', status: 'active', joinedAt: serverTimestamp()
