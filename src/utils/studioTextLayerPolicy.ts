@@ -34,5 +34,5 @@ export function normalizeStudioTextLayer(value: Partial<StudioTextLayer>, fallba
 export function isStudioTextLayerVisible(layer: StudioTextLayer, elapsed: number, totalDuration: number): boolean {
   const safeElapsed = Math.max(0, Number.isFinite(elapsed) ? elapsed : 0);
   const safeTotal = Math.max(0, Number.isFinite(totalDuration) ? totalDuration : 0);
-  return Boolean(layer.text.trim()) && safeElapsed >= layer.start && safeElapsed <= (layer.end > layer.start ? layer.end : safeTotal);
+  return Boolean(layer.text.trim()) && safeElapsed >= layer.start && safeElapsed <= (layer.end > 0 ? layer.end : safeTotal);
 }
