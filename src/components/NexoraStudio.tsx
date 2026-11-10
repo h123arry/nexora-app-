@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { buildWaveformPeaks, getAudioEnvelopeGain, getDuckedMusicGain } from '../utils/studioAudioPolicy';
 import { appendHistorySnapshot, reorderById } from '../utils/studioHistoryPolicy';
 import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer } from '../utils/studioTextLayerPolicy';
-import { isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
+import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
@@ -367,10 +367,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   };
 
   const addImageLayer = (file: File) => {
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { setMessage('Choose a PNG, JPEG or WebP image.'); return; }
-    if (file.size > 10 * 1024 * 1024) { setMessage('Each sticker or image must be 10 MB or smaller.'); return; }
-    if (imageLayers.length >= 20) { setMessage('A Studio project can contain up to 20 image layers.'); return; }
-    if (imageLayers.reduce((total, layer) => total + layer.blob.size, 0) + file.size > 40 * 1024 * 1024) { setMessage('Image layers in one project cannot exceed 40 MB combined.'); return; }
+    if (!canAddStudioImageLayer(imageLayers, file)) { setMessage('Use PNG, JPEG or WebP images, up to 10 MB each, 20 layers and 40 MB combined.'); return; }
     const id = makeId();
     const layer = normalizeStudioImageLayer({ id, name: file.name, blob: file, start: Math.min(previewGlobalTime, totalDuration), end: 0, x: 0.5, y: 0.5, scale: 0.28, rotation: 0, opacity: 1 }, id);
     setImageLayers(previous => [...previous, layer]);
@@ -589,7 +586,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     });
     try {
       for (const layer of imageLayers) {
-        if (typeof createImageBitmap === 'function') imageAssets.set(layer.id, await createImageBitmap(layer.blob));
+        let bitmap: ImageBitmap | null = null;
+        if (typeof createImageBitmap === 'function') {
+          try { bitmap = await createImageBitmap(layer.blob); } catch { bitmap = null; }
+        }
+        if (bitmap) imageAssets.set(layer.id, bitmap);
         else {
           const image = new Image();
           image.src = getUrlForClip(layer.blob);
