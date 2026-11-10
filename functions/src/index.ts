@@ -13,7 +13,7 @@ import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
 import { setCircleMemberRole } from './communityGovernance.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
-import { createPageBookingRequest, respondToPageBookingRequest } from './pageBookings.js';
+import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
 import { searchPublicDirectory } from './directorySearch.js';
@@ -345,6 +345,22 @@ export const respondToBusinessBookingRequest = onCall({ maxInstances: 10 }, asyn
   }
 });
 
+
+export const cancelBusinessBookingRequest = onCall({ maxInstances: 10 }, async (request) => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to cancel a business booking.');
+  try {
+    return await cancelPageBookingRequest(adminDb, request.auth.uid, request.data?.bookingId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid booking')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only the customer or business')) throw new HttpsError('permission-denied', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    if (message.includes('can no longer be cancelled') || message.includes('Only pending or confirmed')) {
+      throw new HttpsError('failed-precondition', message);
+    }
+    throw new HttpsError('internal', 'The booking could not be cancelled. Please retry.');
+  }
+});
 
 export const publishBusinessServiceListing = onCall({ maxInstances: 10 }, async (request) => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish a business service.');
