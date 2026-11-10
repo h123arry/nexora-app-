@@ -11,7 +11,7 @@ import { deletePublicPostComment } from './postCommentDeletion.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
 import { createCircleEvent, setCircleEventRsvp } from './communityEvents.js';
 import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communityAnnouncements.js';
-import { setCircleMemberRole, moderateCircleMember } from './communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './communityGovernance.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
@@ -262,6 +262,18 @@ export const setCommunityMemberRole = onCall({ maxInstances: 10 }, async (reques
   }
 });
 
+
+export const listCommunityBans = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to review Circle moderation records.');
+  try {
+    return await listCircleBans(adminDb, request.auth.uid, request.data?.communityId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid Circle')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('Only active Circle managers')) throw new HttpsError('permission-denied', message);
+    throw new HttpsError('internal', 'The Circle ban list could not be loaded. Please retry.');
+  }
+});
 
 export const moderateCommunityMember = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to moderate Circle members.');
