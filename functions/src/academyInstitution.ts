@@ -6,6 +6,17 @@ const text = (value: unknown, min: number, max: number): value is string =>
   typeof value === 'string' && value.trim().length >= min && value.length <= max;
 const safeId = (value: unknown): value is string => typeof value === 'string' && ID.test(value);
 
+const BUNDLED_ACADEMY_LESSONS: Record<string, readonly string[]> = {
+  'creator-foundations': ['identity', 'audience', 'plan'],
+  'content-craft': ['hooks', 'story', 'quality'],
+  'community-building': ['conversation', 'trust', 'collab'],
+  'creator-business': ['value', 'revenue', 'disclosure'],
+  'live-production': ['run-of-show', 'hosting', 'safety'],
+  'creator-analytics': ['metrics', 'retention', 'experiments'],
+  'personal-brand': ['positioning', 'portfolio', 'reputation'],
+  'creator-safety': ['security', 'rights', 'wellbeing'],
+};
+
 async function instructor(db: Firestore, uid: string, minimum: 'instructor' | 'editor' | 'admin' = 'instructor') {
   const snap = await db.collection('academyInstructors').doc(uid).get();
   const role = snap.get('role');
@@ -323,4 +334,48 @@ export async function bookAcademyMentorshipSession(db: Firestore, uid: string, s
     tx.update(sessionRef, { bookedCount });
   });
   return { sessionId, booked: true, bookedCount };
+}
+
+
+/**
+ * Records learner progress through trusted server code. Published institutional
+ * lessons are checked against their live course/lesson documents; bundled
+ * introductory lessons are checked against the versioned curriculum allowlist.
+ * This record is progress only and never grants an assessed credential.
+ */
+export async function completeAcademyLesson(db: Firestore, uid: string, courseId: string, lessonId: string) {
+  if (!uid || !safeId(courseId) || !safeId(lessonId)) {
+    throw new Error('A valid course and lesson are required.');
+  }
+  const bundledLessons = BUNDLED_ACADEMY_LESSONS[courseId];
+  if (bundledLessons && !bundledLessons.includes(lessonId)) {
+    throw new Error('This lesson is not part of the selected course.');
+  }
+  const courseRef = db.collection('academyCourses').doc(courseId);
+  const lessonRef = courseRef.collection('lessons').doc(lessonId);
+  const progressRef = db.collection('academyProgress').doc(uid + '_' + courseId);
+  return db.runTransaction(async tx => {
+    const [progress, course, lesson] = await Promise.all([
+      tx.get(progressRef),
+      bundledLessons ? Promise.resolve(null) : tx.get(courseRef),
+      bundledLessons ? Promise.resolve(null) : tx.get(lessonRef),
+    ]);
+    if (!bundledLessons && (!course?.exists || course.get('status') !== 'published'
+      || !lesson?.exists || lesson.get('status') !== 'published')) {
+      throw new Error('This published Academy lesson is unavailable.');
+    }
+    if (progress.exists && (progress.get('userId') !== uid || progress.get('courseId') !== courseId)) {
+      throw new Error('This learner progress record is unavailable.');
+    }
+    const existing = Array.isArray(progress.get('completedLessonIds'))
+      ? [...new Set((progress.get('completedLessonIds') as unknown[]).filter((id): id is string => typeof id === 'string' && id.length <= 120))]
+      : [];
+    if (existing.includes(lessonId)) return { courseId, lessonId, completedLessonIds: existing, alreadyCompleted: true };
+    if (existing.length >= 500) throw new Error('This course progress record has reached its supported lesson limit.');
+    const completedLessonIds = [...existing, lessonId];
+    tx.set(progressRef, {
+      userId: uid, courseId, completedLessonIds, updatedAt: new Date(), schemaVersion: 1,
+    }, { merge: true });
+    return { courseId, lessonId, completedLessonIds, alreadyCompleted: false };
+  });
 }

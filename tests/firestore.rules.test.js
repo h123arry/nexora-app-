@@ -1186,8 +1186,9 @@ const publicProfile = (uid) => ({
       userId: 'alice', courseId: 'creator-foundations',
       completedLessonIds: ['identity'], updatedAt: serverTimestamp(), schemaVersion: 1
     };
-    await assertSucceeds(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), ownProgress));
+    await seed(async admin => setDoc(doc(admin, 'academyProgress', 'alice_creator-foundations'), ownProgress));
     await assertSucceeds(getDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
+    await assertFails(setDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), ownProgress));
     await assertSucceeds(getDocs(query(collection(alice, 'academyProgress'), where('userId', '==', 'alice'))));
     await assertFails(getDoc(doc(dbFor('bob'), 'academyProgress', 'alice_creator-foundations')));
     await assertFails(setDoc(doc(dbFor('bob'), 'academyProgress', 'bob_creator-foundations'), {
@@ -1204,6 +1205,9 @@ const publicProfile = (uid) => ({
     }));
     await assertFails(updateDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
       userId: 'bob'
+    }));
+    await assertFails(updateDoc(doc(alice, 'academyProgress', 'alice_creator-foundations'), {
+      completedLessonIds: ['identity', 'audience']
     }));
     await assertFails(deleteDoc(doc(alice, 'academyProgress', 'alice_creator-foundations')));
   });

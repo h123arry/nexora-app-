@@ -221,17 +221,13 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
     if (saving) return;
     const existing = progress[course.id] ?? [];
     if (existing.includes(lesson.id)) return;
-    const updated = [...existing, lesson.id];
     setSaving(lesson.id);
     try {
-      await setDoc(doc(db, 'academyProgress', currentUser.id + '_' + course.id), {
-        userId: currentUser.id,
-        courseId: course.id,
-        completedLessonIds: updated,
-        updatedAt: serverTimestamp(),
-        schemaVersion: 1,
-      }, { merge: true });
-      setProgress(previous => ({ ...previous, [course.id]: updated }));
+      const result = await httpsCallable<
+        { courseId: string; lessonId: string },
+        { completedLessonIds: string[] }
+      >(functions, 'academyCompleteLesson')({ courseId: course.id, lessonId: lesson.id });
+      setProgress(previous => ({ ...previous, [course.id]: result.data.completedLessonIds }));
     } catch {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Your lesson progress could not be saved. Please try again.' }));
     } finally {

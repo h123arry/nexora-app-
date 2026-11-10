@@ -7,6 +7,7 @@ import {
   getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
   issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
   createAcademyMentorshipSession, listUpcomingAcademyMentorshipSessions, bookAcademyMentorshipSession,
+  completeAcademyLesson,
 } from '../src/academyInstitution.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-engagement' }, 'academy-institution-tests');
@@ -18,6 +19,9 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Academy institution tests require the Firestore Emulator.');
   await db.recursiveDelete(db.doc('academyCourses/' + courseId));
   await db.recursiveDelete(db.doc('academyMentorshipSessions/academy-session-test'));
+  await db.recursiveDelete(db.doc('academyCourses/academy-progress-course'));
+  await db.doc('academyProgress/learner-progress_academy-progress-course').delete().catch(() => undefined);
+  await db.doc('academyProgress/learner-progress_creator-foundations').delete().catch(() => undefined);
   await db.collection('academyAssessmentAttempts').where('courseId', '==', courseId).get().then(async s => {
     for (const d of s.docs) await d.ref.delete();
   });
@@ -29,6 +33,9 @@ before(async () => {
   await db.collection('academyInstructors').doc('academy-admin').set({ role: 'admin', status: 'active' });
 });
 after(async () => {
+  await db.recursiveDelete(db.doc('academyCourses/academy-progress-course'));
+  await db.doc('academyProgress/learner-progress_academy-progress-course').delete().catch(() => undefined);
+  await db.doc('academyProgress/learner-progress_creator-foundations').delete().catch(() => undefined);
   await db.recursiveDelete(db.doc('academyCourses/' + courseId));
   await db.recursiveDelete(db.doc('academyMentorshipSessions/academy-session-test'));
   await db.collection('academyAssessmentAttempts').where('courseId', '==', courseId).get().then(async s => {
@@ -100,6 +107,39 @@ describe('NEXORA Institute institution services', () => {
     await assert.rejects(
       issueAcademyCertificate(db, 'learner-one', courseId, assessmentId),
       /revoked Academy certificate cannot be reissued/,
+    );
+  });
+
+  it('saves bundled and published lesson progress through trusted, race-safe writes', async () => {
+    const courseRef = db.collection('academyCourses').doc('academy-progress-course');
+    await courseRef.set({ ownerId: 'academy-instructor', status: 'published', lessonCount: 3 });
+    for (let index = 1; index <= 3; index += 1) {
+      await courseRef.collection('lessons').doc('module-' + index).set({
+        id: 'module-' + index, status: 'published', title: 'Module ' + index,
+      });
+    }
+
+    const first = await completeAcademyLesson(db, 'learner-progress', 'academy-progress-course', 'module-1');
+    assert.equal(first.alreadyCompleted, false);
+    const [second, third] = await Promise.all([
+      completeAcademyLesson(db, 'learner-progress', 'academy-progress-course', 'module-2'),
+      completeAcademyLesson(db, 'learner-progress', 'academy-progress-course', 'module-3'),
+    ]);
+    assert.equal(second.alreadyCompleted, false);
+    assert.equal(third.alreadyCompleted, false);
+    const saved = await db.doc('academyProgress/learner-progress_academy-progress-course').get();
+    assert.deepEqual(saved.get('completedLessonIds').sort(), ['module-1', 'module-2', 'module-3']);
+    const retry = await completeAcademyLesson(db, 'learner-progress', 'academy-progress-course', 'module-1');
+    assert.equal(retry.alreadyCompleted, true);
+
+    await assert.rejects(
+      completeAcademyLesson(db, 'learner-progress', 'academy-progress-course', 'not-published'),
+      /unavailable/,
+    );
+    await completeAcademyLesson(db, 'learner-progress', 'creator-foundations', 'identity');
+    await assert.rejects(
+      completeAcademyLesson(db, 'learner-progress', 'creator-foundations', 'not-a-lesson'),
+      /not part of the selected course/,
     );
   });
 
