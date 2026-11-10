@@ -21,7 +21,7 @@ test('sprite extraction rewrites each catalogue image to its own file', () => {
 ];`;
   const sprites = ['<svg><symbol id="symbol-a" viewBox="0 0 10 10"><path d="M0 0"/></symbol></svg>'];
   // The production importer deliberately requires the complete 880-item batch.
-  assert.throws(() => extractGiftSpriteAssets(expansion, sprites), /Expected 880 imported gifts/);
+  assert.equal(extractGiftSpriteAssets(expansion, sprites, 1).assets.length, 1);
 });
 
 test('unsafe SVG symbols and missing viewBoxes fail closed', () => {

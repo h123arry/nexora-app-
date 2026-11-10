@@ -12,23 +12,23 @@ const escapeXml = value => String(value).replace(/[&<>"']/g, c => ({
 }[c]));
 
 export function extractSymbolSvg(symbolMarkup, accessibleName) {
-  const opening = symbolMarkup.match(/^<symbol\\b([^>]*)>/);
+  const opening = symbolMarkup.match(/^<symbol\b([^>]*)>/);
   if (!opening) throw new Error('Expected an SVG symbol element');
-  const viewBox = opening[1].match(/\\bviewBox=["']([^"']+)["']/);
+  const viewBox = opening[1].match(/\bviewBox=["']([^"']+)["']/);
   if (!viewBox) throw new Error('SVG symbol is missing its viewBox');
-  const inner = symbolMarkup.slice(opening[0].length).replace(/<\\/symbol>\\s*$/, '');
-  if (!inner || /<script\\b|<foreignObject\\b|javascript:/i.test(inner)) {
+  const inner = symbolMarkup.slice(opening[0].length).replace(/<\/symbol>\s*$/, '');
+  if (!inner || /<script\b|<foreignObject\b|javascript:/i.test(inner)) {
     throw new Error('Unsafe or empty SVG symbol');
   }
   return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="' + viewBox[1] +
     '" role="img" aria-label="' + escapeXml(accessibleName) +
-    '" focusable="false">\\n' + inner + '\\n</svg>\\n';
+    '" focusable="false">\n' + inner + '\n</svg>\n';
 }
 
-export function extractGiftSpriteAssets(expansionText, spriteTexts) {
+export function extractGiftSpriteAssets(expansionText, spriteTexts, expectedCount = 880) {
   const symbols = new Map();
   for (const sprite of spriteTexts) {
-    for (const match of sprite.matchAll(/<symbol\\b[^>]*\\bid=["']([^"']+)["'][^>]*>[\\s\\S]*?<\\/symbol>/g)) {
+    for (const match of sprite.matchAll(/<symbol\b[^>]*\bid=["']([^"']+)["'][^>]*>[\s\S]*?<\/symbol>/g)) {
       if (symbols.has(match[1])) throw new Error('Duplicate sprite symbol: ' + match[1]);
       symbols.set(match[1], match[0]);
     }
@@ -36,7 +36,7 @@ export function extractGiftSpriteAssets(expansionText, spriteTexts) {
   const assets = [];
   const seenIds = new Set();
   let rewritten = expansionText;
-  const entries = [...expansionText.matchAll(/\\{\\s*"id":\\s*"([^"]+)"[\\s\\S]*?"image":\\s*"([^"]+)"[\\s\\S]*?\\n\\s*\\}/g)];
+  const entries = [...expansionText.matchAll(/\{\s*"id":\s*"([^"]+)"[\s\S]*?"image":\s*"([^"]+)"[\s\S]*?\n\s*\}/g)];
   for (const entry of entries) {
     const [, giftId, imageRef] = entry;
     if (seenIds.has(giftId)) throw new Error('Duplicate gift id: ' + giftId);
@@ -47,7 +47,7 @@ export function extractGiftSpriteAssets(expansionText, spriteTexts) {
     }
     const symbol = symbols.get(symbolId);
     if (!symbol) throw new Error('Missing symbol ' + symbolId + ' for ' + giftId);
-    const name = entry[0].match(/"name":\\s*"([^"]+)"/)?.[1] || giftId;
+    const name = entry[0].match(/"name":\s*"([^"]+)"/)?.[1] || giftId;
     const outputPath = '/' + OUTPUT_DIR + '/' + giftId + '.svg';
     assets.push({
       path: resolve(ROOT, 'public' + outputPath),
@@ -58,9 +58,9 @@ export function extractGiftSpriteAssets(expansionText, spriteTexts) {
     });
     rewritten = rewritten.replace(entry[0], entry[0].replace(imageRef, outputPath));
   }
-  if (entries.length !== 880) throw new Error('Expected 880 imported gifts; found ' + entries.length);
-  if (symbols.size !== 880) throw new Error('Expected 880 sprite symbols; found ' + symbols.size);
-  if (assets.length !== 880) throw new Error('Not every imported gift received an individual asset');
+  if (entries.length !== expectedCount) throw new Error('Expected ' + expectedCount + ' imported gifts; found ' + entries.length);
+  if (symbols.size !== expectedCount) throw new Error('Expected ' + expectedCount + ' sprite symbols; found ' + symbols.size);
+  if (assets.length !== expectedCount) throw new Error('Not every imported gift received an individual asset');
   return { assets, rewritten };
 }
 
@@ -76,12 +76,12 @@ async function main() {
     await writeFile(asset.path, asset.svg);
   }
   await writeFile(expansionPath, rewritten);
-  process.stdout.write('Extracted ' + assets.length + ' individual, lazy-loadable GiftVerse SVG assets.\\n');
+  process.stdout.write('Extracted ' + assets.length + ' individual, lazy-loadable GiftVerse SVG assets.\n');
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   main().catch(error => {
-    process.stderr.write((error?.stack || String(error)) + '\\n');
+    process.stderr.write((error?.stack || String(error)) + '\n');
     process.exitCode = 1;
   });
 }
