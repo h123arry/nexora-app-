@@ -12,7 +12,6 @@ export interface WorldWeave {
   momentCount: number; createdAt?: unknown; updatedAt?: unknown;
 }
 export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; weaveDescription: string; visibility: WorldWeaveVisibility; status: 'pending' | 'accepted'; createdAt?: unknown; }
-export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; ownerName: string; weaveTitle: string; status: 'pending' | 'accepted'; createdAt?: unknown; }
 export interface WorldWeaveMoment {
   id: string; weaveId: string; authorId: string; authorName: string; authorUsername: string;
   authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video';
@@ -124,10 +123,3 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
   }
 }
 
-export async function inviteToWorldWeaveByUsername(weaveId: string, username: string): Promise<void> {
-  const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
-  if (!/^[a-z0-9_.]{2,30}$/.test(cleanUsername)) throw new Error('Enter a valid NEXORA username.');
-  const matches = await getDocs(query(collection(db, 'publicProfiles'), where('username', '==', cleanUsername), limit(2)));
-  if (matches.size !== 1) throw new Error(matches.empty ? 'No NEXORA member was found with that username.' : 'That username is not unique.');
-  await inviteToWorldWeave(weaveId, matches.docs[0].id);
-}
