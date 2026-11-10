@@ -1427,10 +1427,10 @@ export default function ProfileView({
         {activePanel === 'menu' && (
           <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex justify-end" onClick={() => { setActivePanel('profile'); setSettingsActiveSubPanel('main'); setSettingsSearchQuery(''); }}>
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              initial={reduceMotion ? false : { x: "100%", opacity: 0 }}
+              animate={reduceMotion ? { opacity: 1 } : { x: 0, opacity: 1 }}
+              exit={reduceMotion ? { opacity: 0 } : { x: "100%", opacity: 0 }}
+              transition={reduceMotion ? { duration: 0 } : { type: "spring", damping: 30, stiffness: 300 }}
               className="w-full max-w-md h-full bg-[#080614] border-l border-white/10 p-5 overflow-y-auto space-y-5 text-left flex flex-col justify-between"
               onClick={(e) => e.stopPropagation()}
             >
