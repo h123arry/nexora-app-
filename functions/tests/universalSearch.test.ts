@@ -60,6 +60,18 @@ describe('NEXORA universal search', () => {
     assert.ok(result.results.some(hit => hit.kind === 'video' && hit.targetId === 'public-video'));
     assert.ok(!result.results.some(hit => hit.targetId === 'private-user' || hit.targetId === 'blocked-user' || hit.targetId === 'private-post' || hit.targetId === 'blocked-post'));
   });
+  it('does not index non-public posts or invite-only Circles', async () => {
+    await db.doc('posts/friends-only').set({ id:'friends-only', userId:'public-user', content:'Nexora friends only', audience:'followers', timestamp:new Date() });
+    await db.doc('communities/invite-circle').set({ id:'invite-circle', type:'invite-only', name:'Nexora Invite Circle' });
+    await syncUniversalSearchRecord(db,'post','friends-only','posts/friends-only',(await db.doc('posts/friends-only').get()).data()!);
+    await syncUniversalSearchRecord(db,'circle','invite-circle','communities/invite-circle',(await db.doc('communities/invite-circle').get()).data()!);
+    const postIndexId = 'post_' + createHash('sha256').update('posts/friends-only').digest('hex');
+    const circleIndexId = 'circle_' + createHash('sha256').update('communities/invite-circle').digest('hex');
+    assert.equal((await db.doc('searchIndex/' + postIndexId).get()).exists, false);
+    assert.equal((await db.doc('searchIndex/' + circleIndexId).get()).exists, false);
+    await db.doc('posts/friends-only').delete();
+    await db.doc('communities/invite-circle').delete();
+  });
   it('rechecks Circle visibility at query time after a Circle becomes private', async () => {
     const before = await searchNexoraContent(db,'viewer','nexora');
     assert.ok(before.results.some(hit => hit.kind === 'circle' && hit.targetId === 'search-circle'));
