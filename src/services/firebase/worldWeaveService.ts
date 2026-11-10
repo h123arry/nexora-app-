@@ -24,18 +24,18 @@ function requireUser() {
 }
 export function subscribeToMyWorldWeaves(userId: string, onItems: (items: WorldWeave[]) => void, onError: (error: Error) => void): Unsubscribe {
   if (auth.currentUser?.uid !== userId) throw new Error('Your account must match the WorldWeave profile.');
-  return onSnapshot(query(collection(db, 'worldWeaves'), where('participantIds', 'array-contains', userId), orderBy('updatedAt', 'desc')),
+  return onSnapshot(query(collection(db, 'worldWeaves'), where('participantIds', 'array-contains', userId), orderBy('updatedAt', 'desc'), limit(100)),
     snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeave))), onError);
 }
 export function subscribeToPublicWorldWeaves(onItems: (items: WorldWeave[]) => void, onError: (error: Error) => void): Unsubscribe {
   requireUser();
-  return onSnapshot(query(collection(db, 'worldWeaves'), where('visibility', '==', 'public'), orderBy('updatedAt', 'desc')),
+  return onSnapshot(query(collection(db, 'worldWeaves'), where('visibility', '==', 'public'), orderBy('updatedAt', 'desc'), limit(50)),
     snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeave))), onError);
 }
 export function subscribeToWorldWeaveMoments(weaveId: string, onItems: (items: WorldWeaveMoment[]) => void, onError: (error: Error) => void): Unsubscribe {
   requireUser();
-  return onSnapshot(query(collection(db, 'worldWeaves', weaveId, 'moments'), orderBy('createdAt', 'asc')),
-    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveMoment))), onError);
+  return onSnapshot(query(collection(db, 'worldWeaves', weaveId, 'moments'), orderBy('createdAt', 'desc'), limit(100)),
+    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveMoment)).reverse()), onError);
 }
 export async function createWorldWeave(input: { title: string; description: string; visibility: WorldWeaveVisibility; ownerName: string }): Promise<string> {
   const user = requireUser();
@@ -101,8 +101,8 @@ export async function acceptWorldWeaveInvite(weaveId: string): Promise<WorldWeav
     }
     const data = weave.data();
     const alreadyJoined = (data.participantIds || []).includes(user.uid);
+    transaction.update(inviteRef, { status: 'accepted', acceptedAt: serverTimestamp() });
     if (!alreadyJoined) {
-      transaction.update(inviteRef, { status: 'accepted', acceptedAt: serverTimestamp() });
       transaction.update(weaveRef, { participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp() });
     }
     return { ...data, id: weave.id, participantIds: [...(data.participantIds || []), ...(alreadyJoined ? [] : [user.uid])],
