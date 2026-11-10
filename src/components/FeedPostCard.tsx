@@ -800,6 +800,7 @@ export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
   if (prev.isReleased !== next.isReleased) return false;
   if (prev.preloadMode !== next.preloadMode) return false;
   if (prev.selectedTag !== next.selectedTag) return false;
+  if ((prev.feedReasons || []).join('|') !== (next.feedReasons || []).join('|')) return false;
 
   // Post core metrics and contents
   if (
