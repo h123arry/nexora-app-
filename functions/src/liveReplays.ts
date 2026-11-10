@@ -35,7 +35,7 @@ function egressToken(): string {
     video: { roomRecord: true },
   }, secret);
 }
-async function egressRequest<T extends EgressResult>(method: 'StartRoomCompositeEgress' | 'StopEgress' | 'ListEgress', payload: Record<string, unknown>): Promise<T> {
+async function egressRequest<T extends EgressResult>(method: 'StartEgress' | 'StopEgress' | 'ListEgress', payload: Record<string, unknown>): Promise<T> {
   const response = await fetch(liveKitBaseUrl() + '/twirp/livekit.Egress/' + method, {
     method: 'POST',
     headers: { Authorization: 'Bearer ' + egressToken(), 'Content-Type': 'application/json' },
@@ -107,14 +107,11 @@ export const startLiveRecording = onCall(
     if (!reservation.start) return { sessionId, status: reservation.status, replayed: true };
     try {
       const roomName = 'nexora_' + sessionId;
-      const result = await egressRequest<EgressResult>('StartRoomCompositeEgress', {
+      const result = await egressRequest<EgressResult>('StartEgress', {
         room_name: roomName,
-        layout: 'grid',
-        file_outputs: [{
-          file_type: 'MP4',
-          filepath: 'nexora-live/' + sessionId + '/{time}',
-          gcp: { credentials: JSON.stringify(credentials), bucket },
-        }],
+        template: { layout: 'grid' },
+        outputs: [{ file: { file_type: 'MP4', filepath: 'nexora-live/' + sessionId + '/{time}.mp4' } }],
+        storage: { gcp: { credentials: JSON.stringify(credentials), bucket } },
       });
       if (!result.egress_id) throw new Error('LiveKit did not return a recording job ID.');
       await sessionRef.update({
