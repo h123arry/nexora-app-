@@ -12,6 +12,94 @@ import { VoiceEngine } from '../services/voh/voiceEngine';
 import NexoraLoader from './NexoraLoader';
 import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
 
+type PhotoExportOptions = {
+  rotation: number;
+  zoom: number;
+  filterStyle?: string;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  blur: number;
+  sticker?: string | null;
+  text?: string;
+  textColor?: string;
+};
+
+/** Bake the adjustments shown in the composer into the image that is uploaded. */
+async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions): Promise<Blob> {
+  const objectUrl = URL.createObjectURL(source);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('This photo could not be prepared. Please choose it again.'));
+    });
+
+    const rotated = Math.abs(options.rotation % 180) === 90;
+    const canvas = document.createElement('canvas');
+    canvas.width = rotated ? image.naturalHeight : image.naturalWidth;
+    canvas.height = rotated ? image.naturalWidth : image.naturalHeight;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Photo editing is not available in this browser.');
+
+    context.save();
+    context.translate(canvas.width / 2, canvas.height / 2);
+    context.rotate((options.rotation * Math.PI) / 180);
+    context.scale(Math.max(1, options.zoom), Math.max(1, options.zoom));
+    const filters = [
+      options.filterStyle && options.filterStyle !== 'none' ? options.filterStyle : '',
+      `brightness(${options.brightness}%)`,
+      `contrast(${options.contrast}%)`,
+      `saturate(${options.saturation}%)`,
+      options.blur > 0 ? `blur(${options.blur}px)` : '',
+    ].filter(Boolean);
+    context.filter = filters.join(' ');
+    context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+    context.restore();
+    context.filter = 'none';
+
+    if (options.sticker) {
+      context.font = `bold ${Math.max(48, Math.round(canvas.width * 0.12))}px sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(options.sticker, canvas.width / 2, canvas.height / 2);
+    }
+    if (options.text?.trim()) {
+      const fontSize = Math.max(24, Math.round(canvas.width * 0.045));
+      const padding = Math.round(fontSize * 0.65);
+      context.font = `700 ${fontSize}px sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      const maxWidth = canvas.width - padding * 2;
+      const words = options.text.trim().split(/\\s+/);
+      const lines: string[] = [];
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && context.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else line = candidate;
+      }
+      if (line) lines.push(line);
+      const lineHeight = Math.round(fontSize * 1.25);
+      const blockHeight = lines.length * lineHeight + padding;
+      const top = canvas.height - blockHeight - padding;
+      context.fillStyle = 'rgba(5, 9, 20, 0.72)';
+      context.fillRect(padding / 2, top, canvas.width - padding, blockHeight);
+      context.fillStyle = options.textColor || '#ffffff';
+      lines.forEach((item, index) => context.fillText(item, canvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
+    }
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Your edited photo could not be exported. Please try again.')), 'image/jpeg', 0.92);
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 interface MediaCreationEngineProps {
   currentUser: User;
   onClose: () => void;
@@ -32,7 +120,9 @@ interface MediaCreationEngineProps {
     imageFilter?: string,
     imageFilters?: string[],
     scheduledTime?: string,
-    isBroadcastPost?: boolean
+    isBroadcastPost?: boolean,
+    communityName?: string,
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean }
   ) => string;
   theme: 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';
   isStoryModeInitially?: boolean;
@@ -760,11 +850,6 @@ export default function MediaCreationEngine({
       setPostingStatus('failed');
       return;
     }
-    if (isScheduled && !scheduledDateTime) {
-      setErrorMessage('Choose a date and time before scheduling this post.');
-      setPostingStatus('failed');
-      return;
-    }
     const uploadController = new AbortController();
     uploadAbortControllerRef.current = uploadController;
     setErrorMessage('');
@@ -776,17 +861,41 @@ export default function MediaCreationEngine({
       let finalVid = videoFileUrl || recordedVideoUrl || undefined;
       const durableImages: string[] = [];
       for (let index = 0; index < selectedImages.length; index += 1) {
-        const imageUrl = selectedImages[index].url;
-        if (imageUrl.startsWith('data:') || imageUrl.startsWith('blob:') || imageUrl.startsWith('db-media://')) {
-          if (isOffline) throw new Error('Connect to the internet before publishing media. Your current draft is still available on this device.');
+        const selectedImage = selectedImages[index];
+        const imageUrl = selectedImage.url;
+        const hasEdits = selectedImage.rotation !== 0
+          || selectedImage.zoom !== 1
+          || Boolean(selectedImage.filterStyle && selectedImage.filterStyle !== 'none')
+          || brightness !== 100
+          || contrast !== 100
+          || saturation !== 100
+          || blur !== 0
+          || Boolean(stickerOverlay)
+          || Boolean(textOverlay.trim());
+        const isLocalImage = imageUrl.startsWith('data:') || imageUrl.startsWith('blob:') || imageUrl.startsWith('db-media://');
+
+        if (isLocalImage || hasEdits) {
+          if (isOffline) throw new Error('Connect to the internet before publishing photos. Your draft is still saved on this device.');
           const imageBlob = imageUrl.startsWith('db-media://')
             ? await getMediaBlob(imageUrl.slice('db-media://'.length))
             : await (await fetch(imageUrl)).blob();
-          if (!imageBlob) throw new Error('A saved image draft could not be recovered. Please choose the image again.');
+          if (!imageBlob) throw new Error('A saved photo could not be recovered. Please choose it again.');
+          const publishBlob = hasEdits ? await renderEditedPhotoBlob(imageBlob, {
+            rotation: selectedImage.rotation,
+            zoom: selectedImage.zoom,
+            filterStyle: selectedImage.filterStyle,
+            brightness,
+            contrast,
+            saturation,
+            blur,
+            sticker: stickerOverlay,
+            text: textOverlay,
+            textColor: textOverlayColor,
+          }) : imageBlob;
           const uploaded = await uploadMediaFile({
-            file: imageBlob,
+            file: publishBlob,
             userId: currentUser.id,
-            fileName: `image-${index + 1}-${Date.now()}.${imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'}`,
+            fileName: `photo-${index + 1}-${Date.now()}.${hasEdits ? 'jpg' : (imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg')}`,
             signal: uploadController.signal,
             onProgress: progress => setUploadProgress(progress),
           });
@@ -872,8 +981,15 @@ export default function MediaCreationEngine({
         activeMode === 'pulse' ? (location || 'Nigeria') : undefined,
         activeFilter,
         selectedImages.length > 1 ? activeFilters : undefined,
-        isScheduled ? scheduledDateTime : undefined,
-        targetBroadcastChannel
+        undefined,
+        targetBroadcastChannel,
+        undefined,
+        {
+          location: location.trim() || undefined,
+          taggedUsernames: taggedUsernames.split(',').map(value => value.trim().replace(/^@/, '')).filter(Boolean).slice(0, 20),
+          imageAltText: imageAltText.trim() || undefined,
+          commentsAllowed,
+        }
       );
       if (!createdPostId) throw new Error('Nexora could not confirm this post. Please sign in and retry.');
 
@@ -1792,31 +1908,15 @@ export default function MediaCreationEngine({
                         <span className="text-sm font-bold text-white">{activeTab === 'story' ? 'Ready to share your story?' : 'Ready to share?'}</span>
                       </div>
 
-                      {/* Custom options row */}
                       <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-[#292244] rounded-2xl text-left">
-                        <div className="flex flex-col gap-1.5 text-left">
-                          <span className="text-xs font-bold text-[#EEEAF8]">Who can see this? Everyone</span>
-                          <p className="text-[11px] leading-relaxed text-[var(--nx-muted)]">Your post will be visible to everyone on NEXORA.</p>
-                        </div>
-                      </div>
-
-                      {/* Scheduling controls */}
-                      <div className="p-3.5 bg-[#0a0715]/40 border border-[#292244] rounded-2xl text-left space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <div>
-                            <span className="font-bold text-white block">📅 Schedule your post</span>
-                            <span className="text-[10px] text-[#8E88A7]">Choose when you want your post to be shared.</span>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-[#EEEAF8] block">Public post</span>
+                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">Anyone on NEXORA can see this post.</p>
                           </div>
-                          <input type="checkbox" checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} className="accent-violet-500" />
+                          <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[10px] font-semibold text-[#C7B5FF]">Everyone</span>
                         </div>
-                        {isScheduled && (
-                          <input 
-                            type="datetime-local" 
-                            value={scheduledDateTime}
-                            onChange={(e) => setScheduledDateTime(e.target.value)}
-                            className="w-full bg-[#120E2B] border border-[#292244] rounded-xl p-2.5 text-xs text-violet-400"
-                          />
-                        )}
+                        <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
                       </div>
 
                     </div>
