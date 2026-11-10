@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Trash2, Users, X } from 'lucide-react';
 import type { User } from '../types';
 import {
-  addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments,
+  addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments, updateWorldWeaveDetails,
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
@@ -28,6 +28,10 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [editingDetails, setEditingDetails] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editVisibility, setEditVisibility] = useState<'public' | 'private'>('public');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<'public' | 'private'>('public');
@@ -117,6 +121,19 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setBusy(false); }
   };
 
+  const handleUpdateDetails = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selected) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await updateWorldWeaveDetails(selected.id, { title: editTitle, description: editDescription, visibility: editVisibility });
+      setSelected(current => current ? { ...current, title: editTitle.trim(), description: editDescription.trim(), visibility: editVisibility } : current);
+      setEditingDetails(false);
+      setNotice('WorldWeave details updated.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not update this WorldWeave.'); }
+    finally { setBusy(false); }
+  };
+
   const handleMoment = async (event: React.FormEvent) => {
     event.preventDefault(); if (!selected) return;
     setBusy(true); setError(''); setNotice(''); setProgress(0);
@@ -174,6 +191,12 @@ export default function WorldWeaveView({ currentUser }: Props) {
           {selected.description && <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">{selected.description}</p>}
           <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1} contributors</span><span>{moments.length} of {selected.momentCount || moments.length} recent moments loaded</span><span>Started by {selected.ownerName}</span></div>
         </section>
+        {selected.ownerId === currentUser.id && <div className="flex justify-end"><button type="button" onClick={() => { setEditTitle(selected.title); setEditDescription(selected.description); setEditVisibility(selected.visibility); setEditingDetails(value => !value); }} className="rounded-xl border border-violet-400/20 px-3 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-500/10">{editingDetails ? 'Close settings' : 'Edit experience'}</button></div>}
+        {editingDetails && selected.ownerId === currentUser.id && <form onSubmit={handleUpdateDetails} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-4">
+          <div className="grid gap-3 md:grid-cols-2"><input value={editTitle} onChange={e => setEditTitle(e.target.value)} minLength={3} maxLength={90} required className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60" aria-label="WorldWeave title"/><select value={editVisibility} onChange={e => setEditVisibility(e.target.value as 'public'|'private')} className="rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white"><option value="public">Public</option><option value="private">Private</option></select></div>
+          <textarea value={editDescription} onChange={e => setEditDescription(e.target.value)} maxLength={500} rows={2} className="mt-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60" aria-label="WorldWeave description"/>
+          <div className="mt-3 flex justify-end"><button disabled={busy || editTitle.trim().length < 3} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">Save changes</button></div>
+        </form>}
         {notice && <p role="status" className="rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm text-violet-100">{notice}</p>}
         {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>}
         {!isMember && selected.visibility === 'public' && <div className="rounded-3xl border border-violet-400/20 bg-violet-500/[.06] p-5">
