@@ -103,14 +103,17 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
   const statusRef = db.collection('accountStatus').doc(viewerId);
   const account = await statusRef.get();
   const moderationRef = sessionRef.collection('moderation').doc(viewerId);
-  const moderation = await moderationRef.get();
-  if (moderation.data()?.banned === true || moderation.data()?.removed === true) throw new HttpsError('permission-denied', 'You are not allowed to join this live room.');
   if (accountRestricted(account.data(), 'suspended')) throw new HttpsError('permission-denied', 'This account cannot join live rooms.');
   try {
     return await db.runTransaction(async tx => {
       const audienceRef = sessionRef.collection('audience').doc(viewerId);
-      const [session, viewer, audience] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef), tx.get(audienceRef)]);
+      const [session, viewer, audience, moderation] = await Promise.all([
+        tx.get(sessionRef), tx.get(viewerRef), tx.get(audienceRef), tx.get(moderationRef),
+      ]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has ended.');
+      if (moderation.data()?.banned === true || moderation.data()?.removed === true) {
+        throw new HttpsError('permission-denied', 'You are not allowed to join this live room.');
+      }
       const hostId = session.data()?.hostId;
       if (viewerId === hostId) return { sessionId, joined: true, viewerCount: Number(session.data()?.viewerCount || 0) };
       if (!viewer.exists) {
