@@ -26,4 +26,5 @@ test('zero end means visible through the end of the video', () => {
   const layer = normalizeStudioTextLayer({ text: 'Title', start: 2, end: 0 }, 'fallback');
   assert.equal(isStudioTextLayerVisible(layer, 9, 10), true);
   assert.equal(isStudioTextLayerVisible(layer, 10.1, 10), false);
+  assert.equal(isStudioTextLayerVisible({ ...layer, start: 5, end: 3 }, 6, 10), false);
 });
