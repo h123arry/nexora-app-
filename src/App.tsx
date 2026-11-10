@@ -210,7 +210,6 @@ export default function App() {
       setPendingAuthAction(null);
       action();
       if (firebaseUser?.uid) localStorage.setItem('nexora_onboarding_completed_' + firebaseUser.uid, 'true');
-      setShowOnboarding(false);
       window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Authenticated successfully! Action completed.' }));
     }
   }, [isLoggedIn, pendingAuthAction]);
