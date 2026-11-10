@@ -48,3 +48,9 @@ Make participation, contribution quality, feed ranking, and safety outcomes unde
 - No production Functions, Firestore rules, or production data were deployed or modified by this branch.
 - New report history is served through an authenticated callable; no client-side read access to moderation collections is added.
 - Remaining workstreams are not considered complete until their trusted backend, UI, abuse controls, tests, and release gates are implemented and validated.
+
+## Implemented in the current Phase C slice
+
+- Creator progression now derives six named levels from the existing reputation score (Newcomer through Legacy Builder). The dashboard shows current level, next threshold, and points remaining. This is a recognition layer only: it does not mint NEX, grant paid entitlements, or bypass moderation and verification.
+- Creator milestones now include separate Helpful Contributor and Trusted Guide recognitions, driven by the existing helpfulness component of the reputation breakdown. Likes and views cannot unlock these recognitions; the UI does not present them as fact-checking or proof that an individual claim is true.
+- Unit coverage verifies level boundaries, invalid reputation handling, and the separation between helpfulness and popularity signals.
