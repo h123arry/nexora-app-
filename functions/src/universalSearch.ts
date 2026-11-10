@@ -184,7 +184,7 @@ export async function searchNexoraContent(
   const interests: Record<string, number> = interestDNA && typeof interestDNA === 'object'
     ? Object.fromEntries(Object.entries(interestDNA as Record<string, unknown>)
       .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] > 0)
-      .map(([key, value]) => [normalizeSearchText(key), Math.min(10, value)]))
+      .map(([key, value]) => [normalizeSearchText(key), Math.min(10, value)] as const))
     : {};
   const followedIds = new Set(followedSnapshot.docs.map(doc => String(doc.get('followingId') || '')).filter(Boolean));
   const blocked = new Set<string>([
