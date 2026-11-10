@@ -146,7 +146,10 @@ export default function CommunitiesHubView({
 
   // 10. Community Discussion Feed Composer Input
   const [communityPostInput, setCommunityPostInput] = useState('');
-  const [communityPostImage, setCommunityPostImage] = useState('');
+  const [communityFeedPosts, setCommunityFeedPosts] = useState<Array<{ id: string; authorId: string; authorName: string; authorUsername: string; authorAvatar: string; content: string; createdAt: string }>>([]);
+  const [communityFeedLoading, setCommunityFeedLoading] = useState(false);
+  const [communityFeedError, setCommunityFeedError] = useState('');
+  const [communityPostSubmitting, setCommunityPostSubmitting] = useState(false);
 
   // 11. Community Moderation State Variables
   const [banInput, setBanInput] = useState('');
@@ -177,6 +180,33 @@ export default function CommunitiesHubView({
       unsubFollows();
     };
   }, [followActorId]);
+
+  useEffect(() => {
+    if (!selectedCircle?.id) {
+      setCommunityFeedPosts([]);
+      setCommunityFeedLoading(false);
+      setCommunityFeedError('');
+      return;
+    }
+    let active = true;
+    setCommunityFeedLoading(true);
+    setCommunityFeedError('');
+    const stop = CommunityService.watchPosts(
+      selectedCircle.id,
+      followActorId,
+      nextPosts => {
+        if (!active) return;
+        setCommunityFeedPosts(nextPosts);
+        setCommunityFeedLoading(false);
+      },
+      error => {
+        if (!active) return;
+        setCommunityFeedError(error.message || 'The Circle feed could not be loaded.');
+        setCommunityFeedLoading(false);
+      },
+    );
+    return () => { active = false; stop(); };
+  }, [selectedCircle?.id, followActorId]);
 
   // 12. Backup Personal User for Identity Switching
   useEffect(() => {
@@ -343,35 +373,37 @@ export default function CommunitiesHubView({
     }
   };
 
-  // 18. Community Post Submit (Dynamic global synchronization)
-  const handleCommunityPostSubmit = (e: React.FormEvent) => {
+  // 18. Circle posts are private to the active membership boundary.
+  const handleCommunityPostSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!communityPostInput.trim() || !selectedCircle) return;
-
-    // Use parent onAddPost to publish. Community is specified as a parameter!
-    onAddPost(
-      communityPostInput,
-      communityPostImage || undefined,
-      selectedCircle.tags.join(','),
-      selectedCircle.name
-    );
-
-    setCommunityPostInput('');
-    setCommunityPostImage('');
-    window.dispatchEvent(new CustomEvent('toast', { detail: `📢 Update published to ${selectedCircle.name} Feed` }));
+    const content = communityPostInput.trim();
+    if (!content || !selectedCircle || communityPostSubmitting) return;
+    setCommunityPostSubmitting(true);
+    setCommunityFeedError('');
+    try {
+      await CommunityService.createPost(selectedCircle.id, content);
+      setCommunityPostInput('');
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Published to ${selectedCircle.name}` }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Your Circle post could not be published. Please retry.';
+      setCommunityFeedError(message);
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    } finally {
+      setCommunityPostSubmitting(false);
+    }
   };
 
   // 19. Join/Leave Community
-  const handleJoinCircleToggle = async (circleId: string, e?: React.MouseEvent) => {
+  const handleJoinCircleToggle = async (circleId: string, e?: React.MouseEvent): Promise<boolean> => {
     if (e) e.stopPropagation();
     
     const target = communities.find(c => c.id === circleId);
-    if (!target) return;
+    if (!target) return false;
     const willJoin = !target.isJoinedByMe;
     const access = target.type ?? 'unknown';
     if (willJoin && access !== 'public' && target.ownerId !== followActorId) {
       window.dispatchEvent(new CustomEvent('toast', { detail: access === 'unknown' ? 'Access settings are unavailable for this community.' : 'Access requests are not available yet.' }));
-      return;
+      return false;
     }
 
     try {
@@ -392,9 +424,11 @@ export default function CommunitiesHubView({
         return c;
       }));
       window.dispatchEvent(new CustomEvent('toast', { detail: willJoin ? `✓ Joined ${target.name}` : `✓ Left ${target.name}` }));
+      return true;
     } catch (err) {
       console.error('Failed community join/leave:', err);
-      window.dispatchEvent(new CustomEvent('toast', { detail: `❌ Failed to update membership. Please try again.` }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: `Failed to update membership. Please try again.` }));
+      return false;
     }
   };
 
@@ -408,7 +442,10 @@ export default function CommunitiesHubView({
       window.dispatchEvent(new CustomEvent('toast', { detail: 'This community is restricted. Access requests are not available yet.' }));
       return;
     }
-    if (access === 'public' && !community.isJoinedByMe) await handleJoinCircleToggle(community.id);
+    if (access === 'public' && !community.isJoinedByMe) {
+      const joined = await handleJoinCircleToggle(community.id);
+      if (!joined) return;
+    }
     setSelectedCircle(community);
     setActivePortalTab('feed');
   };
@@ -1119,143 +1156,42 @@ export default function CommunitiesHubView({
                         rows={3}
                         className="w-full bg-zinc-900 border border-white/5 rounded-xl p-3 text-xs focus:outline-none focus:border-white/10 text-white text-left font-sans"
                       />
-                      <div className="flex flex-col sm:flex-row gap-2 justify-between items-stretch sm:items-center">
-                        <input
-                          type="text"
-                          placeholder="Include cover image link (optional)"
-                          value={communityPostImage}
-                          onChange={(e) => setCommunityPostImage(e.target.value)}
-                          className="px-3 py-1.5 bg-zinc-900 border border-white/5 rounded-lg text-[10px] focus:outline-none text-left"
-                        />
+                      <div className="flex justify-end">
                         <button
                           type="submit"
-                          className="px-4 py-1.5 bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-[10px] font-mono font-black uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
+                          disabled={communityPostSubmitting || !communityPostInput.trim()}
+                          className="px-4 py-1.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-[10px] font-mono font-black uppercase transition-all flex items-center justify-center gap-1 cursor-pointer"
                         >
                           <Send className="w-3 h-3" />
-                          <span>PUBLISH POST</span>
+                          <span>{communityPostSubmitting ? 'PUBLISHING…' : 'PUBLISH TO CIRCLE'}</span>
                         </button>
                       </div>
                     </form>
 
-                    {/* Announcements Sticky section */}
-                    <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-xs sm:text-sm text-amber-200 leading-relaxed font-sans space-y-1">
-                      <div className="flex items-center gap-1.5 text-amber-400 font-bold">
-                        <Megaphone className="w-4 h-4" />
-                        <span>COMMUNITY BULLETIN</span>
+                    {communityFeedError && (
+                      <div role="alert" className="rounded-xl border border-rose-500/20 bg-rose-500/5 px-3 py-2 text-xs text-rose-200">{communityFeedError}</div>
+                    )}
+                    {communityFeedLoading && <p className="py-8 text-center text-xs text-zinc-400">Loading Circle posts…</p>}
+                    {!communityFeedLoading && !communityFeedError && communityFeedPosts.length === 0 && (
+                      <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-8 text-center">
+                        <p className="text-sm font-semibold text-white">A fresh start for {selectedCircle.name}</p>
+                        <p className="mt-1 text-xs text-zinc-400">Posts shared here are visible to this Circle&apos;s active members.</p>
                       </div>
-                      <p>All members are invited to participate in the upcoming local tech roundtable scheduler. Read details in the calendar deck.</p>
-                    </div>
-
-                    {/* Dynamic Synchronized Feed */}
-                    <div className="space-y-4">
-                      {posts.filter(p => p.communityName === selectedCircle.name).map((post) => {
-                        const isPinned = selectedCircle.pinnedPosts?.includes(post.id);
-                        return (
-                          <div key={post.id} className="p-4 bg-zinc-900/60 border border-white/5 rounded-2xl space-y-3">
-                            <div className="flex items-center justify-between">
-                              <div 
-                                className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition-opacity"
-                                onClick={() => (post.userId || post.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: post.userId || post.username } }))}
-                              >
-                                <img src={post.avatar} className="w-8 h-8 rounded-xl object-cover" />
-                                <div>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs font-bold text-white hover:underline">{post.name}</span>
-                                    {post.isVerified && <CheckCircle className="w-3 h-3 text-purple-400" />}
-                                  </div>
-                                  <p className="text-[9px] text-current/40 font-mono hover:underline">@{post.username} • {new Date(post.timestamp).toLocaleTimeString()}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-1.5">
-                                {isPinned && (
-                                  <span className="text-[8px] font-mono bg-pink-500/20 text-pink-300 border border-pink-500/20 px-1.5 py-0.5 rounded">PINNED</span>
-                                )}
-                                <button 
-                                  onClick={() => handlePinPost(selectedCircle.id, post.id)}
-                                  className="text-[9px] font-mono text-violet-400 hover:text-white"
-                                >
-                                  Pin
-                                </button>
-                                <button 
-                                  onClick={() => setReportedPostId(post.id)}
-                                  className="text-[9px] font-mono text-rose-400 hover:text-white"
-                                >
-                                  Report
-                                </button>
-                              </div>
+                    )}
+                    <div className="space-y-3">
+                      {communityFeedPosts.map(post => (
+                        <article key={post.id} className="rounded-2xl border border-white/10 bg-zinc-900/60 p-4 space-y-3">
+                          <div className="flex items-center gap-2">
+                            {post.authorAvatar ? <img src={post.authorAvatar} alt="" className="h-9 w-9 rounded-xl object-cover" /> : <div className="h-9 w-9 rounded-xl bg-violet-500/15" />}
+                            <div className="min-w-0">
+                              <p className="truncate text-xs font-bold text-white">{post.authorName}</p>
+                              <p className="text-[10px] text-zinc-400">{post.authorUsername ? `@${post.authorUsername} · ` : ''}{post.createdAt}</p>
                             </div>
-
-                            <p className="text-xs sm:text-sm leading-relaxed">{post.content}</p>
-                            
-                            {post.image && (
-                              <img src={post.image} className="w-full max-h-60 object-cover rounded-xl border border-white/5" />
-                            )}
-
-                            {/* Feed comments & likes synchronization */}
-                            <div className="flex items-center gap-4 text-[11px] font-mono text-current/50 pt-2 border-t border-white/5">
-                              <button onClick={() => onLikePost(post.id)} className="flex items-center gap-1 hover:text-pink-400">
-                                <Heart className={`w-3.5 h-3.5 ${post.isLikedByUser ? 'fill-pink-500 text-pink-500' : ''}`} />
-                                <span>{post.likes}</span>
-                              </button>
-                              <span className="flex items-center gap-1">
-                                <MessageSquare className="w-3.5 h-3.5" />
-                                <span>{post.comments?.length || 0}</span>
-                              </span>
-                            </div>
-
-                            {/* Inside post comments */}
-                            <div className="space-y-1.5 pl-3 border-l border-white/5">
-                              {post.comments?.map((comment) => (
-                                <div key={comment.id} className="text-[10px] text-current/80">
-                                  <span 
-                                    className="font-bold text-violet-300 hover:underline cursor-pointer"
-                                    onClick={() => (comment.userId || comment.username) && window.dispatchEvent(new CustomEvent('nexora-view-profile', { detail: { userIdOrUsername: comment.userId || comment.username } }))}
-                                  >
-                                    @{comment.username}: 
-                                  </span>
-                                  <span>{comment.content}</span>
-                                </div>
-                              ))}
-                              
-                              <div className="flex gap-1.5 pt-1.5">
-                                <input
-                                  type="text"
-                                  placeholder="Add comments..."
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && (e.target as HTMLInputElement).value.trim()) {
-                                      onAddComment(post.id, (e.target as HTMLInputElement).value);
-                                      (e.target as HTMLInputElement).value = '';
-                                    }
-                                  }}
-                                  className="flex-1 bg-[#18181b]/50 border border-white/5 rounded-lg px-2 py-1 text-[10px] focus:outline-none"
-                                />
-                              </div>
-                            </div>
-
-                            {/* Report post form inline helper */}
-                            {reportedPostId === post.id && (
-                              <div className="p-3 bg-zinc-950 rounded-xl space-y-2 border border-rose-500/20">
-                                <span className="block text-[10px] font-mono text-rose-400 uppercase font-bold">Report Content Form</span>
-                                <input
-                                  type="text"
-                                  placeholder="Enter reporting reason (e.g. Spam, Harassment...)"
-                                  value={reportReasonInput}
-                                  onChange={(e) => setReportReasonInput(e.target.value)}
-                                  className="w-full bg-zinc-900 border border-white/5 p-2 rounded text-[10px] focus:outline-none"
-                                />
-                                <div className="flex gap-2 justify-end">
-                                  <button onClick={() => setReportedPostId(null)} className="text-[9px] font-mono text-current/50">Cancel</button>
-                                  <button onClick={() => handleReportPost(selectedCircle.id, post.id, post.content)} className="px-3 py-1 bg-rose-600 text-white rounded text-[9px] font-mono">SUBMIT REPORT</button>
-                                </div>
-                              </div>
-                            )}
+                            <span className="ml-auto rounded-full border border-violet-400/20 px-2 py-1 text-[9px] text-violet-200">CIRCLE ONLY</span>
                           </div>
-                        );
-                      })}
-
-                      {posts.filter(p => p.communityName === selectedCircle.name).length === 0 && (
-                        <p className="text-center py-8 text-[11px] text-current/40 italic">Nothing published yet. Be the first to share an update!</p>
-                      )}
+                          <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-100">{post.content}</p>
+                        </article>
+                      ))}
                     </div>
                   </div>
                 )}
