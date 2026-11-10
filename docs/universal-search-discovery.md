@@ -21,7 +21,7 @@ The index stores only the fields needed for discovery: title, bounded excerpt, p
 - Prefix matching across title, username, description, bio, content and tags.
 - Multi-term relevance: every query term must match through exact, prefix or one-edit-distance token matching.
 - A bounded bigram fallback provides typo tolerance when the exact prefix has no candidates.
-- Ranking combines title match strength, freshness decay, bounded engagement and verification.
+- Ranking combines title match strength, freshness decay, bounded engagement, verification, followed creators/Pages and the viewer's interest DNA.
 - Results are deduplicated by stable indexed document ID and cursor-paginated in bounded pages.
 - Search is authenticated. Private-profile visibility, both sides of block relationships, and Circle bans are checked server-side before a hit is returned.
 - The Firestore search projection is denied to all client reads and writes. Clients call the authenticated callable only.
