@@ -28,8 +28,6 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - name: Generate and import 880 licensed vector artworks
-        run: npm run giftverse:import-openmoji
       - name: Extract individual catalogue artwork files
         run: npm run giftverse:extract-individual
       - name: Install dependencies
