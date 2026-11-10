@@ -118,7 +118,7 @@ export async function listCircleReports(
     const targetData = target.data() || {};
     const summary = targetType === 'member'
       ? String(targetData.name || targetData.username || 'Circle member')
-      : String(targetData.content || targetData.title || '').slice(0, 180);
+      : String(targetData.content || targetData.title || '').slice(0, 1200);
     const createdAt = report.get('createdAt')?.toDate?.();
     return {
       id: report.id,
