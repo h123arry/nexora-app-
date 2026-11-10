@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assessGiftRisk, isSupportedDisplayCurrency, validatePayoutRequest } from '../src/giftEconomyPolicy.ts';
+import { isLiveGiftDeliveryEnabled } from '../src/giftDeliveryPolicy.ts';
 
 test('gift risk scoring classifies velocity and high value without treating low activity as suspicious', () => {
   assert.deepEqual(assessGiftRisk({ senderGiftCount10m: 1, senderGrossNex10m: 100, giftGrossNex: 100, senderAccountAgeDays: 90, senderRestricted: false, recipientRestricted: false }), { score: 0, tier: 'low', reasons: [] });
@@ -22,4 +23,13 @@ test('payout requests validate positive bounded NEX amounts and NGN corridor', (
   assert.deepEqual(validatePayoutRequest({ amountNex: 1000, currency: 'NGN' }), { amountNex: 1000, currency: 'NGN' });
   assert.throws(() => validatePayoutRequest({ amountNex: 999, currency: 'NGN' }));
   assert.throws(() => validatePayoutRequest({ amountNex: 1000, currency: 'USD' }));
+});
+
+
+test('live gift delivery requires an active room with host gifting explicitly enabled', () => {
+  assert.equal(isLiveGiftDeliveryEnabled({ status: 'live', giftsEnabled: true }), true);
+  assert.equal(isLiveGiftDeliveryEnabled({ status: 'live', giftsEnabled: false }), false);
+  assert.equal(isLiveGiftDeliveryEnabled({ status: 'live' }), false);
+  assert.equal(isLiveGiftDeliveryEnabled({ status: 'ended', giftsEnabled: true }), false);
+  assert.equal(isLiveGiftDeliveryEnabled(null), false);
 });
