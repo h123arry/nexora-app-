@@ -9,6 +9,7 @@ import PurpleVerifiedBadge from './VohVerifiedBadge';
 import MiniServicesHub from './MiniServicesHub';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
+import { searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
 import { getTranslations } from '../utils/translations';
 import { readUserScopedJson } from '../utils/userScopedStorage';
 
@@ -49,7 +50,7 @@ export default function ExploreView({
   const copy = getTranslations(locale);
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities'>('all');
+  const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities' | 'live' | 'events' | 'services' | 'hashtags'>('all');
   const [showAllPulse, setShowAllPulse] = useState(false);
   const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_blocked_users', currentUserId, []));
   const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_muted_users', currentUserId, []));
@@ -81,6 +82,12 @@ export default function ExploreView({
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [directoryError, setDirectoryError] = useState('');
   const [directoryLoadingMore, setDirectoryLoadingMore] = useState(false);
+  const [universalResults, setUniversalResults] = useState<NexoraSearchResult | null>(null);
+  const [universalLoading, setUniversalLoading] = useState(false);
+  const [universalLoadingMore, setUniversalLoadingMore] = useState(false);
+  const [universalError, setUniversalError] = useState('');
+  const universalRequestKey = useRef('');
+  universalRequestKey.current = currentUserId + ':' + debouncedSearch.trim();
   const directoryRequestKey = useRef('');
   directoryRequestKey.current = currentUserId + ':' + debouncedSearch.trim();
 
