@@ -3,7 +3,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings } from './liveSessionsPolicy.js';
+import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision } from './liveSessionsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
@@ -120,6 +120,65 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     throw new HttpsError('unavailable', 'You could not join this live room. Please retry.');
+  }
+});
+
+export const requestLiveGuestAccess = onCall({ maxInstances: 20 }, async request => {
+  const guestId = uid(request);
+  const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const connectionId = valid(() => validateLiveConnectionId(request.data?.connectionId));
+  const sessionRef = sessions.doc(sessionId);
+  const viewerRef = db.collection('liveSessionViewers').doc(rateDocId(sessionId, guestId));
+  const requestRef = sessionRef.collection('guestRequests').doc(guestId);
+  const profileRef = db.collection('users').doc(guestId);
+  const statusRef = db.collection('accountStatus').doc(guestId);
+  try {
+    return await db.runTransaction(async tx => {
+      const [session, viewer, existing, profile, status] = await Promise.all([
+        tx.get(sessionRef), tx.get(viewerRef), tx.get(requestRef), tx.get(profileRef), tx.get(statusRef),
+      ]);
+      if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room is no longer active.');
+      if (session.data()?.hostId === guestId) throw new HttpsError('failed-precondition', 'The host is already on stage.');
+      if (!viewer.exists || !(viewer.data()?.connectionIds || []).includes(connectionId)) {
+        throw new HttpsError('permission-denied', 'Join the live room before requesting stage access.');
+      }
+      if (accountRestricted(status.data(), 'suspended') || accountRestricted(status.data(), 'postingRestricted')) {
+        throw new HttpsError('permission-denied', 'This account cannot request live stage access.');
+      }
+      const current = existing.data()?.status;
+      if (current === 'pending' || current === 'approved') return { sessionId, status: current as 'pending' | 'approved', replayed: true };
+      const guestName = String(profile.data()?.name || profile.data()?.username || 'NEXORA member').slice(0, 80);
+      tx.set(requestRef, {
+        guestId, guestName, status: 'pending', requestedAt: FieldValue.serverTimestamp(),
+        reviewedAt: null, updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { sessionId, status: 'pending' as const, replayed: false };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('unavailable', 'Your stage request could not be sent. Please retry.');
+  }
+});
+
+export const reviewLiveGuestAccess = onCall({ maxInstances: 10 }, async request => {
+  const hostId = uid(request);
+  const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const guestId = valid(() => validateLiveSessionId(request.data?.guestId));
+  const decision = valid(() => validateLiveGuestDecision(request.data?.decision));
+  const sessionRef = sessions.doc(sessionId);
+  const requestRef = sessionRef.collection('guestRequests').doc(guestId);
+  try {
+    return await db.runTransaction(async tx => {
+      const [session, guestRequest] = await Promise.all([tx.get(sessionRef), tx.get(requestRef)]);
+      if (!session.exists || session.data()?.hostId !== hostId) throw new HttpsError('permission-denied', 'Only the live room host can review stage requests.');
+      if (session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has already ended.');
+      if (!guestRequest.exists || guestRequest.data()?.status !== 'pending') throw new HttpsError('failed-precondition', 'This guest request is no longer pending.');
+      tx.update(requestRef, { status: decision, reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
+      return { sessionId, guestId, status: decision, updated: true as const };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('unavailable', 'The guest request could not be reviewed. Please retry.');
   }
 });
 
