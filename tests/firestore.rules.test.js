@@ -1263,6 +1263,8 @@ const publicProfile = (uid) => ({
       await setDoc(doc(db, 'liveSessions', 'ended-room'), { hostId: 'alice', status: 'ended', viewerCount: 0 });
       await setDoc(doc(db, 'liveSessions', 'active-room', 'messages', 'message-1'), { senderId: 'bob', message: 'Hello live room' });
       await setDoc(doc(db, 'liveSessions', 'ended-room', 'messages', 'message-2'), { senderId: 'bob', message: 'Past chat' });
+      await setDoc(doc(db, 'liveSessions', 'active-room', 'guestRequests', 'bob'), { guestId: 'bob', guestName: 'Bob', status: 'pending' });
+      await setDoc(doc(db, 'liveSessions', 'active-room', 'guestRequests', 'charlie'), { guestId: 'charlie', guestName: 'Charlie', status: 'approved' });
     });
     await assertSucceeds(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room')));
     await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'ended-room')));
@@ -1271,6 +1273,14 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'ended-room', 'messages', 'message-2')));
     await assertFails(setDoc(doc(dbFor('alice'), 'liveSessions', 'forged-room'), { hostId: 'alice', status: 'live' }));
     await assertFails(setDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'messages', 'forged'), { senderId: 'bob', message: 'forged' }));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'guestRequests', 'bob')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'guestRequests', 'charlie')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'guestRequests', 'bob')));
+    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'liveSessions', 'active-room', 'guestRequests'), where('status', '==', 'pending'))));
+    await assertFails(getDocs(query(collection(dbFor('bob'), 'liveSessions', 'active-room', 'guestRequests'), where('status', '==', 'pending'))));
+    await assertFails(setDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'guestRequests', 'bob'), { guestId: 'bob', status: 'approved' }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'guestRequests', 'bob'), { status: 'approved' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'guestRequests', 'bob')));
     await assertFails(setDoc(doc(dbFor('bob'), 'liveSessionViewers', 'forged'), { sessionId: 'active-room', viewerId: 'bob' }));
   });
 });
