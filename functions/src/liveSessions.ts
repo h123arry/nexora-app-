@@ -4,7 +4,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId } from './liveSessionsPolicy.js';
+import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings, validateLiveGuestDecision, validateLiveGuestId, calculateLiveWatchDurationMs } from './liveSessionsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
@@ -45,7 +45,7 @@ export const startLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiK
       const existing = await tx.get(sessions.where('hostId', '==', hostId).where('status', '==', 'live').limit(1));
       if (!existing.empty) throw new HttpsError('already-exists', 'You already have an active live room.');
       tx.create(ref, {
-        hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, peakViewerCount: 0, uniqueViewerCount: 0, messageCount: 0, giftCount: 0, giftNexTotal: 0, chatEnabled: true, giftsEnabled: true,
+        hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, peakViewerCount: 0, uniqueViewerCount: 0, messageCount: 0, giftCount: 0, giftNexTotal: 0, totalWatchMs: 0, completedViewerSessions: 0, chatEnabled: true, giftsEnabled: true,
         videoTransport: 'livekit', hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), startedAt: FieldValue.serverTimestamp(),
         endedAt: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
@@ -246,10 +246,19 @@ export const leaveLiveSession = onCall({ maxInstances: 20 }, async request => {
         return { sessionId, left: true, viewerCount: Number(session.data()?.viewerCount || 0) };
       }
       tx.delete(viewerRef);
-      if (!session.exists || session.data()?.status !== 'live') return { sessionId, left: true, viewerCount: 0 };
+      if (!session.exists) return { sessionId, left: true, viewerCount: 0 };
+      const watchDurationMs = calculateLiveWatchDurationMs(viewer.data()?.joinedAt, Date.now());
+      const isLive = session.data()?.status === 'live';
       const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount > 0 ? session.data()!.viewerCount : 0;
-      tx.update(sessionRef, { viewerCount: Math.max(0, count - 1), updatedAt: FieldValue.serverTimestamp() });
-      return { sessionId, left: true, viewerCount: Math.max(0, count - 1) };
+      tx.update(sessionRef, {
+        ...(isLive ? { viewerCount: Math.max(0, count - 1) } : {}),
+        ...(watchDurationMs > 0 ? {
+          totalWatchMs: FieldValue.increment(watchDurationMs),
+          completedViewerSessions: FieldValue.increment(1),
+        } : {}),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { sessionId, left: true, viewerCount: isLive ? Math.max(0, count - 1) : 0 };
     });
   } catch {
     throw new HttpsError('unavailable', 'You could not leave this live room cleanly. Please retry.');
@@ -337,9 +346,18 @@ export const reconcileLiveSessionViewers = onSchedule({
       const expiresAt = viewer.data()?.expiresAt?.toMillis?.() || 0;
       if (expiresAt > Date.now()) return;
       tx.delete(viewerDoc.ref);
-      if (session.exists && session.data()?.status === 'live' && viewer.data()?.viewerId !== session.data()?.hostId) {
+      if (session.exists) {
+        const watchDurationMs = calculateLiveWatchDurationMs(viewer.data()?.joinedAt, Date.now());
+        const isActiveViewer = session.data()?.status === 'live' && viewer.data()?.viewerId !== session.data()?.hostId;
         const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount > 0 ? session.data()!.viewerCount : 0;
-        tx.update(sessionRef, { viewerCount: Math.max(0, count - 1), updatedAt: FieldValue.serverTimestamp() });
+        tx.update(sessionRef, {
+          ...(isActiveViewer ? { viewerCount: Math.max(0, count - 1) } : {}),
+          ...(watchDurationMs > 0 ? {
+            totalWatchMs: FieldValue.increment(watchDurationMs),
+            completedViewerSessions: FieldValue.increment(1),
+          } : {}),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
       }
     });
   }
