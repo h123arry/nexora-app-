@@ -75,6 +75,7 @@ const GiftEarningsFinancePanel = lazy(() => import('./components/GiftEarningsFin
 const GiftEconomyOperationsPanel = lazy(() => import('./components/GiftEconomyOperationsPanel'));
 const ActivityView = lazy(() => import('./components/ActivityView'));
 const OnboardingTour = lazy(() => import('./components/OnboardingTour'));
+const RetentionWelcomePanel = lazy(() => import('./components/RetentionWelcomePanel'));
 const MediaCreationEngine = lazy(() => import('./components/MediaCreationEngine'));
 const ExploreView = lazy(() => import('./components/ExploreView'));
 const NewInboxView = lazy(() => import('./components/NewInboxView'));
@@ -209,14 +210,26 @@ export default function App() {
       const action = pendingAuthAction;
       setPendingAuthAction(null);
       action();
+      if (firebaseUser?.uid) localStorage.setItem('nexora_onboarding_completed_' + firebaseUser.uid, 'true');
       window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Authenticated successfully! Action completed.' }));
     }
   }, [isLoggedIn, pendingAuthAction]);
 
   const [isLogoutConfirming, setIsLogoutConfirming] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !localStorage.getItem('nexora_onboarding_completed');
+    return !localStorage.getItem('nexora_onboarding_completed_guest');
   });
+
+  useEffect(() => {
+    const onboardingKey = 'nexora_onboarding_completed_' + (isLoggedIn ? currentUser.id : 'guest');
+    setShowOnboarding(!localStorage.getItem(onboardingKey));
+  }, [isLoggedIn, currentUser.id]);
+
+  const completeOnboarding = () => {
+    const onboardingKey = 'nexora_onboarding_completed_' + (isLoggedIn ? currentUser.id : 'guest');
+    localStorage.setItem(onboardingKey, 'true');
+    setShowOnboarding(false);
+  };
 
   const [showDiagnosticsOverlay, setShowDiagnosticsOverlay] = useState(() => {
     return localStorage.getItem('nx_diagnostics_overlay') === 'true';
@@ -720,6 +733,7 @@ export default function App() {
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [creationInitialMode, setCreationInitialMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
   const [creationInitialTab, setCreationInitialTab] = useState<'feed' | 'story' | 'drafts' | undefined>(undefined);
+  const [creationInitialCaption, setCreationInitialCaption] = useState('');
   const [systemSpeed, setSystemSpeed] = useState('1.8ms');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncPending, setIsSyncPending] = useState(false);
@@ -1882,6 +1896,7 @@ export default function App() {
     setIsCreatePostModalOpen(false);
     setCreationInitialMode(null);
     setCreationInitialTab(undefined);
+    setCreationInitialCaption('');
   };
 
   // 11. Determine specific theme CSS configurations dynamically
@@ -1968,6 +1983,11 @@ export default function App() {
       </a>
       <OfflineBanner />
       <PwaUpdatePrompt />
+      {isLoggedIn && activeTab === 'feed' && (
+        <Suspense fallback={null}>
+          <RetentionWelcomePanel userId={currentUser.id} notifications={notifications} />
+        </Suspense>
+      )}
       {/* 🧭 Unified Navigation Menu Drawer Overlay */}
       <SlideDownMenu
         isOpen={isNavMenuOpen}
@@ -2308,6 +2328,7 @@ export default function App() {
             isOffline={isOffline}
             initialMode={creationInitialMode}
             initialTab={creationInitialTab}
+            initialCaption={creationInitialCaption}
             onToggleOffline={() => {
               setIsOffline(prev => {
                 const next = !prev;
@@ -3075,7 +3096,28 @@ export default function App() {
       <AnimatePresence>
         {showOnboarding && (
           <Suspense fallback={null}>
-            <OnboardingTour onClose={() => setShowOnboarding(false)} />
+            <OnboardingTour
+              onClose={completeOnboarding}
+              onInterestSelected={(interest) => {
+                const interestDNA = { ...currentUser.interestDNA, [interest]: 95 };
+                setCurrentUser(previous => ({ ...previous, interestDNA }));
+                if (isLoggedIn) {
+                  ProfileService.updateProfile(currentUser.id, { interestDNA }).catch(error => {
+                    console.warn('[Onboarding] Could not persist selected interest.', error);
+                    window.dispatchEvent(new CustomEvent('toast', { detail: 'Your choice is saved for this session. We could not sync it yet.' }));
+                  });
+                }
+              }}
+              onStartFirstTask={() => {
+                completeOnboarding();
+                requireAuth(() => {
+                  setCreationInitialMode('text');
+                  setCreationInitialTab('feed');
+                  setCreationInitialCaption("I'm new to NEXORA. What should I explore first?");
+                  setIsCreatePostModalOpen(true);
+                }, 'Sign in to publish your first NEXORA post.');
+              }}
+            />
           </Suspense>
         )}
       </AnimatePresence>

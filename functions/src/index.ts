@@ -21,6 +21,7 @@ import { searchPublicDirectory } from './directorySearch.js';
 import { syncUniversalSearchRecord, searchNexoraContent, getNexoraTrending } from './universalSearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { createDailySessionRecorder } from './retention.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
 export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
 export { listAdminUsers, updateAdminUser, listAdminAuditEvents } from './adminUsers.js';
@@ -818,3 +819,13 @@ export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, he
 export { getLiveKitToken } from './liveKitTransport.js';
 
 export { startLiveRecording, stopLiveRecording, getLiveReplayPlayback } from './liveReplays.js';
+
+export const recordDailySession = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to record your NEXORA session.');
+  try {
+    return await createDailySessionRecorder(adminDb)(request.auth.uid);
+  } catch (error) {
+    console.error('[Retention] Unable to record daily session.', error);
+    throw new HttpsError('internal', 'Your session could not be recorded. Please try again.');
+  }
+});
