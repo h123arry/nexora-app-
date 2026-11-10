@@ -18,7 +18,8 @@ const timeLabel = (value: unknown) => {
 
 export default function WorldWeaveView({ currentUser }: Props) {
   const [myWeaves, setMyWeaves] = useState<WorldWeave[]>([]);
-  const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);\n  const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
+  const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);
+  const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
   const [loading, setLoading] = useState(true);
