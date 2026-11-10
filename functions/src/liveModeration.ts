@@ -23,7 +23,7 @@ async function removeFromLiveKit(roomName: string, identity: string, key: string
     headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
     body: JSON.stringify({ room: roomName, identity }),
   });
-  if (!response.ok) throw new Error('LiveKit could not remove this participant.');
+  if (!response.ok && response.status !== 404) throw new Error('LiveKit could not remove this participant.');
 }
 
 export const moderateLiveParticipant = onCall(
@@ -50,7 +50,6 @@ export const moderateLiveParticipant = onCall(
     const viewerKey = createHashId(sessionId, participantId);
     const viewerRef = db.collection('liveSessionViewers').doc(viewerKey);
     const moderationRef = sessionRef.collection('moderation').doc(participantId);
-    const existing = (await moderationRef.get()).data() || {};
     if (action === 'remove' || action === 'ban') {
       const key = apiKey.value();
       const secret = apiSecret.value();
