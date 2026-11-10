@@ -2,24 +2,8 @@ import { Notification, User, Post } from '../types';
 import { playNexoraSound } from './soundExperience';
 
 // ============================================================================
-// 1. CRYSTAL SYNTHESIS AUDIO ENGINE (Zero External Assets Required)
+// 1. CENTRALIZED SOUND EXPERIENCE
 // ============================================================================
-let audioCtx: AudioContext | null = null;
-
-function getAudioContext(): AudioContext | null {
-  if (typeof window === 'undefined') return null;
-  if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-    if (AudioContextClass) {
-      audioCtx = new AudioContextClass();
-    }
-  }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
-  return audioCtx;
-}
-
 export function playNotificationSound(type: 'spark' | 'comment' | 'follow' | 'profile_view' | 'sync' | 'default' = 'default') {
   const soundType = type === 'spark' ? 'notification.spark'
     : type === 'comment' ? 'notification.comment'
