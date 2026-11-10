@@ -48,7 +48,6 @@ interface FeedPostCardProps {
   handlePublishScheduledPostNow: (postId: string) => void;
   handleBroadcastReaction: (postId: string, emoji: string) => void;
   votedPolls: Record<string, string>;
-  setVotedPolls: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   selectedTag: string | null;
   setSelectedTag: (tag: string | null) => void;
   setNidaDiagnosticPost: (post: Post) => void;
@@ -99,7 +98,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   handlePublishScheduledPostNow,
   handleBroadcastReaction,
   votedPolls,
-  setVotedPolls,
   selectedTag,
   setSelectedTag,
   setNidaDiagnosticPost,
