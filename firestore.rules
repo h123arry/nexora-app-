@@ -633,7 +633,7 @@ service cloud.firestore {
         && ((request.resource.data.mediaType == 'text'
           && request.resource.data.caption.size() > 0
           && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath', 'mediaId']))
-          || (request.resource.data.mediaType in ['image', 'video']
+          || (request.resource.data.mediaType in ['image', 'video', 'audio']
             && request.resource.data.mediaUrl is string
             && request.resource.data.mediaUrl.size() > 0
             && request.resource.data.mediaUrl.size() <= 2000
@@ -1167,6 +1167,146 @@ service cloud.firestore {
         && request.resource.data.retentionNote is string
         && request.resource.data.retentionNote.size() <= 500;
       allow update, delete: if false;
+    }
+
+    match /worldWeaves/{weaveId} {
+      function weaveMember() {
+        return signedIn() && request.auth.uid in resource.data.get('participantIds', []);
+      }
+      function weaveOwner() {
+        return signedIn() && resource.data.get('ownerId', '') == request.auth.uid;
+      }
+      allow get, list: if signedIn()
+        && (resource.data.get('visibility', 'private') == 'public'
+          || request.auth.uid in resource.data.get('participantIds', [])
+          || (exists(/databases/$(database)/documents/worldWeaves/$(weaveId)/invites/$(request.auth.uid))
+            && get(/databases/$(database)/documents/worldWeaves/$(weaveId)/invites/$(request.auth.uid)).data.get('status', '') == 'pending'));
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'id', 'ownerId', 'ownerName', 'title', 'description', 'visibility',
+          'participantIds', 'memberCount', 'momentCount', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.id == weaveId
+        && request.resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerName is string
+        && request.resource.data.ownerName.size() <= 80
+        && request.resource.data.title is string
+        && request.resource.data.title.size() >= 3
+        && request.resource.data.title.size() <= 90
+        && request.resource.data.description is string
+        && request.resource.data.description.size() <= 500
+        && request.resource.data.visibility in ['public', 'private']
+        && request.resource.data.participantIds == [request.auth.uid]
+        && request.resource.data.memberCount == 1
+        && request.resource.data.momentCount == 0
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn() && (
+        (weaveOwner()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'visibility', 'updatedAt'])
+          && request.resource.data.title is string
+          && request.resource.data.title.size() >= 3
+          && request.resource.data.title.size() <= 90
+          && request.resource.data.description is string
+          && request.resource.data.description.size() <= 500
+          && request.resource.data.visibility in ['public', 'private']
+          && request.resource.data.updatedAt == request.time)
+
+                || (weaveMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'momentCount', 'lastMomentId'])
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.momentCount == resource.data.get('momentCount', 0) + 1
+          && request.resource.data.lastMomentId is string
+          && request.resource.data.lastMomentId != resource.data.get('lastMomentId', '')
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/moments/$(request.resource.data.lastMomentId)).data.get('authorId', '') == request.auth.uid
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/moments/$(request.resource.data.lastMomentId)).data.get('createdAt', null) == request.time)
+        || (!weaveMember()
+          && resource.data.get('visibility', 'private') == 'public'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
+          && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
+          && request.resource.data.updatedAt == request.time)
+        || (!weaveMember()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
+          && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
+          && request.resource.data.updatedAt == request.time
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/invites/$(request.auth.uid)).data.get('status', '') == 'accepted')
+      );
+      allow delete: if weaveOwner();
+
+      match /moments/{momentId} {
+        function canViewWeave() {
+          let weave = get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data;
+          return signedIn() && (weave.get('visibility', 'private') == 'public'
+            || request.auth.uid in weave.get('participantIds', []));
+        }
+        function canContribute() {
+          return signedIn()
+            && request.auth.uid in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', []);
+        }
+        allow get, list: if canViewWeave();
+        allow create: if canContribute()
+          && request.resource.data.keys().hasOnly([
+            'weaveId', 'authorId', 'authorName', 'authorUsername', 'authorAvatar',
+            'text', 'mediaType', 'mediaUrl', 'storagePath', 'createdAt'
+          ])
+          && request.resource.data.weaveId == weaveId
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() <= 80
+          && request.resource.data.authorUsername is string
+          && request.resource.data.authorUsername.size() <= 40
+          && request.resource.data.authorAvatar is string
+          && request.resource.data.authorAvatar.size() <= 2048
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 2000
+          && ((request.resource.data.mediaType == 'text'
+              && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath']))
+            || (request.resource.data.mediaType in ['image', 'video', 'audio']
+              && request.resource.data.get('mediaUrl', '') is string
+              && request.resource.data.mediaUrl.size() <= 2048
+              && request.resource.data.get('storagePath', '') is string
+              && request.resource.data.storagePath.matches('^users/' + request.auth.uid + '/media/.*')))
+          && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if signedIn()
+          && (resource.data.authorId == request.auth.uid
+            || get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '') == request.auth.uid);
+      }
+
+      match /invites/{inviteeId} {
+        allow get, list: if signedIn()
+          && (request.auth.uid == inviteeId
+            || request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', ''));
+        allow create: if signedIn()
+          && request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '')
+          && inviteeId == request.resource.data.inviteeId
+          && inviteeId != request.auth.uid
+          && !(inviteeId in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', []))
+          && request.resource.data.keys().hasOnly(['weaveId', 'inviteeId', 'invitedBy', 'ownerName', 'weaveTitle', 'status', 'createdAt'])
+          && request.resource.data.weaveId == weaveId
+          && request.resource.data.invitedBy == request.auth.uid
+          && request.resource.data.ownerName is string
+          && request.resource.data.ownerName.size() <= 80
+          && request.resource.data.weaveTitle is string
+          && request.resource.data.weaveTitle.size() >= 3
+          && request.resource.data.weaveTitle.size() <= 90
+          && request.resource.data.status == 'pending'
+          && request.resource.data.createdAt == request.time;
+        allow update: if signedIn() && request.auth.uid == inviteeId
+          && resource.data.get('status', '') == 'pending'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'acceptedAt'])
+          && request.resource.data.status == 'accepted'
+          && request.resource.data.acceptedAt == request.time;
+        allow delete: if signedIn()
+          && (request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '')
+            || (request.auth.uid == inviteeId && resource.data.get('status', '') == 'pending'));
+      }
+    }
+
+    match /{path=**}/invites/{inviteId} {
+      allow list: if signedIn() && resource.data.get('inviteeId', '') == request.auth.uid;
     }
 
     match /privacySettings/{userId} { allow read, write: if owner(userId); }
