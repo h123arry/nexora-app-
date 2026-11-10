@@ -72,7 +72,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     const projectKey = `active-project-v1:${currentUser.id}`;
     loadProject(projectKey).then(project => {
       if (!active || !project) return;
-      setClips(project.clips || []);
+      setClips((project.clips || []).map(clip => ({ ...clip, volume: typeof clip.volume === 'number' ? Math.min(1, Math.max(0, clip.volume)) : 1 })));
       setSelectedId(project.clips?.[0]?.id || null);
       setSoundtrack(project.soundtrack || null);
       setCaption(project.caption || '');
@@ -379,7 +379,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         </header>
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
-            <div className="relative flex aspect-video w-full max-w-5xl items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]">
+            <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
               {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="h-full w-full object-contain" playsInline controls muted={muted} onLoadedMetadata={event => { event.currentTarget.currentTime = selectedClip.start; }} onTimeUpdate={event => { if (event.currentTarget.currentTime >= selectedClip.end) { event.currentTarget.pause(); setPlaying(false); } }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
               {overlay.trim() && <div className="pointer-events-none absolute inset-x-5 bottom-8 text-center text-2xl font-black drop-shadow-[0_2px_8px_rgba(0,0,0,.9)]" style={{color:overlayColor}}>{overlay}</div>}
             </div>
@@ -405,6 +405,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <div className="flex items-center gap-2"><Scissors size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Clip trim</h2></div>
               <label className="block text-[10px] text-[#A39BBF]">In · {selectedClip.start.toFixed(1)}s<input type="range" min="0" max={Math.max(0,selectedClip.end-0.25)} step=".1" value={selectedClip.start} onChange={event => updateSelected({start:Math.min(Number(event.target.value),selectedClip.end-0.25)})} className="mt-2 w-full accent-violet-500"/></label>
               <label className="block text-[10px] text-[#A39BBF]">Out · {selectedClip.end.toFixed(1)}s<input type="range" min={Math.min(selectedClip.duration,selectedClip.start+0.25)} max={selectedClip.duration} step=".1" value={selectedClip.end} onChange={event => updateSelected({end:Math.max(Number(event.target.value),selectedClip.start+0.25)})} className="mt-2 w-full accent-violet-500"/></label>
+              <label className="block text-[10px] text-[#A39BBF]">Clip volume · {Math.round(selectedClip.volume * 100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.volume} onChange={event => updateSelected({volume:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label>
             </div>}
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <div className="flex items-center gap-2"><Music2 size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Soundtrack</h2></div>
