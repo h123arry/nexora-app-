@@ -2,7 +2,7 @@ import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/fire
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
@@ -124,6 +124,65 @@ export const getNexoraTrendingTopics = onCall({ maxInstances: 5 }, async request
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to view NEXORA trends.');
   try { return { topics: await getNexoraTrending(adminDb) }; }
   catch { throw new HttpsError('unavailable', 'Trending topics are temporarily unavailable.'); }
+});
+
+/** Admin-only, cursor-based one-time index backfill. Invoke once per source until done=true. */
+export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSeconds: 540 }, async request => {
+  const claims = request.auth?.token || {};
+  if (!request.auth?.uid || !(claims.admin === true || claims.role === 'admin' || claims.role === 'founder' || claims.role === 'super_admin')) {
+    throw new HttpsError('permission-denied', 'Only NEXORA administrators can rebuild the search index.');
+  }
+  const source = request.data?.source;
+  const sources = ['users','posts','pages','communities','liveSessions','circlePosts','circleEvents','pageServices','pageUpdates'];
+  if (typeof source !== 'string' || !sources.includes(source)) throw new HttpsError('invalid-argument', 'Choose a supported search index source.');
+  const cursor = request.data?.cursor;
+  if (cursor !== undefined && cursor !== null && (typeof cursor !== 'string' || cursor.length > 500 || cursor.includes('..'))) {
+    throw new HttpsError('invalid-argument', 'The backfill cursor is invalid.');
+  }
+  const collectionName = source === 'circlePosts' ? 'posts'
+    : source === 'circleEvents' ? 'events'
+      : source === 'pageServices' ? 'services'
+        : source === 'pageUpdates' ? 'channelUpdates' : source;
+  let query = source.startsWith('circle') || source.startsWith('page')
+    ? adminDb.collectionGroup(collectionName)
+    : adminDb.collection(collectionName);
+  query = query.orderBy(FieldPath.documentId());
+  if (cursor) {
+    if (source.startsWith('circle') || source.startsWith('page')) {
+      const previous = await adminDb.doc(cursor).get();
+      if (!previous.exists) throw new HttpsError('invalid-argument', 'The backfill cursor is stale. Restart this source.');
+      query = query.startAfter(previous);
+    } else query = query.startAfter(cursor);
+  }
+  const snapshot = await query.limit(100).get();
+  let processed = 0;
+  for (const document of snapshot.docs) {
+    const data = document.data() as Record<string, unknown>;
+    const segments = document.ref.path.split('/');
+    if (source === 'circlePosts' || source === 'circleEvents') {
+      if (segments.length !== 4 || segments[0] !== 'communities') continue;
+      const parent = await adminDb.collection('communities').doc(segments[1]).get();
+      const kind = source === 'circleEvents' ? 'event' : 'post';
+      await syncUniversalSearchRecord(adminDb, kind, document.id, document.ref.path, data, parent.data() as Record<string, unknown> | undefined);
+    } else if (source === 'pageServices' || source === 'pageUpdates') {
+      if (segments.length !== 4 || segments[0] !== 'pages') continue;
+      const parent = await adminDb.collection('pages').doc(segments[1]).get();
+      const kind = source === 'pageServices' ? 'service' : 'update';
+      await syncUniversalSearchRecord(adminDb, kind, document.id, document.ref.path, data, parent.data() as Record<string, unknown> | undefined);
+    } else {
+      const kind = source === 'users' ? 'person'
+        : source === 'pages' ? 'page'
+          : source === 'communities' ? 'circle'
+            : source === 'liveSessions' ? 'live'
+              : (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
+      await syncUniversalSearchRecord(adminDb, kind, document.id, document.ref.path, data);
+    }
+    processed++;
+  }
+  const nextCursor = snapshot.size === 100
+    ? (source.startsWith('circle') || source.startsWith('page') ? snapshot.docs[snapshot.docs.length - 1].ref.path : snapshot.docs[snapshot.docs.length - 1].id)
+    : null;
+  return { source, processed, nextCursor, done: nextCursor === null };
 });
 
 
