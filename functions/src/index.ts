@@ -14,7 +14,7 @@ import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communi
 import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './communityGovernance.js';
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
-import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary } from './referrals.js';
+import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary, getReferralInvitePreview } from './referrals.js';
 import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
 import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries as listMyContentSeriesRecord, listContentSeriesEpisodes } from './contentSeries.js';
@@ -939,6 +939,12 @@ export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', asyn
     try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, match[1]); }
     catch (error) { console.error('[Challenges] Contribution tracking failed.', error); }
   }
+});
+
+
+export const previewReferralInvite = onCall({ maxInstances: 10 }, async request => {
+  try { return await getReferralInvitePreview(adminDb, request.data?.code); }
+  catch { throw new HttpsError('unavailable', 'This invitation preview is temporarily unavailable.'); }
 });
 
 export const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
