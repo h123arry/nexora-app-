@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { createSocialChallenge, joinSocialChallenge, recordSocialChallengePost } from '../src/socialChallenges.js';
+import { createSocialChallenge, joinSocialChallenge, recordSocialChallengePost, listSocialChallenges } from '../src/socialChallenges.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-challenges' }, 'social-challenge-tests');
 const db = getFirestore(app);
@@ -30,6 +30,11 @@ describe('server-backed social challenges', () => {
     ids.push(created.challengeId);
     assert.match(created.postTag, /^#nxchallenge_/);
     assert.equal((await db.doc(`socialChallenges/${created.challengeId}/participants/creator-a`).get()).exists, true);
+    const listed = await listSocialChallenges(db, 'creator-a');
+    const own = listed.challenges.find(item => item.id === created.challengeId);
+    assert.equal(own?.joinedByMe, true);
+    assert.equal(own?.myContributionCount, 0);
+    assert.equal((await listSocialChallenges(db, 'someone-else')).challenges.find(item => item.id === created.challengeId)?.joinedByMe, false);
   });
 
   it('joins once and increments the participant count once', async () => {
