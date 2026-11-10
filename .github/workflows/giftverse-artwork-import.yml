@@ -1,0 +1,53 @@
+name: GiftVerse licensed artwork expansion
+
+on:
+  push:
+    branches:
+      - feat/giftverse-licensed-artwork-pipeline
+    paths:
+      - scripts/giftverse/build-openmoji-expansion.mjs
+      - .github/workflows/giftverse-artwork-import.yml
+
+permissions:
+  contents: write
+
+jobs:
+  expand:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out GiftVerse branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Generate and import 880 licensed vector artworks
+        run: npm run giftverse:import-openmoji
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Firebase Functions dependencies
+        run: npm --prefix functions ci
+      - name: Type-check frontend and Functions
+        run: |
+          npm run lint
+          npm run functions:build
+      - name: Run complete unit suite
+        run: npm run test:unit
+      - name: Build production application
+        run: npm run build
+      - name: Commit generated catalogue, sprites and provenance
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add functions/src/giftCatalogPolicy.ts functions/src/giftCatalogExpansion.ts tests/gift-catalog.test.ts public/giftverse
+          if git diff --cached --quiet; then
+            echo "No generated GiftVerse changes."
+          else
+            git commit -m "Import 880 licensed GiftVerse artworks [skip ci]"
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+          fi

@@ -1,5 +1,6 @@
+import { GIFTVERSE_EXPANSION } from './giftCatalogExpansion.js';
 export type GiftRarity='common'|'uncommon'|'rare'|'epic'|'legendary';export interface NexoraGift{id:string;name:string;category:string;categoryName:string;priceNex:number;rarity:GiftRarity;image:string;animation:'sparkle'|'reveal'|'cinematic'|'legendary';subscriptionExclusive:boolean;limitedEdition:boolean;icon:string;description:string;}
-export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
+export const GIFT_CATALOG_VERSION=2;export const GIFT_CATALOG:NexoraGift[]=[
   {
     "id": "floral-01",
     "name": "Violet Rose",
@@ -1680,4 +1681,4 @@ export const GIFT_CATALOG_VERSION=1;export const GIFT_CATALOG:NexoraGift[]=[
     "icon": "🌟",
     "description": "A once-in-a-lifetime celebration for a creator's biggest milestone."
   }
-];export function findNexoraGift(id:unknown):NexoraGift|undefined{return typeof id==='string'?GIFT_CATALOG.find(g=>g.id===id):undefined;}
+,...GIFTVERSE_EXPANSION];export function findNexoraGift(id:unknown):NexoraGift|undefined{return typeof id==='string'?GIFT_CATALOG.find(g=>g.id===id):undefined;}
