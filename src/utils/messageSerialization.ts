@@ -20,20 +20,20 @@ export function normalizeMessageReactionUsers(
   reactionUsers: MessageReactionUsers | undefined,
   legacyReactions: AggregatedMessageReaction[] | undefined,
 ): MessageReactionUsers {
-  if (reactionUsers && Object.keys(reactionUsers).length > 0) {
-    return Object.fromEntries(Object.entries(reactionUsers).map(([uid, emojis]) => [
-      uid,
-      Array.isArray(emojis) ? [...new Set(emojis)] : [],
-    ]));
-  }
   const normalized: MessageReactionUsers = {};
+  // Legacy records remain visible for members who have not yet written a
+  // user-owned record. Once a member has a key in reactionUsers, that entry
+  // becomes authoritative for that member (including an empty list).
   for (const reaction of legacyReactions || []) {
     if (!reaction || typeof reaction.emoji !== 'string' || !Array.isArray(reaction.userIds)) continue;
     for (const uid of reaction.userIds) {
-      if (typeof uid !== 'string' || !uid) continue;
+      if (typeof uid !== 'string' || !uid || Object.prototype.hasOwnProperty.call(reactionUsers || {}, uid)) continue;
       normalized[uid] ||= [];
       if (!normalized[uid].includes(reaction.emoji)) normalized[uid].push(reaction.emoji);
     }
+  }
+  for (const [uid, emojis] of Object.entries(reactionUsers || {})) {
+    normalized[uid] = Array.isArray(emojis) ? [...new Set(emojis)] : [];
   }
   return normalized;
 }
@@ -61,8 +61,12 @@ export function toggleMessageReaction(
   userId: string,
   emoji: string,
 ): MessageReactionUsers {
-  const next = normalizeMessageReactionUsers(reactionUsers, legacyReactions);
-  const current = next[userId] || [];
+  const next: MessageReactionUsers = { ...(reactionUsers || {}) };
+  const current = Object.prototype.hasOwnProperty.call(next, userId)
+    ? (Array.isArray(next[userId]) ? next[userId] : [])
+    : (legacyReactions || [])
+      .filter(reaction => reaction?.emoji && Array.isArray(reaction.userIds) && reaction.userIds.includes(userId))
+      .map(reaction => reaction.emoji);
   next[userId] = current.includes(emoji)
     ? current.filter(value => value !== emoji)
     : [...current, emoji].slice(-12);
