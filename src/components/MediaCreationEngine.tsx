@@ -902,10 +902,8 @@ export default function MediaCreationEngine({
 
   // Dynamic Styles
   const getModalBg = () => {
-    if (theme === 'neon-cyber') return 'bg-slate-950/95 border-fuchsia-500/20 text-white';
-    if (theme === 'emerald-glass') return 'bg-emerald-950/95 border-emerald-500/20 text-white';
-    if (theme === 'stealth-dark') return 'bg-[#06060a]/95 border-zinc-800/80 text-white';
-    return 'bg-white border-zinc-200 text-zinc-900';
+    if (theme === 'platinum-light') return 'bg-[#F8F6FF] border-[#D8CCFF] text-[#211B49]';
+    return 'bg-[#090714]/98 border-[#44376F]/70 text-white';
   };
 
   const getStepButtonColor = (step: number) => {
@@ -1090,14 +1088,6 @@ export default function MediaCreationEngine({
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {onToggleOffline && (
-              <button 
-                onClick={onToggleOffline}
-                className={`px-2 py-1 rounded-lg text-[9px] font-mono font-bold border transition-colors ${isOffline ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 'bg-zinc-800/40 text-zinc-400 border-zinc-800 hover:bg-zinc-800'}`}
-              >
-                {isOffline ? '🔌 OFF' : '🟢 ON'}
-              </button>
-            )}
             <button 
               onClick={handleExitClick}
               className="p-1.5 rounded-lg bg-zinc-800/40 text-zinc-400 hover:text-white transition-colors cursor-pointer"
@@ -1117,7 +1107,7 @@ export default function MediaCreationEngine({
           </button>
           <button 
             onClick={() => { setActiveTab('story'); setActiveMode('photo'); setCurrentStep(2); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'story' ? 'bg-emerald-600/15 text-emerald-400 border border-emerald-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'story' ? 'bg-violet-600/20 text-violet-200 border border-violet-500/30' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
             📖 Stories
           </button>
@@ -1262,7 +1252,7 @@ export default function MediaCreationEngine({
                         </div>
                         <button 
                           onClick={captureCameraSnapshot}
-                          className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                          className="w-full py-2.5 bg-linear-to-r from-[#7138FF] to-[#3B16B8] text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                         >
                           Take photo
                         </button>
@@ -1371,7 +1361,7 @@ export default function MediaCreationEngine({
                               Stop recording
                             </button>
                           ) : (
-                            <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-fuchsia-600 to-pink-500 rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-md cursor-pointer">
+                            <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-[#8A3FFC] to-[#1600A3] rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-md cursor-pointer">
                               Start recording
                             </button>
                           )}
@@ -1405,7 +1395,7 @@ export default function MediaCreationEngine({
                             🛑 Stop recording
                           </button>
                         ) : (
-                          <button onClick={startVoiceRecording} className="px-6 py-3 bg-linear-to-tr from-violet-600 to-pink-500 text-white font-black rounded-xl text-xs font-mono animate-pulse">
+                          <button onClick={startVoiceRecording} className="px-6 py-3 bg-linear-to-tr from-[#7138FF] to-[#3B16B8] text-white font-black rounded-xl text-xs font-mono animate-pulse">
                             🎙️ Start recording
                           </button>
                         )}
@@ -1491,16 +1481,18 @@ export default function MediaCreationEngine({
                             </p>
                           )}
                         </div>
+                      ) : (videoFileUrl || recordedVideoUrl) ? (
+                        <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="h-full w-full bg-black object-contain" />
                       ) : (
                         <div className="text-center p-6 space-y-2 text-zinc-500">
                           <Sliders className="w-8 h-8 mx-auto" />
-                          <p className="text-xs italic">No editable images selected. Choose standard photo formats to trigger overlays.</p>
+                          <p className="text-xs">Your photo or video preview will appear here.</p>
                         </div>
                       )}
                     </div>
 
-                    {/* Editor controls list */}
-                    <div className="space-y-3.5 bg-zinc-950/40 p-4 rounded-2xl border border-zinc-900/60">
+                    {/* Photo adjustments are only shown when a photo is selected. */}
+                    <div className={`${selectedImages.length > 0 ? 'space-y-3.5 bg-zinc-950/40 p-4 rounded-2xl border border-zinc-900/60' : 'hidden'}`}>
                       <span className="text-[10px] font-mono text-zinc-400 uppercase block tracking-wider pt-1">Photo adjustments</span>
                       
                       {/* Interactive CSS filters row */}
@@ -1600,6 +1592,12 @@ export default function MediaCreationEngine({
                       </div>
 
                     </div>
+                    {selectedImages.length === 0 && (videoFileUrl || recordedVideoUrl) && (
+                      <div className="flex flex-col justify-center rounded-2xl border border-[#7138FF]/25 bg-[#120E2B] p-5">
+                        <span className="mb-2 text-xs font-semibold text-[#B69BFF]">Your video is ready</span>
+                        <p className="text-sm leading-relaxed text-zinc-200">Review your clip on the left. Add a caption and details next, then preview it before sharing.</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1736,6 +1734,9 @@ export default function MediaCreationEngine({
                         <img src={selectedImages[0]?.url} className="w-full h-full object-cover" style={{ filter: selectedImages[0]?.filterStyle || 'none' }} />
                       </div>
                     )}
+                    {(videoFileUrl || recordedVideoUrl) && (
+                      <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[460px] w-full rounded-xl border border-zinc-900 bg-black object-contain" />
+                    )}
 
                     {voiceFileUrl && (
                       <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-between text-xs">
@@ -1760,13 +1761,6 @@ export default function MediaCreationEngine({
                       </div>
                     )}
 
-                    {/* Mock action triggers */}
-                    <div className="flex justify-between items-center text-xs text-zinc-400 border-t border-zinc-900 pt-3">
-                      <span>❤️ Like</span>
-                      <span>💬 Comment</span>
-                      <span>🔄 Repost</span>
-                      <span>⚡ Tip</span>
-                    </div>
                   </div>
 
                   {/* Accessibility & Quality audit compliance checklist */}
@@ -1787,13 +1781,6 @@ export default function MediaCreationEngine({
                           <span className="text-emerald-400">✓ Photo description added</span>
                         )}
                       </div>
-                      <div className="flex items-center gap-2 text-xs">
-                        {isVideoTrimCheck ? (
-                          <span className="text-amber-400">⚠️ Long videos are welcome. Make sure this is the clip you want to share.</span>
-                        ) : (
-                          <span className="text-emerald-400">✓ Video is ready to share</span>
-                        )}
-                      </div>
                     </div>
                   </div>
 
@@ -1808,12 +1795,6 @@ export default function MediaCreationEngine({
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-black text-white uppercase">Ready to share?</span>
-                        <button 
-                          onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
-                          className="text-xs text-violet-400 hover:underline flex items-center gap-1"
-                        >
-                          {isAdvancedOptionsOpen ? 'Hide options' : 'More options'}
-                        </button>
                       </div>
 
                       {/* Custom options row */}
@@ -1823,31 +1804,6 @@ export default function MediaCreationEngine({
                           <p className="text-[11px] leading-relaxed text-[var(--nx-muted)]">Your post will be visible to everyone on NEXORA.</p>
                         </div>
                       </div>
-
-                      {isAdvancedOptionsOpen && (
-                        <div className="space-y-2.5 bg-zinc-950/40 p-4 border border-zinc-900 rounded-2xl text-left">
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-300">Allow Comments reactions</span>
-                            <input type="checkbox" checked={commentsAllowed} onChange={(e) => setCommentsAllowed(e.target.checked)} className="accent-violet-500" />
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-300">Allow Shares & Reposts</span>
-                            <input type="checkbox" checked={sharesAllowed} onChange={(e) => setSharesAllowed(e.target.checked)} className="accent-violet-500" />
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-300">Allow Downloads</span>
-                            <input type="checkbox" checked={downloadsAllowed} onChange={(e) => setDownloadsAllowed(e.target.checked)} className="accent-violet-500" />
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-300">Cross-Post to external grids</span>
-                            <input type="checkbox" checked={crossPostToTwitter} onChange={(e) => setCrossPostToTwitter(e.target.checked)} className="accent-violet-500" />
-                          </div>
-                          <div className="flex justify-between items-center text-xs">
-                            <span className="text-zinc-300">Pin Post to top of profile</span>
-                            <input type="checkbox" checked={pinnedOnProfile} onChange={(e) => setPinnedOnProfile(e.target.checked)} className="accent-violet-500" />
-                          </div>
-                        </div>
-                      )}
 
                       {/* Scheduling controls */}
                       <div className="p-3.5 bg-[#0a0715]/40 border border-zinc-900 rounded-2xl text-left space-y-2">
@@ -1961,7 +1917,7 @@ export default function MediaCreationEngine({
                 <button 
                   onClick={nextStep}
                   disabled={currentStep === 2 && !activeMode}
-                  className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
+                  className="px-5 py-2.5 bg-linear-to-r from-[#7138FF] to-[#3B16B8] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
                 >
                   Continue →
                 </button>
@@ -1969,7 +1925,7 @@ export default function MediaCreationEngine({
                 <button 
                   onClick={triggerPublishMedia}
                   disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
-                  className="px-6 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
+                  className="px-6 py-2.5 bg-linear-to-r from-[#7138FF] to-[#3B16B8] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
                 >
                   Share post
                 </button>
