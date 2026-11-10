@@ -2,7 +2,7 @@ import { FieldValue, Timestamp, getFirestore, type DocumentSnapshot } from 'fire
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { findNexoraGift } from './giftCatalogPolicy.js';
-import { validateGiftDeliveryInput, giftDeliveryReferences } from './giftDeliveryPolicy.js';
+import { validateGiftDeliveryInput, giftDeliveryReferences, isLiveGiftDeliveryEnabled } from './giftDeliveryPolicy.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
 import { assessGiftRisk } from './giftEconomyPolicy.js';
 
@@ -78,6 +78,7 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
         if (!liveSession?.exists || ownerId !== input.recipientId || session.status !== 'live') {
           throw new HttpsError('failed-precondition', 'This creator is not currently live in that session.');
         }
+        if (!isLiveGiftDeliveryEnabled(session)) throw new HttpsError('failed-precondition', 'Gifting is disabled for this live room.');
       }
       const senderData = senderWallet.data() || {};
       const escrowData = escrowWallet.data() || {};

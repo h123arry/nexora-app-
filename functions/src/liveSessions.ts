@@ -3,7 +3,7 @@ import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle } from './liveSessionsPolicy.js';
+import { nextLiveChatRateState, validateLiveChatMessage, validateLiveConnectionId, validateLiveSessionId, validateLiveSessionTitle, validateLiveSessionSettings } from './liveSessionsPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const sessions = db.collection('liveSessions');
@@ -67,6 +67,27 @@ export const endLiveSession = onCall({ maxInstances: 10 }, async request => {
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     throw new HttpsError('unavailable', 'The live room could not be ended. Please retry.');
+  }
+});
+
+export const updateLiveSessionSettings = onCall({ maxInstances: 10 }, async request => {
+  const hostId = uid(request);
+  const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
+  const settings = valid(() => validateLiveSessionSettings(request.data?.settings));
+  const ref = sessions.doc(sessionId);
+  try {
+    return await db.runTransaction(async tx => {
+      const snapshot = await tx.get(ref);
+      if (!snapshot.exists || snapshot.data()?.hostId !== hostId) {
+        throw new HttpsError('permission-denied', 'Only the live room host can change these settings.');
+      }
+      if (snapshot.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has already ended.');
+      tx.update(ref, { ...settings, updatedAt: FieldValue.serverTimestamp() });
+      return { sessionId, ...settings, updated: true as const };
+    });
+  } catch (error) {
+    if (error instanceof HttpsError) throw error;
+    throw new HttpsError('unavailable', 'Live room settings could not be updated. Please retry.');
   }
 });
 
