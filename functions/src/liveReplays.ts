@@ -92,14 +92,22 @@ export const startLiveRecording = onCall(
     if (credentials.type !== 'service_account' || typeof credentials.client_email !== 'string' || typeof credentials.private_key !== 'string') {
       throw new HttpsError('failed-precondition', 'The replay storage secret must contain a Google Cloud service-account JSON key.');
     }
-    const existing = session.data()?.recording as Record<string, unknown> | undefined;
-    if (existing && ['starting', 'recording', 'processing', 'completed'].includes(String(existing.status))) {
-      return { sessionId, status: existing.status, replayed: true };
-    }
-    await sessionRef.update({
-      recording: { status: 'starting', startedBy: hostId, startedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() },
-      updatedAt: FieldValue.serverTimestamp(),
+    const reservation = await db.runTransaction(async tx => {
+      const current = await tx.get(sessionRef);
+      if (!current.exists || current.data()?.hostId !== hostId || current.data()?.status !== 'live') {
+        throw new HttpsError('failed-precondition', 'This live room is no longer available for recording.');
+      }
+      const existing = current.data()?.recording as Record<string, unknown> | undefined;
+      if (existing && ['starting', 'recording', 'processing', 'completed'].includes(String(existing.status))) {
+        return { start: false as const, status: String(existing.status) };
+      }
+      tx.update(sessionRef, {
+        recording: { status: 'starting', startedBy: hostId, startedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() },
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return { start: true as const, status: 'starting' };
     });
+    if (!reservation.start) return { sessionId, status: reservation.status, replayed: true };
     try {
       const roomName = 'nexora_' + sessionId;
       const result = await egressRequest<EgressResult>('StartRoomCompositeEgress', {
