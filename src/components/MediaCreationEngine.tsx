@@ -954,9 +954,6 @@ export default function MediaCreationEngine({
         finalVoiceUrl = uploadedVoice.downloadUrl;
       }
 
-      const activeFilters = selectedImages.map(img => img.filterStyle || 'none');
-      const activeFilter = activeFilters[0] || 'none';
-
       let pollObj = undefined;
       if (activeMode === 'poll' && pollQuestion.trim()) {
         pollObj = {
