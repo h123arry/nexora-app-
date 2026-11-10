@@ -1,27 +1,13 @@
 # NEXORA GIFTVERSE artwork
 
-The directory `gifts/` contains 120 individually bundled SVG artworks, one for each server-owned catalogue gift. Every image has a stable gift ID, accessible display title, description and a 256 × 256 viewBox.
+GiftVerse now contains 1,000 distinct gift identities: 120 original bundled SVG artworks plus 880 individually referenced Twemoji SVG illustrations. Each catalogue entry has a unique gift ID, name, image reference, NEX price, rarity, category, animation profile and description.
 
-Artwork colour tokens are validated as real SVG colours. Each collection has its own visual palette (floral, royal, dragon, wildlife, love, celestial, African heritage, fantasy, music, luxury, technology and seasonal).
+The 880 source images are pinned to Twemoji v15.1.0 commit `7407fa31c51be5ab45626b8ab5554d50cc8073f6` and loaded by the live catalogue from fixed upstream SVG URLs. Their source artwork is licensed CC BY 4.0. NEXORA adds its own collectible identity, midnight-violet presentation frame, rarity treatment and animation composition. The source artwork is not claimed as exclusively owned by NEXORA.
 
-The catalogue stores the canonical image path, NEX price, rarity and animation profile. The app loads the individual image for each card and preview. Animation profile metadata prepares the assets for Phase 5.4's real delivery renderer; it does not itself activate cinematic playback.
+The 120 original GiftVerse SVGs remain bundled locally. The 880 Twemoji source files are currently pinned remote assets rather than locally vendored files. This is an explicit limitation: the 880 images require network access. The licensed importer provides the path to bundle and sanitize them in a later offline-vendoring pass.
 
-NEX prices remain server-owned. Phase 5.2 supports browsing and secure price quotes only. Sending, charging, creator earnings and withdrawals are later phases.
+## Attribution
 
-## Expanding GiftVerse with licensed source artwork
+All emojis designed by Twemoji, the open-source emoji project. Graphics licensed under Creative Commons Attribution 4.0 International (CC BY 4.0). Source: https://github.com/jdecked/twemoji. Licence: https://creativecommons.org/licenses/by/4.0/. Per-image provenance: `provenance/twemoji-v15.1.0.json`.
 
-New online artwork must be licensed for commercial adaptation and must pass the rights policy in [ARTWORK_RIGHTS.md](./ARTWORK_RIGHTS.md). The import pipeline in `scripts/giftverse/import-artwork.mjs` sanitizes SVG source, requires creator/source/licence/modification metadata, enforces share-alike handling and emits a provenance register. Imported files must then be added to the canonical server catalogue and covered by tests before release.
-
-Example import command:
-
-```sh
-node scripts/giftverse/import-artwork.mjs \
-  --manifest ./giftverse-import/manifest.json \
-  --input-dir ./giftverse-import/source \
-  --output-dir ./public/giftverse/gifts \
-  --provenance ./public/giftverse/provenance/imported-artwork.json
-```
-
-A successful import is not a catalogue release by itself. Every gift must have a unique identity, image path, accessible title, category, rarity, NEX price and original description. Rights review is mandatory before the artwork is published.
-
-The individual SVGs are standalone vector artwork extracted from the original 120-symbol GIFTVERSE sprite already in the repository. Separate generated PNG references discussed in chat were not available as retrievable files during that earlier repository operation.
+See [ARTWORK_RIGHTS.md](./ARTWORK_RIGHTS.md) and [TWEMOJI_ATTRIBUTION.md](./TWEMOJI_ATTRIBUTION.md).
