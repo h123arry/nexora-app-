@@ -912,11 +912,24 @@ export function subscribeToOnlinePresence(targets: Array<{ chatId: string; userI
 /**
  * Real-time read receipts
  */
-export async function updateMessageReadReceipt(chatId: string, messageId: string, status: 'delivered' | 'read') {
-  try {
-    const docRef = doc(db, `chats/${chatId}/messages/${messageId}`);
-    await updateDoc(docRef, { status });
-  } catch (e) {
-    // Fail silently or fallback
+export async function updateMessageReadReceipt(
+  chatId: string,
+  messageId: string,
+  status: 'delivered' | 'read',
+  isGroup = false,
+) {
+  const messageRef = doc(db, `chats/${chatId}/messages/${messageId}`);
+  if (isGroup) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) throw new Error('Sign in to update message receipts.');
+    // Each recipient owns only their receipt entry. The message snapshot then
+    // carries a consistent per-member view to every participant.
+    await updateDoc(messageRef, {
+      [`recipientReceipts.${uid}.status`]: status,
+      [`recipientReceipts.${uid}.updatedAt`]: serverTimestamp(),
+    });
+    return;
   }
+  // Preserve the established direct-message receipt contract.
+  await updateDoc(messageRef, { status });
 }
