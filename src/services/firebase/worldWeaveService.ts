@@ -12,6 +12,7 @@ export interface WorldWeave {
   momentCount: number; createdAt?: unknown; updatedAt?: unknown;
 }
 export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; weaveDescription: string; visibility: WorldWeaveVisibility; status: 'pending' | 'accepted'; createdAt?: unknown; }
+export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; ownerName: string; weaveTitle: string; status: 'pending' | 'accepted'; createdAt?: unknown; }
 export interface WorldWeaveMoment {
   id: string; weaveId: string; authorId: string; authorName: string; authorUsername: string;
   authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video';
@@ -51,22 +52,45 @@ export async function createWorldWeave(input: { title: string; description: stri
 export async function inviteToWorldWeave(weaveId: string, inviteeId: string): Promise<void> {
   const user = requireUser();
   if (!inviteeId || inviteeId === user.uid) throw new Error('Choose another NEXORA member to invite.');
-  await setDoc(doc(db, 'worldWeaves', weaveId, 'invites', inviteeId), {
-    weaveId, inviteeId, invitedBy: user.uid, status: 'pending', createdAt: serverTimestamp(),
-  });
+  const weaveSnapshot = await getDoc(doc(db, 'worldWeaves', weaveId));
+  if (!weaveSnapshot.exists()) throw new Error('This WorldWeave no longer exists.');
+  const weave = weaveSnapshot.data();
+  if (weave.ownerId !== user.uid) throw new Error('Only the WorldWeave owner can invite contributors.');
+  if ((weave.participantIds || []).includes(inviteeId)) throw new Error('That member is already contributing.');
+  const inviteRef = doc(db, 'worldWeaves', weaveId, 'invites', inviteeId);
+  if ((await getDoc(inviteRef)).exists()) throw new Error('An invitation already exists for this member.');
+  await setDoc(inviteRef, { weaveId, inviteeId, invitedBy: user.uid, ownerName: weave.ownerName,
+    weaveTitle: weave.title, status: 'pending', createdAt: serverTimestamp() });
+}
+export function subscribeToMyWorldWeaveInvites(userId: string, onItems: (items: WorldWeaveInvite[]) => void, onError: (error: Error) => void): Unsubscribe {
+  if (auth.currentUser?.uid !== userId) throw new Error('Your account must match the invitation recipient.');
+  return onSnapshot(query(collectionGroup(db, 'invites'), where('inviteeId', '==', userId)),
+    snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveInvite)).filter(item => item.status === 'pending')), onError);
+}
+export async function inviteToWorldWeaveByUsername(weaveId: string, username: string): Promise<void> {
+  const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
+  if (!/^[a-z0-9_.]{2,30}$/.test(cleanUsername)) throw new Error('Enter a valid NEXORA username.');
+  const matches = await getDocs(query(collection(db, 'publicProfiles'), where('username', '==', cleanUsername), limit(2)));
+  if (matches.size !== 1) throw new Error(matches.empty ? 'No NEXORA member was found with that username.' : 'That username is not unique.');
+  await inviteToWorldWeave(weaveId, matches.docs[0].id);
 }
 export async function acceptWorldWeaveInvite(weaveId: string): Promise<WorldWeave> {
   const user = requireUser();
-  await runTransaction(db, async transaction => {
+  return runTransaction(db, async transaction => {
     const weaveRef = doc(db, 'worldWeaves', weaveId);
     const inviteRef = doc(db, 'worldWeaves', weaveId, 'invites', user.uid);
     const [weave, invite] = await Promise.all([transaction.get(weaveRef), transaction.get(inviteRef)]);
     if (!weave.exists() || !invite.exists() || invite.data().status !== 'pending' || invite.data().inviteeId !== user.uid) {
       throw new Error('This WorldWeave invitation is no longer available.');
     }
-    if (weave.data().participantIds?.includes(user.uid)) return;
-    transaction.update(inviteRef, { status: 'accepted', acceptedAt: serverTimestamp() });
-    transaction.update(weaveRef, { participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp() });
+    const data = weave.data();
+    const alreadyJoined = (data.participantIds || []).includes(user.uid);
+    if (!alreadyJoined) {
+      transaction.update(inviteRef, { status: 'accepted', acceptedAt: serverTimestamp() });
+      transaction.update(weaveRef, { participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp() });
+    }
+    return { ...data, id: weave.id, participantIds: [...(data.participantIds || []), ...(alreadyJoined ? [] : [user.uid])],
+      memberCount: (data.memberCount || 1) + (alreadyJoined ? 0 : 1) } as WorldWeave;
   });
 }
 export async function addWorldWeaveTextMoment(weaveId: string, author: { id: string; name: string; username: string; avatar: string }, text: string): Promise<void> {
