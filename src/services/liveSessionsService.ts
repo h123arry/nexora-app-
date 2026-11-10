@@ -6,7 +6,8 @@ const liveKitFunctions = getFunctions(app, 'europe-west1');
 export interface LiveSessionSummary {
   id: string; hostId: string; hostName?: string; title: string; status: 'live' | 'ended';
   viewerCount: number; peakViewerCount?: number; uniqueViewerCount?: number; messageCount?: number; giftCount?: number; giftNexTotal?: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured' | 'livekit';
-  startedAt?: { toDate?: () => Date } | string | null;
+  startedAt?: { toDate?: () => Date } | string | null; endedAt?: { toDate?: () => Date } | string | null;
+  recording?: { status?: 'starting' | 'recording' | 'processing' | 'completed' | 'failed' | 'stop_failed'; egressId?: string; objectPath?: string | null } | null;
 }
 export interface LiveChatMessage {
   id: string; senderId: string; senderName: string; message: string; createdAt?: { toDate?: () => Date } | string | null;
