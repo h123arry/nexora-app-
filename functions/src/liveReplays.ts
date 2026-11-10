@@ -6,8 +6,8 @@ import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig
 import { createLiveKitJwt } from './liveKitTokenPolicy.js';
 import { canWatchLiveReplay, isSafeLiveReplayObjectPath } from './liveReplaysPolicy.js';
 
-const apiKey = defineSecret('LIVEKIT_API_KEY');
-const apiSecret = defineSecret('LIVEKIT_API_SECRET');
+export const liveKitApiKey = defineSecret('LIVEKIT_API_KEY');
+export const liveKitApiSecret = defineSecret('LIVEKIT_API_SECRET');
 const gcsCredentials = defineSecret('LIVE_REPLAY_GCS_CREDENTIALS');
 const replayBucket = defineString('LIVE_REPLAY_GCS_BUCKET');
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -26,8 +26,8 @@ function liveKitBaseUrl(): string {
   return (process.env.LIVEKIT_URL?.trim() || DEFAULT_LIVEKIT_URL).replace(/^wss:/i, 'https:').replace(/\/$/, '');
 }
 function egressToken(): string {
-  const key = apiKey.value();
-  const secret = apiSecret.value();
+  const key = liveKitApiKey.value();
+  const secret = liveKitApiSecret.value();
   if (!key || !secret) throw new HttpsError('failed-precondition', 'Live recording is not configured on the server.');
   const now = Math.floor(Date.now() / 1000);
   return createLiveKitJwt({
@@ -72,7 +72,7 @@ export async function stopLiveRecordingForSession(sessionId: string): Promise<vo
 }
 
 export const startLiveRecording = onCall(
-  { region: 'europe-west1', secrets: [apiKey, apiSecret, gcsCredentials], maxInstances: 5 },
+  { region: 'europe-west1', secrets: [liveKitApiKey, liveKitApiSecret, gcsCredentials], maxInstances: 5 },
   async request => {
     const hostId = requireUid(request);
     const sessionId = typeof request.data?.sessionId === 'string' ? request.data.sessionId.trim() : '';
@@ -131,7 +131,7 @@ export const startLiveRecording = onCall(
 );
 
 export const stopLiveRecording = onCall(
-  { region: 'europe-west1', secrets: [apiKey, apiSecret], maxInstances: 5 },
+  { region: 'europe-west1', secrets: [liveKitApiKey, liveKitApiSecret], maxInstances: 5 },
   async request => {
     const hostId = requireUid(request);
     const sessionId = typeof request.data?.sessionId === 'string' ? request.data.sessionId.trim() : '';
@@ -148,7 +148,7 @@ export const stopLiveRecording = onCall(
 );
 
 export const getLiveReplayPlayback = onCall(
-  { region: 'europe-west1', secrets: [apiKey, apiSecret], maxInstances: 10 },
+  { region: 'europe-west1', secrets: [liveKitApiKey, liveKitApiSecret], maxInstances: 10 },
   async request => {
     const userId = requireUid(request);
     const sessionId = typeof request.data?.sessionId === 'string' ? request.data.sessionId.trim() : '';
