@@ -1143,6 +1143,10 @@ service cloud.firestore {
     match /privacySettings/{userId} { allow read, write: if owner(userId); }
 
     // Chats can be discovered only by participant-filtered queries and read only by participants.
+    // Search projections are written and queried only by trusted server code.
+    // Clients cannot enumerate, mutate, or bypass visibility checks on this index.
+    match /searchIndex/{searchDocumentId} { allow read, write: if false; }
+
     match /chats/{chatId} {
       allow get, list: if signedIn() && request.auth.uid in resource.data.participants;
       // Clients may open direct conversations only. Group membership is created
@@ -1178,10 +1182,6 @@ service cloud.firestore {
           && request.resource.data.status in ['delivered', 'read'];
         allow delete: if chatMember(chatId) && resource.data.senderId == request.auth.uid;
       }
-      // Search projections are written and queried only by trusted server code.
-    // Clients cannot enumerate, mutate, or bypass visibility checks on this index.
-    match /searchIndex/{searchDocumentId} { allow read, write: if false; }
-
     match /presence/{userId} {
         allow get: if chatMember(chatId);
         allow list: if false;
