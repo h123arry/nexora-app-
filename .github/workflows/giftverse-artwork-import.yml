@@ -7,6 +7,7 @@ on:
       - feat/giftverse-individual-artwork-assets
     paths:
       - scripts/giftverse/build-openmoji-expansion.mjs
+      - scripts/giftverse/extract-individual-artwork.mjs
       - .github/workflows/giftverse-artwork-import.yml
 
 permissions:
