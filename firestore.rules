@@ -753,7 +753,14 @@ service cloud.firestore {
           || (courseId == 'live-production' && lessonId in ['run-of-show', 'hosting', 'safety'])
           || (courseId == 'creator-analytics' && lessonId in ['metrics', 'retention', 'experiments'])
           || (courseId == 'personal-brand' && lessonId in ['positioning', 'portfolio', 'reputation'])
-          || (courseId == 'creator-safety' && lessonId in ['security', 'rights', 'wellbeing']);
+          || (courseId == 'creator-safety' && lessonId in ['security', 'rights', 'wellbeing'])
+          || (courseId is string && courseId.size() > 0 && courseId.size() <= 128
+            && lessonId is string && lessonId.size() > 0 && lessonId.size() <= 128
+            && !courseId.matches('.*[/].*') && !lessonId.matches('.*[/].*')
+            && exists(/databases/$(database)/documents/academyCourses/$(courseId))
+            && get(/databases/$(database)/documents/academyCourses/$(courseId)).data.status == 'published'
+            && exists(/databases/$(database)/documents/academyCourses/$(courseId)/lessons/$(lessonId))
+            && get(/databases/$(database)/documents/academyCourses/$(courseId)/lessons/$(lessonId)).data.status == 'published');
       }
       function validLessonNote() {
         return request.resource.data.keys().hasOnly(['userId', 'courseId', 'lessonId', 'note', 'updatedAt', 'schemaVersion'])
