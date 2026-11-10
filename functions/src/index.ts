@@ -313,7 +313,7 @@ export const submitCommunityReport = onCall({ maxInstances: 10 }, async request 
     const message = error instanceof Error ? error.message : '';
     if (message.includes('valid Circle') || message.includes('Choose valid')) throw new HttpsError('invalid-argument', message);
     if (message.includes('Join this Circle')) throw new HttpsError('permission-denied', message);
-    if (message.includes('already reported') || message.includes('unavailable')) throw new HttpsError('failed-precondition', message);
+    if (message.includes('already reported') || message.includes('unavailable') || message.includes('own Circle content')) throw new HttpsError('failed-precondition', message);
     throw new HttpsError('internal', 'Your Circle report could not be submitted. Please retry.');
   }
 });
@@ -340,7 +340,7 @@ export const resolveCommunityReport = onCall({ maxInstances: 10 }, async request
   } catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('valid report') || message.includes('valid Circle')) throw new HttpsError('invalid-argument', message);
-    if (message.includes('Only active Circle managers')) throw new HttpsError('permission-denied', message);
+    if (message.includes('Only active Circle managers') || message.includes('equal or higher role')) throw new HttpsError('permission-denied', message);
     if (message.includes('no longer open') || message.includes('Only member reports') || message.includes('Member reports')) {
       throw new HttpsError('failed-precondition', message);
     }
