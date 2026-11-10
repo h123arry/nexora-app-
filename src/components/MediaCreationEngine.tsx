@@ -11,6 +11,8 @@ import { uploadMediaFile } from '../services/firebase/storageService';
 import { VoiceEngine } from '../services/voh/voiceEngine';
 import NexoraLoader from './NexoraLoader';
 import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
+import { db } from '../lib/firebase';
+import { collection, endAt, getDocs, limit, orderBy, query, startAt, where } from 'firebase/firestore';
 
 type PhotoExportOptions = {
   rotation: number;
@@ -299,6 +301,12 @@ export default function MediaCreationEngine({
   const [videoTrimStart, setVideoTrimStart] = useState(0);
   const [videoTrimEnd, setVideoTrimEnd] = useState(15);
   const [videoDuration, setVideoDuration] = useState(15);
+  const [videoCoverBlob, setVideoCoverBlob] = useState<Blob | null>(null);
+  const [videoCoverTime, setVideoCoverTime] = useState(0);
+  const [isTrimmingVideo, setIsTrimmingVideo] = useState(false);
+  const trimVideoRef = useRef<HTMLVideoElement>(null);
+  const [mentionSuggestions, setMentionSuggestions] = useState<Array<{ username: string; name: string; avatar: string }>>([]);
+  const [mentionValidation, setMentionValidation] = useState<'idle' | 'checking' | 'valid' | 'invalid'>('idle');
 
   // Reels
   const [isRecording, setIsRecording] = useState(false);
@@ -536,6 +544,26 @@ export default function MediaCreationEngine({
     return () => clearInterval(loopTimerRef.current);
   }, [isRecording, isRecordingPaused]);
 
+  // Resolve @mentions against the public profile directory; never suggest private user records.
+  useEffect(() => {
+    const raw = String(taggedUsernames || '').split(',').pop()?.trim().replace(/^@/, '') || '';
+    if (raw.length < 2 || !db) { setMentionSuggestions([]); return; }
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        const normalized = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
+        if (!normalized) { setMentionSuggestions([]); return; }
+        const result = await getDocs(query(collection(db, 'publicProfiles'), orderBy('username'), startAt(normalized), endAt(`${normalized}\\uf8ff`), limit(6)));
+        if (!active) return;
+        setMentionSuggestions(result.docs.map(item => {
+          const data = item.data();
+          return { username: String(data.username || ''), name: String(data.name || data.username || 'NEXORA user'), avatar: String(data.avatar || '') };
+        }).filter(item => item.username));
+      } catch { if (active) setMentionSuggestions([]); }
+    }, 180);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [taggedUsernames]);
+
   // Location suggestions
   useEffect(() => {
     if (location.trim().length > 1) {
@@ -606,6 +634,8 @@ export default function MediaCreationEngine({
             return trackObjectUrl(URL.createObjectURL(file));
           });
           setVideoRawBlob(file);
+          setVideoCoverBlob(null);
+          setVideoCoverTime(0);
           setVideoTrimStart(0);
           setVideoTrimEnd(Math.min(15, Math.max(1, Math.round(metadata.duration || 15))));
           setVideoDuration(metadata.duration || 15);
@@ -615,6 +645,65 @@ export default function MediaCreationEngine({
       })();
     });
     e.target.value = '';
+  };
+
+  const applyVideoTrim = async () => {
+    const video = trimVideoRef.current;
+    if (!video || videoTrimEnd <= videoTrimStart) { setErrorMessage('Choose a valid video section before trimming.'); return; }
+    const capture = video as HTMLVideoElement & { captureStream?: () => MediaStream; mozCaptureStream?: () => MediaStream };
+    if (typeof MediaRecorder === 'undefined' || (!capture.captureStream && !capture.mozCaptureStream)) {
+      setErrorMessage('Video trimming is not supported by this browser. Your original video is unchanged.'); return;
+    }
+    setIsTrimmingVideo(true); setErrorMessage('');
+    let stream: MediaStream | null = null; let recorder: MediaRecorder | null = null;
+    try {
+      if (video.readyState < 1) await new Promise<void>((resolve, reject) => { video.onloadedmetadata = () => resolve(); video.onerror = () => reject(new Error('The video could not be opened.')); });
+      stream = capture.captureStream ? capture.captureStream() : capture.mozCaptureStream!();
+      const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      const chunks: Blob[] = [];
+      const finished = new Promise<Blob>((resolve, reject) => {
+        recorder!.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
+        recorder!.onerror = () => reject(new Error('The trimmed video could not be encoded.'));
+        recorder!.onstop = () => chunks.length ? resolve(new Blob(chunks, { type: recorder!.mimeType || 'video/webm' })) : reject(new Error('The selected section was empty.'));
+      });
+      video.pause(); video.currentTime = videoTrimStart;
+      await new Promise<void>((resolve, reject) => {
+        const onSeek = () => { clearTimeout(timeout); resolve(); };
+        const timeout = window.setTimeout(() => { video.removeEventListener('seeked', onSeek); reject(new Error('Could not seek to the selected start time.')); }, 5000);
+        video.addEventListener('seeked', onSeek, { once: true });
+      });
+      recorder.start(200); await video.play();
+      await new Promise<void>(resolve => {
+        const finish = () => { video.removeEventListener('timeupdate', check); clearTimeout(timeout); resolve(); };
+        const check = () => { if (video.currentTime >= videoTrimEnd) { video.pause(); finish(); } };
+        const timeout = window.setTimeout(() => { video.pause(); finish(); }, Math.max(1500, (videoTrimEnd - videoTrimStart + 2) * 1000));
+        video.addEventListener('timeupdate', check);
+      });
+      if (recorder.state !== 'inactive') recorder.stop();
+      const trimmed = await finished;
+      const nextUrl = trackObjectUrl(URL.createObjectURL(trimmed));
+      revokeTrackedObjectUrl(videoFileUrl); revokeTrackedObjectUrl(recordedVideoUrl);
+      setVideoFileUrl(nextUrl); setRecordedVideoUrl(null); setVideoRawBlob(trimmed);
+      setVideoDuration(videoTrimEnd - videoTrimStart); setVideoTrimStart(0); setVideoTrimEnd(Math.max(1, videoTrimEnd - videoTrimStart));
+      setVideoCoverBlob(null); setVideoCoverTime(0);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Video trimmed and ready to publish.' }));
+    } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'Video trimming failed.'); }
+    finally { stream?.getTracks().forEach(track => track.stop()); setIsTrimmingVideo(false); }
+  };
+
+  const captureVideoCover = async () => {
+    const video = trimVideoRef.current; if (!video) return;
+    try {
+      if (video.readyState < 2) await new Promise<void>((resolve, reject) => { video.onloadeddata = () => resolve(); video.onerror = () => reject(new Error('Video frame unavailable.')); });
+      const width = Math.min(1280, video.videoWidth || 1280); const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = Math.max(1, Math.round(width * (video.videoHeight || 720) / (video.videoWidth || 1280)));
+      const context = canvas.getContext('2d'); if (!context) throw new Error('Cover selection is unavailable.');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('Could not export this cover.')), 'image/jpeg', 0.9));
+      setVideoCoverBlob(blob); setVideoCoverTime(video.currentTime);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Video cover selected.' }));
+    } catch (error) { setErrorMessage(error instanceof Error ? error.message : 'Could not select this cover.'); }
   };
 
   const startReelRecording = () => {
@@ -931,6 +1020,16 @@ export default function MediaCreationEngine({
     setUploadProgress(0);
 
     try {
+      const requestedMentions = taggedUsernames.split(',').map(value => value.trim().replace(/^@/, '').toLowerCase()).filter(Boolean).slice(0, 20);
+      if (requestedMentions.length) {
+        setMentionValidation('checking');
+        const verified = await Promise.all(requestedMentions.map(async username => {
+          const match = await getDocs(query(collection(db, 'publicProfiles'), where('username', '==', username), limit(1)));
+          return !match.empty;
+        }));
+        if (verified.some(value => !value)) { setMentionValidation('invalid'); throw new Error('A mentioned username was not found. Select a real account from the suggestions before publishing.'); }
+        setMentionValidation('valid');
+      }
       let mainImg = selectedImages[0]?.url || undefined;
       let finalVid = videoFileUrl || recordedVideoUrl || undefined;
       const durableImages: string[] = [];
@@ -986,7 +1085,7 @@ export default function MediaCreationEngine({
       }
       if (uploadVideoBlob) {
         try {
-          const thumb = await generateVideoThumbnail(uploadVideoBlob);
+          const thumb = videoCoverBlob ? URL.createObjectURL(videoCoverBlob) : await generateVideoThumbnail(uploadVideoBlob);
           if (thumb) mainImg = thumb;
           if (isOffline) throw new Error('Connect to publish this video. Keep it as a draft and retry when online.');
           const uploaded = await uploadMediaFile({
@@ -997,8 +1096,8 @@ export default function MediaCreationEngine({
             onProgress: progress => setUploadProgress(progress),
           });
           finalVid = uploaded.downloadUrl;
-          if (mainImg?.startsWith('data:')) {
-            const thumbnail = await (await fetch(mainImg)).blob();
+          if (mainImg?.startsWith('blob:') || mainImg?.startsWith('data:')) {
+            const thumbnail = videoCoverBlob || await (await fetch(mainImg)).blob();
             const uploadedThumbnail = await uploadMediaFile({ file: thumbnail, userId: currentUser.id, fileName: `video-thumbnail-${Date.now()}.jpg`, signal: uploadController.signal });
             mainImg = uploadedThumbnail.downloadUrl;
           }
@@ -1057,7 +1156,7 @@ export default function MediaCreationEngine({
         undefined,
         {
           location: location.trim() || undefined,
-          taggedUsernames: taggedUsernames.split(',').map(value => value.trim().replace(/^@/, '')).filter(Boolean).slice(0, 20),
+          taggedUsernames: requestedMentions,
           imageAltText: imageAltText.trim() || undefined,
           commentsAllowed,
         }
@@ -1507,10 +1606,23 @@ export default function MediaCreationEngine({
                         Choose video
                         <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
                       </label>
-                      {videoFileUrl && (
-                        <div className="max-w-xs mx-auto p-2 bg-[#120E2B] border border-[#292244] rounded-xl space-y-1">
-                          <p className="text-[10px] text-emerald-300 font-semibold">✓ Video selected</p>
-                          <video src={videoFileUrl} controls className="w-full rounded-lg" />
+                      {(videoFileUrl || recordedVideoUrl) && (
+                        <div className="max-w-sm mx-auto p-3 bg-[#120E2B] border border-[#292244] rounded-xl space-y-3 text-left">
+                          <p className="text-[10px] text-emerald-300 font-semibold">✓ Video ready · {Math.round(videoDuration)} seconds</p>
+                          <video ref={trimVideoRef} src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" onLoadedMetadata={event => { const duration = Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : videoDuration; setVideoDuration(duration); setVideoTrimEnd(previous => Math.min(previous, duration)); }} className="w-full rounded-lg bg-black" />
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-[10px] text-[#A39BBF]"><label htmlFor="video-trim-start">Start · {videoTrimStart.toFixed(1)}s</label><span>End · {videoTrimEnd.toFixed(1)}s</span></div>
+                            <input id="video-trim-start" aria-label="Video trim start" type="range" min="0" max={Math.max(0, videoDuration - 1)} step="0.1" value={Math.min(videoTrimStart, Math.max(0, videoDuration - 1))} onChange={event => { const value = Number(event.target.value); setVideoTrimStart(value); if (value >= videoTrimEnd) setVideoTrimEnd(Math.min(videoDuration, value + 1)); }} className="w-full accent-violet-500" />
+                            <input aria-label="Video trim end" type="range" min={Math.min(videoDuration, videoTrimStart + 1)} max={videoDuration} step="0.1" value={Math.max(videoTrimStart + 1, Math.min(videoTrimEnd, videoDuration))} onChange={event => setVideoTrimEnd(Number(event.target.value))} className="w-full accent-violet-500" />
+                            <p className="text-[10px] text-[#8E88A7]">The selected section is re-encoded in your browser. Audio is retained when media capture is supported.</p>
+                            <button type="button" onClick={applyVideoTrim} disabled={isTrimmingVideo || videoTrimEnd <= videoTrimStart} className="w-full rounded-lg bg-violet-600/20 border border-violet-500/30 px-3 py-2 text-xs font-bold text-violet-200 disabled:opacity-50">{isTrimmingVideo ? 'Trimming video…' : 'Apply trim'}</button>
+                          </div>
+                          <div className="space-y-2 border-t border-[#292244] pt-3">
+                            <p className="text-[10px] font-semibold text-white">Choose your cover</p>
+                            <input aria-label="Cover frame time" type="range" min="0" max={Math.max(0, videoDuration - 0.1)} step="0.1" value={Math.min(videoCoverTime, Math.max(0, videoDuration - 0.1))} onChange={event => { const value = Number(event.target.value); setVideoCoverTime(value); if (trimVideoRef.current) trimVideoRef.current.currentTime = value; }} className="w-full accent-violet-500" />
+                            <button type="button" onClick={captureVideoCover} className="w-full rounded-lg border border-[#44376F] px-3 py-2 text-xs font-semibold text-[#D1CBE3]">Use this frame as cover</button>
+                            {videoCoverBlob && <p className="text-[10px] text-emerald-300">✓ Custom cover selected</p>}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -1842,10 +1954,18 @@ export default function MediaCreationEngine({
                         type="text"
                         maxLength={500}
                         value={taggedUsernames}
-                        onChange={(e) => setTaggedUsernames(e.target.value)}
+                        onChange={(e) => { setTaggedUsernames(e.target.value); setMentionValidation('idle'); }}
                         placeholder="@username, @username"
                         className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl px-3 py-2 text-xs text-white"
                       />
+                      {mentionSuggestions.length > 0 && <div className="mt-1 overflow-hidden rounded-xl border border-[#44376F] bg-[#120E2B]">
+                        {mentionSuggestions.map(person => <button key={person.username} type="button" onClick={() => { const parts = taggedUsernames.split(','); parts[parts.length - 1] = ` @${person.username}`; setTaggedUsernames(parts.map(value => value.trim()).filter(Boolean).join(', ') + ', '); setMentionSuggestions([]); setMentionValidation('idle'); }} className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-[#19143A]">
+                          {person.avatar ? <img src={person.avatar} alt="" className="h-6 w-6 rounded-full object-cover" /> : <span className="h-6 w-6 rounded-full bg-violet-900" />}
+                          <span><span className="block text-xs text-white">{person.name}</span><span className="block text-[10px] text-violet-300">@{person.username}</span></span>
+                        </button>)}
+                      </div>}
+                      {mentionValidation === 'invalid' && <p className="text-[10px] text-rose-300">A username could not be found. Choose accounts from the suggestions.</p>}
+                      {mentionValidation === 'valid' && <p className="text-[10px] text-emerald-300">✓ All mentioned accounts are valid.</p>}
                     </div>
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">🏷️ Add topics</label>
