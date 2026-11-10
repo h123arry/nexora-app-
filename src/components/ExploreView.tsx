@@ -248,15 +248,26 @@ export default function ExploreView({
   const searchPages = directoryResults?.pages || [];
   const searchCircles = directoryResults?.circles || [];
   const directoryEntryCount = searchPages.length + searchCircles.length;
-  const visibleResultCount = searchFilterType === 'users'
-    ? searchPeople.length
-    : searchFilterType === 'posts'
-      ? filteredPosts.length
-      : searchFilterType === 'videos'
-        ? filteredVideos.length
-        : searchFilterType === 'communities'
-          ? directoryEntryCount
-          : searchPeople.length + filteredPosts.length + filteredVideos.length + directoryEntryCount;
+  const serverHits = universalResults?.results || [];
+  const filteredServerHits = serverHits.filter(hit => {
+    if (searchFilterType === 'all') return true;
+    if (searchFilterType === 'users') return hit.kind === 'person';
+    if (searchFilterType === 'posts') return hit.kind === 'post';
+    if (searchFilterType === 'videos') return hit.kind === 'video';
+    if (searchFilterType === 'communities') return hit.kind === 'page' || hit.kind === 'circle';
+    if (searchFilterType === 'live') return hit.kind === 'live';
+    if (searchFilterType === 'events') return hit.kind === 'event';
+    if (searchFilterType === 'services') return hit.kind === 'service' || hit.kind === 'update';
+    if (searchFilterType === 'hashtags') return hit.kind === 'hashtag';
+    return false;
+  });
+  const visibleResultCount = universalResults
+    ? filteredServerHits.length
+    : searchFilterType === 'users' ? searchPeople.length
+      : searchFilterType === 'posts' ? filteredPosts.length
+        : searchFilterType === 'videos' ? filteredVideos.length
+          : searchFilterType === 'communities' ? directoryEntryCount
+            : searchPeople.length + filteredPosts.length + filteredVideos.length + directoryEntryCount;
 
   return (
     <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
@@ -304,7 +315,11 @@ export default function ExploreView({
             { id: 'users', label: copy.filterUsers },
             { id: 'posts', label: copy.filterPosts },
             { id: 'videos', label: copy.filterVideos },
-            { id: 'communities', label: copy.filterCommunities }
+            { id: 'communities', label: copy.filterCommunities },
+            { id: 'live', label: 'Live' },
+            { id: 'events', label: 'Events' },
+            { id: 'services', label: 'Services' },
+            { id: 'hashtags', label: 'Hashtags' }
           ].map(f => (
             <button
               type="button"
@@ -381,6 +396,8 @@ export default function ExploreView({
             </button>
           </div>
           {directoryLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching the live directory…</p>}
+          {universalLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching across NEXORA…</p>}
+          {universalError && <p role="alert" className="px-1 text-[10px] text-amber-300">{universalError}</p>}
           {directoryError && <p role="alert" className="px-1 text-[10px] text-amber-300">Live directory search is unavailable. Showing locally loaded results where possible.</p>}
 
           {visibleResultCount === 0 && searchFilterType === 'communities' && directoryLoading ? (
