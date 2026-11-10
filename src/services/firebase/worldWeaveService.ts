@@ -1,5 +1,5 @@
 import {
-  arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query,
+  arrayUnion, collection, collectionGroup, deleteDoc, doc, documentId, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query, startAfter,
   serverTimestamp, setDoc, updateDoc, where, runTransaction, writeBatch, type Unsubscribe,
 } from 'firebase/firestore';
 import { auth, db } from './config';
@@ -36,6 +36,16 @@ export function subscribeToWorldWeaveMoments(weaveId: string, onItems: (items: W
   requireUser();
   return onSnapshot(query(collection(db, 'worldWeaves', weaveId, 'moments'), orderBy('createdAt', 'desc'), limit(100)),
     snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveMoment)).reverse()), onError);
+}
+export async function fetchOlderWorldWeaveMoments(weaveId: string, before: WorldWeaveMoment): Promise<WorldWeaveMoment[]> {
+  requireUser();
+  if (!before.createdAt) return [];
+  const snapshot = await getDocs(query(
+    collection(db, 'worldWeaves', weaveId, 'moments'),
+    orderBy('createdAt', 'desc'), orderBy(documentId(), 'desc'),
+    startAfter(before.createdAt, before.id), limit(100),
+  ));
+  return snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveMoment)).reverse();
 }
 export async function createWorldWeave(input: { title: string; description: string; visibility: WorldWeaveVisibility; ownerName: string }): Promise<string> {
   const user = requireUser();
