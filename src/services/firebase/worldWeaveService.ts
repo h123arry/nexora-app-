@@ -1,5 +1,5 @@
 import {
-  addDoc, arrayUnion, collection, doc, increment, onSnapshot, orderBy, query,
+  addDoc, arrayUnion, collection, doc, getDocs, increment, limit, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, updateDoc, where, runTransaction, type Unsubscribe,
 } from 'firebase/firestore';
 import { auth, db } from './config';
@@ -97,4 +97,12 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
     if (uploaded) await Promise.allSettled([deleteMediaFile(uploaded.storagePath)]);
     throw error;
   }
+}
+
+export async function inviteToWorldWeaveByUsername(weaveId: string, username: string): Promise<void> {
+  const cleanUsername = username.trim().replace(/^@/, '').toLowerCase();
+  if (!/^[a-z0-9_.]{2,30}$/.test(cleanUsername)) throw new Error('Enter a valid NEXORA username.');
+  const matches = await getDocs(query(collection(db, 'publicProfiles'), where('username', '==', cleanUsername), limit(2)));
+  if (matches.size !== 1) throw new Error(matches.empty ? 'No NEXORA member was found with that username.' : 'That username is not unique.');
+  await inviteToWorldWeave(weaveId, matches.docs[0].id);
 }
