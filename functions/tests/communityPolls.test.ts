@@ -14,6 +14,7 @@ before(async () => {
   await db.doc('communities/poll-circle').set({ id: 'poll-circle', ownerId: 'alice', type: 'public' });
   await db.doc('communities/poll-circle/members/alice').set({ userId: 'alice', role: 'owner', status: 'active' });
   await db.doc('communities/poll-circle/members/bob').set({ userId: 'bob', role: 'member', status: 'active' });
+  await db.doc('communities/poll-circle/members/muted-poll-user').set({ userId: 'muted-poll-user', role: 'member', status: 'active' });
 });
 
 after(async () => {
@@ -29,6 +30,15 @@ describe('trusted Circle polls', () => {
     assert.deepEqual(poll.get('options').map((option: { votes: number }) => option.votes), [0, 0]);
     await assert.rejects(createCirclePoll(db, 'mallory', 'poll-circle', 'No access?', ['Yes', 'No']), /Join this Circle/);
     await assert.rejects(createCirclePoll(db, 'alice', 'poll-circle', 'Duplicate?', ['Yes', 'yes']), /distinct options/);
+  });
+
+  it('blocks poll creation during an active mute and restores it after expiry', async () => {
+    const muteRef = db.doc('communities/poll-circle/mutes/muted-poll-user');
+    await muteRef.set({ userId: 'muted-poll-user', reason: 'Temporary poll mute', createdAt: new Date(), expiresAt: new Date(Date.now() + 60 * 60 * 1000) });
+    await assert.rejects(createCirclePoll(db, 'muted-poll-user', 'poll-circle', 'Muted poll?', ['Yes', 'No']), /temporarily muted/);
+    await muteRef.update({ expiresAt: new Date(Date.now() - 1000) });
+    const created = await createCirclePoll(db, 'muted-poll-user', 'poll-circle', 'After expiry?', ['Yes', 'No']);
+    assert.equal((await db.doc(`communities/poll-circle/polls/${created.pollId}`).get()).exists, true);
   });
 
   it('records one immutable vote per member and updates aggregate counts transactionally', async () => {
