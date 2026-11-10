@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Award, BookOpen, CheckCircle2, ChevronRight, Clock3, GraduationCap, Sparkles } from 'lucide-react';
-import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db, functions } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { User } from '../types';
@@ -65,6 +65,9 @@ type MentorshipSession = { sessionId: string; title: string; description: string
 
 export default function CreatorAcademyView({ currentUser }: { currentUser: User }) {
   const [progress, setProgress] = useState<Record<string, string[]>>({});
+  const [lessonNotes, setLessonNotes] = useState<Record<string, string>>({});
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+  const [noteMessage, setNoteMessage] = useState('');
   const [courses, setCourses] = useState<Course[]>(COURSES);
   const [institutionalDetails, setInstitutionalDetails] = useState<Record<string, { lessons: Lesson[]; assessments: Assessment[] }>>({});
   const [selectedCourse, setSelectedCourse] = useState(COURSES[0].id);
@@ -93,14 +96,29 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       setLoading(true);
       setMentorshipLoading(true);
       setLoadError(false);
+      setProgress({});
+      setLessonNotes({});
+      setNoteMessage('');
       const progressQuery = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(50));
-      const [progressResult, catalogResult, instructorResult, mentorshipResult] = await Promise.allSettled([
+      const notesQuery = query(collection(db, 'academyLessonNotes'), where('userId', '==', currentUser.id), limit(100));
+      const [progressResult, catalogResult, instructorResult, mentorshipResult, notesResult] = await Promise.allSettled([
         getDocs(progressQuery),
         httpsCallable<void, { courses: Array<{ id: string; title: string; description: string; level: string; category: string; lessonCount: number; version: number }>; truncated: boolean }>(functions, 'academyListPublishedCourses')(),
         getDoc(doc(db, 'academyInstructors', currentUser.id)),
         httpsCallable<void, { sessions: MentorshipSession[]; truncated: boolean }>(functions, 'academyListMentorshipSessions')(),
+        getDocs(notesQuery),
       ]);
       if (!active) return;
+      if (notesResult.status === 'fulfilled') {
+        const nextNotes: Record<string, string> = {};
+        notesResult.value.docs.forEach(item => {
+          const data = item.data();
+          if (typeof data.courseId === 'string' && typeof data.lessonId === 'string' && typeof data.note === 'string') {
+            nextNotes[data.courseId + ':' + data.lessonId] = data.note;
+          }
+        });
+        setLessonNotes(nextNotes);
+      } else setNoteMessage('Your saved study notes could not be loaded.');
       if (progressResult.status === 'fulfilled') {
         const next: Record<string, string[]> = {};
         progressResult.value.docs.forEach(item => {
@@ -169,6 +187,27 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
     return total > 0 && (progress[course.id] ?? []).length >= total;
   }).length;
   const overallProgress = useMemo(() => totalLessons ? Math.min(100, Math.round(completedLessons / totalLessons * 100)) : 0, [completedLessons, totalLessons]);
+
+  const saveLessonNote = async (course: Course, lesson: Lesson) => {
+    const key = course.id + ':' + lesson.id;
+    const noteId = currentUser.id + '_' + course.id + '_' + lesson.id;
+    const note = lessonNotes[key] || '';
+    if (savingNoteId) return;
+    setSavingNoteId(key);
+    setNoteMessage('');
+    try {
+      const ref = doc(db, 'academyLessonNotes', noteId);
+      if (note.trim()) {
+        await setDoc(ref, { userId: currentUser.id, courseId: course.id, lessonId: lesson.id, note: note.slice(0, 5000), updatedAt: serverTimestamp(), schemaVersion: 1 });
+        setNoteMessage('Study note saved to your account.');
+      } else {
+        await deleteDoc(ref);
+        setNoteMessage('Study note cleared.');
+      }
+    } catch {
+      setNoteMessage('Your study note could not be saved. Please try again.');
+    } finally { setSavingNoteId(null); }
+  };
 
   const markLessonComplete = async (course: Course, lesson: Lesson) => {
     if (saving) return;
@@ -297,6 +336,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
                     {lesson.objectives && <div className="mt-3 rounded-xl border border-white/8 bg-black/20 p-3"><p className="text-[10px] font-black uppercase tracking-wider text-violet-200">What you will learn</p><ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-white/55">{lesson.objectives.map(objective => <li key={objective}>{objective}</li>)}</ul></div>}
                     {lesson.exercise && <div className="mt-3 rounded-xl border border-violet-400/15 bg-violet-500/[0.06] p-3"><p className="text-[10px] font-black uppercase tracking-wider text-violet-200">Practical assignment</p><p className="mt-2 text-xs leading-5 text-white/65">{lesson.exercise}</p></div>}
                     {lesson.reflection && <p className="mt-3 text-xs italic leading-5 text-white/45">Reflect: {lesson.reflection}</p>}
+                    <div className="mt-4 border-t border-white/8 pt-3"><label htmlFor={'academy-note-' + lesson.id} className="text-[10px] font-black uppercase tracking-wider text-white/55">Your private study notes</label><textarea id={'academy-note-' + lesson.id} value={lessonNotes[activeCourse.id + ':' + lesson.id] || ''} maxLength={5000} onChange={event => setLessonNotes(previous => ({ ...previous, [activeCourse.id + ':' + lesson.id]: event.target.value }))} rows={3} placeholder="Write your own notes, examples or next steps…" className="mt-2 w-full resize-y rounded-xl border border-white/10 bg-black/25 p-3 text-xs leading-5 text-white placeholder:text-white/25 focus:border-violet-400/40 focus:outline-none"/><div className="mt-2 flex items-center justify-between gap-3"><span className="text-[10px] text-white/30">{(lessonNotes[activeCourse.id + ':' + lesson.id] || '').length}/5000 · Private to your account</span><button type="button" disabled={savingNoteId !== null} onClick={() => void saveLessonNote(activeCourse, lesson)} className="rounded-lg border border-violet-400/25 px-3 py-2 text-[10px] font-bold text-violet-200 disabled:opacity-40">{savingNoteId === activeCourse.id + ':' + lesson.id ? 'Saving…' : 'Save notes'}</button></div></div>
                     {lesson.transcript && <details className="mt-3"><summary className="cursor-pointer text-[10px] font-bold text-violet-200">Accessible transcript</summary><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-white/55">{lesson.transcript}</p></details>}
                     {lesson.resourceUrls?.map(url => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-2 mr-3 inline-block text-[10px] text-violet-300 underline">Open lesson resource</a>)}</div>
                   <button disabled={done || saving !== null || loading} onClick={() => void markLessonComplete(activeCourse, lesson)} className={'shrink-0 rounded-xl px-3 py-2 text-[10px] font-bold transition-colors disabled:cursor-default ' + (done ? 'text-emerald-300' : 'bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50')}>{done ? 'Completed' : saving === lesson.id ? 'Saving…' : 'Complete'}</button>
@@ -304,6 +344,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
               </article>;
             })}
           </div>
+          {noteMessage && <p role="status" className="mt-3 text-xs text-violet-200/80">{noteMessage}</p>}
           {activeCourse.institutional && (
             <section className="mt-6 space-y-4 border-t border-white/10 pt-5">
               <div><h4 className="text-sm font-black text-white">Published assessments</h4><p className="mt-1 text-xs text-white/45">Questions are supplied without answer keys. NEXORA grades your submission on the server.</p></div>
