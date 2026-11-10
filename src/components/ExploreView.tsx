@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Search, Flame, ArrowRight, Play, X, UserPlus, Check, Trash2, Clock, Globe, Users, Radio } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { User, Post } from '../types';
@@ -9,6 +9,7 @@ import PurpleVerifiedBadge from './VohVerifiedBadge';
 import MiniServicesHub from './MiniServicesHub';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
+import { getNexoraTrendingTopics, searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
 import { getTranslations } from '../utils/translations';
 import { readUserScopedJson } from '../utils/userScopedStorage';
 
@@ -49,7 +50,7 @@ export default function ExploreView({
   const copy = getTranslations(locale);
   const [localSearch, setLocalSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities'>('all');
+  const [searchFilterType, setSearchFilterType] = useState<'all' | 'users' | 'posts' | 'videos' | 'communities' | 'live' | 'events' | 'services' | 'hashtags'>('all');
   const [showAllPulse, setShowAllPulse] = useState(false);
   const [blockedCreatorIds, setBlockedCreatorIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_blocked_users', currentUserId, []));
   const [mutedCreatorIds, setMutedCreatorIds] = useState<string[]>(() => readUserScopedJson(localStorage, 'nexora_muted_users', currentUserId, []));
@@ -80,6 +81,16 @@ export default function ExploreView({
   const [directoryResults, setDirectoryResults] = useState<PublicDirectoryResult | null>(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [directoryError, setDirectoryError] = useState('');
+  const [directoryLoadingMore, setDirectoryLoadingMore] = useState(false);
+  const [universalResults, setUniversalResults] = useState<NexoraSearchResult | null>(null);
+  const [universalLoading, setUniversalLoading] = useState(false);
+  const [universalLoadingMore, setUniversalLoadingMore] = useState(false);
+  const [universalError, setUniversalError] = useState('');
+  const [serverTrendingTags, setServerTrendingTags] = useState<Array<[string, number]>>([]);
+  const universalRequestKey = useRef('');
+  universalRequestKey.current = currentUserId + ':' + debouncedSearch.trim();
+  const directoryRequestKey = useRef('');
+  directoryRequestKey.current = currentUserId + ':' + debouncedSearch.trim();
 
   // Signed-in discovery uses the privacy-filtered server directory for people,
   // Pages and public Circles. Local post search remains scoped to loaded public posts.
@@ -93,6 +104,7 @@ export default function ExploreView({
     }
     let cancelled = false;
     setDirectoryLoading(true);
+    setDirectoryLoadingMore(false);
     setDirectoryResults(null);
     setDirectoryError('');
     void searchPublicDirectory(term).then(results => {
@@ -107,6 +119,71 @@ export default function ExploreView({
     });
     return () => { cancelled = true; };
   }, [currentUserId, debouncedSearch]);
+
+  useEffect(() => {
+    if (!currentUserId) { setServerTrendingTags([]); return; }
+    let active = true;
+    void getNexoraTrendingTopics().then(topics => {
+      if (active) setServerTrendingTags(topics.map(topic => ['#' + topic.tag, topic.postCount] as [string, number]));
+    }).catch(() => { if (active) setServerTrendingTags([]); });
+    return () => { active = false; };
+  }, [currentUserId]);
+  // Server-indexed search spans public NEXORA content, not only loaded feed items.
+  useEffect(() => {
+    const term = debouncedSearch.trim();
+    if (!currentUserId || term.length < 2) { setUniversalResults(null); setUniversalLoading(false); setUniversalError(''); return; }
+    let cancelled = false;
+    setUniversalLoading(true); setUniversalResults(null); setUniversalError('');
+    void searchNexora(term).then(result => { if (!cancelled) setUniversalResults(result); })
+      .catch(error => { if (!cancelled) setUniversalError(error instanceof Error ? error.message : 'NEXORA-wide search is temporarily unavailable.'); })
+      .finally(() => { if (!cancelled) setUniversalLoading(false); });
+    return () => { cancelled = true; };
+  }, [currentUserId, debouncedSearch]);
+
+  const loadMoreUniversalResults = async () => {
+    const cursor = universalResults?.nextCursor; const term = debouncedSearch.trim();
+    const requestKey = universalRequestKey.current;
+    if (!currentUserId || !cursor || universalLoadingMore || term.length < 2) return;
+    setUniversalLoadingMore(true); setUniversalError('');
+    try {
+      const next = await searchNexora(term, cursor);
+      if (universalRequestKey.current !== requestKey) return;
+      setUniversalResults(current => current ? {
+        results: [...new Map([...current.results, ...next.results].map(item => [item.id, item])).values()],
+        nextCursor: next.nextCursor, query: next.query,
+      } : next);
+    } catch (error) { if (universalRequestKey.current === requestKey) setUniversalError(error instanceof Error ? error.message : 'More search results could not be loaded.'); }
+    finally { if (universalRequestKey.current === requestKey) setUniversalLoadingMore(false); }
+  };
+  // Continue the server directory using its opaque, query-bound cursor. Results
+  // are merged by stable document ID so overlapping prefix indexes never duplicate cards.
+  const loadMoreDirectoryResults = async () => {
+    const cursor = directoryResults?.nextCursor;
+    const term = debouncedSearch.trim();
+    const requestKey = directoryRequestKey.current;
+    if (!currentUserId || !cursor || directoryLoadingMore || term.length < 2) return;
+    setDirectoryLoadingMore(true);
+    setDirectoryError('');
+    try {
+      const next = await searchPublicDirectory(term, cursor);
+      if (directoryRequestKey.current !== requestKey) return;
+      setDirectoryResults(current => {
+        if (!current) return next;
+        const mergeById = <T extends { id: string },>(previous: T[], incoming: T[]) =>
+          [...new Map([...previous, ...incoming].map(item => [item.id, item])).values()];
+        return {
+          people: mergeById(current.people, next.people),
+          pages: mergeById(current.pages, next.pages),
+          circles: mergeById(current.circles, next.circles),
+          nextCursor: next.nextCursor,
+        };
+      });
+    } catch (error) {
+      if (directoryRequestKey.current === requestKey) setDirectoryError(error instanceof Error ? error.message : 'More directory results could not be loaded.');
+    } finally {
+      if (directoryRequestKey.current === requestKey) setDirectoryLoadingMore(false);
+    }
+  };
 
     // Debounce search input for performance
   useEffect(() => {
@@ -150,8 +227,9 @@ export default function ExploreView({
   };
 
   // Recent topic momentum is based on real loaded posts from multiple creators.
-  const trendingTags = useMemo(() => rankTrendingTopics(posts, { windowHours: 168, minPosts: 2, limit: 6 })
+  const localTrendingTags = useMemo(() => rankTrendingTopics(posts, { windowHours: 168, minPosts: 2, limit: 6 })
     .map(topic => [`#${topic.tag}`, topic.postCount] as [string, number]), [posts]);
+  const trendingTags = serverTrendingTags.length ? serverTrendingTags.slice(0, 6) : localTrendingTags;
 
   // Personalize creator suggestions using the signed-in user's interest profile.
   const suggestedCreators = useMemo(() => recommendCreators(creators, {
@@ -164,31 +242,43 @@ export default function ExploreView({
 
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
-    return searchPosts(posts, debouncedSearch);
-  }, [posts, debouncedSearch]);
+    return universalResults?.results.length ? [] : searchPosts(posts, debouncedSearch);
+  }, [posts, debouncedSearch, universalResults]);
 
   const filteredCreators = useMemo(() => {
-    return searchCreators(creators, debouncedSearch, { limit: 50 });
-  }, [creators, debouncedSearch]);
+    return universalResults?.results.length ? [] : searchCreators(creators, debouncedSearch, { limit: 50 });
+  }, [creators, debouncedSearch, universalResults]);
 
   const filteredVideos = useMemo(() => {
-    return searchPosts(posts, debouncedSearch, { videosOnly: true });
-  }, [posts, debouncedSearch]);
+    return universalResults?.results.length ? [] : searchPosts(posts, debouncedSearch, { videosOnly: true });
+  }, [posts, debouncedSearch, universalResults]);
 
   const hasActiveSearch = debouncedSearch.trim().length > 0;
-  const searchPeople = currentUserId && directoryResults ? directoryResults.people : filteredCreators;
-  const searchPages = directoryResults?.pages || [];
-  const searchCircles = directoryResults?.circles || [];
+  const hasUniversalHits = Boolean(universalResults?.results.length);
+  const searchPeople = hasUniversalHits ? [] : currentUserId && directoryResults ? directoryResults.people : filteredCreators;
+  const searchPages = hasUniversalHits ? [] : directoryResults?.pages || [];
+  const searchCircles = hasUniversalHits ? [] : directoryResults?.circles || [];
   const directoryEntryCount = searchPages.length + searchCircles.length;
-  const visibleResultCount = searchFilterType === 'users'
-    ? searchPeople.length
-    : searchFilterType === 'posts'
-      ? filteredPosts.length
-      : searchFilterType === 'videos'
-        ? filteredVideos.length
-        : searchFilterType === 'communities'
-          ? directoryEntryCount
-          : searchPeople.length + filteredPosts.length + filteredVideos.length + directoryEntryCount;
+  const serverHits = universalResults?.results || [];
+  const filteredServerHits = serverHits.filter(hit => {
+    if (searchFilterType === 'all') return true;
+    if (searchFilterType === 'users') return hit.kind === 'person';
+    if (searchFilterType === 'posts') return hit.kind === 'post';
+    if (searchFilterType === 'videos') return hit.kind === 'video';
+    if (searchFilterType === 'communities') return hit.kind === 'page' || hit.kind === 'circle' || hit.kind === 'poll' || hit.kind === 'announcement';
+    if (searchFilterType === 'live') return hit.kind === 'live';
+    if (searchFilterType === 'events') return hit.kind === 'event';
+    if (searchFilterType === 'services') return hit.kind === 'service' || hit.kind === 'update';
+    if (searchFilterType === 'hashtags') return hit.kind === 'hashtag';
+    return false;
+  });
+  const visibleResultCount = hasUniversalHits
+    ? filteredServerHits.length
+    : searchFilterType === 'users' ? searchPeople.length
+      : searchFilterType === 'posts' ? filteredPosts.length
+        : searchFilterType === 'videos' ? filteredVideos.length
+          : searchFilterType === 'communities' ? directoryEntryCount
+            : searchPeople.length + filteredPosts.length + filteredVideos.length + directoryEntryCount;
 
   return (
     <div id="explore-view-master-panel" className="nx-page-shell space-y-6 pb-12 max-w-4xl mx-auto px-4 sm:px-6">
@@ -236,7 +326,11 @@ export default function ExploreView({
             { id: 'users', label: copy.filterUsers },
             { id: 'posts', label: copy.filterPosts },
             { id: 'videos', label: copy.filterVideos },
-            { id: 'communities', label: copy.filterCommunities }
+            { id: 'communities', label: copy.filterCommunities },
+            { id: 'live', label: 'Live' },
+            { id: 'events', label: 'Events' },
+            { id: 'services', label: 'Services' },
+            { id: 'hashtags', label: 'Hashtags' }
           ].map(f => (
             <button
               type="button"
@@ -313,6 +407,8 @@ export default function ExploreView({
             </button>
           </div>
           {directoryLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching the live directory…</p>}
+          {universalLoading && <p role="status" className="px-1 text-[10px] text-violet-300">Searching across NEXORA…</p>}
+          {universalError && <p role="alert" className="px-1 text-[10px] text-amber-300">{universalError}</p>}
           {directoryError && <p role="alert" className="px-1 text-[10px] text-amber-300">Live directory search is unavailable. Showing locally loaded results where possible.</p>}
 
           {visibleResultCount === 0 && searchFilterType === 'communities' && directoryLoading ? (
@@ -335,6 +431,45 @@ export default function ExploreView({
             </div>
           ) : (
             <div className="space-y-8">
+              {hasUniversalHits && (
+                <section aria-label="NEXORA-wide search results" className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-violet-400/20 pb-2">
+                    <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-violet-300">Across NEXORA ({filteredServerHits.length})</h3>
+                    <span className="text-[9px] font-mono uppercase text-zinc-500">Ranked · privacy-filtered</span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {filteredServerHits.map(hit => (
+                      <button key={hit.id} type="button" onClick={() => {
+                        if (hit.kind === 'person') onViewProfile?.(hit.targetId);
+                        else if (hit.kind === 'hashtag') setSelectedTag(hit.targetId);
+                        else if (hit.kind === 'post' || hit.kind === 'video') setActiveTab('feed');
+                        else if (hit.kind === 'live') setActiveTab('live');
+                        else setActiveTab('communities');
+                      }} className="nx-soft-card min-h-24 p-3 text-left transition-colors hover:border-violet-400/40">
+                        <div className="flex items-start gap-3">
+                          {hit.image ? <img src={hit.image} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-xl object-cover" referrerPolicy="no-referrer" /> : <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-xs font-bold text-violet-200">{hit.kind === 'hashtag' ? '#' : hit.kind.slice(0,1).toUpperCase()}</span>}
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-2">
+                              <span className="truncate text-xs font-bold text-white">{hit.title}</span>
+                              <span className="shrink-0 rounded-md border border-violet-400/20 px-1.5 py-0.5 text-[8px] font-mono uppercase text-violet-300">{hit.kind}</span>
+                            </span>
+                            {hit.subtitle && <span className="mt-0.5 block truncate text-[10px] text-violet-300">{hit.subtitle}</span>}
+                            {hit.excerpt && <span className="mt-1 block line-clamp-2 text-[10px] leading-relaxed text-zinc-400">{hit.excerpt}</span>}
+                          </span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                  {filteredServerHits.length === 0 && !universalLoading && <p className="rounded-2xl nx-surface p-5 text-center text-xs text-zinc-400">No indexed matches in this category. Try another filter or search term.</p>}
+                  {universalResults.nextCursor && (
+                    <div className="flex justify-center">
+                      <button type="button" disabled={universalLoadingMore} onClick={() => void loadMoreUniversalResults()} className="min-h-11 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-2 text-xs font-mono font-bold uppercase text-violet-200 hover:bg-violet-500/20 disabled:opacity-60">
+                        {universalLoadingMore ? 'Loading more…' : 'Load more NEXORA results'}
+                      </button>
+                    </div>
+                  )}
+                </section>
+              )}
               
               {/* Users Section */}
               {(searchFilterType === 'all' || searchFilterType === 'users') && searchPeople.length > 0 && (
@@ -502,6 +637,19 @@ export default function ExploreView({
                     try { window.sessionStorage.setItem('nexora_community_search_handoff', debouncedSearch); } catch {}
                     setActiveTab('communities');
                   }} className="px-3.5 py-2 rounded-xl bg-violet-500/15 hover:bg-violet-600 border border-violet-400/25 text-violet-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
+                </div>
+              )}
+
+              {!hasUniversalHits && currentUserId && directoryResults?.nextCursor && (searchFilterType === 'all' || searchFilterType === 'users' || searchFilterType === 'communities') && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    disabled={directoryLoadingMore}
+                    onClick={() => void loadMoreDirectoryResults()}
+                    className="min-h-11 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-2 text-xs font-mono font-bold uppercase text-violet-200 transition-colors hover:bg-violet-500/20 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {directoryLoadingMore ? 'Loading more…' : 'Load more directory results'}
+                  </button>
                 </div>
               )}
 

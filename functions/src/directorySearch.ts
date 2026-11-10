@@ -153,7 +153,7 @@ export async function searchPublicDirectory(
     }));
 
   const circles = [...new Map([...circlesByName, ...circlesByTitle].map(doc => [doc.id, doc])).values()]
-    .filter(item => !strings(item.get('bannedUsers')).includes(viewerUid))
+    .filter(item => item.get('type') === 'public' && !strings(item.get('bannedUsers')).includes(viewerUid))
     .map(item => ({
       id: item.id, name: String(item.get('name') || 'Circle'),
       description: String(item.get('description') || '').slice(0, 240),

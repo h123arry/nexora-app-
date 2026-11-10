@@ -1,0 +1,352 @@
+import { createHash } from 'node:crypto';
+import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
+
+export type SearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'hashtag' | 'poll' | 'announcement';
+export interface SearchHit {
+  id: string; kind: SearchKind; title: string; subtitle: string; excerpt: string;
+  image: string; targetId: string; targetPath: string; ownerId: string;
+  verified: boolean; createdAt: string; score: number; tags: string[];
+}
+export interface UniversalSearchResult { results: SearchHit[]; nextCursor: string | null; query: string; }
+const INDEX = 'searchIndex';
+const PAGE_SIZE = 30;
+const CANDIDATE_LIMIT = PAGE_SIZE + 1;
+const MAX_CURSOR = 2048;
+
+export function normalizeSearchText(value: unknown): string {
+  return typeof value === 'string'
+    ? value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase().replace(/[^\p{L}\p{N}_#@]+/gu, ' ').trim().slice(0, 4000)
+    : '';
+}
+function tokens(value: unknown): string[] {
+  return [...new Set(normalizeSearchText(value).replace(/[#@]/g, '').split(/\s+/).filter(word => word.length >= 2).slice(0, 180))];
+}
+function searchKeys(value: unknown): string[] {
+  const words = tokens(value);
+  const keys = new Set<string>();
+  for (const word of words) {
+    for (let length = 2; length <= Math.min(word.length, 16); length++) keys.add('p:' + word.slice(0, length));
+  }
+  // Bigram fallback enables a bounded typo-tolerant candidate pass.
+  for (const word of words) {
+    for (let i = 0; i < word.length - 1; i++) keys.add('b:' + word.slice(i, i + 2));
+  }
+  return [...keys].slice(0, 260);
+}
+function asDate(value: unknown): Date {
+  if (value instanceof Date) return value;
+  if (value && typeof value === 'object' && 'toDate' in value && typeof (value as {toDate?: unknown}).toDate === 'function') {
+    const date = (value as {toDate: () => Date}).toDate();
+    if (Number.isFinite(date.getTime())) return date;
+  }
+  if (typeof value === 'string' || typeof value === 'number') {
+    const date = new Date(value);
+    if (Number.isFinite(date.getTime())) return date;
+  }
+  return new Date(0);
+}
+function safeString(value: unknown, max = 500): string {
+  return typeof value === 'string' ? value.trim().slice(0, max) : '';
+}
+function publicRecord(kind: SearchKind, id: string, path: string, data: Record<string, unknown>, parent?: Record<string, unknown>) {
+  const title = safeString(data.name || data.title || data.content || data.question || data.serviceName, 180);
+  const body = safeString(data.description || data.bio || data.content || data.caption || data.body || data.question, 1800);
+  const tags = Array.isArray(data.tags) ? [...new Set(data.tags.filter((tag): tag is string => typeof tag === 'string'))].slice(0, 24) : [];
+  const ownerId = kind === 'person' ? id : safeString(data.userId || data.authorId || data.ownerId || data.hostId || data.createdBy, 150);
+  const createdAt = asDate(data.timestamp || data.createdAt || data.startedAt || data.updatedAt);
+  const subtitle = safeString(data.username || data.category || data.hostName || data.authorUsername || (kind === 'event' ? data.location : ''), 120);
+  const firstImage = Array.isArray(data.images) ? data.images.find(item => typeof item === 'string') : '';
+  const image = safeString(data.avatar || data.authorAvatar || data.thumbnailUrl || data.videoThumbnail || data.image || firstImage || data.coverImage || data.bannerImage, 1200);
+  const searchText = [title, body, subtitle, safeString(data.username, 80), safeString(data.category, 80), ...tags, ...(Array.isArray(data.options) ? data.options.map(option => typeof option === 'string' ? option : (option && typeof option === 'object' ? String((option as Record<string, unknown>).text || '') : '')) : [])].join(' ');
+  return {
+    id, kind, title: title || 'NEXORA', subtitle, excerpt: body.slice(0, 260), image,
+    targetId: id, targetPath: path, ownerId, verified: data.isVerified === true,
+    createdAt, tags, searchKeys: searchKeys(searchText), normalizedText: normalizeSearchText(searchText),
+    isPublic: true, parentId: safeString(parent?.id, 150), bannedUsers: Array.isArray(data.bannedUsers) ? data.bannedUsers.filter((item): item is string => typeof item === 'string').slice(0, 500) : [], scoreSignals: {
+      likes: Math.max(0, Math.min(1000000, Number(data.likes || data.likesCount) || 0)),
+      comments: Math.max(0, Math.min(1000000, Number(data.commentsCount) || 0)),
+      views: Math.max(0, Math.min(10000000, Number(data.views || data.viewCount) || 0)),
+    },
+  };
+}
+
+/** Idempotently synchronize one source record into the private, server-only search projection. */
+export async function syncUniversalSearchRecord(
+  db: Firestore, kind: SearchKind, id: string, sourcePath: string,
+  data: Record<string, unknown> | null, parent?: Record<string, unknown>,
+): Promise<void> {
+  const indexId = kind + '_' + createHash('sha256').update(sourcePath).digest('hex');
+  const ref = db.collection(INDEX).doc(indexId);
+  if (!data) { await ref.delete().catch(() => undefined); return; }
+  const status = safeString(data.status, 40).toLowerCase();
+  const isEligible =
+    (kind === 'person' && data.isBanned !== true && data.isSuspended !== true && data.isSeedProfile !== true) ||
+    (kind === 'post' && (data.audience === 'public' || (!!parent && parent.type === 'public' && parent.isPrivate !== true)) && status !== 'deleted' && status !== 'removed') ||
+    (kind === 'video' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
+    (kind === 'page' && data.isPrivate !== true && data.privacy !== 'private' && status !== 'private' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
+    (kind === 'circle' && data.type === 'public' && data.isPrivate !== true && status !== 'suspended' && status !== 'deleted') ||
+    (kind === 'live' && status === 'live') ||
+    (kind === 'event' && status === 'scheduled' && parent?.type === 'public' && parent?.isPrivate !== true) ||
+    (kind === 'poll' && status === 'open' && parent?.type === 'public' && parent?.isPrivate !== true) ||
+    (kind === 'announcement' && parent?.type === 'public' && parent?.isPrivate !== true && data.deleted !== true) ||
+    (kind === 'service' && status === 'active' && parent?.category === 'Business') ||
+    (kind === 'update' && status !== 'deleted' && parent?.status !== 'suspended');
+  if (!isEligible) { await ref.delete().catch(() => undefined); return; }
+  const record = publicRecord(kind, id, sourcePath, data, parent);
+  if (record.title.length < 2 || record.searchKeys.length === 0) { await ref.delete().catch(() => undefined); return; }
+  await ref.set(record);
+}
+
+function editDistanceAtMostOne(a: string, b: string): boolean {
+  if (Math.abs(a.length - b.length) > 1) return false;
+  let i = 0, j = 0, edits = 0;
+  while (i < a.length && j < b.length) {
+    if (a[i] === b[j]) { i++; j++; continue; }
+    if (++edits > 1) return false;
+    if (a.length > b.length) i++;
+    else if (b.length > a.length) j++;
+    else { i++; j++; }
+  }
+  return edits + (i < a.length || j < b.length ? 1 : 0) <= 1;
+}
+function relevance(queryWords: string[], doc: FirebaseFirestore.DocumentData): number | null {
+  const title = normalizeSearchText(doc.title);
+  const text = normalizeSearchText(doc.normalizedText);
+  const titleWords = tokens(title);
+  const allWords = tokens(text);
+  let score = 0;
+  for (const word of queryWords) {
+    const exactTitle = titleWords.includes(word);
+    const prefixTitle = titleWords.some(item => item.startsWith(word));
+    const exactBody = allWords.includes(word);
+    const prefixBody = allWords.some(item => item.startsWith(word));
+    const typo = allWords.some(item => editDistanceAtMostOne(item, word));
+    if (!exactTitle && !prefixTitle && !exactBody && !prefixBody && !typo) return null;
+    score += exactTitle ? 18 : prefixTitle ? 14 : exactBody ? 10 : prefixBody ? 7 : 3;
+  }
+  const ageHours = Math.max(0, (Date.now() - asDate(doc.createdAt).getTime()) / 3600000);
+  const freshness = Math.max(0, 6 - Math.log2(1 + ageHours / 12));
+  const signals = doc.scoreSignals || {};
+  const engagement = Math.min(8, Math.log1p(Number(signals.likes || 0)) * 0.7
+    + Math.log1p(Number(signals.comments || 0)) * 0.9 + Math.log1p(Number(signals.views || 0)) * 0.2);
+  return score + freshness + engagement + (doc.verified ? 1.5 : 0);
+}
+function decodeCursor(raw: unknown, query: string, key: string): string | null {
+  if (raw === undefined || raw === null || raw === '') return null;
+  if (typeof raw !== 'string' || raw.length > MAX_CURSOR) throw new Error('Search cursor is invalid. Restart your search.');
+  try {
+    const value = JSON.parse(Buffer.from(raw, 'base64url').toString('utf8')) as {v?: number; q?: string; k?: string; after?: string};
+    if (value.v !== 1 || value.q !== query || value.k !== key || typeof value.after !== 'string' || value.after.length > 160 || value.after.includes('/')) throw new Error('invalid');
+    return value.after;
+  } catch { throw new Error('Search cursor is invalid. Restart your search.'); }
+}
+function encodeCursor(query: string, key: string, after: string | null): string | null {
+  return after ? Buffer.from(JSON.stringify({v:1,q:query,k:key,after})).toString('base64url') : null;
+}
+
+export async function searchNexoraContent(
+  db: Firestore, viewerUid: string, rawQuery: unknown, rawCursor?: unknown, rawKinds?: unknown,
+): Promise<UniversalSearchResult> {
+  if (!viewerUid) throw new Error('Sign in to search NEXORA.');
+  const query = normalizeSearchText(rawQuery);
+  if (query.length < 2 || query.length > 80) throw new Error('Search terms must be between 2 and 80 characters.');
+  const queryWords = tokens(query).slice(0, 6);
+  if (!queryWords.length) throw new Error('Enter a search term.');
+  const prefixKey = 'p:' + queryWords[0].slice(0, 16);
+  const typoKeys = queryWords[0].length >= 3 ? [...new Set(Array.from({length: queryWords[0].length - 1}, (_, i) => 'b:' + queryWords[0].slice(i, i + 2)))].slice(0, 2) : [];
+  const allowedKinds: SearchKind[] = ['person','post','video','page','circle','live','event','service','update','hashtag','poll','announcement'];
+  const requestedKinds = Array.isArray(rawKinds) ? rawKinds.filter((kind): kind is SearchKind => allowedKinds.includes(kind as SearchKind)) : allowedKinds;
+  const key = prefixKey;
+  const after = decodeCursor(rawCursor, query, key);
+  let base = db.collection(INDEX).where('searchKeys', 'array-contains', key).limit(CANDIDATE_LIMIT);
+  if (after) {
+    const previous = await db.collection(INDEX).doc(after).get();
+    if (!previous.exists) throw new Error('Search cursor is stale. Restart your search.');
+    base = base.startAfter(previous) as typeof base;
+  }
+  const snapshot = await base.get();
+  let candidateDocs: QueryDocumentSnapshot[] = [...snapshot.docs];
+  let usedTypoFallback = false;
+  if (snapshot.empty && !after && typoKeys.length) {
+    const typoSnapshots = await Promise.all(typoKeys.map(searchKey => db.collection(INDEX).where('searchKeys','array-contains',searchKey).limit(60).get()));
+    const docs = new Map<string, QueryDocumentSnapshot>();
+    typoSnapshots.forEach(result => result.docs.forEach(doc => docs.set(doc.id, doc)));
+    candidateDocs = [...docs.values()];
+    usedTypoFallback = true;
+  }
+  const candidates = candidateDocs.filter(doc => requestedKinds.includes(doc.get('kind')) && doc.get('isPublic') === true);
+  const [viewerSettings, viewerProfile, followedSnapshot] = await Promise.all([
+    db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get(),
+    db.collection('users').doc(viewerUid).get(),
+    db.collection('follows').where('followerId', '==', viewerUid).limit(200).get(),
+  ]);
+  const viewerData = viewerSettings.data() || {};
+  const interestDNA = viewerProfile.data()?.interestDNA;
+  const interests: Record<string, number> = interestDNA && typeof interestDNA === 'object'
+    ? Object.fromEntries(Object.entries(interestDNA as Record<string, unknown>)
+      .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] > 0)
+      .map(([key, value]) => [normalizeSearchText(key), Math.min(10, value)] as const))
+    : {};
+  const followedIds = new Set(followedSnapshot.docs.map(doc => String(doc.get('followingId') || '')).filter(Boolean));
+  const blocked = new Set<string>([
+    ...(Array.isArray(viewerData?.privacy?.blockedUserIds) ? viewerData.privacy.blockedUserIds : []),
+    ...(Array.isArray(viewerData?.messaging?.blockedUserIds) ? viewerData.messaging.blockedUserIds : []),
+  ].filter((item): item is string => typeof item === 'string'));
+  const ownerPolicyCache = new Map<string, Promise<{privateProfile:boolean; blocks:string[]; restricted:boolean}>>();
+  const parentPolicyCache = new Map<string, Promise<{exists:boolean; data:Record<string, unknown>}>>();
+  const readParentPolicy = (collectionName: string, id: string) => {
+    const key = collectionName + '/' + id;
+    let pending = parentPolicyCache.get(key);
+    if (!pending) {
+      pending = db.collection(collectionName).doc(id).get().then(snapshot => ({
+        exists: snapshot.exists, data: (snapshot.data() || {}) as Record<string, unknown>,
+      }));
+      parentPolicyCache.set(key, pending);
+    }
+    return pending;
+  };
+  const visibleCandidates = await Promise.all(candidates.map(async candidate => {
+    const data = candidate.data();
+    const ownerId = String(data.ownerId || '');
+    const sourceSegments = String(data.targetPath || '').split('/');
+    if (sourceSegments[0] === 'communities' && sourceSegments.length >= 2) {
+      const parent = await readParentPolicy('communities', sourceSegments[1]);
+      const community = parent.data;
+      if (!parent.exists || community.isPrivate === true || community.type !== 'public') return null;
+      if (Array.isArray(community.bannedUsers) && community.bannedUsers.includes(viewerUid)) return null;
+    }
+    if (sourceSegments[0] === 'pages' && sourceSegments.length >= 2) {
+      const parent = await readParentPolicy('pages', sourceSegments[1]);
+      const page = parent.data;
+      if (!parent.exists || page.isPrivate === true || page.privacy === 'private' || ['private','suspended','deleted','draft'].includes(String(page.status || '').toLowerCase())) return null;
+      if (data.kind === 'service' && page.category !== 'Business') return null;
+    }
+    if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) return null;
+    if (ownerId && ['person','post','video','live'].includes(String(data.kind))) {
+      let policy = ownerPolicyCache.get(ownerId);
+      if (!policy) {
+        policy = Promise.all([
+          db.collection('users').doc(ownerId).get(),
+          db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
+          db.collection('accountStatus').doc(ownerId).get(),
+        ]).then(([ownerProfile, ownerSettings, ownerStatus]) => {
+          const profile = ownerProfile.data() || {};
+          const privacy = ownerSettings.data() || {};
+          const restriction = ownerStatus.data() || {};
+          const restrictionExpiry = asDate(restriction.expiresAt);
+          return {
+            privateProfile: privacy?.privacy?.isPrivate === true,
+            blocks: [
+              ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
+              ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
+            ],
+            restricted: profile.isBanned === true || profile.isSuspended === true || profile.isSeedProfile === true
+              || ((restriction.banned === true || restriction.suspended === true)
+                && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now())),
+          };
+        });
+        ownerPolicyCache.set(ownerId, policy);
+      }
+      const visibility = await policy;
+      if (visibility.restricted || visibility.blocks.includes(viewerUid)) return null;
+      if (visibility.privateProfile && !followedIds.has(ownerId)) {
+        const follow = await db.collection('follows').doc(viewerUid + '_' + ownerId).get();
+        if (!follow.exists) return null;
+      }
+    }
+    return candidate;
+  }));
+  const hits: SearchHit[] = [];
+  for (const candidate of visibleCandidates) {
+    if (!candidate) continue;
+    const data = candidate.data();
+    const ownerId = String(data.ownerId || '');
+    const score = relevance(queryWords, data);
+    if (score === null) continue;
+    hits.push({
+      id: candidate.id, kind: data.kind, title: String(data.title || ''), subtitle: String(data.subtitle || ''),
+      excerpt: String(data.excerpt || ''), image: String(data.image || ''), targetId: String(data.targetId || ''),
+      targetPath: String(data.targetPath || ''), ownerId: String(data.ownerId || ''), verified: data.verified === true,
+      createdAt: asDate(data.createdAt).toISOString(),
+      score: score + (followedIds.has(String(data.targetId || '')) || (ownerId && followedIds.has(ownerId)) ? 3 : 0)
+        + Math.min(4, (Array.isArray(data.tags) ? data.tags : []).reduce((sum: number, tag: unknown) => sum + (interests[normalizeSearchText(tag)] || 0) * 0.35, 0)),
+      tags: Array.isArray(data.tags) ? data.tags.slice(0, 12) : [],
+    });
+  }
+  const hashtagGroups = new Map<string, {count:number;creators:Set<string>;score:number;createdAt:string}>();
+  for (const candidate of visibleCandidates) {
+    if (!candidate) continue;
+    const data = candidate.data();
+    if (data.kind !== 'post' && data.kind !== 'video') continue;
+    const score = relevance(queryWords, data);
+    if (score === null || !Array.isArray(data.tags)) continue;
+    for (const rawTag of data.tags) {
+      if (typeof rawTag !== 'string') continue;
+      const tag = normalizeSearchText(rawTag.replace(/^#/, '')).replace(/\\s+/g, ' ').slice(0, 40);
+      if (!tag || !queryWords.some(word => tag.includes(word) || editDistanceAtMostOne(tag.split(' ')[0] || tag, word))) continue;
+      const entry = hashtagGroups.get(tag) || {count:0,creators:new Set<string>(),score:0,createdAt:''};
+      entry.count += 1;
+      if (data.ownerId) entry.creators.add(String(data.ownerId));
+      entry.score += score;
+      entry.createdAt = [entry.createdAt, asDate(data.createdAt).toISOString()].sort().at(-1) || '';
+      hashtagGroups.set(tag,entry);
+    }
+  }
+  if (requestedKinds.includes('hashtag')) {
+    for (const [tag, entry] of hashtagGroups) hits.push({
+      id: 'hashtag_' + tag.replace(/[^a-z0-9]+/g,'_'), kind: 'hashtag', title: '#' + tag,
+      subtitle: entry.count + ' matching public posts', excerpt: 'Explore public posts using this topic',
+      image: '', targetId: tag, targetPath: 'explore', ownerId: '', verified: false,
+      createdAt: entry.createdAt, score: entry.score + Math.min(5, entry.count), tags: [tag],
+    });
+  }
+  hits.sort((a,b) => b.score - a.score || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
+  const results = hits.slice(0, PAGE_SIZE);
+  const lastDoc = snapshot.docs.length >= CANDIDATE_LIMIT && !usedTypoFallback ? snapshot.docs[PAGE_SIZE - 1].id : null;
+  return { results, nextCursor: encodeCursor(query,key,lastDoc), query };
+}
+
+export async function getNexoraTrending(db: Firestore): Promise<Array<{tag:string;score:number;postCount:number;creatorCount:number}>> {
+  const posts = await db.collection('posts').where('audience','==','public').orderBy('timestamp','desc').limit(250).get();
+  const creatorIds = [...new Set(posts.docs.map(post => String(post.get('userId') || post.get('authorId') || '')).filter(Boolean))];
+  const [profileSnapshots, privacySnapshots, statusSnapshots] = await Promise.all([
+    Promise.all(creatorIds.map(id => db.collection('users').doc(id).get())),
+    Promise.all(creatorIds.map(id => db.collection('users').doc(id).collection('settings').doc('preferences').get())),
+    Promise.all(creatorIds.map(id => db.collection('accountStatus').doc(id).get())),
+  ]);
+  const hiddenCreators = new Set<string>();
+  creatorIds.forEach((id,index) => {
+    const profile = profileSnapshots[index].data() || {};
+    const privacy = privacySnapshots[index].data() || {};
+    const status = statusSnapshots[index].data() || {};
+    const expiry = asDate(status.expiresAt).getTime();
+    const activeRestriction = (status.suspended === true || status.banned === true) && (expiry === 0 || expiry > Date.now());
+    if (profile.isBanned === true || profile.isSuspended === true || profile.isSeedProfile === true || privacy?.privacy?.isPrivate === true || activeRestriction) hiddenCreators.add(id);
+  });
+  const groups = new Map<string,{posts:Set<string>;creators:Map<string,number>}>();
+  const now = Date.now();
+  for (const post of posts.docs) {
+    const data = post.data();
+    const creator = String(data.userId || data.authorId || '');
+    if (!creator || hiddenCreators.has(creator)) continue;
+    const ageHours = Math.max(0,(now-asDate(data.timestamp).getTime())/3600000);
+    const tags = Array.isArray(data.tags) ? [...new Set(data.tags)] : [];
+    for (const raw of tags) {
+      if (typeof raw !== 'string') continue;
+      const tag = normalizeSearchText(raw.replace(/^#/,'')).replace(/\\s+/g,' ').slice(0,40);
+      if (!tag || tag.length < 2) continue;
+      const entry = groups.get(tag) || {posts:new Set<string>(),creators:new Map<string,number>()};
+      entry.posts.add(post.id);
+      const contribution = Math.min(30,Math.log1p(Number(data.likes)||0)*2 + Math.log1p(Number(data.commentsCount)||0)*3)
+        * Math.pow(0.5,ageHours/12);
+      entry.creators.set(creator, Math.min(18, (entry.creators.get(creator) || 0) + contribution));
+      groups.set(tag,entry);
+    }
+  }
+  return [...groups.entries()].filter(([,entry])=>entry.posts.size>=2 && entry.creators.size>=2)
+    .map(([tag,entry])=>({
+      tag, score:Math.round([...entry.creators.values()].reduce((sum,value)=>sum+value,0)*100)/100,
+      postCount:entry.posts.size, creatorCount:entry.creators.size,
+    }))
+    .sort((a,b)=>b.score-a.score || b.creatorCount-a.creatorCount || a.tag.localeCompare(b.tag)).slice(0,20);
+}

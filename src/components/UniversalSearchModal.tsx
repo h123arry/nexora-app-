@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, X, Users, MessageSquare, Briefcase, Bookmark, Cpu, Globe, ArrowRight, Sparkles, Hash, Clock, Trash2, Plus, Shield, ShieldCheck, Heart, Play, Radio, ChevronRight } from 'lucide-react';
 import { User, Post, Chat } from '../types';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
+import { searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
 import { clearRecentSearches, deleteRecentSearch, listRecentSearches, saveRecentSearch } from '../services/firebase/searchHistoryService';
 import { trackClientObservation } from '../services/analyticsService';
 
@@ -38,6 +39,12 @@ export default function UniversalSearchModal({
   const [serverSearchLoading, setServerSearchLoading] = useState(false);
   const [serverSearchError, setServerSearchError] = useState('');
   const [serverCursorLoading, setServerCursorLoading] = useState(false);
+  const [universalSearchResults, setUniversalSearchResults] = useState<NexoraSearchResult | null>(null);
+  const [universalSearchLoading, setUniversalSearchLoading] = useState(false);
+  const [universalSearchError, setUniversalSearchError] = useState('');
+  const [universalCursorLoading, setUniversalCursorLoading] = useState(false);
+  const universalQueryRef = useRef('');
+  universalQueryRef.current = query.trim();
   const activeDirectoryQueryRef = useRef('');
   activeDirectoryQueryRef.current = query.trim();
   useEffect(() => {
@@ -89,6 +96,30 @@ export default function UniversalSearchModal({
     return () => { active = false; window.clearTimeout(timer); };
   }, [isOpen, query, currentUser.id]);
 
+  useEffect(() => {
+    const term = query.trim();
+    if (!isOpen || term.length < 2) { setUniversalSearchResults(null); setUniversalSearchLoading(false); setUniversalSearchError(''); return; }
+    let active = true;
+    setUniversalSearchResults(null); setUniversalSearchError('');
+    const timer = window.setTimeout(async () => {
+      setUniversalSearchLoading(true);
+      try { const result = await searchNexora(term); if (active) setUniversalSearchResults(result); }
+      catch (error) { if (active) setUniversalSearchError(error instanceof Error ? error.message : 'NEXORA-wide search is temporarily unavailable.'); }
+      finally { if (active) setUniversalSearchLoading(false); }
+    }, 250);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [isOpen, query, currentUser.id]);
+
+  const handleLoadMoreUniversalResults = async () => {
+    if (!universalSearchResults?.nextCursor || universalCursorLoading) return;
+    const requestedQuery = query.trim(); setUniversalCursorLoading(true);
+    try {
+      const next = await searchNexora(requestedQuery, universalSearchResults.nextCursor);
+      if (universalQueryRef.current !== requestedQuery) return;
+      setUniversalSearchResults(current => current ? { results: [...new Map([...current.results, ...next.results].map(item => [item.id, item])).values()], nextCursor: next.nextCursor, query: next.query } : next);
+    } catch { setUniversalSearchError('More NEXORA search results could not be loaded. Please retry.'); }
+    finally { setUniversalCursorLoading(false); }
+  };
   const handleLoadMoreDirectoryResults = async () => {
     if (!serverResults?.nextCursor || serverCursorLoading) return;
     const requestedQuery = query.trim();
@@ -262,7 +293,7 @@ export default function UniversalSearchModal({
     matchedOpportunities.length > 0 ||
     matchedSaved.length > 0 ||
     matchedAiChats.length > 0 ||
-    (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0)) || serverSearchLoading || Boolean(serverSearchError);
+    (serverResults !== null && (serverResults.people.length > 0 || serverResults.pages.length > 0 || serverResults.circles.length > 0)) || serverSearchLoading || Boolean(serverSearchError) || Boolean(universalSearchResults?.results.length) || universalSearchLoading || Boolean(universalSearchError);
 
   return (
     <div id="universal-search-modal" role="dialog" aria-modal="true" aria-label="NEXORA universal search" className="fixed inset-0 z-100 bg-[#060412]/98 backdrop-blur-2xl flex flex-col overflow-hidden text-white animate-fade-in select-none">
@@ -439,9 +470,30 @@ export default function UniversalSearchModal({
               ) : (
                 <div className="space-y-10">
 
+                  {universalSearchLoading && <p role="status" className="text-xs text-violet-200/70">Searching all indexed NEXORA content…</p>}
+                  {universalSearchError && <p role="status" className="text-xs text-amber-200/80">{universalSearchError}</p>}
+                  {Boolean(universalSearchResults?.results.length) && (
+                    <section className="space-y-3 rounded-2xl border border-violet-400/25 bg-violet-500/[0.06] p-4" aria-label="NEXORA-wide search results">
+                      <div className="flex items-center justify-between gap-2"><h4 className="text-xs font-mono uppercase tracking-widest text-violet-200">Across NEXORA ({universalSearchResults.results.length})</h4><span className="text-[9px] font-mono uppercase text-zinc-500">Ranked results</span></div>
+                      <div className="space-y-2">
+                        {universalSearchResults.results.map(hit => <button key={hit.id} type="button" onClick={() => {
+                          if (hit.kind === 'person') onViewProfile({ id: hit.targetId, username: hit.subtitle, name: hit.title, avatar: hit.image, bio: hit.excerpt, location: '', website: '', followers: 0, following: 0, isVerified: hit.verified, coverImage: '', joinedDate: '', reputationPoints: 0, reputationBreakdown: { contributions: 0, helpfulness: 0, missionsCompleted: 0, skillsVerified: 0 }, interestDNA: {}, skills: [] });
+                          else if (hit.kind === 'hashtag') onSelectTab('explore');
+                          else if (hit.kind === 'live') onSelectTab('live');
+                          else if (hit.kind === 'event' || hit.kind === 'page' || hit.kind === 'circle' || hit.kind === 'poll' || hit.kind === 'announcement' || hit.kind === 'service' || hit.kind === 'update') onSelectTab('communities');
+                          else onSelectTab('feed');
+                          handleSaveSearch(query); onClose();
+                        }} className="flex w-full items-start gap-3 rounded-xl border border-white/5 bg-white/[0.025] p-3 text-left transition-colors hover:border-violet-400/30 hover:bg-white/[0.05]">
+                          {hit.image ? <img src={hit.image} alt="" className="h-9 w-9 shrink-0 rounded-lg object-cover" referrerPolicy="no-referrer" /> : <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-violet-500/15 text-xs font-bold text-violet-200">{hit.kind === 'hashtag' ? '#' : hit.kind.slice(0,1).toUpperCase()}</span>}
+                          <span className="min-w-0 flex-1"><span className="flex items-center gap-2"><span className="truncate text-sm font-semibold text-white">{hit.title}</span><span className="rounded border border-violet-400/20 px-1.5 py-0.5 text-[8px] uppercase text-violet-300">{hit.kind}</span></span><span className="mt-0.5 block truncate text-xs text-violet-200/70">{hit.subtitle}</span><span className="mt-1 block line-clamp-2 text-xs text-zinc-400">{hit.excerpt}</span></span>
+                        </button>)}
+                      </div>
+                      {universalSearchResults.nextCursor && <button type="button" onClick={() => void handleLoadMoreUniversalResults()} disabled={universalCursorLoading} className="w-full rounded-xl border border-violet-400/20 bg-violet-500/10 px-4 py-2.5 text-xs font-semibold text-violet-100 hover:bg-violet-500/15 disabled:opacity-50">{universalCursorLoading ? 'Loading more…' : 'Load more NEXORA results'}</button>}
+                    </section>
+                  )}
                   {serverSearchLoading && <p className="text-xs text-violet-200/70">Searching the live NEXORA directory…</p>}
                   {serverSearchError && <p role="status" className="text-xs text-amber-200/80">{serverSearchError}</p>}
-                  {serverResults && (
+                  {!universalSearchResults?.results.length && serverResults && (
                     <section className="space-y-4 rounded-2xl border border-violet-400/20 bg-violet-500/[0.04] p-4" aria-label="Live directory results">
                       <h4 className="text-xs font-mono uppercase tracking-widest text-violet-300">Live NEXORA directory</h4>
                       {serverResults.people.length > 0 && <div className="space-y-2">
@@ -481,7 +533,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 1. PEOPLE */}
-                  {matchedUsers.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedUsers.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-violet-400 flex items-center gap-2">
@@ -516,7 +568,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 2. POSTS */}
-                  {matchedPosts.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedPosts.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-pink-400 flex items-center gap-2">
@@ -552,7 +604,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 3. WORLD PULSE */}
-                  {matchedPulse.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedPulse.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-cyan-400 flex items-center gap-2">
@@ -582,7 +634,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 4. COMMUNITIES */}
-                  {matchedCommunities.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedCommunities.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-emerald-400 flex items-center gap-2">
@@ -613,7 +665,7 @@ export default function UniversalSearchModal({
                   )}
 
                   {/* 5. OPPORTUNITIES */}
-                  {matchedOpportunities.length > 0 && (
+                  {!universalSearchResults?.results.length && matchedOpportunities.length > 0 && (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-white/10 pb-2">
                         <h4 className="text-xs font-mono uppercase tracking-widest text-amber-400 flex items-center gap-2">

@@ -1369,4 +1369,14 @@ const publicProfile = (uid) => ({
 
     await assertFails(setDoc(doc(dbFor('bob'), 'liveSessionViewers', 'forged'), { sessionId: 'active-room', viewerId: 'bob' }));
   });
+
+  it('keeps universal search projections inaccessible to every client context', async () => {
+    await seed(async adminDb => setDoc(doc(adminDb, 'searchIndex', 'post_private-projection'), {
+      kind: 'post', title: 'Indexed public content', isPublic: true, searchKeys: ['p:in']
+    }));
+    await assertFails(getDoc(doc(guestDb(), 'searchIndex', 'post_private-projection')));
+    await assertFails(getDocs(collection(dbFor('alice'), 'searchIndex')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'searchIndex', 'forged'), { kind: 'post', isPublic: true }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'searchIndex', 'post_private-projection'), { title: 'forged result' }));
+  });
 });
