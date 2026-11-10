@@ -264,7 +264,7 @@ export default function ExploreView({
     if (searchFilterType === 'users') return hit.kind === 'person';
     if (searchFilterType === 'posts') return hit.kind === 'post';
     if (searchFilterType === 'videos') return hit.kind === 'video';
-    if (searchFilterType === 'communities') return hit.kind === 'page' || hit.kind === 'circle';
+    if (searchFilterType === 'communities') return hit.kind === 'page' || hit.kind === 'circle' || hit.kind === 'poll' || hit.kind === 'announcement';
     if (searchFilterType === 'live') return hit.kind === 'live';
     if (searchFilterType === 'events') return hit.kind === 'event';
     if (searchFilterType === 'services') return hit.kind === 'service' || hit.kind === 'update';
