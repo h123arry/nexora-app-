@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight,
+  classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, canClaimMediaProcessing,
   MAX_INPUT_BYTES, MAX_IMAGE_BYTES,
 } from '../src/policies.js';
 
@@ -70,3 +70,4 @@ describe('NEXORA media rendition planning', () => {
     assert.throws(() => videoRenditionsForHeight(-1, plan));
   });
 });
+

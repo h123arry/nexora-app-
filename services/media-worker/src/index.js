@@ -8,7 +8,7 @@ import sharp from 'sharp';
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, MAX_DURATION_SECONDS } from './policies.js';
+import { classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, canClaimMediaProcessing, MAX_DURATION_SECONDS } from './policies.js';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
 const bucketName = process.env.MEDIA_BUCKET;
