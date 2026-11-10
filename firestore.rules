@@ -743,6 +743,41 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Learner study notes are private, account-owned learning records. They never affect grading.
+    match /academyLessonNotes/{noteId} {
+      function validAcademyLesson(courseId, lessonId) {
+        return (courseId == 'creator-foundations' && lessonId in ['identity', 'audience', 'plan'])
+          || (courseId == 'content-craft' && lessonId in ['hooks', 'story', 'quality'])
+          || (courseId == 'community-building' && lessonId in ['conversation', 'trust', 'collab'])
+          || (courseId == 'creator-business' && lessonId in ['value', 'revenue', 'disclosure'])
+          || (courseId == 'live-production' && lessonId in ['run-of-show', 'hosting', 'safety'])
+          || (courseId == 'creator-analytics' && lessonId in ['metrics', 'retention', 'experiments'])
+          || (courseId == 'personal-brand' && lessonId in ['positioning', 'portfolio', 'reputation'])
+          || (courseId == 'creator-safety' && lessonId in ['security', 'rights', 'wellbeing']);
+      }
+      function validLessonNote() {
+        return request.resource.data.keys().hasOnly(['userId', 'courseId', 'lessonId', 'note', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.keys().hasAll(['userId', 'courseId', 'lessonId', 'note', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.userId == request.auth.uid
+          && validAcademyLesson(request.resource.data.courseId, request.resource.data.lessonId)
+          && noteId == request.auth.uid + '_' + request.resource.data.courseId + '_' + request.resource.data.lessonId
+          && request.resource.data.note is string
+          && request.resource.data.note.size() <= 5000
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.schemaVersion == 1;
+      }
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validLessonNote();
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.courseId == resource.data.courseId
+        && request.resource.data.lessonId == resource.data.lessonId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['note', 'updatedAt'])
+        && validLessonNote();
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
     // Raw analytics observations and aggregate metrics are server-owned.
     match /analyticsEvents/{eventId} { allow read, write: if false; }
     match /analyticsDaily/{dayId} {
