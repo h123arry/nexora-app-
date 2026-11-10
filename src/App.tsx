@@ -87,6 +87,7 @@ const SavedView = lazy(() => import('./components/SavedView'));
 const UniversalSearchModal = lazy(() => import('./components/UniversalSearchModal'));
 const WalletView = lazy(() => import('./components/WalletView'));
 const GiftVerseView = lazy(() => import('./components/GiftVerseView'));
+const WorldWeaveView = lazy(() => import('./components/WorldWeaveView'));
 const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import OfflineBanner from './components/OfflineBanner';
@@ -707,9 +708,9 @@ export default function App() {
   const [friendIds, setFriendIds] = useState<string[]>([]);
   const [privateCacheOwnerId, setPrivateCacheOwnerId] = useState(initialCacheUserId);
 
-  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'giftverse' | 'settings'>(() => {
+  const [activeTab, setActiveTab] = useState<'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'nida' | 'creator' | 'communities' | 'live' | 'saved' | 'wallet' | 'giftverse' | 'settings' | 'worldweave'>(() => {
     const requestedTab = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('tab') : null;
-    const supportedTabs = ['feed', 'explore', 'inbox', 'pulse', 'matrix', 'activity', 'profile', 'admin', 'nida', 'creator', 'communities', 'live', 'saved', 'wallet', 'giftverse', 'settings'];
+    const supportedTabs = ['feed', 'explore', 'inbox', 'pulse', 'matrix', 'activity', 'profile', 'admin', 'nida', 'creator', 'communities', 'live', 'saved', 'wallet', 'giftverse', 'settings', 'worldweave'];
     return supportedTabs.includes(requestedTab || '') ? requestedTab as any : 'feed';
   });
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
@@ -2137,7 +2138,7 @@ export default function App() {
             
             {activeTab !== 'feed' && (
               <div className={activeTab === 'profile' ? "w-full min-h-[620px]" : `${getCardClass(theme)} rounded-3xl p-5 md:p-6 min-h-[620px]`}>
-                {!isLoggedIn && ['matrix', 'inbox', 'activity', 'admin', 'creator', 'saved', 'wallet', 'settings'].includes(activeTab) ? (
+                {!isLoggedIn && ['matrix', 'inbox', 'activity', 'admin', 'creator', 'saved', 'wallet', 'settings', 'worldweave'].includes(activeTab) ? (
                   <div className="flex min-h-[420px] flex-col items-center justify-center gap-4 p-8 text-center text-white">
                     <h2 className="text-lg font-bold">Sign in required</h2>
                     <p className="max-w-md text-sm text-zinc-400">This area contains account-specific information and is available only to a verified Firebase account.</p>
@@ -2221,6 +2222,8 @@ export default function App() {
                       onClose={() => setActiveTab('feed')}
                     />
                   )}
+
+                  {activeTab === 'worldweave' && <WorldWeaveView currentUser={getRichUser(currentUser)} />}
 
                   {activeTab === 'communities' && (
                     <CommunitiesHubView
