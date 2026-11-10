@@ -181,6 +181,8 @@ export interface Post {
   isLikedByUser?: boolean;
   isBookmarkedByUser?: boolean;
   location?: string;
+  taggedUsernames?: string[];
+  imageAltText?: string;
   comments: Comment[];
   isVoice?: boolean;
   voiceDuration?: number;
