@@ -52,6 +52,7 @@ export const moderateLiveParticipant = onCall(
     const viewerRef = db.collection('liveSessionViewers').doc(viewerKey);
     const moderationRef = sessionRef.collection('moderation').doc(participantId);
     const update: Record<string, unknown> = { updatedAt: FieldValue.serverTimestamp(), updatedBy: hostId };
+    if (action === 'ban' || action === 'remove') update.participantName = String(profile.data()?.name || profile.data()?.username || 'NEXORA member').slice(0, 80);
     if (action === 'mute_chat') update.chatMuted = true;
     if (action === 'unmute_chat') update.chatMuted = false;
     if (action === 'ban') { update.banned = true; update.chatMuted = true; update.bannedAt = FieldValue.serverTimestamp(); }
