@@ -785,6 +785,33 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
+    // Creator workbooks are private planning documents, never public profile or performance claims.
+    match /academyCreatorWorkbooks/{workbookId} {
+      function validWorkbook() {
+        return request.resource.data.keys().hasOnly(['userId', 'templateId', 'content', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.keys().hasAll(['userId', 'templateId', 'content', 'updatedAt', 'schemaVersion'])
+          && request.resource.data.userId == request.auth.uid
+          && request.resource.data.templateId in [
+            'content-brief', 'publishing-plan', 'audience-interview', 'partnership-proposal',
+            'live-run-sheet', 'community-charter', 'content-experiment', 'portfolio-case-study'
+          ]
+          && workbookId == request.auth.uid + '_' + request.resource.data.templateId
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 16000
+          && request.resource.data.updatedAt == request.time
+          && request.resource.data.schemaVersion == 1;
+      }
+      allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validWorkbook();
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.templateId == resource.data.templateId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['content', 'updatedAt'])
+        && validWorkbook();
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
     // Raw analytics observations and aggregate metrics are server-owned.
     match /analyticsEvents/{eventId} { allow read, write: if false; }
     match /analyticsDaily/{dayId} {
