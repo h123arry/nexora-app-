@@ -1763,12 +1763,13 @@ export default function MediaCreationEngine({
                   {/* Tagging, location and Alt-text metadata */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👥 Tag people</label>
+                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👥 Mention usernames</label>
                       <input 
-                        type="text" 
+                        type="text"
+                        maxLength={500}
                         value={taggedUsernames}
                         onChange={(e) => setTaggedUsernames(e.target.value)}
-                        placeholder="Enter usernames separated by commas"
+                        placeholder="@username, @username"
                         className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
@@ -1788,7 +1789,8 @@ export default function MediaCreationEngine({
                     <div className="space-y-1 relative">
                       <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">📍 Location</label>
                       <input 
-                        type="text" 
+                        type="text"
+                        maxLength={120}
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="Search for a place..."
@@ -1805,7 +1807,8 @@ export default function MediaCreationEngine({
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👁️ Describe this photo (optional)</label>
                       <input 
-                        type="text" 
+                        type="text"
+                        maxLength={500}
                         value={imageAltText}
                         onChange={(e) => setImageAltText(e.target.value)}
                         placeholder="Describe the photo for people who use screen readers."
