@@ -6,6 +6,7 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { User, Post } from '../types';
 import { recordCreatorProfileVisit } from '../services/analytics/creatorAudience';
 import PurpleVerifiedBadge from './VohVerifiedBadge';
+import { getCreatorCommunityAsset } from '../content/creatorCommunityAssets';
 import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
 import GiftVerseView from './GiftVerseView';
@@ -244,6 +245,8 @@ export default function ProfileView({
   onOpenVohAi
 }: ProfileViewProps) {
   const reduceMotion = useReducedMotion();
+  const profileFrameAsset = getCreatorCommunityAsset(currentUser.profileFrameId);
+  const profileBadgeAsset = getCreatorCommunityAsset(currentUser.profileBadgeId);
   // Navigation State
   const [activePanel, setActivePanel] = useState<'profile' | 'edit-profile' | 'menu' | 'creator-studio' | 'qr-profile' | 'social-graph' | 'collections' | 'subscriptions' | 'linked-accounts' | 'other-profile-menu'>('profile');
   const [profileTab, setProfileTab] = useState<string>('media');
@@ -1149,14 +1152,15 @@ export default function ProfileView({
                     type="button"
                     onClick={() => setProfilePicExpanded(true)}
                     aria-label="View profile photo"
-                    className="w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-black overflow-hidden relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4"
+                    className="w-16 h-16 sm:w-22 sm:h-22 rounded-full bg-black overflow-visible relative border-2 border-white/10 z-10 cursor-zoom-in transition-transform duration-300 hover:scale-[1.03] shadow-md focus-visible:outline-2 focus-visible:outline-violet-300 focus-visible:outline-offset-4"
                   >
                     <img
                       src={currentUser.avatar}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full rounded-full object-cover"
                       alt=""
                       referrerPolicy="no-referrer"
                     />
+                    {profileFrameAsset && <img src={profileFrameAsset.path} alt="" aria-hidden="true" className="pointer-events-none absolute -inset-[7px] z-20 h-[calc(100%+14px)] w-[calc(100%+14px)] object-contain" />}
                   </button>
                 </div>
 
@@ -1166,6 +1170,7 @@ export default function ProfileView({
                       {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
                     </h1>
                     {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
+                    {profileBadgeAsset && <img src={profileBadgeAsset.path} alt="Creator badge" title={profileBadgeAsset.title} className="h-5 w-5 shrink-0 object-contain" />}
                   </div>
                   <p className={`text-xs sm:text-sm font-bold font-mono tracking-wider mt-0.5 ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-400/90'}`}>
                     @{currentUser.username || (isOwnProfile ? 'add-username' : 'member')}

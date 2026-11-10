@@ -11,6 +11,13 @@ const profile = {
   interestDNA: { AI: 90 }, skills: [],
 } as User;
 
+test('includes only the optional profile decoration identifiers in the public projection', () => {
+  const decorated = createPublicProfileProjection({ ...profile, profileFrameId: 'frame-aurora', profileBadgeId: 'badge-regalia' });
+  assert.equal(decorated.profileFrameId, 'frame-aurora');
+  assert.equal(decorated.profileBadgeId, 'badge-regalia');
+  assert.equal('email' in decorated, false);
+});
+
 test('omits location from public profiles unless explicitly opted in', () => {
   const projection = createPublicProfileProjection(profile);
   assert.equal(projection.location, undefined);

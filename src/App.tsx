@@ -2237,6 +2237,7 @@ export default function App() {
                       currentUser={getRichUser(currentUser)}
                       posts={resolvedPosts}
                       onAddPost={handleAddPost}
+                      onUpdateProfile={handleUpdateProfile}
                     />
                   )}
 
