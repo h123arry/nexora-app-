@@ -62,6 +62,7 @@ interface RefactoredPost extends Post {
   opportunitySkills?: string[];
   isSpamBot?: boolean;
   category?: string;
+  feedReasons?: string[];
 }
 
 function PostCarousel({ images, filters }: { images: string[], filters?: string[] }) {
@@ -1407,7 +1408,7 @@ export default function FeedView({
           seenPostIds: viewedPostIds,
           mode: feedTab === 'trending' ? 'trending' : 'forYou',
           maxPostsPerCreator: 3,
-        }).map(({ post }) => post);
+        }).map(({ post, reasons }) => ({ ...post, feedReasons: reasons }));
       }
 
       if (feedTab === 'posts') {
@@ -1495,7 +1496,7 @@ export default function FeedView({
         return rankReels(sortedList, followingIds, recommendationsPersonalizationEnabled ? currentUser.interestDNA : {}, {
           mutedCreatorIds, blockedCreatorIds: blockedUserIds, hiddenPostIds, notInterestedTags,
           viewerId: currentUser.id,
-        }).map(({ post }) => post as RefactoredPost);
+        }).map(({ post, reasons }) => ({ ...post, feedReasons: reasons } as RefactoredPost));
       }
       return sortedList;
     })();
@@ -2223,6 +2224,7 @@ export default function FeedView({
             <React.Fragment key={post.id}>
               <FeedPostCard
                 post={post}
+                feedReasons={post.feedReasons}
                 index={index}
                 isActive={activePostId === post.id}
                 activeCommentsPostId={activeCommentsPostId}
