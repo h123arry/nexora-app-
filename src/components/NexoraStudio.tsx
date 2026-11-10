@@ -3,10 +3,11 @@ import { AnimatePresence, motion } from 'motion/react';
 import { buildWaveformPeaks, getAudioEnvelopeGain, getDuckedMusicGain } from '../utils/studioAudioPolicy';
 import { appendHistorySnapshot, reorderById } from '../utils/studioHistoryPolicy';
 import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer } from '../utils/studioTextLayerPolicy';
+import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
-type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
+type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; imageLayers: StudioImageLayer[]; selectedImageLayerId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type StudioSnapshot = Omit<StudioProject, 'updatedAt'> & { selectedId: string | null };
 type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string) => Promise<void> };
 
@@ -59,6 +60,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [overlay, setOverlay] = useState('');
   const [textLayers, setTextLayers] = useState<StudioTextLayer[]>([]);
   const [selectedTextLayerId, setSelectedTextLayerId] = useState<string | null>(null);
+  const [imageLayers, setImageLayers] = useState<StudioImageLayer[]>([]);
+  const [selectedImageLayerId, setSelectedImageLayerId] = useState<string | null>(null);
   const [previewGlobalTime, setPreviewGlobalTime] = useState(0);
   const [overlayColor, setOverlayColor] = useState('#FFFFFF');
   const [aspectRatio, setAspectRatio] = useState<'portrait' | 'square' | 'landscape'>('portrait');
@@ -91,10 +94,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const historyRef = useRef<{ past: StudioSnapshot[]; future: StudioSnapshot[]; current: StudioSnapshot | null; applying: boolean }>({ past: [], future: [], current: null, applying: false });
   const selectedClip = clips.find(clip => clip.id === selectedId) || clips[0] || null;
   const selectedTextLayer = textLayers.find(layer => layer.id === selectedTextLayerId) || textLayers[0] || null;
+  const selectedImageLayer = imageLayers.find(layer => layer.id === selectedImageLayerId) || imageLayers[0] || null;
   const selectedClipIndex = selectedClip ? clips.findIndex(clip => clip.id === selectedClip.id) : -1;
   const selectedClipGlobalOffset = useMemo(() => clips.slice(0, Math.max(0, selectedClipIndex)).reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips, selectedClipIndex]);
   const totalDuration = useMemo(() => clips.reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips]);
-  const snapshot = useMemo<StudioSnapshot>(() => ({ clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition }), [clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition]);
+  const snapshot = useMemo<StudioSnapshot>(() => ({ clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition }), [clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition]);
 
   useEffect(() => {
     let active = true;
@@ -117,6 +121,17 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           : [];
       setTextLayers(restoredTextLayers);
       setSelectedTextLayerId(restoredTextLayers.some(layer => layer.id === project.selectedTextLayerId) ? project.selectedTextLayerId : restoredTextLayers[0]?.id || null);
+      const restoredImageLayers: StudioImageLayer[] = [];
+      let restoredImageBytes = 0;
+      for (const layer of Array.isArray(project.imageLayers) ? project.imageLayers : []) {
+        if (restoredImageLayers.length >= 20) break;
+        if (layer?.blob instanceof Blob && ['image/png', 'image/jpeg', 'image/webp'].includes(layer.blob.type) && layer.blob.size <= 10 * 1024 * 1024 && restoredImageBytes + layer.blob.size <= 40 * 1024 * 1024) {
+          restoredImageLayers.push(normalizeStudioImageLayer(layer, makeId()));
+          restoredImageBytes += layer.blob.size;
+        }
+      }
+      setImageLayers(restoredImageLayers);
+      setSelectedImageLayerId(restoredImageLayers.some(layer => layer.id === project.selectedImageLayerId) ? project.selectedImageLayerId : restoredImageLayers[0]?.id || null);
       setAspectRatio(project.aspectRatio || 'portrait');
       setTransition(project.transition || 'cut');
       setSoundtrackVolume(typeof project.soundtrackVolume === 'number' ? Math.min(1, Math.max(0, project.soundtrackVolume)) : 0.8);
@@ -144,12 +159,12 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     if (!ready) return;
     setExportBlob(null);
     const timer = window.setTimeout(() => {
-      void saveProject({ clips, soundtrack, voiceover, caption, overlay: textLayers[0]?.text || '', overlayColor: textLayers[0]?.color || '#FFFFFF', textLayers, selectedTextLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart: textLayers[0]?.start || 0, overlayEnd: textLayers[0]?.end || 0, overlayPosition: textLayers[0]?.position || 'bottom', updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
+      void saveProject({ clips, soundtrack, voiceover, caption, overlay: textLayers[0]?.text || '', overlayColor: textLayers[0]?.color || '#FFFFFF', textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart: textLayers[0]?.start || 0, overlayEnd: textLayers[0]?.end || 0, overlayPosition: textLayers[0]?.position || 'bottom', updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
         .then(() => setMessage('Draft saved on this device'))
         .catch(() => setMessage('This draft could not be saved on this device.'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
+  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -198,6 +213,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     setOverlayColor(value.overlayColor);
     setTextLayers(value.textLayers);
     setSelectedTextLayerId(value.selectedTextLayerId);
+    setImageLayers(value.imageLayers);
+    setSelectedImageLayerId(value.selectedImageLayerId);
     setAspectRatio(value.aspectRatio);
     setTransition(value.transition);
     setSoundtrackVolume(value.soundtrackVolume);
@@ -349,6 +366,20 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     setTextLayers(previous => previous.map(layer => layer.id === selectedTextLayer.id ? normalizeStudioTextLayer({ ...layer, ...patch }, layer.id) : layer));
   };
 
+  const addImageLayer = (file: File) => {
+    if (!canAddStudioImageLayer(imageLayers, file)) { setMessage('Use PNG, JPEG or WebP images, up to 10 MB each, 20 layers and 40 MB combined.'); return; }
+    const id = makeId();
+    const layer = normalizeStudioImageLayer({ id, name: file.name, blob: file, start: Math.min(previewGlobalTime, totalDuration), end: 0, x: 0.5, y: 0.5, scale: 0.28, rotation: 0, opacity: 1 }, id);
+    setImageLayers(previous => [...previous, layer]);
+    setSelectedImageLayerId(id);
+    setMessage('Image layer added to your project.');
+  };
+
+  const updateSelectedImageLayer = (patch: Partial<StudioImageLayer>) => {
+    if (!selectedImageLayer) return;
+    setImageLayers(previous => previous.map(layer => layer.id === selectedImageLayer.id ? normalizeStudioImageLayer({ ...layer, ...patch }, layer.id) : layer));
+  };
+
   const reorderClip = (sourceId: string, targetId: string) => {
     setClips(previous => reorderById(previous, sourceId, targetId));
     setSelectedId(sourceId);
@@ -476,6 +507,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     }
     const recorder = new MediaRecorder(stream, { mimeType });
     const chunks: Blob[] = [];
+    const imageAssets = new Map<string, CanvasImageSource>();
     const stopped = new Promise<Blob>((resolve, reject) => {
       recorder.ondataavailable = event => { if (event.data.size) chunks.push(event.data); };
       recorder.onerror = () => reject(new Error('The video export failed while encoding.'));
@@ -491,6 +523,22 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         const height = preview.videoHeight * scale;
         context.drawImage(preview, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
       }
+      for (const layer of imageLayers) {
+        if (!isStudioImageLayerVisible(layer, elapsed, totalDuration)) continue;
+        const image = imageAssets.get(layer.id);
+        if (!image) continue;
+        const dimensions = image as ImageBitmap | HTMLImageElement;
+        const imageWidth = 'naturalWidth' in dimensions ? dimensions.naturalWidth : dimensions.width;
+        const imageHeight = 'naturalHeight' in dimensions ? dimensions.naturalHeight : dimensions.height;
+        const width = canvas.width * layer.scale;
+        const height = imageWidth > 0 ? width * imageHeight / imageWidth : width;
+        context.save();
+        context.globalAlpha = layer.opacity;
+        context.translate(canvas.width * layer.x, canvas.height * layer.y);
+        context.rotate(layer.rotation * Math.PI / 180);
+        context.drawImage(image, -width / 2, -height / 2, width, height);
+        context.restore();
+      }
       for (const layer of textLayers) {
         const frame = getStudioTextLayerFrame(layer, elapsed, totalDuration);
         if (!frame) continue;
@@ -505,7 +553,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         context.lineWidth = Math.max(3, layer.fontSize * 0.14);
         context.strokeStyle = 'rgba(5,9,20,.82)';
         context.fillStyle = layer.color;
-        const words = layer.text.trim().split(/\\s+/);
+        const words = layer.text.trim().split(/\s+/);
         const wrapped: string[] = [];
         let line = '';
         for (const word of words) {
@@ -537,6 +585,19 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       requestAnimationFrame(step);
     });
     try {
+      for (const layer of imageLayers) {
+        let bitmap: ImageBitmap | null = null;
+        if (typeof createImageBitmap === 'function') {
+          try { bitmap = await createImageBitmap(layer.blob); } catch { bitmap = null; }
+        }
+        if (bitmap) imageAssets.set(layer.id, bitmap);
+        else {
+          const image = new Image();
+          image.src = getUrlForClip(layer.blob);
+          await new Promise<void>((resolve, reject) => { image.onload = () => resolve(); image.onerror = () => reject(new Error(`Could not decode image layer: ${layer.name}`)); });
+          imageAssets.set(layer.id, image);
+        }
+      }
       recorder.start(250);
       draw();
       for (const [clipIndex, clip] of clips.entries()) {
@@ -591,6 +652,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
       if (voiceoverElement) voiceoverElement.pause();
       if (voiceoverObjectUrl) URL.revokeObjectURL(voiceoverObjectUrl);
+      for (const asset of imageAssets.values()) if (typeof ImageBitmap !== 'undefined' && asset instanceof ImageBitmap) asset.close();
       audioContext?.close();
       stream.getTracks().forEach(track => track.stop());
     }
@@ -646,6 +708,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
               {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="h-full w-full object-contain" playsInline controls muted={muted} onLoadedMetadata={event => { event.currentTarget.currentTime = selectedClip.start; setPreviewGlobalTime(selectedClipGlobalOffset); }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end) { event.currentTarget.pause(); setPlaying(false); } }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
+              {imageLayers.filter(layer => isStudioImageLayerVisible(layer, previewGlobalTime, totalDuration)).map(layer => <img key={layer.id} src={getUrlForClip(layer.blob)} alt={layer.name} draggable={false} className="pointer-events-none absolute z-[5] max-w-none object-contain" style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, width: `${layer.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`, opacity: layer.opacity }}/>) }
               {textLayers.map(layer => { const frame = getStudioTextLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <div key={layer.id} className="pointer-events-none absolute z-10 max-w-[90%] whitespace-pre-wrap text-center font-black drop-shadow-[0_2px_8px_rgba(0,0,0,.9)]" style={{ left: '50%', top: layer.position === 'top' ? '9%' : layer.position === 'center' ? '50%' : undefined, bottom: layer.position === 'bottom' ? '9%' : undefined, transform: `translate(-50%, -50%) translateY(${frame.offsetY}px) rotate(${layer.rotation + frame.rotation}deg) scale(${frame.scale})`, fontSize: `${Math.max(12, layer.fontSize * (aspectRatio === 'portrait' ? 0.48 : 0.62))}px`, opacity: frame.opacity, color: layer.color }}>{layer.text}</div>; })}
             </div>
             <div className="flex items-center gap-2">
@@ -696,6 +759,12 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Type size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Text layers</h2></div><button type="button" onClick={addTextLayer} className="inline-flex items-center gap-1 rounded-lg border border-violet-400/30 px-2 py-1.5 text-[10px] font-semibold text-violet-100"><Plus size={12}/> Add text</button></div>
               {textLayers.length > 0 && <div className="space-y-1">{textLayers.map((layer,index)=><div key={layer.id} className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${selectedTextLayerId===layer.id?'border-violet-400/50 bg-violet-500/10':'border-[#292244] bg-[#080611]'}`}><button type="button" onClick={()=>setSelectedTextLayerId(layer.id)} className="min-w-0 flex-1 truncate text-left text-[10px] font-semibold">{index+1}. {layer.text || 'Untitled text'}</button><button type="button" onClick={()=>{const remaining=textLayers.filter(item=>item.id!==layer.id); setTextLayers(remaining); if(selectedTextLayerId===layer.id || !remaining.some(item=>item.id===selectedTextLayerId))setSelectedTextLayerId(remaining[0]?.id||null);}} aria-label={`Delete ${layer.text || 'text'} layer`} className="rounded p-1 text-rose-300"><Trash2 size={12}/></button></div>)}</div>}
               {selectedTextLayer ? <><input value={selectedTextLayer.text} onChange={event=>updateSelectedTextLayer({text:event.target.value.slice(0,120)})} maxLength={120} placeholder="Write your title" className="w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white outline-none focus:border-violet-400"/><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Text colour<input aria-label="Text layer colour" type="color" value={selectedTextLayer.color} onChange={event=>updateSelectedTextLayer({color:event.target.value})} className="mt-1 h-8 w-full rounded border-0 bg-transparent"/></label><label className="block text-[10px] text-[#A39BBF]">Placement<select value={selectedTextLayer.position} onChange={event=>updateSelectedTextLayer({position:event.target.value as StudioTextLayer['position']})} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"><option value="top">Top</option><option value="center">Centre</option><option value="bottom">Bottom</option></select></label></div><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Show from (s)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={selectedTextLayer.start} onChange={event=>updateSelectedTextLayer({start:Math.max(0,Math.min(totalDuration,Number(event.target.value)||0))})} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label><label className="block text-[10px] text-[#A39BBF]">Hide after (s)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={selectedTextLayer.end} onChange={event=>updateSelectedTextLayer({end:Math.max(0,Math.min(totalDuration,Number(event.target.value)||0))})} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label></div><label className="block text-[10px] text-[#A39BBF]">Font size · {selectedTextLayer.fontSize}px<input type="range" min="18" max="100" step="1" value={selectedTextLayer.fontSize} onChange={event=>updateSelectedTextLayer({fontSize:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Opacity · {Math.round(selectedTextLayer.opacity*100)}%<input type="range" min="0" max="1" step=".05" value={selectedTextLayer.opacity} onChange={event=>updateSelectedTextLayer({opacity:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Scale · {selectedTextLayer.scale.toFixed(1)}x<input type="range" min="0.5" max="2" step=".05" value={selectedTextLayer.scale} onChange={event=>updateSelectedTextLayer({scale:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Rotation · {selectedTextLayer.rotation}°<input type="range" min="-180" max="180" step="5" value={selectedTextLayer.rotation} onChange={event=>updateSelectedTextLayer({rotation:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label></div><label className="block text-[10px] text-[#A39BBF]">Entrance animation<select value={selectedTextLayer.animation} onChange={event=>updateSelectedTextLayer({animation:event.target.value as StudioTextLayer['animation']})} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"><option value="none">None</option><option value="fade">Fade in / out</option><option value="zoom">Zoom in / out</option><option value="slide-up">Slide up</option><option value="pop">Pop</option></select></label>{selectedTextLayer.animation!=='none' && <label className="block text-[10px] text-[#A39BBF]">Animation duration · {selectedTextLayer.animationDuration.toFixed(1)}s<input type="range" min="0.1" max="5" step="0.1" value={selectedTextLayer.animationDuration} onChange={event=>updateSelectedTextLayer({animationDuration:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label>}<p className="text-[9px] text-[#827B9C]">Set the end time to 0 to keep this text visible through the end of the video.</p></> : <p className="rounded-lg border border-dashed border-[#44376F] px-3 py-4 text-center text-[10px] text-[#827B9C]">Add a text layer to place titles independently in your video.</p>}
+            </div>
+            <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
+              <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Film size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Image & sticker layers</h2></div><label className="inline-flex cursor-pointer items-center gap-1 rounded-lg border border-violet-400/30 px-2 py-1.5 text-[10px] font-semibold text-violet-100"><Plus size={12}/> Add image<input type="file" accept="image/png,image/jpeg,image/webp" className="hidden" onChange={event=>{const file=event.target.files?.[0]; if(file)addImageLayer(file); event.target.value='';}}/></label></div>
+              {imageLayers.length>0 && <div className="space-y-1">{imageLayers.map((layer,index)=><div key={layer.id} className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 ${selectedImageLayerId===layer.id?'border-violet-400/50 bg-violet-500/10':'border-[#292244] bg-[#080611]'}`}><button type="button" onClick={()=>setSelectedImageLayerId(layer.id)} className="min-w-0 flex-1 truncate text-left text-[10px] font-semibold">{index+1}. {layer.name}</button><button type="button" onClick={()=>{const remaining=imageLayers.filter(item=>item.id!==layer.id); setImageLayers(remaining); if(selectedImageLayerId===layer.id || !remaining.some(item=>item.id===selectedImageLayerId))setSelectedImageLayerId(remaining[0]?.id||null);}} aria-label={`Delete ${layer.name} layer`} className="rounded p-1 text-rose-300"><Trash2 size={12}/></button></div>)}</div>}
+              {selectedImageLayer ? <><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Show from (s)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={selectedImageLayer.start} onChange={event=>updateSelectedImageLayer({start:Math.max(0,Math.min(totalDuration,Number(event.target.value)||0))})} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label><label className="block text-[10px] text-[#A39BBF]">Hide after (s)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={selectedImageLayer.end} onChange={event=>updateSelectedImageLayer({end:Math.max(0,Math.min(totalDuration,Number(event.target.value)||0))})} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label></div><label className="block text-[10px] text-[#A39BBF]">Size · {Math.round(selectedImageLayer.scale*100)}%<input type="range" min="0.05" max="1" step=".01" value={selectedImageLayer.scale} onChange={event=>updateSelectedImageLayer({scale:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Horizontal · {Math.round(selectedImageLayer.x*100)}%<input type="range" min="0" max="1" step=".01" value={selectedImageLayer.x} onChange={event=>updateSelectedImageLayer({x:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Vertical · {Math.round(selectedImageLayer.y*100)}%<input type="range" min="0" max="1" step=".01" value={selectedImageLayer.y} onChange={event=>updateSelectedImageLayer({y:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label></div><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Rotation · {selectedImageLayer.rotation}°<input type="range" min="-180" max="180" step="5" value={selectedImageLayer.rotation} onChange={event=>updateSelectedImageLayer({rotation:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Opacity · {Math.round(selectedImageLayer.opacity*100)}%<input type="range" min="0" max="1" step=".05" value={selectedImageLayer.opacity} onChange={event=>updateSelectedImageLayer({opacity:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label></div></> : <p className="rounded-lg border border-dashed border-[#44376F] px-3 py-4 text-center text-[10px] text-[#827B9C]">Import your own transparent PNG, sticker or image to add it as a timed layer.</p>}
+              <p className="text-[9px] text-[#827B9C]">Up to 20 image layers per project, 10 MB each and 40 MB combined. Images stay inside your local Studio draft until you export.</p>
             </div>
             <div className="space-y-2"><label className="block text-xs font-bold">Post caption</label><textarea value={caption} onChange={event=>setCaption(event.target.value.slice(0,500))} maxLength={500} rows={3} placeholder="Write a caption for your finished video…" className="w-full resize-y rounded-xl border border-[#34265E] bg-[#100C20] p-3 text-xs text-white outline-none focus:border-violet-400"/><div className="text-right text-[10px] text-[#827B9C]">{caption.length}/500</div></div>
             <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing?'Publishing…':<><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button><p className="text-center text-[9px] text-[#827B9C]">Export first, then publish your rendered video.</p></div>
