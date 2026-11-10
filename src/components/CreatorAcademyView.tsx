@@ -201,7 +201,8 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
         await setDoc(ref, { userId: currentUser.id, courseId: course.id, lessonId: lesson.id, note: note.slice(0, 5000), updatedAt: serverTimestamp(), schemaVersion: 1 });
         setNoteMessage('Study note saved to your account.');
       } else {
-        await deleteDoc(ref);
+        const existing = await getDoc(ref);
+        if (existing.exists()) await deleteDoc(ref);
         setNoteMessage('Study note cleared.');
       }
     } catch {
