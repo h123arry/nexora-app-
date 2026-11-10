@@ -1197,7 +1197,9 @@ service cloud.firestore {
           return chat.get('isGroup', false) == true
             && resource.data.senderId != request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipientReceipts'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['recipientReceipts'])
             && nextReceipts.diff(previousReceipts).affectedKeys().hasOnly([request.auth.uid])
+            && nextReceipts.diff(previousReceipts).affectedKeys().hasAny([request.auth.uid])
             && nextReceipt.keys().hasOnly(['status', 'updatedAt'])
             && nextReceipt.get('status', '') in ['delivered', 'read']
             && nextReceipt.get('updatedAt', null) == request.time
@@ -1208,7 +1210,9 @@ service cloud.firestore {
           let nextUsers = request.resource.data.get('reactionUsers', {});
           let ownReactions = nextUsers.get(request.auth.uid, []);
           return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactionUsers'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['reactionUsers'])
             && nextUsers.diff(previousUsers).affectedKeys().hasOnly([request.auth.uid])
+            && nextUsers.diff(previousUsers).affectedKeys().hasAny([request.auth.uid])
             && ownReactions is list
             && ownReactions.size() <= 12
             && ownReactions.hasOnly([
