@@ -34,7 +34,7 @@ export function subscribeToPublicWorldWeaves(onItems: (items: WorldWeave[]) => v
 }
 export function subscribeToWorldWeaveMoments(weaveId: string, onItems: (items: WorldWeaveMoment[]) => void, onError: (error: Error) => void): Unsubscribe {
   requireUser();
-  return onSnapshot(query(collection(db, 'worldWeaves', weaveId, 'moments'), orderBy('createdAt', 'desc'), limit(100)),
+  return onSnapshot(query(collection(db, 'worldWeaves', weaveId, 'moments'), orderBy('createdAt', 'desc'), orderBy(documentId(), 'desc'), limit(100)),
     snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveMoment)).reverse()), onError);
 }
 export async function fetchOlderWorldWeaveMoments(weaveId: string, before: WorldWeaveMoment): Promise<WorldWeaveMoment[]> {
