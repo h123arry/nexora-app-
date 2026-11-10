@@ -766,6 +766,10 @@ const publicProfile = (uid) => ({
       await setDoc(doc(db, 'communities', 'member-circle', 'bans', 'mallory'), {
         userId: 'mallory', bannedBy: 'alice', reason: 'Repeated abuse', createdAt: Timestamp.now()
       });
+      await setDoc(doc(db, 'communities', 'member-circle', 'reports', 'report-private'), {
+        reporterUid: 'bob', targetType: 'post', targetId: 'post-1', reason: 'Private moderation report',
+        status: 'open', createdAt: Timestamp.now()
+      });
     });
 
     const aliceMembers = collection(dbFor('alice'), 'communities', 'member-circle', 'members');
@@ -793,6 +797,11 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('alice'), 'communities', 'member-circle', 'bans', 'mallory')));
     await assertFails(setDoc(doc(dbFor('mallory'), 'communities', 'member-circle', 'bans', 'self-created'), {
       userId: 'mallory', reason: 'fake'
+    }));
+    await assertFails(getDoc(doc(dbFor('alice'), 'communities', 'member-circle', 'reports', 'report-private')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'reports', 'report-private')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'reports', 'forged-report'), {
+      reporterUid: 'bob', targetType: 'post', targetId: 'post-1', reason: 'fake', status: 'open'
     }));
     await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'members', 'alice'), {
       userId: 'alice', role: 'member', status: 'active', joinedAt: serverTimestamp()
