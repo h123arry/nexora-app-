@@ -242,21 +242,22 @@ export default function ExploreView({
 
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
-    return universalResults ? [] : searchPosts(posts, debouncedSearch);
+    return universalResults?.results.length ? [] : searchPosts(posts, debouncedSearch);
   }, [posts, debouncedSearch, universalResults]);
 
   const filteredCreators = useMemo(() => {
-    return universalResults ? [] : searchCreators(creators, debouncedSearch, { limit: 50 });
+    return universalResults?.results.length ? [] : searchCreators(creators, debouncedSearch, { limit: 50 });
   }, [creators, debouncedSearch, universalResults]);
 
   const filteredVideos = useMemo(() => {
-    return universalResults ? [] : searchPosts(posts, debouncedSearch, { videosOnly: true });
+    return universalResults?.results.length ? [] : searchPosts(posts, debouncedSearch, { videosOnly: true });
   }, [posts, debouncedSearch, universalResults]);
 
   const hasActiveSearch = debouncedSearch.trim().length > 0;
-  const searchPeople = universalResults ? [] : currentUserId && directoryResults ? directoryResults.people : filteredCreators;
-  const searchPages = universalResults ? [] : directoryResults?.pages || [];
-  const searchCircles = universalResults ? [] : directoryResults?.circles || [];
+  const hasUniversalHits = Boolean(universalResults?.results.length);
+  const searchPeople = hasUniversalHits ? [] : currentUserId && directoryResults ? directoryResults.people : filteredCreators;
+  const searchPages = hasUniversalHits ? [] : directoryResults?.pages || [];
+  const searchCircles = hasUniversalHits ? [] : directoryResults?.circles || [];
   const directoryEntryCount = searchPages.length + searchCircles.length;
   const serverHits = universalResults?.results || [];
   const filteredServerHits = serverHits.filter(hit => {
@@ -271,7 +272,7 @@ export default function ExploreView({
     if (searchFilterType === 'hashtags') return hit.kind === 'hashtag';
     return false;
   });
-  const visibleResultCount = universalResults
+  const visibleResultCount = hasUniversalHits
     ? filteredServerHits.length
     : searchFilterType === 'users' ? searchPeople.length
       : searchFilterType === 'posts' ? filteredPosts.length
@@ -430,7 +431,7 @@ export default function ExploreView({
             </div>
           ) : (
             <div className="space-y-8">
-              {universalResults && (
+              {hasUniversalHits && (
                 <section aria-label="NEXORA-wide search results" className="space-y-3">
                   <div className="flex items-center justify-between border-b border-violet-400/20 pb-2">
                     <h3 className="text-[10px] font-mono font-bold uppercase tracking-widest text-violet-300">Across NEXORA ({filteredServerHits.length})</h3>
@@ -639,7 +640,7 @@ export default function ExploreView({
                 </div>
               )}
 
-              {currentUserId && directoryResults?.nextCursor && (searchFilterType === 'all' || searchFilterType === 'users' || searchFilterType === 'communities') && (
+              {!hasUniversalHits && currentUserId && directoryResults?.nextCursor && (searchFilterType === 'all' || searchFilterType === 'users' || searchFilterType === 'communities') && (
                 <div className="flex justify-center pt-2">
                   <button
                     type="button"
