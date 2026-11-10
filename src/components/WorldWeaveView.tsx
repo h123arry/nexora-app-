@@ -4,7 +4,7 @@ import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Tras
 import type { User } from '../types';
 import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment,
-  acceptWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, subscribeToMyWorldWeaveInvites,
+  acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
 } from '../services/firebase/worldWeaveService';
@@ -80,6 +80,15 @@ export default function WorldWeaveView({ currentUser }: Props) {
       const weave = await acceptWorldWeaveInvite(invite.weaveId);
       setSelected(weave); setNotice('You joined the WorldWeave. Add your perspective to the timeline.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not accept this invitation.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleDeclineInvite = async (invite: WorldWeaveInvite) => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await declineWorldWeaveInvite(invite.weaveId);
+      setNotice('Invitation declined.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not decline this invitation.'); }
     finally { setBusy(false); }
   };
 
@@ -201,7 +210,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white"><Users size={16} className="text-violet-300"/> WorldWeave invitations <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-[10px] text-violet-100">{invitations.length}</span></div>
         <div className="space-y-2">{invitations.map(invite => <div key={`${invite.weaveId}:${invite.id}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#090e1b] p-3">
           <div><p className="text-sm font-semibold text-white">{invite.weaveTitle}</p><p className="mt-1 text-xs text-slate-400">Invited by {invite.ownerName}</p></div>
-          <button disabled={busy} onClick={() => void handleAcceptInvite(invite)} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Accept invitation</button>
+          <div className="flex items-center gap-2"><button disabled={busy} onClick={() => void handleDeclineInvite(invite)} className="rounded-xl border border-white/10 px-3 py-2 text-xs font-semibold text-slate-300 disabled:opacity-40">Decline</button><button disabled={busy} onClick={() => void handleAcceptInvite(invite)} className="rounded-xl bg-violet-600 px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Accept invitation</button></div>
         </div>)}</div>
       </section>}
       {showCreate && <form onSubmit={handleCreate} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-5">
