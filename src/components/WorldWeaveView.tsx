@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Trash2, Users, X } from 'lucide-react';
 import type { User } from '../types';
 import {
-  addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment,
+  addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments,
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
@@ -23,6 +23,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
+  const [hasMoreMoments, setHasMoreMoments] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -50,8 +52,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
   }, [currentUser.id]);
 
   useEffect(() => {
-    if (!selected) { setMoments([]); return; }
-    return subscribeToWorldWeaveMoments(selected.id, setMoments, err => setError(err.message));
+    if (!selected) { setMoments([]); setHasMoreMoments(false); return; }
+    return subscribeToWorldWeaveMoments(selected.id, items => { setMoments(items); setHasMoreMoments(items.length === 100); }, err => setError(err.message));
   }, [selected?.id]);
 
   const weaves = useMemo(() => {
@@ -118,6 +120,17 @@ export default function WorldWeaveView({ currentUser }: Props) {
     finally { setBusy(false); setProgress(0); }
   };
 
+  const handleLoadOlderMoments = async () => {
+    if (!selected || !moments.length || loadingOlder) return;
+    setLoadingOlder(true); setError('');
+    try {
+      const older = await fetchOlderWorldWeaveMoments(selected.id, moments[0]);
+      setMoments(current => [...older.filter(item => !current.some(existing => existing.id === item.id)), ...current]);
+      setHasMoreMoments(older.length === 100);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not load older moments.'); }
+    finally { setLoadingOlder(false); }
+  };
+
   const handleDeleteMoment = async (moment: WorldWeaveMoment) => {
     if (!selected || !window.confirm('Remove this moment from the shared timeline?')) return;
     setBusy(true); setError(''); setNotice('');
@@ -178,6 +191,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
         </div>}
         <section className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-white">The shared timeline</h2><span className="text-xs text-slate-500">Latest 100 · chronological</span></div>
+          {hasMoreMoments && <div className="flex justify-center"><button type="button" disabled={loadingOlder} onClick={() => void handleLoadOlderMoments()} className="rounded-xl border border-violet-400/20 bg-violet-500/[.06] px-4 py-2.5 text-xs font-semibold text-violet-100 disabled:opacity-40">{loadingOlder ? 'Loading older moments…' : 'Load older moments'}</button></div>}
           {moments.length === 0 ? <div className="rounded-3xl border border-dashed border-white/10 p-8 text-center text-sm text-slate-400">No moments yet. The first perspective starts the story.</div> :
             <div className="relative space-y-4 before:absolute before:bottom-4 before:left-[19px] before:top-4 before:w-px before:bg-violet-400/20">
               {moments.map(moment => <motion.article key={moment.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} className="relative ml-1 rounded-3xl border border-white/10 bg-[#0b1221] p-4 pl-12 md:p-5 md:pl-14">
