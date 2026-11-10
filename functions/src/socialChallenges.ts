@@ -68,21 +68,27 @@ export async function joinSocialChallenge(db: Firestore, uid: string, challengeI
   });
 }
 
-export async function listSocialChallenges(db: Firestore) {
+export async function listSocialChallenges(db: Firestore, uid: string) {
+  if (!validUid(uid)) throw new Error('A valid account is required.');
   const snapshot = await db.collection('socialChallenges').where('status', '==', 'active').limit(40).get();
   const now = Date.now();
-  return {
-    challenges: snapshot.docs.filter(doc => {
+  const activeDocs = snapshot.docs.filter(doc => {
       const endAt = doc.get('endAt')?.toDate?.()?.getTime?.() || 0;
       return endAt > now;
-    }).sort((a, b) => (b.get('createdAt')?.toDate?.()?.getTime?.() || 0) - (a.get('createdAt')?.toDate?.()?.getTime?.() || 0)).map(doc => ({
+  }).sort((a, b) => (b.get('createdAt')?.toDate?.()?.getTime?.() || 0) - (a.get('createdAt')?.toDate?.()?.getTime?.() || 0));
+  const challenges = await Promise.all(activeDocs.map(async doc => {
+    const participant = await doc.ref.collection('participants').doc(uid).get();
+    return {
       id: doc.id, creatorId: doc.get('creatorId'), title: doc.get('title'),
       description: doc.get('description'), topic: doc.get('topic'),
       targetPosts: doc.get('targetPosts'), participantCount: doc.get('participantCount') || 0,
       contributionCount: doc.get('contributionCount') || 0,
+      joinedByMe: participant.exists,
+      myContributionCount: participant.exists ? Number(participant.get('contributionCount') || 0) : 0,
       endAt: doc.get('endAt')?.toDate?.()?.toISOString?.() || null,
-    })),
-  };
+    };
+  }));
+  return { challenges };
 }
 
 /** Called only by the trusted post-created trigger; the tag opts a public post into a challenge. */
