@@ -26,8 +26,12 @@ function rateDocId(sessionId: string, userId: string): string {
   return createHash('sha256').update(sessionId + ':' + userId).digest('hex');
 }
 
-export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
+export const startLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey, liveKitApiSecret] }, async request => {
   const hostId = uid(request);
+  const liveKitUrl = process.env.LIVEKIT_URL?.trim() || 'wss://nexora-live-is43sh5r.livekit.cloud';
+  if (!liveKitApiKey.value().trim() || !liveKitApiSecret.value().trim() || !/^wss:\/\//i.test(liveKitUrl)) {
+    throw new HttpsError('failed-precondition', 'NEXORA Live video is not configured on the server yet. Please try again later.');
+  }
   const title = valid(() => validateLiveSessionTitle(request.data?.title));
   const statusRef = db.collection('accountStatus').doc(hostId);
   const profileRef = db.collection('users').doc(hostId);
@@ -42,11 +46,11 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
       if (!existing.empty) throw new HttpsError('already-exists', 'You already have an active live room.');
       tx.create(ref, {
         hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, peakViewerCount: 0, uniqueViewerCount: 0, messageCount: 0, giftCount: 0, giftNexTotal: 0, chatEnabled: true, giftsEnabled: true,
-        videoTransport: 'not_configured', hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), startedAt: FieldValue.serverTimestamp(),
+        videoTransport: 'livekit', hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), startedAt: FieldValue.serverTimestamp(),
         endedAt: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
     });
-    return { sessionId: ref.id, status: 'live' as const, viewerCount: 0, videoTransport: 'not_configured' as const };
+    return { sessionId: ref.id, status: 'live' as const, viewerCount: 0, videoTransport: 'livekit' as const };
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     throw new HttpsError('unavailable', 'Your live room could not be started. Please retry.');
