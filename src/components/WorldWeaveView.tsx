@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Camera, Globe2, LockKeyhole, Plus, Send, Sparkles, Users, Video, X } from 'lucide-react';
+import { ArrowLeft, Camera, Globe2, LockKeyhole, Plus, Send, Sparkles, Users, X } from 'lucide-react';
 import type { User } from '../types';
 import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave,
@@ -134,12 +134,14 @@ export default function WorldWeaveView({ currentUser }: Props) {
             {momentFile && <p className="mt-2 truncate text-xs text-violet-200">{momentFile.name}</p>}
             {busy && progress > 0 && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-violet-400 transition-all" style={{width: progress+'%'}}/></div>}
           </form>
+          {selected.ownerId === currentUser.id && (
           <form onSubmit={handleInvite} className="h-fit rounded-3xl border border-white/10 bg-[#0b1221] p-4">
             <div className="mb-3 text-sm font-bold text-white">Bring someone in</div>
             <p className="mb-3 text-xs leading-5 text-slate-400">Invite another NEXORA member to add their own perspective.</p>
             <input value={inviteUsername} onChange={e => setInviteUsername(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
             <button disabled={busy || !inviteUsername.trim()} className="mt-2 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-100 disabled:opacity-40">Send invitation</button>
           </form>
+          )}
         </div>}
         <section className="space-y-4">
           <div className="flex items-center justify-between"><h2 className="text-lg font-bold text-white">The shared timeline</h2><span className="text-xs text-slate-500">Oldest to newest</span></div>
