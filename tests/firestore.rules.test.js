@@ -216,6 +216,24 @@ const publicProfile = (uid) => ({
     ));
   });
 
+  it('persists chat reactions while allowing each participant to change only their own emoji list', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'chats', 'reaction-chat'), {
+        id: 'reaction-chat', participants: ['alice', 'bob', 'charlie'], isGroup: true
+      });
+      await setDoc(doc(adminDb, 'chats', 'reaction-chat', 'messages', 'message-1'), {
+        id: 'message-1', chatId: 'reaction-chat', senderId: 'alice',
+        content: 'hello group', status: 'sent', timestamp: new Date().toISOString()
+      });
+    });
+    const bobMessage = doc(dbFor('bob'), 'chats', 'reaction-chat', 'messages', 'message-1');
+    await assertSucceeds(updateDoc(bobMessage, { reactionUsers: { bob: ['❤️', '😂'] } }));
+    await assertFails(updateDoc(bobMessage, { reactionUsers: { bob: ['❤️'], alice: ['😂'] } }));
+    await assertFails(updateDoc(bobMessage, { reactionUsers: { bob: ['not-an-emoji'] } }));
+    await assertFails(updateDoc(bobMessage, { content: 'edited without permission' }));
+    await assertSucceeds(updateDoc(bobMessage, { reactionUsers: { bob: ['❤️'] } }));
+  });
+
   it('restricts chat reads and writes to participants and binds message authorship to Firebase UID', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'chats', 'chat-1'), { id: 'chat-1', participants: ['alice', 'bob'], lastMessage: '' });
