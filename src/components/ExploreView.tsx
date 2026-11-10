@@ -96,6 +96,7 @@ export default function ExploreView({
     }
     let cancelled = false;
     setDirectoryLoading(true);
+    setDirectoryLoadingMore(false);
     setDirectoryResults(null);
     setDirectoryError('');
     void searchPublicDirectory(term).then(results => {
