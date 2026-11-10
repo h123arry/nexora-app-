@@ -20,6 +20,7 @@ import { publishBusinessService, setBusinessServiceStatus } from './businessServ
 import { searchPublicDirectory } from './directorySearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { createDailySessionRecorder } from './retention.js';
 export { saveCreatorStudioTemplate, listCreatorStudioTemplates, deleteCreatorStudioTemplate } from './creatorStudio.js';
 export { getCreatorEarningsSnapshot, getPendingGiftEarningsForFinance, settleGiftCreatorEarning } from './giftEarnings.js';
 export { listAdminUsers, updateAdminUser, listAdminAuditEvents } from './adminUsers.js';
