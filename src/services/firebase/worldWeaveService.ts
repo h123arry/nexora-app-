@@ -109,6 +109,10 @@ export async function acceptWorldWeaveInvite(weaveId: string): Promise<WorldWeav
       memberCount: (data.memberCount || 1) + (alreadyJoined ? 0 : 1) } as WorldWeave;
   });
 }
+export async function declineWorldWeaveInvite(weaveId: string): Promise<void> {
+  const user = requireUser();
+  await deleteDoc(doc(db, 'worldWeaves', weaveId, 'invites', user.uid));
+}
 export async function addWorldWeaveTextMoment(weaveId: string, author: { id: string; name: string; username: string; avatar: string }, text: string): Promise<void> {
   const user = requireUser(); const cleanText = text.trim();
   if (user.uid !== author.id) throw new Error('The signed-in account must own this contribution.');
