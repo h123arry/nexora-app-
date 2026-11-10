@@ -448,6 +448,21 @@ export const CommunityService = {
     await update({ communityId, targetUid, role, reason });
   },
 
+  async moderateMember(
+    communityId: string,
+    targetUid: string,
+    action: 'mute' | 'unmute',
+    reason: string,
+    durationMinutes = 60,
+  ): Promise<{ userId: string; action: 'mute' | 'unmute'; mutedUntil: string | null }> {
+    if (!communityId || communityId.includes('/') || !targetUid || targetUid.includes('/')) {
+      throw new Error('A valid Circle member is required.');
+    }
+    const moderate = httpsCallable(functions, 'moderateCommunityMember');
+    const result = await moderate({ communityId, targetUid, action, reason, durationMinutes });
+    return result.data as { userId: string; action: 'mute' | 'unmute'; mutedUntil: string | null };
+  },
+
   async leaveCommunity(userId: string, communityId: string): Promise<void> {
     if (!userId || !communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const memberRef = doc(db, 'communities', communityId, 'members', userId);
