@@ -80,6 +80,7 @@ export default function ExploreView({
   const [directoryResults, setDirectoryResults] = useState<PublicDirectoryResult | null>(null);
   const [directoryLoading, setDirectoryLoading] = useState(false);
   const [directoryError, setDirectoryError] = useState('');
+  const [directoryLoadingMore, setDirectoryLoadingMore] = useState(false);
 
   // Signed-in discovery uses the privacy-filtered server directory for people,
   // Pages and public Circles. Local post search remains scoped to loaded public posts.
@@ -107,6 +108,34 @@ export default function ExploreView({
     });
     return () => { cancelled = true; };
   }, [currentUserId, debouncedSearch]);
+
+  // Continue the server directory using its opaque, query-bound cursor. Results
+  // are merged by stable document ID so overlapping prefix indexes never duplicate cards.
+  const loadMoreDirectoryResults = async () => {
+    const cursor = directoryResults?.nextCursor;
+    const term = debouncedSearch.trim();
+    if (!currentUserId || !cursor || directoryLoadingMore || term.length < 2) return;
+    setDirectoryLoadingMore(true);
+    setDirectoryError('');
+    try {
+      const next = await searchPublicDirectory(term, cursor);
+      setDirectoryResults(current => {
+        if (!current) return next;
+        const mergeById = <T extends { id: string }>(previous: T[], incoming: T[]) =>
+          [...new Map([...previous, ...incoming].map(item => [item.id, item])).values()];
+        return {
+          people: mergeById(current.people, next.people),
+          pages: mergeById(current.pages, next.pages),
+          circles: mergeById(current.circles, next.circles),
+          nextCursor: next.nextCursor,
+        };
+      });
+    } catch (error) {
+      setDirectoryError(error instanceof Error ? error.message : 'More directory results could not be loaded.');
+    } finally {
+      setDirectoryLoadingMore(false);
+    }
+  };
 
     // Debounce search input for performance
   useEffect(() => {
@@ -502,6 +531,19 @@ export default function ExploreView({
                     try { window.sessionStorage.setItem('nexora_community_search_handoff', debouncedSearch); } catch {}
                     setActiveTab('communities');
                   }} className="px-3.5 py-2 rounded-xl bg-violet-500/15 hover:bg-violet-600 border border-violet-400/25 text-violet-200 hover:text-white text-[10px] font-mono font-bold uppercase shrink-0">Open hub</button>
+                </div>
+              )}
+
+              {currentUserId && directoryResults?.nextCursor && (searchFilterType === 'all' || searchFilterType === 'users' || searchFilterType === 'communities') && (
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    disabled={directoryLoadingMore}
+                    onClick={() => void loadMoreDirectoryResults()}
+                    className="min-h-11 rounded-xl border border-violet-400/30 bg-violet-500/10 px-5 py-2 text-xs font-mono font-bold uppercase text-violet-200 transition-colors hover:bg-violet-500/20 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    {directoryLoadingMore ? 'Loading more…' : 'Load more directory results'}
+                  </button>
                 </div>
               )}
 
