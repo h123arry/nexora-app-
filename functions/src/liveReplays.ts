@@ -5,6 +5,7 @@ import { defineSecret, defineString } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { createLiveKitJwt } from './liveKitTokenPolicy.js';
+import { canWatchLiveReplay, isSafeLiveReplayObjectPath } from './liveReplaysPolicy.js';
 
 const apiKey = defineSecret('LIVEKIT_API_KEY');
 const apiSecret = defineSecret('LIVEKIT_API_SECRET');
@@ -47,10 +48,7 @@ async function egressRequest<T extends EgressResult>(method: 'StartRoomComposite
   }
   return await response.json() as T;
 }
-function safeObjectPath(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 1024 || value.startsWith('/') || value.includes('..') || !value.startsWith('nexora-live/')) return null;
-  return value;
-}
+function safeObjectPath(value: unknown): string | null { return isSafeLiveReplayObjectPath(value) ? value : null; }
 
 /** Stop an active recording when a host ends a room or the host lease expires. */
 export async function stopLiveRecordingForSession(sessionId: string): Promise<void> {
@@ -163,10 +161,8 @@ export const getLiveReplayPlayback = onCall(
     const session = await sessionRef.get();
     if (!session.exists || session.data()?.status !== 'ended') throw new HttpsError('failed-precondition', 'This replay is not available yet.');
     const data = session.data()!;
-    if (data.hostId !== userId) {
-      const audience = await sessionRef.collection('audience').doc(userId).get();
-      if (!audience.exists) throw new HttpsError('permission-denied', 'Only the host and people who attended this live room can watch its replay.');
-    }
+    const audience = data.hostId === userId ? null : await sessionRef.collection('audience').doc(userId).get();
+    if (!canWatchLiveReplay(String(data.hostId || ''), userId, audience?.exists === true)) throw new HttpsError('permission-denied', 'Only the host and people who attended this live room can watch its replay.');
     const recording = data.recording as Record<string, unknown> | undefined;
     const egressId = typeof recording?.egressId === 'string' ? recording.egressId : '';
     if (!egressId || !['recording', 'processing', 'completed', 'stop_failed'].includes(String(recording?.status))) {
