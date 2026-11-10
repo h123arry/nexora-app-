@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 const ROOT = process.cwd();
 const EXPANSION = 'functions/src/giftCatalogExpansion.ts';
 const SPRITE_DIR = 'public/giftverse/gifts';
-const OUTPUT_DIR = 'public/giftverse/gifts/imported';
+const OUTPUT_DIR = 'giftverse/gifts/imported';
 
 const escapeXml = value => String(value).replace(/[&<>"']/g, c => ({
   '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
