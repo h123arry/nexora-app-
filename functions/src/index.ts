@@ -61,11 +61,21 @@ export const deliverNotificationPush = createNotificationPushDelivery(adminDb, a
 const syncSearch = (kind: Parameters<typeof syncUniversalSearchRecord>[1], id: string, path: string, data: Record<string, unknown> | null, parent?: Record<string, unknown>) =>
   syncUniversalSearchRecord(adminDb, kind, id, path, data, parent);
 
+const searchFieldsChanged = (
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null,
+  fields: string[],
+): boolean => {
+  if (!before || !after) return true;
+  return fields.some(field => JSON.stringify(before[field] ?? null) !== JSON.stringify(after[field] ?? null));
+};
+
 export const indexPublicPostForSearch = onDocumentWritten('posts/{postId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const after = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
   const id = event.params.postId;
   const path = 'posts/' + id;
+  if (before && after && !searchFieldsChanged(before, after, ['content','audience','tags','videoUrl','mediaType','type','timestamp','likes','likesCount','commentsCount','views','viewCount','image','images','status','userId'])) return;
   const resolveKind = (data: Record<string, unknown> | null): 'video' | 'post' =>
     data && (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
   const previousKind = resolveKind(before);
@@ -74,19 +84,27 @@ export const indexPublicPostForSearch = onDocumentWritten('posts/{postId}', asyn
   if (after) await syncSearch(nextKind, id, path, after);
 });
 export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','bio','isVerified','isBanned','isSuspended','isSeedProfile'])) return;
   await syncSearch('person', event.params.userId, 'users/' + event.params.userId, data);
 });
 export const indexPageForSearch = onDocumentWritten('pages/{pageId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','category','description','status','isPrivate','privacy','ownerId'])) return;
   await syncSearch('page', event.params.pageId, 'pages/' + event.params.pageId, data);
 });
 export const indexCircleForSearch = onDocumentWritten('communities/{communityId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['name','description','bannerImage','type','isPrivate','bannedUsers','status'])) return;
   await syncSearch('circle', event.params.communityId, 'communities/' + event.params.communityId, data);
 });
 export const indexLiveRoomForSearch = onDocumentWritten('liveSessions/{sessionId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['title','description','hostName','hostId','status','thumbnailUrl','startedAt'])) return;
   await syncSearch('live', event.params.sessionId, 'liveSessions/' + event.params.sessionId, data);
 });
 export const indexCirclePostForSearch = onDocumentWritten('communities/{communityId}/posts/{postId}', async event => {
