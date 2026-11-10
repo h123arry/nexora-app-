@@ -8,7 +8,7 @@ The trusted server projection in `searchIndex/{kind}_{sourceId}` supports:
 - Public Pages (`pages`)
 - Public Circles (`communities`)
 - Live rooms while their status is `live` (`liveSessions`)
-- Scheduled events in public Circles
+- Scheduled events, open polls and announcements in public Circles
 - Active services belonging to Business Pages
 - Published Page channel updates
 - Hashtag/topic hits derived from matching public post tags
@@ -41,7 +41,7 @@ Deletion, unpublishing, suspension, private audience changes and ended live room
 New triggers cover writes after deployment. Existing records need a one-time backfill. The admin-only callable `backfillNexoraSearchIndex` processes bounded batches of 100 and returns a continuation cursor.
 
 Run the callable as a trusted NEXORA admin for each source until `done: true`:
-`users`, `posts`, `pages`, `communities`, `liveSessions`, `circlePosts`, `circleEvents`, `pageServices`, `pageUpdates`.
+`users`, `posts`, `pages`, `communities`, `liveSessions`, `circlePosts`, `circleEvents`, `circlePolls`, `circleAnnouncements`, `pageServices`, `pageUpdates`.
 
 Pass the returned `nextCursor` as `cursor` on the next call for that same source. Do not expose this callable to ordinary users or run a broad backfill from a client app. The callable verifies the admin custom claim before reading or writing index records.
 
