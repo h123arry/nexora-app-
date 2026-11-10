@@ -3,11 +3,12 @@ import { Storage } from '@google-cloud/storage';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { spawn } from 'node:child_process';
-import { createHash, createHmac, randomUUID } from 'node:crypto';
+import { createHmac, randomUUID } from 'node:crypto';
 import sharp from 'sharp';
-import { mkdtemp, mkdir, rm, stat, readFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, MAX_DURATION_SECONDS } from './policies.js';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
 const bucketName = process.env.MEDIA_BUCKET;
@@ -17,8 +18,6 @@ if (!getApps().length) initializeApp({ projectId });
 const db = getFirestore(getApps()[0], databaseId);
 const storage = new Storage({ projectId });
 const bucket = storage.bucket(bucketName);
-const MAX_INPUT_BYTES = 250 * 1024 * 1024;
-const MAX_DURATION_SECONDS = 60 * 60;
 const RENDITIONS = [{height:360,bitrate:'800k',audio:'96k'},{height:720,bitrate:'2500k',audio:'128k'},{height:1080,bitrate:'5000k',audio:'128k'}];
 
 function run(binary,args) {
@@ -54,17 +53,9 @@ async function upload(local,object,contentType,cacheControl='public,max-age=3153
   await bucket.upload(local,{destination:object,metadata:{contentType,cacheControl,metadata:{nexoraGenerated:'true'}}});
 }
 async function processObject(event){
-  const object=event.data || event;
-  const name=object.name;
-  const match=typeof name==='string' && name.match(/^users\/([A-Za-z0-9_-]{1,128})\/media\/([A-Za-z0-9_-]{1,128})$/);
-  if(!match || object.bucket!==bucketName) return {ignored:true};
-  const [,ownerId,mediaId]=match;
-  if(object.metadata?.ownerId!==ownerId || object.metadata?.mediaId!==mediaId) return {ignored:true};
-  if(Number(object.size)>MAX_INPUT_BYTES || Number(object.size)<=0) throw new Error('Input file exceeds media size policy');
-  const isVideo=String(object.contentType||'').toLowerCase().startsWith('video/');
-  const isImage=String(object.contentType||'').toLowerCase().startsWith('image/');
-  if(!isVideo && !isImage) return {ignored:true};
-  if(isImage && Number(object.size)>12*1024*1024) throw new Error('Image exceeds 12 MiB processing limit');
+  const classification=classifyStorageObject(event,bucketName);
+  if(classification.ignored) return {ignored:true,reason:classification.reason};
+  const {object,ownerId,mediaId,isVideo,isImage,generation}=classification;
   const ref=db.collection('mediaAssets').doc(mediaId);
   const token=randomUUID();
   const accepted=await db.runTransaction(async tx=>{
@@ -77,19 +68,18 @@ async function processObject(event){
   const work=await mkdtemp(path.join(tmpdir(),'nexora-media-'));
   try {
     const input=path.join(work,'source');
-    await bucket.file(name).download({destination:input});
+    await bucket.file(object.name).download({destination:input});
     if(isImage) {
       const sourceMetadata=await sharp(input,{limitInputPixels:100_000_000}).metadata();
       if(!sourceMetadata.width || !sourceMetadata.height || sourceMetadata.width>20_000 || sourceMetadata.height>20_000) throw new Error('Image dimensions are outside supported limits');
-      const outputRoot=`processed/${ownerId}/${mediaId}/${object.generation || 'current'}`;
+      const outputRoot=`processed/${ownerId}/${mediaId}/${generation}`;
       const variants=[];
-      for(const width of [320,640,1280]) {
-        if(sourceMetadata.width<width && width!==320) continue;
+      for(const width of imageRenditionWidths(sourceMetadata.width)){
         const output=path.join(work,`image-${width}.webp`);
-        await sharp(input,{limitInputPixels:100_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:82,effort:4}).toFile(output);
-        const objectPath=`${outputRoot}/image-${width}.webp`;
+        const outputInfo=await sharp(input,{limitInputPixels:100_000_000}).rotate().resize({width,withoutEnlargement:true}).webp({quality:82,effort:4}).toFile(output);
+        const objectPath=`${outputRoot}/image-${outputInfo.width}.webp`;
         await upload(output,objectPath,'image/webp');
-        variants.push({width,path:objectPath});
+        variants.push({width:outputInfo.width,height:outputInfo.height,path:objectPath});
       }
       const result=await db.runTransaction(async tx=>{
         const snap=await tx.get(ref); const current=snap.data();
@@ -100,11 +90,10 @@ async function processObject(event){
       return {ready:result,mediaId,imageVariants:variants.length};
     }
     const metadata=await probe(input);
-    const outputRoot=`processed/${ownerId}/${mediaId}/${object.generation || 'current'}`;
+    const outputRoot=`processed/${ownerId}/${mediaId}/${generation}`;
     const master=[];
     const actual=[];
-    for(const rendition of RENDITIONS){
-      if(metadata.height<rendition.height) continue;
+    for(const rendition of videoRenditionsForHeight(metadata.height,RENDITIONS)){
       const dir=path.join(work,String(rendition.height)); await mkdir(dir,{recursive:true});
       const mp4=path.join(dir,'video.mp4');
       await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height}\\,ih)`,'-c:v','libx264','-preset','veryfast','-profile:v','main','-b:v',rendition.bitrate,'-maxrate',rendition.bitrate,'-bufsize',`${parseInt(rendition.bitrate,10)*2}k`,'-c:a','aac','-b:a',rendition.audio,'-movflags','+faststart','-pix_fmt','yuv420p',mp4]);
