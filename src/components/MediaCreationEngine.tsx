@@ -107,12 +107,12 @@ const FILTER_PRESETS = [
 ];
 
 const WIZARD_STEPS = [
-  { id: 1, label: 'Type' },
-  { id: 2, label: 'Media' },
-  { id: 3, label: 'Edit' },
-  { id: 4, label: 'Details' },
+  { id: 1, label: 'Choose' },
+  { id: 2, label: 'Add' },
+  { id: 3, label: 'Review' },
+  { id: 4, label: 'Caption' },
   { id: 5, label: 'Preview' },
-  { id: 6, label: 'Publish' }
+  { id: 6, label: 'Share' }
 ];
 
 export default function MediaCreationEngine({
@@ -973,8 +973,8 @@ export default function MediaCreationEngine({
                 <ShieldAlert className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="text-sm font-sans font-black text-white uppercase tracking-wider">Unsaved Work Detected</h4>
-                <p className="text-xs text-zinc-400 mt-1">Would you like to preserve your captions and edits as a draft before leaving the studio?</p>
+                <h4 className="text-sm font-sans font-bold text-white">Leave this post?</h4>
+                <p className="text-xs text-zinc-400 mt-1">Save your work as a draft so you can come back to it later.</p>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2">
                 <button 
@@ -1015,8 +1015,8 @@ export default function MediaCreationEngine({
                 <Camera className="w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-sm font-black text-white uppercase tracking-wider">Access Shutter Hardware</h3>
-                <p className="text-xs text-zinc-400 leading-relaxed mt-1">Nexora requires high-definition camera, mic, and media library synchronization for live overlays.</p>
+                <h3 className="text-sm font-bold text-white">Allow camera and microphone access</h3>
+                <p className="text-xs text-zinc-400 leading-relaxed mt-1">Allow access when you want to take a photo, record a video or make a voice note.</p>
               </div>
               <div className="flex gap-2">
                 <button 
@@ -1029,7 +1029,7 @@ export default function MediaCreationEngine({
                   onClick={() => { setPermissionState('granted'); setPermissionTarget(null); }}
                   className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
                 >
-                  Authorize
+                  Continue
                 </button>
               </div>
             </div>
@@ -1083,9 +1083,9 @@ export default function MediaCreationEngine({
               <div>
                 <div className="flex items-baseline gap-2">
                   <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
-                  <span className="text-[11px] font-mono font-bold tracking-widest uppercase text-violet-400">Content Studio</span>
+                  <span className="text-[11px] font-semibold tracking-wide text-violet-300">CREATE</span>
                 </div>
-                <h1 className="text-sm font-black font-sans uppercase tracking-tight">Unified Publisher v3.0</h1>
+                <h1 className="text-sm font-semibold font-sans tracking-tight text-zinc-200">Make something worth sharing</h1>
               </div>
             </div>
           </div>
@@ -1113,19 +1113,19 @@ export default function MediaCreationEngine({
             onClick={() => { setActiveTab('feed'); setCurrentStep(1); }}
             className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
-            📝 Dynamic Feed
+            📝 Posts
           </button>
           <button 
             onClick={() => { setActiveTab('story'); setActiveMode('photo'); setCurrentStep(2); }}
             className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'story' ? 'bg-emerald-600/15 text-emerald-400 border border-emerald-500/20' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
-            📖 Stories Mode
+            📖 Stories
           </button>
           <button 
             onClick={() => setActiveTab('drafts')}
             className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeTab === 'drafts' ? 'bg-violet-600 text-white font-black' : 'text-zinc-500 hover:text-zinc-300'}`}
           >
-            💾 Saved Drafts <span className="px-1.5 bg-zinc-800 text-[10px] rounded-full text-zinc-400">{draftsList.length}</span>
+            💾 Drafts <span className="px-1.5 bg-zinc-800 text-[10px] rounded-full text-zinc-400">{draftsList.length}</span>
           </button>
         </div>
 
@@ -1154,11 +1154,11 @@ export default function MediaCreationEngine({
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
             <div className="space-y-3">
-              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block">Draft Archives</span>
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block">Your drafts</span>
               {draftsList.length === 0 ? (
                 <div className="py-12 border border-zinc-900 border-dashed rounded-2xl text-center space-y-2">
                   <FolderHeart className="w-8 h-8 text-zinc-600 mx-auto animate-pulse" />
-                  <p className="text-xs text-zinc-400 italic">No saved drafts available. Drafts persist across refresh sessions.</p>
+                  <p className="text-xs text-zinc-400 italic">No drafts yet. Save something you're working on and it will be waiting here.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1179,8 +1179,8 @@ export default function MediaCreationEngine({
                       </div>
                       <p className="text-xs text-zinc-300 line-clamp-2 italic font-serif">"{d.caption || 'No caption text'}"</p>
                       <div className="flex items-center justify-between mt-3 text-[9px] font-mono text-zinc-500">
-                        <span>Calendar: {d.timestamp}</span>
-                        <span className="text-violet-400 group-hover:underline">Restore →</span>
+                        <span>Saved: {new Date(d.timestamp).toLocaleDateString()}</span>
+                        <span className="text-violet-400 group-hover:underline">Continue →</span>
                       </div>
                     </div>
                   ))}
@@ -1195,21 +1195,21 @@ export default function MediaCreationEngine({
                 /* STEP 1: CHOOSE CONTENT TYPE */
                 <div className="space-y-4 animate-fadeIn">
                   <div>
-                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">Unified Create Hub</span>
-                    <h3 className="text-sm font-black text-white uppercase">Choose content format type</h3>
+                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">CREATE SOMETHING</span>
+                    <h3 className="text-sm font-black text-white uppercase">What would you like to share?</h3>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {[
-                      { id: 'text', icon: FileText, label: 'Text Post', color: 'border-blue-500/10 hover:border-blue-500/30 text-blue-400', desc: 'Symmetric layout micro-blog' },
-                      { id: 'photo', icon: Camera, label: 'Photo snapshot', color: 'border-white/10 hover:border-white/10 text-violet-400', desc: 'Capture or Import images' },
-                      { id: 'carousel', icon: FileImage, label: 'Carousel (Multiple)', color: 'border-fuchsia-500/10 hover:border-fuchsia-500/30 text-fuchsia-400', desc: 'Multiple images layout' },
-                      { id: 'video', icon: Video, label: 'Interactive Video', color: 'border-cyan-500/10 hover:border-cyan-500/30 text-cyan-400', desc: 'Publish full standard video' },
-                      { id: 'reel', icon: Sparkle, label: 'Reel (Short Video)', color: 'border-pink-500/10 hover:border-pink-500/30 text-pink-400', desc: 'TikTok-style short video' },
-                      { id: 'voice', icon: Mic, label: 'Voice Memo', color: 'border-rose-500/10 hover:border-rose-500/30 text-rose-400', desc: 'Record microphone waves' },
-                      { id: 'poll', icon: BarChart2, label: 'Interactive Poll', color: 'border-amber-500/10 hover:border-amber-500/30 text-amber-400', desc: 'Engage audience feedback' },
-                      { id: 'pulse', icon: MapPin, label: 'Regional Pulse', color: 'border-emerald-500/10 hover:border-emerald-500/30 text-emerald-400', desc: 'Localized regional checkins' },
-                      { id: 'community', icon: Users, label: 'Collaboration', color: 'border-purple-500/10 hover:border-purple-500/30 text-purple-400', desc: 'Share with close friends circle' }
+                      { id: 'text', icon: FileText, label: 'Text post', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a thought, story or update.' },
+                      { id: 'photo', icon: Camera, label: 'Photo', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a photo from your device or camera.' },
+                      { id: 'carousel', icon: FileImage, label: 'Photo collection', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share several photos together.' },
+                      { id: 'video', icon: Video, label: 'Video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a video from your device.' },
+                      { id: 'reel', icon: Sparkle, label: 'Short video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record a quick moment or choose a clip.' },
+                      { id: 'voice', icon: Mic, label: 'Voice note', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record a message in your own voice.' },
+                      { id: 'poll', icon: BarChart2, label: 'Poll', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Ask a question and let people vote.' },
+                      { id: 'pulse', icon: MapPin, label: 'Local update', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share what is happening near you.' },
+                      { id: 'community', icon: Users, label: 'Circle post', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share something with your circle.' }
                     ].map((item) => (
                       <button
                         key={item.id}
@@ -1230,12 +1230,12 @@ export default function MediaCreationEngine({
                 /* STEP 2: MEDIA IMPORT & RECORDING */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-mono text-zinc-400 uppercase">Format: {activeMode?.toUpperCase()}</span>
+                    <span className="text-[10px] font-mono text-zinc-400 uppercase">You're adding</span>
                     <button 
                       onClick={() => setCurrentStep(1)} 
                       className="text-xs text-violet-400 hover:underline flex items-center gap-1 font-bold"
                     >
-                      Change Type
+                      Choose another
                     </button>
                   </div>
 
@@ -1245,11 +1245,11 @@ export default function MediaCreationEngine({
                       <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-zinc-950/20 hover:border-white/10 transition-all flex flex-col items-center justify-center">
                         <FileImage className="w-8 h-8 text-zinc-500 animate-bounce" />
                         <div className="space-y-1">
-                          <p className="text-xs text-zinc-300 font-bold">Upload Snapshot</p>
-                          <p className="text-[10px] text-zinc-500 font-sans">Support JPG, PNG format up to 10MB</p>
+                          <p className="text-xs text-zinc-300 font-bold">Add a photo</p>
+                          <p className="text-[10px] text-zinc-500 font-sans">Choose a photo from your device.</p>
                         </div>
                         <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all">
-                          Browse Local Gallery
+                          Choose from device
                           <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
@@ -1257,14 +1257,14 @@ export default function MediaCreationEngine({
                       {/* Snap device simulation */}
                       <div className="border border-zinc-800 rounded-2xl p-4 text-center space-y-4 bg-zinc-950/40 flex flex-col justify-between">
                         <div className="space-y-1">
-                          <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Live Frame Shutter</span>
-                          <p className="text-[10px] text-zinc-500">Capture an instant photo from your physical webcam.</p>
+                          <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Take a photo</span>
+                          <p className="text-[10px] text-zinc-500">Use your camera to take a photo.</p>
                         </div>
                         <button 
                           onClick={captureCameraSnapshot}
                           className="w-full py-2.5 bg-linear-to-r from-violet-600 to-pink-500 text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                         >
-                          📸 Snaps live frame
+                          Take photo
                         </button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
@@ -1287,7 +1287,7 @@ export default function MediaCreationEngine({
                     <div className="space-y-3">
                       <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#080712]/30">
                         <FileImage className="w-8 h-8 text-zinc-500 mx-auto" />
-                        <p className="text-xs text-zinc-300 font-bold">Multi-Image Grid selection</p>
+                        <p className="text-xs text-zinc-300 font-bold">Add photos to your collection</p>
                         <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
                           Add multiple images
                           <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
@@ -1296,7 +1296,7 @@ export default function MediaCreationEngine({
 
                       {selectedImages.length > 0 && (
                         <div className="space-y-2 bg-zinc-950/50 p-3 rounded-xl border border-zinc-900">
-                          <span className="text-[9px] font-mono text-zinc-400 uppercase">Selected list ({selectedImages.length}): Drag to reorder</span>
+                          <span className="text-[9px] font-mono text-zinc-400 uppercase">Your photos ({selectedImages.length}) · Arrange them in the order you want</span>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {selectedImages.map((img, index) => (
                               <div key={index} className="relative aspect-square rounded-lg border border-zinc-800 overflow-hidden group">
@@ -1328,11 +1328,11 @@ export default function MediaCreationEngine({
                     <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-4 bg-zinc-950/20">
                       <Video className="w-8 h-8 text-zinc-500 mx-auto animate-pulse" />
                       <div className="space-y-1">
-                        <p className="text-xs text-zinc-300 font-bold">Import Interactive Video</p>
-                        <p className="text-[10px] text-zinc-500">Supported formats: MP4, MOV, WebM up to 50MB</p>
+                        <p className="text-xs text-zinc-300 font-bold">Choose a video</p>
+                        <p className="text-[10px] text-zinc-500">Choose a video from your device (up to 50 MB).</p>
                       </div>
                       <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
-                        Choose Video File
+                        Choose video
                         <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
                       </label>
                       {videoFileUrl && (
@@ -1349,7 +1349,7 @@ export default function MediaCreationEngine({
                     <div className="space-y-3">
                       <div className="relative aspect-[9/16] max-w-[240px] mx-auto rounded-2xl overflow-hidden bg-black border border-zinc-800 flex flex-col justify-between p-3.5 shadow-md">
                         <div className="z-10 flex justify-between items-center text-[8px] font-mono text-zinc-400">
-                          <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">RECORDING CONSOLE</span>
+                          <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">YOUR CAMERA</span>
                           <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-zinc-900 rounded-full text-white">
                             <RefreshCw className="w-3 h-3" />
                           </button>
@@ -1368,14 +1368,14 @@ export default function MediaCreationEngine({
                         <div className="z-10 flex flex-col items-center gap-2">
                           {isRecording ? (
                             <button onClick={handleStopReelRecord} className="w-12 h-12 bg-rose-600 rounded-full border-2 border-white animate-pulse flex items-center justify-center text-[10px] text-white font-bold font-mono">
-                              STOP
+                              Stop recording
                             </button>
                           ) : (
                             <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-fuchsia-600 to-pink-500 rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-md cursor-pointer">
-                              START
+                              Start recording
                             </button>
                           )}
-                          {isRecording && <span className="text-[9px] font-mono bg-black/60 text-white px-2 py-0.5 rounded-full">Stream time: {loopTimerSecs}s</span>}
+                          {isRecording && <span className="text-[9px] font-mono bg-black/60 text-white px-2 py-0.5 rounded-full">Recording: {loopTimerSecs}s</span>}
                         </div>
                       </div>
                     </div>
@@ -1385,7 +1385,7 @@ export default function MediaCreationEngine({
                     <div className="p-5 bg-zinc-950 border border-zinc-800 rounded-2xl text-center space-y-4">
                       <div className="space-y-1">
                         <span className="text-3xl font-mono font-bold text-white block">0:{voiceDurationSecs.toString().padStart(2, '0')}</span>
-                        <span className="text-[9.5px] font-mono text-zinc-500 block uppercase">Continuous recording</span>
+                        <span className="text-[9.5px] font-mono text-zinc-500 block uppercase">Voice note</span>
                       </div>
 
                       {/* Waveform simulator */}
@@ -1402,18 +1402,18 @@ export default function MediaCreationEngine({
                       <div className="flex justify-center items-center gap-3">
                         {voiceIsRecording ? (
                           <button onClick={stopVoiceRecording} className="px-5 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs font-mono">
-                            🛑 STOP WAVE
+                            🛑 Stop recording
                           </button>
                         ) : (
                           <button onClick={startVoiceRecording} className="px-6 py-3 bg-linear-to-tr from-violet-600 to-pink-500 text-white font-black rounded-xl text-xs font-mono animate-pulse">
-                            🎙️ START RECORDING
+                            🎙️ Start recording
                           </button>
                         )}
                       </div>
 
                       {voiceTranscript && (
                         <div className="text-left bg-zinc-900 border border-zinc-800 p-3.5 rounded-xl space-y-1">
-                          <span className="text-[8px] font-mono text-violet-400 uppercase font-black">AI Transcribing Shutter</span>
+                          <span className="text-[8px] font-mono text-violet-400 uppercase font-black">Voice transcript</span>
                           <p className="text-xs text-zinc-300 font-sans italic">"{voiceTranscript}"</p>
                         </div>
                       )}
@@ -1423,10 +1423,10 @@ export default function MediaCreationEngine({
                   {activeMode === 'poll' && (
                     <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-zinc-500 uppercase block">Poll question query</label>
+                        <label className="text-[10px] font-mono text-zinc-500 uppercase block">Your question</label>
                         <input 
                           type="text" 
-                          placeholder="e.g. Is Decentralization ready for prime-time?"
+                          placeholder="What would you like to ask?"
                           value={pollQuestion}
                           onChange={(e) => setPollQuestion(e.target.value)}
                           className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-sans"
@@ -1450,7 +1450,7 @@ export default function MediaCreationEngine({
                         ))}
                         {pollOptionsList.length < 5 && (
                           <button onClick={() => setPollOptionsList(prev => [...prev, ''])} className="text-[10px] font-mono text-violet-400 hover:underline">
-                            + Add poll option targets
+                            + Add another option
                           </button>
                         )}
                       </div>
@@ -1501,12 +1501,12 @@ export default function MediaCreationEngine({
 
                     {/* Editor controls list */}
                     <div className="space-y-3.5 bg-zinc-950/40 p-4 rounded-2xl border border-zinc-900/60">
-                      <span className="text-[10px] font-mono text-zinc-400 uppercase block tracking-wider pt-1">Adjustment Panel</span>
+                      <span className="text-[10px] font-mono text-zinc-400 uppercase block tracking-wider pt-1">Photo adjustments</span>
                       
                       {/* Interactive CSS filters row */}
                       {selectedImages.length > 0 && (
                         <div className="space-y-1.5">
-                          <span className="text-[9px] font-mono text-zinc-500 block uppercase">Filters Palette</span>
+                          <span className="text-[9px] font-mono text-zinc-500 block uppercase">Choose a look</span>
                           <div className="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
                             {FILTER_PRESETS.map((p) => (
                               <button
@@ -1545,7 +1545,7 @@ export default function MediaCreationEngine({
                           }}
                           className="py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[10px] font-mono text-zinc-300 rounded-lg flex items-center justify-center gap-1"
                         >
-                          <RotateCw className="w-3.5 h-3.5" /> ROTATE (90°)
+                          <RotateCw className="w-3.5 h-3.5" /> Rotate photo
                         </button>
                         <button 
                           onClick={() => {
@@ -1558,7 +1558,7 @@ export default function MediaCreationEngine({
                           }}
                           className="py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[10px] font-mono text-zinc-300 rounded-lg flex items-center justify-center gap-1"
                         >
-                          <Crop className="w-3.5 h-3.5" /> ZOOM (TOGGLE)
+                          <Crop className="w-3.5 h-3.5" /> Zoom photo
                         </button>
                       </div>
 
@@ -1580,7 +1580,7 @@ export default function MediaCreationEngine({
 
                       {/* Stickers Overlay & Text Overlays */}
                       <div className="space-y-2 border-t border-zinc-900 pt-3 text-left">
-                        <span className="text-[9px] font-mono text-zinc-500 uppercase block">Stickers & Labels overlays</span>
+                        <span className="text-[9px] font-mono text-zinc-500 uppercase block">Stickers and text</span>
                         <div className="flex gap-2">
                           {['🔥', '⚡', '✨', '🏆', '👾', '🚀', '💯'].map((emo) => (
                             <button key={emo} onClick={() => setStickerOverlay(stickerOverlay === emo ? null : emo)} className={`text-lg p-1 hover:scale-110 transition-transform ${stickerOverlay === emo ? 'bg-violet-600/20 rounded-lg border border-white/10' : ''}`}>
@@ -1591,7 +1591,7 @@ export default function MediaCreationEngine({
                         <div className="space-y-1">
                           <input 
                             type="text" 
-                            placeholder="Add Overlay Text details..."
+                            placeholder="Add text to your photo"
                             value={textOverlay}
                             onChange={(e) => setTextOverlay(e.target.value)}
                             className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-[11px] text-white"
@@ -1608,16 +1608,16 @@ export default function MediaCreationEngine({
                 /* STEP 4: SMART CAPTION & METADATA DETAILS */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="space-y-1 text-left">
-                    <label className="text-[10px] font-mono text-zinc-400 uppercase">Write Smart Caption</label>
+                    <label className="text-[10px] font-mono text-zinc-400 uppercase">Write a caption</label>
                     <textarea
                       rows={3}
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
-                      placeholder="Type details... use #developer, #systemsdesign or tag @voh to explore."
+                      placeholder="Tell people what this is about..."
                       className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-white/10 resize-none leading-relaxed"
                     />
                     <div className="flex justify-between text-[9px] font-mono text-zinc-500 px-1">
-                      <span>Character metrics: {caption.length} / 500</span>
+                      <span>{caption.length} of 500 characters</span>
                       {caption.includes('#') && <span className="text-violet-400">⚡ Hashtags detected</span>}
                     </div>
                   </div>
@@ -1626,15 +1626,15 @@ export default function MediaCreationEngine({
                   <div className="bg-zinc-950/40 p-3.5 border border-zinc-900 rounded-2xl space-y-2">
                     <div className="flex items-center gap-1.5 text-violet-400 font-mono text-[9px] uppercase tracking-widest">
                       <VohIcon size={14} animated variant="brand" />
-                      <span>VOH AI Caption Assistant</span>
+                      <span>VOH AI writing help</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        { prompt: 'rewrite', label: 'Rewrite Punchy' },
-                        { prompt: 'shorten', label: 'Shorten Text' },
-                        { prompt: 'expand', label: 'Expand Professional' },
-                        { prompt: 'tags', label: 'Add Hashtags' },
-                        { prompt: 'translate', label: 'Translate (FR)' }
+                        { prompt: 'rewrite', label: 'Rewrite' },
+                        { prompt: 'shorten', label: 'Shorten' },
+                        { prompt: 'expand', label: 'Make clearer' },
+                        { prompt: 'tags', label: 'Suggest hashtags' },
+                        { prompt: 'translate', label: 'Translate to French' }
                       ].map((assist) => (
                         <button
                           key={assist.prompt}
@@ -1651,22 +1651,22 @@ export default function MediaCreationEngine({
                   {/* Tagging, location and Alt-text metadata */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👥 Tag alignments (@names)</label>
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👥 Tag people</label>
                       <input 
                         type="text" 
                         value={taggedUsernames}
                         onChange={(e) => setTaggedUsernames(e.target.value)}
-                        placeholder="alex_sterling, sarah_codes"
+                        placeholder="Enter usernames separated by commas"
                         className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">🏷️ Topic Categories</label>
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">🏷️ Add topics</label>
                       <input 
                         type="text" 
                         value={topics}
                         onChange={(e) => setTopics(e.target.value)}
-                        placeholder="AI, Technology, Systems"
+                        placeholder="e.g. Music, Football, Technology"
                         className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
@@ -1679,7 +1679,7 @@ export default function MediaCreationEngine({
                         type="text" 
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
-                        placeholder="Search regions..."
+                        placeholder="Search for a place..."
                         className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
                       />
                       {locationSuggestions.length > 0 && (
@@ -1691,12 +1691,12 @@ export default function MediaCreationEngine({
                       )}
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👁️ Accessibility Alt-Text (Images)</label>
+                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👁️ Describe this photo (optional)</label>
                       <input 
                         type="text" 
                         value={imageAltText}
                         onChange={(e) => setImageAltText(e.target.value)}
-                        placeholder="Describe what is in the media..."
+                        placeholder="Describe the photo for people who use screen readers."
                         className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
@@ -1709,8 +1709,8 @@ export default function MediaCreationEngine({
                 /* STEP 5: VISUAL PREVIEW & ACCESSIBILITY COMPLIANCE */
                 <div className="space-y-4 animate-fadeIn">
                   <div>
-                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">Live Shutter Preview</span>
-                    <h3 className="text-sm font-black text-white uppercase">Exactly how your post will render</h3>
+                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">POST PREVIEW</span>
+                    <h3 className="text-sm font-black text-white uppercase">This is how your post will look.</h3>
                   </div>
 
                   {/* Simulated Live Post Card */}
@@ -1726,10 +1726,10 @@ export default function MediaCreationEngine({
                           <span className="text-[10px] text-zinc-500 font-mono">@{currentUser.username}</span>
                         </div>
                       </div>
-                      <span className="text-[9px] font-mono text-violet-400 bg-violet-950/25 px-2 py-0.5 rounded border border-white/10">Preview Card</span>
+                      <span className="text-[9px] font-mono text-violet-400 bg-violet-950/25 px-2 py-0.5 rounded border border-white/10">Preview</span>
                     </div>
 
-                    <p className="text-xs text-zinc-200 leading-relaxed font-sans">{caption || "Write caption text in previous step... #developer #systemsdesign"}</p>
+                    <p className="text-xs text-zinc-200 leading-relaxed font-sans">{caption || "Your caption will appear here."}</p>
 
                     {selectedImages.length > 0 && (
                       <div className="aspect-video rounded-xl border border-zinc-900 bg-black overflow-hidden">
@@ -1741,7 +1741,7 @@ export default function MediaCreationEngine({
                       <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <Play className="w-4 h-4 text-violet-400" />
-                          <span>Voice memopad playing...</span>
+                          <span>Voice note</span>
                         </div>
                         <span className="text-[10px] font-mono text-zinc-500">0:{voiceDurationSecs}</span>
                       </div>
@@ -1771,27 +1771,27 @@ export default function MediaCreationEngine({
 
                   {/* Accessibility & Quality audit compliance checklist */}
                   <div className="p-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-2.5 text-left">
-                    <span className="text-[9.5px] font-mono text-amber-400 uppercase font-black tracking-widest block">Quality Shutter Check</span>
+                    <span className="text-[9.5px] font-mono text-amber-400 uppercase font-black tracking-widest block">A quick final check</span>
                     <div className="space-y-1.5">
                       <div className="flex items-center gap-2 text-xs">
                         {hasContrastIssue ? (
                           <span className="text-amber-400">⚠️ Soft background contrast warnings in Light Theme.</span>
                         ) : (
-                          <span className="text-emerald-400">✓ Contrast checklist satisfied</span>
+                          <span className="text-emerald-400">✓ Text contrast looks good</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         {isAltTextMissing ? (
-                          <span className="text-amber-400">⚠️ Missing alt-text description targets for visually impaired readers.</span>
+                          <span className="text-amber-400">⚠️ Add a short photo description to help people using screen readers.</span>
                         ) : (
-                          <span className="text-emerald-400">✓ Alt-text metadata checks satisfied</span>
+                          <span className="text-emerald-400">✓ Photo description added</span>
                         )}
                       </div>
                       <div className="flex items-center gap-2 text-xs">
                         {isVideoTrimCheck ? (
-                          <span className="text-amber-400">⚠️ Video trim boundaries exceed optimal 15 seconds engagement weight.</span>
+                          <span className="text-amber-400">⚠️ Long videos are welcome. Make sure this is the clip you want to share.</span>
                         ) : (
-                          <span className="text-emerald-400">✓ Media trim boundaries optimal</span>
+                          <span className="text-emerald-400">✓ Video is ready to share</span>
                         )}
                       </div>
                     </div>
@@ -1807,20 +1807,20 @@ export default function MediaCreationEngine({
                   {postingStatus === 'idle' ? (
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-black text-white uppercase">Configure Publishing settings</span>
+                        <span className="text-sm font-black text-white uppercase">Ready to share?</span>
                         <button 
                           onClick={() => setIsAdvancedOptionsOpen(!isAdvancedOptionsOpen)}
                           className="text-xs text-violet-400 hover:underline flex items-center gap-1"
                         >
-                          {isAdvancedOptionsOpen ? 'Collapse Details' : 'Show Advanced Details'}
+                          {isAdvancedOptionsOpen ? 'Hide options' : 'More options'}
                         </button>
                       </div>
 
                       {/* Custom options row */}
                       <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-zinc-900 rounded-2xl text-left">
                         <div className="flex flex-col gap-1.5 text-left">
-                          <span className="text-xs font-bold text-zinc-200">Audience: Public</span>
-                          <p className="text-[11px] leading-relaxed text-[var(--nx-muted)]">Private, follower-only, and community-only post permissions are not yet enforced by the backend. Publishing is limited to public posts so a restricted post is never accidentally exposed.</p>
+                          <span className="text-xs font-bold text-zinc-200">Who can see this? Everyone</span>
+                          <p className="text-[11px] leading-relaxed text-[var(--nx-muted)]">Your post will be visible to everyone on NEXORA.</p>
                         </div>
                       </div>
 
@@ -1853,8 +1853,8 @@ export default function MediaCreationEngine({
                       <div className="p-3.5 bg-[#0a0715]/40 border border-zinc-900 rounded-2xl text-left space-y-2">
                         <div className="flex justify-between items-center text-xs">
                           <div>
-                            <span className="font-bold text-white block">📅 Post Scheduling</span>
-                            <span className="text-[10px] text-zinc-500">Post automatically triggers at a future date</span>
+                            <span className="font-bold text-white block">📅 Schedule your post</span>
+                            <span className="text-[10px] text-zinc-500">Choose when you want your post to be shared.</span>
                           </div>
                           <input type="checkbox" checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} className="accent-violet-500" />
                         </div>
@@ -1889,11 +1889,11 @@ export default function MediaCreationEngine({
 
                       <div className="space-y-1">
                         <span className="text-[10px] font-mono text-zinc-500 uppercase block tracking-wider">
-                          {postingStatus === 'publishing' && '📤 Uploading media and publishing your post...'}
-                          {postingStatus === 'completed' && '✨ Content Successfully Shared!'}
+                          {postingStatus === 'publishing' && '📤 Sharing your post...'}
+                          {postingStatus === 'completed' && '✨ Your post is live!'}
                         </span>
                         <p className="text-xs text-zinc-300 font-sans">
-                          {postingStatus === 'completed' ? 'Post shared successfully.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Uploading media or saving your post...'}
+                          {postingStatus === 'completed' ? 'Your post has been shared.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Getting your post ready...'}
                         </p>
                       </div>
 
@@ -1905,7 +1905,7 @@ export default function MediaCreationEngine({
                             onClick={() => { setPostingStatus('idle'); setErrorMessage(''); }}
                             className="inline-flex items-center gap-1.5 rounded-xl bg-rose-500/15 px-3 py-2 text-[10px] font-bold uppercase tracking-wide text-rose-100 hover:bg-rose-500/25"
                           >
-                            <RefreshCw className="h-3.5 w-3.5" /> Review and retry
+                            <RefreshCw className="h-3.5 w-3.5" /> Try again
                           </button>
                         </div>
                       )}
@@ -1916,13 +1916,13 @@ export default function MediaCreationEngine({
                             onClick={() => uploadAbortControllerRef.current?.abort()} 
                             className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 rounded-lg text-xs"
                           >
-                            Cancel Upload
+                            Cancel
                           </button>
                           <button 
                             onClick={() => setIsMinimized(true)}
                             className="px-3 py-1.5 bg-violet-600/20 text-violet-300 rounded-lg text-xs"
                           >
-                            Minimize to Tray
+                            Minimize
                           </button>
                         </div>
                       )}
@@ -1945,7 +1945,7 @@ export default function MediaCreationEngine({
                 onClick={saveAsDraftLocally}
                 className="px-4 py-2 border border-zinc-800 hover:bg-zinc-900 rounded-xl text-zinc-400 text-xs font-mono font-bold cursor-pointer transition-colors"
               >
-                Save Draft 💾
+                Save draft
               </button>
             </div>
             <div className="flex gap-2">
@@ -1963,7 +1963,7 @@ export default function MediaCreationEngine({
                   disabled={currentStep === 2 && !activeMode}
                   className="px-5 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all"
                 >
-                  Next Step →
+                  Continue →
                 </button>
               ) : (
                 <button 
@@ -1971,7 +1971,7 @@ export default function MediaCreationEngine({
                   disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
                   className="px-6 py-2.5 bg-linear-to-r from-violet-600 to-pink-500 hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
                 >
-                  Publish Now 🚀
+                  Share post
                 </button>
               )}
             </div>
