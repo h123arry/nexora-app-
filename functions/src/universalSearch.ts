@@ -9,7 +9,7 @@ export interface SearchHit {
 }
 export interface UniversalSearchResult { results: SearchHit[]; nextCursor: string | null; query: string; }
 const INDEX = 'searchIndex';
-const PAGE_SIZE = 120;
+const PAGE_SIZE = 30;
 const CANDIDATE_LIMIT = PAGE_SIZE + 1;
 const MAX_CURSOR = 2048;
 
