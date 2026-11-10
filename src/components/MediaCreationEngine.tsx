@@ -40,6 +40,7 @@ interface MediaCreationEngineProps {
   onToggleOffline?: () => void;
   initialMode?: 'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null;
   initialTab?: 'feed' | 'story' | 'drafts';
+  initialCaption?: string;
 }
 
 interface SelectedImage {
@@ -123,7 +124,8 @@ export default function MediaCreationEngine({
   isOffline = false,
   onToggleOffline,
   initialMode = null,
-  initialTab = undefined
+  initialTab = undefined,
+  initialCaption = ''
 }: MediaCreationEngineProps) {
   const autosaveKey = `nexora_creation_autosave_v1_${currentUser.id || 'visitor'}`;
   const draftsKey = `nexora_post_drafts_v1_${currentUser.id || 'visitor'}`;
@@ -139,7 +141,7 @@ export default function MediaCreationEngine({
   });
 
   // Form Fields
-  const [caption, setCaption] = useState(() => initialAutosave?.caption || '');
+  const [caption, setCaption] = useState(() => initialAutosave?.caption || initialCaption);
   const [topics, setTopics] = useState(() => initialAutosave?.topics || '');
   const [audience, setAudience] = useState<'public' | 'circle' | 'community' | 'followers' | 'onlyme'>(() => 'public');
   const [location, setLocation] = useState(() => initialAutosave?.location || '');
