@@ -1,5 +1,6 @@
 export function appendHistorySnapshot<T>(history: T[], snapshot: T, limit = 40): T[] {
-  const safeLimit = Math.max(1, Math.min(200, Math.floor(limit) || 40));
+  const requestedLimit = Number.isFinite(limit) ? Math.floor(limit) : 40;
+  const safeLimit = Math.max(1, Math.min(200, requestedLimit));
   return [...history, snapshot].slice(-safeLimit);
 }
 
