@@ -560,7 +560,12 @@ service cloud.firestore {
           'commentsDisabled', 'location', 'audience', 'communityName', 'opportunityType',
           'interactivePoll', 'editHistory', 'scheduledTime', 'isDraft', 'isArchived',
           'discussionModeEnabled', 'discussionSideA', 'discussionSideB', 'updatedAt'
-          ]) || isOwnCommentAppend(postId));
+          ])
+          && (!request.resource.data.keys().hasAny(['taggedUsernames'])
+            || (request.resource.data.taggedUsernames is list && request.resource.data.taggedUsernames.size() <= 20))
+          && (!request.resource.data.keys().hasAny(['imageAltText'])
+            || (request.resource.data.imageAltText is string && request.resource.data.imageAltText.size() <= 500))
+          || isOwnCommentAppend(postId));
       allow delete: if signedIn() && (resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
 
