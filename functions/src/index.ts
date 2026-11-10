@@ -508,5 +508,5 @@ export const academyBookMentorshipSession = onCall({ maxInstances: 10 }, async r
   try { return await bookAcademyMentorshipSession(adminDb, request.auth.uid, request.data?.sessionId); } catch (error) { throw academyFailure(error); }
 });
 
-export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, heartbeatLiveSession, sendLiveChatMessage, updateLiveSessionSettings, reconcileLiveSessionViewers } from './liveSessions.js';
+export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, heartbeatLiveSession, sendLiveChatMessage, updateLiveSessionSettings, requestLiveGuestAccess, reviewLiveGuestAccess, reconcileLiveSessionViewers } from './liveSessions.js';
 export { getLiveKitToken } from './liveKitTransport.js';
