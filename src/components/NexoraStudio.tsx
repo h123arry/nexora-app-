@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Music2, Pause, Play, Plus, Scissors, Trash2, Type, Upload, Volume2, X } from 'lucide-react';
 
-type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number };
-type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; caption: string; overlay: string; overlayColor: string; updatedAt: number };
+type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
+type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; caption: string; overlay: string; overlayColor: string; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string) => Promise<void> };
 
 const DB_NAME = 'nexora-studio-projects';
@@ -49,6 +49,12 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [caption, setCaption] = useState('');
   const [overlay, setOverlay] = useState('');
   const [overlayColor, setOverlayColor] = useState('#FFFFFF');
+  const [aspectRatio, setAspectRatio] = useState<'portrait' | 'square' | 'landscape'>('portrait');
+  const [transition, setTransition] = useState<'cut' | 'fade'>('cut');
+  const [soundtrackVolume, setSoundtrackVolume] = useState(0.8);
+  const [overlayStart, setOverlayStart] = useState(0);
+  const [overlayEnd, setOverlayEnd] = useState(0);
+  const [overlayPosition, setOverlayPosition] = useState<'top' | 'center' | 'bottom'>('bottom');
   const [playing, setPlaying] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -72,6 +78,12 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       setCaption(project.caption || '');
       setOverlay(project.overlay || '');
       setOverlayColor(project.overlayColor || '#FFFFFF');
+      setAspectRatio(project.aspectRatio || 'portrait');
+      setTransition(project.transition || 'cut');
+      setSoundtrackVolume(typeof project.soundtrackVolume === 'number' ? project.soundtrackVolume : 0.8);
+      setOverlayStart(project.overlayStart || 0);
+      setOverlayEnd(project.overlayEnd || 0);
+      setOverlayPosition(project.overlayPosition || 'bottom');
     }).catch(() => { if (active) setMessage('A previous Studio draft could not be restored. You can still start a new project.'); })
       .finally(() => { if (active) setReady(true); });
     return () => { active = false; projectUrls.current.forEach(URL.revokeObjectURL); };
@@ -81,12 +93,12 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     if (!ready) return;
     setExportBlob(null);
     const timer = window.setTimeout(() => {
-      void saveProject({ clips, soundtrack, caption, overlay, overlayColor, updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
+      void saveProject({ clips, soundtrack, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, overlayStart, overlayEnd, overlayPosition, updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
         .then(() => setMessage('Draft saved on this device'))
         .catch(() => setMessage('This draft could not be saved on this device.'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [ready, clips, soundtrack, caption, overlay, overlayColor, currentUser.id]);
+  }, [ready, clips, soundtrack, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
 
   const getUrl = useCallback((blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -108,7 +120,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         probe.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`Could not read ${file.name}`)); };
         probe.src = url;
       }).catch(() => 0);
-      if (duration > 0) additions.push({ id: makeId(), name: file.name, blob: file, start: 0, end: duration, duration });
+      if (duration > 0) additions.push({ id: makeId(), name: file.name, blob: file, start: 0, end: duration, duration, volume: 1 });
     }
     if (!additions.length) { setMessage('Choose a supported video file to add to your timeline.'); return; }
     setClips(previous => [...previous, ...additions]);
@@ -175,7 +187,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     if (!mimeType) throw new Error('This browser does not provide a supported video export format.');
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Video rendering is unavailable on this device.');
-    canvas.width = 1280; canvas.height = 720;
+    const dimensions = aspectRatio === 'portrait' ? { width: 720, height: 1280 } : aspectRatio === 'square' ? { width: 1080, height: 1080 } : { width: 1280, height: 720 };
+    canvas.width = dimensions.width; canvas.height = dimensions.height;
     const preview = document.createElement('video');
     preview.playsInline = true;
     preview.muted = false;
@@ -185,6 +198,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let audioContext: AudioContext | null = null;
     let audioElement: HTMLAudioElement | null = null;
     let audioObjectUrl: string | null = null;
+    let clipGain: GainNode | null = null;
+    let soundtrackGain: GainNode | null = null;
+    let elapsed = 0;
+    let fadeOpacity = transition === 'fade' ? 1 : 0;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) throw new Error('Audio mixing is not supported by this browser. Export is paused to avoid silently dropping your clip audio.');
     if (AudioContextClass) {
@@ -192,16 +209,18 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       await audioContext.resume();
       const mixedAudio = audioContext.createMediaStreamDestination();
       // Route source-video audio and optional soundtrack into the export stream, not the device speakers.
-      audioContext.createMediaElementSource(preview).connect(mixedAudio);
+      clipGain = audioContext.createGain();
+      audioContext.createMediaElementSource(preview).connect(clipGain);
+      clipGain.connect(mixedAudio);
       if (soundtrack) {
         audioElement = new Audio();
         audioElement.src = audioObjectUrl = URL.createObjectURL(soundtrack);
         audioElement.loop = true;
         const source = audioContext.createMediaElementSource(audioElement);
-        const gain = audioContext.createGain();
-        gain.gain.value = 0.8;
-        source.connect(gain);
-        gain.connect(mixedAudio);
+        soundtrackGain = audioContext.createGain();
+        soundtrackGain.gain.value = soundtrackVolume;
+        source.connect(soundtrackGain);
+        soundtrackGain.connect(mixedAudio);
       }
       mixedAudio.stream.getAudioTracks().forEach(track => stream.addTrack(track));
     }
@@ -222,10 +241,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         const height = preview.videoHeight * scale;
         context.drawImage(preview, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
       }
-      if (overlay.trim()) {
+      if (overlay.trim() && elapsed >= overlayStart && elapsed <= (overlayEnd > overlayStart ? overlayEnd : totalDuration)) {
         context.font = '700 54px system-ui, sans-serif';
         context.textAlign = 'center';
-        context.textBaseline = 'bottom';
+        context.textBaseline = overlayPosition === 'top' ? 'top' : overlayPosition === 'center' ? 'middle' : 'bottom';
         context.lineWidth = 8;
         context.strokeStyle = 'rgba(5,9,20,.8)';
         context.fillStyle = overlayColor;
@@ -239,18 +258,34 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         }
         if (line) lines.push(line);
         lines.slice(-3).forEach((text, index, all) => {
-          const y = canvas.height - 70 - (all.length - index - 1) * 64;
+          const base = overlayPosition === 'top' ? 90 : overlayPosition === 'center' ? canvas.height / 2 : canvas.height - 70;
+          const y = base + (index - (all.length - 1) / 2) * 64;
           context.strokeText(text, canvas.width / 2, y);
           context.fillText(text, canvas.width / 2, y);
         });
       }
+      if (fadeOpacity > 0) {
+        context.fillStyle = `rgba(0,0,0,${Math.min(1, fadeOpacity)})`;
+        context.fillRect(0, 0, canvas.width, canvas.height);
+      }
       frame = requestAnimationFrame(draw);
     };
+    const animateFade = (from: number, to: number, durationMs: number) => new Promise<void>(resolve => {
+      const started = performance.now();
+      const step = (now: number) => {
+        const progress = Math.min(1, (now - started) / durationMs);
+        fadeOpacity = from + (to - from) * progress;
+        if (progress < 1) requestAnimationFrame(step); else resolve();
+      };
+      requestAnimationFrame(step);
+    });
     try {
       recorder.start(250);
       draw();
       if (audioElement) await audioElement.play().catch(() => undefined);
-      for (const clip of clips) {
+      for (const [clipIndex, clip] of clips.entries()) {
+        if (clipGain) clipGain.gain.value = clip.volume;
+        if (soundtrackGain) soundtrackGain.gain.value = soundtrackVolume;
         preview.src = URL.createObjectURL(clip.blob);
         const clipUrl = preview.src;
         await new Promise<void>((resolve, reject) => {
@@ -265,15 +300,20 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           });
         }
         await preview.play();
+        if (transition === 'fade') await animateFade(1, 0, 350);
+        const clipElapsedStart = elapsed;
         await new Promise<void>(resolve => {
           const check = () => {
+            elapsed = clipElapsedStart + Math.max(0, preview.currentTime - clip.start);
             if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); resolve(); }
             else window.setTimeout(check, 40);
           };
           check();
         });
         preview.pause();
+        elapsed = clipElapsedStart + (clip.end - clip.start);
         URL.revokeObjectURL(clipUrl);
+        if (transition === 'fade' && clipIndex < clips.length - 1) await animateFade(0, 1, 350);
       }
       cancelAnimationFrame(frame);
       recorder.stop();
@@ -370,12 +410,21 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <div className="flex items-center gap-2"><Music2 size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Soundtrack</h2></div>
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#44376F] px-3 py-2 text-xs text-[#D7CCF7]"><Plus size={13}/>{soundtrack?'Replace audio track':'Add music or voiceover'}<input className="hidden" type="file" accept="audio/*" onChange={event => {const file=event.target.files?.[0]; if(file) setSoundtrack(file); event.target.value='';}}/></label>
               {soundtrack && <div className="flex items-center justify-between text-[10px] text-emerald-300"><span className="truncate">{(soundtrack as File).name || 'Audio track selected'}</span><button onClick={() => setSoundtrack(null)} className="text-rose-300">Remove</button></div>}
-              <p className="text-[10px] leading-relaxed text-[#827B9C]">A selected soundtrack is mixed into the exported video. Original clip audio remains part of the source recording.</p>
+              {soundtrack && <label className="block text-[10px] text-[#A39BBF]">Music volume · {Math.round(soundtrackVolume * 100)}%<input type="range" min="0" max="1" step=".05" value={soundtrackVolume} onChange={event => setSoundtrackVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label>}
+              <p className="text-[10px] leading-relaxed text-[#827B9C]">Adjust source audio and soundtrack separately. The mix is baked into your exported video.</p>
+            </div>
+            <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
+              <h2 className="text-xs font-bold">Video format</h2>
+              <label className="block text-[10px] text-[#A39BBF]">Canvas ratio<select value={aspectRatio} onChange={event => setAspectRatio(event.target.value as typeof aspectRatio)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="portrait">9:16 · Reels and vertical video</option><option value="square">1:1 · Square posts</option><option value="landscape">16:9 · Landscape video</option></select></label>
+              <label className="block text-[10px] text-[#A39BBF]">Scene transition<select value={transition} onChange={event => setTransition(event.target.value as typeof transition)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="cut">Clean cut</option><option value="fade">Fade through black</option></select></label>
             </div>
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <div className="flex items-center gap-2"><Type size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Text overlay</h2></div>
               <input value={overlay} onChange={event=>setOverlay(event.target.value.slice(0,120))} maxLength={120} placeholder="Add a title or on-screen text" className="w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white outline-none focus:border-violet-400"/>
               <div className="flex items-center justify-between text-[10px] text-[#8E88A7]"><span>Text colour</span><input aria-label="Overlay text colour" type="color" value={overlayColor} onChange={event=>setOverlayColor(event.target.value)} className="h-7 w-10 rounded border-0 bg-transparent"/></div>
+              <label className="block text-[10px] text-[#A39BBF]">Position<select value={overlayPosition} onChange={event=>setOverlayPosition(event.target.value as typeof overlayPosition)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="top">Top</option><option value="center">Center</option><option value="bottom">Bottom</option></select></label>
+              <div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Show from (s)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={overlayStart} onChange={event=>setOverlayStart(Math.max(0,Math.min(totalDuration,Number(event.target.value)||0)))} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label><label className="block text-[10px] text-[#A39BBF]">Hide after (s)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={overlayEnd} onChange={event=>setOverlayEnd(Math.max(0,Math.min(totalDuration,Number(event.target.value)||0)))} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label></div>
+              <p className="text-[9px] text-[#827B9C]">Set the end to 0 to keep the title visible until the video ends.</p>
             </div>
             <div className="space-y-2"><label className="block text-xs font-bold">Post caption</label><textarea value={caption} onChange={event=>setCaption(event.target.value.slice(0,500))} maxLength={500} rows={3} placeholder="Write a caption for your finished video…" className="w-full resize-y rounded-xl border border-[#34265E] bg-[#100C20] p-3 text-xs text-white outline-none focus:border-violet-400"/><div className="text-right text-[10px] text-[#827B9C]">{caption.length}/500</div></div>
             <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing?'Publishing…':<><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button><p className="text-center text-[9px] text-[#827B9C]">Export first, then publish your rendered video.</p></div>
