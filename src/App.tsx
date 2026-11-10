@@ -2378,6 +2378,7 @@ export default function App() {
         {isNexoraStudioOpen && currentUser && (
           <Suspense fallback={<div className="fixed inset-0 z-[140] grid place-items-center bg-[#05040D] text-sm text-violet-200">Opening NEXORA Studio…</div>}>
             <NexoraStudio
+              key={currentUser.id}
               currentUser={currentUser}
               onClose={() => setIsNexoraStudioOpen(false)}
               onPublish={async (video, caption) => {
