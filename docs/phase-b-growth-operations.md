@@ -26,6 +26,10 @@ Challenges are stored and mutated by trusted Functions. Clients cannot directly 
 
 A member joins before contributing. A public post containing the exact tag `#nxchallenge_<challengeId>` is recorded by the post-created trigger. The post ID is the contribution document ID, making retries idempotent. The challenge completes when its configured contribution target is reached or it expires.
 
+## Public feed polls
+
+Feed poll votes are now server-managed. Each authenticated account has one immutable vote per post, the selected option counts are updated transactionally, and the account's vote is restored on feed load. The Circle poll system remains separate and continues to use its existing membership and manager permissions.
+
 ## Numbered creator series
 
 Creators can create a series in Creator Studio and attach only their own public posts. Episode numbers are assigned transactionally by the server. The post ID is the episode document ID, so the same post cannot be added twice to one series.
