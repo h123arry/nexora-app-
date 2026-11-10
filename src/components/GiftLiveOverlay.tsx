@@ -36,9 +36,9 @@ export default function GiftLiveOverlay({ streamId, soundEnabled = false, audioC
     return () => window.clearTimeout(timer);
   }, [active]);
   useEffect(() => {
-    if (!active) return;
+    if (!active || !soundEnabled) return;
     playNexoraSound(active.rarity === 'legendary' ? 'gift.legendary' : 'gift.arrival');
-  }, [active]);
+  }, [active, soundEnabled]);
   if (!active) return null;
   const cinematic = active.animation === 'cinematic' || active.animation === 'legendary';
   return <div className="pointer-events-none absolute inset-0 z-[80] flex items-center justify-center overflow-hidden" aria-live="polite" aria-atomic="true">

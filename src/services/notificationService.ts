@@ -9,8 +9,12 @@ export function playNotificationSound(type: 'spark' | 'comment' | 'follow' | 'pr
     : type === 'comment' ? 'notification.comment'
     : type === 'follow' ? 'notification.follow'
     : type === 'sync' ? 'interface.confirmation'
+    : type === 'profile_view' ? 'notification.profile'
     : 'notification.default';
   playNexoraSound(soundType);
+  if (type !== 'sync' && typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+    try { navigator.vibrate([25, 20, 35]); } catch { /* Haptics are optional. */ }
+  }
 }
 
 // ============================================================================
