@@ -3,7 +3,9 @@ import {
   serverTimestamp, setDoc, updateDoc, where, runTransaction, writeBatch, type Unsubscribe,
 } from 'firebase/firestore';
 import { auth, db } from './config';
-import { uploadMediaFile, deleteMediaFile } from './storageService';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../../lib/firebase';
+import { uploadMediaFile } from './storageService';
 
 export type WorldWeaveVisibility = 'public' | 'private';
 export interface WorldWeave {
@@ -176,7 +178,10 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
     batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp(), lastMomentId: momentRef.id });
     await batch.commit();
   } catch (error) {
-    if (uploaded) await Promise.allSettled([deleteMediaFile(uploaded.storagePath), deleteDoc(doc(db, 'mediaAssets', uploaded.mediaId))]);
+    if (uploaded) {
+      const cleanup = httpsCallable(functions, 'cleanupUnpublishedWorldWeaveMedia');
+      await Promise.allSettled([cleanup({ weaveId, momentId: momentRef.id })]);
+    }
     throw error;
   }
 }
