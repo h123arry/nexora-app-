@@ -39,8 +39,10 @@ export async function createReferralCode(db: Firestore, uid: string): Promise<{ 
   if (validBalance(treasury.data()?.availableBalance) < rewardNex) {
     throw new Error('The referral programme is not currently available.');
   }
-  const existingCodes = await db.collection('referralCodes').where('ownerId', '==', uid).limit(5).get();
-  if (existingCodes.size >= 5) throw new Error('You have reached the referral-code limit.');
+  const existingCodes = await db.collection('referralCodes').where('ownerId', '==', uid).limit(100).get();
+  const activeCodeCount = existingCodes.docs.filter(doc => doc.get('status') === 'active'
+    && (doc.get('expiresAt')?.toDate?.()?.getTime?.() || 0) > Date.now()).length;
+  if (activeCodeCount >= 5) throw new Error('You have reached the referral-code limit.');
   const code = randomBytes(32).toString('base64url');
   await db.collection('referralCodes').doc(hashCode(code)).create({
     ownerId: uid,
@@ -63,8 +65,9 @@ export async function claimReferral(db: Firestore, inviteeUid: string, code: str
   return db.runTransaction(async tx => {
     const [codeSnapshot, attribution] = await Promise.all([tx.get(codeRef), tx.get(attributionRef)]);
     if (attribution.exists) return { claimed: false };
+    const expiresAt = codeSnapshot.get('expiresAt')?.toDate?.();
     if (!codeSnapshot.exists || codeSnapshot.get('status') !== 'active'
-      || codeSnapshot.get('expiresAt')?.toDate?.() <= new Date()) throw new Error('This referral invitation is unavailable.');
+      || !(expiresAt instanceof Date) || expiresAt.getTime() <= Date.now()) throw new Error('This referral invitation is unavailable.');
     const ownerId = String(codeSnapshot.get('ownerId') || '');
     if (!validUid(ownerId) || ownerId === inviteeUid) throw new Error('You cannot refer your own account.');
     const count = Number(codeSnapshot.get('redemptionCount') || 0);
@@ -194,8 +197,12 @@ export async function getReferralInvitePreview(db: Firestore, code: string) {
     db.collection('referralCodes').doc(hashCode(code)).get(),
     db.collection('referralProgramConfig').doc('current').get(),
   ]);
+  const expiresAt = invite.get('expiresAt')?.toDate?.();
+  const redemptionCount = Number(invite.get('redemptionCount') || 0);
+  const maxRedemptions = Number(invite.get('maxRedemptions') || MAX_REDEMPTIONS);
   if (!invite.exists || invite.get('status') !== 'active' || config.get('enabled') !== true
-    || invite.get('expiresAt')?.toDate?.() <= new Date()) return { valid: false as const };
+    || !(expiresAt instanceof Date) || expiresAt.getTime() <= Date.now()
+    || !Number.isSafeInteger(redemptionCount) || redemptionCount >= maxRedemptions) return { valid: false as const };
   const ownerId = String(invite.get('ownerId') || '');
   if (!validUid(ownerId)) return { valid: false as const };
   const profile = await db.collection('publicProfiles').doc(ownerId).get();
