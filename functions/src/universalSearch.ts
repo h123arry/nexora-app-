@@ -240,7 +240,7 @@ export async function searchNexoraContent(
               ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
               ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
             ],
-            restricted: profile.isBanned === true || profile.isSuspended === true
+            restricted: profile.isBanned === true || profile.isSuspended === true || profile.isSeedProfile === true
               || ((restriction.banned === true || restriction.suspended === true)
                 && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now())),
           };
@@ -308,15 +308,19 @@ export async function searchNexoraContent(
 export async function getNexoraTrending(db: Firestore): Promise<Array<{tag:string;score:number;postCount:number;creatorCount:number}>> {
   const posts = await db.collection('posts').where('audience','==','public').orderBy('timestamp','desc').limit(250).get();
   const creatorIds = [...new Set(posts.docs.map(post => String(post.get('userId') || post.get('authorId') || '')).filter(Boolean))];
-  const [privacySnapshots, statusSnapshots] = await Promise.all([
+  const [profileSnapshots, privacySnapshots, statusSnapshots] = await Promise.all([
+    Promise.all(creatorIds.map(id => db.collection('users').doc(id).get())),
     Promise.all(creatorIds.map(id => db.collection('users').doc(id).collection('settings').doc('preferences').get())),
     Promise.all(creatorIds.map(id => db.collection('accountStatus').doc(id).get())),
   ]);
   const hiddenCreators = new Set<string>();
   creatorIds.forEach((id,index) => {
+    const profile = profileSnapshots[index].data() || {};
     const privacy = privacySnapshots[index].data() || {};
     const status = statusSnapshots[index].data() || {};
-    if (privacy?.privacy?.isPrivate === true || status.suspended === true || status.banned === true) hiddenCreators.add(id);
+    const expiry = asDate(status.expiresAt).getTime();
+    const activeRestriction = (status.suspended === true || status.banned === true) && (expiry === 0 || expiry > Date.now());
+    if (profile.isBanned === true || profile.isSuspended === true || profile.isSeedProfile === true || privacy?.privacy?.isPrivate === true || activeRestriction) hiddenCreators.add(id);
   });
   const groups = new Map<string,{posts:Set<string>;creators:Map<string,number>}>();
   const now = Date.now();
