@@ -132,12 +132,13 @@ export const CommunityService = {
     if (!userId || !communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const communityRef = doc(db, 'communities', communityId);
     const memberRef = doc(db, 'communities', communityId, 'members', userId);
-    const banRef = doc(db, 'communities', communityId, 'bans', userId);
-    const [community, membership, ban] = await Promise.all([getDoc(communityRef), getDoc(memberRef), getDoc(banRef)]);
+    const [community, membership] = await Promise.all([getDoc(communityRef), getDoc(memberRef)]);
     if (!community.exists() || community.data().type !== 'public') {
       throw new Error('This Circle is unavailable or requires an invitation.');
     }
-    if (ban.exists() || community.data().bannedUsers?.includes?.(userId)) throw new Error('You cannot join this Circle.');
+    if (community.data().bannedUsers?.includes?.(userId)) throw new Error('You cannot join this Circle.');
+    // Private ban markers are intentionally unreadable to clients. Firestore Rules
+    // enforce their existence check atomically when this membership write is attempted.
     if (membership.exists() && membership.data().status === 'active') return;
     await setDoc(memberRef, {
       userId,
