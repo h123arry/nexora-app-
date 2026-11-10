@@ -3,6 +3,26 @@ export const LIVE_SESSION_TITLE_MAX = 80;
 export const LIVE_CHAT_MESSAGE_MAX = 500;
 export const LIVE_CHAT_WINDOW_MS = 10_000;
 export const LIVE_CHAT_WINDOW_MAX_MESSAGES = 5;
+export const LIVE_WATCH_DURATION_MAX_MS = 24 * 60 * 60 * 1000;
+
+export function calculateLiveWatchDurationMs(joinedAt: unknown, endedAtMs: number): number {
+  if (!Number.isFinite(endedAtMs) || endedAtMs < 0) return 0;
+  let joinedAtMs = 0;
+  if (typeof joinedAt === 'number' && Number.isFinite(joinedAt)) joinedAtMs = joinedAt;
+  else if (joinedAt instanceof Date) joinedAtMs = joinedAt.getTime();
+  else if (typeof joinedAt === 'string') joinedAtMs = Date.parse(joinedAt);
+  else if (joinedAt && typeof joinedAt === 'object') {
+    const timestamp = joinedAt as { toMillis?: () => number; toDate?: () => Date };
+    try {
+      if (typeof timestamp.toMillis === 'function') joinedAtMs = timestamp.toMillis();
+      else if (typeof timestamp.toDate === 'function') joinedAtMs = timestamp.toDate().getTime();
+    } catch {
+      return 0;
+    }
+  }
+  if (!Number.isFinite(joinedAtMs) || joinedAtMs <= 0 || joinedAtMs > endedAtMs) return 0;
+  return Math.min(endedAtMs - joinedAtMs, LIVE_WATCH_DURATION_MAX_MS);
+}
 
 export interface LiveSessionSettings {
   chatEnabled?: boolean;
