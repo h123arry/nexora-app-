@@ -450,6 +450,14 @@ export const CommunityService = {
   },
 
 
+
+  async listBannedMembers(communityId: string): Promise<Array<{ userId: string; name: string; username: string; reason: string; bannedAt: string }>> {
+    if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
+    const list = httpsCallable(functions, 'listCommunityBans');
+    const result = await list({ communityId });
+    return Array.isArray(result.data) ? result.data as Array<{ userId: string; name: string; username: string; reason: string; bannedAt: string }> : [];
+  },
+
   async moderateMember(
     communityId: string,
     targetUid: string,
