@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Send, RefreshCw, Users } from 'lucide-react';
 import { CommunityService } from '../services/firebase/communityService';
+import CircleReportButton from './CircleReportButton';
 
 type CirclePost = {
   id: string; authorId: string; authorName: string; authorUsername: string;
@@ -62,6 +63,9 @@ export default function CircleFeedPanel({ communityId, currentUserId }: { commun
           <div className="min-w-0"><p className="truncate text-xs font-bold text-white">{post.authorName}</p><p className="truncate text-[10px] text-white/40">{post.authorUsername ? '@'+post.authorUsername+' · ' : ''}{post.createdAt}</p></div>
         </div>
         <p className="mt-3 whitespace-pre-wrap break-words text-sm leading-6 text-white/85">{post.content}</p>
+        {post.authorId !== currentUserId && <div className="mt-3 border-t border-white/5 pt-2">
+          <CircleReportButton communityId={communityId} targetType="post" targetId={post.id}/>
+        </div>}
       </article>)}</div>}
     <div className="flex items-center justify-center gap-2 text-[10px] text-white/30"><RefreshCw size={11}/> New posts appear automatically</div>
   </section>;
