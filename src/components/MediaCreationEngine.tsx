@@ -146,6 +146,7 @@ interface DraftItem {
   id: string;
   caption: string;
   images: string[];
+  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'filterName' | 'filterStyle'>[];
   videoUrl?: string;
   voiceUrl?: string;
   transcript?: string;
@@ -153,6 +154,17 @@ interface DraftItem {
   audience: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
   type: string;
   timestamp: string;
+  location?: string;
+  taggedUsernames?: string;
+  imageAltText?: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  blur?: number;
+  stickerOverlay?: string | null;
+  textOverlay?: string;
+  textOverlayColor?: string;
+  commentsAllowed?: boolean;
   cloudSynced?: boolean;
   cloudOnly?: boolean;
 }
@@ -244,16 +256,16 @@ export default function MediaCreationEngine({
   const [contrast, setContrast] = useState(() => initialAutosave?.contrast ?? 100);
   const [saturation, setSaturation] = useState(() => initialAutosave?.saturation ?? 100);
   const [blur, setBlur] = useState(() => initialAutosave?.blur ?? 0);
-  const [stickerOverlay, setStickerOverlay] = useState<string | null>(null);
-  const [textOverlay, setTextOverlay] = useState('');
-  const [textOverlayColor, setTextOverlayColor] = useState('#ffffff');
+  const [stickerOverlay, setStickerOverlay] = useState<string | null>(() => initialAutosave?.stickerOverlay || null);
+  const [textOverlay, setTextOverlay] = useState(() => initialAutosave?.textOverlay || '');
+  const [textOverlayColor, setTextOverlayColor] = useState(() => initialAutosave?.textOverlayColor || '#ffffff');
   const [selectedMusic, setSelectedMusic] = useState<string | null>(null);
   const [musicTrimStart, setMusicTrimStart] = useState(0);
   const [musicTrimEnd, setMusicTrimEnd] = useState(15);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
 
   // Publish advanced toggles
-  const [commentsAllowed, setCommentsAllowed] = useState(true);
+  const [commentsAllowed, setCommentsAllowed] = useState(() => initialAutosave?.commentsAllowed !== false);
   const [sharesAllowed, setSharesAllowed] = useState(true);
   const [downloadsAllowed, setDownloadsAllowed] = useState(true);
   const [pinnedOnProfile, setPinnedOnProfile] = useState(false);
@@ -265,11 +277,13 @@ export default function MediaCreationEngine({
   // Media Capture / Import variables
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>(() => {
     if (initialAutosave?.images && initialAutosave.images.length > 0) {
-      return initialAutosave.images.map((img: string) => ({
+      return initialAutosave.images.map((img: string, index: number) => ({
         url: img,
-        rotation: 0,
-        zoom: 1,
-        cropOffset: { x: 0, y: 0 }
+        rotation: initialAutosave.imageEdits?.[index]?.rotation ?? 0,
+        zoom: initialAutosave.imageEdits?.[index]?.zoom ?? 1,
+        cropOffset: initialAutosave.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        filterName: initialAutosave.imageEdits?.[index]?.filterName,
+        filterStyle: initialAutosave.imageEdits?.[index]?.filterStyle,
       }));
     }
     return [];
@@ -382,8 +396,23 @@ export default function MediaCreationEngine({
     setLocation(nextAutosave?.location || '');
     setTaggedUsernames(nextAutosave?.taggedUsernames || '');
     setImageAltText(nextAutosave?.imageAltText || '');
+    setCommentsAllowed(nextAutosave?.commentsAllowed !== false);
+    setStickerOverlay(nextAutosave?.stickerOverlay || null);
+    setTextOverlay(nextAutosave?.textOverlay || '');
+    setTextOverlayColor(nextAutosave?.textOverlayColor || '#ffffff');
+    setBrightness(nextAutosave?.brightness ?? 100);
+    setContrast(nextAutosave?.contrast ?? 100);
+    setSaturation(nextAutosave?.saturation ?? 100);
+    setBlur(nextAutosave?.blur ?? 0);
     setSelectedImages(Array.isArray(nextAutosave?.images)
-      ? nextAutosave.images.filter((url: unknown): url is string => typeof url === 'string').map((url: string) => ({ url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }))
+      ? nextAutosave.images.filter((url: unknown): url is string => typeof url === 'string').map((url: string, index: number) => ({
+          url,
+          rotation: nextAutosave?.imageEdits?.[index]?.rotation ?? 0,
+          zoom: nextAutosave?.imageEdits?.[index]?.zoom ?? 1,
+          cropOffset: nextAutosave?.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+          filterName: nextAutosave?.imageEdits?.[index]?.filterName,
+          filterStyle: nextAutosave?.imageEdits?.[index]?.filterStyle,
+        }))
       : []);
     setVideoFileUrl(nextAutosave?.videoUrl || null);
     setRecordedVideoUrl(nextAutosave?.recordedVideoUrl || null);
@@ -409,6 +438,7 @@ export default function MediaCreationEngine({
           activeMode,
           currentStep,
           images: selectedImages.map(img => img.url),
+          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
           videoUrl: videoFileUrl,
           recordedVideoUrl,
           voiceUrl: voiceFileUrl,
@@ -419,7 +449,11 @@ export default function MediaCreationEngine({
           brightness,
           contrast,
           saturation,
-          blur
+          blur,
+          stickerOverlay,
+          textOverlay,
+          textOverlayColor,
+          commentsAllowed
         };
         localStorage.setItem(autosaveKey, JSON.stringify(draft));
       } catch (e) {
@@ -427,7 +461,7 @@ export default function MediaCreationEngine({
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur, composerStateOwnerId, currentUser.id]);
+  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur, stickerOverlay, textOverlay, textOverlayColor, commentsAllowed, composerStateOwnerId, currentUser.id]);
 
   // Restore account-owned text drafts across devices. Media bytes and browser object URLs
   // intentionally remain on the originating device unless they have a durable HTTPS URL.
@@ -765,13 +799,25 @@ export default function MediaCreationEngine({
       id: `draft-${Date.now()}`,
       caption,
       images: selectedImages.map(img => img.url),
+      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
       videoUrl: videoFileUrl || recordedVideoUrl || undefined,
       voiceUrl: voiceFileUrl || undefined,
       transcript: voiceTranscript || undefined,
       topics,
       audience,
       type: activeMode || 'text',
-      timestamp: new Date().toLocaleDateString()
+      timestamp: new Date().toLocaleDateString(),
+      location,
+      taggedUsernames,
+      imageAltText,
+      brightness,
+      contrast,
+      saturation,
+      blur,
+      stickerOverlay,
+      textOverlay,
+      textOverlayColor,
+      commentsAllowed
     };
     let cloudSynced = false;
     if (currentUser.id && currentUser.id !== 'guest_visitor_id' && navigator.onLine) {
@@ -798,8 +844,26 @@ export default function MediaCreationEngine({
     setTopics(draft.topics);
     setAudience('public');
     setActiveMode(draft.type as any);
+    setLocation(draft.location || '');
+    setTaggedUsernames(draft.taggedUsernames || '');
+    setImageAltText(draft.imageAltText || '');
+    setCommentsAllowed(draft.commentsAllowed !== false);
+    setBrightness(draft.brightness ?? 100);
+    setContrast(draft.contrast ?? 100);
+    setSaturation(draft.saturation ?? 100);
+    setBlur(draft.blur ?? 0);
+    setStickerOverlay(draft.stickerOverlay || null);
+    setTextOverlay(draft.textOverlay || '');
+    setTextOverlayColor(draft.textOverlayColor || '#ffffff');
     if (draft.images) {
-      setSelectedImages(draft.images.map(img => ({ url: img, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } })));
+      setSelectedImages(draft.images.map((img, index) => ({
+        url: img,
+        rotation: draft.imageEdits?.[index]?.rotation ?? 0,
+        zoom: draft.imageEdits?.[index]?.zoom ?? 1,
+        cropOffset: draft.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        filterName: draft.imageEdits?.[index]?.filterName,
+        filterStyle: draft.imageEdits?.[index]?.filterStyle,
+      })));
     }
     if (draft.videoUrl) setVideoFileUrl(draft.videoUrl);
     if (draft.voiceUrl) {
@@ -831,6 +895,12 @@ export default function MediaCreationEngine({
     setPollOptionsList(['', '']);
     setStickerOverlay(null);
     setTextOverlay('');
+    setTextOverlayColor('#ffffff');
+    setBrightness(100);
+    setContrast(100);
+    setSaturation(100);
+    setBlur(0);
+    setCommentsAllowed(true);
     setActiveMode(null);
     setCurrentStep(1);
   };
