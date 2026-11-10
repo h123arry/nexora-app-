@@ -118,7 +118,7 @@ export const indexCirclePostForSearch = onDocumentWritten('communities/{communit
 export const indexCirclePollForSearch = onDocumentWritten('communities/{communityId}/polls/{pollId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
-  if (before && data && !searchFieldsChanged(before, data, ['question','status','options'])) return;
+  if (before && data && !searchFieldsChanged(before, data, ['question','status'])) return;
   const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
   await syncSearch('poll', event.params.pollId, 'communities/' + event.params.communityId + '/polls/' + event.params.pollId,
     data, parentSnapshot.data() as Record<string, unknown> | undefined);
