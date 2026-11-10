@@ -1,0 +1,50 @@
+# Phase C — Community Progression & Trust
+
+## Product objective
+
+Make participation, contribution quality, feed ranking, and safety outcomes understandable and meaningful without turning NEXORA into a points-farming system.
+
+## Existing systems to reuse
+
+- Social Challenges already provide server-managed creation, joining, and idempotent public-post contribution tracking. Phase C must extend that system rather than introduce duplicate challenges.
+- The reputation engine and creator achievements already calculate reputation tiers and creator milestones. New levels must use trusted, quality-gated signals and must not let users grant themselves status.
+- Feed ranking already returns reason strings from the ranking policy. Those reasons are now carried into feed cards so members can inspect why a recommendation appeared.
+- Moderation reports already have a trusted callable submission/review path. Phase C adds a private, owner-scoped status history rather than creating a second reporting system.
+- Circle events and RSVP records already exist. Seasonal events should extend this event infrastructure where appropriate rather than duplicate Circle events.
+
+## Phase C workstreams and release gates
+
+1. Missions and capability unlocks
+   - Reuse existing challenge participation where it fits.
+   - Unlock privileges only from server-verified milestones.
+   - Never grant moderation, finance, or identity-verification privileges from activity points.
+2. Creator and contributor levels
+   - Keep creator milestones distinct from community contribution levels.
+   - Use transparent thresholds and anti-farming rules.
+   - Do not equate popularity with trust.
+3. Helpful-content verification
+   - Use distinct-account, non-self endorsements and abuse-resistant thresholds.
+   - Label community usefulness separately from identity verification or factual certification.
+4. Transparent feed explanations
+   - Show only ranking reasons actually produced by the ranking policy.
+   - Avoid exposing private personalization data, hidden weights, or other users' activity.
+5. Report-resolution tracking
+   - Reporters can read only their own status projection.
+   - Reviewer notes, evidence, and staff identity remain private.
+6. Seasonal community events
+   - Use real event windows, server-owned participation, and idempotent contribution records.
+   - Avoid fake attendance, invented rewards, or automatic NEX issuance.
+
+## Implemented in this branch
+
+- Added listMyModerationReports, an authenticated callable returning a bounded status projection for the signed-in reporter only.
+- Added an account-support report history panel with refresh and live refresh after a report is submitted.
+- Added emulator coverage proving that another account's reports and private reviewer fields are not returned.
+- Carried actual ranking reason strings from rankPosts and rankReels into feed cards, with a compact “Why am I seeing this?” disclosure.
+- Preserved the existing /logo.svg and NEXORA violet brand identity; no replacement logo or creator-content watermarking was introduced.
+
+## Safety and deployment
+
+- No production Functions, Firestore rules, or production data were deployed or modified by this branch.
+- New report history is served through an authenticated callable; no client-side read access to moderation collections is added.
+- Remaining workstreams are not considered complete until their trusted backend, UI, abuse controls, tests, and release gates are implemented and validated.
