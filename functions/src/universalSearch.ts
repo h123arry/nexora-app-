@@ -174,8 +174,19 @@ export async function searchNexoraContent(
     usedTypoFallback = true;
   }
   const candidates = candidateDocs.filter(doc => requestedKinds.includes(doc.get('kind')) && doc.get('isPublic') === true);
-  const viewerSettings = await db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get();
+  const [viewerSettings, viewerProfile, followedSnapshot] = await Promise.all([
+    db.collection('users').doc(viewerUid).collection('settings').doc('preferences').get(),
+    db.collection('users').doc(viewerUid).get(),
+    db.collection('follows').where('followerId', '==', viewerUid).limit(200).get(),
+  ]);
   const viewerData = viewerSettings.data() || {};
+  const interestDNA = viewerProfile.data()?.interestDNA;
+  const interests: Record<string, number> = interestDNA && typeof interestDNA === 'object'
+    ? Object.fromEntries(Object.entries(interestDNA as Record<string, unknown>)
+      .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]) && entry[1] > 0)
+      .map(([key, value]) => [normalizeSearchText(key), Math.min(10, value)]))
+    : {};
+  const followedIds = new Set(followedSnapshot.docs.map(doc => String(doc.get('followingId') || '')).filter(Boolean));
   const blocked = new Set<string>([
     ...(Array.isArray(viewerData?.privacy?.blockedUserIds) ? viewerData.privacy.blockedUserIds : []),
     ...(Array.isArray(viewerData?.messaging?.blockedUserIds) ? viewerData.messaging.blockedUserIds : []),
@@ -229,7 +240,10 @@ export async function searchNexoraContent(
       id: candidate.id, kind: data.kind, title: String(data.title || ''), subtitle: String(data.subtitle || ''),
       excerpt: String(data.excerpt || ''), image: String(data.image || ''), targetId: String(data.targetId || ''),
       targetPath: String(data.targetPath || ''), ownerId: String(data.ownerId || ''), verified: data.verified === true,
-      createdAt: asDate(data.createdAt).toISOString(), score, tags: Array.isArray(data.tags) ? data.tags.slice(0, 12) : [],
+      createdAt: asDate(data.createdAt).toISOString(),
+      score: score + (followedIds.has(String(data.targetId || '')) || (ownerId && followedIds.has(ownerId)) ? 3 : 0)
+        + Math.min(4, (Array.isArray(data.tags) ? data.tags : []).reduce((sum: number, tag: unknown) => sum + (interests[normalizeSearchText(tag)] || 0) * 0.35, 0)),
+      tags: Array.isArray(data.tags) ? data.tags.slice(0, 12) : [],
     });
   }
   const hashtagGroups = new Map<string, {count:number;creators:Set<string>;score:number;createdAt:string}>();
