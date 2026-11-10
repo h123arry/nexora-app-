@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 import { CREATOR_ACADEMY_TOOLKITS } from '../content/creatorAcademyToolkits';
@@ -7,6 +7,7 @@ type Draft = Record<string, string>;
 
 export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
+  const [savedTemplateIds, setSavedTemplateIds] = useState<string[]>([]);
   const [selectedId, setSelectedId] = useState(CREATOR_ACADEMY_TOOLKITS[0].id);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -18,14 +19,17 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
   useEffect(() => {
     let active = true;
     setDrafts({});
+    setSavedTemplateIds([]);
     setLoading(true);
     setError('');
     getDocs(query(collection(db, 'academyCreatorWorkbooks'), where('userId', '==', userId), limit(20)))
       .then(snapshot => {
         if (!active) return;
         const next: Record<string, Draft> = {};
+        const nextSaved: string[] = [];
         snapshot.docs.forEach(item => {
           const data = item.data();
+          if (typeof data.templateId === 'string') nextSaved.push(data.templateId);
           if (typeof data.templateId !== 'string' || typeof data.content !== 'string') return;
           try {
             const parsed = JSON.parse(data.content) as Record<string, unknown>;
@@ -35,6 +39,7 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
           } catch { /* Ignore malformed legacy records rather than displaying untrusted shapes. */ }
         });
         setDrafts(next);
+        setSavedTemplateIds(nextSaved);
       })
       .catch(() => { if (active) setError('Your saved creator workbooks could not be loaded.'); })
       .finally(() => { if (active) setLoading(false); });
@@ -49,6 +54,7 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
       await setDoc(doc(db, 'academyCreatorWorkbooks', userId + '_' + selected.id), {
         userId, templateId: selected.id, content, updatedAt: serverTimestamp(), schemaVersion: 1,
       });
+      setSavedTemplateIds(previous => previous.includes(selected.id) ? previous : [...previous, selected.id]);
       setNotice('Your workbook has been saved to your NEXORA account.');
     } catch {
       setError('The workbook could not be saved. Please try again.');
@@ -60,8 +66,8 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
     setBusy(true); setNotice(''); setError('');
     try {
       const ref = doc(db, 'academyCreatorWorkbooks', userId + '_' + selected.id);
-      const existing = await getDoc(ref);
-      if (existing.exists()) await deleteDoc(ref);
+      if (savedTemplateIds.includes(selected.id)) await deleteDoc(ref);
+      setSavedTemplateIds(previous => previous.filter(id => id !== selected.id));
       setDrafts(previous => ({ ...previous, [selected.id]: {} }));
       setNotice('This workbook has been cleared.');
     } catch {
