@@ -27,6 +27,7 @@ import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import CreatorMembershipPanel from './CreatorMembershipPanel';
 import { buildCreatorAchievements } from '../services/analytics/creatorAchievements';
 import ContentSeriesPanel from './ContentSeriesPanel';
+import ReferralGrowthPanel from './ReferralGrowthPanel';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -44,7 +45,7 @@ export default function CreatorDashboardView({
   onUpdateProfile
 }: CreatorDashboardViewProps) {
   // Tabs & Navigation
-  const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization' | 'assets' | 'series'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization' | 'assets' | 'series' | 'growth'>('overview');
   
   // Real Local state for Optimistic UI and responsiveness
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
@@ -741,6 +742,7 @@ export default function CreatorDashboardView({
           { id: 'media', label: 'Media Library', icon: Folder },
           { id: 'assets', label: 'Creator Assets', icon: Sparkles },
           { id: 'series', label: 'Content Series', icon: BookOpen },
+          { id: 'growth', label: 'Growth & Referrals', icon: Users },
           { id: 'achievements', label: 'Milestones', icon: Award },
           { id: 'policy', label: 'Policy Hub', icon: Shield },
           { id: 'monetization', label: 'Earnings', icon: DollarSign }
@@ -783,6 +785,7 @@ export default function CreatorDashboardView({
           {activeTab === 'academy' && <CreatorAcademyView currentUser={currentUser} />}
           {activeTab === 'assets' && <CreatorCommunityAssetLibrary currentUser={currentUser} onUpdateProfile={onUpdateProfile} />}
           {activeTab === 'series' && <ContentSeriesPanel currentUser={currentUser} posts={posts} />}
+          {activeTab === 'growth' && <ReferralGrowthPanel currentUser={currentUser} />}
 
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
