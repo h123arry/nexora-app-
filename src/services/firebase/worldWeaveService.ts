@@ -100,7 +100,7 @@ export async function inviteToWorldWeave(weaveId: string, inviteeId: string): Pr
     weaveTitle: weave.title, status: 'pending', createdAt: serverTimestamp() });
 }
 export function subscribeToWorldWeaveInvites(weaveId: string, onItems: (items: WorldWeaveInvite[]) => void, onError: (error: Error) => void): Unsubscribe {
-  const user = requireUser();
+  requireUser();
   return onSnapshot(query(collection(db, 'worldWeaves', weaveId, 'invites'), where('status', '==', 'pending'), limit(50)),
     snapshot => onItems(snapshot.docs.map(item => ({ ...item.data(), id: item.id } as WorldWeaveInvite))), onError);
 }
