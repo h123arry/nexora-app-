@@ -232,21 +232,21 @@ export default function ExploreView({
 
   // Filtered lists for search
   const filteredPosts = useMemo(() => {
-    return searchPosts(posts, debouncedSearch);
-  }, [posts, debouncedSearch]);
+    return universalResults ? [] : searchPosts(posts, debouncedSearch);
+  }, [posts, debouncedSearch, universalResults]);
 
   const filteredCreators = useMemo(() => {
-    return searchCreators(creators, debouncedSearch, { limit: 50 });
-  }, [creators, debouncedSearch]);
+    return universalResults ? [] : searchCreators(creators, debouncedSearch, { limit: 50 });
+  }, [creators, debouncedSearch, universalResults]);
 
   const filteredVideos = useMemo(() => {
-    return searchPosts(posts, debouncedSearch, { videosOnly: true });
-  }, [posts, debouncedSearch]);
+    return universalResults ? [] : searchPosts(posts, debouncedSearch, { videosOnly: true });
+  }, [posts, debouncedSearch, universalResults]);
 
   const hasActiveSearch = debouncedSearch.trim().length > 0;
-  const searchPeople = currentUserId && directoryResults ? directoryResults.people : filteredCreators;
-  const searchPages = directoryResults?.pages || [];
-  const searchCircles = directoryResults?.circles || [];
+  const searchPeople = universalResults ? [] : currentUserId && directoryResults ? directoryResults.people : filteredCreators;
+  const searchPages = universalResults ? [] : directoryResults?.pages || [];
+  const searchCircles = universalResults ? [] : directoryResults?.circles || [];
   const directoryEntryCount = searchPages.length + searchCircles.length;
   const serverHits = universalResults?.results || [];
   const filteredServerHits = serverHits.filter(hit => {
