@@ -633,7 +633,7 @@ service cloud.firestore {
         && ((request.resource.data.mediaType == 'text'
           && request.resource.data.caption.size() > 0
           && !request.resource.data.keys().hasAny(['mediaUrl', 'storagePath', 'mediaId']))
-          || (request.resource.data.mediaType in ['image', 'video']
+          || (request.resource.data.mediaType in ['image', 'video', 'audio']
             && request.resource.data.mediaUrl is string
             && request.resource.data.mediaUrl.size() > 0
             && request.resource.data.mediaUrl.size() <= 2000
