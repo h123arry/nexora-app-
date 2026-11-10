@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { setCircleMemberRole } from '../src/communityGovernance.js';
+import { setCircleMemberRole, moderateCircleMember, listCircleBans } from '../src/communityGovernance.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'community-governance-tests');
@@ -51,5 +51,69 @@ describe('trusted Circle role delegation', () => {
     await assert.rejects(setCircleMemberRole(db, 'alice', 'governance-circle', 'bob', 'owner', 'Transfer ownership'), /valid member/);
     await assert.rejects(setCircleMemberRole(db, 'alice', 'governance-circle', 'bob', 'admin', '  '), /valid member/);
     await assert.equal((await circle.collection('members').doc('bob').get()).get('role'), 'member');
+  });
+});
+
+
+describe('trusted Circle member enforcement', () => {
+  it('bans and unbans transactionally, then permits a clean public rejoin', async () => {
+    const banned = await moderateCircleMember(db, 'alice', 'governance-circle', 'bob', 'ban', 'Repeated harassment reports');
+    assert.deepEqual(banned, { userId: 'bob', action: 'ban', status: 'banned' });
+    assert.equal((await circle.collection('members').doc('bob').get()).exists, false);
+    assert.equal((await circle.collection('bans').doc('bob').get()).exists, true);
+    const banList = await listCircleBans(db, 'alice', 'governance-circle');
+    assert.equal(banList.length, 1);
+    assert.equal(banList[0].userId, 'bob');
+    assert.equal(banList[0].reason, 'Repeated harassment reports');
+    await assert.rejects(listCircleBans(db, 'bob', 'governance-circle'), /Only active Circle managers/);
+    const banEvents = await circle.collection('auditEvents').where('targetUid', '==', 'bob').where('action', '==', 'member_banned').get();
+    assert.equal(banEvents.size, 1);
+    assert.equal(banEvents.docs[0].get('reason'), 'Repeated harassment reports');
+
+    const unbanned = await moderateCircleMember(db, 'alice', 'governance-circle', 'bob', 'unban', 'Appeal reviewed and accepted');
+    assert.deepEqual(unbanned, { userId: 'bob', action: 'unban', status: 'unbanned' });
+    assert.equal((await circle.collection('members').doc('bob').get()).exists, false);
+    assert.equal((await circle.collection('bans').doc('bob').get()).exists, false);
+    const unbanEvents = await circle.collection('auditEvents').where('targetUid', '==', 'bob').where('action', '==', 'member_unbanned').get();
+    assert.equal(unbanEvents.size, 1);
+  });
+
+  it('allows moderators to remove lower-ranked members but prevents privilege escalation', async () => {
+    await circle.collection('members').doc('bob').set({ userId: 'bob', role: 'member', status: 'active' });
+    const removed = await moderateCircleMember(db, 'carol', 'governance-circle', 'bob', 'remove', 'Repeated disruption after warning');
+    assert.deepEqual(removed, { userId: 'bob', action: 'remove', status: 'removed' });
+    assert.equal((await circle.collection('members').doc('bob').get()).exists, false);
+    await assert.rejects(
+      moderateCircleMember(db, 'carol', 'governance-circle', 'alice', 'ban', 'Attempted owner ban'),
+      /equal or higher role/,
+    );
+    await assert.rejects(
+      moderateCircleMember(db, 'bob', 'governance-circle', 'carol', 'remove', 'Non-manager action'),
+      /Only active Circle managers/,
+    );
+    const events = await circle.collection('auditEvents').where('targetUid', '==', 'bob').where('action', '==', 'member_removed').get();
+    assert.equal(events.size, 1);
+    await circle.collection('members').doc('dave').set({ userId: 'dave', role: 'admin', status: 'active' });
+    await circle.update({ admins: ['dave'] });
+    await assert.rejects(
+      moderateCircleMember(db, 'carol', 'governance-circle', 'dave', 'ban', 'Moderator cannot ban admin'),
+      /equal or higher role/,
+    );
+    await moderateCircleMember(db, 'alice', 'governance-circle', 'dave', 'ban', 'Repeated policy violations');
+    assert.equal((await circle.collection('members').doc('dave').get()).exists, false);
+    assert.deepEqual((await circle.get()).get('admins'), []);
+    await moderateCircleMember(db, 'alice', 'governance-circle', 'dave', 'unban', 'Review complete');
+  });
+
+  it('rejects invalid moderation inputs and unknown ban records without mutating membership', async () => {
+    await assert.rejects(
+      moderateCircleMember(db, 'alice', 'governance-circle', 'carol', 'ban', 'x'),
+      /valid member/,
+    );
+    await assert.rejects(
+      moderateCircleMember(db, 'alice', 'governance-circle', 'carol', 'unban', 'No active ban exists'),
+      /not banned/,
+    );
+    assert.equal((await circle.collection('members').doc('carol').get()).get('status'), 'active');
   });
 });

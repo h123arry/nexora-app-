@@ -477,7 +477,11 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
                 
                 {activePortalTab === 'feed' && <CircleFeedPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 
-                {activePortalTab === 'members' && <CircleMembersPanel communityId={selectedCircle.id} />}
+                {activePortalTab === 'members' && <CircleMembersPanel
+                  communityId={selectedCircle.id}
+                  currentUserId={currentUser.id}
+                  canManage={selectedCircle.ownerId === currentUser.id || Boolean(selectedCircle.admins?.includes(currentUser.id) || selectedCircle.moderators?.includes(currentUser.id))}
+                />}
 
                 {activePortalTab === 'events' && <CircleEventsPanel communityId={selectedCircle.id} currentUserId={currentUser.id} />}
 

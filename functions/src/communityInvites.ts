@@ -47,8 +47,9 @@ export async function redeemCircleInvite(db: Firestore, userUid: string, token: 
       || data.useCount >= data.maxUses) throw new Error('Invalid or expired Circle invitation.');
     const communityRef = db.collection('communities').doc(String(data.communityId));
     const memberRef = communityRef.collection('members').doc(userUid);
-    const [community, member] = await Promise.all([tx.get(communityRef), tx.get(memberRef)]);
-    if (!community.exists || community.get('bannedUsers')?.includes?.(userUid)) {
+    const banRef = communityRef.collection('bans').doc(userUid);
+    const [community, member, ban] = await Promise.all([tx.get(communityRef), tx.get(memberRef), tx.get(banRef)]);
+    if (!community.exists || ban.exists || community.get('bannedUsers')?.includes?.(userUid)) {
       throw new Error('You cannot join this Circle.');
     }
     if (member.exists && member.get('status') === 'active') return { communityId: communityRef.id, joined: false };

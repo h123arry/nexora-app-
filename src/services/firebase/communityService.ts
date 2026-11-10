@@ -137,6 +137,8 @@ export const CommunityService = {
       throw new Error('This Circle is unavailable or requires an invitation.');
     }
     if (community.data().bannedUsers?.includes?.(userId)) throw new Error('You cannot join this Circle.');
+    // Private ban markers are intentionally unreadable to clients. Firestore Rules
+    // enforce their existence check atomically when this membership write is attempted.
     if (membership.exists() && membership.data().status === 'active') return;
     await setDoc(memberRef, {
       userId,
@@ -446,6 +448,29 @@ export const CommunityService = {
     }
     const update = httpsCallable(functions, 'setCommunityMemberRole');
     await update({ communityId, targetUid, role, reason });
+  },
+
+
+
+  async listBannedMembers(communityId: string): Promise<Array<{ userId: string; name: string; username: string; reason: string; bannedAt: string }>> {
+    if (!communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
+    const list = httpsCallable(functions, 'listCommunityBans');
+    const result = await list({ communityId });
+    return Array.isArray(result.data) ? result.data as Array<{ userId: string; name: string; username: string; reason: string; bannedAt: string }> : [];
+  },
+
+  async moderateMember(
+    communityId: string,
+    targetUid: string,
+    action: 'remove' | 'ban' | 'unban',
+    reason: string,
+  ): Promise<void> {
+    if (!communityId || communityId.includes('/') || !targetUid || targetUid.includes('/')
+      || typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 500) {
+      throw new Error('A valid Circle member and moderation reason are required.');
+    }
+    const moderate = httpsCallable(functions, 'moderateCommunityMember');
+    await moderate({ communityId, targetUid, action, reason: reason.trim() });
   },
 
   async leaveCommunity(userId: string, communityId: string): Promise<void> {

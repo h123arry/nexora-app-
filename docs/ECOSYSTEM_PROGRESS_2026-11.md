@@ -10,7 +10,7 @@ This is an implementation snapshot, not a release-readiness certification.
 - Creator and organisation Pages have follower-only official channel updates. Page owners publish and remove updates through trusted callables.
 - Explore now includes a curated, route-only Mini Services hub. It does not execute third-party scripts or arbitrary user code.
 - Explore and Universal Search recent-search records are scoped to the signed-in account.
-- Circle member pagination, governance, announcements and invitation foundations remain in place.
+- Circle member pagination, role governance, trusted remove/ban/unban actions, private manager-only ban review, invitation enforcement, and append-only moderation audit events are connected. Bans use private server-owned subcollection records rather than exposing banned user IDs on public Circle documents.
 - Inbox pin/archive preferences already use account-owned Firestore records for cross-device synchronisation.
 
 ## Still incomplete
@@ -18,6 +18,7 @@ This is an implementation snapshot, not a release-readiness certification.
 - Paid creator subscriptions remain unavailable until a payment provider adapter, signed webhooks, settlement, refunds and entitlement activation are implemented and verified.
 - Broadcast channels need delivery notifications, richer media, moderation workflows and creator analytics.
 - Directory search still needs server-backed posts, events, tags and service indexing, cursor pagination and production ranking.
+- Circle mute enforcement, report-driven Circle moderation, secure Circle media upload/download, and multi-account moderation acceptance tests remain incomplete.
 - Group messaging still needs trusted group creation, invitations, roles, removal/leave lifecycle and end-to-end acceptance tests.
 - Saved content needs richer presentation and more entry points beyond Circle and event views.
 - Business services need availability/slot management, customer cancellation, owner scheduling and operational notifications. Payment collection is intentionally disabled.
