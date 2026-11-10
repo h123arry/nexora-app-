@@ -39,3 +39,8 @@ The shared gift stage now observes its own viewport intersection and the documen
 The reaction picker and branded loader also use Motion's reduced-motion preference hook so JavaScript-driven transitions do not bypass the operating-system accessibility setting. The existing global CSS reduced-motion rules remain a second layer, not the only protection.
 
 This tranche improves lifecycle and accessibility behaviour in existing product surfaces. It does not add remote animation downloads, autoplay sound, or claim new 3D/rigged artwork.
+
+
+## Shared motion presets
+
+The interaction layer now exposes a small typed preset library for menus, panels, toast notifications and celebrations. Components consume the same reduced-motion-aware configuration rather than independently recreating entrance and exit values. Keep high-frequency or long-running effects out of generic presets; those require component-specific lifecycle controls and must pause when hidden.

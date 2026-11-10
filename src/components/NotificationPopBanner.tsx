@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { getMotionPreset } from '../utils/motionPresets';
 import { 
   Zap, 
   Flame, 
@@ -249,10 +250,7 @@ export default function NotificationPopBanner({
       <AnimatePresence mode="wait">
         <motion.div
           key={activePop.id}
-          initial={reduceMotion ? false : { y: -70, opacity: 0, scale: 0.93, filter: 'blur(4px)' }}
-          animate={{ y: 0, opacity: 1, scale: 1, filter: 'blur(0px)' }}
-          exit={reduceMotion ? { opacity: 0 } : { y: -50, opacity: 0, scale: 0.94, filter: 'blur(4px)', transition: { duration: 0.22 } }}
-          transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 28 }}
+          {...getMotionPreset('toast', Boolean(reduceMotion))}
           drag="y"
           dragConstraints={{ top: -100, bottom: 0 }}
           dragElastic={0.4}

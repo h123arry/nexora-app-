@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { getMotionPreset } from '../utils/motionPresets';
 import { 
   Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
   Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, 
@@ -309,10 +310,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                       }} 
                     />
                     <motion.div
-                      initial={reduceMotion ? false : { opacity: 0, scale: 0.95, y: -5 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, y: -5 }}
-                      transition={{ duration: reduceMotion ? 0 : 0.14 }}
+                      {...getMotionPreset('menu', Boolean(reduceMotion))}
                       id={`post-options-${post.id}`}
                       role="menu"
                       aria-label={`Post options for ${post.name}`}
