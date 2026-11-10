@@ -32,7 +32,10 @@ after(async () => {
   await db.recursiveDelete(db.doc('users/private-user')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/blocked-user')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/viewer')).catch(() => undefined);
-  await db.recursiveDelete(db.doc('posts')).catch(() => undefined);
+  await db.doc('posts/public-video').delete().catch(() => undefined);
+  await db.doc('posts/private-post').delete().catch(() => undefined);
+  await db.doc('posts/blocked-post').delete().catch(() => undefined);
+  await db.recursiveDelete(db.doc('users/public-user')).catch(() => undefined);
   await deleteApp(app);
 });
 describe('NEXORA universal search', () => {
