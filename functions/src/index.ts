@@ -18,6 +18,7 @@ import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary 
 import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
 import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries as listMyContentSeriesRecord, listContentSeriesEpisodes } from './contentSeries.js';
+import { voteOnPublicPostPoll, getMyPublicPostPollVotes } from './publicPostPolls.js';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
@@ -839,6 +840,30 @@ export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId
 });
 
 
+
+
+export const voteOnFeedPoll = onCall({ maxInstances: 20 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to vote in this poll.');
+  try { return await voteOnPublicPostPoll(adminDb, request.auth.uid, request.data?.postId, request.data?.optionId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('identifiers') || message.includes('valid poll') || message.includes('valid options') || message.includes('valid poll option')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('failed-precondition', 'Your poll vote could not be recorded.');
+  }
+});
+
+export const getMyFeedPollVotes = onCall({ maxInstances: 20 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view your poll activity.');
+  try { return await getMyPublicPostPollVotes(adminDb, request.auth.uid, request.data?.postIds); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid list')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('unavailable', 'Your poll activity is temporarily unavailable.');
+  }
+});
 
 export const createMyContentSeries = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a content series.');
