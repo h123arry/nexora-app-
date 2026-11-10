@@ -16,7 +16,7 @@ function validId(value: unknown): value is string {
 
 function reportDocumentId(communityId: string, reporterUid: string, targetType: string, targetId: string): string {
   return createHash('sha256')
-    .update([communityId, reporterUid, targetType, targetId].join(':'))
+    .update(JSON.stringify([communityId, reporterUid, targetType, targetId]))
     .digest('hex');
 }
 
