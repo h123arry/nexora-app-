@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { rankLiveRooms, scoreLiveRoom } from '../src/liveDiscoveryPolicy.ts';
+import { rankLiveRooms, scoreLiveRoom } from '../src/services/liveDiscoveryPolicy.ts';
 
 const now = Date.parse('2026-11-10T12:00:00.000Z');
 
