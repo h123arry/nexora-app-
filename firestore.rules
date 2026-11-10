@@ -966,6 +966,11 @@ service cloud.firestore {
         );
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid;
 
+      // Circle ban markers contain private member IDs and are managed only by trusted callables.
+      match /bans/{memberId} {
+        allow read, write: if false;
+      }
+
       // Membership is a per-user record. Members can read only their own record;
       // owners can review the member list. Clients cannot assign elevated roles.
       match /members/{memberId} {
@@ -989,6 +994,7 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.status == 'active'
           && request.resource.data.joinedAt == request.time
+          && !exists(/databases/$(database)/documents/communities/$(communityId)/bans/$(request.auth.uid))
           && (
             (
               request.resource.data.role == 'member'
