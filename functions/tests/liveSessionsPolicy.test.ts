@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LIVE_CHAT_MESSAGE_MAX, LIVE_CHAT_WINDOW_MAX_MESSAGES, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle, validateLiveConnectionId, nextLiveChatRateState } from '../src/liveSessionsPolicy.ts';
+import { LIVE_CHAT_MESSAGE_MAX, LIVE_CHAT_WINDOW_MAX_MESSAGES, validateLiveChatMessage, validateLiveSessionId, validateLiveSessionTitle, validateLiveConnectionId, nextLiveChatRateState, validateLiveSessionSettings } from '../src/liveSessionsPolicy.ts';
 
 test('live room titles and IDs are normalized and bounded', () => {
   assert.equal(validateLiveSessionTitle('  Creator Q&A  '), 'Creator Q&A');
@@ -28,4 +28,13 @@ test('live connection references are bounded opaque identifiers', () => {
   assert.equal(validateLiveConnectionId('live_conn_123'), 'live_conn_123');
   assert.throws(() => validateLiveConnectionId('../viewer'));
   assert.throws(() => validateLiveConnectionId('short'));
+});
+
+
+test('live host settings accept only explicit chat and gift toggles', () => {
+  assert.deepEqual(validateLiveSessionSettings({ chatEnabled: false }), { chatEnabled: false });
+  assert.deepEqual(validateLiveSessionSettings({ chatEnabled: true, giftsEnabled: false }), { chatEnabled: true, giftsEnabled: false });
+  assert.throws(() => validateLiveSessionSettings({}));
+  assert.throws(() => validateLiveSessionSettings({ chatEnabled: 'false' }));
+  assert.throws(() => validateLiveSessionSettings({ chatEnabled: false, hostId: 'attacker' }));
 });
