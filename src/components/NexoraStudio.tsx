@@ -8,7 +8,6 @@ type Props = { currentUser: { id: string; name?: string; username?: string }; on
 
 const DB_NAME = 'nexora-studio-projects';
 const STORE_NAME = 'projects';
-const PROJECT_KEY = 'active-project-v1';
 
 function openProjectDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -18,20 +17,20 @@ function openProjectDb(): Promise<IDBDatabase> {
     request.onerror = () => reject(request.error || new Error('Studio storage is unavailable.'));
   });
 }
-async function saveProject(project: StudioProject): Promise<void> {
+async function saveProject(project: StudioProject, projectKey: string): Promise<void> {
   const db = await openProjectDb();
   await new Promise<void>((resolve, reject) => {
     const transaction = db.transaction(STORE_NAME, 'readwrite');
-    transaction.objectStore(STORE_NAME).put(project, PROJECT_KEY);
+    transaction.objectStore(STORE_NAME).put(project, projectKey);
     transaction.oncomplete = () => resolve();
     transaction.onerror = () => reject(transaction.error || new Error('Could not save this Studio project.'));
   });
   db.close();
 }
-async function loadProject(): Promise<StudioProject | null> {
+async function loadProject(projectKey: string): Promise<StudioProject | null> {
   const db = await openProjectDb();
   const value = await new Promise<StudioProject | null>((resolve, reject) => {
-    const request = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(PROJECT_KEY);
+    const request = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).get(projectKey);
     request.onsuccess = () => resolve((request.result as StudioProject) || null);
     request.onerror = () => reject(request.error || new Error('Could not restore this Studio project.'));
   });
@@ -64,7 +63,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
 
   useEffect(() => {
     let active = true;
-    loadProject().then(project => {
+    const projectKey = `active-project-v1:${currentUser.id}`;
+    loadProject(projectKey).then(project => {
       if (!active || !project) return;
       setClips(project.clips || []);
       setSelectedId(project.clips?.[0]?.id || null);
@@ -75,18 +75,18 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     }).catch(() => { if (active) setMessage('A previous Studio draft could not be restored. You can still start a new project.'); })
       .finally(() => { if (active) setReady(true); });
     return () => { active = false; projectUrls.current.forEach(URL.revokeObjectURL); };
-  }, []);
+  }, [currentUser.id]);
 
   useEffect(() => {
     if (!ready) return;
     setExportBlob(null);
     const timer = window.setTimeout(() => {
-      void saveProject({ clips, soundtrack, caption, overlay, overlayColor, updatedAt: Date.now() })
+      void saveProject({ clips, soundtrack, caption, overlay, overlayColor, updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
         .then(() => setMessage('Draft saved on this device'))
         .catch(() => setMessage('This draft could not be saved on this device.'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [ready, clips, soundtrack, caption, overlay, overlayColor]);
+  }, [ready, clips, soundtrack, caption, overlay, overlayColor, currentUser.id]);
 
   const getUrl = useCallback((blob: Blob) => {
     const url = URL.createObjectURL(blob);
