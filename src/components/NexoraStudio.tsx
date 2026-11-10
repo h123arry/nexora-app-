@@ -349,15 +349,6 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     setTextLayers(previous => previous.map(layer => layer.id === selectedTextLayer.id ? normalizeStudioTextLayer({ ...layer, ...patch }, layer.id) : layer));
   };
 
-  const removeSelectedTextLayer = () => {
-    if (!selectedTextLayer) return;
-    setTextLayers(previous => {
-      const next = previous.filter(layer => layer.id !== selectedTextLayer.id);
-      setSelectedTextLayerId(next[0]?.id || null);
-      return next;
-    });
-  };
-
   const reorderClip = (sourceId: string, targetId: string) => {
     setClips(previous => reorderById(previous, sourceId, targetId));
     setSelectedId(sourceId);
