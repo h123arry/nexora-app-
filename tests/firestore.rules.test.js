@@ -1214,25 +1214,25 @@ const publicProfile = (uid) => ({
       userId: 'alice', courseId: 'creator-foundations', lessonId: 'identity',
       note: 'My audience promise and examples.', updatedAt: serverTimestamp(), schemaVersion: 1
     };
-    await assertSucceeds(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), note));
-    await assertSucceeds(getDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity')));
+    await assertSucceeds(setDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_8_identity'), note));
+    await assertSucceeds(getDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_8_identity')));
     await assertSucceeds(getDocs(query(collection(alice, 'academyLessonNotes'), where('userId', '==', 'alice'))));
-    await assertFails(getDoc(doc(dbFor('bob'), 'academyLessonNotes', 'alice_creator-foundations_identity')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'academyLessonNotes', 'alice_19_creator-foundations_8_identity')));
     await assertFails(setDoc(doc(dbFor('bob'), 'academyLessonNotes', 'bob_creator-foundations_identity'), note));
-    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_unknown'), {
+    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_7_unknown'), {
       ...note, lessonId: 'unknown'
     }));
-    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), {
+    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_8_identity'), {
       ...note, note: 'x'.repeat(5001)
     }));
-    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), {
+    await assertFails(setDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_8_identity'), {
       ...note, isInstructor: true
     }));
-    await assertFails(updateDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity'), {
+    await assertFails(updateDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_8_identity'), {
       userId: 'bob'
     }));
-    await assertSucceeds(deleteDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity')));
-    await assertFails(getDoc(doc(alice, 'academyLessonNotes', 'alice_creator-foundations_identity')));
+    await assertSucceeds(deleteDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_8_identity')));
+    await assertFails(getDoc(doc(alice, 'academyLessonNotes', 'alice_19_creator-foundations_8_identity')));
   });
 
   it('keeps Creator Academy workbooks private and restricts them to approved templates', async () => {
