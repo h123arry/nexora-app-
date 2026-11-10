@@ -72,6 +72,9 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'worldWeaves', 'private-weave')));
     await assertFails(getDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave')));
     await assertSucceeds(getDoc(doc(dbFor('bob'), 'worldWeaves', 'public-weave')));
+    await assertSucceeds(updateDoc(doc(dbFor('bob'), 'worldWeaves', 'public-weave'), {
+      participantIds: ['alice', 'bob'], memberCount: 2, updatedAt: serverTimestamp()
+    }));
     await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'moments', 'forged'), {
       weaveId: 'private-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
       authorAvatar: '', text: 'I was not invited', mediaType: 'text', createdAt: serverTimestamp()
