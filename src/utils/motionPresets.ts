@@ -4,7 +4,7 @@ export interface MotionPreset {
   initial: false | Record<string, number>;
   animate: Record<string, number>;
   exit: Record<string, number>;
-  transition: { duration: number; ease?: string };
+  transition: { duration: number; ease?: 'easeOut' };
 }
 
 const PRESETS: Record<MotionPresetName, MotionPreset> = {
