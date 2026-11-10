@@ -7,7 +7,7 @@ This document describes the real LiveKit-backed broadcast path and the checks re
 - A host can create one active live room at a time.
 - Viewer admission and host presence are tracked by trusted Firebase callables.
 - Hosts and approved guests can publish audio/video; ordinary viewers receive media only.
-- Hosts can mute live chat, remove a viewer, or ban a viewer for that room.
+- Hosts can mute live chat, remove a viewer, or ban a viewer for that room. Hosts can review the room's private ban list and unban a member without exposing moderation records to ordinary viewers.
 - Ban/removal state is checked by the admission, chat and LiveKit-token paths. Moderation is saved before an active LiveKit participant is disconnected.
 - Host and approved guest clients can share their screen where the browser/device supports screen capture.
 - Live discovery ranks rooms using freshness, actual viewers, peak audience and chat activity. Gift count is deliberately a low-weight signal.
