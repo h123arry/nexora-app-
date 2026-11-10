@@ -105,14 +105,15 @@ export async function listCircleReports(
     const targetId = String(report.get('targetId') || '');
     const [reporter, target] = await Promise.all([
       db.collection('publicProfiles').doc(reporterUid).get(),
-      db.collection('communities').doc(communityId)
-        .collection(targetType === 'member' ? 'members' : targetType === 'post' ? 'posts' : 'messages')
-        .doc(targetId).get(),
+      db.collection(targetType === 'member' ? 'publicProfiles' : 'communities').doc(targetType === 'member' ? targetId : communityId)
+        .collection(targetType === 'member' ? 'unused' : targetType === 'post' ? 'posts' : 'messages')
+        .doc(targetType === 'member' ? '__unused__' : targetId).get(),
     ]);
     const profile = reporter.data() || {};
     const targetData = target.data() || {};
+    const targetProfile = targetType === 'member' ? await db.collection('publicProfiles').doc(targetId).get() : null;
     const summary = targetType === 'member'
-      ? String(profile.name || profile.username || 'Circle member')
+      ? String(targetProfile?.data()?.name || targetProfile?.data()?.username || 'Circle member')
       : String(targetData.content || targetData.title || '').slice(0, 180);
     const createdAt = report.get('createdAt')?.toDate?.();
     return {
