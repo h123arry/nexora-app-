@@ -112,6 +112,33 @@ export default function ExploreView({
     return () => { cancelled = true; };
   }, [currentUserId, debouncedSearch]);
 
+  // Server-indexed search spans public NEXORA content, not only loaded feed items.
+  useEffect(() => {
+    const term = debouncedSearch.trim();
+    if (!currentUserId || term.length < 2) { setUniversalResults(null); setUniversalLoading(false); setUniversalError(''); return; }
+    let cancelled = false;
+    setUniversalLoading(true); setUniversalResults(null); setUniversalError('');
+    void searchNexora(term).then(result => { if (!cancelled) setUniversalResults(result); })
+      .catch(error => { if (!cancelled) setUniversalError(error instanceof Error ? error.message : 'NEXORA-wide search is temporarily unavailable.'); })
+      .finally(() => { if (!cancelled) setUniversalLoading(false); });
+    return () => { cancelled = true; };
+  }, [currentUserId, debouncedSearch]);
+
+  const loadMoreUniversalResults = async () => {
+    const cursor = universalResults?.nextCursor; const term = debouncedSearch.trim();
+    const requestKey = universalRequestKey.current;
+    if (!currentUserId || !cursor || universalLoadingMore || term.length < 2) return;
+    setUniversalLoadingMore(true); setUniversalError('');
+    try {
+      const next = await searchNexora(term, cursor);
+      if (universalRequestKey.current !== requestKey) return;
+      setUniversalResults(current => current ? {
+        results: [...new Map([...current.results, ...next.results].map(item => [item.id, item])).values()],
+        nextCursor: next.nextCursor, query: next.query,
+      } : next);
+    } catch (error) { if (universalRequestKey.current === requestKey) setUniversalError(error instanceof Error ? error.message : 'More search results could not be loaded.'); }
+    finally { if (universalRequestKey.current === requestKey) setUniversalLoadingMore(false); }
+  };
   // Continue the server directory using its opaque, query-bound cursor. Results
   // are merged by stable document ID so overlapping prefix indexes never duplicate cards.
   const loadMoreDirectoryResults = async () => {
