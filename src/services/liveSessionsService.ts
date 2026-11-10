@@ -36,6 +36,14 @@ export async function sendLiveChatMessage(sessionId: string, message: string, co
   return (await call({ sessionId, message, connectionId })).data;
 }
 
+export async function updateLiveSessionSettings(sessionId: string, settings: { chatEnabled?: boolean; giftsEnabled?: boolean }) {
+  const call = httpsCallable<
+    { sessionId: string; settings: { chatEnabled?: boolean; giftsEnabled?: boolean } },
+    { sessionId: string; chatEnabled?: boolean; giftsEnabled?: boolean; updated: true }
+  >(functions, 'updateLiveSessionSettings');
+  return (await call({ sessionId, settings })).data;
+}
+
 export async function getLiveKitToken(sessionId: string, connectionId: string) {
   const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'viewer'; expiresAt: number }>(liveKitFunctions, 'getLiveKitToken');
   return (await call({ sessionId, connectionId })).data;
