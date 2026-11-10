@@ -260,6 +260,7 @@ export async function searchNexoraContent(
   for (const candidate of visibleCandidates) {
     if (!candidate) continue;
     const data = candidate.data();
+    const ownerId = String(data.ownerId || '');
     const score = relevance(queryWords, data);
     if (score === null) continue;
     hits.push({
