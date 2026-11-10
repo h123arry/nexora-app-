@@ -46,3 +46,39 @@ export function buildCreatorAchievements(
     { id: 'top_contrib', title: 'Top Contributor', desc: 'Reach 500 reputation points', icon: '⭐', unlocked: reputation >= 500, progress: Math.min(100, Math.round(reputation / 500 * 100)), label: `${reputation.toLocaleString()}/500 Rep` },
   ];
 }
+
+export interface CreatorProgressionLevel {
+  id: string;
+  title: string;
+  reputationRequired: number;
+  currentReputation: number;
+  unlocked: boolean;
+  progress: number;
+  nextLevel: string | null;
+  pointsToNext: number;
+}
+
+/** Levels are presentation milestones only; they never mint currency or grant permissions. */
+export function buildCreatorProgressionLevel(reputationPoints: unknown): CreatorProgressionLevel {
+  const reputation = count(reputationPoints);
+  const levels = [
+    { id: 'newcomer', title: 'Newcomer', reputationRequired: 0 },
+    { id: 'contributor', title: 'Contributor', reputationRequired: 100 },
+    { id: 'community_voice', title: 'Community Voice', reputationRequired: 250 },
+    { id: 'community_leader', title: 'Community Leader', reputationRequired: 400 },
+    { id: 'nexora_ambassador', title: 'NEXORA Ambassador', reputationRequired: 750 },
+    { id: 'legacy_builder', title: 'Legacy Builder', reputationRequired: 1200 },
+  ];
+  let current = levels[0];
+  for (const level of levels) if (reputation >= level.reputationRequired) current = level;
+  const next = levels[levels.indexOf(current) + 1] || null;
+  const span = next ? next.reputationRequired - current.reputationRequired : 0;
+  return {
+    ...current,
+    currentReputation: reputation,
+    unlocked: true,
+    progress: next && span > 0 ? Math.min(100, Math.round((reputation - current.reputationRequired) / span * 100)) : 100,
+    nextLevel: next?.title || null,
+    pointsToNext: next ? Math.max(0, next.reputationRequired - reputation) : 0,
+  };
+}
