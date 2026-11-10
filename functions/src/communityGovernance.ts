@@ -1,4 +1,4 @@
-import type { Firestore } from 'firebase-admin/firestore';
+import { FieldValue, type Firestore } from 'firebase-admin/firestore';
 import { randomUUID } from 'node:crypto';
 
 const ID_LIMIT = 150;
@@ -73,4 +73,70 @@ export async function setCircleMemberRole(
   });
 
   return { userId: targetUid, role };
+}
+
+
+export async function moderateCircleMember(
+  db: Firestore,
+  actorUid: string,
+  communityId: string,
+  targetUid: string,
+  action: 'mute' | 'unmute',
+  durationMinutes: number,
+  reason: string,
+): Promise<{ userId: string; action: 'mute' | 'unmute'; mutedUntil: string | null }> {
+  const cleanReason = typeof reason === 'string' ? reason.trim() : '';
+  if (!validId(actorUid) || !validId(communityId) || !validId(targetUid)
+    || actorUid === targetUid || !['mute', 'unmute'].includes(action)
+    || cleanReason.length < 3 || cleanReason.length > REASON_LIMIT
+    || (action === 'mute' && ![60, 1440, 10080].includes(durationMinutes))) {
+    throw new Error('A valid Circle member, moderation action, duration and reason are required.');
+  }
+  const communityRef = db.collection('communities').doc(communityId);
+  const actorRef = communityRef.collection('members').doc(actorUid);
+  const targetRef = communityRef.collection('members').doc(targetUid);
+  const auditRef = communityRef.collection('auditEvents').doc(randomUUID());
+  const now = new Date();
+  const mutedUntil = action === 'mute' ? new Date(now.getTime() + durationMinutes * 60_000) : null;
+
+  await db.runTransaction(async tx => {
+    const [community, actor, target] = await Promise.all([
+      tx.get(communityRef), tx.get(actorRef), tx.get(targetRef),
+    ]);
+    const actorRole = String(actor.get('role') || '');
+    const targetRole = String(target.get('role') || 'member');
+    const isOwner = community.exists && community.get('ownerId') === actorUid && actorRole === 'owner';
+    if (!community.exists || !actor.exists || actor.get('status') !== 'active'
+      || !['owner', 'admin', 'moderator'].includes(actorRole)
+      || (actorRole === 'owner' && !isOwner)) {
+      throw new Error('Only an active Circle owner, admin or moderator can mute members.');
+    }
+    if (!target.exists || target.get('status') !== 'active') {
+      throw new Error('The target must be an active Circle member.');
+    }
+    if (targetRole === 'owner' || targetUid === community.get('ownerId')) {
+      throw new Error('Circle ownership cannot be muted.');
+    }
+    if (!isOwner && targetRole !== 'member') {
+      throw new Error('Only the Circle owner can moderate another manager.');
+    }
+
+    if (action === 'mute') {
+      tx.update(targetRef, {
+        mutedUntil, mutedBy: actorUid, mutedAt: now, muteReason: cleanReason,
+      });
+    } else {
+      tx.update(targetRef, {
+        mutedUntil: FieldValue.delete(), mutedBy: FieldValue.delete(),
+        mutedAt: FieldValue.delete(), muteReason: FieldValue.delete(),
+      });
+    }
+    tx.create(auditRef, {
+      id: auditRef.id, actorUid, targetUid,
+      action: action === 'mute' ? 'member_muted' : 'member_unmuted',
+      durationMinutes: action === 'mute' ? durationMinutes : null,
+      reason: cleanReason, createdAt: now,
+    });
+  });
+  return { userId: targetUid, action, mutedUntil: mutedUntil ? mutedUntil.toISOString() : null };
 }

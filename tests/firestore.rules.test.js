@@ -805,12 +805,20 @@ const publicProfile = (uid) => ({
       await setDoc(doc(db, 'communities', 'chat-circle', 'members', 'bob'), {
         userId: 'bob', role: 'member', status: 'active', joinedAt: Timestamp.now()
       });
+      await setDoc(doc(db, 'communities', 'chat-circle', 'members', 'charlie'), {
+        userId: 'charlie', role: 'member', status: 'active', joinedAt: Timestamp.now(),
+        mutedUntil: Timestamp.fromMillis(Date.now() + 60 * 60 * 1000)
+      });
     });
 
     const bobMessages = collection(dbFor('bob'), 'communities', 'chat-circle', 'messages');
     const bobMessage = doc(bobMessages, 'message-1');
     await assertSucceeds(setDoc(bobMessage, {
       id: 'message-1', senderId: 'bob', content: 'Hello Circle', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDocs(collection(dbFor('charlie'), 'communities', 'chat-circle', 'messages')));
+    await assertFails(setDoc(doc(dbFor('charlie'), 'communities', 'chat-circle', 'messages', 'muted-message'), {
+      id: 'muted-message', senderId: 'charlie', content: 'Muted message', createdAt: serverTimestamp()
     }));
     await assertSucceeds(getDoc(doc(dbFor('alice'), 'communities', 'chat-circle', 'messages', 'message-1')));
     await assertSucceeds(getDocs(collection(dbFor('bob'), 'communities', 'chat-circle', 'messages')));

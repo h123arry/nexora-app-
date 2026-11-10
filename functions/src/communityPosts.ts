@@ -39,6 +39,11 @@ export async function createCirclePostForUser(
       || (Array.isArray(community.get('bannedUsers')) && (community.get('bannedUsers') as unknown[]).includes(uid))) {
       throw new HttpsError('permission-denied', 'Join this Circle to publish a post.');
     }
+    const mutedUntil = member.get('mutedUntil') as { toDate?: () => Date } | Date | undefined;
+    const mutedUntilDate = mutedUntil instanceof Date ? mutedUntil : mutedUntil?.toDate?.();
+    if (mutedUntilDate && mutedUntilDate.getTime() > now.getTime()) {
+      throw new HttpsError('permission-denied', 'You are muted in this Circle and cannot publish posts yet.');
+    }
     const restriction = accountStatus.data() || {};
     if (activeRestriction(restriction, 'postingRestricted', now)
       || activeRestriction(restriction, 'suspended', now)

@@ -9,6 +9,7 @@ type CircleMember = {
   username: string;
   avatar: string;
   role: string;
+  mutedUntil: string | null;
 };
 
 export default function CircleGovernancePanel({
@@ -35,6 +36,8 @@ export default function CircleGovernancePanel({
   const [inviteLink, setInviteLink] = useState('');
   const [inviteToken, setInviteToken] = useState('');
   const [inviteBusy, setInviteBusy] = useState(false);
+  const [moderationReasonByUser, setModerationReasonByUser] = useState<Record<string, string>>({});
+  const [muteDurationByUser, setMuteDurationByUser] = useState<Record<string, number>>({});
 
   useEffect(() => {
     let active = true;
@@ -104,6 +107,28 @@ export default function CircleGovernancePanel({
     }
   };
 
+  const moderateMember = async (member: CircleMember, action: 'mute' | 'unmute') => {
+    const reason = moderationReasonByUser[member.userId]?.trim() || '';
+    const duration = muteDurationByUser[member.userId] || 60;
+    if (!canManage || member.userId === currentUserId || savingId || !reason) return;
+    setSavingId(member.userId);
+    setError('');
+    setNotice('');
+    try {
+      const result = await CommunityService.moderateMember(communityId, member.userId, action, reason, duration);
+      setMembers(previous => previous.map(item => item.userId === member.userId
+        ? { ...item, mutedUntil: result.mutedUntil }
+        : item));
+      setNotice(action === 'mute'
+        ? `Muted ${member.name} until ${new Date(result.mutedUntil || '').toLocaleString()}.`
+        : `Removed the Circle mute for ${member.name}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'The moderation action could not be saved.');
+    } finally {
+      setSavingId(null);
+    }
+  };
+
   const saveRole = async (member: CircleMember) => {
     const role = roleByUser[member.userId] || 'member';
     const reason = reasonByUser[member.userId] || '';
@@ -128,7 +153,7 @@ export default function CircleGovernancePanel({
         <ShieldCheck className="h-4 w-4 text-violet-400" />
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle governance</h3>
-          <p className="text-[11px] text-violet-200/50">Manage trusted roles with server-verified permissions and an audit trail.</p>
+          <p className="text-[11px] text-violet-200/50">Manage trusted roles and time-limited member mutes. The server verifies permissions and records every action.</p>
           {memberCount !== null && <p className="text-[10px] text-violet-300/70">{memberCount.toLocaleString()} active members · showing {members.length}</p>}
         </div>
       </div>
@@ -166,6 +191,36 @@ export default function CircleGovernancePanel({
                   </div>
                   <span className="rounded-lg border border-white/10 px-2 py-1 text-[9px] uppercase text-violet-200/70">{member.role}</span>
                 </div>
+                {canManage && member.userId !== currentUserId && member.role !== 'owner'
+                  && (isOwner || member.role === 'member') && (
+                  <div className="mt-3 space-y-2 border-t border-white/5 pt-3">
+                    {member.mutedUntil && new Date(member.mutedUntil).getTime() > Date.now()
+                      && <p className="text-[10px] text-amber-200">Muted until {new Date(member.mutedUntil).toLocaleString()}</p>}
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-[130px_1fr_auto]">
+                      <select value={muteDurationByUser[member.userId] || 60}
+                        onChange={event => setMuteDurationByUser(previous => ({ ...previous, [member.userId]: Number(event.target.value) }))}
+                        className="rounded-lg border border-white/10 bg-[#0b1020] px-2 py-2 text-xs text-white">
+                        <option value={60}>Mute 1 hour</option>
+                        <option value={1440}>Mute 24 hours</option>
+                        <option value={10080}>Mute 7 days</option>
+                      </select>
+                      <input value={moderationReasonByUser[member.userId] || ''}
+                        onChange={event => setModerationReasonByUser(previous => ({ ...previous, [member.userId]: event.target.value }))}
+                        maxLength={500} placeholder="Reason for moderation action"
+                        className="min-w-0 rounded-lg border border-white/10 bg-white/5 px-2 py-2 text-xs text-white" />
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => void moderateMember(member, 'mute')}
+                          disabled={savingId !== null || !moderationReasonByUser[member.userId]?.trim()}
+                          className="rounded-lg bg-amber-600/80 px-3 py-2 text-xs font-bold text-white disabled:opacity-40">
+                          {savingId === member.userId ? 'Saving...' : 'Mute'}
+                        </button>
+                        {member.mutedUntil && <button type="button" onClick={() => void moderateMember(member, 'unmute')}
+                          disabled={savingId !== null || !moderationReasonByUser[member.userId]?.trim()}
+                          className="rounded-lg border border-emerald-400/20 px-3 py-2 text-xs font-bold text-emerald-200 disabled:opacity-40">Unmute</button>}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {isOwner && member.userId !== currentUserId && member.role !== 'owner' && (
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_1.5fr_auto]">
                     <select value={selectedRole} onChange={event => setRoleByUser(previous => ({ ...previous, [member.userId]: event.target.value as 'admin' | 'moderator' | 'member' }))} className="min-w-0 rounded-lg border border-white/10 bg-[#0b1020] px-2 py-2 text-xs text-white">

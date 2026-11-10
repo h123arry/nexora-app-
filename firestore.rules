@@ -1052,8 +1052,12 @@ service cloud.firestore {
             && exists(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid))
             && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.status == 'active';
         }
+        function unmutedCircleMember() {
+          return activeCircleMember()
+            && get(/databases/$(database)/documents/communities/$(communityId)/members/$(request.auth.uid)).data.get('mutedUntil', request.time) <= request.time;
+        }
         allow get, list: if activeCircleMember();
-        allow create: if activeCircleMember()
+        allow create: if unmutedCircleMember()
           && request.resource.data.keys().hasOnly(['id', 'senderId', 'content', 'createdAt'])
           && request.resource.data.id == messageId
           && request.resource.data.senderId == request.auth.uid
