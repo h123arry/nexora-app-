@@ -1212,9 +1212,13 @@ service cloud.firestore {
           && request.resource.data.visibility in ['public', 'private']
           && request.resource.data.updatedAt == request.time)
         || (weaveMember()
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'momentCount'])
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'momentCount', 'lastMomentId'])
           && request.resource.data.updatedAt == request.time
-          && request.resource.data.momentCount == resource.data.get('momentCount', 0) + 1)
+          && request.resource.data.momentCount == resource.data.get('momentCount', 0) + 1
+          && request.resource.data.lastMomentId is string
+          && request.resource.data.lastMomentId != resource.data.get('lastMomentId', '')
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/moments/$(request.resource.data.lastMomentId)).data.get('authorId', '') == request.auth.uid
+          && getAfter(/databases/$(database)/documents/worldWeaves/$(weaveId)/moments/$(request.resource.data.lastMomentId)).data.get('createdAt', null) == request.time)
         || (!weaveMember()
           && resource.data.get('visibility', 'private') == 'public'
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
