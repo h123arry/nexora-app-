@@ -1,5 +1,5 @@
 import {
-  addDoc, arrayUnion, collection, doc, getDocs, increment, limit, onSnapshot, orderBy, query,
+  addDoc, arrayUnion, collection, collectionGroup, doc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, updateDoc, where, runTransaction, type Unsubscribe,
 } from 'firebase/firestore';
 import { auth, db } from './config';
@@ -11,7 +11,7 @@ export interface WorldWeave {
   visibility: WorldWeaveVisibility; participantIds: string[]; memberCount: number;
   momentCount: number; createdAt?: unknown; updatedAt?: unknown;
 }
-export interface WorldWeaveMoment {
+export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; weaveDescription: string; visibility: WorldWeaveVisibility; status: 'pending' | 'accepted'; createdAt?: unknown; }\nexport interface WorldWeaveMoment {
   id: string; weaveId: string; authorId: string; authorName: string; authorUsername: string;
   authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video';
   mediaUrl?: string; storagePath?: string; createdAt?: unknown;
@@ -54,7 +54,7 @@ export async function inviteToWorldWeave(weaveId: string, inviteeId: string): Pr
     weaveId, inviteeId, invitedBy: user.uid, status: 'pending', createdAt: serverTimestamp(),
   });
 }
-export async function acceptWorldWeaveInvite(weaveId: string): Promise<void> {
+export async function acceptWorldWeaveInvite(weaveId: string): Promise<WorldWeave> {
   const user = requireUser();
   await runTransaction(db, async transaction => {
     const weaveRef = doc(db, 'worldWeaves', weaveId);
