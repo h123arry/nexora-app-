@@ -29,6 +29,8 @@ export async function createReferralCode(db: Firestore, uid: string): Promise<{ 
   if (!validUid(uid)) throw new Error('A valid account is required.');
   const config = await db.collection('referralProgramConfig').doc('current').get();
   if (!config.exists || config.get('enabled') !== true) throw new Error('The referral programme is not currently available.');
+  const existingCodes = await db.collection('referralCodes').where('ownerId', '==', uid).limit(5).get();
+  if (existingCodes.size >= 5) throw new Error('You have reached the referral-code limit.');
   const code = randomBytes(32).toString('base64url');
   await db.collection('referralCodes').doc(hashCode(code)).create({
     ownerId: uid,
@@ -107,8 +109,8 @@ export async function qualifyReferral(
     const referrerId = String(attribution.get('referrerId') || '');
     if (!validUid(referrerId) || referrerId === inviteeUid) throw new Error('Referral attribution is invalid.');
     const successful = await tx.get(db.collection('referralAttributions')
-      .where('referrerId', '==', referrerId).where('status', '==', 'qualified'));
-    if (successful.size >= maxSuccessfulReferrals) {
+      .where('referrerId', '==', referrerId));
+    if (successful.docs.filter(doc => doc.get('status') === 'qualified').length >= maxSuccessfulReferrals) {
       tx.update(attributionRef, { status: 'capped', qualifiedAt: FieldValue.serverTimestamp(), rewardNex: 0 });
       return { qualified: false, rewardNex: 0 };
     }
