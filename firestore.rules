@@ -1227,6 +1227,7 @@ service cloud.firestore {
             get(/databases/$(database)/documents/chats/$(chatId)).data.get('isGroup', false) != true
             && resource.data.senderId != request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+            && request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
             && request.resource.data.status in ['delivered', 'read']
           )
           || validGroupReceiptUpdate()
