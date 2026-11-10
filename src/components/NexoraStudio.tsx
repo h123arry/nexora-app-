@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { buildWaveformPeaks, getAudioEnvelopeGain, getDuckedMusicGain } from '../utils/studioAudioPolicy';
-import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Scissors, Trash2, Type, Upload, Volume2, X } from 'lucide-react';
+import { appendHistorySnapshot, reorderById } from '../utils/studioHistoryPolicy';
+import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
 type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
+type StudioSnapshot = Omit<StudioProject, 'updatedAt'> & { selectedId: string | null };
 type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string) => Promise<void> };
 
 const DB_NAME = 'nexora-studio-projects';
@@ -73,14 +75,19 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [message, setMessage] = useState('');
   const [ready, setReady] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const projectUrls = useRef<string[]>([]);
   const voiceoverRecorderRef = useRef<MediaRecorder | null>(null);
   const voiceoverStreamRef = useRef<MediaStream | null>(null);
   const voiceoverChunksRef = useRef<Blob[]>([]);
+  const draggedClipIdRef = useRef<string | null>(null);
+  const historyRef = useRef<{ past: StudioSnapshot[]; future: StudioSnapshot[]; current: StudioSnapshot | null; applying: boolean }>({ past: [], future: [], current: null, applying: false });
   const selectedClip = clips.find(clip => clip.id === selectedId) || clips[0] || null;
   const totalDuration = useMemo(() => clips.reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips]);
+  const snapshot = useMemo<StudioSnapshot>(() => ({ clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition }), [clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition]);
 
   useEffect(() => {
     let active = true;
@@ -147,6 +154,92 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       .finally(() => { void decoder.close().catch(() => undefined); });
     return () => { cancelled = true; };
   }, [voiceover]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const history = historyRef.current;
+    if (history.applying) {
+      history.current = snapshot;
+      history.applying = false;
+      setCanUndo(history.past.length > 0);
+      setCanRedo(history.future.length > 0);
+      return;
+    }
+    if (history.current) {
+      history.past = appendHistorySnapshot(history.past, history.current, 40);
+      history.future = [];
+      setCanUndo(true);
+      setCanRedo(false);
+    }
+    history.current = snapshot;
+  }, [ready, snapshot]);
+
+  const applySnapshot = useCallback((value: StudioSnapshot) => {
+    setClips(value.clips);
+    setSelectedId(value.selectedId);
+    setSoundtrack(value.soundtrack);
+    setVoiceover(value.voiceover);
+    setCaption(value.caption);
+    setOverlay(value.overlay);
+    setOverlayColor(value.overlayColor);
+    setAspectRatio(value.aspectRatio);
+    setTransition(value.transition);
+    setSoundtrackVolume(value.soundtrackVolume);
+    setSoundtrackFadeIn(value.soundtrackFadeIn);
+    setSoundtrackFadeOut(value.soundtrackFadeOut);
+    setDuckMusicUnderVoiceover(value.duckMusicUnderVoiceover);
+    setMusicDuckingLevel(value.musicDuckingLevel);
+    setVoiceoverVolume(value.voiceoverVolume);
+    setVoiceoverFadeIn(value.voiceoverFadeIn);
+    setVoiceoverFadeOut(value.voiceoverFadeOut);
+    setVoiceoverStart(value.voiceoverStart);
+    setOverlayStart(value.overlayStart);
+    setOverlayEnd(value.overlayEnd);
+    setOverlayPosition(value.overlayPosition);
+  }, []);
+
+  const undo = useCallback(() => {
+    const history = historyRef.current;
+    if (!history.current || !history.past.length) return;
+    const previous = history.past[history.past.length - 1];
+    history.past = history.past.slice(0, -1);
+    history.future = appendHistorySnapshot(history.future, history.current, 40);
+    history.applying = true;
+    applySnapshot(previous);
+    setCanUndo(history.past.length > 0);
+    setCanRedo(true);
+    setMessage('Last Studio edit undone.');
+  }, [applySnapshot]);
+
+  const redo = useCallback(() => {
+    const history = historyRef.current;
+    if (!history.current || !history.future.length) return;
+    const next = history.future[history.future.length - 1];
+    history.future = history.future.slice(0, -1);
+    history.past = appendHistorySnapshot(history.past, history.current, 40);
+    history.applying = true;
+    applySnapshot(next);
+    setCanUndo(true);
+    setCanRedo(history.future.length > 0);
+    setMessage('Studio edit restored.');
+  }, [applySnapshot]);
+
+  useEffect(() => {
+    const handleHistoryShortcut = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      if (event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        if (event.shiftKey) redo(); else undo();
+      } else if (event.key.toLowerCase() === 'y') {
+        event.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener('keydown', handleHistoryShortcut);
+    return () => window.removeEventListener('keydown', handleHistoryShortcut);
+  }, [undo, redo]);
 
   const getUrl = useCallback((blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -225,6 +318,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const updateSelected = (patch: Partial<StudioClip>) => {
     if (!selectedClip) return;
     setClips(previous => previous.map(clip => clip.id === selectedClip.id ? { ...clip, ...patch } : clip));
+  };
+
+  const reorderClip = (sourceId: string, targetId: string) => {
+    setClips(previous => reorderById(previous, sourceId, targetId));
+    setSelectedId(sourceId);
   };
 
   const moveClip = (index: number, direction: -1 | 1) => {
@@ -506,7 +604,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             <button type="button" onClick={onClose} aria-label="Close Studio" className="rounded-xl border border-white/10 p-2 text-[#C7B5FF]"><ArrowLeft size={18}/></button>
             <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.24em] text-violet-300">NEXORA</p><h1 className="truncate text-lg font-black tracking-tight sm:text-xl">Studio</h1></div>
           </div>
-          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={handleExport} disabled={rendering || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
+          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><button type="button" onClick={handleExport} disabled={rendering || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
         </header>
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
@@ -525,7 +623,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             <div className="space-y-2">
               <div className="flex items-center justify-between"><h2 className="text-sm font-bold">Timeline</h2><label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-100"><Plus size={14}/> Add clips<input className="hidden" type="file" accept="video/*" multiple onChange={event => { if (event.target.files) void addVideoFiles(event.target.files); event.target.value=''; }}/></label></div>
               <div className="space-y-2">
-                {clips.map((clip,index) => <div key={clip.id} className={`rounded-xl border p-3 ${selectedId===clip.id?'border-violet-400/60 bg-violet-500/10':'border-[#292244] bg-[#100C20]'}`}>
+                {clips.map((clip,index) => <div key={clip.id} draggable onDragStart={event=>{draggedClipIdRef.current=clip.id; event.dataTransfer.effectAllowed="move"; event.dataTransfer.setData("text/plain",clip.id);}} onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault(); const sourceId=event.dataTransfer.getData("text/plain")||draggedClipIdRef.current; if(sourceId) reorderClip(sourceId,clip.id); draggedClipIdRef.current=null;}} onDragEnd={()=>{draggedClipIdRef.current=null;}} className={`cursor-grab rounded-xl border p-3 active:cursor-grabbing ${selectedId===clip.id?'border-violet-400/60 bg-violet-500/10':'border-[#292244] bg-[#100C20]'}`}>
                   <button type="button" onClick={() => setSelectedId(clip.id)} className="flex w-full items-center gap-2 text-left"><Film size={15} className="shrink-0 text-violet-300"/><span className="min-w-0 flex-1 truncate text-xs font-semibold">{index+1}. {clip.name}</span><span className="text-[10px] text-[#8E88A7]">{(clip.end-clip.start).toFixed(1)}s</span></button>
                   <div className="mt-2 flex justify-end gap-1"><button onClick={() => moveClip(index,-1)} disabled={!index} aria-label="Move clip up" className="rounded-lg p-1.5 text-[#A39BBF] disabled:opacity-30"><ArrowUp size={13}/></button><button onClick={() => moveClip(index,1)} disabled={index===clips.length-1} aria-label="Move clip down" className="rounded-lg p-1.5 text-[#A39BBF] disabled:opacity-30"><ArrowDown size={13}/></button><button onClick={() => removeClip(clip.id)} aria-label="Remove clip" className="rounded-lg p-1.5 text-rose-300"><Trash2 size={13}/></button></div>
                 </div>)}
