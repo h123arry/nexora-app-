@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { isSupportedOutgoingMediaType, omitUndefinedFields, serializeOutgoingMessage } from '../src/utils/messageSerialization';
+import { aggregateMessageReactions, isSupportedOutgoingMediaType, normalizeMessageReactionUsers, omitUndefinedFields, serializeOutgoingMessage, toggleMessageReaction } from '../src/utils/messageSerialization';
 
 describe('Firestore message serialization', () => {
   it('omits undefined optional fields but preserves actual message data and the original object', () => {
@@ -37,5 +37,35 @@ describe('Firestore message serialization', () => {
     assert.equal(isSupportedOutgoingMediaType('voice'), true);
     assert.equal(isSupportedOutgoingMediaType('image'), false);
     assert.equal(isSupportedOutgoingMediaType('video'), false);
+  });
+});
+
+
+describe('message reaction persistence model', () => {
+  it('aggregates recipient-owned emoji lists into the existing bubble reaction shape', () => {
+    assert.deepEqual(aggregateMessageReactions({
+      alice: ['❤️', '😂'],
+      bob: ['❤️'],
+    }, undefined), [
+      { emoji: '❤️', userIds: ['alice', 'bob'] },
+      { emoji: '😂', userIds: ['alice'] },
+    ]);
+  });
+
+  it('migrates legacy aggregate reactions into per-user reaction records', () => {
+    assert.deepEqual(normalizeMessageReactionUsers(undefined, [
+      { emoji: '❤️', userIds: ['alice', 'bob'] },
+      { emoji: '😂', userIds: ['alice'] },
+    ]), { alice: ['❤️', '😂'], bob: ['❤️'] });
+  });
+
+  it('toggles only the acting user and preserves every other member reaction', () => {
+    const initial = { alice: ['❤️'], bob: ['😂'] };
+    assert.deepEqual(toggleMessageReaction(initial, undefined, 'alice', '❤️'), {
+      alice: [], bob: ['😂'],
+    });
+    assert.deepEqual(toggleMessageReaction(initial, undefined, 'alice', '🔥'), {
+      alice: ['❤️', '🔥'], bob: ['😂'],
+    });
   });
 });
