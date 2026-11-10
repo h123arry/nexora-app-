@@ -313,7 +313,7 @@ export interface AppState {
   chats: Chat[];
   messages: { [chatId: string]: Message[] };
   notifications: Notification[];
-  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin';
+  activeTab: 'feed' | 'explore' | 'inbox' | 'pulse' | 'matrix' | 'activity' | 'profile' | 'admin' | 'worldweave';
   theme: ThemeMood;
   searchQuery: string;
   selectedTag: string | null;
