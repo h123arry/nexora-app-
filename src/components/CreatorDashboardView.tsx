@@ -5,7 +5,7 @@ import CreatorAcademyView from './CreatorAcademyView';
 import CreatorCommunityAssetLibrary from './CreatorCommunityAssetLibrary';
 import { getCreatorCommunityAssets } from '../content/creatorCommunityAssets';
 import { listCreatorStudioTemplates, saveCreatorStudioTemplate, deleteCreatorStudioTemplate, CreatorStudioTemplate } from '../services/creatorStudioService';
-import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, GraduationCap } from 'lucide-react';
+import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, BookOpen, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, GraduationCap } from 'lucide-react';
 import { User, Post, Notification } from '../types';
 import { db } from '../lib/firebase';
 import { getDownloadURL, ref } from 'firebase/storage';
@@ -26,6 +26,7 @@ import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import CreatorMembershipPanel from './CreatorMembershipPanel';
 import { buildCreatorAchievements } from '../services/analytics/creatorAchievements';
+import ContentSeriesPanel from './ContentSeriesPanel';
 
 interface CreatorDashboardViewProps {
   currentUser: User;
@@ -43,7 +44,7 @@ export default function CreatorDashboardView({
   onUpdateProfile
 }: CreatorDashboardViewProps) {
   // Tabs & Navigation
-  const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization' | 'assets'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization' | 'assets' | 'series'>('overview');
   
   // Real Local state for Optimistic UI and responsiveness
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
@@ -739,6 +740,7 @@ export default function CreatorDashboardView({
           { id: 'drafts', label: 'Drafts & Schedule', icon: Calendar },
           { id: 'media', label: 'Media Library', icon: Folder },
           { id: 'assets', label: 'Creator Assets', icon: Sparkles },
+          { id: 'series', label: 'Content Series', icon: BookOpen },
           { id: 'achievements', label: 'Milestones', icon: Award },
           { id: 'policy', label: 'Policy Hub', icon: Shield },
           { id: 'monetization', label: 'Earnings', icon: DollarSign }
@@ -780,6 +782,7 @@ export default function CreatorDashboardView({
         >
           {activeTab === 'academy' && <CreatorAcademyView currentUser={currentUser} />}
           {activeTab === 'assets' && <CreatorCommunityAssetLibrary currentUser={currentUser} onUpdateProfile={onUpdateProfile} />}
+          {activeTab === 'series' && <ContentSeriesPanel currentUser={currentUser} posts={posts} />}
 
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
