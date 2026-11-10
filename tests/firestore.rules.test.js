@@ -88,11 +88,12 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDocs(query(collectionGroup(dbFor('bob'), 'invites'), where('inviteeId', '==', 'bob'))));
     await assertFails(getDocs(query(collectionGroup(dbFor('charlie'), 'invites'), where('inviteeId', '==', 'bob'))));
 
-    const batch = writeBatch(dbFor('bob'));
-    batch.update(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'invites', 'bob'), {
+    const bobDb = dbFor('bob');
+    const batch = writeBatch(bobDb);
+    batch.update(doc(bobDb, 'worldWeaves', 'private-weave', 'invites', 'bob'), {
       status: 'accepted', acceptedAt: serverTimestamp()
     });
-    batch.update(doc(dbFor('bob'), 'worldWeaves', 'private-weave'), {
+    batch.update(doc(bobDb, 'worldWeaves', 'private-weave'), {
       participantIds: ['alice', 'bob'], memberCount: 2, updatedAt: serverTimestamp()
     });
     await assertSucceeds(batch.commit());
