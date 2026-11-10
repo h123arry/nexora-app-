@@ -778,6 +778,17 @@ service cloud.firestore {
             || get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.hostId == request.auth.uid);
         allow create, update, delete: if false;
       }
+      match /guestRequests/{guestId} {
+        function liveRoomHost() {
+          return signedIn()
+            && get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.hostId == request.auth.uid;
+        }
+        // A guest may read only their own request; only the host may list pending requests.
+        allow get: if signedIn() && (request.auth.uid == guestId || liveRoomHost());
+        allow list: if liveRoomHost();
+        allow create, update, delete: if false;
+      }
+
     }
     match /liveSessionViewers/{viewerId} { allow read, write: if false; }
     match /liveChatRateLimits/{rateId} { allow read, write: if false; }
