@@ -1,5 +1,6 @@
 import React from 'react';
 import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
+import GiftArtwork from './GiftArtwork';
 
 export interface GiftAnimationStageProps {
   giftId: string;
@@ -38,7 +39,7 @@ export default function GiftAnimationStage({
       {profile.category === 'floral' && <div className="gift-stage__petals" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>}
       {profile.category === 'dragon' && <div className="gift-stage__flight-trail" aria-hidden="true" />}
       {profile.category === 'wildlife' && <div className="gift-stage__ground-glow" aria-hidden="true" />}
-      <img className="gift-stage__art" src={giftImage} alt="" draggable={false} decoding="async" />
+      <GiftArtwork className="gift-stage__art" src={giftImage} alt="" draggable={false} decoding="async" />
       {animation === 'legendary' && <div className="gift-stage__legendary-flare" aria-hidden="true" />}
       <style>{STAGE_STYLES}</style>
     </div>
