@@ -69,14 +69,25 @@ export const moderateLiveParticipant = onCall(
     if (action === 'unban') { update.banned = false; update.chatMuted = false; update.unbannedAt = FieldValue.serverTimestamp(); }
     if (action === 'remove') { update.removed = true; update.removedAt = FieldValue.serverTimestamp(); }
     if (action === 'unban') update.removed = false;
-    await moderationRef.set(update, { merge: true });
-    if (action === 'remove' || action === 'ban') {
-      await viewerRef.delete();
-      await sessionRef.collection('guestRequests').doc(participantId).set({
-        guestId: participantId, guestName: String(profile.data()?.name || profile.data()?.username || 'NEXORA member').slice(0, 80),
-        status: 'denied', reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
+    await db.runTransaction(async tx => {
+      const [currentSession, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
+      if (!currentSession.exists || currentSession.data()?.hostId !== hostId || currentSession.data()?.status !== 'live') {
+        throw new HttpsError('failed-precondition', 'This live room is no longer available for moderation.');
+      }
+      tx.set(moderationRef, update, { merge: true });
+      if (action === 'remove' || action === 'ban') {
+        if (viewer.exists) {
+          tx.delete(viewerRef);
+          const currentCount = Number.isSafeInteger(currentSession.data()?.viewerCount) && currentSession.data()!.viewerCount >= 0
+            ? currentSession.data()!.viewerCount : 0;
+          tx.update(sessionRef, { viewerCount: Math.max(0, currentCount - 1), updatedAt: FieldValue.serverTimestamp() });
+        }
+        tx.set(sessionRef.collection('guestRequests').doc(participantId), {
+          guestId: participantId, guestName: String(profile.data()?.name || profile.data()?.username || 'NEXORA member').slice(0, 80),
+          status: 'denied', reviewedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    });
     await db.collection('liveModerationAudit').add({
       sessionId, hostId, participantId, action, createdAt: FieldValue.serverTimestamp(),
     });
