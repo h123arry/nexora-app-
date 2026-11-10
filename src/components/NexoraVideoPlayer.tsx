@@ -17,6 +17,7 @@ import { shouldLoadVideoPoster } from '../utils/videoPreloadPolicy';
 import { hasAnalyticsObservationConsent, trackClientObservation } from '../services/analyticsService';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
+import { playNexoraSound } from '../services/soundExperience';
 
 interface Post {
   id: string;
@@ -731,7 +732,7 @@ export default function NexoraVideoPlayer({
     if (now - lastTapRef.current < 280) {
       if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
       lastTapRef.current = 0;
-      if (!post.isLikedByUser) onSpark();
+      if (!post.isLikedByUser) { onSpark(); playNexoraSound('social.spark'); }
       recordReelSignal(post.id, { liked: true }, currentUser?.id);
       setHeartPosition({ x: clientX, y: clientY });
       setShowDoubleTapHeart(true);
@@ -1112,7 +1113,7 @@ export default function NexoraVideoPlayer({
              >
                {/* ❤️ Spark Button */}
                <button 
-                 onClick={(e) => { e.stopPropagation(); onSpark(); }}
+                 onClick={(e) => { e.stopPropagation(); onSpark(); playNexoraSound('social.spark'); }}
                  disabled={isProcessing}
                  className={`flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                  title="Spark"

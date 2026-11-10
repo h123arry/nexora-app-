@@ -5,7 +5,7 @@ export const DEFAULT_SOUND_PREFERENCES: SoundPreferences = { notifications: true
 const STORAGE_KEY = 'nexora_sound_preferences_v1';
 type SoundCategory = keyof SoundPreferences;
 const SOUND_CATEGORY: Record<string, SoundCategory> = {
-  'notification.spark': 'notifications', 'notification.comment': 'notifications', 'notification.follow': 'notifications', 'notification.profile': 'notifications', 'notification.default': 'notifications',
+  'notification.spark': 'notifications', 'notification.comment': 'notifications', 'notification.follow': 'notifications', 'notification.profile': 'notifications', 'notification.default': 'notifications', 'social.spark': 'interface', 'social.comment': 'notifications', 'social.share': 'interface',
   'interface.confirmation': 'interface', 'interface.tap': 'interface', 'gift.arrival': 'gifts', 'gift.legendary': 'gifts', 'live.join': 'live', 'live.reaction': 'live',
 };
 export function normalizeSoundPreferences(value: unknown): SoundPreferences {
@@ -28,7 +28,7 @@ function getContext(): AudioContext | null {
   try { context ??= new Ctor(); return context; } catch { return null; }
 }
 const TONES: Record<string, number[]> = {
-  'notification.spark': [587, 880, 1175], 'notification.comment': [659, 784], 'notification.follow': [523, 659, 784], 'notification.profile': [880, 1047], 'notification.default': [600, 900],
+  'notification.spark': [587, 880, 1175], 'notification.comment': [659, 784], 'notification.follow': [523, 659, 784], 'notification.profile': [880, 1047], 'notification.default': [600, 900], 'social.spark': [784, 988, 1175], 'social.comment': [659, 784, 988], 'social.share': [523, 659],
   'interface.confirmation': [660, 880], 'interface.tap': [520], 'gift.arrival': [523, 659, 784, 1047], 'gift.legendary': [392, 523, 659, 784, 1047], 'live.join': [440, 660], 'live.reaction': [784, 988],
 };
 export function playNexoraSound(soundId: keyof typeof TONES): boolean {

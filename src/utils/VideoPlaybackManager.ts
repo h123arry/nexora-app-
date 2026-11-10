@@ -41,6 +41,7 @@ class VideoPlaybackManager {
       window.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           this.pauseActive();
+          this.clearMemory();
         } else {
           this.resumeActive();
         }
@@ -106,17 +107,18 @@ class VideoPlaybackManager {
    * Predictively preloads subsequent video files into a hidden element sandbox.
    * This downloads the video segment ahead of time, ensuring instant playback startup.
    */
-  public preloadVideo(url: string) {
+  public preloadVideo(url: string, mode: 'auto' | 'metadata' = 'auto') {
     if (!url || typeof document === 'undefined') return;
     const connection = typeof navigator !== 'undefined' ? (navigator as any).connection : undefined;
-    if (connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType)) return;
+    if (connection?.saveData || ['slow-2g', '2g', '3g'].includes(connection?.effectiveType)) mode = 'metadata';
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
     const resolvedUrl = this.getAdaptiveUrl(url);
 
     if (this.preloadElements.has(resolvedUrl)) return; // Already cached/preloading
 
     // Evict oldest if limit reached
-    if (this.preloadElements.size >= this.MAX_PRELOAD_COUNT) {
+    const budget = mode === 'metadata' ? 1 : this.MAX_PRELOAD_COUNT;
+    if (this.preloadElements.size >= budget) {
       const firstKey = this.preloadElements.keys().next().value;
       if (firstKey) {
         const oldestEl = this.preloadElements.get(firstKey);
@@ -130,7 +132,7 @@ class VideoPlaybackManager {
 
     try {
       const hiddenVid = document.createElement('video');
-      hiddenVid.preload = 'auto';
+      hiddenVid.preload = mode;
       hiddenVid.muted = true;
       hiddenVid.src = resolvedUrl;
       hiddenVid.style.display = 'none';
@@ -380,6 +382,16 @@ class VideoPlaybackManager {
   /**
    * Cleans up all preload sandbox elements to free up browser memory
    */
+  public releasePreload(url: string) {
+    const resolvedUrl = this.getAdaptiveUrl(url);
+    const element = this.preloadElements.get(resolvedUrl);
+    if (!element) return;
+    element.pause();
+    element.removeAttribute('src');
+    element.load();
+    this.preloadElements.delete(resolvedUrl);
+  }
+
   public clearMemory() {
     this.preloadElements.forEach((el) => {
       el.src = '';

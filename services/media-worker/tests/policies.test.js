@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight,
+  classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, canClaimMediaProcessing,
   MAX_INPUT_BYTES, MAX_IMAGE_BYTES,
 } from '../src/policies.js';
 
@@ -69,4 +69,12 @@ describe('NEXORA media rendition planning', () => {
     assert.deepEqual(videoRenditionsForHeight(2160, plan), plan);
     assert.throws(() => videoRenditionsForHeight(-1, plan));
   });
+});
+
+it('processing leases are protected while active and recover after expiry', () => {
+  const now = 2_000_000;
+  assert.equal(canClaimMediaProcessing({ status: 'processing', processingStartedAt: { toMillis: () => now - 60_000 } }, now), false);
+  assert.equal(canClaimMediaProcessing({ status: 'processing', processingStartedAt: { toMillis: () => now - 16 * 60_000 } }, now), true);
+  assert.equal(canClaimMediaProcessing({ status: 'ready' }, now), false);
+  assert.equal(canClaimMediaProcessing({ status: 'failed' }, now), true);
 });
