@@ -17,6 +17,8 @@ before(async () => {
   await circle.collection('members').doc('bob').set({ userId: 'bob', role: 'member', status: 'active' });
   await circle.collection('members').doc('carol').set({ userId: 'carol', role: 'member', status: 'active' });
   await circle.collection('posts').doc('post-review').set({ id: 'post-review', authorId: 'carol', content: 'A reported Circle post' });
+  await circle.collection('posts').doc('post-carol-review').set({ id: 'post-carol-review', authorId: 'bob', content: 'A reported post by Bob' });
+  await circle.collection('posts').doc('post-remove').set({ id: 'post-remove', authorId: 'carol', content: 'A post to remove after review' });
   await circle.collection('posts').doc('post-dismiss').set({ id: 'post-dismiss', authorId: 'carol', content: 'A post that should remain' });
   await circle.collection('messages').doc('message-dismiss').set({ id: 'message-dismiss', senderId: 'carol', content: 'A reported message' });
   await db.collection('publicProfiles').doc('bob').set({ name: 'Bob Reporter', username: 'bob' });
@@ -31,11 +33,11 @@ after(async () => {
 
 describe('trusted Circle reporting and review', () => {
   it('accepts one report per member and target, rejects duplicate and self reports', async () => {
-    const submitted = await submitCircleReport(db, 'bob', 'report-test-circle', 'post', 'post-review', 'This post contains targeted harassment.');
+    const submitted = await submitCircleReport(db, 'carol', 'report-test-circle', 'post', 'post-carol-review', 'This post contains targeted harassment.');
     assert.equal(submitted.submitted, true);
     assert.equal(submitted.reportId.length, 64);
     await assert.rejects(
-      submitCircleReport(db, 'bob', 'report-test-circle', 'post', 'post-review', 'This post contains targeted harassment.'),
+      submitCircleReport(db, 'carol', 'report-test-circle', 'post', 'post-carol-review', 'This post contains targeted harassment.'),
       /already reported/,
     );
     await assert.rejects(
@@ -50,6 +52,7 @@ describe('trusted Circle reporting and review', () => {
       submitCircleReport(db, 'mallory', 'report-test-circle', 'post', 'post-review', 'This post contains targeted harassment.'),
       /Join this Circle/,
     );
+    await resolveCircleReport(db, 'alice', 'report-test-circle', submitted.reportId, 'dismiss', 'Reviewed and dismissed after evidence check');
   });
 
   it('exposes the bounded open queue only to active Circle managers', async () => {
@@ -62,10 +65,10 @@ describe('trusted Circle reporting and review', () => {
   });
 
   it('removes reported posts transactionally and records the resolution', async () => {
-    const submitted = await submitCircleReport(db, 'bob', 'report-test-circle', 'post', 'post-review', 'This post contains targeted harassment.');
+    const submitted = await submitCircleReport(db, 'bob', 'report-test-circle', 'post', 'post-remove', 'This post contains targeted harassment.');
     const resolved = await resolveCircleReport(db, 'alice', 'report-test-circle', submitted.reportId, 'remove_content', 'Confirmed targeted harassment under Circle rules');
     assert.deepEqual(resolved, { reportId: submitted.reportId, status: 'resolved' });
-    assert.equal((await circle.collection('posts').doc('post-review').get()).exists, false);
+    assert.equal((await circle.collection('posts').doc('post-remove').get()).exists, false);
     const report = await circle.collection('reports').doc(submitted.reportId).get();
     assert.equal(report.get('status'), 'resolved');
     assert.equal(report.get('resolution'), 'remove_content');
