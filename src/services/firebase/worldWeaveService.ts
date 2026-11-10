@@ -48,6 +48,21 @@ export async function createWorldWeave(input: { title: string; description: stri
     createdAt: serverTimestamp(), updatedAt: serverTimestamp() });
   return ref.id;
 }
+export async function joinPublicWorldWeave(weaveId: string): Promise<WorldWeave> {
+  const user = requireUser();
+  const weaveRef = doc(db, 'worldWeaves', weaveId);
+  const weaveSnapshot = await getDoc(weaveRef);
+  if (!weaveSnapshot.exists() || weaveSnapshot.data().visibility !== 'public') {
+    throw new Error('This public WorldWeave is no longer available.');
+  }
+  const data = weaveSnapshot.data();
+  const alreadyJoined = (data.participantIds || []).includes(user.uid);
+  if (!alreadyJoined) await updateDoc(weaveRef, {
+    participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp(),
+  });
+  return { ...data, id: weaveId, participantIds: [...(data.participantIds || []), ...(alreadyJoined ? [] : [user.uid])],
+    memberCount: (data.memberCount || 1) + (alreadyJoined ? 0 : 1) } as WorldWeave;
+}
 export async function inviteToWorldWeave(weaveId: string, inviteeId: string): Promise<void> {
   const user = requireUser();
   if (!inviteeId || inviteeId === user.uid) throw new Error('Choose another NEXORA member to invite.');
