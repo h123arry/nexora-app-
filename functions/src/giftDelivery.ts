@@ -80,6 +80,9 @@ export const sendNexGift = onCall({ maxInstances: 20 }, async (request) => {
         }
         if (!isLiveGiftDeliveryEnabled(session)) throw new HttpsError('failed-precondition', 'Gifting is disabled for this live room.');
       }
+      if (input.contextType === 'live' && liveSession?.exists) {
+        tx.update(liveSession.ref, { giftCount: FieldValue.increment(input.quantity), giftNexTotal: FieldValue.increment(units), updatedAt: FieldValue.serverTimestamp() });
+      }
       const senderData = senderWallet.data() || {};
       const escrowData = escrowWallet.data() || {};
       const senderBalance = counter(senderData.availableBalance);
