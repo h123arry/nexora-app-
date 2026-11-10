@@ -37,9 +37,13 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
     });
 
     const rotated = Math.abs(options.rotation % 180) === 90;
+    // Keep the export lightweight enough for mid-range phones while retaining 4K detail.
+    const resizeRatio = Math.min(1, 4096 / Math.max(image.naturalWidth, image.naturalHeight));
+    const sourceWidth = Math.max(1, Math.round(image.naturalWidth * resizeRatio));
+    const sourceHeight = Math.max(1, Math.round(image.naturalHeight * resizeRatio));
     const canvas = document.createElement('canvas');
-    canvas.width = rotated ? image.naturalHeight : image.naturalWidth;
-    canvas.height = rotated ? image.naturalWidth : image.naturalHeight;
+    canvas.width = rotated ? sourceHeight : sourceWidth;
+    canvas.height = rotated ? sourceWidth : sourceHeight;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Photo editing is not available in this browser.');
 
@@ -55,7 +59,7 @@ async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions):
       options.blur > 0 ? `blur(${options.blur}px)` : '',
     ].filter(Boolean);
     context.filter = filters.join(' ');
-    context.drawImage(image, -image.naturalWidth / 2, -image.naturalHeight / 2);
+    context.drawImage(image, -sourceWidth / 2, -sourceHeight / 2, sourceWidth, sourceHeight);
     context.restore();
     context.filter = 'none';
 
