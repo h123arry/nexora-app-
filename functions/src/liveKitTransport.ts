@@ -46,15 +46,23 @@ export const getLiveKitToken = onCall(
     let isApprovedGuest = false;
     if (!isHost) {
       const viewerId = createHash('sha256').update(sessionId + ':' + userId).digest('hex');
-      const [viewer, guestRequest] = await Promise.all([
-        db.collection('liveSessionViewers').doc(viewerId).get(),
-        sessionRef.collection('guestRequests').doc(userId).get(),
-      ]);
-      const connections: unknown = viewer.data()?.connectionIds;
-      if (!viewer.exists || !Array.isArray(connections) || !connections.includes(connectionId)) {
-        throw new HttpsError('permission-denied', 'Join this live room before connecting to its video.');
-      }
-      isApprovedGuest = guestRequest.data()?.status === 'approved';
+      const membership = await db.runTransaction(async tx => {
+        const viewerRef = db.collection('liveSessionViewers').doc(viewerId);
+        const guestRequestRef = sessionRef.collection('guestRequests').doc(userId);
+        const moderationRef = sessionRef.collection('moderation').doc(userId);
+        const [viewer, guestRequest, moderation] = await Promise.all([
+          tx.get(viewerRef), tx.get(guestRequestRef), tx.get(moderationRef),
+        ]);
+        if (moderation.data()?.banned === true || moderation.data()?.removed === true) {
+          throw new HttpsError('permission-denied', 'You are not allowed to join this live room.');
+        }
+        const connections: unknown = viewer.data()?.connectionIds;
+        if (!viewer.exists || !Array.isArray(connections) || !connections.includes(connectionId)) {
+          throw new HttpsError('permission-denied', 'Join this live room before connecting to its video.');
+        }
+        return { approved: guestRequest.data()?.status === 'approved' };
+      });
+      isApprovedGuest = membership.approved;
     }
     if (activeRestriction('postingRestricted') && (isHost || isApprovedGuest)) {
       throw new HttpsError('permission-denied', 'This account cannot publish live video.');
