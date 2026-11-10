@@ -212,8 +212,10 @@ export default function NewInboxView({
       });
       setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, unreadCount: 0 } : c));
       void Promise.all(msgsList
-        .filter(message => message.senderId !== currentUser.id && message.status !== 'read')
-        .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read')));
+        .filter(message => message.senderId !== currentUser.id && (activeChat?.isGroup
+          ? message.recipientReceipts?.[currentUser.id]?.status !== 'read'
+          : message.status !== 'read'))
+        .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read', Boolean(activeChat?.isGroup))));
     }, () => {
       console.warn('[Inbox] Message snapshot error; details redacted.');
     });
