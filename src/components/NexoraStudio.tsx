@@ -79,6 +79,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
 
   useEffect(() => {
     if (!ready) return;
+    setExportBlob(null);
     const timer = window.setTimeout(() => {
       void saveProject({ clips, soundtrack, caption, overlay, overlayColor, updatedAt: Date.now() })
         .then(() => setMessage('Draft saved on this device'))
@@ -177,17 +178,21 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     canvas.width = 1280; canvas.height = 720;
     const preview = document.createElement('video');
     preview.playsInline = true;
-    preview.muted = true;
+    preview.muted = false;
+    preview.volume = 1;
     preview.preload = 'auto';
     const stream = canvas.captureStream(30);
     let audioContext: AudioContext | null = null;
     let audioElement: HTMLAudioElement | null = null;
     let audioObjectUrl: string | null = null;
-    if (soundtrack) {
-      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (AudioContextClass) {
-        audioContext = new AudioContextClass();
-        await audioContext.resume();
+    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (AudioContextClass) {
+      audioContext = new AudioContextClass();
+      await audioContext.resume();
+      const mixedAudio = audioContext.createMediaStreamDestination();
+      // Route source-video audio and optional soundtrack into the export stream, not the device speakers.
+      audioContext.createMediaElementSource(preview).connect(mixedAudio);
+      if (soundtrack) {
         audioElement = new Audio();
         audioElement.src = audioObjectUrl = URL.createObjectURL(soundtrack);
         audioElement.loop = true;
@@ -195,11 +200,9 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         const gain = audioContext.createGain();
         gain.gain.value = 0.8;
         source.connect(gain);
-        gain.connect(audioContext.destination);
-        const audioStream = audioContext.createMediaStreamDestination();
-        gain.connect(audioStream);
-        audioStream.stream.getAudioTracks().forEach(track => stream.addTrack(track));
+        gain.connect(mixedAudio);
       }
+      mixedAudio.stream.getAudioTracks().forEach(track => stream.addTrack(track));
     }
     const recorder = new MediaRecorder(stream, { mimeType });
     const chunks: Blob[] = [];
@@ -313,7 +316,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const previewUrl = selectedClip ? getUrlForClip(selectedClip.blob) : '';
   function getUrlForClip(blob: Blob): string {
     const key = blob as Blob & { __studioUrl?: string };
-    if (!key.__studioUrl) Object.defineProperty(key, '__studioUrl', { value: URL.createObjectURL(blob), configurable: true });
+    if (!key.__studioUrl) {
+      const url = URL.createObjectURL(blob);
+      Object.defineProperty(key, '__studioUrl', { value: url, configurable: true });
+      projectUrls.current.push(url);
+    }
     return key.__studioUrl;
   }
 
