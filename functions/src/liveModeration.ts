@@ -4,6 +4,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { defineSecret } from 'firebase-functions/params';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { calculateLiveWatchDurationMs } from './liveSessionsPolicy.js';
 
 const apiKey = defineSecret('LIVEKIT_API_KEY');
 const apiSecret = defineSecret('LIVEKIT_API_SECRET');
@@ -68,7 +69,15 @@ export const moderateLiveParticipant = onCall(
           tx.delete(viewerRef);
           const currentCount = Number.isSafeInteger(currentSession.data()?.viewerCount) && currentSession.data()!.viewerCount >= 0
             ? currentSession.data()!.viewerCount : 0;
-          tx.update(sessionRef, { viewerCount: Math.max(0, currentCount - 1), updatedAt: FieldValue.serverTimestamp() });
+          const watchDurationMs = calculateLiveWatchDurationMs(viewer.data()?.joinedAt, Date.now());
+          tx.update(sessionRef, {
+            viewerCount: Math.max(0, currentCount - 1),
+            ...(watchDurationMs > 0 ? {
+              totalWatchMs: FieldValue.increment(watchDurationMs),
+              completedViewerSessions: FieldValue.increment(1),
+            } : {}),
+            updatedAt: FieldValue.serverTimestamp(),
+          });
         }
         tx.set(sessionRef.collection('guestRequests').doc(participantId), {
           guestId: participantId, guestName: String(profile.data()?.name || profile.data()?.username || 'NEXORA member').slice(0, 80),
