@@ -40,7 +40,7 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
       const existing = await tx.get(sessions.where('hostId', '==', hostId).where('status', '==', 'live').limit(1));
       if (!existing.empty) throw new HttpsError('already-exists', 'You already have an active live room.');
       tx.create(ref, {
-        hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, chatEnabled: true, giftsEnabled: true,
+        hostId, hostName: String(profile.data()?.name || profile.data()?.username || 'NEXORA creator').slice(0, 80), title, status: 'live', viewerCount: 0, peakViewerCount: 0, uniqueViewerCount: 0, messageCount: 0, giftCount: 0, giftNexTotal: 0, chatEnabled: true, giftsEnabled: true,
         videoTransport: 'not_configured', hostExpiresAt: Timestamp.fromMillis(Date.now() + 90_000), startedAt: FieldValue.serverTimestamp(),
         endedAt: null, createdAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(),
       });
@@ -105,15 +105,18 @@ export const joinLiveSession = onCall({ maxInstances: 20 }, async request => {
   if (accountRestricted(account.data(), 'suspended')) throw new HttpsError('permission-denied', 'This account cannot join live rooms.');
   try {
     return await db.runTransaction(async tx => {
-      const [session, viewer] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef)]);
+      const audienceRef = sessionRef.collection('audience').doc(viewerId);
+      const [session, viewer, audience] = await Promise.all([tx.get(sessionRef), tx.get(viewerRef), tx.get(audienceRef)]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room has ended.');
       const hostId = session.data()?.hostId;
       if (viewerId === hostId) return { sessionId, joined: true, viewerCount: Number(session.data()?.viewerCount || 0) };
       if (!viewer.exists) {
         tx.create(viewerRef, { sessionId, viewerId, connectionIds: [connectionId], joinedAt: FieldValue.serverTimestamp(), lastSeenAt: FieldValue.serverTimestamp(), expiresAt: Timestamp.fromMillis(Date.now() + 90_000) });
         const count = Number.isSafeInteger(session.data()?.viewerCount) && session.data()!.viewerCount >= 0 ? session.data()!.viewerCount : 0;
-        tx.update(sessionRef, { viewerCount: count + 1, updatedAt: FieldValue.serverTimestamp() });
-        return { sessionId, joined: true, viewerCount: count + 1 };
+        const nextCount = count + 1;
+        tx.update(sessionRef, { viewerCount: nextCount, peakViewerCount: Math.max(Number(session.data()?.peakViewerCount || 0), nextCount), ...(audience.exists ? {} : { uniqueViewerCount: FieldValue.increment(1) }), updatedAt: FieldValue.serverTimestamp() });
+        if (!audience.exists) tx.create(audienceRef, { viewerId, firstJoinedAt: FieldValue.serverTimestamp() });
+        return { sessionId, joined: true, viewerCount: nextCount };
       }
       const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds.filter((item: unknown): item is string => typeof item === 'string') : [];
       const nextConnections = connections.includes(connectionId) ? connections : [...connections, connectionId];
@@ -282,6 +285,7 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
       const senderName = String(profileData.name || profileData.username || 'NEXORA member').slice(0, 80);
       tx.set(rateRef, { windowStartedAt: Timestamp.fromMillis(nextRate.windowStartedAtMs), messageCount: nextRate.messageCount, expireAt: Timestamp.fromMillis(Date.now() + 24 * 60 * 60 * 1000), updatedAt: FieldValue.serverTimestamp() });
       tx.create(messageRef, { senderId, senderName, message, createdAt: FieldValue.serverTimestamp() });
+      tx.update(sessionRef, { messageCount: FieldValue.increment(1), updatedAt: FieldValue.serverTimestamp() });
       return { messageId: messageRef.id, sessionId, senderId, senderName, message, status: 'sent' as const };
     });
   } catch (error) {
