@@ -2,6 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
+import { createHash } from 'node:crypto';
 import { searchNexoraContent, syncUniversalSearchRecord } from '../src/universalSearch.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-search' }, 'universal-search-tests');
@@ -28,7 +29,10 @@ before(async () => {
   await syncUniversalSearchRecord(db,'post','blocked-post','posts/blocked-post',(await db.doc('posts/blocked-post').get()).data()!);
 });
 after(async () => {
-  for (const id of ['person_public-user','person_private-user','person_blocked-user','video_public-video','post_private-post','post_blocked-post']) await db.doc('searchIndex/' + id).delete().catch(() => undefined);
+  for (const [kind, path] of [['person','users/public-user'],['person','users/private-user'],['person','users/blocked-user'],['video','posts/public-video'],['post','posts/private-post'],['post','posts/blocked-post']]) {
+    const id = kind + '_' + createHash('sha256').update(path).digest('hex');
+    await db.doc('searchIndex/' + id).delete().catch(() => undefined);
+  }
   await db.recursiveDelete(db.doc('users/private-user')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/blocked-user')).catch(() => undefined);
   await db.recursiveDelete(db.doc('users/viewer')).catch(() => undefined);
