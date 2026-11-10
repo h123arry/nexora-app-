@@ -186,6 +186,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let audioElement: HTMLAudioElement | null = null;
     let audioObjectUrl: string | null = null;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) throw new Error('Audio mixing is not supported by this browser. Export is paused to avoid silently dropping your clip audio.');
     if (AudioContextClass) {
       audioContext = new AudioContextClass();
       await audioContext.resume();
@@ -256,11 +257,13 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           preview.onloadedmetadata = () => resolve();
           preview.onerror = () => reject(new Error(`Could not open ${clip.name} for export.`));
         });
-        preview.currentTime = clip.start;
-        await new Promise<void>((resolve, reject) => {
-          const timeout = window.setTimeout(() => reject(new Error('The editor could not seek to the selected clip range.')), 8000);
-          preview.onseeked = () => { window.clearTimeout(timeout); resolve(); };
-        });
+        if (Math.abs(preview.currentTime - clip.start) > 0.05) {
+          await new Promise<void>((resolve, reject) => {
+            const timeout = window.setTimeout(() => reject(new Error('The editor could not seek to the selected clip range.')), 8000);
+            preview.onseeked = () => { window.clearTimeout(timeout); resolve(); };
+            preview.currentTime = clip.start;
+          });
+        }
         await preview.play();
         await new Promise<void>(resolve => {
           const check = () => {
