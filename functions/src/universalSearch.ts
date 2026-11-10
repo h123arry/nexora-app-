@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-export type SearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'hashtag';
+export type SearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'hashtag' | 'poll' | 'announcement';
 export interface SearchHit {
   id: string; kind: SearchKind; title: string; subtitle: string; excerpt: string;
   image: string; targetId: string; targetPath: string; ownerId: string;
@@ -50,13 +50,13 @@ function safeString(value: unknown, max = 500): string {
 }
 function publicRecord(kind: SearchKind, id: string, path: string, data: Record<string, unknown>, parent?: Record<string, unknown>) {
   const title = safeString(data.name || data.title || data.content || data.question || data.serviceName, 180);
-  const body = safeString(data.description || data.bio || data.content || data.caption || data.question, 1800);
+  const body = safeString(data.description || data.bio || data.content || data.caption || data.body || data.question, 1800);
   const tags = Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 24) : [];
   const ownerId = kind === 'person' ? id : safeString(data.userId || data.authorId || data.ownerId || data.hostId || data.createdBy, 150);
   const createdAt = asDate(data.timestamp || data.createdAt || data.startedAt || data.updatedAt);
   const subtitle = safeString(data.username || data.category || data.hostName || data.authorUsername || (kind === 'event' ? data.location : ''), 120);
   const image = safeString(data.avatar || data.authorAvatar || data.thumbnailUrl || data.coverImage || data.bannerImage, 1200);
-  const searchText = [title, body, subtitle, safeString(data.username, 80), safeString(data.category, 80), ...tags].join(' ');
+  const searchText = [title, body, subtitle, safeString(data.username, 80), safeString(data.category, 80), ...tags, ...(Array.isArray(data.options) ? data.options.map(option => typeof option === 'string' ? option : (option && typeof option === 'object' ? String((option as Record<string, unknown>).text || '') : '')) : [])].join(' ');
   return {
     id, kind, title: title || 'NEXORA', subtitle, excerpt: body.slice(0, 260), image,
     targetId: id, targetPath: path, ownerId, verified: data.isVerified === true,
@@ -86,6 +86,8 @@ export async function syncUniversalSearchRecord(
     (kind === 'circle' && data.type === 'public' && data.isPrivate !== true && status !== 'suspended' && status !== 'deleted') ||
     (kind === 'live' && status === 'live') ||
     (kind === 'event' && status === 'scheduled' && parent?.type === 'public' && parent?.isPrivate !== true) ||
+    (kind === 'poll' && status === 'open' && parent?.type === 'public' && parent?.isPrivate !== true) ||
+    (kind === 'announcement' && parent?.type === 'public' && parent?.isPrivate !== true && data.deleted !== true) ||
     (kind === 'service' && status === 'active' && parent?.category === 'Business') ||
     (kind === 'update' && status !== 'deleted' && parent?.status !== 'suspended');
   if (!isEligible) { await ref.delete().catch(() => undefined); return; }
@@ -151,7 +153,7 @@ export async function searchNexoraContent(
   if (!queryWords.length) throw new Error('Enter a search term.');
   const prefixKey = 'p:' + queryWords[0].slice(0, 16);
   const typoKeys = queryWords[0].length >= 3 ? [...new Set(Array.from({length: queryWords[0].length - 1}, (_, i) => 'b:' + queryWords[0].slice(i, i + 2)))].slice(0, 2) : [];
-  const allowedKinds: SearchKind[] = ['person','post','video','page','circle','live','event','service','update','hashtag'];
+  const allowedKinds: SearchKind[] = ['person','post','video','page','circle','live','event','service','update','hashtag','poll','announcement'];
   const requestedKinds = Array.isArray(rawKinds) ? rawKinds.filter((kind): kind is SearchKind => allowedKinds.includes(kind as SearchKind)) : allowedKinds;
   const key = prefixKey;
   const after = decodeCursor(rawCursor, query, key);
