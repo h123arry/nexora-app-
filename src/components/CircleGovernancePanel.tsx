@@ -153,7 +153,7 @@ export default function CircleGovernancePanel({
         <ShieldCheck className="h-4 w-4 text-violet-400" />
         <div>
           <h3 className="text-xs font-mono uppercase tracking-wider text-violet-400 font-bold">Circle governance</h3>
-          <p className="text-[11px] text-violet-200/50">Manage trusted roles with server-verified permissions and an audit trail.</p>
+          <p className="text-[11px] text-violet-200/50">Manage trusted roles and time-limited member mutes. The server verifies permissions and records every action.</p>
           {memberCount !== null && <p className="text-[10px] text-violet-300/70">{memberCount.toLocaleString()} active members · showing {members.length}</p>}
         </div>
       </div>
