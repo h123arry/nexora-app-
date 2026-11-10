@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, Camera, Globe2, LockKeyhole, Plus, Send, Sparkles, Users, X } from 'lucide-react';
+import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Users, X } from 'lucide-react';
 import type { User } from '../types';
 import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave,
@@ -141,7 +141,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
             <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white"><Plus size={16} className="text-violet-300"/> Add your perspective</div>
             <textarea value={momentText} onChange={e => setMomentText(e.target.value)} maxLength={2000} rows={3} placeholder="What happened from where you stood?" className="w-full resize-y rounded-2xl border border-white/10 bg-[#070d19] p-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-              <label htmlFor="worldweave-media" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300 hover:border-violet-400/50"><Camera size={15}/> Add photo or video<input id="worldweave-media" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif,video/mp4,video/webm,video/quicktime" className="hidden" onChange={e => setMomentFile(e.target.files?.[0] || null)}/></label>
+              <label htmlFor="worldweave-media" className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-white/10 px-3 py-2 text-xs text-slate-300 hover:border-violet-400/50"><Camera size={15}/> Add photo, video or voice note<input id="worldweave-media" type="file" accept="image/jpeg,image/png,image/webp,image/avif,image/gif,video/mp4,video/webm,video/quicktime,audio/mpeg,audio/mp4,audio/wav,audio/webm,audio/ogg,audio/aac" className="hidden" onChange={e => setMomentFile(e.target.files?.[0] || null)}/></label>
               <span className="text-[10px] text-slate-500">{momentText.length}/2000</span>
               <button disabled={busy || (!momentText.trim() && !momentFile)} className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"><Send size={14}/> Share moment</button>
             </div>
@@ -167,6 +167,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
                 {moment.text && <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-200">{moment.text}</p>}
                 {moment.mediaType === 'image' && moment.mediaUrl && <img src={moment.mediaUrl} alt="WorldWeave contribution" loading="lazy" className="mt-3 max-h-[520px] w-full rounded-2xl object-cover"/>}
                 {moment.mediaType === 'video' && moment.mediaUrl && <video src={moment.mediaUrl} controls playsInline preload="metadata" className="mt-3 max-h-[520px] w-full rounded-2xl bg-black"/>}
+                {moment.mediaType === 'audio' && moment.mediaUrl && <div className="mt-3 rounded-2xl border border-violet-400/15 bg-violet-500/[.06] p-3"><div className="mb-2 flex items-center gap-2 text-xs font-semibold text-violet-200"><Mic size={14}/> Voice note</div><audio src={moment.mediaUrl} controls preload="metadata" className="w-full"/></div>}
               </motion.article>)}
             </div>}
         </section>
