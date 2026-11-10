@@ -59,7 +59,7 @@ describe('trusted Circle member enforcement', () => {
   it('bans and unbans transactionally, then permits a clean public rejoin', async () => {
     const banned = await moderateCircleMember(db, 'alice', 'governance-circle', 'bob', 'ban', 'Repeated harassment reports');
     assert.deepEqual(banned, { userId: 'bob', action: 'ban', status: 'banned' });
-    assert.equal((await circle.collection('members').doc('bob').get()).get('status'), 'banned');
+    assert.equal((await circle.collection('members').doc('bob').get()).exists, false);
     assert.equal((await circle.collection('bans').doc('bob').get()).exists, true);
     const banList = await listCircleBans(db, 'alice', 'governance-circle');
     assert.equal(banList.length, 1);
