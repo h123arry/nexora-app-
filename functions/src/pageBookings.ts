@@ -179,3 +179,60 @@ export async function respondToPageBookingRequest(
     return { status: decision };
   });
 }
+
+
+/** Either booking participant can cancel a pending request or future confirmed appointment. */
+export async function cancelPageBookingRequest(
+  db: Firestore,
+  requesterUid: string,
+  bookingId: string,
+): Promise<{ status: 'cancelled' }> {
+  if (!requesterUid || !validId(bookingId)) throw new Error('A valid booking request is required.');
+  const ref = db.collection('pageBookings').doc(bookingId);
+  return db.runTransaction(async tx => {
+    const booking = await tx.get(ref);
+    if (!booking.exists) throw new Error('This booking request is unavailable.');
+    const ownerUid = String(booking.get('ownerId') || '');
+    const customerUid = String(booking.get('customerId') || '');
+    const isOwner = requesterUid === ownerUid;
+    const isCustomer = requesterUid === customerUid;
+    if (!isOwner && !isCustomer) throw new Error('Only the customer or business Page owner can cancel this booking.');
+    const status = booking.get('status');
+    if (status === 'cancelled') return { status: 'cancelled' };
+    if (status !== 'pending' && status !== 'accepted') {
+      throw new Error('Only pending or confirmed future bookings can be cancelled.');
+    }
+    const startsAt = bookingDate(booking.get('requestedAt'));
+    if (!startsAt || startsAt.getTime() <= Date.now()) {
+      throw new Error('This booking can no longer be cancelled because its appointment time has passed.');
+    }
+    const recipientUid = isOwner ? customerUid : ownerUid;
+    if (!recipientUid) throw new Error('The other booking participant is unavailable.');
+    const notificationId = 'booking_cancelled_' + bookingId;
+    const notificationRef = db.collection('users').doc(recipientUid).collection('notifications').doc(notificationId);
+    const notification = await tx.get(notificationRef);
+    const now = new Date();
+    const pageName = String(booking.get('pageName') || 'Business Page');
+    const serviceName = String(booking.get('serviceName') || 'your service');
+    tx.update(ref, { status: 'cancelled', cancelledBy: requesterUid, cancelledAt: now, updatedAt: now });
+    if (!notification.exists) {
+      tx.create(notificationRef, {
+        id: notificationId,
+        userId: recipientUid,
+        type: 'community',
+        category: 'communities',
+        targetId: bookingId,
+        content: isOwner
+          ? pageName + ' cancelled your booking for ' + serviceName
+          : 'A customer cancelled the booking request for ' + serviceName,
+        actorName: isOwner ? pageName : 'NEXORA customer',
+        username: isOwner ? String(booking.get('pageUsername') || '') : '',
+        avatar: isOwner ? String(booking.get('pageAvatar') || '') : '',
+        timestamp: now.toISOString(),
+        isRead: false,
+        priority: 4,
+      });
+    }
+    return { status: 'cancelled' };
+  });
+}
