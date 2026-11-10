@@ -50,6 +50,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [voiceoverVolume, setVoiceoverVolume] = useState(1);
   const [voiceoverStart, setVoiceoverStart] = useState(0);
   const [recordingVoiceover, setRecordingVoiceover] = useState(false);
+  const [voiceoverWaveform, setVoiceoverWaveform] = useState<number[]>([]);
   const [caption, setCaption] = useState('');
   const [overlay, setOverlay] = useState('');
   const [overlayColor, setOverlayColor] = useState('#FFFFFF');
@@ -115,6 +116,32 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     }, 500);
     return () => window.clearTimeout(timer);
   }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, voiceoverVolume, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!voiceover || voiceover.size > 30 * 1024 * 1024) { setVoiceoverWaveform([]); return; }
+    const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) { setVoiceoverWaveform([]); return; }
+    const decoder = new AudioContextClass();
+    voiceover.arrayBuffer()
+      .then(data => decoder.decodeAudioData(data))
+      .then(buffer => {
+        const channel = buffer.getChannelData(0);
+        const bars = 96;
+        const samplesPerBar = Math.max(1, Math.floor(channel.length / bars));
+        const peaks = Array.from({ length: bars }, (_, index) => {
+          const start = index * samplesPerBar;
+          const end = Math.min(channel.length, start + samplesPerBar);
+          let peak = 0;
+          for (let sample = start; sample < end; sample += 1) peak = Math.max(peak, Math.abs(channel[sample]));
+          return peak;
+        });
+        if (!cancelled) setVoiceoverWaveform(peaks);
+      })
+      .catch(() => { if (!cancelled) setVoiceoverWaveform([]); })
+      .finally(() => { void decoder.close().catch(() => undefined); });
+    return () => { cancelled = true; };
+  }, [voiceover]);
 
   const getUrl = useCallback((blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -265,6 +292,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let clipGain: GainNode | null = null;
     let soundtrackGain: GainNode | null = null;
     let voiceoverGain: GainNode | null = null;
+    let voiceoverStartTimer: number | null = null;
     let elapsed = 0;
     let fadeOpacity = transition === 'fade' ? 1 : 0;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -355,8 +383,6 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     try {
       recorder.start(250);
       draw();
-      if (audioElement) await audioElement.play().catch(() => undefined);
-      if (voiceoverElement) window.setTimeout(() => { void voiceoverElement?.play().catch(() => undefined); }, Math.max(0, voiceoverStart * 1000));
       for (const [clipIndex, clip] of clips.entries()) {
         if (clipGain) clipGain.gain.value = clip.volume;
         if (soundtrackGain) soundtrackGain.gain.value = soundtrackVolume;
@@ -375,6 +401,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         }
         await preview.play();
         if (transition === 'fade') await animateFade(1, 0, 350);
+        if (clipIndex === 0) {
+          if (audioElement) await audioElement.play().catch(() => undefined);
+          if (voiceoverElement) voiceoverStartTimer = window.setTimeout(() => { void voiceoverElement?.play().catch(() => undefined); }, Math.max(0, voiceoverStart * 1000));
+        }
         const clipElapsedStart = elapsed;
         await new Promise<void>(resolve => {
           const check = () => {
@@ -398,6 +428,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       throw error;
     } finally {
       preview.pause();
+      if (voiceoverStartTimer !== null) window.clearTimeout(voiceoverStartTimer);
       if (audioElement) audioElement.pause();
       if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
       if (voiceoverElement) voiceoverElement.pause();
@@ -494,6 +525,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Mic size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Voiceover</h2></div>{recordingVoiceover && <span className="text-[10px] font-semibold text-rose-300">Recording</span>}</div>
               <button type="button" onClick={recordingVoiceover ? stopVoiceover : startVoiceover} className={`w-full rounded-lg border px-3 py-2 text-xs font-semibold ${recordingVoiceover?'border-rose-400/40 bg-rose-500/10 text-rose-200':'border-[#44376F] text-[#D7CCF7]'}`}>{recordingVoiceover?'Stop recording':'Record voiceover'}</button>
               {voiceover && <div className="flex items-center justify-between gap-2 text-[10px] text-emerald-300"><span className="truncate">Voiceover ready · {(voiceover.size/1024).toFixed(0)} KB</span><button type="button" onClick={()=>setVoiceover(null)} className="shrink-0 text-rose-300">Remove</button></div>}
+              {voiceover && <><audio controls preload="metadata" src={getUrlForClip(voiceover)} className="h-9 w-full" aria-label="Preview recorded voiceover"/><div className="flex h-12 items-center gap-px overflow-hidden rounded-lg border border-[#34265E] bg-[#080611] px-2" role="img" aria-label="Voiceover audio waveform">{voiceoverWaveform.length ? voiceoverWaveform.map((peak,index)=><span key={index} className="min-w-0 flex-1 rounded-full bg-violet-400/80" style={{height:`${Math.max(8,Math.round(peak*100))}%`}}/>) : <span className="w-full text-center text-[9px] text-[#827B9C]">Waveform preview unavailable for this recording on this device.</span>}</div></>}
               {voiceover && <><label className="block text-[10px] text-[#A39BBF]">Voice volume · {Math.round(voiceoverVolume*100)}%<input type="range" min="0" max="1" step=".05" value={voiceoverVolume} onChange={event=>setVoiceoverVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Start voiceover at (seconds)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={voiceoverStart} onChange={event=>setVoiceoverStart(Math.max(0,Math.min(totalDuration,Number(event.target.value)||0)))} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label></>}
               <p className="text-[10px] leading-relaxed text-[#827B9C]">Record narration with your microphone. It is saved as a separate track and mixed during export.</p>
             </div>
