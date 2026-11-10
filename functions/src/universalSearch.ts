@@ -51,7 +51,7 @@ function publicRecord(kind: SearchKind, id: string, path: string, data: Record<s
   const title = safeString(data.name || data.title || data.content || data.question || data.serviceName, 180);
   const body = safeString(data.description || data.bio || data.content || data.caption || data.question, 1800);
   const tags = Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 24) : [];
-  const ownerId = safeString(data.userId || data.authorId || data.ownerId || data.hostId || data.createdBy, 150);
+  const ownerId = kind === 'person' ? id : safeString(data.userId || data.authorId || data.ownerId || data.hostId || data.createdBy, 150);
   const createdAt = asDate(data.timestamp || data.createdAt || data.startedAt || data.updatedAt);
   const subtitle = safeString(data.username || data.category || data.hostName || data.authorUsername || (kind === 'event' ? data.location : ''), 120);
   const image = safeString(data.avatar || data.authorAvatar || data.thumbnailUrl || data.coverImage || data.bannerImage, 1200);
@@ -78,7 +78,7 @@ export async function syncUniversalSearchRecord(
   const status = safeString(data.status, 40).toLowerCase();
   const isEligible =
     (kind === 'person' && data.isBanned !== true && data.isSuspended !== true && data.isSeedProfile !== true) ||
-    (kind === 'post' && (data.audience === 'public' || (parent?.isPrivate !== true && parent?.type !== 'private' && parent?.privacy !== 'private' && parent?.visibility !== 'private')) && status !== 'deleted' && status !== 'removed') ||
+    (kind === 'post' && (data.audience === 'public' || (!!parent && parent.isPrivate !== true && parent.type !== 'private' && parent.privacy !== 'private' && parent.visibility !== 'private')) && status !== 'deleted' && status !== 'removed') ||
     (kind === 'video' && data.audience === 'public' && status !== 'deleted' && status !== 'removed') ||
     (kind === 'page' && status !== 'suspended' && status !== 'deleted' && status !== 'draft') ||
     (kind === 'circle' && data.isPrivate !== true && data.type !== 'private' && data.privacy !== 'private' && data.visibility !== 'private' && status !== 'suspended' && status !== 'deleted') ||
