@@ -39,6 +39,17 @@ test('LiveKit viewer grants are subscribe-only and cannot publish media or data'
   });
 });
 
+test('approved live guest grants allow media publishing without data-channel publishing', () => {
+  assert.deepEqual(createLiveKitVideoGrant('nexora_room_123', true), {
+    roomJoin: true,
+    room: 'nexora_room_123',
+    canPublish: true,
+    canPublishData: false,
+    canSubscribe: true,
+    canUpdateOwnMetadata: false,
+  });
+});
+
 test('LiveKit grants reject empty or oversized room names', () => {
   assert.throws(() => createLiveKitVideoGrant('', false), /valid LiveKit room/);
   assert.throws(() => createLiveKitVideoGrant('x'.repeat(136), false), /valid LiveKit room/);
