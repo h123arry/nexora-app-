@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Ban, UserMinus } from 'lucide-react';
+import CircleReportButton from './CircleReportButton';
 import { CommunityService, type CircleMemberCursor } from '../services/firebase/communityService';
 
 type Member = { userId: string; name: string; username: string; avatar: string; role: string };
@@ -112,6 +113,7 @@ export default function CircleMembersPanel({ communityId, currentUserId, canMana
           </div>
           <div className="flex shrink-0 flex-col items-end gap-2">
             <span className="text-[8px] font-mono font-bold bg-violet-600/20 text-violet-300 border border-white/10 px-2 py-0.5 rounded uppercase">{member.role}</span>
+            {member.userId !== currentUserId && <CircleReportButton communityId={communityId} targetType="member" targetId={member.userId}/>}
             {canManage && member.userId !== currentUserId && <div className="flex gap-1">
               <button type="button" onClick={() => void moderate(member.userId, 'remove')} disabled={Boolean(moderatingUid) || reason.trim().length < 3}
                 className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-[9px] font-bold text-white/65 disabled:opacity-30"><UserMinus size={11}/>{moderatingUid === member.userId ? 'Working…' : 'Remove'}</button>
