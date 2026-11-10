@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { claimReferral, createReferralCode, getReferralSummary, qualifyReferral } from '../src/referrals.js';
+import { claimReferral, createReferralCode, getReferralSummary, getReferralInvitePreview, qualifyReferral } from '../src/referrals.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-referrals';
 const app = initializeApp({ projectId }, 'referral-engine-tests');
@@ -14,6 +14,7 @@ before(async () => {
   assert.ok(process.env.FIRESTORE_EMULATOR_HOST, 'Referral tests require the Firestore Emulator.');
   await config.set({ enabled: true, rewardNex: 25, maxSuccessfulReferrals: 10 });
   await promo.set({ availableBalance: 1000 });
+  await db.doc('publicProfiles/referrer-a').set({ name: 'NEXORA Referrer', username: 'referrer_a', avatar: 'https://example.test/avatar.png' });
 });
 after(async () => {
   const [codes, attributions] = await Promise.all([
@@ -23,6 +24,7 @@ after(async () => {
     ...codes.docs.filter(doc => doc.get('ownerId') === 'referrer-a').map(doc => doc.ref.delete()),
     ...attributions.docs.filter(doc => ['invitee-a', 'invitee-b'].includes(doc.id)).map(doc => doc.ref.delete()),
     db.doc('posts/qualifying-post-a').delete(),
+    db.doc('publicProfiles/referrer-a').delete(),
     db.doc('nexWallets/referrer-a').delete(),
     db.doc('nexWallets/referral_promo_pool').delete(),
     config.delete(),
@@ -43,6 +45,9 @@ describe('trusted referral programme', () => {
     const digest = (await db.collection('referralCodes').get()).docs.find(doc => doc.get('ownerId') === 'referrer-a');
     assert.ok(digest);
     assert.notEqual(digest!.id, code);
+    assert.deepEqual(await getReferralInvitePreview(db, code), {
+      valid: true, inviterName: 'NEXORA Referrer', inviterUsername: 'referrer_a', inviterAvatar: 'https://example.test/avatar.png',
+    });
     await assert.rejects(claimReferral(db, 'referrer-a', code), /own account/);
     assert.deepEqual(await claimReferral(db, 'invitee-a', code), { claimed: true });
     assert.deepEqual(await claimReferral(db, 'invitee-a', code), { claimed: false });
