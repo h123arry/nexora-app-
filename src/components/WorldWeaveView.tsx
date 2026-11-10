@@ -4,7 +4,7 @@ import { ArrowLeft, Camera, Globe2, LockKeyhole, Mic, Plus, Send, Sparkles, Tras
 import type { User } from '../types';
 import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments, updateWorldWeaveDetails,
-  acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, subscribeToMyWorldWeaveInvites,
+  acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
   type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
 } from '../services/firebase/worldWeaveService';
@@ -21,6 +21,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
   const [myWeaves, setMyWeaves] = useState<WorldWeave[]>([]);
   const [publicWeaves, setPublicWeaves] = useState<WorldWeave[]>([]);
   const [invitations, setInvitations] = useState<WorldWeaveInvite[]>([]);
+  const [sentInvitations, setSentInvitations] = useState<WorldWeaveInvite[]>([]);
+  const [discoveryQuery, setDiscoveryQuery] = useState('');
   const [selected, setSelected] = useState<WorldWeave | null>(null);
   const [moments, setMoments] = useState<WorldWeaveMoment[]>([]);
   const [hasMoreMoments, setHasMoreMoments] = useState(false);
@@ -56,6 +58,11 @@ export default function WorldWeaveView({ currentUser }: Props) {
   }, [currentUser.id]);
 
   useEffect(() => {
+    if (!selected || selected.ownerId !== currentUser.id) { setSentInvitations([]); return; }
+    return subscribeToWorldWeaveInvites(selected.id, setSentInvitations, err => setError(err.message));
+  }, [selected?.id, selected?.ownerId, currentUser.id]);
+
+  useEffect(() => {
     if (!selected) { setMoments([]); setHasMoreMoments(false); return; }
     return subscribeToWorldWeaveMoments(selected.id, items => {
       setMoments(current => {
@@ -87,6 +94,12 @@ export default function WorldWeaveView({ currentUser }: Props) {
     });
   }, [myWeaves, publicWeaves]);
 
+  const visibleWeaves = useMemo(() => {
+    const term = discoveryQuery.trim().toLowerCase();
+    if (!term) return weaves;
+    return weaves.filter(item => [item.title, item.description, item.ownerName].some(value => value.toLowerCase().includes(term)));
+  }, [weaves, discoveryQuery]);
+
   const handleJoinPublic = async () => {
     if (!selected) return;
     setBusy(true); setError(''); setNotice('');
@@ -112,6 +125,16 @@ export default function WorldWeaveView({ currentUser }: Props) {
       await declineWorldWeaveInvite(invite.weaveId);
       setNotice('Invitation declined.');
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not decline this invitation.'); }
+    finally { setBusy(false); }
+  };
+
+  const handleRevokeInvite = async (invite: WorldWeaveInvite) => {
+    if (!selected) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await revokeWorldWeaveInvite(selected.id, invite.inviteeId);
+      setNotice('Invitation revoked.');
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not revoke this invitation.'); }
     finally { setBusy(false); }
   };
 
@@ -222,12 +245,23 @@ export default function WorldWeaveView({ currentUser }: Props) {
             {busy && progress > 0 && <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-violet-400 transition-all" style={{width: progress+'%'}}/></div>}
           </form>
           {selected.ownerId === currentUser.id && (
-          <form onSubmit={handleInvite} className="h-fit rounded-3xl border border-white/10 bg-[#0b1221] p-4">
-            <div className="mb-3 text-sm font-bold text-white">Bring someone in</div>
-            <p className="mb-3 text-xs leading-5 text-slate-400">Invite another NEXORA member to add their own perspective.</p>
-            <input value={inviteUsername} onChange={e => setInviteUsername(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
-            <button disabled={busy || !inviteUsername.trim()} className="mt-2 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-100 disabled:opacity-40">Send invitation</button>
-          </form>
+          <div className="space-y-3">
+            <form onSubmit={handleInvite} className="h-fit rounded-3xl border border-white/10 bg-[#0b1221] p-4">
+              <div className="mb-3 text-sm font-bold text-white">Bring someone in</div>
+              <p className="mb-3 text-xs leading-5 text-slate-400">Invite another NEXORA member to add their own perspective.</p>
+              <input value={inviteUsername} onChange={e => setInviteUsername(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
+              <button disabled={busy || !inviteUsername.trim()} className="mt-2 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-100 disabled:opacity-40">Send invitation</button>
+            </form>
+            <section className="rounded-3xl border border-white/10 bg-[#0b1221] p-4">
+              <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Pending invitations</h3><span className="text-[10px] text-slate-500">{sentInvitations.length}/50</span></div>
+              {sentInvitations.length === 0 ? <p className="text-xs text-slate-500">No pending invitations.</p> : <div className="space-y-2">
+                {sentInvitations.map(invite => <div key={invite.inviteeId} className="flex items-center justify-between gap-2 rounded-xl border border-white/5 bg-black/10 px-3 py-2">
+                  <span className="truncate text-xs text-slate-300">@{invite.inviteeId}</span>
+                  <button type="button" disabled={busy} onClick={() => void handleRevokeInvite(invite)} className="shrink-0 rounded-lg px-2 py-1 text-[10px] font-semibold text-red-300 hover:bg-red-500/10 disabled:opacity-40">Revoke</button>
+                </div>)}
+              </div>}
+            </section>
+          </div>
           )}
         </div>}
         <section className="space-y-4">
@@ -274,11 +308,13 @@ export default function WorldWeaveView({ currentUser }: Props) {
         <textarea value={description} onChange={e => setDescription(e.target.value)} maxLength={500} rows={2} placeholder="What is this experience about?" className="mt-3 w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-3 text-sm text-white outline-none focus:border-violet-400/60"/>
         <div className="mt-3 flex justify-end"><button disabled={busy || title.trim().length < 3} className="rounded-xl bg-violet-600 px-5 py-2.5 text-xs font-bold text-white disabled:opacity-40">{busy ? 'Creating…' : 'Create WorldWeave'}</button></div>
       </form>}
-      <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold text-white">Experiences unfolding</h2><p className="mt-1 text-xs text-slate-500">Your contributions and public stories from the NEXORA community</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-slate-400">{weaves.length} shown</span></div>
+      <div className="flex items-center justify-between"><div><h2 className="text-lg font-bold text-white">Experiences unfolding</h2><p className="mt-1 text-xs text-slate-500">Your contributions and public stories from the NEXORA community</p></div><span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-slate-400">{visibleWeaves.length} shown</span></div>
+      <input value={discoveryQuery} onChange={event => setDiscoveryQuery(event.target.value)} placeholder="Search experiences, descriptions or hosts…" aria-label="Search WorldWeave experiences" className="w-full rounded-2xl border border-white/10 bg-[#0b1221] px-4 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/50"/>
       {loading && <div className="py-10 text-center text-sm text-slate-400">Loading WorldWeaves…</div>}
       {!loading && weaves.length === 0 && <div className="rounded-3xl border border-dashed border-white/10 p-10 text-center"><Globe2 className="mx-auto mb-3 text-violet-300" size={28}/><p className="font-semibold text-white">Your next great story starts here.</p><p className="mt-2 text-sm text-slate-400">Create an experience and invite the people who saw it differently.</p></div>}
+      {!loading && weaves.length > 0 && visibleWeaves.length === 0 && <div className="rounded-2xl border border-white/10 p-6 text-center text-sm text-slate-400">No experiences match that search. Try another title or host.</div>}
       <div className="grid gap-4 md:grid-cols-2">
-        {weaves.map(weave => <button key={weave.id} onClick={() => { setSelected(weave); setNotice(''); setError(''); }} className="group rounded-3xl border border-white/10 bg-[#0b1221] p-5 text-left transition hover:-translate-y-0.5 hover:border-violet-400/35 hover:bg-[#100d23]">
+        {visibleWeaves.map(weave => <button key={weave.id} onClick={() => { setSelected(weave); setNotice(''); setError(''); }} className="group rounded-3xl border border-white/10 bg-[#0b1221] p-5 text-left transition hover:-translate-y-0.5 hover:border-violet-400/35 hover:bg-[#100d23]">
           <div className="flex items-start justify-between gap-3"><div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-violet-200"><Sparkles size={13}/>{weave.visibility === 'public' ? <Globe2 size={13}/> : <LockKeyhole size={13}/>} {weave.visibility}</div><span className="text-[10px] text-slate-500">{weave.ownerName}</span></div>
           <h3 className="mt-4 text-xl font-bold text-white group-hover:text-violet-100">{weave.title}</h3><p className="mt-2 line-clamp-2 min-h-10 text-sm leading-6 text-slate-400">{weave.description || 'A shared experience, told from multiple perspectives.'}</p>
           <div className="mt-5 flex items-center gap-4 text-xs text-slate-500"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{weave.memberCount || 1} contributors</span><span>{weave.momentCount || 0} moments</span></div>
