@@ -132,11 +132,12 @@ export const CommunityService = {
     if (!userId || !communityId || communityId.includes('/')) throw new Error('A valid Circle is required.');
     const communityRef = doc(db, 'communities', communityId);
     const memberRef = doc(db, 'communities', communityId, 'members', userId);
-    const [community, membership] = await Promise.all([getDoc(communityRef), getDoc(memberRef)]);
+    const banRef = doc(db, 'communities', communityId, 'bans', userId);
+    const [community, membership, ban] = await Promise.all([getDoc(communityRef), getDoc(memberRef), getDoc(banRef)]);
     if (!community.exists() || community.data().type !== 'public') {
       throw new Error('This Circle is unavailable or requires an invitation.');
     }
-    if (community.data().bannedUsers?.includes?.(userId)) throw new Error('You cannot join this Circle.');
+    if (ban.exists() || community.data().bannedUsers?.includes?.(userId)) throw new Error('You cannot join this Circle.');
     if (membership.exists() && membership.data().status === 'active') return;
     await setDoc(memberRef, {
       userId,
