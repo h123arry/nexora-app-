@@ -32,6 +32,7 @@ interface FeedPostCardProps {
   onSharePost?: (postId: string) => void;
   onRepostPost?: (postId: string) => void;
   onQuotePost?: (postId: string) => void;
+  onVotePoll?: (postId: string, optionId: string) => void;
   onCommentToggle: (postId: string) => void;
   onToggleFollow?: (userId: string) => void;
   onViewProfile?: (userId: string) => void;
@@ -83,6 +84,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   onSharePost,
   onRepostPost,
   onQuotePost,
+  onVotePoll,
   onCommentToggle,
   onToggleFollow,
   onViewProfile,
@@ -621,7 +623,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
                 <button
                   key={opt.id}
                   disabled={!!userVote}
-                  onClick={() => setVotedPolls((prev) => ({ ...prev, [post.id]: opt.id }))}
+                  onClick={() => onVotePoll?.(post.id, opt.id)}
                   className={`w-full text-left p-2.5 rounded-xl border relative overflow-hidden transition-all text-xs font-sans cursor-pointer ${
                     userVote === opt.id
                       ? 'border-violet-500 bg-violet-600/10 font-bold text-white'
