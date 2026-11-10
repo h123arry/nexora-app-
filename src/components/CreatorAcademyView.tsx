@@ -5,12 +5,13 @@ import { db, functions } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { User } from '../types';
 import CreatorAcademyInstitutionTools from './CreatorAcademyInstitutionTools';
+import { CREATOR_ACADEMY_LESSONS } from '../content/creatorAcademyLessons';
 
-type Lesson = { id: string; title: string; minutes?: number; summary: string; body?: string; transcript?: string; resourceUrls?: string[] };
+type Lesson = { id: string; title: string; minutes?: number; summary: string; body?: string; transcript?: string; resourceUrls?: string[]; objectives?: string[]; exercise?: string; reflection?: string };
 type Assessment = { id: string; passPercent: number; questions: Array<{ id: string; prompt: string; options: string[] }> };
 type Course = { id: string; title: string; level: string; category: string; description: string; lessons: Lesson[]; institutional?: boolean; lessonCount?: number; version?: number };
 
-const COURSES: Course[] = [
+const BASE_COURSES: Course[] = [
   { id: 'creator-foundations', title: 'The Creator Foundations', level: 'Beginner', category: 'Getting started', description: 'Build a clear creator identity, choose your audience and establish a sustainable publishing habit.', lessons: [
     { id: 'identity', title: 'Define your creator identity', minutes: 8, summary: 'Find the topics, perspective and promise that make your work recognisable.' },
     { id: 'audience', title: 'Understand the audience you serve', minutes: 10, summary: 'Describe the people you want to reach and the value they should receive.' },
@@ -52,6 +53,12 @@ const COURSES: Course[] = [
     { id: 'wellbeing', title: 'Create sustainably', minutes: 8, summary: 'Set boundaries, manage pressure and build a healthy publishing rhythm.' },
   ]},
 ];
+
+// Introductory curriculum is authored and bundled with the app; progress remains account-scoped in Firestore.
+const COURSES: Course[] = BASE_COURSES.map(course => ({
+  ...course,
+  lessons: course.lessons.map(lesson => ({ ...lesson, ...CREATOR_ACADEMY_LESSONS[lesson.id] })),
+}));
 
 type Progress = { courseId: string; completedLessonIds: string[] };
 type MentorshipSession = { sessionId: string; title: string; description: string; startsAt: string; durationMinutes: number; capacity: number; bookedCount: number; seatsAvailable: number; mentorId: string; mentorName: string; mentorUsername: string; isBooked: boolean };
@@ -287,6 +294,9 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
                   <div className={'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ' + (done ? 'bg-emerald-400/15 text-emerald-300' : 'bg-violet-500/15 text-violet-200')}>{done ? <CheckCircle2 size={17}/> : String(index + 1).padStart(2, '0')}</div>
                   <div className="min-w-0 flex-1"><h4 className="text-sm font-bold">{lesson.title}</h4><p className="mt-1 text-xs leading-5 text-white/50">{lesson.summary}</p>{lesson.minutes && <div className="mt-2 flex items-center gap-1 text-[10px] text-white/35"><Clock3 size={12}/>{lesson.minutes} min</div>}
                     {lesson.body && <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-white/65">{lesson.body}</p>}
+                    {lesson.objectives && <div className="mt-3 rounded-xl border border-white/8 bg-black/20 p-3"><p className="text-[10px] font-black uppercase tracking-wider text-violet-200">What you will learn</p><ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-white/55">{lesson.objectives.map(objective => <li key={objective}>{objective}</li>)}</ul></div>}
+                    {lesson.exercise && <div className="mt-3 rounded-xl border border-violet-400/15 bg-violet-500/[0.06] p-3"><p className="text-[10px] font-black uppercase tracking-wider text-violet-200">Practical assignment</p><p className="mt-2 text-xs leading-5 text-white/65">{lesson.exercise}</p></div>}
+                    {lesson.reflection && <p className="mt-3 text-xs italic leading-5 text-white/45">Reflect: {lesson.reflection}</p>}
                     {lesson.transcript && <details className="mt-3"><summary className="cursor-pointer text-[10px] font-bold text-violet-200">Accessible transcript</summary><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-white/55">{lesson.transcript}</p></details>}
                     {lesson.resourceUrls?.map(url => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-2 mr-3 inline-block text-[10px] text-violet-300 underline">Open lesson resource</a>)}</div>
                   <button disabled={done || saving !== null || loading} onClick={() => void markLessonComplete(activeCourse, lesson)} className={'shrink-0 rounded-xl px-3 py-2 text-[10px] font-bold transition-colors disabled:cursor-default ' + (done ? 'text-emerald-300' : 'bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50')}>{done ? 'Completed' : saving === lesson.id ? 'Saving…' : 'Complete'}</button>
