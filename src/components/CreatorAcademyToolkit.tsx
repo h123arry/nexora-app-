@@ -75,6 +75,29 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
     } finally { setBusy(false); }
   };
 
+  const download = () => {
+    const content = [
+      '# ' + selected.title,
+      selected.description,
+      '',
+      ...selected.fields.flatMap(field => ['## ' + field.label, values[field.id] || '_Not completed_', '']),
+      '---',
+      'Created in NEXORA Creator Academy.',
+    ].join('\n');
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const safeName = selected.id.replace(/[^a-z0-9-]/gi, '-').toLowerCase();
+    link.href = url;
+    link.download = 'nexora-' + safeName + '.md';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    setNotice('Your workbook was downloaded as a Markdown file.');
+    setError('');
+  };
+
   const copy = async () => {
     const text = [selected.title, selected.description, ...selected.fields.map(field => field.label + '\n' + (values[field.id] || 'Not completed'))].join('\n\n');
     try {
@@ -85,7 +108,7 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
 
   return <section className="space-y-5 rounded-3xl border border-violet-400/15 bg-[#090d1b] p-5 md:p-6">
     <div className="flex flex-wrap items-end justify-between gap-3">
-      <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-300">Creator workbench</p><h3 className="mt-2 text-xl font-black text-white">Practical creator toolkits</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-white/50">Eight reusable workbooks for planning content, researching your audience, building partnerships and running a safer creator business. Drafts are private to your account.</p></div>
+      <div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-violet-300">Creator workbench</p><h3 className="mt-2 text-xl font-black text-white">Practical creator toolkits</h3><p className="mt-1 max-w-2xl text-xs leading-5 text-white/50">Twelve reusable workbooks for planning content, researching your audience, building partnerships and running a safer creator business. Drafts are private to your account.</p></div>
       <span className="rounded-full border border-white/10 px-3 py-1 text-[10px] text-white/45">{CREATOR_ACADEMY_TOOLKITS.length} workbooks</span>
     </div>
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -105,6 +128,7 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
       <div className="mt-4 flex flex-wrap gap-2 border-t border-white/10 pt-4">
         <button type="button" disabled={busy || loading} onClick={() => void save()} className="rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">{busy ? 'Saving…' : 'Save workbook'}</button>
         <button type="button" disabled={busy || loading} onClick={() => void copy()} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-bold text-white/70 disabled:opacity-40">Copy as text</button>
+        <button type="button" disabled={loading} onClick={download} className="rounded-xl border border-violet-400/25 px-4 py-2.5 text-xs font-bold text-violet-200 disabled:opacity-40">Download workbook</button>
         <button type="button" disabled={busy || loading} onClick={() => void clear()} className="rounded-xl border border-white/10 px-4 py-2.5 text-xs font-bold text-white/45 disabled:opacity-40">Clear workbook</button>
       </div>
     </div>

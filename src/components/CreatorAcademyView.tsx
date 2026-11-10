@@ -53,6 +53,26 @@ const BASE_COURSES: Course[] = [
     { id: 'rights', title: 'Respect copyright and permissions', minutes: 10, summary: 'Understand ownership, licences, consent and responsible reuse.' },
     { id: 'wellbeing', title: 'Create sustainably', minutes: 8, summary: 'Set boundaries, manage pressure and build a healthy publishing rhythm.' },
   ]},
+  { id: 'video-production', title: 'Video Production and Visual Storytelling', level: 'Beginner', category: 'Production', description: 'Plan, capture and edit clear video stories with accessible sound, intentional framing and a repeatable production workflow.', lessons: [
+    { id: 'shot-planning', title: 'Plan a visual sequence', minutes: 9, summary: 'Plan a visual sequence through practical creator workflows and repeatable quality checks.' },
+    { id: 'sound-lighting', title: 'Record clean sound and usable light', minutes: 11, summary: 'Record clean sound and usable light through practical creator workflows and repeatable quality checks.' },
+    { id: 'editing-workflow', title: 'Edit for clarity and rhythm', minutes: 9, summary: 'Edit for clarity and rhythm through practical creator workflows and repeatable quality checks.' },
+  ]},
+  { id: 'creator-finance', title: 'Creator Finance and Business Operations', level: 'Intermediate', category: 'Finance', description: 'Build a responsible operating model for creator income, costs, records, cash flow and tax preparation.', lessons: [
+    { id: 'income-costs', title: 'Understand creator income and costs', minutes: 9, summary: 'Understand creator income and costs through practical creator workflows and repeatable quality checks.' },
+    { id: 'cash-flow', title: 'Manage cash flow and reserves', minutes: 11, summary: 'Manage cash flow and reserves through practical creator workflows and repeatable quality checks.' },
+    { id: 'records-tax', title: 'Keep useful financial records', minutes: 9, summary: 'Keep useful financial records through practical creator workflows and repeatable quality checks.' },
+  ]},
+  { id: 'creative-rights', title: 'Creative Rights, Licensing and Contracts', level: 'All levels', category: 'Professional practice', description: 'Protect original work, obtain permissions and understand the practical terms behind collaborations and licensing.', lessons: [
+    { id: 'ownership-permissions', title: 'Understand ownership and permissions', minutes: 9, summary: 'Understand ownership and permissions through practical creator workflows and repeatable quality checks.' },
+    { id: 'music-image-licensing', title: 'Use music, images and footage responsibly', minutes: 11, summary: 'Use music, images and footage responsibly through practical creator workflows and repeatable quality checks.' },
+    { id: 'contracts-deliverables', title: 'Read contracts and define deliverables', minutes: 9, summary: 'Read contracts and define deliverables through practical creator workflows and repeatable quality checks.' },
+  ]},
+  { id: 'inclusive-creation', title: 'Accessible and Inclusive Content', level: 'All levels', category: 'Accessibility', description: 'Make content easier to understand and participate in through captions, descriptions, inclusive language and thoughtful design.', lessons: [
+    { id: 'captions-transcripts', title: 'Create accurate captions and transcripts', minutes: 9, summary: 'Create accurate captions and transcripts through practical creator workflows and repeatable quality checks.' },
+    { id: 'visual-accessibility', title: 'Improve visual and audio accessibility', minutes: 11, summary: 'Improve visual and audio accessibility through practical creator workflows and repeatable quality checks.' },
+    { id: 'inclusive-community', title: 'Build inclusive participation', minutes: 9, summary: 'Build inclusive participation through practical creator workflows and repeatable quality checks.' },
+  ]},
 ];
 
 // Introductory curriculum is authored and bundled with the app; progress remains account-scoped in Firestore.

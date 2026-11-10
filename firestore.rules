@@ -727,6 +727,10 @@ service cloud.firestore {
           || (courseId == 'creator-analytics' && lessonId in ['metrics', 'retention', 'experiments'])
           || (courseId == 'personal-brand' && lessonId in ['positioning', 'portfolio', 'reputation'])
           || (courseId == 'creator-safety' && lessonId in ['security', 'rights', 'wellbeing'])
+          || (courseId == 'video-production' && lessonId in ['shot-planning', 'sound-lighting', 'editing-workflow'])
+          || (courseId == 'creator-finance' && lessonId in ['income-costs', 'cash-flow', 'records-tax'])
+          || (courseId == 'creative-rights' && lessonId in ['ownership-permissions', 'music-image-licensing', 'contracts-deliverables'])
+          || (courseId == 'inclusive-creation' && lessonId in ['captions-transcripts', 'visual-accessibility', 'inclusive-community'])
           || (courseId is string && courseId.size() > 0 && courseId.size() <= 128
             && lessonId is string && lessonId.size() > 0 && lessonId.size() <= 128
             && !courseId.matches('.*[/].*') && !lessonId.matches('.*[/].*')
@@ -766,7 +770,8 @@ service cloud.firestore {
           && request.resource.data.userId == request.auth.uid
           && request.resource.data.templateId in [
             'content-brief', 'publishing-plan', 'audience-interview', 'partnership-proposal',
-            'live-run-sheet', 'community-charter', 'content-experiment', 'portfolio-case-study'
+            'live-run-sheet', 'community-charter', 'content-experiment', 'portfolio-case-study',
+            'production-shotlist', 'creator-budget', 'rights-register', 'accessibility-audit'
           ]
           && workbookId == request.auth.uid + '_' + request.resource.data.templateId
           && request.resource.data.content is string
