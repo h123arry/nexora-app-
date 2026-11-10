@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { createPageBookingRequest, respondToPageBookingRequest } from '../src/pageBookings.js';
+import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from '../src/pageBookings.js';
 
 const projectId = process.env.GCLOUD_PROJECT || 'demo-nexora-engagement';
 const app = initializeApp({ projectId }, 'page-booking-tests');
@@ -14,10 +14,10 @@ before(async () => {
   await db.recursiveDelete(page);
   await page.set({ id: 'booking-test-page', ownerId: 'business-owner', category: 'Business', name: 'Test Business' });
   await page.collection('services').doc('consultation').set({
-    name: 'Consultation', status: 'active', bookable: true,
+    name: 'Consultation', durationMinutes: 30, status: 'active', bookable: true,
   });
   await page.collection('services').doc('follow-up').set({
-    name: 'Follow-up', status: 'active', bookable: true,
+    name: 'Follow-up', durationMinutes: 15, status: 'active', bookable: true,
   });
 });
 
@@ -32,10 +32,12 @@ after(async () => {
       db.collection('users').doc(ownerId).collection('notifications').doc('booking_request_' + item.id).delete(),
       db.collection('users').doc(customerId).collection('notifications').doc('booking_response_' + item.id + '_accepted').delete(),
       db.collection('users').doc(customerId).collection('notifications').doc('booking_response_' + item.id + '_declined').delete(),
+      db.collection('users').doc(ownerId).collection('notifications').doc('booking_cancelled_' + item.id).delete(),
+      db.collection('users').doc(customerId).collection('notifications').doc('booking_cancelled_' + item.id).delete(),
       item.ref.delete(),
     ]);
   }));
-  await Promise.all(['customer-1', 'customer-2', 'customer-3', 'customer-rate-test', 'customer-service-scope'].map(id => db.collection('pageBookingRateLimits').doc(id).delete()));
+  await Promise.all(['customer-1', 'customer-2', 'customer-3', 'customer-rate-test', 'customer-service-scope', 'customer-booking-conflict-1', 'customer-booking-conflict-2', 'customer-booking-clear', 'customer-booking-cancel', 'customer-booking-cancel-owner', 'customer-booking-declined'].map(id => db.collection('pageBookingRateLimits').doc(id).delete()));
   await deleteApp(app);
 });
 
@@ -83,6 +85,68 @@ describe('trusted business booking requests', () => {
     assert.deepEqual(await respondToPageBookingRequest(db, 'business-owner', created.bookingId, 'accepted'), { status: 'accepted' });
     assert.equal((await customerNotificationRef.get()).exists, true);
     await assert.rejects(respondToPageBookingRequest(db, 'business-owner', created.bookingId, 'declined'), /already been resolved/);
+  });
+
+  it('prevents a business from accepting overlapping confirmed appointments', async () => {
+    const start = Date.now() + 10 * 86400000;
+    const first = await createPageBookingRequest(
+      db, 'customer-booking-conflict-1', 'booking-test-page', 'consultation',
+      new Date(start).toISOString(), '', 'conflict-booking-key-0001',
+    );
+    await respondToPageBookingRequest(db, 'business-owner', first.bookingId, 'accepted');
+
+    const overlap = await createPageBookingRequest(
+      db, 'customer-booking-conflict-2', 'booking-test-page', 'follow-up',
+      new Date(start + 15 * 60000).toISOString(), '', 'conflict-booking-key-0002',
+    );
+    await assert.rejects(
+      respondToPageBookingRequest(db, 'business-owner', overlap.bookingId, 'accepted'),
+      /overlaps another confirmed booking/,
+    );
+    assert.equal((await db.collection('pageBookings').doc(overlap.bookingId).get()).get('status'), 'pending');
+
+    const clear = await createPageBookingRequest(
+      db, 'customer-booking-clear', 'booking-test-page', 'consultation',
+      new Date(start + 30 * 60000).toISOString(), '', 'conflict-booking-key-0003',
+    );
+    await respondToPageBookingRequest(db, 'business-owner', clear.bookingId, 'accepted');
+    assert.equal((await db.collection('pageBookings').doc(clear.bookingId).get()).get('status'), 'accepted');
+  });
+
+  it('lets either booking participant cancel a future request and notifies the other side once', async () => {
+    const pending = await createPageBookingRequest(
+      db, 'customer-booking-cancel', 'booking-test-page', 'consultation',
+      new Date(Date.now() + 5 * 86400000).toISOString(), '', 'cancel-booking-key-0001',
+    );
+    await assert.rejects(
+      cancelPageBookingRequest(db, 'unrelated-user', pending.bookingId),
+      /Only the customer or business Page owner/,
+    );
+    assert.deepEqual(await cancelPageBookingRequest(db, 'customer-booking-cancel', pending.bookingId), { status: 'cancelled' });
+    assert.deepEqual(await cancelPageBookingRequest(db, 'customer-booking-cancel', pending.bookingId), { status: 'cancelled' });
+    const ownerNotification = await db.collection('users').doc('business-owner').collection('notifications').doc('booking_cancelled_' + pending.bookingId).get();
+    assert.equal(ownerNotification.exists, true);
+    assert.equal(ownerNotification.get('targetId'), pending.bookingId);
+    assert.equal((await db.collection('pageBookings').doc(pending.bookingId).get()).get('status'), 'cancelled');
+
+    const accepted = await createPageBookingRequest(
+      db, 'customer-booking-cancel-owner', 'booking-test-page', 'consultation',
+      new Date(Date.now() + 6 * 86400000).toISOString(), '', 'cancel-booking-key-0002',
+    );
+    await respondToPageBookingRequest(db, 'business-owner', accepted.bookingId, 'accepted');
+    await cancelPageBookingRequest(db, 'business-owner', accepted.bookingId);
+    const customerNotification = await db.collection('users').doc('customer-booking-cancel-owner').collection('notifications').doc('booking_cancelled_' + accepted.bookingId).get();
+    assert.equal(customerNotification.exists, true);
+    assert.equal((await db.collection('pageBookings').doc(accepted.bookingId).get()).get('status'), 'cancelled');
+  });
+
+  it('does not allow cancellation after a booking is declined', async () => {
+    const declined = await createPageBookingRequest(
+      db, 'customer-booking-declined', 'booking-test-page', 'consultation',
+      new Date(Date.now() + 7 * 86400000).toISOString(), '', 'cancel-booking-key-0003',
+    );
+    await respondToPageBookingRequest(db, 'business-owner', declined.bookingId, 'declined');
+    await assert.rejects(cancelPageBookingRequest(db, 'customer-booking-declined', declined.bookingId), /Only pending or confirmed/);
   });
 
   it('rate-limits repeated booking requests per customer', async () => {
