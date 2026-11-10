@@ -1369,9 +1369,14 @@ service cloud.firestore {
           && inviteeId == request.resource.data.inviteeId
           && inviteeId != request.auth.uid
           && inviteeId !in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
-          && request.resource.data.keys().hasOnly(['weaveId', 'inviteeId', 'invitedBy', 'status', 'createdAt'])
+          && request.resource.data.keys().hasOnly(['weaveId', 'inviteeId', 'invitedBy', 'ownerName', 'weaveTitle', 'status', 'createdAt'])
           && request.resource.data.weaveId == weaveId
           && request.resource.data.invitedBy == request.auth.uid
+          && request.resource.data.ownerName is string
+          && request.resource.data.ownerName.size() <= 80
+          && request.resource.data.weaveTitle is string
+          && request.resource.data.weaveTitle.size() >= 3
+          && request.resource.data.weaveTitle.size() <= 90
           && request.resource.data.status == 'pending'
           && request.resource.data.createdAt == request.time;
         allow update: if signedIn() && request.auth.uid == inviteeId
@@ -1382,6 +1387,10 @@ service cloud.firestore {
         allow delete: if signedIn()
           && request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '');
       }
+    }
+
+    match /{path=**}/invites/{inviteId} {
+      allow list: if signedIn() && resource.data.get('inviteeId', '') == request.auth.uid;
     }
 
     match /privacySettings/{userId} { allow read, write: if owner(userId); }
