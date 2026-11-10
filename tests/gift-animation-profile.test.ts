@@ -7,7 +7,10 @@ test('GIFTVERSE resolves distinct choreography for signature gift worlds', () =>
   assert.equal(getGiftAnimationProfile('wildlife-01', 'sparkle').category, 'wildlife');
   assert.equal(getGiftAnimationProfile('floral-01', 'sparkle').category, 'floral');
   assert.equal(getGiftAnimationProfile('royal-10', 'legendary').category, 'royal');
-  assert.equal(getGiftAnimationProfile('unknown-01', 'reveal').category, 'other');\n  assert.equal(getGiftAnimationProfile('twemoji-1f34e', 'reveal', 'culinary').category, 'culinary');\n  assert.equal(getGiftAnimationProfile('twemoji-1f30d', 'cinematic', 'journeys').category, 'journeys');\n  assert.equal(getGiftAnimationProfile('twemoji-1f91d', 'sparkle', 'bonds').category, 'bonds');
+  assert.equal(getGiftAnimationProfile('unknown-01', 'reveal').category, 'other');
+  assert.equal(getGiftAnimationProfile('twemoji-1f34e', 'reveal', 'culinary').category, 'culinary');
+  assert.equal(getGiftAnimationProfile('twemoji-1f30d', 'cinematic', 'journeys').category, 'journeys');
+  assert.equal(getGiftAnimationProfile('twemoji-1f91d', 'sparkle', 'bonds').category, 'bonds');
 });
 
 test('rarity animation tier controls a bounded visual budget', () => {

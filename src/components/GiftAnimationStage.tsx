@@ -3,6 +3,7 @@ import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
 
 export interface GiftAnimationStageProps {
   giftId: string;
+  category?: string;
   giftImage: string;
   giftName: string;
   animation: 'sparkle' | 'reveal' | 'cinematic' | 'legendary';
@@ -18,12 +19,14 @@ export interface GiftAnimationStageProps {
 export default function GiftAnimationStage({
   giftId, category, giftImage, giftName, animation, rarity, reducedMotion = false, size = 'live',
 }: GiftAnimationStageProps) {
-  const profile = getGiftAnimationProfile(giftId, animation, category);\n  const giftHue = Array.from(giftId).reduce((value, character) => (value * 31 + character.charCodeAt(0)) % 360, 0);
+  const profile = getGiftAnimationProfile(giftId, animation, category);
+  const giftHue = Array.from(giftId).reduce((value, character) => (value * 31 + character.charCodeAt(0)) % 360, 0);
   return (
     <div
       className={['gift-stage', `gift-stage--${profile.category}`, `gift-stage--${animation}`, `gift-stage--${size}`].join(' ')}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
-      data-rarity={rarity}\n      style={{ '--gift-hue': giftHue } as React.CSSProperties}
+      data-rarity={rarity}
+      style={{ '--gift-hue': giftHue } as React.CSSProperties}
       role="img"
       aria-label={giftName}
     >
@@ -61,7 +64,13 @@ const STAGE_STYLES = `
 .gift-stage--floral .gift-stage__art{animation-name:gift-flower-bloom}
 .gift-stage--royal .gift-stage__art,.gift-stage--luxury .gift-stage__art{animation-name:gift-royal-descent}
 .gift-stage--celestial .gift-stage__art,.gift-stage--tech .gift-stage__art{animation-name:gift-celestial-turn}
-.gift-stage--music .gift-stage__art{animation-name:gift-music-pulse}\n.gift-stage--culinary .gift-stage__art{animation-name:gift-flower-bloom}\n.gift-stage--journeys .gift-stage__art{animation-name:gift-dragon-flight}\n.gift-stage--celebrations .gift-stage__art{animation-name:gift-music-pulse}\n.gift-stage--relics .gift-stage__art{animation-name:gift-royal-descent}\n.gift-stage--sigils .gift-stage__art{animation-name:gift-celestial-turn}\n.gift-stage--bonds .gift-stage__art{animation-name:gift-heart-pulse}
+.gift-stage--music .gift-stage__art{animation-name:gift-music-pulse}
+.gift-stage--culinary .gift-stage__art{animation-name:gift-flower-bloom}
+.gift-stage--journeys .gift-stage__art{animation-name:gift-dragon-flight}
+.gift-stage--celebrations .gift-stage__art{animation-name:gift-music-pulse}
+.gift-stage--relics .gift-stage__art{animation-name:gift-royal-descent}
+.gift-stage--sigils .gift-stage__art{animation-name:gift-celestial-turn}
+.gift-stage--bonds .gift-stage__art{animation-name:gift-heart-pulse}
 .gift-stage__orbit{position:absolute;z-index:2;width:82%;height:34%;border:1px solid rgba(201,180,255,.2);border-radius:50%;transform:rotate(-28deg);opacity:0;animation:gift-orbit-in 4s ease-out both}
 .gift-stage__orbit--two{width:68%;height:25%;transform:rotate(34deg);animation-delay:.18s;border-color:rgba(255,220,160,.18)}
 .gift-stage__particles{position:absolute;inset:5%;z-index:5;pointer-events:none}
@@ -73,7 +82,8 @@ const STAGE_STYLES = `
 .gift-stage__flight-trail{position:absolute;z-index:1;width:100%;height:28%;left:-110%;top:48%;border-radius:50%;background:linear-gradient(90deg,transparent,rgba(160,120,255,.4),rgba(255,180,120,.18),transparent);filter:blur(12px);transform:rotate(-18deg);animation:gift-flight-trail 5s ease-in-out both}
 .gift-stage__ground-glow{position:absolute;z-index:2;bottom:16%;width:58%;height:9%;border-radius:50%;background:rgba(250,198,113,.28);filter:blur(14px);animation:gift-ground-pulse 1.2s ease-in-out infinite}
 .gift-stage__legendary-flare{position:absolute;z-index:6;inset:8%;border:1px solid rgba(255,220,160,.45);border-radius:50%;box-shadow:0 0 42px rgba(245,190,95,.22),inset 0 0 30px rgba(245,190,95,.12);animation:gift-flare 2.6s ease-in-out infinite}
-@keyframes gift-heart-pulse{0%,100%{transform:scale(1)}25%{transform:scale(1.08)}45%{transform:scale(.98)}65%{transform:scale(1.045)}80%{transform:scale(1)}}\n@keyframes gift-stage-arrive{0%{opacity:0;transform:translateY(44px) scale(.5)}65%{opacity:1;transform:translateY(-8px) scale(1.08)}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes gift-heart-pulse{0%,100%{transform:scale(1)}25%{transform:scale(1.08)}45%{transform:scale(.98)}65%{transform:scale(1.045)}80%{transform:scale(1)}}
+@keyframes gift-stage-arrive{0%{opacity:0;transform:translateY(44px) scale(.5)}65%{opacity:1;transform:translateY(-8px) scale(1.08)}100%{opacity:1;transform:translateY(0) scale(1)}}
 @keyframes gift-dragon-flight{0%{opacity:0;transform:translate(-110px,48px) rotate(-18deg) scale(.48)}35%{opacity:1;transform:translate(-8px,-18px) rotate(7deg) scale(1.12)}68%{transform:translate(58px,-4px) rotate(-5deg) scale(1.02)}100%{opacity:1;transform:translate(0,0) rotate(0) scale(1)}}
 @keyframes gift-wildlife-step{0%{opacity:0;transform:translateX(-78px) translateY(18px) scale(.76)}18%{opacity:1}32%{transform:translateX(-34px) translateY(-7px) rotate(-3deg) scale(.94)}48%{transform:translateX(4px) translateY(2px) rotate(2deg) scale(1.02)}64%{transform:translateX(34px) translateY(-6px) rotate(-2deg) scale(1.03)}82%{transform:translateX(8px) translateY(0) scale(1)}100%{opacity:1;transform:translateX(0) translateY(0) scale(1)}}
 @keyframes gift-flower-bloom{0%{opacity:0;transform:scale(.08) rotate(-38deg)}45%{opacity:1;transform:scale(1.12) rotate(8deg)}70%{transform:scale(.96) rotate(-3deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
