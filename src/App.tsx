@@ -2001,6 +2001,18 @@ export default function App() {
       >
         Skip to main content
       </a>
+      {!isLoggedIn && new URLSearchParams(window.location.search).has('ref') && (
+        <div className="fixed top-3 left-3 right-3 z-[95] mx-auto max-w-xl rounded-2xl border border-violet-400/30 bg-[#100B25]/95 p-4 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Sparkles className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">You’ve been invited to NEXORA</p>
+              <p className="mt-0.5 text-xs text-violet-100/70">Join your friend on the world’s living social network.</p>
+            </div>
+            <button onClick={() => { setAuthPromptReason('Create your NEXORA account to accept this personal invitation.'); setShowAuthModal(true); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white hover:bg-violet-500">Join</button>
+          </div>
+        </div>
+      )}
       <OfflineBanner />
       <PwaUpdatePrompt />
       {isLoggedIn && activeTab === 'feed' && (
