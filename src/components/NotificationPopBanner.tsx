@@ -250,7 +250,7 @@ export default function NotificationPopBanner({
         <motion.div
           key={activePop.id}
           initial={reduceMotion ? false : { y: -70, opacity: 0, scale: 0.93, filter: 'blur(4px)' }}
-          animate={{ y: 0, opacity: 1, scale: 1, filter: reduceMotion ? 'blur(0px)' : 'blur(0px)' }}
+          animate={{ y: 0, opacity: 1, scale: 1, filter: 'blur(0px)' }}
           exit={reduceMotion ? { opacity: 0 } : { y: -50, opacity: 0, scale: 0.94, filter: 'blur(4px)', transition: { duration: 0.22 } }}
           transition={reduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 28 }}
           drag="y"

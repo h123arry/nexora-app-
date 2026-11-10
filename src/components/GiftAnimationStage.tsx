@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getGiftAnimationProfile } from '../utils/giftAnimationProfile';
 import { shouldPauseMotion } from '../utils/motionLifecycle';
+import { useReducedMotion } from 'motion/react';
 import GiftArtwork from './GiftArtwork';
 
 export interface GiftAnimationStageProps {
@@ -21,6 +22,8 @@ export default function GiftAnimationStage({
   giftId, giftImage, giftName, animation, rarity, reducedMotion = false, size = 'live',
 }: GiftAnimationStageProps) {
   const profile = getGiftAnimationProfile(giftId, animation);
+  const systemReducedMotion = useReducedMotion();
+  const motionReduced = reducedMotion || Boolean(systemReducedMotion);
   const stageRef = useRef<HTMLDivElement>(null);
   const [isInView, setIsInView] = useState(true);
   const [pageVisible, setPageVisible] = useState(() => typeof document === 'undefined' || document.visibilityState === 'visible');
@@ -40,12 +43,12 @@ export default function GiftAnimationStage({
     return () => document.removeEventListener('visibilitychange', updateVisibility);
   }, []);
 
-  const paused = shouldPauseMotion({ reducedMotion, inViewport: isInView, pageVisible });
+  const paused = shouldPauseMotion({ reducedMotion: motionReduced, inViewport: isInView, pageVisible });
   return (
     <div
       ref={stageRef}
       className={['gift-stage', `gift-stage--${profile.category}`, `gift-stage--${animation}`, `gift-stage--${size}`].join(' ')}
-      data-reduced-motion={reducedMotion ? 'true' : 'false'}
+      data-reduced-motion={motionReduced ? 'true' : 'false'}
       data-paused={paused ? 'true' : 'false'}
       data-rarity={rarity}
       role="img"

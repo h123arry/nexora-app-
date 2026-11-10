@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import NexoraLoader from './NexoraLoader';
 import CreatorAcademyView from './CreatorAcademyView';
 import { listCreatorStudioTemplates, saveCreatorStudioTemplate, deleteCreatorStudioTemplate, CreatorStudioTemplate } from '../services/creatorStudioService';
@@ -40,7 +40,6 @@ export default function CreatorDashboardView({
   onClose,
   onUpdateProfile
 }: CreatorDashboardViewProps) {
-  const reduceMotion = useReducedMotion();
   // Tabs & Navigation
   const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization'>('overview');
   
@@ -1318,13 +1317,9 @@ export default function CreatorDashboardView({
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {achievementsList.map((badge, i) => (
-                  <motion.div
+                  <div 
                     key={badge.id}
-                    initial={reduceMotion ? false : { opacity: 0, y: 12, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    transition={{ duration: reduceMotion ? 0 : 0.24, delay: reduceMotion ? 0 : Math.min(i * 0.035, 0.28) }}
-                    whileHover={reduceMotion || !badge.unlocked ? undefined : { y: -3, scale: 1.015 }}
-                    className={`p-5 rounded-2xl border relative overflow-hidden transition-colors ${
+                    className={`p-5 rounded-2xl border relative overflow-hidden transition-all ${
                       badge.unlocked 
                         ? 'bg-gradient-to-br from-[#120a3a]/80 to-[#2c0f4f]/40 border-white/10' 
                         : 'bg-zinc-950/40 border-white/5 opacity-50'
@@ -1359,7 +1354,7 @@ export default function CreatorDashboardView({
                         </div>
                       )}
                     </div>
-                  </motion.div>
+                  </div>
                 ))}
               </div>
             </div>
