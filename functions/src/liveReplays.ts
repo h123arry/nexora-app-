@@ -16,7 +16,7 @@ const DEFAULT_LIVEKIT_URL = 'wss://nexora-live-is43sh5r.livekit.cloud';
 const SIGNED_URL_TTL_MS = 5 * 60 * 1000;
 
 type EgressFileResult = { filename?: string; location?: string; duration?: number; size?: number };
-type EgressResult = { egress_id?: string; status?: string; file_results?: EgressFileResult[] };
+type EgressResult = { egress_id?: string; status?: string; file_results?: EgressFileResult[]; items?: EgressResult[] };
 
 function requireUid(request: { auth?: { uid: string } | null }): string {
   if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to manage live recordings.');
@@ -156,10 +156,8 @@ export const getLiveReplayPlayback = onCall(
     if (!session.exists || session.data()?.status !== 'ended') throw new HttpsError('failed-precondition', 'This replay is not available yet.');
     const data = session.data()!;
     if (data.hostId !== userId) {
-      const audienceId = createHash('sha256').update(sessionId + ':' + userId).digest('hex');
       const audience = await sessionRef.collection('audience').doc(userId).get();
       if (!audience.exists) throw new HttpsError('permission-denied', 'Only the host and people who attended this live room can watch its replay.');
-      void audienceId;
     }
     const recording = data.recording as Record<string, unknown> | undefined;
     const egressId = typeof recording?.egressId === 'string' ? recording.egressId : '';
@@ -168,7 +166,8 @@ export const getLiveReplayPlayback = onCall(
     }
     let objectPath = safeObjectPath(recording?.objectPath);
     try {
-      const result = await egressRequest<EgressResult>('ListEgress', { egress_id: egressId });
+      const response = await egressRequest<EgressResult>('ListEgress', { egress_id: egressId });
+      const result = response.items?.[0] || response;
       const completed = result.file_results?.find(file => typeof file.filename === 'string');
       if (completed?.filename) objectPath = safeObjectPath(completed.filename);
       if (result.status === 'EGRESS_COMPLETE' && objectPath) {
