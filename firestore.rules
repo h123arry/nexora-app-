@@ -857,6 +857,12 @@ service cloud.firestore {
         allow list: if liveRoomHost();
         allow create, update, delete: if false;
       }
+      match /moderation/{participantId} {
+        // Moderation history is private to the host; clients cannot forge moderation state.
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/liveSessions/$(sessionId)).data.hostId == request.auth.uid;
+        allow create, update, delete: if false;
+      }
 
     }
     match /liveSessionViewers/{viewerId} { allow read, write: if false; }
