@@ -17,7 +17,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 ### Foundation (merged in PR #206)
 
 - Studio entry from the Create menu.
-- Multi-clip import, per-clip trim in/out, split at playhead, reorder and remove.
+- Multi-clip import, per-clip trim in/out, split at playhead, drag-to-reorder and remove.
+- Bounded 40-step project-wide undo/redo history, including keyboard shortcuts and edit restoration across timeline, audio and title settings.
 - Browser-side canvas + MediaRecorder WebM export.
 - Source clip audio and optional soundtrack mixed through Web Audio when supported.
 - On-screen title overlay and post caption.
@@ -45,7 +46,9 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Per-layer start/end, position, scale, rotation and opacity.
 - Keyframe interpolation for movement, scale and opacity.
 - Cross-dissolve and selected transition presets beyond fade-through-black.
-- Undo/redo history with bounded memory and crash-safe checkpoints.
+- Multi-track timeline with independent video, audio, text and sticker layers.
+- Keyframe interpolation for movement, scale and opacity.
+- Cross-dissolve and selected transition presets beyond fade-through-black.
 
 ### Phase 4 · Audio and captions
 - Clip-aligned waveform scrubbing and multi-region voiceover editing.
