@@ -840,7 +840,7 @@ export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId
 
 export const createSocialChallenge = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to start a challenge.');
-  try { return await createSocialChallenge(adminDb, request.auth.uid, request.data || {}); }
+  try { return await createSocialChallengeRecord(adminDb, request.auth.uid, request.data || {}); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('invalid') || message.includes('limits')) throw new HttpsError('invalid-argument', message);
@@ -850,7 +850,7 @@ export const createSocialChallenge = onCall({ maxInstances: 10 }, async request 
 
 export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to join a challenge.');
-  try { return await joinSocialChallenge(adminDb, request.auth.uid, request.data?.challengeId); }
+  try { return await joinSocialChallengeRecord(adminDb, request.auth.uid, request.data?.challengeId); }
   catch (error) {
     const message = error instanceof Error ? error.message : '';
     if (message.includes('valid challenge')) throw new HttpsError('invalid-argument', message);
@@ -861,7 +861,7 @@ export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request =>
 
 export const listSocialChallenges = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore challenges.');
-  try { return await listSocialChallenges(adminDb); }
+  try { return await listSocialChallengesRecords(adminDb); }
   catch { throw new HttpsError('unavailable', 'Challenges are temporarily unavailable.'); }
 });
 
@@ -876,7 +876,7 @@ export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', asyn
   }
 });
 
-\nexport const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
+export const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create your referral link.');
   try { return await createReferralCode(adminDb, request.auth.uid); }
   catch (error) {
