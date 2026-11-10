@@ -1369,7 +1369,7 @@ service cloud.firestore {
           && request.auth.uid == get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('ownerId', '')
           && inviteeId == request.resource.data.inviteeId
           && inviteeId != request.auth.uid
-          && inviteeId !in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', [])
+          && !(inviteeId in get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('participantIds', []))
           && request.resource.data.keys().hasOnly(['weaveId', 'inviteeId', 'invitedBy', 'ownerName', 'weaveTitle', 'status', 'createdAt'])
           && request.resource.data.weaveId == weaveId
           && request.resource.data.invitedBy == request.auth.uid
