@@ -51,7 +51,7 @@ function safeString(value: unknown, max = 500): string {
 function publicRecord(kind: SearchKind, id: string, path: string, data: Record<string, unknown>, parent?: Record<string, unknown>) {
   const title = safeString(data.name || data.title || data.content || data.question || data.serviceName, 180);
   const body = safeString(data.description || data.bio || data.content || data.caption || data.body || data.question, 1800);
-  const tags = Array.isArray(data.tags) ? data.tags.filter((tag): tag is string => typeof tag === 'string').slice(0, 24) : [];
+  const tags = Array.isArray(data.tags) ? [...new Set(data.tags.filter((tag): tag is string => typeof tag === 'string'))].slice(0, 24) : [];
   const ownerId = kind === 'person' ? id : safeString(data.userId || data.authorId || data.ownerId || data.hostId || data.createdBy, 150);
   const createdAt = asDate(data.timestamp || data.createdAt || data.startedAt || data.updatedAt);
   const subtitle = safeString(data.username || data.category || data.hostName || data.authorUsername || (kind === 'event' ? data.location : ''), 120);
@@ -272,6 +272,7 @@ export async function searchNexoraContent(
   for (const candidate of visibleCandidates) {
     if (!candidate) continue;
     const data = candidate.data();
+    if (data.kind !== 'post' && data.kind !== 'video') continue;
     const score = relevance(queryWords, data);
     if (score === null || !Array.isArray(data.tags)) continue;
     for (const rawTag of data.tags) {
