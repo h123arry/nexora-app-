@@ -9,7 +9,7 @@ import PurpleVerifiedBadge from './VohVerifiedBadge';
 import MiniServicesHub from './MiniServicesHub';
 import { searchCreators, searchPosts, recommendCreators, rankTrendingTopics } from '../services/discovery/discoveryService';
 import { searchPublicDirectory, type PublicDirectoryResult } from '../services/firebase/directorySearchService';
-import { searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
+import { getNexoraTrendingTopics, searchNexora, type NexoraSearchResult } from '../services/firebase/universalSearchService';
 import { getTranslations } from '../utils/translations';
 import { readUserScopedJson } from '../utils/userScopedStorage';
 
@@ -86,6 +86,7 @@ export default function ExploreView({
   const [universalLoading, setUniversalLoading] = useState(false);
   const [universalLoadingMore, setUniversalLoadingMore] = useState(false);
   const [universalError, setUniversalError] = useState('');
+  const [serverTrendingTags, setServerTrendingTags] = useState<Array<[string, number]>>([]);
   const universalRequestKey = useRef('');
   universalRequestKey.current = currentUserId + ':' + debouncedSearch.trim();
   const directoryRequestKey = useRef('');
@@ -119,6 +120,14 @@ export default function ExploreView({
     return () => { cancelled = true; };
   }, [currentUserId, debouncedSearch]);
 
+  useEffect(() => {
+    if (!currentUserId) { setServerTrendingTags([]); return; }
+    let active = true;
+    void getNexoraTrendingTopics().then(topics => {
+      if (active) setServerTrendingTags(topics.map(topic => ['#' + topic.tag, topic.postCount] as [string, number]));
+    }).catch(() => { if (active) setServerTrendingTags([]); });
+    return () => { active = false; };
+  }, [currentUserId]);
   // Server-indexed search spans public NEXORA content, not only loaded feed items.
   useEffect(() => {
     const term = debouncedSearch.trim();
@@ -218,8 +227,9 @@ export default function ExploreView({
   };
 
   // Recent topic momentum is based on real loaded posts from multiple creators.
-  const trendingTags = useMemo(() => rankTrendingTopics(posts, { windowHours: 168, minPosts: 2, limit: 6 })
+  const localTrendingTags = useMemo(() => rankTrendingTopics(posts, { windowHours: 168, minPosts: 2, limit: 6 })
     .map(topic => [`#${topic.tag}`, topic.postCount] as [string, number]), [posts]);
+  const trendingTags = serverTrendingTags.length ? serverTrendingTags.slice(0, 6) : localTrendingTags;
 
   // Personalize creator suggestions using the signed-in user's interest profile.
   const suggestedCreators = useMemo(() => recommendCreators(creators, {
