@@ -1028,7 +1028,13 @@ export default function NewInboxView({
         <MediaGallery
           isOpen={showMediaGallery}
           onClose={() => setShowMediaGallery(false)}
+          chatId={activeChat.id}
           chatPartnerName={activeChat.partnerName}
+          currentUserId={currentUser.id}
+          messages={activeMessages}
+          hasMoreHistory={Boolean(activeChatId && hasOlderMessages[activeChatId])}
+          isLoadingOlder={isLoadingOlderMessages}
+          onLoadOlder={() => void loadOlderMessages()}
         />
       )}
 
