@@ -209,6 +209,8 @@ export default function App() {
       const action = pendingAuthAction;
       setPendingAuthAction(null);
       action();
+      if (firebaseUser?.uid) localStorage.setItem('nexora_onboarding_completed_' + firebaseUser.uid, 'true');
+      setShowOnboarding(false);
       window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Authenticated successfully! Action completed.' }));
     }
   }, [isLoggedIn, pendingAuthAction]);
@@ -731,6 +733,7 @@ export default function App() {
   const [isCreateMenuOpen, setIsCreateMenuOpen] = useState(false);
   const [creationInitialMode, setCreationInitialMode] = useState<'text' | 'photo' | 'video' | 'reel' | 'voice' | 'poll' | 'pulse' | 'community' | null>(null);
   const [creationInitialTab, setCreationInitialTab] = useState<'feed' | 'story' | 'drafts' | undefined>(undefined);
+  const [creationInitialCaption, setCreationInitialCaption] = useState('');
   const [systemSpeed, setSystemSpeed] = useState('1.8ms');
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isSyncPending, setIsSyncPending] = useState(false);
@@ -1892,6 +1895,7 @@ export default function App() {
     setIsCreatePostModalOpen(false);
     setCreationInitialMode(null);
     setCreationInitialTab(undefined);
+    setCreationInitialCaption('');
   };
 
   // 11. Determine specific theme CSS configurations dynamically
@@ -2323,6 +2327,7 @@ export default function App() {
             isOffline={isOffline}
             initialMode={creationInitialMode}
             initialTab={creationInitialTab}
+            initialCaption={creationInitialCaption}
             onToggleOffline={() => {
               setIsOffline(prev => {
                 const next = !prev;
@@ -3107,6 +3112,7 @@ export default function App() {
                 requireAuth(() => {
                   setCreationInitialMode('text');
                   setCreationInitialTab('feed');
+                  setCreationInitialCaption("I'm new to NEXORA. What should I explore first?");
                   setIsCreatePostModalOpen(true);
                 }, 'Sign in to publish your first NEXORA post.');
               }}
