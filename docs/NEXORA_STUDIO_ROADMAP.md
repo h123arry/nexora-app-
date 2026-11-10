@@ -31,6 +31,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Preview aspect ratio follows the selected export format.
 - Per-clip source audio volume and independent soundtrack volume.
 - Microphone-recorded voiceover saved as a separate, timed audio track with independent volume and export mixing.
+- Independent soundtrack and voiceover fade-in/fade-out envelopes, with optional automatic music ducking during narration.
+- Pure audio-mix and waveform policies covered by focused unit tests.
 - Decoded voiceover waveform preview and in-editor audio playback for supported recordings.
 - Title placement (top, centre, bottom), start time and end time.
 - Optional fade-through-black scene transitions between clips.
@@ -47,7 +49,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 
 ### Phase 4 · Audio and captions
 - Clip-aligned waveform scrubbing and multi-region voiceover editing.
-- Audio fade-in/fade-out, clip ducking and mix preview.
+- Live mix preview with timeline-synchronized audio playback and audio/video sync validation.
 - Rights-cleared NEXORA soundtrack library; no unlicensed commercial tracks.
 - Caption/subtitle tracks with timed segments, editable text and accessible defaults.
 - Audio/video sync checks and export loudness safeguards.
