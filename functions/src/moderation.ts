@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { listOwnModerationReports } from './moderationReportTracking.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -195,32 +196,8 @@ export const submitModerationAppeal = onCall({ maxInstances: 10 }, async (reques
 });
 
 
-/** Owner-scoped report history. Private reviewer notes and reporter identity never leave this boundary. */
+/** Owner-scoped report history. Private reviewer notes and evidence stay internal. */
 export const listMyModerationReports = onCall({ maxInstances: 10 }, async request => {
   const userId = requireAuth(request);
-  const snapshot = await db.collection('moderationReports')
-    .where('reporterId', '==', userId)
-    .limit(100)
-    .get();
-  const reports = snapshot.docs.map(doc => {
-    const data = doc.data();
-    const createdAt = data.createdAt?.toDate?.();
-    const updatedAt = data.updatedAt?.toDate?.();
-    const reviewedAt = data.reviewedAt?.toDate?.();
-    const rawStatus = String(data.status || 'pending');
-    const status = ['pending', 'under_review', 'escalated', 'resolved', 'dismissed'].includes(rawStatus)
-      ? rawStatus : 'pending';
-    return {
-      id: doc.id,
-      targetType: String(data.targetType || 'content'),
-      category: String(data.category || 'other'),
-      status,
-      action: status === 'resolved' && typeof data.action === 'string' ? data.action : null,
-      createdAt: createdAt instanceof Date ? createdAt.toISOString() : null,
-      updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : null,
-      reviewedAt: reviewedAt instanceof Date ? reviewedAt.toISOString() : null,
-    };
-  });
-  reports.sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
-  return { reports: reports.slice(0, 50) };
+  return { reports: await listOwnModerationReports(db, userId) };
 });
