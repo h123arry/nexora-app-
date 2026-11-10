@@ -1,6 +1,6 @@
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
-export type SearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update';
+export type SearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'hashtag';
 export interface SearchHit {
   id: string; kind: SearchKind; title: string; subtitle: string; excerpt: string;
   image: string; targetId: string; targetPath: string; ownerId: string;
@@ -60,7 +60,7 @@ function publicRecord(kind: SearchKind, id: string, path: string, data: Record<s
     id, kind, title: title || 'NEXORA', subtitle, excerpt: body.slice(0, 260), image,
     targetId: id, targetPath: path, ownerId, verified: data.isVerified === true,
     createdAt, tags, searchKeys: searchKeys(searchText), normalizedText: normalizeSearchText(searchText),
-    isPublic: true, parentId: safeString(parent?.id, 150), scoreSignals: {
+    isPublic: true, parentId: safeString(parent?.id, 150), bannedUsers: Array.isArray(data.bannedUsers) ? data.bannedUsers.filter((item): item is string => typeof item === 'string').slice(0, 500) : [], scoreSignals: {
       likes: Math.max(0, Math.min(1000000, Number(data.likes || data.likesCount) || 0)),
       comments: Math.max(0, Math.min(1000000, Number(data.commentsCount) || 0)),
       views: Math.max(0, Math.min(10000000, Number(data.views || data.viewCount) || 0)),
@@ -149,7 +149,7 @@ export async function searchNexoraContent(
   if (!queryWords.length) throw new Error('Enter a search term.');
   const prefixKey = 'p:' + queryWords[0].slice(0, 16);
   const typoKeys = queryWords[0].length >= 3 ? [...new Set(Array.from({length: queryWords[0].length - 1}, (_, i) => 'b:' + queryWords[0].slice(i, i + 2)))].slice(0, 2) : [];
-  const allowedKinds: SearchKind[] = ['person','post','video','page','circle','live','event','service','update'];
+  const allowedKinds: SearchKind[] = ['person','post','video','page','circle','live','event','service','update','hashtag'];
   const requestedKinds = Array.isArray(rawKinds) ? rawKinds.filter((kind): kind is SearchKind => allowedKinds.includes(kind as SearchKind)) : allowedKinds;
   const key = prefixKey;
   const after = decodeCursor(rawCursor, query, key);
@@ -183,7 +183,7 @@ export async function searchNexoraContent(
   for (const candidate of candidates) {
     const data = candidate.data();
     const ownerId = String(data.ownerId || '');
-    if (ownerId && (ownerId === viewerUid || blocked.has(ownerId))) continue;
+    if (ownerId && blocked.has(ownerId)) continue;
     if (ownerId) {
       const [ownerSettings, follow] = await Promise.all([
         db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
@@ -193,7 +193,7 @@ export async function searchNexoraContent(
       const ownerBlocks = [...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
         ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : [])];
       if (ownerBlocks.includes(viewerUid)) continue;
-      if (privacy?.privacy?.isPrivate === true && !follow.exists && data.kind === 'person') continue;
+      if (privacy?.privacy?.isPrivate === true && !follow.exists && ['person','post','video','live'].includes(String(data.kind))) continue;
       if (accountStatus.get('suspended') === true && ownerId === viewerUid) continue;
     }
     if (data.kind === 'circle' && Array.isArray(data.bannedUsers) && data.bannedUsers.includes(viewerUid)) continue;
@@ -204,6 +204,31 @@ export async function searchNexoraContent(
       excerpt: String(data.excerpt || ''), image: String(data.image || ''), targetId: String(data.targetId || ''),
       targetPath: String(data.targetPath || ''), ownerId, verified: data.verified === true,
       createdAt: asDate(data.createdAt).toISOString(), score, tags: Array.isArray(data.tags) ? data.tags.slice(0, 12) : [],
+    });
+  }
+  const hashtagGroups = new Map<string, {count:number;creators:Set<string>;score:number;createdAt:string}>();
+  for (const candidate of candidates) {
+    const data = candidate.data();
+    const score = relevance(queryWords, data);
+    if (score === null || !Array.isArray(data.tags)) continue;
+    for (const rawTag of data.tags) {
+      if (typeof rawTag !== 'string') continue;
+      const tag = normalizeSearchText(rawTag.replace(/^#/, '')).replace(/\\s+/g, ' ').slice(0, 40);
+      if (!tag || !queryWords.some(word => tag.includes(word) || editDistanceAtMostOne(tag.split(' ')[0] || tag, word))) continue;
+      const entry = hashtagGroups.get(tag) || {count:0,creators:new Set<string>(),score:0,createdAt:''};
+      entry.count += 1;
+      if (data.ownerId) entry.creators.add(String(data.ownerId));
+      entry.score += score;
+      entry.createdAt = [entry.createdAt, asDate(data.createdAt).toISOString()].sort().at(-1) || '';
+      hashtagGroups.set(tag,entry);
+    }
+  }
+  if (requestedKinds.includes('hashtag')) {
+    for (const [tag, entry] of hashtagGroups) hits.push({
+      id: 'hashtag_' + tag.replace(/[^a-z0-9]+/g,'_'), kind: 'hashtag', title: '#' + tag,
+      subtitle: entry.count + ' matching public posts', excerpt: 'Explore public posts using this topic',
+      image: '', targetId: tag, targetPath: 'explore', ownerId: '', verified: false,
+      createdAt: entry.createdAt, score: entry.score + Math.min(5, entry.count), tags: [tag],
     });
   }
   hits.sort((a,b) => b.score - a.score || b.createdAt.localeCompare(a.createdAt) || a.id.localeCompare(b.id));
