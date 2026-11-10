@@ -39,6 +39,7 @@ export { getGiftCatalog, quoteNexGift } from './giftCatalog.js';
 export { sendNexGift } from './giftDelivery.js';
 export { cleanupExpiredStories } from './storyCleanup.js';
 export { moderateLiveParticipant } from './liveModeration.js';
+export { sendPageBookingReminders } from './pageBookingReminders.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
 import {
   saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
