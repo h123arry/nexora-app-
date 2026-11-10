@@ -60,7 +60,7 @@ describe('trusted Circle member enforcement', () => {
     const banned = await moderateCircleMember(db, 'alice', 'governance-circle', 'bob', 'ban', 'Repeated harassment reports');
     assert.deepEqual(banned, { userId: 'bob', action: 'ban', status: 'banned' });
     assert.equal((await circle.collection('members').doc('bob').get()).get('status'), 'banned');
-    assert.deepEqual((await circle.get()).get('bannedUsers'), ['bob']);
+    assert.equal((await circle.collection('bans').doc('bob').get()).exists, true);
     const banEvents = await circle.collection('auditEvents').where('targetUid', '==', 'bob').where('action', '==', 'member_banned').get();
     assert.equal(banEvents.size, 1);
     assert.equal(banEvents.docs[0].get('reason'), 'Repeated harassment reports');
@@ -68,7 +68,7 @@ describe('trusted Circle member enforcement', () => {
     const unbanned = await moderateCircleMember(db, 'alice', 'governance-circle', 'bob', 'unban', 'Appeal reviewed and accepted');
     assert.deepEqual(unbanned, { userId: 'bob', action: 'unban', status: 'unbanned' });
     assert.equal((await circle.collection('members').doc('bob').get()).exists, false);
-    assert.deepEqual((await circle.get()).get('bannedUsers'), []);
+    assert.equal((await circle.collection('bans').doc('bob').get()).exists, false);
     const unbanEvents = await circle.collection('auditEvents').where('targetUid', '==', 'bob').where('action', '==', 'member_unbanned').get();
     assert.equal(unbanEvents.size, 1);
   });
