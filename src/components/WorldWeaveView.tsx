@@ -71,6 +71,12 @@ export default function WorldWeaveView({ currentUser }: Props) {
     }, err => setError(err.message));
   }, [selected?.id]);
 
+  useEffect(() => {
+    if (!selected) return;
+    const latest = [...myWeaves, ...publicWeaves].find(item => item.id === selected.id);
+    if (latest) setSelected(current => current?.id === latest.id ? { ...current, ...latest } : current);
+  }, [myWeaves, publicWeaves, selected?.id]);
+
   const weaves = useMemo(() => {
     const unique = new Map<string, WorldWeave>();
     [...myWeaves, ...publicWeaves].forEach(item => unique.set(item.id, item));
