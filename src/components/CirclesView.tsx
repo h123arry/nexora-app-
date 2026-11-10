@@ -12,6 +12,7 @@ import CircleAnnouncementsPanel from './CircleAnnouncementsPanel';
 import CircleGovernancePanel from './CircleGovernancePanel';
 import CircleReportsPanel from './CircleReportsPanel';
 import SaveToCollectionButton from './SaveToCollectionButton';
+import { getCreatorCommunityAsset, getCreatorCommunityAssets } from '../content/creatorCommunityAssets';
 
 interface CirclesViewProps {
   currentUser: User;
@@ -45,6 +46,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
   // Circle Builder States
   const [promptInput, setPromptInput] = useState('');
   const [isBuilding, setIsBuilding] = useState(false);
+  const [selectedCoverId, setSelectedCoverId] = useState('circle-aurora');
 
   // Filter categories
   const [activeFilter, setActiveFilter] = useState<'all' | 'joined' | 'explore'>('all');
@@ -133,11 +135,7 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
     setIsBuilding(true);
     setCirclesError(null);
     const circleName = idea.replace(/^(create|make) (a |an )?/i, '').trim().slice(0, 60);
-    const banner = /soccer|football|sport/i.test(idea)
-      ? 'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80'
-      : /code|developer|program/i.test(idea)
-        ? 'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80'
-        : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80';
+    const banner = getCreatorCommunityAsset(selectedCoverId)?.path || '/creator-assets/circle-covers/circle-aurora.svg';
     try {
       const created = await CommunityService.createPublicCommunity({
         ownerId: currentUser.id,
@@ -262,6 +260,16 @@ export default function CirclesView({ currentUser }: CirclesViewProps) {
               <Wand2 className="w-3.5 h-3.5" />
               <span>{isBuilding ? 'BUILDING...' : 'CREATE CIRCLE'}</span>
             </button>
+          </div>
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-violet-200/70">Choose your Circle cover</p>
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
+              {getCreatorCommunityAssets('circle-cover').map(asset => (
+                <button key={asset.id} type="button" disabled={isBuilding} onClick={() => setSelectedCoverId(asset.id)} aria-label={`Use ${asset.title} Circle cover`} aria-pressed={selectedCoverId === asset.id} className={`overflow-hidden rounded-lg border-2 transition-colors ${selectedCoverId === asset.id ? 'border-violet-300 ring-2 ring-violet-500/30' : 'border-white/10 hover:border-white/30'}`}>
+                  <img src={asset.path} alt="" className="aspect-video w-full object-cover"/>
+                </button>
+              ))}
+            </div>
           </div>
         </form>
       </div>

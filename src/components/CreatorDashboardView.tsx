@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import NexoraLoader from './NexoraLoader';
 import CreatorAcademyView from './CreatorAcademyView';
+import CreatorCommunityAssetLibrary from './CreatorCommunityAssetLibrary';
 import { listCreatorStudioTemplates, saveCreatorStudioTemplate, deleteCreatorStudioTemplate, CreatorStudioTemplate } from '../services/creatorStudioService';
 import { TrendingUp, Award, Clock, Eye, Sparkles, Bookmark, Users, Check, Trash2, Edit, Plus, Search, Filter, Calendar, ChevronRight, ArrowRight, X, Lock, Shield, Globe, Laptop, FileText, MoreVertical, Archive, RefreshCw, Sliders, EyeOff, HelpCircle, Info, Folder, Bell, Sun, Volume2, AlertTriangle, Download, Gift, DollarSign, Smartphone, Tablet, CheckCircle, MessageSquare, Heart, ChevronDown, GraduationCap } from 'lucide-react';
 import { User, Post, Notification } from '../types';
@@ -41,7 +42,7 @@ export default function CreatorDashboardView({
   onUpdateProfile
 }: CreatorDashboardViewProps) {
   // Tabs & Navigation
-  const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'academy' | 'analytics' | 'content' | 'drafts' | 'media' | 'achievements' | 'policy' | 'monetization' | 'assets'>('overview');
   
   // Real Local state for Optimistic UI and responsiveness
   const [localPosts, setLocalPosts] = useState<Post[]>([]);
@@ -736,6 +737,7 @@ export default function CreatorDashboardView({
           { id: 'content', label: 'Content Manager', icon: FileText },
           { id: 'drafts', label: 'Drafts & Schedule', icon: Calendar },
           { id: 'media', label: 'Media Library', icon: Folder },
+          { id: 'assets', label: 'Creator Assets', icon: Sparkles },
           { id: 'achievements', label: 'Milestones', icon: Award },
           { id: 'policy', label: 'Policy Hub', icon: Shield },
           { id: 'monetization', label: 'Earnings', icon: DollarSign }
@@ -776,6 +778,7 @@ export default function CreatorDashboardView({
           className="space-y-6"
         >
           {activeTab === 'academy' && <CreatorAcademyView currentUser={currentUser} />}
+          {activeTab === 'assets' && <CreatorCommunityAssetLibrary currentUser={currentUser} onUpdateProfile={onUpdateProfile} />}
 
           {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
@@ -1326,7 +1329,7 @@ export default function CreatorDashboardView({
                     }`}
                   >
                     <div className="flex items-start justify-between">
-                      <span className="text-2xl">{badge.icon}</span>
+                      <div className="flex items-center gap-2"><img src={getCreatorCommunityAssets('milestone-art')[i % 8]?.path} alt="" aria-hidden="true" className="h-12 w-12 object-contain" /><span className="text-2xl">{badge.icon}</span></div>
                       {badge.unlocked ? (
                         <span className="text-[9px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 font-mono font-extrabold uppercase px-2 py-0.5 rounded-full">Unlocked</span>
                       ) : (

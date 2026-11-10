@@ -152,14 +152,14 @@ service cloud.firestore {
       return [
         'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
         'followers', 'following', 'sparks', 'isVerified', 'hasStory',
-        'coverImage', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
+        'coverImage', 'profileFrameId', 'profileBadgeId', 'joinedDate', 'reputationPoints', 'reputationBreakdown',
         'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
     }
     function editableProfileKeys() {
       return [
-        'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage',
+        'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
         'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
         'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts'
       ];
@@ -279,7 +279,7 @@ service cloud.firestore {
         && request.resource.data.id == userId
         && request.resource.data.keys().hasOnly([
           'id', 'username', 'name', 'avatar', 'bio', 'location', 'website',
-          'followers', 'following', 'sparks', 'isVerified', 'hasStory', 'coverImage',
+          'followers', 'following', 'sparks', 'isVerified', 'hasStory', 'coverImage', 'profileFrameId', 'profileBadgeId',
           'joinedDate', 'email', 'phone', 'role', 'isBanned', 'isSuspended',
           'isSeedProfile', 'preferredLanguage', 'savedCollections', 'contributions',
           'reputationPoints', 'reputationBreakdown', 'interestDNA', 'skills',
@@ -299,11 +299,13 @@ service cloud.firestore {
       allow update: if owner(userId)
         && request.resource.data.id == userId
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage',
+          'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
           'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
           'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'preferredLanguage',
           'savedCollections', 'updatedAt', 'isVerified'
         ])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified'])
           || request.resource.data.isVerified == request.auth.token.get('email_verified', false)
           || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));
@@ -487,6 +489,8 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(editableProfileKeys().concat(['isVerified', 'interestDNA']))
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['interestDNA'])
           || !request.resource.data.keys().hasAny(['interestDNA']))
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
+        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified'])
           || request.resource.data.isVerified == request.auth.token.get('email_verified', false)
           || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));

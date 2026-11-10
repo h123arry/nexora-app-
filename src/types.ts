@@ -12,6 +12,8 @@ export interface User {
   isVerified: boolean;
   hasStory?: boolean;
   coverImage: string;
+  profileFrameId?: string;
+  profileBadgeId?: string;
   joinedDate: string;
   email?: string;
   phone?: string;
