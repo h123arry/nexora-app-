@@ -145,6 +145,7 @@ export default function App() {
   const [isPostsHydrated, setIsPostsHydrated] = useState(false);
 
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [referralInvitePreview, setReferralInvitePreview] = useState<{ inviterName: string; inviterUsername: string; inviterAvatar: string } | null>(null);
   const [pendingAuthAction, setPendingAuthAction] = useState<(() => void) | null>(null);
   const [authPromptReason, setAuthPromptReason] = useState<string>('Join Nexora to like, comment, follow creators, and personalize your experience.');
 
@@ -159,6 +160,23 @@ export default function App() {
     action();
     return true;
   };
+
+  useEffect(() => {
+    const referralCode = new URLSearchParams(window.location.search).get('ref');
+    if (!referralCode) return;
+    let active = true;
+    const preview = httpsCallable<{ code: string }, { valid: boolean; inviterName?: string; inviterUsername?: string; inviterAvatar?: string }>(functions, 'previewReferralInvite');
+    preview({ code: referralCode }).then(result => {
+      if (active && result.data.valid) {
+        setReferralInvitePreview({
+          inviterName: result.data.inviterName || 'A NEXORA member',
+          inviterUsername: result.data.inviterUsername || '',
+          inviterAvatar: result.data.inviterAvatar || '',
+        });
+      }
+    }).catch(() => { /* Invalid or unavailable invites keep the generic landing message. */ });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     if (!isLoggedIn || !currentUser.id || typeof window === 'undefined') return;
@@ -179,6 +197,26 @@ export default function App() {
         window.dispatchEvent(new CustomEvent('toast', {
           detail: error instanceof Error ? error.message : 'This Circle invitation could not be redeemed.',
         }));
+      });
+    return () => { active = false; };
+  }, [isLoggedIn, currentUser.id]);
+
+  useEffect(() => {
+    if (!isLoggedIn || !currentUser.id || typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const referralCode = params.get('ref');
+    if (!referralCode) return;
+    params.delete('ref');
+    window.history.replaceState({}, '', `${window.location.pathname}${params.toString() ? `?${params.toString()}` : ''}${window.location.hash}`);
+    let active = true;
+    const claim = httpsCallable<{ code: string }, { claimed: boolean }>(functions, 'claimMyReferral');
+    claim({ code: referralCode })
+      .then(result => {
+        if (!active || !result.data.claimed) return;
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Your NEXORA invitation has been applied. Complete your first public post to qualify.' }));
+      })
+      .catch(() => {
+        if (active) window.dispatchEvent(new CustomEvent('toast', { detail: 'This NEXORA invitation could not be applied.' }));
       });
     return () => { active = false; };
   }, [isLoggedIn, currentUser.id]);
@@ -1981,6 +2019,18 @@ export default function App() {
       >
         Skip to main content
       </a>
+      {!isLoggedIn && new URLSearchParams(window.location.search).has('ref') && (
+        <div className="fixed top-3 left-3 right-3 z-[95] mx-auto max-w-xl rounded-2xl border border-violet-400/30 bg-[#100B25]/95 p-4 shadow-2xl backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-500/15 text-violet-200"><Sparkles className="h-5 w-5" /></div>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-bold text-white">You’ve been invited to NEXORA</p>
+              <p className="mt-0.5 text-xs text-violet-100/70">{referralInvitePreview ? `Invited by ${referralInvitePreview.inviterName}${referralInvitePreview.inviterUsername ? ` (@${referralInvitePreview.inviterUsername})` : ''}. Join them on the world’s living social network.` : 'Join your friend on the world’s living social network.'}</p>
+            </div>
+            <button onClick={() => { setAuthPromptReason('Create your NEXORA account to accept this personal invitation.'); setShowAuthModal(true); }} className="shrink-0 rounded-xl bg-violet-600 px-3 py-2 text-xs font-bold text-white hover:bg-violet-500">Join</button>
+          </div>
+        </div>
+      )}
       <OfflineBanner />
       <PwaUpdatePrompt />
       {isLoggedIn && activeTab === 'feed' && (

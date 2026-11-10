@@ -31,6 +31,8 @@ import StoryRail from './StoryRail';
 import { Skeleton } from './Skeleton';
 import { rankReels } from '../services/reels/reelsRanking';
 import { buildPostAnalytics } from '../services/analytics/postAnalytics';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../lib/firebase';
 
 // Interface extensions for threaded comments and advanced posts
 interface ThreadReply {
@@ -329,6 +331,40 @@ export default function FeedView({
   
   // Custom interactive features
   const [votedPolls, setVotedPolls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    setVotedPolls({});
+    if (!currentUser?.id || currentUser.id === 'guest_visitor_id') return;
+    const postIds = posts.filter(post => !!post.interactivePoll).slice(0, 60).map(post => post.id);
+    if (!postIds.length) return;
+    let active = true;
+    const loadVotes = httpsCallable<{ postIds: string[] }, { votes: Record<string, string> }>(functions, 'getMyFeedPollVotes');
+    loadVotes({ postIds }).then(result => {
+      if (active) setVotedPolls(result.data.votes || {});
+    }).catch(() => { /* Vote recovery is best-effort; the server still enforces one vote. */ });
+    return () => { active = false; };
+  }, [currentUser.id, posts]);
+
+  const handleVotePoll = async (postId: string, optionId: string) => {
+    if (!currentUser?.id || currentUser.id === 'guest_visitor_id') {
+      onRequireAuth?.();
+      return;
+    }
+    try {
+      const vote = httpsCallable<{ postId: string; optionId: string }, {
+        voted: boolean; selectedOptionId: string; options: { id: string; text: string; votes: number }[];
+      }>(functions, 'voteOnFeedPoll');
+      const result = await vote({ postId, optionId });
+      setVotedPolls(previous => ({ ...previous, [postId]: result.data.selectedOptionId }));
+      setLocalPosts(previous => previous.map(post => post.id === postId && post.interactivePoll
+        ? { ...post, interactivePoll: { ...post.interactivePoll, options: result.data.options } }
+        : post));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', {
+        detail: error instanceof Error ? error.message : 'Your vote could not be recorded. Please retry.',
+      }));
+    }
+  };
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null);
   const [activePostId, setActivePostId] = useState<string | null>(null);
   const activePostIdRef = useRef<string | null>(null);
@@ -2204,6 +2240,7 @@ export default function FeedView({
                 onSharePost={onSharePost}
                 onRepostPost={onRepostPost}
                 onQuotePost={postId => { const target = localPosts.find(post => post.id === postId); if (target) { setQuoteTargetPost(target); setQuoteDraft(''); } }}
+                onVotePoll={handleVotePoll}
                 onCommentToggle={(postId) => setActiveCommentsPostId(activeCommentsPostId === postId ? null : postId)}
                 onToggleFollow={onToggleFollow}
                 onViewProfile={onViewProfile}
@@ -2218,7 +2255,6 @@ export default function FeedView({
                 handlePublishScheduledPostNow={handlePublishScheduledPostNow}
                 handleBroadcastReaction={handleBroadcastReaction}
                 votedPolls={votedPolls}
-                setVotedPolls={setVotedPolls}
                 selectedTag={selectedTag}
                 setSelectedTag={setSelectedTag}
                 setNidaDiagnosticPost={setNidaDiagnosticPost}

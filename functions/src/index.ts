@@ -14,6 +14,11 @@ import { createCircleAnnouncement, setCircleAnnouncementPinned } from './communi
 import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './communityGovernance.js';
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
+import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary, getReferralInvitePreview } from './referrals.js';
+import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
+import { getAuth } from 'firebase-admin/auth';
+import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries as listMyContentSeriesRecord, listContentSeriesEpisodes } from './contentSeries.js';
+import { voteOnPublicPostPoll, getMyPublicPostPollVotes } from './publicPostPolls.js';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
@@ -819,6 +824,163 @@ export { startLiveSession, endLiveSession, joinLiveSession, leaveLiveSession, he
 export { getLiveKitToken } from './liveKitTransport.js';
 
 export { startLiveRecording, stopLiveRecording, getLiveReplayPlayback } from './liveReplays.js';
+
+
+
+export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId}', async event => {
+  const post = event.data?.data();
+  if (!post || post.audience !== 'public' || typeof post.userId !== 'string') return;
+  try {
+    const identity = await getAuth(getFirebaseAdminApp()).getUser(post.userId);
+    await qualifyReferral(adminDb, post.userId, identity.emailVerified, event.params.postId);
+  } catch (error) {
+    // Referral failures must never block post creation; pending attribution is retained.
+    console.error('[Referrals] Public-post qualification did not complete.', error);
+  }
+});
+
+
+
+
+export const voteOnFeedPoll = onCall({ maxInstances: 20 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to vote in this poll.');
+  try { return await voteOnPublicPostPoll(adminDb, request.auth.uid, request.data?.postId, request.data?.optionId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('identifiers') || message.includes('valid poll') || message.includes('valid options') || message.includes('valid poll option')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('failed-precondition', 'Your poll vote could not be recorded.');
+  }
+});
+
+export const getMyFeedPollVotes = onCall({ maxInstances: 20 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view your poll activity.');
+  try { return await getMyPublicPostPollVotes(adminDb, request.auth.uid, request.data?.postIds); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid list')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('unavailable', 'Your poll activity is temporarily unavailable.');
+  }
+});
+
+export const createMyContentSeries = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a content series.');
+  try { return await createContentSeriesRecord(adminDb, request.auth.uid, request.data || {}); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('details are invalid') || message.includes('limit')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'The content series could not be created.');
+  }
+});
+
+export const addPostToMyContentSeries = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to organize your posts.');
+  try { return await appendPostToSeries(adminDb, request.auth.uid, request.data?.seriesId, request.data?.postId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('identifiers')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('Only your own')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The post could not be added to this series.');
+  }
+});
+
+export const listMyContentSeries = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view your content series.');
+  try { return await listMyContentSeriesRecord(adminDb, request.auth.uid); }
+  catch { throw new HttpsError('unavailable', 'Your content series are temporarily unavailable.'); }
+});
+
+export const listMyContentSeriesEpisodes = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view series episodes.');
+  try { return await listContentSeriesEpisodes(adminDb, request.auth.uid, request.data?.seriesId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('identifiers')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'The series episodes could not be loaded.');
+  }
+});
+
+export const createSocialChallenge = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to start a challenge.');
+  try { return await createSocialChallengeRecord(adminDb, request.auth.uid, request.data || {}); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('invalid') || message.includes('limits')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'The challenge could not be created. Please retry.');
+  }
+});
+
+export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to join a challenge.');
+  try { return await joinSocialChallengeRecord(adminDb, request.auth.uid, request.data?.challengeId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid challenge')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('closed or unavailable')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The challenge could not be joined. Please retry.');
+  }
+});
+
+export const listSocialChallenges = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore challenges.');
+  try { return await listSocialChallengesRecords(adminDb); }
+  catch { throw new HttpsError('unavailable', 'Challenges are temporarily unavailable.'); }
+});
+
+export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', async event => {
+  const post = event.data?.data();
+  if (!post || post.audience !== 'public' || typeof post.userId !== 'string') return;
+  const source = [post.content, ...(Array.isArray(post.tags) ? post.tags : [])].filter(value => typeof value === 'string').join(' ');
+  const matches = [...source.matchAll(/#nxchallenge_([A-Za-z0-9_-]{1,150})/g)];
+  for (const match of matches.slice(0, 3)) {
+    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, match[1]); }
+    catch (error) { console.error('[Challenges] Contribution tracking failed.', error); }
+  }
+});
+
+
+export const previewReferralInvite = onCall({ maxInstances: 10 }, async request => {
+  try { return await getReferralInvitePreview(adminDb, request.data?.code); }
+  catch { throw new HttpsError('unavailable', 'This invitation preview is temporarily unavailable.'); }
+});
+
+export const createMyReferralCode = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create your referral link.');
+  try { return await createReferralCode(adminDb, request.auth.uid); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('not currently available')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'Your referral link could not be created. Please retry.');
+  }
+});
+
+export const claimMyReferral = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to accept a referral.');
+  try {
+    const identity = await getAuth(getFirebaseAdminApp()).getUser(request.auth.uid);
+    const createdAt = Date.parse(identity.metadata.creationTime);
+    if (!Number.isFinite(createdAt) || Date.now() - createdAt > 7 * 86400000) {
+      throw new HttpsError('failed-precondition', 'Referral invitations can only be applied to newly created accounts.');
+    }
+    return await claimReferral(adminDb, request.auth.uid, request.data?.code);
+  }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (error instanceof HttpsError) throw error;
+    if (message.includes('valid referral') || message.includes('own account')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('reached its limit')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The referral could not be applied. Please retry.');
+  }
+});
+
+export const getMyReferralSummary = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view referral activity.');
+  try { return await getReferralSummary(adminDb, request.auth.uid); }
+  catch { throw new HttpsError('unavailable', 'Referral activity is temporarily unavailable.'); }
+});
 
 export const recordDailySession = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to record your NEXORA session.');

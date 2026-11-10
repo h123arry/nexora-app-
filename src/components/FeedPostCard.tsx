@@ -32,6 +32,7 @@ interface FeedPostCardProps {
   onSharePost?: (postId: string) => void;
   onRepostPost?: (postId: string) => void;
   onQuotePost?: (postId: string) => void;
+  onVotePoll?: (postId: string, optionId: string) => void;
   onCommentToggle: (postId: string) => void;
   onToggleFollow?: (userId: string) => void;
   onViewProfile?: (userId: string) => void;
@@ -47,7 +48,6 @@ interface FeedPostCardProps {
   handlePublishScheduledPostNow: (postId: string) => void;
   handleBroadcastReaction: (postId: string, emoji: string) => void;
   votedPolls: Record<string, string>;
-  setVotedPolls: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   selectedTag: string | null;
   setSelectedTag: (tag: string | null) => void;
   setNidaDiagnosticPost: (post: Post) => void;
@@ -83,6 +83,7 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   onSharePost,
   onRepostPost,
   onQuotePost,
+  onVotePoll,
   onCommentToggle,
   onToggleFollow,
   onViewProfile,
@@ -97,7 +98,6 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   handlePublishScheduledPostNow,
   handleBroadcastReaction,
   votedPolls,
-  setVotedPolls,
   selectedTag,
   setSelectedTag,
   setNidaDiagnosticPost,
@@ -613,15 +613,15 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
           <div className="space-y-2">
             {post.interactivePoll.options.map((opt) => {
               const userVote = votedPolls[post.id];
-              const totalVotes = post.interactivePoll!.options.reduce((acc, o) => acc + o.votes + (userVote === o.id ? 1 : 0), 0);
-              const currentVotes = opt.votes + (userVote === opt.id ? 1 : 0);
+              const totalVotes = post.interactivePoll!.options.reduce((acc, o) => acc + o.votes, 0);
+              const currentVotes = opt.votes;
               const percentage = totalVotes > 0 ? Math.round((currentVotes / totalVotes) * 100) : 0;
 
               return (
                 <button
                   key={opt.id}
                   disabled={!!userVote}
-                  onClick={() => setVotedPolls((prev) => ({ ...prev, [post.id]: opt.id }))}
+                  onClick={() => onVotePoll?.(post.id, opt.id)}
                   className={`w-full text-left p-2.5 rounded-xl border relative overflow-hidden transition-all text-xs font-sans cursor-pointer ${
                     userVote === opt.id
                       ? 'border-violet-500 bg-violet-600/10 font-bold text-white'
