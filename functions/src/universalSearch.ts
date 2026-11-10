@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { Firestore, QueryDocumentSnapshot } from 'firebase-admin/firestore';
 
 export type SearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'hashtag';
@@ -73,7 +74,8 @@ export async function syncUniversalSearchRecord(
   db: Firestore, kind: SearchKind, id: string, sourcePath: string,
   data: Record<string, unknown> | null, parent?: Record<string, unknown>,
 ): Promise<void> {
-  const ref = db.collection(INDEX).doc(kind + '_' + id);
+  const indexId = kind + '_' + createHash('sha256').update(sourcePath).digest('hex');
+  const ref = db.collection(INDEX).doc(indexId);
   if (!data) { await ref.delete().catch(() => undefined); return; }
   const status = safeString(data.status, 40).toLowerCase();
   const isEligible =
