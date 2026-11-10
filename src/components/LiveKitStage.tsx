@@ -111,7 +111,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
           await room.disconnect();
           return;
         }
-        setStatus(isHost ? 'You are broadcasting' : 'Watching live');
+        setStatus(isHost ? 'You are broadcasting' : isGuest ? 'You are on stage' : 'Watching live');
 
         if (canPublish) {
           // Camera and microphone are requested independently so one denied
@@ -168,7 +168,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
 
   const toggleMic = async () => {
     const room = roomRef.current;
-    if (!room || !isHost || busy) return;
+    if (!room || !canPublish || busy) return;
     setBusy(true);
     try {
       const next = !micOn;
@@ -228,7 +228,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest 
         </button>
       )}
 
-      {isHost && (
+      {canPublish && (
         <div className="flex flex-wrap justify-center gap-3">
           <button type="button" disabled={busy || status === 'Video unavailable'} onClick={() => void toggleCamera()} className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-xs font-bold disabled:opacity-50">
             {cameraOn ? 'Turn camera off' : 'Turn camera on'}
