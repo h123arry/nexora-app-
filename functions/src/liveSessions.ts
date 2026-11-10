@@ -263,16 +263,19 @@ export const sendLiveChatMessage = onCall({ maxInstances: 20 }, async request =>
   const statusRef = db.collection('accountStatus').doc(senderId);
   const rateRef = db.collection('liveChatRateLimits').doc(rateDocId(sessionId, senderId));
   const moderationRef = sessionRef.collection('moderation').doc(senderId);
-  const moderation = await moderationRef.get();
-  if (moderation.data()?.banned === true || moderation.data()?.removed === true) throw new HttpsError('permission-denied', 'You are not allowed to participate in this live room.');
-  if (moderation.data()?.chatMuted === true) throw new HttpsError('permission-denied', 'The host has temporarily muted your live chat.');
   const messageRef = sessionRef.collection('messages').doc();
   try {
     return await db.runTransaction(async tx => {
-      const [session, profile, status, rate, viewer] = await Promise.all([
-        tx.get(sessionRef), tx.get(profileRef), tx.get(statusRef), tx.get(rateRef), tx.get(viewerRef),
+      const [session, profile, status, rate, viewer, moderation] = await Promise.all([
+        tx.get(sessionRef), tx.get(profileRef), tx.get(statusRef), tx.get(rateRef), tx.get(viewerRef), tx.get(moderationRef),
       ]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room is no longer active.');
+      if (moderation.data()?.banned === true || moderation.data()?.removed === true) {
+        throw new HttpsError('permission-denied', 'You are not allowed to participate in this live room.');
+      }
+      if (moderation.data()?.chatMuted === true) {
+        throw new HttpsError('permission-denied', 'The host has temporarily muted your live chat.');
+      }
       if (session.data()?.chatEnabled !== true) throw new HttpsError('failed-precondition', 'Live chat is disabled for this room.');
       const connections = Array.isArray(viewer.data()?.connectionIds) ? viewer.data()!.connectionIds : [];
       if (session.data()?.hostId !== senderId && (!viewer.exists || !connections.includes(connectionId))) throw new HttpsError('permission-denied', 'Join this live room before chatting.');
