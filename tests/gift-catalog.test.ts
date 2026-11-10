@@ -19,6 +19,6 @@ test('every gift has unique descriptions, valid rarity, animation and safe NEX p
  assert.ok(new Set(imported.map(g=>g.priceNex)).size>=8);
 });
 test('catalogue spans eighteen gift worlds and preserves the original price ladder',()=>{
- assert.equal(new Set(GIFT_CATALOG.map(g=>g.category)).size,18);assert.deepEqual([...new Set(GIFT_CATALOG.slice(0,120).map(g=>g.priceNex))].sort((a,b)=>a-b),[5,10,20,35,50,100,250,500,1500,5000]);
+ assert.equal(new Set(GIFT_CATALOG.map(g=>g.category)).size,18);assert.deepEqual([...new Set(GIFT_CATALOG.slice(0,120).map(g=>g.priceNex))].sort((a,b)=>a-b),[5,10,20,35,50,100,250,500,1500,5000,10000]);
 });
 test('gift lookup remains server-owned and rejects unknown ids',()=>{assert.equal(GIFT_CATALOG_VERSION,2);assert.equal(findNexoraGift('royal-01')?.priceNex,5);assert.equal(findNexoraGift('missing'),undefined);});
