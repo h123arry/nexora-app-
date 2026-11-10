@@ -17,6 +17,7 @@ import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './co
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary } from './referrals.js';
 import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
+import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries, listContentSeriesEpisodes } from './contentSeries.js';
 import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookingRequest } from './pageBookings.js';
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
@@ -837,6 +838,45 @@ export const qualifyReferralOnFirstPublicPost = onDocumentCreated('posts/{postId
   }
 });
 
+
+
+export const createMyContentSeries = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to create a content series.');
+  try { return await createContentSeriesRecord(adminDb, request.auth.uid, request.data || {}); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('details are invalid') || message.includes('limit')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'The content series could not be created.');
+  }
+});
+
+export const addPostToMyContentSeries = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to organize your posts.');
+  try { return await appendPostToSeries(adminDb, request.auth.uid, request.data?.seriesId, request.data?.postId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('identifiers')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('Only your own')) throw new HttpsError('failed-precondition', message);
+    throw new HttpsError('internal', 'The post could not be added to this series.');
+  }
+});
+
+export const listMyContentSeries = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view your content series.');
+  try { return await listMyContentSeries(adminDb, request.auth.uid); }
+  catch { throw new HttpsError('unavailable', 'Your content series are temporarily unavailable.'); }
+});
+
+export const listMyContentSeriesEpisodes = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view series episodes.');
+  try { return await listContentSeriesEpisodes(adminDb, request.auth.uid, request.data?.seriesId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('identifiers')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    throw new HttpsError('internal', 'The series episodes could not be loaded.');
+  }
+});
 
 export const createSocialChallenge = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to start a challenge.');
