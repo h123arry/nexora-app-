@@ -1,164 +1,51 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Globe, Share2, Users, Flame, HeartHandshake, X, ChevronRight, Check } from 'lucide-react';
-import VohIcon from './VohIcon';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "motion/react";
+import { ArrowRight, Check, Compass, Sparkles, X } from "lucide-react";
 
 interface OnboardingTourProps {
   onClose: () => void;
+  onInterestSelected?: (interest: string) => void;
+  onStartFirstTask?: () => void;
 }
+const interests = [
+  { id: "Technology", label: "Technology", detail: "AI, innovation and digital culture" },
+  { id: "Creators", label: "Creators", detail: "Art, video, storytelling and ideas" },
+  { id: "Business", label: "Business", detail: "Entrepreneurship and opportunities" },
+  { id: "Sports", label: "Sports", detail: "Teams, games and global moments" },
+  { id: "Lifestyle", label: "Lifestyle", detail: "People, culture and everyday life" },
+  { id: "Learning", label: "Learning", detail: "Knowledge, skills and useful answers" },
+];
 
-export default function OnboardingTour({ onClose }: OnboardingTourProps) {
-  const [step, setStep] = useState(0);
-
-  const steps = [
-    {
-      title: "Welcome to Nexora",
-      description: "Discover what's happening around the world in real time with high-fidelity media, live feeds, and intelligent recommendations.",
-      icon: <VohIcon size={44} animated glow variant="brand" />,
-      tag: "GLOBAL LIVING FEED",
-      color: "from-violet-500 to-purple-600"
-    },
-    {
-      title: "Share & Create",
-      description: "Share photos, videos, ideas, and moments effortlessly using Nexora's built-in creation studio and AI tools.",
-      icon: <Share2 className="w-10 h-10 text-cyan-400" />,
-      tag: "CREATION STUDIO",
-      color: "from-cyan-500 to-blue-600"
-    },
-    {
-      title: "Connect & Inspire",
-      description: "Connect with people who inspire you. Join vibrant circles, exchange direct messages, and collaborate across topics.",
-      icon: <Users className="w-10 h-10 text-pink-400" />,
-      tag: "CIRCLES & MESSAGING",
-      color: "from-pink-500 to-rose-600"
-    },
-    {
-      title: "Earn Sparks",
-      description: "Earn Sparks by creating engaging content and building your reputation within the global Nexora community.",
-      icon: <Flame className="w-10 h-10 text-amber-400" />,
-      tag: "REPUTATION & SPARKS",
-      color: "from-amber-500 to-orange-600"
-    },
-    {
-      title: "Build Your Community",
-      description: "Build your community one connection at a time. Customize your profile, select your interests, and shape your network.",
-      icon: <HeartHandshake className="w-10 h-10 text-emerald-400" />,
-      tag: "COMMUNITY BUILDER",
-      color: "from-emerald-500 to-teal-600"
-    }
-  ];
-
-  const handleNext = () => {
-    if (step < steps.length - 1) {
-      setStep(step + 1);
-    } else {
-      handleComplete();
-    }
+export default function OnboardingTour({ onClose, onInterestSelected, onStartFirstTask }: OnboardingTourProps) {
+  const [interest, setInterest] = useState("");
+  const [step, setStep] = useState<"question" | "ready">("question");
+  const chooseInterest = (value: string) => {
+    setInterest(value);
+    onInterestSelected?.(value);
+    setStep("ready");
   };
-
-  const handlePrev = () => {
-    if (step > 0) {
-      setStep(step - 1);
-    }
-  };
-
-  const handleComplete = () => {
-    localStorage.setItem('nexora_onboarding_completed', 'true');
-    onClose();
-  };
-
-  const current = steps[step];
-
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="relative w-full max-w-lg bg-[#080616] border border-white/10 rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.8)] flex flex-col"
-      >
-        {/* Background ambient glow */}
-        <div className={`absolute -top-20 -left-20 w-44 h-44 bg-gradient-to-br ${current.color} opacity-20 blur-[50px] pointer-events-none transition-all duration-500`} />
-        <div className={`absolute -bottom-20 -right-20 w-44 h-44 bg-gradient-to-br ${current.color} opacity-15 blur-[50px] pointer-events-none transition-all duration-500`} />
-
-        {/* Header Close/Skip */}
-        <div className="flex items-center justify-between p-6 pb-2 z-10">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-violet-400 font-bold bg-violet-950/60 border border-white/10 px-2.5 py-1 rounded-full">
-              {current.tag}
-            </span>
-            <span className="text-[10px] font-mono text-zinc-500">
-              {step + 1} / {steps.length}
-            </span>
-          </div>
-          <button 
-            onClick={handleComplete}
-            className="p-1.5 rounded-full hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-            title="Skip guide"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Content Box */}
-        <div className="p-8 flex flex-col items-center text-center z-10 flex-1 min-h-[260px] justify-center">
-          <div className="mb-5 p-4 bg-violet-950/30 border border-white/10 rounded-2xl flex items-center justify-center shadow-inner">
-            {current.icon}
-          </div>
-
-          <h3 className="text-2xl font-sans font-black text-white mb-2.5 tracking-tight">
-            {current.title}
-          </h3>
-          
-          <p className="text-sm text-zinc-300 leading-relaxed max-w-md font-sans">
-            {current.description}
-          </p>
-        </div>
-
-        {/* Progress Dots */}
-        <div className="flex justify-center gap-2 px-8 z-10 mb-2">
-          {steps.map((_, i) => (
-            <button 
-              key={i}
-              onClick={() => setStep(i)}
-              aria-label={`Go to onboarding step ${i + 1}`}
-              aria-current={i === step ? 'step' : undefined}
-              className={`h-1.5 rounded-full cursor-pointer transition-all duration-300 ${
-                i === step ? 'w-7 bg-gradient-to-r from-violet-500 to-fuchsia-500' : 'w-2 bg-white/20 hover:bg-white/40'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Footer Navigation Buttons */}
-        <div className="p-6 pt-4 flex gap-3 z-10">
-          {step > 0 && (
-            <button
-              onClick={handlePrev}
-              className="flex-1 py-3 border border-white/10 hover:bg-white/5 text-zinc-300 rounded-2xl text-xs font-mono font-bold uppercase tracking-wider transition-all cursor-pointer"
-            >
-              Back
-            </button>
-          )}
-          
-          <button
-            onClick={handleNext}
-            className="flex-1 py-3 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-2xl text-xs font-mono font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shadow-[0_4px_20px_rgba(139,92,246,0.3)] cursor-pointer"
-          >
-            {step === steps.length - 1 ? (
-              <>
-                <span>Enter Nexora</span>
-                <Check className="w-3.5 h-3.5" />
-              </>
-            ) : (
-              <>
-                <span>Next</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </>
-            )}
-          </button>
-        </div>
-      </motion.div>
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/85 p-4 backdrop-blur-xl">
+      <AnimatePresence mode="wait">
+        <motion.section key={step} initial={{ opacity: 0, y: 14, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -10 }} className="relative w-full max-w-lg overflow-hidden rounded-3xl border border-violet-400/20 bg-[#090714] p-6 shadow-2xl sm:p-8">
+          <button type="button" onClick={onClose} aria-label="Close onboarding" className="absolute right-5 top-5 rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-white"><X className="h-4 w-4" /></button>
+          <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-violet-400/20 bg-violet-500/10 text-violet-300">{step === "question" ? <Compass className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}</div>
+          {step === "question" ? <>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-violet-300">Your NEXORA starting point</p>
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">What are you most interested in?</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">Choose one. We'll use it to shape the first things you see.</p>
+            <div className="mt-6 grid grid-cols-1 gap-2 sm:grid-cols-2">{interests.map(item => <button key={item.id} type="button" onClick={() => chooseInterest(item.id)} className="rounded-2xl border border-white/10 bg-white/[0.03] p-3 text-left transition hover:border-violet-400/50 hover:bg-violet-500/10"><span className="block text-sm font-bold text-white">{item.label}</span><span className="mt-1 block text-xs text-zinc-400">{item.detail}</span></button>)}</div>
+            <p className="mt-5 text-xs text-zinc-500">You can change your interests any time in your profile settings.</p>
+          </> : <>
+            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-violet-300">You're in</p>
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-white sm:text-3xl">Your {interest.toLowerCase()} corner is ready.</h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-400">NEXORA will use this preference to guide discovery. Your first contribution can be as simple as introducing yourself or sharing one thought.</p>
+            <div className="mt-6 rounded-2xl border border-violet-400/15 bg-violet-500/[0.07] p-4"><div className="flex items-center gap-2 text-sm font-bold text-violet-200"><Check className="h-4 w-4" /> First-session mission</div><p className="mt-2 text-sm text-zinc-300">Publish one short post and see it appear in your NEXORA feed.</p></div>
+            <button type="button" onClick={onStartFirstTask || onClose} className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-purple-600 px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-violet-950/40">Create your first post <ArrowRight className="h-4 w-4" /></button>
+            <button type="button" onClick={onClose} className="mt-3 w-full rounded-xl px-4 py-2 text-xs font-semibold text-zinc-400 hover:text-white">Explore NEXORA first</button>
+          </>}
+        </motion.section>
+      </AnimatePresence>
     </div>
   );
 }
