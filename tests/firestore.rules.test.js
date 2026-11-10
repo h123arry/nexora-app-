@@ -1319,6 +1319,7 @@ const publicProfile = (uid) => ({
       await setDoc(doc(db, 'liveSessions', 'ended-room', 'messages', 'message-2'), { senderId: 'bob', message: 'Past chat' });
       await setDoc(doc(db, 'liveSessions', 'active-room', 'guestRequests', 'bob'), { guestId: 'bob', guestName: 'Bob', status: 'pending' });
       await setDoc(doc(db, 'liveSessions', 'active-room', 'guestRequests', 'charlie'), { guestId: 'charlie', guestName: 'Charlie', status: 'approved' });
+      await setDoc(doc(db, 'liveSessions', 'active-room', 'moderation', 'bob'), { banned: true, participantName: 'Bob', updatedBy: 'alice' });
     });
     await assertSucceeds(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room')));
     await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'ended-room')));
@@ -1335,6 +1336,13 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'guestRequests', 'bob'), { guestId: 'bob', status: 'approved' }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'guestRequests', 'bob'), { status: 'approved' }));
     await assertFails(deleteDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'guestRequests', 'bob')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'moderation', 'bob')));
+    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'liveSessions', 'active-room', 'moderation'), where('banned', '==', true))));
+    await assertFails(getDoc(doc(dbFor('bob'), 'liveSessions', 'active-room', 'moderation', 'bob')));
+    await assertFails(getDocs(query(collection(dbFor('bob'), 'liveSessions', 'active-room', 'moderation'), where('banned', '==', true))));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'moderation', 'bob'), { banned: false }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'liveSessions', 'active-room', 'moderation', 'bob')));
+
     await assertFails(setDoc(doc(dbFor('bob'), 'liveSessionViewers', 'forged'), { sessionId: 'active-room', viewerId: 'bob' }));
   });
 });
