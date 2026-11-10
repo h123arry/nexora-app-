@@ -161,35 +161,35 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     if(!selectedId||!isHost||recordingBusy)return;
     setRecordingBusy(true);setError('');
     try { if(session?.recording?.status==='recording') await stopLiveRecording(selectedId); else await startLiveRecording(selectedId); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\\s*/,'')||'The live recording could not be updated.');}
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'The live recording could not be updated.');}
     finally{setRecordingBusy(false);}
   };
   const openReplay=async(sessionId:string)=>{
     if(replayBusy)return;
     setReplayBusy(true);setError('');
     try { const result=await getLiveReplayPlayback(sessionId);setReplayUrl(result.url); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\\s*/,'')||'This replay is not ready yet.');}
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'This replay is not ready yet.');}
     finally{setReplayBusy(false);}
   };
   const requestStageAccess=async()=>{
     if(!selectedId||guestActionBusy||isHost)return;
     setGuestActionBusy(true);setError('');
     try { await requestLiveGuestAccess(selectedId,connectionId);setGuestRequestStatus('pending'); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\\s*/,'')||'Your stage request could not be sent.');}
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'Your stage request could not be sent.');}
     finally{setGuestActionBusy(false);}
   };
   const moderateParticipant=async(participantId:string,action:'mute_chat'|'unmute_chat'|'remove'|'ban')=>{
     if(!selectedId||!isHost||guestActionBusy)return;
     setGuestActionBusy(true);setError('');
     try { await moderateLiveParticipant(selectedId,participantId,action); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\\s*/,'')||'The participant could not be moderated.');}
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'The participant could not be moderated.');}
     finally{setGuestActionBusy(false);}
   };
   const decideGuestRequest=async(guestId:string,decision:'approved'|'denied')=>{
     if(!selectedId||!isHost||guestActionBusy)return;
     setGuestActionBusy(true);setError('');
     try { await reviewLiveGuestAccess(selectedId,guestId,decision); }
-    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\\s*/,'')||'The guest request could not be reviewed.');}
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'The guest request could not be reviewed.');}
     finally{setGuestActionBusy(false);}
   };
   const submitMessage=async()=>{
