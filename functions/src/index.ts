@@ -75,7 +75,7 @@ export const indexPublicPostForSearch = onDocumentWritten('posts/{postId}', asyn
   const after = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
   const id = event.params.postId;
   const path = 'posts/' + id;
-  if (before && after && !searchFieldsChanged(before, after, ['content','audience','tags','videoUrl','mediaType','type','timestamp','likes','likesCount','commentsCount','views','viewCount','image','images','status','userId'])) return;
+  if (before && after && !searchFieldsChanged(before, after, ['content','audience','tags','videoUrl','mediaType','type','timestamp','likes','likesCount','commentsCount','views','viewCount','image','images','thumbnailUrl','videoThumbnail','username','name','avatar','isVerified','status','userId'])) return;
   const resolveKind = (data: Record<string, unknown> | null): 'video' | 'post' =>
     data && (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
   const previousKind = resolveKind(before);
@@ -92,25 +92,25 @@ export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', a
 export const indexPageForSearch = onDocumentWritten('pages/{pageId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
-  if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','category','description','status','isPrivate','privacy','ownerId'])) return;
+  if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','coverImage','category','description','status','isPrivate','privacy','ownerId','isVerified'])) return;
   await syncSearch('page', event.params.pageId, 'pages/' + event.params.pageId, data);
 });
 export const indexCircleForSearch = onDocumentWritten('communities/{communityId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
-  if (before && data && !searchFieldsChanged(before, data, ['name','description','bannerImage','type','isPrivate','bannedUsers','status'])) return;
+  if (before && data && !searchFieldsChanged(before, data, ['name','description','bannerImage','type','isPrivate','bannedUsers','status','isVerified'])) return;
   await syncSearch('circle', event.params.communityId, 'communities/' + event.params.communityId, data);
 });
 export const indexLiveRoomForSearch = onDocumentWritten('liveSessions/{sessionId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
-  if (before && data && !searchFieldsChanged(before, data, ['title','description','hostName','hostId','status','thumbnailUrl','startedAt'])) return;
+  if (before && data && !searchFieldsChanged(before, data, ['title','description','hostName','hostId','status','thumbnailUrl','startedAt','category','isVerified'])) return;
   await syncSearch('live', event.params.sessionId, 'liveSessions/' + event.params.sessionId, data);
 });
 export const indexCirclePostForSearch = onDocumentWritten('communities/{communityId}/posts/{postId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
-  if (before && data && !searchFieldsChanged(before, data, ['content','tags','status','likesCount','commentsCount','image','authorName','authorUsername','authorAvatar'])) return;
+  if (before && data && !searchFieldsChanged(before, data, ['content','tags','status','likesCount','commentsCount','image','authorName','authorUsername','authorAvatar','isVerified'])) return;
   const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
   await syncSearch('post', event.params.postId, event.data?.after.exists ? event.data.after.ref.path : 'communities/' + event.params.communityId + '/posts/' + event.params.postId,
     data, parentSnapshot.data() as Record<string, unknown> | undefined);
@@ -142,7 +142,7 @@ export const indexCircleEventForSearch = onDocumentWritten('communities/{communi
 export const indexPageServiceForSearch = onDocumentWritten('pages/{pageId}/services/{serviceId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
-  if (before && data && !searchFieldsChanged(before, data, ['name','description','status','durationMinutes','priceMinor','currency'])) return;
+  if (before && data && !searchFieldsChanged(before, data, ['name','serviceName','description','status','durationMinutes','priceMinor','currency','category'])) return;
   const parentSnapshot = await adminDb.collection('pages').doc(event.params.pageId).get();
   await syncSearch('service', event.params.serviceId, 'pages/' + event.params.pageId + '/services/' + event.params.serviceId,
     data, parentSnapshot.data() as Record<string, unknown> | undefined);
@@ -150,7 +150,7 @@ export const indexPageServiceForSearch = onDocumentWritten('pages/{pageId}/servi
 export const indexPageChannelUpdateForSearch = onDocumentWritten('pages/{pageId}/channelUpdates/{updateId}', async event => {
   const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
-  if (before && data && !searchFieldsChanged(before, data, ['content','status','deleted'])) return;
+  if (before && data && !searchFieldsChanged(before, data, ['title','content','body','status','deleted'])) return;
   const parentSnapshot = await adminDb.collection('pages').doc(event.params.pageId).get();
   await syncSearch('update', event.params.updateId, 'pages/' + event.params.pageId + '/channelUpdates/' + event.params.updateId,
     data, parentSnapshot.data() as Record<string, unknown> | undefined);
