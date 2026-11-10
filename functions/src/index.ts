@@ -38,7 +38,7 @@ export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatc
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
 export { getCommunityInsights } from './communityAnalytics.js';
-export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
+export { submitModerationReport, reviewModerationReport, submitModerationAppeal, listMyModerationReports } from './moderation.js';
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
 export { listCreatorMembershipTiers, createCreatorMembershipTier, updateCreatorMembershipTier, archiveCreatorMembershipTier } from './creatorMemberships.js';
