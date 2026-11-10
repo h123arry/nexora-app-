@@ -15,7 +15,7 @@ import { auth } from '../services/firebase/config';
 import CreateGroupChatModal from './CreateGroupChatModal';
 import { getTranslations } from '../utils/translations';
 import { uploadMediaFile, resolvePrivateChatAudio } from '../services/firebase/storageService';
-import { isSupportedOutgoingMediaType, serializeOutgoingMessage } from '../utils/messageSerialization';
+import { aggregateMessageReactions, isSupportedOutgoingMediaType, serializeOutgoingMessage, toggleMessageReaction } from '../utils/messageSerialization';
 import { 
   collection, 
   doc, 
@@ -29,7 +29,8 @@ import {
   getDocs,
   type QueryDocumentSnapshot,
   type DocumentData,
-  deleteDoc 
+  deleteDoc,
+  runTransaction,
 } from 'firebase/firestore';
 import {
   subscribeToTypingState,
@@ -192,7 +193,12 @@ export default function NewInboxView({
       [...snapshot.docs].reverse().forEach(doc => {
         if (seen.has(doc.id)) return;
         seen.add(doc.id);
-        msgsList.push({ id: doc.id, ...doc.data() } as any);
+        const data = doc.data();
+        msgsList.push({
+          id: doc.id,
+          ...data,
+          reactions: aggregateMessageReactions(data.reactionUsers, data.reactions),
+        } as any);
       });
 
       messageCursorsRef.current[activeChatId] = snapshot.docs.length > 0
@@ -298,10 +304,14 @@ export default function NewInboxView({
       const messagesRef = collection(db, `chats/${activeChatId}/messages`);
       const olderQuery = query(messagesRef, orderBy('timestamp', 'desc'), startAfter(cursor), limit(50));
       const snapshot = await getDocs(olderQuery);
-      const olderMessages = [...snapshot.docs].reverse().map(messageDoc => ({
-        id: messageDoc.id,
-        ...messageDoc.data(),
-      } as ExtendedMessage));
+      const olderMessages = [...snapshot.docs].reverse().map(messageDoc => {
+        const data = messageDoc.data();
+        return {
+          id: messageDoc.id,
+          ...data,
+          reactions: aggregateMessageReactions(data.reactionUsers, data.reactions),
+        } as ExtendedMessage;
+      });
       messageCursorsRef.current[activeChatId] = snapshot.docs.length > 0
         ? snapshot.docs[snapshot.docs.length - 1]
         : cursor;
@@ -485,32 +495,42 @@ export default function NewInboxView({
     }
   };
 
-  const handleReactMessage = (msgId: string, emoji: string) => {
-    if (!activeChatId) return;
-    setLocalMessages(prev => {
-      const msgs = prev[activeChatId] || [];
-      return {
+  const handleReactMessage = async (msgId: string, emoji: string) => {
+    if (!activeChatId || !emoji) return;
+    const chatId = activeChatId;
+    if (!db) {
+      setLocalMessages(prev => ({
         ...prev,
-        [activeChatId]: msgs.map(m => {
-          if (m.id === msgId) {
-            const reactions = m.reactions || [];
-            const existing = reactions.find(r => r.emoji === emoji);
-            let updatedReactions = [...reactions];
-            if (existing) {
-              if (existing.userIds.includes(currentUser.id)) {
-                existing.userIds = existing.userIds.filter(id => id !== currentUser.id);
-              } else {
-                existing.userIds.push(currentUser.id);
-              }
-            } else {
-              updatedReactions.push({ emoji, userIds: [currentUser.id] });
-            }
-            return { ...m, reactions: updatedReactions.filter(r => r.userIds.length > 0) };
+        [chatId]: (prev[chatId] || []).map(message => message.id === msgId
+          ? {
+            ...message,
+            reactions: aggregateMessageReactions(
+              toggleMessageReaction(undefined, message.reactions, currentUser.id, emoji),
+              undefined,
+            ),
           }
-          return m;
-        })
-      };
-    });
+          : message),
+      }));
+      return;
+    }
+    try {
+      const messageRef = doc(db, `chats/${chatId}/messages/${msgId}`);
+      await runTransaction(db, async transaction => {
+        const snapshot = await transaction.get(messageRef);
+        if (!snapshot.exists()) throw new Error('Message no longer exists.');
+        const data = snapshot.data();
+        const nextReactionUsers = toggleMessageReaction(
+          data.reactionUsers,
+          data.reactions,
+          currentUser.id,
+          emoji,
+        );
+        transaction.update(messageRef, { reactionUsers: nextReactionUsers });
+      });
+    } catch {
+      console.warn('[Inbox] Message reaction sync failed; details redacted.');
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Reaction could not be saved. Please try again.' }));
+    }
   };
 
   const handleDeleteMessage = async (msgId: string) => {
