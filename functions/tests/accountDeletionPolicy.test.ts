@@ -18,10 +18,12 @@ before(async () => {
 });
 after(async () => {
   for (const collection of ['mediaAssets', 'academyProgress', 'academyLessonNotes', 'posts']) {
-    const rows = await db.collection(collection).where('ownerId', '==', 'account-delete-other').get();
-    for (const row of rows.docs) await row.ref.delete();
-    const userRows = await db.collection(collection).where('userId', '==', 'account-delete-other').get();
-    for (const row of userRows.docs) await row.ref.delete();
+    for (const userId of ['account-delete-test', 'account-delete-other']) {
+      const rows = await db.collection(collection).where('ownerId', '==', userId).get();
+      for (const row of rows.docs) await row.ref.delete();
+      const userRows = await db.collection(collection).where('userId', '==', userId).get();
+      for (const row of userRows.docs) await row.ref.delete();
+    }
   }
   await deleteApp(app);
 });
