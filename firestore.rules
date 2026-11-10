@@ -767,7 +767,7 @@ service cloud.firestore {
           && request.resource.data.keys().hasAll(['userId', 'courseId', 'lessonId', 'note', 'updatedAt', 'schemaVersion'])
           && request.resource.data.userId == request.auth.uid
           && validAcademyLesson(request.resource.data.courseId, request.resource.data.lessonId)
-          && noteId == request.auth.uid + '_' + request.resource.data.courseId.size() + '_' + request.resource.data.courseId + '_' + request.resource.data.lessonId.size() + '_' + request.resource.data.lessonId
+          && noteId == request.auth.uid + '_' + string(request.resource.data.courseId.size()) + '_' + request.resource.data.courseId + '_' + string(request.resource.data.lessonId.size()) + '_' + request.resource.data.lessonId
           && request.resource.data.note is string
           && request.resource.data.note.size() <= 5000
           && request.resource.data.updatedAt == request.time
