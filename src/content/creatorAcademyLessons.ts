@@ -149,7 +149,7 @@ export const CREATOR_ACADEMY_LESSONS: Record<string, AcademyLessonEnrichment> = 
     objectives: ["Recognise personal warning signs of overload.", "Set boundaries around work and audience access.", "Build a realistic rest and recovery routine."],
     exercise: "Write a creator wellbeing agreement with working hours, notification windows, private topics, weekly rest time and one person you can contact when pressure becomes difficult.",
     reflection: "What boundary would make your creative work healthier immediately?"
-  }
+  },
   'shot-planning': {
     body: "Video is easier to produce when the story is planned before the camera is opened. Start with the audience outcome and write the sequence of information or emotion the viewer needs. Convert each beat into a shot: a wide view for context, a medium view for action, a close view for detail, and supporting footage that proves or illustrates the point. Create a shot list with location, subject, framing, movement, audio and permissions. Check continuity and obtain consent before filming people or private spaces. A plan should remain flexible, but it prevents missing the detail that makes the story understandable.",
     objectives: ["Identify the audience outcome and story beats.", "Translate story beats into a practical shot list.", "Check consent, continuity and production constraints."],

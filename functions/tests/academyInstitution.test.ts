@@ -22,7 +22,6 @@ before(async () => {
   await db.recursiveDelete(db.doc('academyCourses/academy-progress-course'));
   await db.doc('academyProgress/learner-progress_academy-progress-course').delete().catch(() => undefined);
   await db.doc('academyProgress/learner-progress_creator-foundations').delete().catch(() => undefined);
-  await db.doc('academyProgress/learner-progress_video-production').delete().catch(() => undefined);
   await db.collection('academyAssessmentAttempts').where('courseId', '==', courseId).get().then(async s => {
     for (const d of s.docs) await d.ref.delete();
   });
