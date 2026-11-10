@@ -1205,7 +1205,8 @@ service cloud.firestore {
         }
         allow update: if chatMember(chatId) && (
           (
-            resource.data.senderId != request.auth.uid
+            get(/databases/$(database)/documents/chats/$(chatId)).data.get('isGroup', false) != true
+            && resource.data.senderId != request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
             && request.resource.data.status in ['delivered', 'read']
           )
