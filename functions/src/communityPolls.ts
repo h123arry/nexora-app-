@@ -33,6 +33,11 @@ async function requireActiveMember(db: Firestore, communityId: string, uid: stri
   if (!community.exists || !membership.exists || membership.get('status') !== 'active') {
     throw new Error('Join this Circle to participate in its polls.');
   }
+  const mutedUntil = membership.get('mutedUntil') as { toDate?: () => Date } | Date | undefined;
+  const mutedUntilDate = mutedUntil instanceof Date ? mutedUntil : mutedUntil?.toDate?.();
+  if (mutedUntilDate && mutedUntilDate.getTime() > Date.now()) {
+    throw new Error('You are muted in this Circle and cannot publish polls yet.');
+  }
 }
 
 export async function createCirclePoll(
