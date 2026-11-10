@@ -665,8 +665,8 @@ export default function CreatorDashboardView({
   const progressionLevel = useMemo(() => buildCreatorProgressionLevel(currentUser.reputationPoints), [currentUser.reputationPoints]);
 
   const achievementsList = useMemo(
-    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, currentUser.isVerified === true),
-    [localPosts, currentUser.reputationPoints, currentUser.isVerified],
+    () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, currentUser.isVerified === true, currentUser.reputationBreakdown?.helpfulness),
+    [localPosts, currentUser.reputationPoints, currentUser.isVerified, currentUser.reputationBreakdown?.helpfulness],
   );
 
   return (
