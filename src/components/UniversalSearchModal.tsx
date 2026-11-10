@@ -472,7 +472,7 @@ export default function UniversalSearchModal({
 
                   {universalSearchLoading && <p role="status" className="text-xs text-violet-200/70">Searching all indexed NEXORA content…</p>}
                   {universalSearchError && <p role="status" className="text-xs text-amber-200/80">{universalSearchError}</p>}
-                  {universalSearchResults?.results.length ? (
+                  {Boolean(universalSearchResults?.results.length) && (
                     <section className="space-y-3 rounded-2xl border border-violet-400/25 bg-violet-500/[0.06] p-4" aria-label="NEXORA-wide search results">
                       <div className="flex items-center justify-between gap-2"><h4 className="text-xs font-mono uppercase tracking-widest text-violet-200">Across NEXORA ({universalSearchResults.results.length})</h4><span className="text-[9px] font-mono uppercase text-zinc-500">Ranked results</span></div>
                       <div className="space-y-2">
