@@ -462,7 +462,6 @@ export default function NewInboxView({
       lastTimestamp: new Date().toISOString(),
       username: user.username,
       isGroup: false,
-      isBroadcast: false
     };
 
     setChats(prev => [newChat, ...prev]);
