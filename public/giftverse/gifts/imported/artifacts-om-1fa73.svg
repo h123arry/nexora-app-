@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1fa73" role="img" aria-label="Nexora Shorts" focusable="false">
+<title>Nexora Shorts</title><desc>A crafted collectible inspired by shorts, curated as Nexora Shorts in the NEXORA midnight-violet universe. Original artwork by Sam Eckert.</desc><defs><radialGradient id="bg-1FA73"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1FA73" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1FA73)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1FA73)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#d0cfce" d="M36.6214,42.6711c-2.56,0-3.9347.7605-3.9347,1.8289s-2,6.4131-2,6.4131H16.625V18.9583h40V50.9131H42.5633s-2-5.3446-2-6.4131-1.3743-1.8289-3.9347-1.8289"/>
+    <rect x="17" y="18" width="39" height="6" fill="#3f3f3f"/>
+    <path fill="#d0cfce" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M34,29c2.0039-1.2821-.0281-3.2706,2-4"/>
+    <path fill="#d0cfce" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M40,30c-1.6822-1.6822-.9719-4.2706-3-5"/>
+    <circle cx="36.5" cy="25.5" r="0.5" fill="#d0cfce" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M36.6214,42.6711c-2.56,0-3.9347.7605-3.9347,1.8289s-2,6.4131-2,6.4131H16.625V17.9583h40V50.9131H42.5633s-2-5.3445-2-6.413-1.3743-1.8289-3.9347-1.8289Z"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M27.0438,26.328S26.6591,34,18.9562,39.7946"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M45.9562,26.328S46.3409,34,54.0438,39.7946"/>
+    <line x1="17" x2="56" y1="24" y2="24" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M34,29c2.0039-1.2821-.0281-3.2706,2-4"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6" d="M40,30c-1.6822-1.6822-.9719-4.2706-3-5"/>
+    <circle cx="36.5" cy="25.5" r="0.5" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.6"/>
+  </g>
+</g>
+</svg>

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="culinary-om-1fad3" role="img" aria-label="Nexora Flatbread" focusable="false">
+<title>Nexora Flatbread</title><desc>A culinary collectible inspired by flatbread, curated as Nexora Flatbread in the NEXORA midnight-violet universe. Original artwork by Liz Bravo.</desc><defs><radialGradient id="bg-1FAD3"><stop offset="0" stop-color="#F59E0B" stop-opacity=".28"/><stop offset="1" stop-color="#4A2B18"/></radialGradient><linearGradient id="rim-1FAD3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".52" stop-color="#F59E0B"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1FAD3)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1FAD3)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#FDE68A" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#FDE68A"/><circle cx="256" cy="474" r="5" fill="#F59E0B"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <circle cx="36" cy="36" r="23" fill="#fcea2b"/>
+    <path fill="#f1b31c" d="M54.6948,22.61a23,23,0,0,1-40.6742,20.182A23.0012,23.0012,0,1,0,54.6948,22.61Z"/>
+  </g>
+  <g>
+    <circle cx="36" cy="36" r="23" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="46.2638" x2="25.0506" y1="25.8938" y2="47.107" fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="48.0355" x2="33.8933" y1="34.7365" y2="48.8786" fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="27.1018" x2="23.5662" y1="35.016" y2="38.5515" fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="37.7084" x2="30.6373" y1="24.4094" y2="31.4804" fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+    <line x1="29.1529" x2="22.0818" y1="22.925" y2="29.996" fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+</g>
+</svg>

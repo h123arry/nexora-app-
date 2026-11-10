@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f4ff" role="img" aria-label="Nexora Prayer Beads" focusable="false">
+<title>Nexora Prayer Beads</title><desc>A crafted collectible inspired by prayer beads, curated as Nexora Prayer Beads in the NEXORA midnight-violet universe. Original artwork by Jonas Roßner.</desc><defs><radialGradient id="bg-1F4FF"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F4FF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F4FF)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F4FF)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <circle cx="40.4665" cy="54" r="1.95"/>
+  </g>
+  <g>
+    <polygon fill="#F1B31C" points="37.3037,56.9264 38.6067,53.2677 42.4051,53.5098 42.7217,57.9283"/>
+    <polyline fill="#F1B31C" points="41.5621,55.2169 42.4051,65.9918 35.281,64.8074 39.0648,54.9973"/>
+    <circle cx="40.4665" cy="54" r="2" fill="#FCEA2B"/>
+    <polyline fill="#F1B31C" points="41.7833,58.045 42.4051,65.9918 35.281,64.8074 38.124,57.4366"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <polyline fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="41.7833,58.045 42.4051,65.9918 35.281,64.8074 38.124,57.4366"/>
+    <path fill="none" stroke="#000000" stroke-dasharray="0,6.7346,0,0,0,0" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M47.6095,12.8474c1.1383,11.1934-2.5564,14.3792,7.9682,15.4424c10.5246,1.0632,0.6967,20.0417-13.9754,20.0417 S25.2386,38.0801,29.4125,33.9062c4.1738-4.1738-3.1185-6.2607-4.3102-4.1738s-17.9028,0.1524-9.9347-10.6242 S46.4711,1.654,47.6095,12.8474z"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#D22F27" stroke-dasharray="0,6.7346,0,0,0,0" stroke-linecap="round" stroke-linejoin="round" stroke-width="4" d="M47.6095,12.8474c1.1383,11.1934-2.5564,14.3792,7.9682,15.4424c10.5246,1.0632,0.6967,20.0417-13.9754,20.0417 S25.2386,38.0801,29.4125,33.9062c4.1738-4.1738-3.1185-6.2607-4.3102-4.1738s-17.9028,0.1524-9.9347-10.6242 S46.4711,1.654,47.6095,12.8474z"/>
+  </g>
+</g>
+</svg>

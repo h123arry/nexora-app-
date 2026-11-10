@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="music-om-1f3bd" role="img" aria-label="Nexora Running Shirt" focusable="false">
+<title>Nexora Running Shirt</title><desc>A celebration collectible inspired by running shirt, curated as Nexora Running Shirt in the NEXORA midnight-violet universe. Original artwork by Sarah Mager.</desc><defs><radialGradient id="bg-1F3BD"><stop offset="0" stop-color="#C084FC" stop-opacity=".28"/><stop offset="1" stop-color="#38204F"/></radialGradient><linearGradient id="rim-1F3BD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3E8FF"/><stop offset=".52" stop-color="#C084FC"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F3BD)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F3BD)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#F3E8FF" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#F3E8FF"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#C084FC"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <g>
+      <path fill="#92d3f5" d="M49.9661,4.9838v6s-.41,13,5,13v43h-38v-43c5.3228-.1787,4.9687-13.0312,4.9687-13.0312l.0313-5.9688h3.8363a10,10,0,0,0,20,0Z"/>
+      <path fill="#61b2e4" d="M45.7971,5.0243a10,10,0,0,1-20,0s3.9632,5.0527,9.3243,5.19C40.6118,10.3552,45.7971,5.0243,45.7971,5.0243Z"/>
+      <path fill="#fcea2b" d="M14.9583,52.0078V47.0331C30.7508,47.0331,45.7971,28.1679,45.7971,5H50C50,30.9117,33.4936,52.0078,14.9583,52.0078Z"/>
+    </g>
+  </g>
+  <g>
+    <g>
+      <g>
+        <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16.8914,46.4939V24.0162c5.3229-.1787,4.9687-13.0313,4.9687-13.0313l.0313-5.9687h3.8363a10,10,0,0,0,20,0h4.1637v6s-.41,13,5,13v43h-38v-14.75"/>
+        <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M41.6674,8.3189A10.0055,10.0055,0,0,1,29.5179,8.203"/>
+      </g>
+      <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.9583,52.0078V47.0331C30.7508,47.0331,45.7971,28.1679,45.7971,5H50C50,30.9117,33.4936,52.0078,14.9583,52.0078Z"/>
+    </g>
+  </g>
+</g>
+</svg>

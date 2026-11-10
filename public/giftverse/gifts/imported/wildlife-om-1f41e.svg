@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="wildlife-om-1f41e" role="img" aria-label="Nexora Lady Beetle" focusable="false">
+<title>Nexora Lady Beetle</title><desc>A wildlife collectible inspired by lady beetle, curated as Nexora Lady Beetle in the NEXORA midnight-violet universe. Original artwork by Liz Bravo.</desc><defs><radialGradient id="bg-1F41E"><stop offset="0" stop-color="#22C55E" stop-opacity=".28"/><stop offset="1" stop-color="#123B32"/></radialGradient><linearGradient id="rim-1F41E" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D1FAE5"/><stop offset=".52" stop-color="#22C55E"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F41E)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F41E)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#D1FAE5" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#D1FAE5" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#22C55E"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <ellipse cx="36.4596" cy="21.9147" rx="11.0195" ry="11.0971" fill="#3f3f3f"/>
+    <ellipse cx="36.4865" cy="40.6831" rx="16.5287" ry="17.9871" fill="#d22f27"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.9837,21.7274c0,3.3082,4.2257,5.9138,5.4833,6.6049"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.1235,38.2566c0,.7364,3.9538,2.0393,5.8345,2.6284"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.9837,57.6974c0-2.8776,3.1948-4.69,4.8488-5.438"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M49.126,28.53s4.8614-3.8891,4.8614-6.806"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M53.005,40.1373a8.4318,8.4318,0,0,0,4.8715-1.8807"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M48.6433,52.8712c1.2575.1133,4.5656.7251,5.3473,3.8519"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M29.6784,9.0842c.759,3.0135,2.0958,3.6932,2.6623,3.8405"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M42.32,12.9732s2.6586-2.3334,1.9939-3.889"/>
+    <ellipse cx="36.4865" cy="40.6831" rx="16.5287" ry="17.9871" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="36.4865" x2="36.4865" y1="23.6682" y2="57.6979" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <circle cx="26.8192" cy="35.2801" r="2"/>
+    <circle cx="46.2647" cy="35.2801" r="2"/>
+    <circle cx="42.3756" cy="41.1138" r="2"/>
+    <circle cx="46.2647" cy="46.9474" r="2"/>
+    <circle cx="30.7082" cy="41.1138" r="2"/>
+    <circle cx="26.8192" cy="46.9474" r="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M26.46,21.7237a10.004,10.004,0,0,1,20,0"/>
+  </g>
+</g>
+</svg>

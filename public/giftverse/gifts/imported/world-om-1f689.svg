@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f689" role="img" aria-label="Nexora Station" focusable="false">
+<title>Nexora Station</title><desc>A world collectible inspired by station, curated as Nexora Station in the NEXORA midnight-violet universe. Original artwork by Ronja Bäurlen.</desc><defs><radialGradient id="bg-1F689"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F689" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F689)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F689)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DBEAFE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <polygon fill="#fff" points="17.0034 20.119 16.8362 51.3866 53.4544 51.721 53.7749 18.7917 17.0034 20.119"/>
+    <polyline fill="#d0cfce" points="53.7749 42.5833 53.7749 18.7917 60.7813 18.7917 60.7813 42.5833"/>
+    <polyline fill="#d0cfce" points="34.4375 62.5189 3.7813 62.5189 3.7813 50.9289 34.8125 50.9289"/>
+    <path fill="#3f3f3f" d="m35.0781,22.5h-18c-.5522,0-1,.4477-1,1v10c0,.5522.4478,1,1,1h18c.5523,0,1-.4478,1-1v-10c0-.5523-.4477-1-1-1Z"/>
+    <path fill="#9b9b9a" d="m31.7449,25.5h-11.3335c-.5523,0-1,.4477-1,1v4c0,.5522.4477,1,1,1h11.3335c.5522,0,1-.4478,1-1v-4c0-.5523-.4478-1-1-1Z"/>
+    <rect x="3.7813" y="9.1667" width="64.4687" height="9.625" fill="#d0cfce"/>
+    <polyline fill="#d0cfce" points="14.8125 51.9114 10.7813 51.9114 10.7813 18.7917 15.5874 18.7917 15.5874 51.9114 14.8125 51.9114"/>
+    <path fill="#d0cfce" d="m55.2813,38.7689s-13.6875-1-23.75,5.625-16.25,11.625-16.25,11.625c0,0-1.7671,1.7819-1.875,3.875-.1563,3.0312,6.875,3.9375,6.875,3.9375l15.4187,1.0884c.3458.0244.6923.0366,1.0389.0366h32.4798s-.1874-26.1875,0-26.1875c0,0-13.9374,0-13.9374,0Z"/>
+    <path fill="#3f3f3f" d="m30.4063,50.1439l3.0313,3.0312h32.7187v-6.9687c0-.5523-.4478-1-1-1h-17s-8.5625-.25-18.125,4.125"/>
+    <path fill="none" stroke="#ea5a47" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m17.7813,59.5189s12.375-2.125,47.375-1"/>
+  </g>
+  <g>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="54.875 34.9167 54.875 18.7917 59.6812 18.7917 59.6812 34.9167"/>
+    <circle cx="57.934" cy="66.0208" r="2"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="7.4375 61.5364 3.7813 61.5364 3.7813 51.9114 14.8125 51.9114"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m35.0781,22.5h-18c-.5522,0-1,.4477-1,1v10c0,.5522.4478,1,1,1h18c.5523,0,1-.4478,1-1v-10c0-.5523-.4477-1-1-1Z"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m31.7449,25.5h-11.3335c-.5523,0-1,.4477-1,1v4c0,.5522.4477,1,1,1h11.3335c.5522,0,1-.4478,1-1v-4c0-.5523-.4478-1-1-1Z"/>
+    <rect x="3.7813" y="9.1667" width="64.4687" height="9.625" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.0766" points="14.8125 51.9114 10.7813 51.9114 10.7813 18.7917 15.5874 18.7917 15.5874 51.9114 14.8125 51.9114"/>
+    <circle cx="44.8716" cy="66.0208" r="2"/>
+    <line x1="6.0938" x2="68" y1="68.0189" y2="68.0189" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m55.2813,38.7689s-13.6875-1-23.75,5.625-16.25,11.625-16.25,11.625c0,0-1.7671,1.7819-1.875,3.875-.1563,3.0312,6.875,3.9375,6.875,3.9375l15.4187,1.0884c.3458.0244.6923.0366,1.0389.0366h32.4798s-.1874-26.1875,0-26.1875c0,0-13.9374,0-13.9374,0Z"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="30.4063 50.1439 33.4376 53.1751 65.1563 53.1751"/>
+  </g>
+</g>
+</svg>

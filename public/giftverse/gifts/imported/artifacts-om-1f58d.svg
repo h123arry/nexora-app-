@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f58d" role="img" aria-label="Nexora Crayon" focusable="false">
+<title>Nexora Crayon</title><desc>A crafted collectible inspired by crayon, curated as Nexora Crayon in the NEXORA midnight-violet universe. Original artwork by Rana Cakir.</desc><defs><radialGradient id="bg-1F58D"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F58D" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F58D)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F58D)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DDD6FE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <polygon fill="#EA5A47" stroke="none" points="15.8466,59.4954 23.6833,54.7934 16.8591,47.9691 12.157,55.8059"/>
+    <polygon fill="#EA5A47" stroke="none" points="24.5167,55.6267 16.8728,47.9829 16.0257,47.1357 53.2503,9.9112 61.7413,18.4022"/>
+    <polygon fill="#d22f27" stroke="none" points="28.4351,51.7084 20.7912,44.0645 19.9441,43.2174 49.7237,13.4377 58.2147,21.9287"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2.2166" points="24.5167,55.6267 16.8728,47.9829 16.0257,47.1357 53.2503,9.9112 61.7413,18.4022"/>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2.2166" points="15.8466,59.4954 23.6833,54.7934 16.8591,47.9691 12.157,55.8059"/>
+    <line x1="19.9938" x2="28.4028" y1="43.267" y2="51.676" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2.2166"/>
+    <line x1="49.7735" x2="58.1823" y1="13.4874" y2="21.8964" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2.2166"/>
+  </g>
+</g>
+</svg>

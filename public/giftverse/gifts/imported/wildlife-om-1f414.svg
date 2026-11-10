@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="wildlife-om-1f414" role="img" aria-label="Nexora Chicken" focusable="false">
+<title>Nexora Chicken</title><desc>A wildlife collectible inspired by chicken, curated as Nexora Chicken in the NEXORA midnight-violet universe. Original artwork by Selina Bauder.</desc><defs><radialGradient id="bg-1F414"><stop offset="0" stop-color="#22C55E" stop-opacity=".28"/><stop offset="1" stop-color="#123B32"/></radialGradient><linearGradient id="rim-1F414" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#D1FAE5"/><stop offset=".52" stop-color="#22C55E"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F414)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F414)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#D1FAE5" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#D1FAE5"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#22C55E"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#EA5A47" d="M44.62,26.25c0,0,4.375-7.25,2.375-8.25s-5,1-5,1s2-7-2-7s-5,4-5,4s-1.457-8.296-7-6c-3.464,1.435-5,5,0,15"/>
+    <path fill="#FFFFFF" d="M21,35c0,0,4-11,15-11s15,11,15,11c15,28-15,29-15,29S6,63,21,35z"/>
+    <path fill="#F1B31C" d="M36,43c0,0,18-1,0,18C36,61,18,43,36,43z"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M44.46,26.25c0,0,4.375-7.25,2.375-8.25s-5,1-5,1s2-7-2-7s-5,4-5,4s-1.457-8.296-7-6c-3.464,1.435-5,5,0,15"/>
+    <circle cx="27" cy="39" r="2"/>
+    <circle cx="45" cy="39" r="2"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M36.02,43c0,0,18-1,0,18C36.02,61,18.02,43,36.02,43z"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M21,35c0,0,4-11,15-11s15,11,15,11c15,28-15,29-15,29S6,63,21,35z"/>
+  </g>
+</g>
+</svg>

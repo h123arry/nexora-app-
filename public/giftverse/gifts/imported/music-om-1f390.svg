@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="music-om-1f390" role="img" aria-label="Nexora Wind Chime" focusable="false">
+<title>Nexora Wind Chime</title><desc>A celebration collectible inspired by wind chime, curated as Nexora Wind Chime in the NEXORA midnight-violet universe. Original artwork by Jonas Dunkel.</desc><defs><radialGradient id="bg-1F390"><stop offset="0" stop-color="#C084FC" stop-opacity=".28"/><stop offset="1" stop-color="#38204F"/></radialGradient><linearGradient id="rim-1F390" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F3E8FF"/><stop offset=".52" stop-color="#C084FC"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F390)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F390)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#F3E8FF" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#F3E8FF"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#C084FC"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <g>
+      <path fill="#92d3f5" d="M55.1767,38.6265a19.6726,19.6726,0,0,0,.4943-9.2146A19.9973,19.9973,0,0,0,16,33a19.7418,19.7418,0,0,0,.8242,5.63,2.0054,2.0054,0,0,0,1.9234,1.4292H53.2521A2.0071,2.0071,0,0,0,55.1767,38.6265Z"/>
+      <path fill="#f1b31c" d="M39,41a3,3,0,0,1-6,0"/>
+      <path fill="#d0cfce" d="M16,54a14.4232,14.4232,0,0,0,14-4l4,6a14.4232,14.4232,0,0,1-14,4Z"/>
+    </g>
+  </g>
+  <g>
+    <g>
+      <path fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2" d="M55.1767,38.6265a19.6726,19.6726,0,0,0,.4943-9.2146A19.9973,19.9973,0,0,0,16,33a19.7418,19.7418,0,0,0,.8242,5.63,2.0054,2.0054,0,0,0,1.9234,1.4292H53.2521A2.0071,2.0071,0,0,0,55.1767,38.6265Z"/>
+      <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M36,13s.7889-4.1056-1-5"/>
+      <path fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2" d="M36,44s1,6-4,9"/>
+      <path fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2" d="M39,41a3,3,0,0,1-6,0"/>
+      <path fill="none" stroke="#000" stroke-linejoin="round" stroke-width="2" d="M16,54a14.4232,14.4232,0,0,0,14-4l4,6a14.4232,14.4232,0,0,1-14,4Z"/>
+    </g>
+  </g>
+</g>
+</svg>

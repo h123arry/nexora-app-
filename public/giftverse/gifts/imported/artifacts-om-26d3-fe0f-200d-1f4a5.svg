@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-26d3-fe0f-200d-1f4a5" role="img" aria-label="Nexora Broken Chain" focusable="false">
+<title>Nexora Broken Chain</title><desc>A crafted collectible inspired by broken chain, curated as Nexora Broken Chain in the NEXORA midnight-violet universe. Original artwork by Vanessa Stoessinger.</desc><defs><radialGradient id="bg-26D3-FE0F-200D-1F4A5"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-26D3-FE0F-200D-1F4A5" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-26D3-FE0F-200D-1F4A5)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-26D3-FE0F-200D-1F4A5)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><circle cx="256" cy="38" r="6" fill="#DDD6FE"/><path d="M430 330l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <rect x="11" y="29.6317" rx="9" ry="9" width="50" height="18" transform="translate(-16.7726 36.7708) rotate(-45)" fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <path fill="#9b9b9a" stroke="#9b9b9a" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.3223,56.3094c-3.5147-3.5147-3.5147-9.2132,0-12.7279l11.3137-11.3137c3.5147-3.5147,9.2132-3.5147,12.7279,0l-3.5355,3.5355c-1.5621-1.5621-4.0948-1.5621-5.6568,0l-11.3137,11.3137c-1.5621,1.5621-1.5621,4.0948,0,5.6568l-3.5355,3.5355Z"/>
+    <path fill="#d0cfce" stroke="#d0cfce" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M40.9497,20.9541l3.5355,3.5355c1.5621-1.5621,4.0947-1.5621,5.6569,0s1.5621,4.0947,0,5.6569l-11.3137,11.3137c-1.5621,1.5621-4.0948,1.5621-5.6569,0s-1.5621-4.0947,0-5.6569l7.0711-7.0711-3.5355-3.5355-7.0711,7.0711c-3.5147,3.5147-3.5147,9.2132,0,12.7279s9.2132,3.5147,12.7279,0l11.3137-11.3137c3.5147-3.5147,3.5147-9.2132,0-12.7279-3.5147-3.5147-9.2132-3.5147-12.7279,0Z"/>
+    <path fill="#9b9b9a" stroke="#9b9b9a" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21.8579,52.7739c1.5621,1.5621,4.0948,1.5621,5.6568,0l11.3137-11.3137c1.5621-1.5621,1.5621-4.0948,0-5.6568l3.5355-3.5355c3.5147,3.5147,3.5147,9.2132,0,12.7279l-11.3137,11.3137c-3.5147,3.5147-9.2132,3.5147-12.7279,0l3.5355-3.5355Z"/>
+    <circle cx="37" cy="21" r="2" fill="#fff" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M42.364,32.2678h0c3.5147,3.5147,3.5147,9.2132,0,12.7279l-11.3137,11.3137c-3.5147,3.5147-9.2132,3.5147-12.7279,0h0"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M18.3223,56.3094c-3.5147-3.5147-3.5147-9.2132,0-12.7279l4.6891-4.6891"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M24.4233,44.5516l-2.5654,2.5654c-1.5621,1.5621-1.5621,4.0948,0,5.6568"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M21.8579,52.7739h0c1.5621,1.5621,4.0948,1.5621,5.6568,0l11.3137-11.3137c1.5621-1.5621,1.5621-4.0948,0-5.6568h0"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M40.9498,20.9541c3.5147-3.5147,9.2132-3.5147,12.7279,0h0"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M29.636,44.9957h0c-3.5147-3.5147-3.5147-9.2132,0-12.7279l7.0711-7.0711"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M53.6777,20.9541c3.5147,3.5147,3.5147,9.2132,0,12.7279l-4.6891,4.6891"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M47.5767,32.7119l2.5654-2.5654c1.5621-1.5621,1.5621-4.0948,0-5.6568"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M40.2426,28.7322l-7.0711,7.0711c-1.5621,1.5621-1.5621,4.0948,0,5.6568h0"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M50.1421,24.4896h0c-1.5621-1.5621-4.0948-1.5621-5.6568,0"/>
+    <line x1="33.8787" x2="29.636" y1="18.1256" y2="13.883" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="38.1213" x2="38.1213" y1="16.7114" y2="11.0546" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="26.8076" x2="32.4645" y1="22.3683" y2="22.3683" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+  </g>
+</g>
+</svg>

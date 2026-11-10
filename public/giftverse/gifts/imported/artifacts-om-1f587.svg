@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f587" role="img" aria-label="Nexora Linked Paperclips" focusable="false">
+<title>Nexora Linked Paperclips</title><desc>A crafted collectible inspired by linked paperclips, curated as Nexora Linked Paperclips in the NEXORA midnight-violet universe. Original artwork by Marleen Heine.</desc><defs><radialGradient id="bg-1F587"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F587" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F587)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F587)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g/>
+  <g>
+    <g>
+      <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M33.0667,11.2112a7.8894,7.8894,0,0,0-1.0352-.5193c-4.5363-1.7523-8.713.7674-10.5537,5.2112L11.4929,39.8477"/>
+      <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M22.74,39.72l7.2545-17.3527a2.59,2.59,0,0,0-4.7856-1.9822l-10.9358,26.24A5.3177,5.3177,0,0,0,17.11,53.4741a5.2166,5.2166,0,0,0,6.7784-2.79L35.7508,21.9431a10.0445,10.0445,0,0,0,.5525-6.4066"/>
+      <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M36.5374,26.8629l8.77,21.098c1.8407,4.4438,6.1419,7.1664,10.5857,5.3258,4.4467-1.9686,5.6184-6.7037,3.7777-11.1474L49.8,18.1474"/>
+      <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M41.9371,26.19l7.14,17.4a2.59,2.59,0,1,0,4.7856-1.9822L43.0413,15.3206a5.3177,5.3177,0,0,0-6.8484-2.8367,5.2166,5.2166,0,0,0-2.82,6.766l.37.89"/>
+    </g>
+  </g>
+</g>
+</svg>

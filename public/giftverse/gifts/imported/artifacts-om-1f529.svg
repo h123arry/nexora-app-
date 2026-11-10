@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f529" role="img" aria-label="Nexora Nut And Bolt" focusable="false">
+<title>Nexora Nut And Bolt</title><desc>A crafted collectible inspired by nut and bolt, curated as Nexora Nut And Bolt in the NEXORA midnight-violet universe. Original artwork by Marleen Heine.</desc><defs><radialGradient id="bg-1F529"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F529" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F529)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F529)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <g>
+      <polygon fill="#9b9b9a" points="36.804 28.439 43.931 35.497 46.961 32.467 39.869 25.374 36.804 28.439"/>
+      <rect x="35.1711" y="18.7696" width="23.948" height="11.4993" transform="translate(31.1462 -26.1551) rotate(45)" fill="#d0cfce"/>
+      <polyline fill="#d0cfce" points="32.174 33.07 39.869 25.374 46.961 32.467 19.415 60.013 12.322 52.921 32.174 33.07"/>
+      <rect x="30.858" y="35.5005" width="10.0303" height="1.9238" transform="translate(36.2899 -14.6866) rotate(45)" fill="#9b9b9a"/>
+      <rect x="21.3355" y="45.0231" width="10.0303" height="1.9238" transform="translate(40.2342 -5.164) rotate(45)" fill="#9b9b9a"/>
+      <rect x="19.2949" y="47.0636" width="10.0303" height="1.9238" transform="translate(41.0795 -3.1235) rotate(45)" fill="#9b9b9a"/>
+      <rect x="17.2544" y="49.1042" width="10.0303" height="1.9238" transform="translate(41.9247 -1.0829) rotate(45)" fill="#9b9b9a"/>
+      <rect x="21.125" y="37.4189" width="20.0607" height="7.5228" transform="translate(38.2441 -9.9688) rotate(45)" fill="#d0cfce"/>
+    </g>
+  </g>
+  <g>
+    <g>
+      <rect x="35.1711" y="18.7696" width="23.948" height="11.4993" transform="translate(31.1462 -26.1551) rotate(45)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+      <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="32.755 32.488 39.869 25.374 46.961 32.467 39.883 39.546"/>
+      <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="29.642 49.786 20.556 58.873 18.527 59.126 13.175 53.774 13.174 52.069 22.375 42.868"/>
+      <rect x="21.125" y="37.4189" width="20.0607" height="7.5228" transform="translate(38.2441 -9.9688) rotate(45)" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    </g>
+  </g>
+</g>
+</svg>

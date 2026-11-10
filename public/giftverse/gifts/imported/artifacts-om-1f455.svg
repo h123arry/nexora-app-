@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f455" role="img" aria-label="Nexora T Shirt" focusable="false">
+<title>Nexora T Shirt</title><desc>A crafted collectible inspired by t-shirt, curated as Nexora T Shirt in the NEXORA midnight-violet universe. Original artwork by Jonas Roßner.</desc><defs><radialGradient id="bg-1F455"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F455" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F455)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F455)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#61b2e4" d="m23.5126,14.3094l-2.69,1.7114v39.9792h30.3548V16.0208l-2.8717-1.6316-3.2072-.8607.1615-.6129c.2702-1.0254-.2608-2.0923-1.2416-2.4952l-3.458-1.4202c-2.4845-1.0203-5.2265-1.2355-7.8397-.6152l-2.029.4816c-2.057.4883-3.7802,1.8857-4.6828,3.7974l-.3728.7895-2.1235.8558Z"/>
+    <polygon fill="#61b2e4" points="61 31.3289 51.1774 28.3289 51.1774 16.0208 64 22.0208 61 31.3289"/>
+    <path fill="#92d3f5" d="m44.8123,11.273s2.5708,1.0866-3.7875,11.1338l-3.2087-5.165,4.5054-4.8457,1.5524-1.7815"/>
+    <path fill="#92d3f5" d="m27.9297,10.6105l2.0075,2.7494,4.5124,4.8532-3.2087,5.165c-7.1583-8.8534-4.7072-11.2827-4.7072-11.2827"/>
+    <polygon fill="#61b2e4" points="11 31.3289 20.8226 28.3289 20.8226 16.0208 8 22.0208 11 31.3289"/>
+  </g>
+  <g>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="48.3057 15.2396 51.1774 16.0208 51.1774 56 20.8226 56 20.8226 16.0208 23.5126 15.1598"/>
+    <polygon fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="61 31.3289 51.1774 28.3289 51.1774 16.0208 64 22.0208 61 31.3289"/>
+    <polygon fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="11 31.3289 20.8226 28.3289 20.8226 16.0208 8 22.0208 11 31.3289"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m42.3216,12.3962l-4.5054,4.8457,3.2087,5.165c7.1583-8.8534,4.7072-11.2827,4.7072-11.2827-10.4429-8.3615-19.6909,0-19.6909,0,0,0-2.4511,2.4293,4.7072,11.2827l3.2087-5.165-4.5124-4.8532"/>
+    <circle cx="35.8866" cy="21.6749" r="0.8529"/>
+    <circle cx="35.8866" cy="24.9416" r="0.8529"/>
+    <circle cx="35.8866" cy="28.2084" r="0.8529"/>
+  </g>
+</g>
+</svg>

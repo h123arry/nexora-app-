@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="culinary-om-1f9c8" role="img" aria-label="Nexora Butter" focusable="false">
+<title>Nexora Butter</title><desc>A culinary collectible inspired by butter, curated as Nexora Butter in the NEXORA midnight-violet universe. Original artwork by Evelyn Soos.</desc><defs><radialGradient id="bg-1F9C8"><stop offset="0" stop-color="#F59E0B" stop-opacity=".28"/><stop offset="1" stop-color="#4A2B18"/></radialGradient><linearGradient id="rim-1F9C8" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".52" stop-color="#F59E0B"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F9C8)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F9C8)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#FDE68A" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#FDE68A"/><circle cx="256" cy="474" r="5" fill="#F59E0B"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#fcea2b" d="M19,33a3.416,3.416,0,0,0-3.3141,2.9835l-1.3718,13.033A2.65,2.65,0,0,0,17,52H55a2.65,2.65,0,0,0,2.6859-2.9835l-1.3718-13.033A3.416,3.416,0,0,0,53,33Z"/>
+    <polyline fill="#fff" points="12.251 52 60.189 52 58 56 13.616 56 12.251 52"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19,33a3.416,3.416,0,0,0-3.3141,2.9835l-1.3718,13.033A2.65,2.65,0,0,0,17,52H55a2.65,2.65,0,0,0,2.6859-2.9835l-1.3718-13.033A3.416,3.416,0,0,0,53,33Z"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="11.38 52 14.448 52 36 52"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M36,56H15a2.4394,2.4394,0,0,1-1.82-.5833l-.2389-.2381L9.0074,47.17,4.88,47.1514"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="60.62 52 57.552 52 36 52"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M36,56H57a2.4394,2.4394,0,0,0,1.82-.5833l.2389-.2381,3.934-8.0083,4.1271-.0189"/>
+  </g>
+</g>
+</svg>

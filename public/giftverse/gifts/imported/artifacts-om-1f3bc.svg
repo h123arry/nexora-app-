@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f3bc" role="img" aria-label="Nexora Musical Score" focusable="false">
+<title>Nexora Musical Score</title><desc>A crafted collectible inspired by musical score, curated as Nexora Musical Score in the NEXORA midnight-violet universe. Original artwork by Sina Schulz.</desc><defs><radialGradient id="bg-1F3BC"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F3BC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F3BC)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F3BC)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g/>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M31.3109,42.1835c-0.3895-4.0287,3.2811-7.3285,7.3285-7.3285s7.3285,3.32,7.3285,7.3285c0,1.9413-0.5746,9.4819-10.7869,9.1301 c-4.5864-0.3678-8.4458-3.7482-9.0968-8.831c-0.5015-3.9165,0.0223-7.3091,4.0759-11.3628 c4.0537-4.0537,5.2229-4.2957,9.3212-9.9483s2.5823-9.2909,2.3736-10.0085s-1.6073-3.0374-4.2006-3.0374 c-2.5934,0-3.8432,2.7692-4.1817,3.9137c-0.3385,1.1445-0.7269,3.4443-0.0932,7.8778c0.4744,3.3194,8.0552,32.289,8.9828,36.6029 c0.089,0.4139,0.1574,0.8321,0.1961,1.2496c0.0029,0.0308,0.0279,0.7657,0.0279,0.7657c0,2.7615-2.2386,5-5,5 c-2.7614,0-5-2.2385-5-5c0-0.3646,0.039-0.7202,0.1132-1.0627c0,0,0.3213-1.1083,0.8974-1.2909"/>
+    <circle cx="33.9471" cy="57.1464" r="2" fill="#000000" stroke="none"/>
+  </g>
+</g>
+</svg>

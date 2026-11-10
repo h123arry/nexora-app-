@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f451" role="img" aria-label="Nexora Crown · 1F451" focusable="false">
+<title>Nexora Crown · 1F451</title><desc>A crafted collectible inspired by crown, curated as Nexora Crown · 1F451 in the NEXORA midnight-violet universe. Original artwork by Jonas Roßner.</desc><defs><radialGradient id="bg-1F451"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F451" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F451)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F451)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#DDD6FE"/><circle cx="256" cy="474" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <rect x="4" y="51.624" width="64" height="7.2668" fill="#FFFFFF"/>
+    <circle cx="35.9962" cy="16.008" r="5" fill="#FFFFFF"/>
+    <rect x="4" y="51.624" width="64" height="7.2668" fill="#F1B31C"/>
+    <path fill="#FCEA2B" d="M7,11c2.7614,0,5,2.2386,5,5s-2.2386,5-5,5"/>
+    <path fill="#FCEA2B" d="M65,21c-2.7614,0-5-2.2386-5-5s2.2386-5,5-5"/>
+    <path fill="#FCEA2B" d="M64.9674,17.4945c0,9.0811-7.3617,16.4428-16.4428,16.4428H48.238 c-9.0811,0-11.4428-7.3617-11.4428-16.4428h-2.0738c0,9.0811-2.3617,16.4428-11.4428,16.4428h0.1643 c-5.3121,0-10.0359-2.519-13.0419-6.4277C8.2681,24.7363,7,21.2635,7,17.4945V11v40.624h58V11"/>
+    <circle cx="35.9962" cy="16.008" r="5" fill="#FCEA2B"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <rect x="4" y="51.624" width="64" height="7.2668" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <polyline fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="7,11 7,51.624 65,51.624 65,11"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M7,11c2.7614,0,5,2.2386,5,5s-2.2386,5-5,5"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M23.4428,33.9373c-5.3121,0-10.0359-2.519-13.0419-6.4277C8.2681,24.7363,7,21.2635,7,17.4945"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M64.9674,17.4945c0,9.0811-7.3617,16.4428-16.4428,16.4428"/>
+    <circle cx="35.9962" cy="16.008" r="5" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M65,21c-2.7614,0-5-2.2386-5-5s2.2386-5,5-5"/>
+    <rect x="4" y="51.624" width="64" height="7.2668" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M7,11c2.7614,0,5,2.2386,5,5s-2.2386,5-5,5"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M65,21c-2.7614,0-5-2.2386-5-5s2.2386-5,5-5"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M34.597,20.8744c-0.5876,7.4597-3.3959,13.0629-11.3184,13.0629h0.1643c-5.3121,0-10.0359-2.519-13.0419-6.4277 C8.2681,24.7363,7,21.2635,7,17.4945V11v40.624h58V11"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M64.9674,17.4945c0,9.0811-7.3617,16.4428-16.4428,16.4428H48.238c-7.9061,0-10.7191-5.5799-11.3147-13.0163"/>
+    <circle cx="35.9962" cy="16.008" r="5" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+  </g>
+</g>
+</svg>

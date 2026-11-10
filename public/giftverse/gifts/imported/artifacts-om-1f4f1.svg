@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1f4f1" role="img" aria-label="Nexora Mobile Phone" focusable="false">
+<title>Nexora Mobile Phone</title><desc>A crafted collectible inspired by mobile phone, curated as Nexora Mobile Phone in the NEXORA midnight-violet universe. Original artwork by Martin Wehl.</desc><defs><radialGradient id="bg-1F4F1"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1F4F1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F4F1)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F4F1)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DDD6FE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#9B9B9A" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M52.5,64.7644h-33c-0.5523,0-1-0.4477-1-1v-56c0-0.5523,0.4477-1,1-1h33c0.5523,0,1,0.4477,1,1v56 C53.5,64.3167,53.0523,64.7644,52.5,64.7644z"/>
+    <path fill="#D0CFCE" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M48.0339,55H23.9661C23.4325,55,23,54.5675,23,54.0339V13.9661C23,13.4325,23.4325,13,23.9661,13h24.0678 C48.5675,13,49,13.4325,49,13.9661v40.0678C49,54.5675,48.5675,55,48.0339,55z"/>
+    <polygon fill="#FFFFFF" stroke="none" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="31,10 41,10 41,10 31,10"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M52.5,64.7644h-33c-0.5523,0-1-0.4477-1-1v-56c0-0.5523,0.4477-1,1-1h33c0.5523,0,1,0.4477,1,1v56 C53.5,64.3167,53.0523,64.7644,52.5,64.7644z"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M48.0339,55H23.9661C23.4325,55,23,54.5675,23,54.0339V13.9661C23,13.4325,23.4325,13,23.9661,13h24.0678 C48.5675,13,49,13.4325,49,13.9661v40.0678C49,54.5675,48.5675,55,48.0339,55z"/>
+    <circle cx="36" cy="60" r="2" fill="#000000" stroke="#000000" stroke-miterlimit="10"/>
+    <polygon fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" points="31,10 41,10 41,10 31,10"/>
+  </g>
+</g>
+</svg>

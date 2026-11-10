@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="culinary-om-1f95b" role="img" aria-label="Nexora Glass Of Milk" focusable="false">
+<title>Nexora Glass Of Milk</title><desc>A culinary collectible inspired by glass of milk, curated as Nexora Glass Of Milk in the NEXORA midnight-violet universe. Original artwork by Laura Humpfer.</desc><defs><radialGradient id="bg-1F95B"><stop offset="0" stop-color="#F59E0B" stop-opacity=".28"/><stop offset="1" stop-color="#4A2B18"/></radialGradient><linearGradient id="rim-1F95B" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".52" stop-color="#F59E0B"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F95B)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F95B)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#FDE68A" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#FDE68A" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#F59E0B"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <polygon fill="#fff" points="53.545 28 48.35 67 24.6 67 18.6794 28"/>
+    <polygon fill="#d0cfce" points="43.404 28 38.35 67 48.35 67 53.404 28"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="m17,17L24.6,67L48.35,67L55,17"/>
+  </g>
+</g>
+</svg>

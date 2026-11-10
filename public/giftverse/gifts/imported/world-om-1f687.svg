@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f687" role="img" aria-label="Nexora Metro" focusable="false">
+<title>Nexora Metro</title><desc>A world collectible inspired by metro, curated as Nexora Metro in the NEXORA midnight-violet universe. Original artwork by Nadja Grün.</desc><defs><radialGradient id="bg-1F687"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F687" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F687)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F687)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DBEAFE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <circle cx="36" cy="36" r="29" fill="#3f3f3f"/>
+    <path fill="#d0cfce" d="M24.83,14H47.1695A7.2305,7.2305,0,0,1,54.4,21.2305V47.5A1.5,1.5,0,0,1,52.9,49H19.1a1.5,1.5,0,0,1-1.5-1.5V21.23A7.23,7.23,0,0,1,24.83,14Z"/>
+    <rect x="42" y="39" width="9" height="5" fill="#fcea2b"/>
+    <rect x="20" y="39" width="9" height="5" fill="#fcea2b"/>
+    <line x1="51" x2="21" y1="35" y2="35" fill="none" stroke="#ea5a47" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <line x1="17" x2="21" y1="60.8113" y2="54" fill="none" stroke="#fff" stroke-linecap="round" stroke-miterlimit="10" stroke-width="4"/>
+    <line x1="55" x2="51" y1="60.8113" y2="54" fill="none" stroke="#fff" stroke-linecap="round" stroke-miterlimit="10" stroke-width="4"/>
+    <rect x="20" y="22" width="31" height="10" fill="#3f3f3f"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M24.83,14H47.1695A7.2305,7.2305,0,0,1,54.4,21.2305V47.5A1.5,1.5,0,0,1,52.9,49H19.1a1.5,1.5,0,0,1-1.5-1.5V21.23A7.23,7.23,0,0,1,24.83,14Z"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M51,23v8.8H21"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="21 44 29 44 29 40"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="43 44 51 44 51 40"/>
+  </g>
+</g>
+</svg>

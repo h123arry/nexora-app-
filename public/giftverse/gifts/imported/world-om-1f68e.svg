@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="world-om-1f68e" role="img" aria-label="Nexora Trolleybus" focusable="false">
+<title>Nexora Trolleybus</title><desc>A world collectible inspired by trolleybus, curated as Nexora Trolleybus in the NEXORA midnight-violet universe. Original artwork by Nadja Grün.</desc><defs><radialGradient id="bg-1F68E"><stop offset="0" stop-color="#60A5FA" stop-opacity=".28"/><stop offset="1" stop-color="#172554"/></radialGradient><linearGradient id="rim-1F68E" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DBEAFE"/><stop offset=".52" stop-color="#60A5FA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F68E)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F68E)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DBEAFE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DBEAFE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#60A5FA"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <rect x="31" y="21" width="14" height="3" fill="#3f3f3f"/>
+    <path fill="#d0cfce" d="M18,48h-.0853A2.9232,2.9232,0,0,1,15,45.0853V26.9147A2.9232,2.9232,0,0,1,17.9147,24H58.0853A2.9232,2.9232,0,0,1,61,26.9147V45.0853A2.9232,2.9232,0,0,1,58.0853,48H58"/>
+    <rect x="15" y="38" width="45" height="9" fill="#61b2e4"/>
+    <rect x="17" y="27" width="8" height="9" fill="#92d3f5"/>
+    <rect x="30" y="27" width="7" height="7" fill="#92d3f5"/>
+    <rect x="40" y="27" width="7" height="7" fill="#92d3f5"/>
+    <rect x="50" y="27" width="7" height="7" fill="#92d3f5"/>
+    <rect x="16" y="38" width="5" height="3" fill="#fff"/>
+    <circle cx="54" cy="48" r="4" fill="#d0cfce"/>
+    <circle cx="22" cy="48" r="4" fill="#d0cfce"/>
+  </g>
+  <g>
+    <line x1="50" x2="26.1209" y1="48" y2="48" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="30.909 24 30.909 21 46 21 46 24"/>
+    <line x1="38.4546" x2="47" y1="21" y2="11" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <circle cx="22" cy="48" r="4" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <circle cx="54" cy="48" r="4" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="18 36 25 36 25 27.9"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="30.875 34 37 34 37 27.875"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="40.875 34 47 34 47 27.875"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="50.875 34 57 34 57 27.875"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18,48h-.0853A2.9232,2.9232,0,0,1,15,45.0853V26.9147A2.9232,2.9232,0,0,1,17.9147,24H58.0853A2.9232,2.9232,0,0,1,61,26.9147V45.0853A2.9232,2.9232,0,0,1,58.0853,48H58"/>
+    <polyline fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" points="17 41 21 41 21 39"/>
+  </g>
+</g>
+</svg>

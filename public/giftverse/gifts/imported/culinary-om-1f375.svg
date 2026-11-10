@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="culinary-om-1f375" role="img" aria-label="Nexora Teacup Without Handle" focusable="false">
+<title>Nexora Teacup Without Handle</title><desc>A culinary collectible inspired by teacup without handle, curated as Nexora Teacup Without Handle in the NEXORA midnight-violet universe. Original artwork by Laura Humpfer.</desc><defs><radialGradient id="bg-1F375"><stop offset="0" stop-color="#F59E0B" stop-opacity=".28"/><stop offset="1" stop-color="#4A2B18"/></radialGradient><linearGradient id="rim-1F375" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".52" stop-color="#F59E0B"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F375)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F375)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#FDE68A" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#FDE68A" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#F59E0B"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#fff" d="m19.9055,55.7995h32.1874c10.7962-6.4914,15.9071-19.5078,15.9071-35.0476l-39.3658-.4358h-6.9242l-17.71.4358c0,15.5398,5.1109,28.5562,15.9055,35.0476Z"/>
+    <rect x="18.3238" y="29.4186" width="14.019" height="17.5238" fill="#b1cc33"/>
+    <polygon fill="#5c9e31" points="31 30 21 47 23 46.9424 32.3429 46.9424 32 30 31 30"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m19.5,20.3161H4c0,15.5398,5.1109,28.5562,15.9055,35.0476h32.1874c10.7962-6.4914,15.9071-19.5078,15.9071-35.0476H31.5"/>
+    <line x1="25.5" x2="25.3334" y1="20.5" y2="31.4186" fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2"/>
+    <rect x="18.3238" y="29.4186" width="14.019" height="17.5238" fill="none" stroke="#000" stroke-linejoin="round" stroke-width="2"/>
+  </g>
+</g>
+</svg>

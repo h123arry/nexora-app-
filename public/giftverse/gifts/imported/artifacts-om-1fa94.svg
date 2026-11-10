@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="artifacts-om-1fa94" role="img" aria-label="Nexora Diya Lamp" focusable="false">
+<title>Nexora Diya Lamp</title><desc>A crafted collectible inspired by diya lamp, curated as Nexora Diya Lamp in the NEXORA midnight-violet universe. Original artwork by Sam Eckert.</desc><defs><radialGradient id="bg-1FA94"><stop offset="0" stop-color="#8B5CF6" stop-opacity=".28"/><stop offset="1" stop-color="#211B48"/></radialGradient><linearGradient id="rim-1FA94" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#DDD6FE"/><stop offset=".52" stop-color="#8B5CF6"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1FA94)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1FA94)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#DDD6FE" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#DDD6FE" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#8B5CF6"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#a57939" d="M6.5,34.5s4,2.5,4.35,4.1815C12.2991,43.0449,17.7225,56,37.6875,56,61.0625,56,64.5,35.5,64.5,35.5H11Z"/>
+    <path fill="#6a462f" d="M50.21,37.0055S49.5,51.5,44.5,54.5s18-2,20-19Z"/>
+    <path fill="#ea5a47" d="M5.8906,30s0-11.2658,1.6094-12.8752S9.1094,30,9.1094,30Z"/>
+    <path fill="#f1b31c" d="M6.6953,30.5s0-5.6329.8047-6.4376S8.3047,30.5,8.3047,30.5Z"/>
+    <path fill="#fcea2b" d="M7.1286,30s0-1.6.3714-1.9712S7.8714,30,7.8714,30Z"/>
+  </g>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.5,34.5s4,2.5,4.35,4.1815C12.2991,43.0449,17.7225,56,37.6875,56,61.0625,56,64.5,35.5,64.5,35.5s-20.85,1.01-27.8063,1C30.2654,36.4905,11,35.5,11,35.5Z"/>
+    <line x1="7.5" x2="7.5" y1="34.5" y2="32" fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" d="M5.8287,30.5s0-11.6991,1.6713-13.37S9.1713,30.5,9.1713,30.5Z"/>
+  </g>
+</g>
+</svg>

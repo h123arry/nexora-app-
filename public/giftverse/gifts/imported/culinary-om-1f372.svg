@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="culinary-om-1f372" role="img" aria-label="Nexora Pot Of Food" focusable="false">
+<title>Nexora Pot Of Food</title><desc>A culinary collectible inspired by pot of food, curated as Nexora Pot Of Food in the NEXORA midnight-violet universe. Original artwork by Miriam Vollmeier.</desc><defs><radialGradient id="bg-1F372"><stop offset="0" stop-color="#F59E0B" stop-opacity=".28"/><stop offset="1" stop-color="#4A2B18"/></radialGradient><linearGradient id="rim-1F372" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FDE68A"/><stop offset=".52" stop-color="#F59E0B"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F372)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F372)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#FDE68A" stroke-opacity=".16" stroke-width="1.5"/><path d="M82 256l5 12 12 5-12 5-5 12-5-12-12-5 12-5z" fill="#FDE68A"/><circle cx="256" cy="474" r="5" fill="#F59E0B"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#FFFFFF" stroke="none" d="M7,36c0,16.0166,12.9834,29,29,29s29-12.9834,29-29H7z"/>
+    <path fill="#d0cfce" stroke="none" d="M49,36c0,16.0156-4,29-13,29c16.0166,0,29-12.9844,29-29H49z"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M7,36c0,16.0166,12.9834,29,29,29s29-12.9834,29-29H7z"/>
+    <line x1="7" x2="14" y1="25.1406" y2="32.1406" fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M29.043,7.8457c0.1015,1.125,0.5605,2.2236,1.4209,3.084c1.9521,1.9512,1.9521,5.1172,0,7.0703 c-1.9522,1.9531-1.9522,5.1191,0,7.0703c1.9521,1.9512,1.9521,5.1172,0,7.0703"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M34.5703,7.0361C34.4697,8.4336,34.9316,9.8623,36,10.9297c1.9521,1.9512,1.9521,5.1172,0,7.0703 c-1.9521,1.9531-1.9521,5.1191,0,7.0703c1.9521,1.9512,1.9521,5.1172,0,7.0703"/>
+    <path fill="none" stroke="#000000" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2" d="M40.0107,7.2832c-0.0302,1.3164,0.4483,2.6426,1.4532,3.6465c1.9521,1.9512,1.9521,5.1172,0,7.0703 c-1.9522,1.9531-1.9522,5.1191,0,7.0703c1.9521,1.9512,1.9521,5.1172,0,7.0703"/>
+  </g>
+</g>
+</svg>

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" data-gift-id="love-om-1f607" role="img" aria-label="Nexora Smiling Face With Halo" focusable="false">
+<title>Nexora Smiling Face With Halo</title><desc>A expressive collectible inspired by smiling face with halo, curated as Nexora Smiling Face With Halo in the NEXORA midnight-violet universe. Original artwork by Emily Jäger.</desc><defs><radialGradient id="bg-1F607"><stop offset="0" stop-color="#A855F7" stop-opacity=".28"/><stop offset="1" stop-color="#3B1A63"/></radialGradient><linearGradient id="rim-1F607" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#E9D5FF"/><stop offset=".52" stop-color="#A855F7"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="256" cy="256" r="235" fill="#080615"/><circle cx="256" cy="256" r="226" fill="url(#bg-1F607)"/><circle cx="256" cy="256" r="224" fill="none" stroke="url(#rim-1F607)" stroke-width="5"/><circle cx="256" cy="256" r="207" fill="none" stroke="#E9D5FF" stroke-opacity=".16" stroke-width="1.5"/><path d="M256 36l7 17 18 7-18 7-7 18-7-18-18-7 18-7z" fill="#E9D5FF" opacity=".7"/><circle cx="420" cy="256" r="5" fill="#A855F7"/><g transform="translate(112 112) scale(4)">
+  <g>
+    <path fill="#fcea2b" d="M36,60A24,24,0,0,0,54.157,20.3047q-.1309-.1515-.2646-.3008A24,24,0,1,0,36,60Z"/>
+  </g>
+  <g/>
+  <g/>
+  <g/>
+  <g>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M45.8147,45.2268a15.4294,15.4294,0,0,1-19.6294,0"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M47.7657,16.233a23.0273,23.0273,0,0,0-23.3693-.096"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.6381,22.1467a23,23,0,1,0,36.625-.1294"/>
+    <ellipse cx="36" cy="14.8" rx="25" ry="5.25" fill="none" stroke="#000" stroke-miterlimit="10" stroke-width="2"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M31.6941,33.4036a4.7262,4.7262,0,0,0-8.6382,0"/>
+    <path fill="none" stroke="#000" stroke-linecap="round" stroke-miterlimit="10" stroke-width="2" d="M48.9441,33.4036a4.7262,4.7262,0,0,0-8.6382,0"/>
+  </g>
+  <g>
+    <ellipse cx="36" cy="14.8" rx="25" ry="5.25" fill="none" stroke="#61b2e4" stroke-miterlimit="10" stroke-width="2.1"/>
+  </g>
+</g>
+</svg>
