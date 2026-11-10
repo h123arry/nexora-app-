@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
+import { buildWaveformPeaks, getAudioEnvelopeGain, getDuckedMusicGain } from '../utils/studioAudioPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Scissors, Trash2, Type, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
-type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; voiceoverVolume: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
+type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string) => Promise<void> };
 
 const DB_NAME = 'nexora-studio-projects';
@@ -57,6 +58,12 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [aspectRatio, setAspectRatio] = useState<'portrait' | 'square' | 'landscape'>('portrait');
   const [transition, setTransition] = useState<'cut' | 'fade'>('cut');
   const [soundtrackVolume, setSoundtrackVolume] = useState(0.8);
+  const [soundtrackFadeIn, setSoundtrackFadeIn] = useState(0);
+  const [soundtrackFadeOut, setSoundtrackFadeOut] = useState(0);
+  const [duckMusicUnderVoiceover, setDuckMusicUnderVoiceover] = useState(true);
+  const [musicDuckingLevel, setMusicDuckingLevel] = useState(0.3);
+  const [voiceoverFadeIn, setVoiceoverFadeIn] = useState(0);
+  const [voiceoverFadeOut, setVoiceoverFadeOut] = useState(0);
   const [overlayStart, setOverlayStart] = useState(0);
   const [overlayEnd, setOverlayEnd] = useState(0);
   const [overlayPosition, setOverlayPosition] = useState<'top' | 'center' | 'bottom'>('bottom');
@@ -91,7 +98,13 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       setOverlayColor(project.overlayColor || '#FFFFFF');
       setAspectRatio(project.aspectRatio || 'portrait');
       setTransition(project.transition || 'cut');
-      setSoundtrackVolume(typeof project.soundtrackVolume === 'number' ? project.soundtrackVolume : 0.8);
+      setSoundtrackVolume(typeof project.soundtrackVolume === 'number' ? Math.min(1, Math.max(0, project.soundtrackVolume)) : 0.8);
+      setSoundtrackFadeIn(typeof project.soundtrackFadeIn === 'number' ? Math.min(8, Math.max(0, project.soundtrackFadeIn)) : 0);
+      setSoundtrackFadeOut(typeof project.soundtrackFadeOut === 'number' ? Math.min(8, Math.max(0, project.soundtrackFadeOut)) : 0);
+      setDuckMusicUnderVoiceover(project.duckMusicUnderVoiceover !== false);
+      setMusicDuckingLevel(typeof project.musicDuckingLevel === 'number' ? Math.min(1, Math.max(0, project.musicDuckingLevel)) : 0.3);
+      setVoiceoverFadeIn(typeof project.voiceoverFadeIn === 'number' ? Math.min(8, Math.max(0, project.voiceoverFadeIn)) : 0);
+      setVoiceoverFadeOut(typeof project.voiceoverFadeOut === 'number' ? Math.min(8, Math.max(0, project.voiceoverFadeOut)) : 0);
       setOverlayStart(project.overlayStart || 0);
       setOverlayEnd(project.overlayEnd || 0);
       setOverlayPosition(project.overlayPosition || 'bottom');
@@ -110,12 +123,12 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     if (!ready) return;
     setExportBlob(null);
     const timer = window.setTimeout(() => {
-      void saveProject({ clips, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, voiceoverVolume, voiceoverStart, overlayStart, overlayEnd, overlayPosition, updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
+      void saveProject({ clips, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
         .then(() => setMessage('Draft saved on this device'))
         .catch(() => setMessage('This draft could not be saved on this device.'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, voiceoverVolume, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
+  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,15 +140,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       .then(data => decoder.decodeAudioData(data))
       .then(buffer => {
         const channel = buffer.getChannelData(0);
-        const bars = 96;
-        const samplesPerBar = Math.max(1, Math.floor(channel.length / bars));
-        const peaks = Array.from({ length: bars }, (_, index) => {
-          const start = index * samplesPerBar;
-          const end = Math.min(channel.length, start + samplesPerBar);
-          let peak = 0;
-          for (let sample = start; sample < end; sample += 1) peak = Math.max(peak, Math.abs(channel[sample]));
-          return peak;
-        });
+        const peaks = buildWaveformPeaks(channel, 96);
         if (!cancelled) setVoiceoverWaveform(peaks);
       })
       .catch(() => { if (!cancelled) setVoiceoverWaveform([]); })
@@ -293,6 +298,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let soundtrackGain: GainNode | null = null;
     let voiceoverGain: GainNode | null = null;
     let voiceoverStartTimer: number | null = null;
+    let voiceoverDuration = 0;
     let elapsed = 0;
     let fadeOpacity = transition === 'fade' ? 1 : 0;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -317,7 +323,23 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       }
       if (voiceover) {
         voiceoverElement = new Audio();
+        voiceoverElement.preload = 'metadata';
         voiceoverElement.src = voiceoverObjectUrl = URL.createObjectURL(voiceover);
+        await new Promise<void>((resolve, reject) => {
+          const timeout = window.setTimeout(() => reject(new Error('The voiceover duration could not be read. Try recording or importing it again.')), 8000);
+          voiceoverElement!.onloadedmetadata = () => {
+            window.clearTimeout(timeout);
+            voiceoverDuration = Number.isFinite(voiceoverElement!.duration) ? voiceoverElement!.duration : 0;
+            if (voiceoverDuration > 0) resolve();
+            else reject(new Error('The voiceover file has no readable duration.'));
+          };
+          voiceoverElement!.onerror = () => { window.clearTimeout(timeout); reject(new Error('The voiceover audio could not be decoded for export.')); };
+          if (voiceoverElement!.readyState >= 1) {
+            window.clearTimeout(timeout);
+            voiceoverDuration = Number.isFinite(voiceoverElement!.duration) ? voiceoverElement!.duration : 0;
+            resolve();
+          } else voiceoverElement!.load();
+        });
         voiceoverGain = audioContext.createGain();
         voiceoverGain.gain.value = voiceoverVolume;
         audioContext.createMediaElementSource(voiceoverElement).connect(voiceoverGain);
@@ -409,6 +431,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         await new Promise<void>(resolve => {
           const check = () => {
             elapsed = clipElapsedStart + Math.max(0, preview.currentTime - clip.start);
+            if (soundtrackGain) soundtrackGain.gain.value = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration, duckingLevel: musicDuckingLevel });
+            if (voiceoverGain) voiceoverGain.gain.value = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: Math.max(0, elapsed - voiceoverStart), totalDuration: voiceoverDuration, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
             if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); resolve(); }
             else window.setTimeout(check, 40);
           };
@@ -518,7 +542,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <div className="flex items-center gap-2"><Music2 size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Soundtrack</h2></div>
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#44376F] px-3 py-2 text-xs text-[#D7CCF7]"><Plus size={13}/>{soundtrack?'Replace audio track':'Add music or voiceover'}<input className="hidden" type="file" accept="audio/*" onChange={event => {const file=event.target.files?.[0]; if(file) setSoundtrack(file); event.target.value='';}}/></label>
               {soundtrack && <div className="flex items-center justify-between text-[10px] text-emerald-300"><span className="truncate">{(soundtrack as File).name || 'Audio track selected'}</span><button onClick={() => setSoundtrack(null)} className="text-rose-300">Remove</button></div>}
-              {soundtrack && <label className="block text-[10px] text-[#A39BBF]">Music volume · {Math.round(soundtrackVolume * 100)}%<input type="range" min="0" max="1" step=".05" value={soundtrackVolume} onChange={event => setSoundtrackVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label>}
+              {soundtrack && <><label className="block text-[10px] text-[#A39BBF]">Music volume · {Math.round(soundtrackVolume * 100)}%<input type="range" min="0" max="1" step=".05" value={soundtrackVolume} onChange={event => setSoundtrackVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Fade in · {soundtrackFadeIn}s<input type="range" min="0" max="8" step=".5" value={soundtrackFadeIn} onChange={event=>setSoundtrackFadeIn(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Fade out · {soundtrackFadeOut}s<input type="range" min="0" max="8" step=".5" value={soundtrackFadeOut} onChange={event=>setSoundtrackFadeOut(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label></div>{voiceover && <><label className="flex items-center gap-2 text-[10px] text-[#C9BFF0]"><input type="checkbox" checked={duckMusicUnderVoiceover} onChange={event=>setDuckMusicUnderVoiceover(event.target.checked)} className="accent-violet-500"/>Lower music while narration is playing</label>{duckMusicUnderVoiceover && <label className="block text-[10px] text-[#A39BBF]">Music under voiceover · {Math.round(musicDuckingLevel*100)}%<input type="range" min="0.1" max="0.8" step=".05" value={musicDuckingLevel} onChange={event=>setMusicDuckingLevel(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label>}</>}</>}
               <p className="text-[10px] leading-relaxed text-[#827B9C]">Music and source audio are mixed into your exported video.</p>
             </div>
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
@@ -526,7 +550,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <button type="button" onClick={recordingVoiceover ? stopVoiceover : startVoiceover} className={`w-full rounded-lg border px-3 py-2 text-xs font-semibold ${recordingVoiceover?'border-rose-400/40 bg-rose-500/10 text-rose-200':'border-[#44376F] text-[#D7CCF7]'}`}>{recordingVoiceover?'Stop recording':'Record voiceover'}</button>
               {voiceover && <div className="flex items-center justify-between gap-2 text-[10px] text-emerald-300"><span className="truncate">Voiceover ready · {(voiceover.size/1024).toFixed(0)} KB</span><button type="button" onClick={()=>setVoiceover(null)} className="shrink-0 text-rose-300">Remove</button></div>}
               {voiceover && <><audio controls preload="metadata" src={getUrlForClip(voiceover)} className="h-9 w-full" aria-label="Preview recorded voiceover"/><div className="flex h-12 items-center gap-px overflow-hidden rounded-lg border border-[#34265E] bg-[#080611] px-2" role="img" aria-label="Voiceover audio waveform">{voiceoverWaveform.length ? voiceoverWaveform.map((peak,index)=><span key={index} className="min-w-0 flex-1 rounded-full bg-violet-400/80" style={{height:`${Math.max(8,Math.round(peak*100))}%`}}/>) : <span className="w-full text-center text-[9px] text-[#827B9C]">Waveform preview unavailable for this recording on this device.</span>}</div></>}
-              {voiceover && <><label className="block text-[10px] text-[#A39BBF]">Voice volume · {Math.round(voiceoverVolume*100)}%<input type="range" min="0" max="1" step=".05" value={voiceoverVolume} onChange={event=>setVoiceoverVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Start voiceover at (seconds)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={voiceoverStart} onChange={event=>setVoiceoverStart(Math.max(0,Math.min(totalDuration,Number(event.target.value)||0)))} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label></>}
+              {voiceover && <><label className="block text-[10px] text-[#A39BBF]">Voice volume · {Math.round(voiceoverVolume*100)}%<input type="range" min="0" max="1" step=".05" value={voiceoverVolume} onChange={event=>setVoiceoverVolume(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Start voiceover at (seconds)<input type="number" min="0" max={Math.max(0,totalDuration)} step=".1" value={voiceoverStart} onChange={event=>setVoiceoverStart(Math.max(0,Math.min(totalDuration,Number(event.target.value)||0)))} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Fade in · {voiceoverFadeIn}s<input type="range" min="0" max="8" step=".5" value={voiceoverFadeIn} onChange={event=>setVoiceoverFadeIn(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Fade out · {voiceoverFadeOut}s<input type="range" min="0" max="8" step=".5" value={voiceoverFadeOut} onChange={event=>setVoiceoverFadeOut(Number(event.target.value))} className="mt-2 w-full accent-violet-500"/></label></div></>}
               <p className="text-[10px] leading-relaxed text-[#827B9C]">Record narration with your microphone. It is saved as a separate track and mixed during export.</p>
             </div>
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
