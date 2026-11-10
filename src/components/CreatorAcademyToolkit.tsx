@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { collection, deleteDoc, doc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 type TemplateField = { id: string; label: string; prompt: string; multiline?: boolean };
@@ -128,7 +128,9 @@ export default function CreatorAcademyToolkit({ userId }: { userId: string }) {
     if (busy) return;
     setBusy(true); setNotice(''); setError('');
     try {
-      await deleteDoc(doc(db, 'academyCreatorWorkbooks', userId + '_' + selected.id));
+      const ref = doc(db, 'academyCreatorWorkbooks', userId + '_' + selected.id);
+      const existing = await getDoc(ref);
+      if (existing.exists()) await deleteDoc(ref);
       setDrafts(previous => ({ ...previous, [selected.id]: {} }));
       setNotice('This workbook has been cleared.');
     } catch {
