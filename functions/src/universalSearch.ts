@@ -191,6 +191,7 @@ export async function searchNexoraContent(
     ...(Array.isArray(viewerData?.privacy?.blockedUserIds) ? viewerData.privacy.blockedUserIds : []),
     ...(Array.isArray(viewerData?.messaging?.blockedUserIds) ? viewerData.messaging.blockedUserIds : []),
   ].filter((item): item is string => typeof item === 'string'));
+  const ownerPolicyCache = new Map<string, Promise<{privateProfile:boolean; blocks:string[]; restricted:boolean}>>();
   const visibleCandidates = await Promise.all(candidates.map(async candidate => {
     const data = candidate.data();
     const ownerId = String(data.ownerId || '');
@@ -209,25 +210,34 @@ export async function searchNexoraContent(
     }
     if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) return null;
     if (ownerId && ['person','post','video','live'].includes(String(data.kind))) {
-      const [ownerSettings, follow, ownerStatus] = await Promise.all([
-        db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
-        db.collection('follows').doc(viewerUid + '_' + ownerId).get(),
-        db.collection('accountStatus').doc(ownerId).get(),
-      ]);
-      const privacy = ownerSettings.data() || {};
-      const restriction = ownerStatus.data() || {};
-      const restrictionExpiry = asDate(restriction.expiresAt);
-      const restrictionActive = (restriction.banned === true || restriction.suspended === true)
-        && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now());
-      if (restrictionActive) return null;
-      const ownerBlocks = [
-        ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
-        ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
-      ];
-      if (ownerBlocks.includes(viewerUid)) return null;
-      if (privacy?.privacy?.isPrivate === true && !follow.exists) return null;
+      let policy = ownerPolicyCache.get(ownerId);
+      if (!policy) {
+        policy = Promise.all([
+          db.collection('users').doc(ownerId).collection('settings').doc('preferences').get(),
+          db.collection('accountStatus').doc(ownerId).get(),
+        ]).then(([ownerSettings, ownerStatus]) => {
+          const privacy = ownerSettings.data() || {};
+          const restriction = ownerStatus.data() || {};
+          const restrictionExpiry = asDate(restriction.expiresAt);
+          return {
+            privateProfile: privacy?.privacy?.isPrivate === true,
+            blocks: [
+              ...(Array.isArray(privacy?.privacy?.blockedUserIds) ? privacy.privacy.blockedUserIds : []),
+              ...(Array.isArray(privacy?.messaging?.blockedUserIds) ? privacy.messaging.blockedUserIds : []),
+            ],
+            restricted: (restriction.banned === true || restriction.suspended === true)
+              && (restrictionExpiry.getTime() === 0 || restrictionExpiry.getTime() > Date.now()),
+          };
+        });
+        ownerPolicyCache.set(ownerId, policy);
+      }
+      const visibility = await policy;
+      if (visibility.restricted || visibility.blocks.includes(viewerUid)) return null;
+      if (visibility.privateProfile && !followedIds.has(ownerId)) {
+        const follow = await db.collection('follows').doc(viewerUid + '_' + ownerId).get();
+        if (!follow.exists) return null;
+      }
     }
-    if (data.kind === 'circle' && Array.isArray(data.bannedUsers) && data.bannedUsers.includes(viewerUid)) return null;
     return candidate;
   }));
   const hits: SearchHit[] = [];
