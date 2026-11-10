@@ -9,9 +9,11 @@ interface LiveKitStageProps {
   sessionId: string;
   connectionId: string;
   isHost: boolean;
+  isGuest: boolean;
 }
 
-export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKitStageProps) {
+export default function LiveKitStage({ sessionId, connectionId, isHost, isGuest }: LiveKitStageProps) {
+  const canPublish = isHost || isGuest;
   const remoteRef = useRef<HTMLDivElement | null>(null);
   const localRef = useRef<HTMLVideoElement | null>(null);
   const roomRef = useRef<any>(null);
@@ -92,7 +94,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
           if (!disposed) setStatus('Connection interrupted. Reconnecting…');
         });
         room.on(sdk.RoomEvent.Reconnected, () => {
-          if (!disposed) setStatus(isHost ? 'You are broadcasting' : 'Watching live');
+          if (!disposed) setStatus(isHost ? 'You are broadcasting' : isGuest ? 'You are on stage' : 'Watching live');
         });
         room.on(sdk.RoomEvent.Disconnected, () => {
           if (!disposed) setStatus('Video connection ended');
@@ -111,7 +113,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
         }
         setStatus(isHost ? 'You are broadcasting' : 'Watching live');
 
-        if (isHost) {
+        if (canPublish) {
           // Camera and microphone are requested independently so one denied
           // permission does not prevent the other media track from starting.
           try {
@@ -144,11 +146,11 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
       if (localRef.current) localRef.current.srcObject = null;
       if (remoteRef.current) remoteRef.current.replaceChildren();
     };
-  }, [sessionId, connectionId, isHost, attempt, attachLocalVideo]);
+  }, [sessionId, connectionId, isHost, isGuest, canPublish, attempt, attachLocalVideo]);
 
   const toggleCamera = async () => {
     const room = roomRef.current;
-    if (!room || !isHost || busy) return;
+    if (!room || !canPublish || busy) return;
     setBusy(true);
     try {
       const next = !cameraOn;
@@ -195,13 +197,13 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
     <div className="mt-5 w-full max-w-2xl space-y-3">
       <div className="relative min-h-56 overflow-hidden rounded-2xl border border-violet-300/20 bg-black">
         <div ref={remoteRef} className="grid min-h-56 grid-cols-1 gap-2 p-2" />
-        {isHost && (
+        {canPublish && (
           <video
             ref={localRef}
             autoPlay
             muted
             playsInline
-            aria-label="Your live camera preview"
+            aria-label={isHost ? 'Your live camera preview' : 'Your guest camera preview'}
             className="absolute bottom-3 right-3 aspect-video w-32 rounded-xl border border-white/30 bg-black object-cover shadow-xl"
           />
         )}
@@ -213,7 +215,7 @@ export default function LiveKitStage({ sessionId, connectionId, isHost }: LiveKi
             {error}
           </div>
         )}
-        {!isHost && status === 'Watching live' && !hasRemoteVideo && (
+        {!canPublish && status === 'Watching live' && !hasRemoteVideo && (
           <div className="pointer-events-none absolute inset-0 grid place-items-center text-xs text-white/60">
             Waiting for the creator's video…
           </div>
