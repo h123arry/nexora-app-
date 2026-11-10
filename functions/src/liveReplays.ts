@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { defineSecret, defineString } from 'firebase-functions/params';
@@ -152,7 +151,7 @@ export const stopLiveRecording = onCall(
 );
 
 export const getLiveReplayPlayback = onCall(
-  { region: 'europe-west1', maxInstances: 10 },
+  { region: 'europe-west1', secrets: [apiKey, apiSecret], maxInstances: 10 },
   async request => {
     const userId = requireUid(request);
     const sessionId = typeof request.data?.sessionId === 'string' ? request.data.sessionId.trim() : '';
