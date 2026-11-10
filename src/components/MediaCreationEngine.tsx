@@ -553,7 +553,7 @@ export default function MediaCreationEngine({
       try {
         const normalized = raw.toLowerCase().replace(/[^a-z0-9_]/g, '');
         if (!normalized) { setMentionSuggestions([]); return; }
-        const result = await getDocs(query(collection(db, 'publicProfiles'), orderBy('username'), startAt(normalized), endAt(`${normalized}\\uf8ff`), limit(6)));
+        const result = await getDocs(query(collection(db, 'publicProfiles'), orderBy('username'), startAt(normalized), endAt(`${normalized}\uf8ff`), limit(6)));
         if (!active) return;
         setMentionSuggestions(result.docs.map(item => {
           const data = item.data();
