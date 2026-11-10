@@ -1,3 +1,4 @@
+import { stopLiveRecordingForSession, liveKitApiKey, liveKitApiSecret } from './liveReplays.js';
 import { createHash } from 'node:crypto';
 import { FieldValue, Timestamp, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
@@ -52,18 +53,20 @@ export const startLiveSession = onCall({ maxInstances: 10 }, async request => {
   }
 });
 
-export const endLiveSession = onCall({ maxInstances: 10 }, async request => {
+export const endLiveSession = onCall({ maxInstances: 10, secrets: [liveKitApiKey, liveKitApiSecret] }, async request => {
   const hostId = uid(request);
   const sessionId = valid(() => validateLiveSessionId(request.data?.sessionId));
   const ref = sessions.doc(sessionId);
   try {
-    return await db.runTransaction(async tx => {
+    const result = await db.runTransaction(async tx => {
       const snapshot = await tx.get(ref);
       if (!snapshot.exists || snapshot.data()?.hostId !== hostId) throw new HttpsError('not-found', 'This live room is unavailable.');
       if (snapshot.data()?.status === 'ended') return { sessionId, status: 'ended' as const, replayed: true };
       tx.update(ref, { status: 'ended', viewerCount: 0, endedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp() });
       return { sessionId, status: 'ended' as const, replayed: false };
     });
+    if (!result.replayed) await stopLiveRecordingForSession(sessionId);
+    return result;
   } catch (error) {
     if (error instanceof HttpsError) throw error;
     throw new HttpsError('unavailable', 'The live room could not be ended. Please retry.');
@@ -305,10 +308,11 @@ async function endExpiredHostSessions() {
       if (expiresAt > Date.now()) return;
       tx.update(sessionDoc.ref, { status: 'ended', viewerCount: 0, endedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), endReason: 'host_connection_expired' });
     });
+    await stopLiveRecordingForSession(sessionDoc.id);
   }
 }
 export const reconcileLiveSessionViewers = onSchedule({
-  schedule: 'every 1 minutes', timeZone: 'Africa/Lagos', maxInstances: 1,
+  schedule: 'every 1 minutes', timeZone: 'Africa/Lagos', maxInstances: 1, secrets: [liveKitApiKey, liveKitApiSecret],
 }, async () => {
   await endExpiredHostSessions();
   const now = Timestamp.now();

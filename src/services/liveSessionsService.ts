@@ -6,7 +6,8 @@ const liveKitFunctions = getFunctions(app, 'europe-west1');
 export interface LiveSessionSummary {
   id: string; hostId: string; hostName?: string; title: string; status: 'live' | 'ended';
   viewerCount: number; peakViewerCount?: number; uniqueViewerCount?: number; messageCount?: number; giftCount?: number; giftNexTotal?: number; chatEnabled: boolean; giftsEnabled: boolean; videoTransport: 'not_configured' | 'livekit';
-  startedAt?: { toDate?: () => Date } | string | null;
+  startedAt?: { toDate?: () => Date } | string | null; endedAt?: { toDate?: () => Date } | string | null;
+  recording?: { status?: 'starting' | 'recording' | 'processing' | 'completed' | 'failed' | 'stop_failed'; egressId?: string; objectPath?: string | null } | null;
 }
 export interface LiveChatMessage {
   id: string; senderId: string; senderName: string; message: string; createdAt?: { toDate?: () => Date } | string | null;
@@ -71,4 +72,17 @@ export async function moderateLiveParticipant(sessionId: string, participantId: 
     { sessionId: string; participantId: string; action: string; updated: true }
   >(liveKitFunctions, 'moderateLiveParticipant');
   return (await call({ sessionId, participantId, action })).data;
+}
+
+export async function startLiveRecording(sessionId: string) {
+  const call = httpsCallable<{ sessionId: string }, { sessionId: string; status: string; egressId?: string; replayed: boolean }>(liveKitFunctions, 'startLiveRecording');
+  return (await call({ sessionId })).data;
+}
+export async function stopLiveRecording(sessionId: string) {
+  const call = httpsCallable<{ sessionId: string }, { sessionId: string; status: string; stopped: true }>(liveKitFunctions, 'stopLiveRecording');
+  return (await call({ sessionId })).data;
+}
+export async function getLiveReplayPlayback(sessionId: string) {
+  const call = httpsCallable<{ sessionId: string }, { sessionId: string; url: string; expiresAt: number }>(liveKitFunctions, 'getLiveReplayPlayback');
+  return (await call({ sessionId })).data;
 }
