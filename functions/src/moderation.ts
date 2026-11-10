@@ -193,3 +193,34 @@ export const submitModerationAppeal = onCall({ maxInstances: 10 }, async (reques
   await db.collection('moderationAuditEvents').add({ type: 'appeal_submitted', appealId, enforcementId: enforcement.id, actorId: userId, createdAt: FieldValue.serverTimestamp() });
   return { accepted: true, duplicate: false, appealId };
 });
+
+
+/** Owner-scoped report history. Private reviewer notes and reporter identity never leave this boundary. */
+export const listMyModerationReports = onCall({ maxInstances: 10 }, async request => {
+  const userId = requireAuth(request);
+  const snapshot = await db.collection('moderationReports')
+    .where('reporterId', '==', userId)
+    .limit(100)
+    .get();
+  const reports = snapshot.docs.map(doc => {
+    const data = doc.data();
+    const createdAt = data.createdAt?.toDate?.();
+    const updatedAt = data.updatedAt?.toDate?.();
+    const reviewedAt = data.reviewedAt?.toDate?.();
+    const rawStatus = String(data.status || 'pending');
+    const status = ['pending', 'under_review', 'escalated', 'resolved', 'dismissed'].includes(rawStatus)
+      ? rawStatus : 'pending';
+    return {
+      id: doc.id,
+      targetType: String(data.targetType || 'content'),
+      category: String(data.category || 'other'),
+      status,
+      action: status === 'resolved' && typeof data.action === 'string' ? data.action : null,
+      createdAt: createdAt instanceof Date ? createdAt.toISOString() : null,
+      updatedAt: updatedAt instanceof Date ? updatedAt.toISOString() : null,
+      reviewedAt: reviewedAt instanceof Date ? reviewedAt.toISOString() : null,
+    };
+  });
+  reports.sort((a, b) => Date.parse(b.createdAt || '') - Date.parse(a.createdAt || ''));
+  return { reports: reports.slice(0, 50) };
+});
