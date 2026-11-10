@@ -55,6 +55,18 @@ const publicProfile = (uid) => ({
 });
 
  describe('Firestore authorization regression tests', () => {
+  it('allows owners to read retention summaries but reserves all writes to trusted server code', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'userRetention', 'alice'), {
+        userId: 'alice', currentStreak: 4, longestStreak: 8, lastActiveDay: '2026-11-10'
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'userRetention', 'alice')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'userRetention', 'alice')));
+    await assertFails(getDocs(collection(dbFor('alice'), 'userRetention')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'userRetention', 'alice'), { userId: 'alice', currentStreak: 999 }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'userRetention', 'alice'), { currentStreak: 999 }));
+  });
   it('allows a user to create their own private/public profile pair but rejects spoofed identity and privilege fields', async () => {
     const ownPrivate = {
       id: 'alice', email: 'alice@example.test', username: 'alice', name: 'Alice',
