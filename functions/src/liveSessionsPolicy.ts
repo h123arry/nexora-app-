@@ -25,6 +25,13 @@ export function validateLiveSessionSettings(value: unknown): LiveSessionSettings
   };
 }
 
+export type LiveGuestDecision = 'approved' | 'denied';
+
+export function validateLiveGuestDecision(value: unknown): LiveGuestDecision {
+  if (value !== 'approved' && value !== 'denied') throw new Error('Choose approve or deny for the guest request.');
+  return value;
+}
+
 export function validateLiveSessionTitle(value: unknown): string {
   if (typeof value !== 'string' || value.trim().length < LIVE_SESSION_TITLE_MIN || value.trim().length > LIVE_SESSION_TITLE_MAX) {
     throw new Error('Live room title must be between 3 and 80 characters.');
