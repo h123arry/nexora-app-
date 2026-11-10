@@ -770,6 +770,15 @@ const publicProfile = (uid) => ({
         reporterUid: 'bob', targetType: 'post', targetId: 'post-1', reason: 'Private moderation report',
         status: 'open', createdAt: Timestamp.now()
       });
+      await setDoc(doc(db, 'communities', 'member-circle', 'mutes', 'bob'), {
+        userId: 'bob', mutedBy: 'alice', reason: 'Temporary restriction',
+        createdAt: Timestamp.now(), expiresAt: Timestamp.fromDate(new Date(Date.now() + 60 * 60 * 1000))
+      });
+      await setDoc(doc(db, 'communities', 'member-circle', 'mutes', 'alice'), {
+        userId: 'alice', mutedBy: 'alice', reason: 'Expired restriction',
+        createdAt: Timestamp.fromDate(new Date(Date.now() - 2 * 60 * 60 * 1000)),
+        expiresAt: Timestamp.fromDate(new Date(Date.now() - 60 * 60 * 1000))
+      });
     });
 
     const aliceMembers = collection(dbFor('alice'), 'communities', 'member-circle', 'members');
@@ -802,6 +811,16 @@ const publicProfile = (uid) => ({
     await assertFails(getDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'reports', 'report-private')));
     await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'reports', 'forged-report'), {
       reporterUid: 'bob', targetType: 'post', targetId: 'post-1', reason: 'fake', status: 'open'
+    }));
+    await assertFails(getDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'mutes', 'bob')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'mutes', 'self-created'), {
+      userId: 'bob', reason: 'fake'
+    }));
+    await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'messages', 'muted-message'), {
+      id: 'muted-message', senderId: 'bob', content: 'Muted send attempt', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'communities', 'member-circle', 'messages', 'after-expiry'), {
+      id: 'after-expiry', senderId: 'alice', content: 'Expired mute no longer blocks sending', createdAt: serverTimestamp()
     }));
     await assertFails(setDoc(doc(dbFor('bob'), 'communities', 'member-circle', 'members', 'alice'), {
       userId: 'alice', role: 'member', status: 'active', joinedAt: serverTimestamp()
