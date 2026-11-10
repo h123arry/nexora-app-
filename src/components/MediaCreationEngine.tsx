@@ -1193,8 +1193,8 @@ export default function MediaCreationEngine({
                       { id: 'text', icon: FileText, label: 'Text post', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a thought, story or update.' },
                       { id: 'photo', icon: Camera, label: 'Photo', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a photo from your device or camera.' },
                       { id: 'carousel', icon: FileImage, label: 'Photo collection', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share several photos together.' },
-                      { id: 'video', icon: Video, label: 'Video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a video from your device.' },
-                      { id: 'reel', icon: Sparkle, label: 'Short video', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record a quick moment or choose a clip.' },
+                      { id: 'video', icon: Video, label: 'Video post', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share a full video with your own caption.' },
+                      { id: 'reel', icon: Sparkle, label: 'Quick clip', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Capture a quick moment in your own style.' },
                       { id: 'voice', icon: Mic, label: 'Voice note', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Record a message in your own voice.' },
                       { id: 'poll', icon: BarChart2, label: 'Poll', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Ask a question and let people vote.' },
                       { id: 'pulse', icon: MapPin, label: 'Local update', color: 'border-[#7138FF]/20 hover:border-[#7138FF]/50 text-[#B69BFF]', desc: 'Share what is happening near you.' },
@@ -1336,7 +1336,7 @@ export default function MediaCreationEngine({
                   {activeMode === 'reel' && (
                     /* REEL INTERACTIVE CAMERA */
                     <div className="space-y-3">
-                      <div className="relative aspect-[9/16] max-w-[240px] mx-auto rounded-2xl overflow-hidden bg-black border border-zinc-800 flex flex-col justify-between p-3.5 shadow-md">
+                      <div className="relative aspect-[4/5] w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black border border-[#44376F] flex flex-col justify-between p-3.5 shadow-md">
                         <div className="z-10 flex justify-between items-center text-[8px] font-mono text-zinc-400">
                           <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">YOUR CAMERA</span>
                           <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-zinc-900 rounded-full text-white">
@@ -1711,8 +1711,8 @@ export default function MediaCreationEngine({
                 /* STEP 5: VISUAL PREVIEW & ACCESSIBILITY COMPLIANCE */
                 <div className="space-y-4 animate-fadeIn">
                   <div>
-                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">POST PREVIEW</span>
-                    <h3 className="text-sm font-black text-white uppercase">This is how your post will look.</h3>
+                    <span className="text-[10px] font-mono text-violet-400 uppercase tracking-widest block mb-1">{activeTab === 'story' ? 'STORY PREVIEW' : 'POST PREVIEW'}</span>
+                    <h3 className="text-sm font-black text-white">{activeTab === 'story' ? 'This is how your story will look.' : 'This is how your post will look.'}</h3>
                   </div>
 
                   {/* Simulated Live Post Card */}
@@ -1800,7 +1800,7 @@ export default function MediaCreationEngine({
                   {postingStatus === 'idle' ? (
                     <div className="space-y-4">
                       <div className="flex justify-between items-center">
-                        <span className="text-sm font-black text-white uppercase">Ready to share?</span>
+                        <span className="text-sm font-bold text-white">{activeTab === 'story' ? 'Ready to share your story?' : 'Ready to share?'}</span>
                       </div>
 
                       {/* Custom options row */}
@@ -1933,7 +1933,7 @@ export default function MediaCreationEngine({
                   disabled={!caption.trim() && selectedImages.length === 0 && !videoFileUrl && !recordedVideoUrl && !voiceFileUrl && !pollQuestion.trim()}
                   className="px-6 py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] hover:brightness-110 disabled:opacity-40 text-white font-sans font-black text-xs uppercase tracking-widest rounded-xl shadow-lg cursor-pointer transition-all animate-pulse"
                 >
-                  Share post
+                  {activeTab === 'story' ? 'Share story' : 'Share post'}
                 </button>
               )}
             </div>
