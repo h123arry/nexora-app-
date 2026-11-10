@@ -21,8 +21,8 @@ before(async () => {
   await circle.collection('posts').doc('post-remove').set({ id: 'post-remove', authorId: 'circle-target-report-test', content: 'A post to remove after review' });
   await circle.collection('posts').doc('post-dismiss').set({ id: 'post-dismiss', authorId: 'circle-target-report-test', content: 'A post that should remain' });
   await circle.collection('messages').doc('message-dismiss').set({ id: 'message-dismiss', senderId: 'circle-target-report-test', content: 'A reported message' });
-  await db.collection('publicProfiles').doc('circle-reporter-report-test').set({ name: 'Bob Reporter', username: 'circle-reporter-report-test' });
-  await db.collection('publicProfiles').doc('circle-target-report-test').set({ name: 'Carol Member', username: 'circle-target-report-test' });
+  await db.collection('publicProfiles').doc('circle-reporter-report-test').set({ name: 'Circle Reporter', username: 'reporter' });
+  await db.collection('publicProfiles').doc('circle-target-report-test').set({ name: 'Circle Target', username: 'target' });
 });
 
 after(async () => {
