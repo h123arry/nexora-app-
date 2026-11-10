@@ -192,6 +192,7 @@ export async function searchNexoraContent(
       const parent = await db.collection('pages').doc(sourceSegments[1]).get();
       const page = parent.data() || {};
       if (!parent.exists || page.isPrivate === true || page.privacy === 'private' || ['private','suspended','deleted','draft'].includes(String(page.status || '').toLowerCase())) return null;
+      if (data.kind === 'service' && page.category !== 'Business') return null;
     }
     if (ownerId && (blocked.has(ownerId) || (data.kind === 'person' && ownerId === viewerUid))) return null;
     if (ownerId && ['person','post','video','live'].includes(String(data.kind))) {
