@@ -42,6 +42,7 @@ interface Post {
   isArchived?: boolean;
   isDraft?: boolean;
   location?: string;
+  commentsDisabled?: boolean;
   soundTitle?: string;
 }
 
@@ -1125,10 +1126,13 @@ export default function NexoraVideoPlayer({
                </button>
 
                {/* 💬 Comment Button */}
-               <button 
-                 onClick={(e) => { e.stopPropagation(); onCommentToggle?.(); }}
-                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
-                 title="Comments"
+               <button
+                 type="button"
+                 disabled={Boolean(post.commentsDisabled)}
+                 onClick={(e) => { e.stopPropagation(); if (!post.commentsDisabled) onCommentToggle?.(); }}
+                 className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center disabled:cursor-not-allowed disabled:opacity-45"
+                 title={post.commentsDisabled ? 'Comments are turned off for this post' : 'Comments'}
+                 aria-label={post.commentsDisabled ? 'Comments are turned off' : 'Open comments'}
                >
                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
                    <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" />
