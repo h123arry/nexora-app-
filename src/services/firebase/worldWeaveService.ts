@@ -1,6 +1,6 @@
 import {
-  addDoc, arrayUnion, collection, collectionGroup, doc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query,
-  serverTimestamp, setDoc, updateDoc, where, runTransaction, type Unsubscribe,
+  arrayUnion, collection, collectionGroup, deleteDoc, doc, getDoc, getDocs, increment, limit, onSnapshot, orderBy, query,
+  serverTimestamp, setDoc, updateDoc, where, runTransaction, writeBatch, type Unsubscribe,
 } from 'firebase/firestore';
 import { auth, db } from './config';
 import { uploadMediaFile, deleteMediaFile } from './storageService';
@@ -96,10 +96,13 @@ export async function addWorldWeaveTextMoment(weaveId: string, author: { id: str
   const user = requireUser(); const cleanText = text.trim();
   if (user.uid !== author.id) throw new Error('The signed-in account must own this contribution.');
   if (!cleanText || cleanText.length > 2000) throw new Error('A moment must contain 1 to 2,000 characters.');
-  await addDoc(collection(db, 'worldWeaves', weaveId, 'moments'), { weaveId, authorId: user.uid,
+  const momentRef = doc(collection(db, 'worldWeaves', weaveId, 'moments'));
+  const batch = writeBatch(db);
+  batch.set(momentRef, { weaveId, authorId: user.uid,
     authorName: author.name.slice(0, 80), authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '',
     text: cleanText, mediaType: 'text', createdAt: serverTimestamp() });
-  await updateDoc(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp() });
+  batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp() });
+  await batch.commit();
 }
 export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: string; name: string; username: string; avatar: string },
   file: File, text: string, onProgress?: (progress: number) => void): Promise<void> {
@@ -113,12 +116,14 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
   let uploaded: Awaited<ReturnType<typeof uploadMediaFile>> | null = null;
   try {
     uploaded = await uploadMediaFile({ file, userId: user.uid, mediaId: momentRef.id, metadata: { purpose: 'worldweave', weaveId, momentId: momentRef.id }, onProgress });
-    await setDoc(momentRef, { weaveId, authorId: user.uid, authorName: author.name.slice(0, 80),
+    const batch = writeBatch(db);
+    batch.set(momentRef, { weaveId, authorId: user.uid, authorName: author.name.slice(0, 80),
       authorUsername: author.username.slice(0, 40), authorAvatar: author.avatar || '', text: text.trim(),
       mediaType, mediaUrl: uploaded.downloadUrl, storagePath: uploaded.storagePath, createdAt: serverTimestamp() });
-    await updateDoc(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp() });
+    batch.update(doc(db, 'worldWeaves', weaveId), { momentCount: increment(1), updatedAt: serverTimestamp() });
+    await batch.commit();
   } catch (error) {
-    if (uploaded) await Promise.allSettled([deleteMediaFile(uploaded.storagePath)]);
+    if (uploaded) await Promise.allSettled([deleteMediaFile(uploaded.storagePath), deleteDoc(doc(db, 'mediaAssets', uploaded.mediaId))]);
     throw error;
   }
 }
