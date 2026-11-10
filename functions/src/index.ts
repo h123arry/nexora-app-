@@ -89,6 +89,18 @@ export const indexCirclePostForSearch = onDocumentWritten('communities/{communit
   await syncSearch('post', event.params.postId, event.data?.after.exists ? event.data.after.ref.path : 'communities/' + event.params.communityId + '/posts/' + event.params.postId,
     data, parentSnapshot.data() as Record<string, unknown> | undefined);
 });
+export const indexCirclePollForSearch = onDocumentWritten('communities/{communityId}/polls/{pollId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('poll', event.params.pollId, 'communities/' + event.params.communityId + '/polls/' + event.params.pollId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexCircleAnnouncementForSearch = onDocumentWritten('communities/{communityId}/announcements/{announcementId}', async event => {
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('announcement', event.params.announcementId, 'communities/' + event.params.communityId + '/announcements/' + event.params.announcementId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
 export const indexCircleEventForSearch = onDocumentWritten('communities/{communityId}/events/{eventId}', async event => {
   const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
   const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
@@ -133,16 +145,18 @@ export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSecond
     throw new HttpsError('permission-denied', 'Only NEXORA administrators can rebuild the search index.');
   }
   const source = request.data?.source;
-  const sources = ['users','posts','pages','communities','liveSessions','circlePosts','circleEvents','pageServices','pageUpdates'];
+  const sources = ['users','posts','pages','communities','liveSessions','circlePosts','circleEvents','circlePolls','circleAnnouncements','pageServices','pageUpdates'];
   if (typeof source !== 'string' || !sources.includes(source)) throw new HttpsError('invalid-argument', 'Choose a supported search index source.');
   const cursor = request.data?.cursor;
   if (cursor !== undefined && cursor !== null && (typeof cursor !== 'string' || cursor.length > 500 || cursor.includes('..'))) {
     throw new HttpsError('invalid-argument', 'The backfill cursor is invalid.');
   }
-  const isCollectionGroup = ['circlePosts','circleEvents','pageServices','pageUpdates'].includes(source);
+  const isCollectionGroup = ['circlePosts','circleEvents','circlePolls','circleAnnouncements','pageServices','pageUpdates'].includes(source);
   const collectionName = source === 'circlePosts' ? 'posts'
     : source === 'circleEvents' ? 'events'
-      : source === 'pageServices' ? 'services'
+      : source === 'circlePolls' ? 'polls'
+        : source === 'circleAnnouncements' ? 'announcements'
+          : source === 'pageServices' ? 'services'
         : source === 'pageUpdates' ? 'channelUpdates' : source;
   let query: FirebaseFirestore.Query = isCollectionGroup
     ? adminDb.collectionGroup(collectionName)
@@ -151,7 +165,7 @@ export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSecond
   if (cursor) {
     if (isCollectionGroup) {
       const cursorSegments = cursor.split('/');
-      const expectedCollection = source === 'circlePosts' ? 'posts' : source === 'circleEvents' ? 'events' : source === 'pageServices' ? 'services' : 'channelUpdates';
+      const expectedCollection = source === 'circlePosts' ? 'posts' : source === 'circleEvents' ? 'events' : source === 'circlePolls' ? 'polls' : source === 'circleAnnouncements' ? 'announcements' : source === 'pageServices' ? 'services' : 'channelUpdates';
       const expectedRoot = source.startsWith('circle') ? 'communities' : 'pages';
       if (cursorSegments.length !== 4 || cursorSegments[0] !== expectedRoot || cursorSegments[2] !== expectedCollection) {
         throw new HttpsError('invalid-argument', 'The backfill cursor does not belong to this source.');
@@ -166,10 +180,10 @@ export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSecond
   for (const document of snapshot.docs) {
     const data = document.data() as Record<string, unknown>;
     const segments = document.ref.path.split('/');
-    if (source === 'circlePosts' || source === 'circleEvents') {
+    if (source === 'circlePosts' || source === 'circleEvents' || source === 'circlePolls' || source === 'circleAnnouncements') {
       if (segments.length !== 4 || segments[0] !== 'communities') continue;
       const parent = await adminDb.collection('communities').doc(segments[1]).get();
-      const kind = source === 'circleEvents' ? 'event' : 'post';
+      const kind = source === 'circleEvents' ? 'event' : source === 'circlePolls' ? 'poll' : source === 'circleAnnouncements' ? 'announcement' : 'post';
       await syncUniversalSearchRecord(adminDb, kind, document.id, document.ref.path, data, parent.data() as Record<string, unknown> | undefined);
     } else if (source === 'pageServices' || source === 'pageUpdates') {
       if (segments.length !== 4 || segments[0] !== 'pages') continue;
