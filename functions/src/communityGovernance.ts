@@ -96,7 +96,8 @@ export async function moderateCircleMember(
   const actorRef = communityRef.collection('members').doc(actorUid);
   const targetRef = communityRef.collection('members').doc(targetUid);
   const auditRef = communityRef.collection('auditEvents').doc(randomUUID());
-  let mutedUntil: Date | null = null;
+  const now = new Date();
+  const mutedUntil = action === 'mute' ? new Date(now.getTime() + durationMinutes * 60_000) : null;
 
   await db.runTransaction(async tx => {
     const [community, actor, target] = await Promise.all([
@@ -120,9 +121,7 @@ export async function moderateCircleMember(
       throw new Error('Only the Circle owner can moderate another manager.');
     }
 
-    const now = new Date();
     if (action === 'mute') {
-      mutedUntil = new Date(now.getTime() + durationMinutes * 60_000);
       tx.update(targetRef, {
         mutedUntil, mutedBy: actorUid, mutedAt: now, muteReason: cleanReason,
       });
@@ -139,5 +138,5 @@ export async function moderateCircleMember(
       reason: cleanReason, createdAt: now,
     });
   });
-  return { userId: targetUid, action, mutedUntil: mutedUntil?.toISOString() || null };
+  return { userId: targetUid, action, mutedUntil: mutedUntil ? mutedUntil.toISOString() : null };
 }
