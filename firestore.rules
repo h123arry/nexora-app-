@@ -710,37 +710,10 @@ service cloud.firestore {
     // Academy lesson progress is a learner-owned record, not a credential.
     // Course completion and certificates must be assessed by trusted backend code.
     match /academyProgress/{progressId} {
-      function validAcademyCourse(courseId) {
-        return courseId in [
-          'creator-foundations', 'content-craft', 'community-building',
-          'creator-business', 'live-production', 'creator-analytics',
-          'personal-brand', 'creator-safety'
-        ];
-      }
-      function validAcademyProgress() {
-        return request.resource.data.keys().hasOnly([
-            'userId', 'courseId', 'completedLessonIds', 'updatedAt', 'schemaVersion'
-          ])
-          && request.resource.data.keys().hasAll([
-            'userId', 'courseId', 'completedLessonIds', 'updatedAt', 'schemaVersion'
-          ])
-          && request.resource.data.userId == request.auth.uid
-          && validAcademyCourse(request.resource.data.courseId)
-          && progressId == request.auth.uid + '_' + request.resource.data.courseId
-          && request.resource.data.completedLessonIds is list
-          && request.resource.data.completedLessonIds.size() <= 3
-          && request.resource.data.schemaVersion == 1;
-      }
+      // Learners may read only their own progress. Writes are performed by
+      // academyCompleteLesson after validating the published lesson.
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
-      allow create: if signedIn() && validAcademyProgress();
-      allow update: if signedIn()
-        && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId
-        && request.resource.data.courseId == resource.data.courseId
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['completedLessonIds', 'updatedAt'])
-        && validAcademyProgress();
-      allow delete: if false;
+      allow create, update, delete: if false;
     }
 
     // Learner study notes are private, account-owned learning records. They never affect grading.

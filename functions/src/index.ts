@@ -45,6 +45,7 @@ import {
   getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
   issueAcademyCertificate, verifyAcademyCertificate, revokeAcademyCertificate, getAcademyTutorContext,
   createAcademyMentorshipSession, listUpcomingAcademyMentorshipSessions, bookAcademyMentorshipSession,
+  completeAcademyLesson,
 } from './academyInstitution.js';
 
 
@@ -492,6 +493,21 @@ export const academyPublishAssessment = onCall({ maxInstances: 10 }, async reque
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to publish an Academy assessment.');
   try { return await publishAcademyAssessment(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId); } catch (error) { throw academyFailure(error); }
 });
+export const academyCompleteLesson = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to save Academy progress.');
+  try {
+    return await completeAcademyLesson(adminDb, request.auth.uid, request.data?.courseId, request.data?.lessonId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid course') || message.includes('not part of the selected course')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    if (message.includes('supported lesson limit')) throw new HttpsError('resource-exhausted', message);
+    throw new HttpsError('internal', 'Your Academy progress could not be saved. Please retry.');
+  }
+});
+
 export const academySubmitAssessment = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to take an Academy assessment.');
   try { return await submitAcademyAssessment(adminDb, request.auth.uid, request.data?.courseId, request.data?.assessmentId, request.data?.answers); } catch (error) { throw academyFailure(error); }
