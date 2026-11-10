@@ -185,3 +185,26 @@ export async function getReferralSummary(db: Firestore, uid: string) {
     rewardsNex: attributions.docs.reduce((total, doc) => total + (doc.get('status') === 'qualified' ? Number(doc.get('rewardNex') || 0) : 0), 0),
   };
 }
+
+
+/** Public, privacy-limited preview used by referral landing pages before sign-in. */
+export async function getReferralInvitePreview(db: Firestore, code: string) {
+  if (typeof code !== 'string' || !CODE_PATTERN.test(code)) return { valid: false as const };
+  const [invite, config] = await Promise.all([
+    db.collection('referralCodes').doc(hashCode(code)).get(),
+    db.collection('referralProgramConfig').doc('current').get(),
+  ]);
+  if (!invite.exists || invite.get('status') !== 'active' || config.get('enabled') !== true
+    || invite.get('expiresAt')?.toDate?.() <= new Date()) return { valid: false as const };
+  const ownerId = String(invite.get('ownerId') || '');
+  if (!validUid(ownerId)) return { valid: false as const };
+  const profile = await db.collection('publicProfiles').doc(ownerId).get();
+  if (!profile.exists) return { valid: true as const, inviterName: 'A NEXORA member', inviterUsername: '', inviterAvatar: '' };
+  const data = profile.data() || {};
+  return {
+    valid: true as const,
+    inviterName: typeof data.name === 'string' && data.name.trim() ? data.name.slice(0, 70) : 'A NEXORA member',
+    inviterUsername: typeof data.username === 'string' ? data.username.slice(0, 40) : '',
+    inviterAvatar: typeof data.avatar === 'string' ? data.avatar.slice(0, 1000) : '',
+  };
+}
