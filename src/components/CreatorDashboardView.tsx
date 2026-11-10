@@ -25,7 +25,7 @@ import { scheduleCreatorPost, listCreatorScheduledPosts, cancelCreatorScheduledP
 import CreatorGiftEarningsPanel from './CreatorGiftEarningsPanel';
 import CreatorEconomyExpansionPanel from './CreatorEconomyExpansionPanel';
 import CreatorMembershipPanel from './CreatorMembershipPanel';
-import { buildCreatorAchievements } from '../services/analytics/creatorAchievements';
+import { buildCreatorAchievements, buildCreatorProgressionLevel } from '../services/analytics/creatorAchievements';
 import ContentSeriesPanel from './ContentSeriesPanel';
 import ReferralGrowthPanel from './ReferralGrowthPanel';
 
@@ -661,6 +661,8 @@ export default function CreatorDashboardView({
       return matchesSearch && matchesType;
     });
   }, [localPosts, uploadedMedia, mediaSearch, mediaTypeFilter]);
+
+  const progressionLevel = useMemo(() => buildCreatorProgressionLevel(currentUser.reputationPoints), [currentUser.reputationPoints]);
 
   const achievementsList = useMemo(
     () => buildCreatorAchievements(localPosts, currentUser.reputationPoints, currentUser.isVerified === true),
@@ -1324,6 +1326,16 @@ export default function CreatorDashboardView({
                 <h4 className="text-sm font-extrabold text-white tracking-tight uppercase">Creator Achievements & Badges</h4>
                 <p className="text-xs text-zinc-400">Reach performance thresholds on Nexora to unlock permanent visual badge customizers on your profile.</p>
               </div>
+
+              <section className="rounded-2xl border border-violet-400/20 bg-gradient-to-br from-[#120a3a]/70 to-[#090714] p-5 space-y-3" aria-label="Creator progression level">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-violet-300">Your community level</p><h4 className="mt-1 text-xl font-black text-white">{progressionLevel.title}</h4></div>
+                  <span className="rounded-full border border-violet-300/20 bg-violet-500/10 px-3 py-1 text-xs font-bold text-violet-200">{progressionLevel.currentReputation.toLocaleString()} reputation</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-white/10"><div className="h-full rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-500 transition-all" style={{ width: progressionLevel.progress + '%' }} /></div>
+                <p className="text-xs text-zinc-400">{progressionLevel.nextLevel ? progressionLevel.pointsToNext.toLocaleString() + ' more reputation points to ' + progressionLevel.nextLevel : 'Highest published progression level reached.'}</p>
+                <p className="text-[10px] text-zinc-500">Levels reflect your existing reputation score. They do not grant NEX, paid benefits or moderation privileges.</p>
+              </section>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {achievementsList.map((badge, i) => (
