@@ -34,6 +34,8 @@ interface MessageBubbleProps {
   currentUserId: string;
   onShowReactionDetails?: (msgId: string) => void;
   isPinned: boolean;
+  groupReadCount?: number;
+  groupRecipientCount?: number;
 }
 
 export default function MessageBubble({
@@ -62,7 +64,9 @@ export default function MessageBubble({
   onSeekVoice,
   currentUserId,
   onShowReactionDetails,
-  isPinned
+  isPinned,
+  groupReadCount = 0,
+  groupRecipientCount = 0,
 }: MessageBubbleProps) {
   const [privateVoiceUrl, setPrivateVoiceUrl] = useState('');
   const [loadingPrivateVoice, setLoadingPrivateVoice] = useState(false);
@@ -403,9 +407,14 @@ export default function MessageBubble({
                   ) : message.status === 'sent' ? (
                     <Check className="w-3 h-3 text-white/40" />
                   ) : (
-                    <CheckCheck className={`w-3 h-3 ${message.status === 'read' ? 'text-cyan-300' : 'text-white/50'}`} />
+                    <CheckCheck className={`w-3 h-3 ${message.status === 'read' ? 'text-violet-300' : 'text-white/50'}`} />
                   )}
                 </div>
+              )}
+              {isMe && groupRecipientCount > 0 && message.status !== 'failed' && (
+                <span className="ml-1 text-[8px] text-white/45" title="Group members who have read this message">
+                  {groupReadCount}/{groupRecipientCount} read
+                </span>
               )}
             </div>
           </div>

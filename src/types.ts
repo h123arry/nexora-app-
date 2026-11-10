@@ -235,6 +235,7 @@ export interface Message {
   content: string;
   timestamp: string;
   status: 'sending' | 'sent' | 'delivered' | 'read' | 'failed';
+  recipientReceipts?: Record<string, { status: 'delivered' | 'read'; updatedAt?: unknown }>;
 }
 
 export interface ExtendedMessage extends Message {

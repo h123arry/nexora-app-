@@ -182,6 +182,40 @@ const publicProfile = (uid) => ({
     await assertSucceeds(getDocs(query(collection(guestDb(), 'publicProfiles'), where('username', '==', 'alice'))));
   });
 
+  it('isolates group message receipts to each recipient and prevents receipt regression', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'chats', 'group-receipts'), {
+        id: 'group-receipts', participants: ['alice', 'bob', 'charlie'], isGroup: true, membersCount: 3
+      });
+      await setDoc(doc(adminDb, 'chats', 'group-receipts', 'messages', 'message-1'), {
+        id: 'message-1', chatId: 'group-receipts', senderId: 'alice',
+        content: 'hello group', status: 'sent', timestamp: new Date().toISOString()
+      });
+    });
+    const bobMessage = doc(dbFor('bob'), 'chats', 'group-receipts', 'messages', 'message-1');
+    await assertSucceeds(updateDoc(bobMessage, {
+      'recipientReceipts.bob.status': 'read',
+      'recipientReceipts.bob.updatedAt': serverTimestamp()
+    }));
+    await assertFails(updateDoc(bobMessage, {
+      'recipientReceipts.alice.status': 'read',
+      'recipientReceipts.alice.updatedAt': serverTimestamp()
+    }));
+    await assertFails(updateDoc(bobMessage, {
+      'recipientReceipts.bob.status': 'delivered',
+      'recipientReceipts.bob.updatedAt': serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'chats', 'group-receipts', 'messages', 'message-1'), {
+      'recipientReceipts.alice.status': 'read',
+      'recipientReceipts.alice.updatedAt': serverTimestamp()
+    }));
+    await assertFails(updateDoc(bobMessage, { status: 'read' }));
+    await assertSucceeds(updateDoc(
+      doc(dbFor('charlie'), 'chats', 'group-receipts', 'messages', 'message-1'),
+      { 'recipientReceipts.charlie.status': 'delivered', 'recipientReceipts.charlie.updatedAt': serverTimestamp() }
+    ));
+  });
+
   it('restricts chat reads and writes to participants and binds message authorship to Firebase UID', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'chats', 'chat-1'), { id: 'chat-1', participants: ['alice', 'bob'], lastMessage: '' });

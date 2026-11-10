@@ -212,8 +212,11 @@ export default function NewInboxView({
       });
       setChats(prev => prev.map(c => c.id === activeChatId ? { ...c, unreadCount: 0 } : c));
       void Promise.all(msgsList
-        .filter(message => message.senderId !== currentUser.id && message.status !== 'read')
-        .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read')));
+        .filter(message => message.senderId !== currentUser.id && (activeChat?.isGroup
+          ? message.recipientReceipts?.[currentUser.id]?.status !== 'read'
+          : message.status !== 'read'))
+        .map(message => updateMessageReadReceipt(activeChatId, message.id, 'read', Boolean(activeChat?.isGroup))))
+        .catch(() => console.warn('[Inbox] Read receipt sync failed; details redacted.'));
     }, () => {
       console.warn('[Inbox] Message snapshot error; details redacted.');
     });
@@ -803,6 +806,8 @@ export default function NewInboxView({
                       voicePlaybackSpeed={1}
                       currentUserId={currentUser.id}
                       isPinned={false}
+                      groupReadCount={activeChat?.isGroup ? Object.values(msg.recipientReceipts || {}).filter(receipt => receipt.status === 'read').length : 0}
+                      groupRecipientCount={activeChat?.isGroup ? Math.max(0, (activeChat.membersCount || 0) - 1) : 0}
                     />
                   );
                 })
