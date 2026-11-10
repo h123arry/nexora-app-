@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Award, BookOpen, CheckCircle2, ChevronRight, Clock3, GraduationCap, Sparkles } from 'lucide-react';
-import { collection, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, getDocs, limit, query, serverTimestamp, setDoc, where } from 'firebase/firestore';
 import { db, functions } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { User } from '../types';
 import CreatorAcademyInstitutionTools from './CreatorAcademyInstitutionTools';
+import CreatorAcademyToolkit from './CreatorAcademyToolkit';
+import { CREATOR_ACADEMY_LESSONS } from '../content/creatorAcademyLessons';
 
-type Lesson = { id: string; title: string; minutes?: number; summary: string; body?: string; transcript?: string; resourceUrls?: string[] };
+type Lesson = { id: string; title: string; minutes?: number; summary: string; body?: string; transcript?: string; resourceUrls?: string[]; objectives?: string[]; exercise?: string; reflection?: string };
 type Assessment = { id: string; passPercent: number; questions: Array<{ id: string; prompt: string; options: string[] }> };
 type Course = { id: string; title: string; level: string; category: string; description: string; lessons: Lesson[]; institutional?: boolean; lessonCount?: number; version?: number };
 
-const COURSES: Course[] = [
+const BASE_COURSES: Course[] = [
   { id: 'creator-foundations', title: 'The Creator Foundations', level: 'Beginner', category: 'Getting started', description: 'Build a clear creator identity, choose your audience and establish a sustainable publishing habit.', lessons: [
     { id: 'identity', title: 'Define your creator identity', minutes: 8, summary: 'Find the topics, perspective and promise that make your work recognisable.' },
     { id: 'audience', title: 'Understand the audience you serve', minutes: 10, summary: 'Describe the people you want to reach and the value they should receive.' },
@@ -53,11 +55,21 @@ const COURSES: Course[] = [
   ]},
 ];
 
+// Introductory curriculum is authored and bundled with the app; progress remains account-scoped in Firestore.
+const COURSES: Course[] = BASE_COURSES.map(course => ({
+  ...course,
+  lessons: course.lessons.map(lesson => ({ ...lesson, ...CREATOR_ACADEMY_LESSONS[lesson.id] })),
+}));
+
 type Progress = { courseId: string; completedLessonIds: string[] };
 type MentorshipSession = { sessionId: string; title: string; description: string; startsAt: string; durationMinutes: number; capacity: number; bookedCount: number; seatsAvailable: number; mentorId: string; mentorName: string; mentorUsername: string; isBooked: boolean };
 
 export default function CreatorAcademyView({ currentUser }: { currentUser: User }) {
   const [progress, setProgress] = useState<Record<string, string[]>>({});
+  const [lessonNotes, setLessonNotes] = useState<Record<string, string>>({});
+  const [savedNoteIds, setSavedNoteIds] = useState<string[]>([]);
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
+  const [noteMessage, setNoteMessage] = useState('');
   const [courses, setCourses] = useState<Course[]>(COURSES);
   const [institutionalDetails, setInstitutionalDetails] = useState<Record<string, { lessons: Lesson[]; assessments: Assessment[] }>>({});
   const [selectedCourse, setSelectedCourse] = useState(COURSES[0].id);
@@ -86,14 +98,33 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
       setLoading(true);
       setMentorshipLoading(true);
       setLoadError(false);
+      setProgress({});
+      setLessonNotes({});
+      setSavedNoteIds([]);
+      setNoteMessage('');
       const progressQuery = query(collection(db, 'academyProgress'), where('userId', '==', currentUser.id), limit(50));
-      const [progressResult, catalogResult, instructorResult, mentorshipResult] = await Promise.allSettled([
+      const notesQuery = query(collection(db, 'academyLessonNotes'), where('userId', '==', currentUser.id), limit(100));
+      const [progressResult, catalogResult, instructorResult, mentorshipResult, notesResult] = await Promise.allSettled([
         getDocs(progressQuery),
         httpsCallable<void, { courses: Array<{ id: string; title: string; description: string; level: string; category: string; lessonCount: number; version: number }>; truncated: boolean }>(functions, 'academyListPublishedCourses')(),
         getDoc(doc(db, 'academyInstructors', currentUser.id)),
         httpsCallable<void, { sessions: MentorshipSession[]; truncated: boolean }>(functions, 'academyListMentorshipSessions')(),
+        getDocs(notesQuery),
       ]);
       if (!active) return;
+      if (notesResult.status === 'fulfilled') {
+        const nextNotes: Record<string, string> = {};
+        const nextSavedNoteIds: string[] = [];
+        notesResult.value.docs.forEach(item => {
+          const data = item.data();
+          nextSavedNoteIds.push(item.id);
+          if (typeof data.courseId === 'string' && typeof data.lessonId === 'string' && typeof data.note === 'string') {
+            nextNotes[data.courseId + ':' + data.lessonId] = data.note;
+          }
+        });
+        setLessonNotes(nextNotes);
+        setSavedNoteIds(nextSavedNoteIds);
+      } else setNoteMessage('Your saved study notes could not be loaded.');
       if (progressResult.status === 'fulfilled') {
         const next: Record<string, string[]> = {};
         progressResult.value.docs.forEach(item => {
@@ -162,6 +193,29 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
     return total > 0 && (progress[course.id] ?? []).length >= total;
   }).length;
   const overallProgress = useMemo(() => totalLessons ? Math.min(100, Math.round(completedLessons / totalLessons * 100)) : 0, [completedLessons, totalLessons]);
+
+  const saveLessonNote = async (course: Course, lesson: Lesson) => {
+    const key = course.id + ':' + lesson.id;
+    const noteId = currentUser.id + '_' + course.id.length + '_' + course.id + '_' + lesson.id.length + '_' + lesson.id;
+    const note = lessonNotes[key] || '';
+    if (savingNoteId) return;
+    setSavingNoteId(key);
+    setNoteMessage('');
+    try {
+      const ref = doc(db, 'academyLessonNotes', noteId);
+      if (note.trim()) {
+        await setDoc(ref, { userId: currentUser.id, courseId: course.id, lessonId: lesson.id, note: note.slice(0, 5000), updatedAt: serverTimestamp(), schemaVersion: 1 });
+        setSavedNoteIds(previous => previous.includes(noteId) ? previous : [...previous, noteId]);
+        setNoteMessage('Study note saved to your account.');
+      } else {
+        if (savedNoteIds.includes(noteId)) await deleteDoc(ref);
+        setSavedNoteIds(previous => previous.filter(id => id !== noteId));
+        setNoteMessage('Study note cleared.');
+      }
+    } catch {
+      setNoteMessage('Your study note could not be saved. Please try again.');
+    } finally { setSavingNoteId(null); }
+  };
 
   const markLessonComplete = async (course: Course, lesson: Lesson) => {
     if (saving) return;
@@ -287,6 +341,10 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
                   <div className={'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-xs font-black ' + (done ? 'bg-emerald-400/15 text-emerald-300' : 'bg-violet-500/15 text-violet-200')}>{done ? <CheckCircle2 size={17}/> : String(index + 1).padStart(2, '0')}</div>
                   <div className="min-w-0 flex-1"><h4 className="text-sm font-bold">{lesson.title}</h4><p className="mt-1 text-xs leading-5 text-white/50">{lesson.summary}</p>{lesson.minutes && <div className="mt-2 flex items-center gap-1 text-[10px] text-white/35"><Clock3 size={12}/>{lesson.minutes} min</div>}
                     {lesson.body && <p className="mt-3 whitespace-pre-wrap text-xs leading-6 text-white/65">{lesson.body}</p>}
+                    {lesson.objectives && <div className="mt-3 rounded-xl border border-white/8 bg-black/20 p-3"><p className="text-[10px] font-black uppercase tracking-wider text-violet-200">What you will learn</p><ul className="mt-2 list-disc space-y-1 pl-4 text-xs leading-5 text-white/55">{lesson.objectives.map(objective => <li key={objective}>{objective}</li>)}</ul></div>}
+                    {lesson.exercise && <div className="mt-3 rounded-xl border border-violet-400/15 bg-violet-500/[0.06] p-3"><p className="text-[10px] font-black uppercase tracking-wider text-violet-200">Practical assignment</p><p className="mt-2 text-xs leading-5 text-white/65">{lesson.exercise}</p></div>}
+                    {lesson.reflection && <p className="mt-3 text-xs italic leading-5 text-white/45">Reflect: {lesson.reflection}</p>}
+                    <div className="mt-4 border-t border-white/8 pt-3"><label htmlFor={'academy-note-' + lesson.id} className="text-[10px] font-black uppercase tracking-wider text-white/55">Your private study notes</label><textarea id={'academy-note-' + lesson.id} value={lessonNotes[activeCourse.id + ':' + lesson.id] || ''} maxLength={5000} onChange={event => setLessonNotes(previous => ({ ...previous, [activeCourse.id + ':' + lesson.id]: event.target.value }))} rows={3} placeholder="Write your own notes, examples or next steps…" className="mt-2 w-full resize-y rounded-xl border border-white/10 bg-black/25 p-3 text-xs leading-5 text-white placeholder:text-white/25 focus:border-violet-400/40 focus:outline-none"/><div className="mt-2 flex items-center justify-between gap-3"><span className="text-[10px] text-white/30">{(lessonNotes[activeCourse.id + ':' + lesson.id] || '').length}/5000 · Private to your account</span><button type="button" disabled={savingNoteId !== null} onClick={() => void saveLessonNote(activeCourse, lesson)} className="rounded-lg border border-violet-400/25 px-3 py-2 text-[10px] font-bold text-violet-200 disabled:opacity-40">{savingNoteId === activeCourse.id + ':' + lesson.id ? 'Saving…' : 'Save notes'}</button></div></div>
                     {lesson.transcript && <details className="mt-3"><summary className="cursor-pointer text-[10px] font-bold text-violet-200">Accessible transcript</summary><p className="mt-2 whitespace-pre-wrap text-xs leading-5 text-white/55">{lesson.transcript}</p></details>}
                     {lesson.resourceUrls?.map(url => <a key={url} href={url} target="_blank" rel="noreferrer" className="mt-2 mr-3 inline-block text-[10px] text-violet-300 underline">Open lesson resource</a>)}</div>
                   <button disabled={done || saving !== null || loading} onClick={() => void markLessonComplete(activeCourse, lesson)} className={'shrink-0 rounded-xl px-3 py-2 text-[10px] font-bold transition-colors disabled:cursor-default ' + (done ? 'text-emerald-300' : 'bg-violet-600 text-white hover:bg-violet-500 disabled:opacity-50')}>{done ? 'Completed' : saving === lesson.id ? 'Saving…' : 'Complete'}</button>
@@ -294,6 +352,7 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
               </article>;
             })}
           </div>
+          {noteMessage && <p role="status" className="mt-3 text-xs text-violet-200/80">{noteMessage}</p>}
           {activeCourse.institutional && (
             <section className="mt-6 space-y-4 border-t border-white/10 pt-5">
               <div><h4 className="text-sm font-black text-white">Published assessments</h4><p className="mt-1 text-xs text-white/45">Questions are supplied without answer keys. NEXORA grades your submission on the server.</p></div>
@@ -336,6 +395,8 @@ export default function CreatorAcademyView({ currentUser }: { currentUser: User 
         {mentorshipLoading ? <p className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-white/40">Loading upcoming sessions…</p> : mentorshipSessions.length === 0 ? <p className="rounded-xl border border-dashed border-white/10 p-5 text-xs text-white/40">There are no upcoming sessions with available seats right now.</p> : <div className="grid gap-3 md:grid-cols-2">{mentorshipSessions.map(session => <article key={session.sessionId} className="rounded-2xl border border-white/10 bg-black/20 p-4"><div className="flex items-start justify-between gap-3"><div><h4 className="text-sm font-bold text-white">{session.title}</h4><p className="mt-1 text-[10px] text-violet-200">{session.mentorName}{session.mentorUsername?' · @'+session.mentorUsername:''}</p></div><span className="rounded-lg bg-violet-500/10 px-2 py-1 text-[10px] text-violet-200">{session.seatsAvailable} seats</span></div><p className="mt-3 text-xs leading-5 text-white/55">{session.description}</p><p className="mt-3 text-[10px] text-white/40">{new Date(session.startsAt).toLocaleString([], {dateStyle:'medium',timeStyle:'short'})} · {session.durationMinutes} minutes</p><button type="button" disabled={bookingSessionId!==null || session.isBooked} onClick={()=>void bookMentorship(session.sessionId)} className="mt-4 min-h-10 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 text-xs font-bold text-violet-100 disabled:opacity-40">{bookingSessionId===session.sessionId?'Booking…':session.isBooked?'Already booked':'Book this session'}</button></article>)}</div>}
         {mentorshipTruncated && <p className="text-[10px] text-amber-200">Showing a bounded list of the first 50 scheduled sessions.</p>}
       </section>
+
+      <CreatorAcademyToolkit userId={currentUser.id} />
 
       <section className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-white/8 bg-[#0b1020] p-4"><div className="flex items-center gap-2 text-violet-300"><Award size={17}/><span className="text-xs font-bold">Institutional learning record</span></div><p className="mt-2 text-xs leading-5 text-white/45">Your completed lessons are saved against your account. Eligible courses can connect this learning record to assessed credentials and mentorship.</p></div>
