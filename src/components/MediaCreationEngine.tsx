@@ -906,7 +906,7 @@ export default function MediaCreationEngine({
   const getStepButtonColor = (step: number) => {
     if (step === currentStep) return 'bg-violet-600 text-white shadow-lg shadow-violet-600/20';
     if (step < currentStep) return 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400';
-    return 'bg-zinc-900/40 border border-zinc-800 text-zinc-500';
+    return 'bg-[#120E2B]/65 border border-[#292244] text-[#8E88A7]';
   };
 
   const canAdvanceFromCurrentStep = () => {
@@ -960,14 +960,14 @@ export default function MediaCreationEngine({
               initial={{ scale: 0.95 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.95 }}
-              className="bg-zinc-900 border border-zinc-800 max-w-sm w-full rounded-2xl p-6 text-center space-y-4"
+              className="bg-[#120E2B] border border-[#292244] max-w-sm w-full rounded-2xl p-6 text-center space-y-4"
             >
               <div className="w-12 h-12 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-400 mx-auto">
                 <ShieldAlert className="w-6 h-6" />
               </div>
               <div>
                 <h4 className="text-sm font-sans font-bold text-white">Leave this post?</h4>
-                <p className="text-xs text-zinc-400 mt-1">Save your work as a draft so you can come back to it later.</p>
+                <p className="text-xs text-[#A39BBF] mt-1">Save your work as a draft so you can come back to it later.</p>
               </div>
               <div className="grid grid-cols-3 gap-2 pt-2">
                 <button 
@@ -984,7 +984,7 @@ export default function MediaCreationEngine({
                 </button>
                 <button 
                   onClick={() => setShowExitConfirm(false)}
-                  className="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl text-[10px] font-mono font-bold cursor-pointer transition-all"
+                  className="px-3 py-2 bg-[#19143A] hover:bg-zinc-700 text-white rounded-xl text-[10px] font-mono font-bold cursor-pointer transition-all"
                 >
                   Keep Editing
                 </button>
@@ -1003,18 +1003,18 @@ export default function MediaCreationEngine({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-52 flex items-center justify-center bg-black/90 p-4"
           >
-            <div className="bg-zinc-950 border border-white/10 max-w-sm w-full rounded-2xl p-6 text-center space-y-4">
+            <div className="bg-[#070511] border border-white/10 max-w-sm w-full rounded-2xl p-6 text-center space-y-4">
               <div className="w-12 h-12 bg-violet-500/10 text-violet-400 rounded-full flex items-center justify-center mx-auto">
                 <Camera className="w-6 h-6 animate-pulse" />
               </div>
               <div>
                 <h3 className="text-sm font-bold text-white">Allow camera and microphone access</h3>
-                <p className="text-xs text-zinc-400 leading-relaxed mt-1">Allow access when you want to take a photo, record a video or make a voice note.</p>
+                <p className="text-xs text-[#A39BBF] leading-relaxed mt-1">Allow access when you want to take a photo, record a video or make a voice note.</p>
               </div>
               <div className="flex gap-2">
                 <button 
                   onClick={() => { setPermissionState('denied'); setPermissionTarget(null); }}
-                  className="flex-1 py-2 rounded-xl bg-zinc-900 hover:bg-zinc-800 text-zinc-500 text-xs font-mono font-bold cursor-pointer transition-all"
+                  className="flex-1 py-2 rounded-xl bg-[#120E2B] hover:bg-[#19143A] text-[#8E88A7] text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Deny
                 </button>
@@ -1032,7 +1032,7 @@ export default function MediaCreationEngine({
 
       {/* 📦 Minimized State Overlay */}
       {isMinimized && (
-        <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-white/10 bg-zinc-950/95 backdrop-blur-md p-4 shadow-md space-y-3 animate-slideIn">
+        <div className="fixed bottom-6 right-6 z-50 w-80 rounded-2xl border border-white/10 bg-[#070511]/95 backdrop-blur-md p-4 shadow-md space-y-3 animate-slideIn">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono font-black text-violet-400 uppercase tracking-widest flex items-center gap-1.5">
               <span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse" />
@@ -1041,17 +1041,17 @@ export default function MediaCreationEngine({
             </span>
             <button 
               onClick={() => setIsMinimized(false)}
-              className="text-[10px] text-zinc-400 hover:text-white hover:underline cursor-pointer font-mono"
+              className="text-[10px] text-[#A39BBF] hover:text-white hover:underline cursor-pointer font-mono"
             >
               Open ↗
             </button>
           </div>
           <div className="space-y-1.5">
-            <div className="flex justify-between items-center text-[9px] font-mono text-zinc-400">
+            <div className="flex justify-between items-center text-[9px] font-mono text-[#A39BBF]">
               <span className="truncate max-w-[200px]">{caption || 'Content compilation...'}</span>
               <span>{uploadProgress}%</span>
             </div>
-            <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
+            <div className="w-full h-1 bg-[#19143A] rounded-full overflow-hidden">
               <div className="h-full bg-violet-500 transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
             </div>
           </div>
@@ -1078,14 +1078,14 @@ export default function MediaCreationEngine({
                   <span className="text-sm font-extrabold tracking-tight nx-gradient-text leading-none">NEXORA</span>
                   <span className="text-[11px] font-semibold tracking-wide text-violet-300">CREATE</span>
                 </div>
-                <h1 className="text-sm font-semibold font-sans tracking-tight text-zinc-200">Make something worth sharing</h1>
+                <h1 className="text-sm font-semibold font-sans tracking-tight text-[#EEEAF8]">Make something worth sharing</h1>
               </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <button 
               onClick={handleExitClick}
-              className="p-1.5 rounded-lg bg-zinc-800/40 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg bg-[#19143A]/70 text-[#A39BBF] hover:text-white transition-colors cursor-pointer"
             >
               <X className="w-4.5 h-4.5" />
             </button>
@@ -1093,30 +1093,30 @@ export default function MediaCreationEngine({
         </div>
 
         {/* Global Tab Navigation */}
-        <div className="flex gap-1.5 p-1 bg-zinc-950/60 border border-zinc-900 rounded-xl mb-4 shrink-0">
+        <div className="flex gap-1.5 p-1 bg-[#070511]/80 border border-[#292244] rounded-xl mb-4 shrink-0">
           <button 
             onClick={() => { setActiveTab('feed'); setCurrentStep(1); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-zinc-800 text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'feed' ? 'bg-[#19143A] text-white' : 'text-[#8E88A7] hover:text-[#D1CBE3]'}`}
           >
             📝 Posts
           </button>
           <button 
             onClick={() => { setActiveTab('story'); setActiveMode('photo'); setCurrentStep(2); }}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'story' ? 'bg-violet-600/20 text-violet-200 border border-violet-500/30' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer ${activeTab === 'story' ? 'bg-violet-600/20 text-violet-200 border border-violet-500/30' : 'text-[#8E88A7] hover:text-[#D1CBE3]'}`}
           >
             📖 Stories
           </button>
           <button 
             onClick={() => setActiveTab('drafts')}
-            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeTab === 'drafts' ? 'bg-violet-600 text-white font-black' : 'text-zinc-500 hover:text-zinc-300'}`}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-sans font-extrabold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${activeTab === 'drafts' ? 'bg-violet-600 text-white font-black' : 'text-[#8E88A7] hover:text-[#D1CBE3]'}`}
           >
-            💾 Drafts <span className="px-1.5 bg-zinc-800 text-[10px] rounded-full text-zinc-400">{draftsList.length}</span>
+            💾 Drafts <span className="px-1.5 bg-[#19143A] text-[10px] rounded-full text-[#A39BBF]">{draftsList.length}</span>
           </button>
         </div>
 
         {/* Dynamic 6-Step Indicator Track */}
         {activeTab !== 'drafts' && (
-          <div className="flex items-center justify-between px-1.5 py-2.5 bg-[#080710]/40 border border-zinc-900 rounded-2xl mb-4 shrink-0">
+          <div className="flex items-center justify-between px-1.5 py-2.5 bg-[#080710]/40 border border-[#292244] rounded-2xl mb-4 shrink-0">
             {WIZARD_STEPS.map((st) => (
               <button 
                 key={st.id}
@@ -1139,11 +1139,11 @@ export default function MediaCreationEngine({
           {activeTab === 'drafts' ? (
             /* Draft Organizer Screen */
             <div className="space-y-3">
-              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest block">Your drafts</span>
+              <span className="text-[10px] font-mono text-[#A39BBF] uppercase tracking-widest block">Your drafts</span>
               {draftsList.length === 0 ? (
-                <div className="py-12 border border-zinc-900 border-dashed rounded-2xl text-center space-y-2">
-                  <FolderHeart className="w-8 h-8 text-zinc-600 mx-auto animate-pulse" />
-                  <p className="text-xs text-zinc-400 italic">No drafts yet. Save something you're working on and it will be waiting here.</p>
+                <div className="py-12 border border-[#292244] border-dashed rounded-2xl text-center space-y-2">
+                  <FolderHeart className="w-8 h-8 text-[#756D91] mx-auto animate-pulse" />
+                  <p className="text-xs text-[#A39BBF] italic">No drafts yet. Save something you're working on and it will be waiting here.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1151,7 +1151,7 @@ export default function MediaCreationEngine({
                     <div 
                       key={d.id}
                       onClick={() => handleSelectDraft(d)}
-                      className="p-3 bg-[#0a0a0f] border border-zinc-800 hover:border-white/10 rounded-xl cursor-pointer transition-all group relative overflow-hidden"
+                      className="p-3 bg-[#0a0a0f] border border-[#292244] hover:border-white/10 rounded-xl cursor-pointer transition-all group relative overflow-hidden"
                     >
                       <div className="flex justify-between items-start mb-2">
                         <span className="text-[9px] font-mono text-violet-400 uppercase bg-violet-950/25 px-2 py-0.5 rounded border border-violet-800/20">{d.type}</span>
@@ -1162,8 +1162,8 @@ export default function MediaCreationEngine({
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
-                      <p className="text-xs text-zinc-300 line-clamp-2 italic font-serif">"{d.caption || 'No caption text'}"</p>
-                      <div className="flex items-center justify-between mt-3 text-[9px] font-mono text-zinc-500">
+                      <p className="text-xs text-[#D1CBE3] line-clamp-2 italic font-serif">"{d.caption || 'No caption text'}"</p>
+                      <div className="flex items-center justify-between mt-3 text-[9px] font-mono text-[#8E88A7]">
                         <span>Saved: {new Date(d.timestamp).toLocaleDateString()}</span>
                         <span className="text-violet-400 group-hover:underline">Continue →</span>
                       </div>
@@ -1200,11 +1200,11 @@ export default function MediaCreationEngine({
                         key={item.id}
                         type="button"
                         onClick={() => { setActiveMode(item.id as any); setCurrentStep(2); }}
-                        className={`p-3.5 text-left rounded-2xl bg-[#090812] border transition-all hover:bg-zinc-950/40 group cursor-pointer ${item.color}`}
+                        className={`p-3.5 text-left rounded-2xl bg-[#090812] border transition-all hover:bg-[#120E2B]/70 group cursor-pointer ${item.color}`}
                       >
                         <item.icon className="w-5 h-5 mb-1.5" />
                         <span className="block text-xs font-black text-white group-hover:text-violet-300">{item.label}</span>
-                        <p className="text-[10px] text-zinc-500 leading-tight mt-1">{item.desc}</p>
+                        <p className="text-[10px] text-[#8E88A7] leading-tight mt-1">{item.desc}</p>
                       </button>
                     ))}
                   </div>
@@ -1227,23 +1227,23 @@ export default function MediaCreationEngine({
                   {activeMode === 'photo' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {/* Drag upload zone */}
-                      <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-zinc-950/20 hover:border-white/10 transition-all flex flex-col items-center justify-center">
-                        <FileImage className="w-8 h-8 text-zinc-500 animate-bounce" />
+                      <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#120E2B]/45 hover:border-white/10 transition-all flex flex-col items-center justify-center">
+                        <FileImage className="w-8 h-8 text-[#8E88A7] animate-bounce" />
                         <div className="space-y-1">
-                          <p className="text-xs text-zinc-300 font-bold">Add a photo</p>
-                          <p className="text-[10px] text-zinc-500 font-sans">Choose a photo from your device.</p>
+                          <p className="text-xs text-[#D1CBE3] font-bold">Add a photo</p>
+                          <p className="text-[10px] text-[#8E88A7] font-sans">Choose a photo from your device.</p>
                         </div>
-                        <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all">
+                        <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all">
                           Choose from device
                           <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
 
                       {/* Snap device simulation */}
-                      <div className="border border-zinc-800 rounded-2xl p-4 text-center space-y-4 bg-zinc-950/40 flex flex-col justify-between">
+                      <div className="border border-[#292244] rounded-2xl p-4 text-center space-y-4 bg-[#120E2B]/70 flex flex-col justify-between">
                         <div className="space-y-1">
                           <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Take a photo</span>
-                          <p className="text-[10px] text-zinc-500">Use your camera to take a photo.</p>
+                          <p className="text-[10px] text-[#8E88A7]">Use your camera to take a photo.</p>
                         </div>
                         <button 
                           onClick={captureCameraSnapshot}
@@ -1253,7 +1253,7 @@ export default function MediaCreationEngine({
                         </button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
-                            <div key={i} className="relative w-12 h-12 rounded-lg border border-zinc-700 overflow-hidden shrink-0">
+                            <div key={i} className="relative w-12 h-12 rounded-lg border border-[#44376F] overflow-hidden shrink-0">
                               <img src={img.url} className="w-full h-full object-cover" />
                               <button 
                                 onClick={() => setSelectedImages(prev => prev.filter((_, idx) => idx !== i))}
@@ -1270,30 +1270,30 @@ export default function MediaCreationEngine({
 
                   {activeMode === 'carousel' && (
                     <div className="space-y-3">
-                      <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#080712]/30">
-                        <FileImage className="w-8 h-8 text-zinc-500 mx-auto" />
-                        <p className="text-xs text-zinc-300 font-bold">Add photos to your collection</p>
-                        <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
+                      <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-3 bg-[#080712]/30">
+                        <FileImage className="w-8 h-8 text-[#8E88A7] mx-auto" />
+                        <p className="text-xs text-[#D1CBE3] font-bold">Add photos to your collection</p>
+                        <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
                           Add multiple images
                           <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageUpload} />
                         </label>
                       </div>
 
                       {selectedImages.length > 0 && (
-                        <div className="space-y-2 bg-zinc-950/50 p-3 rounded-xl border border-zinc-900">
-                          <span className="text-[9px] font-mono text-zinc-400 uppercase">Your photos ({selectedImages.length}) · Arrange them in the order you want</span>
+                        <div className="space-y-2 bg-[#120E2B]/70 p-3 rounded-xl border border-[#292244]">
+                          <span className="text-[9px] font-mono text-[#A39BBF] uppercase">Your photos ({selectedImages.length}) · Arrange them in the order you want</span>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             {selectedImages.map((img, index) => (
-                              <div key={index} className="relative aspect-square rounded-lg border border-zinc-800 overflow-hidden group">
+                              <div key={index} className="relative aspect-square rounded-lg border border-[#292244] overflow-hidden group">
                                 <img src={img.url} className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
                                   {index > 0 && (
-                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); }} className="p-1 bg-zinc-900 rounded text-white">
+                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index - 1]; next[index - 1] = tmp; setSelectedImages(next); }} className="p-1 bg-[#120E2B] rounded text-white">
                                       <ChevronLeft className="w-3.5 h-3.5" />
                                     </button>
                                   )}
                                   {index < selectedImages.length - 1 && (
-                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); }} className="p-1 bg-zinc-900 rounded text-white">
+                                    <button onClick={() => { const next = [...selectedImages]; const tmp = next[index]; next[index] = next[index + 1]; next[index + 1] = tmp; setSelectedImages(next); }} className="p-1 bg-[#120E2B] rounded text-white">
                                       <ChevronRight className="w-3.5 h-3.5" />
                                     </button>
                                   )}
@@ -1310,18 +1310,18 @@ export default function MediaCreationEngine({
                   )}
 
                   {activeMode === 'video' && (
-                    <div className="border border-zinc-800 border-dashed rounded-2xl p-6 text-center space-y-4 bg-zinc-950/20">
-                      <Video className="w-8 h-8 text-zinc-500 mx-auto animate-pulse" />
+                    <div className="border border-[#292244] border-dashed rounded-2xl p-6 text-center space-y-4 bg-[#120E2B]/45">
+                      <Video className="w-8 h-8 text-[#8E88A7] mx-auto animate-pulse" />
                       <div className="space-y-1">
-                        <p className="text-xs text-zinc-300 font-bold">Choose a video</p>
-                        <p className="text-[10px] text-zinc-500">Choose a video from your device (up to 50 MB).</p>
+                        <p className="text-xs text-[#D1CBE3] font-bold">Choose a video</p>
+                        <p className="text-[10px] text-[#8E88A7]">Choose a video from your device (up to 50 MB).</p>
                       </div>
-                      <label className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
+                      <label className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] border border-[#292244] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-all inline-block">
                         Choose video
                         <input type="file" accept="video/*" className="hidden" onChange={handleVideoUpload} />
                       </label>
                       {videoFileUrl && (
-                        <div className="max-w-xs mx-auto p-2 bg-zinc-900 border border-zinc-800 rounded-xl space-y-1">
+                        <div className="max-w-xs mx-auto p-2 bg-[#120E2B] border border-[#292244] rounded-xl space-y-1">
                           <p className="text-[10px] text-emerald-300 font-semibold">✓ Video selected</p>
                           <video src={videoFileUrl} controls className="w-full rounded-lg" />
                         </div>
@@ -1333,9 +1333,9 @@ export default function MediaCreationEngine({
                     /* REEL INTERACTIVE CAMERA */
                     <div className="space-y-3">
                       <div className="relative aspect-[4/5] w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black border border-[#44376F] flex flex-col justify-between p-3.5 shadow-md">
-                        <div className="z-10 flex justify-between items-center text-[8px] font-mono text-zinc-400">
+                        <div className="z-10 flex justify-between items-center text-[8px] font-mono text-[#A39BBF]">
                           <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">YOUR CAMERA</span>
-                          <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-zinc-900 rounded-full text-white">
+                          <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-[#120E2B] rounded-full text-white">
                             <RefreshCw className="w-3 h-3" />
                           </button>
                         </div>
@@ -1346,7 +1346,7 @@ export default function MediaCreationEngine({
                           ) : recordedVideoUrl ? (
                             <video src={recordedVideoUrl} autoPlay loop muted className="w-full h-full object-cover" />
                           ) : (
-                            <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover bg-zinc-900" />
+                            <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover bg-[#120E2B]" />
                           )}
                         </div>
 
@@ -1367,10 +1367,10 @@ export default function MediaCreationEngine({
                   )}
 
                   {activeMode === 'voice' && (
-                    <div className="p-5 bg-zinc-950 border border-zinc-800 rounded-2xl text-center space-y-4">
+                    <div className="p-5 bg-[#070511] border border-[#292244] rounded-2xl text-center space-y-4">
                       <div className="space-y-1">
                         <span className="text-3xl font-mono font-bold text-white block">0:{voiceDurationSecs.toString().padStart(2, '0')}</span>
-                        <span className="text-[9.5px] font-mono text-zinc-500 block uppercase">Voice note</span>
+                        <span className="text-[9.5px] font-mono text-[#8E88A7] block uppercase">Voice note</span>
                       </div>
 
                       {/* Waveform simulator */}
@@ -1378,7 +1378,7 @@ export default function MediaCreationEngine({
                         {[...Array(18)].map((_, idx) => (
                           <div 
                             key={idx}
-                            className={`w-[3px] rounded-full transition-all duration-300 ${voiceIsRecording ? 'bg-violet-500' : 'bg-zinc-800'}`}
+                            className={`w-[3px] rounded-full transition-all duration-300 ${voiceIsRecording ? 'bg-violet-500' : 'bg-[#19143A]'}`}
                             style={{ height: voiceIsRecording ? `${20 + Math.sin(idx + voiceDurationSecs) * 60}%` : '15%' }}
                           />
                         ))}
@@ -1397,36 +1397,36 @@ export default function MediaCreationEngine({
                       </div>
 
                       {voiceTranscript && (
-                        <div className="text-left bg-zinc-900 border border-zinc-800 p-3.5 rounded-xl space-y-1">
+                        <div className="text-left bg-[#120E2B] border border-[#292244] p-3.5 rounded-xl space-y-1">
                           <span className="text-[8px] font-mono text-violet-400 uppercase font-black">Voice transcript</span>
-                          <p className="text-xs text-zinc-300 font-sans italic">"{voiceTranscript}"</p>
+                          <p className="text-xs text-[#D1CBE3] font-sans italic">"{voiceTranscript}"</p>
                         </div>
                       )}
                     </div>
                   )}
 
                   {activeMode === 'poll' && (
-                    <div className="p-4 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-3">
+                    <div className="p-4 bg-[#070511] border border-[#292244] rounded-2xl space-y-3">
                       <div className="space-y-1">
-                        <label className="text-[10px] font-mono text-zinc-500 uppercase block">Your question</label>
+                        <label className="text-[10px] font-mono text-[#8E88A7] uppercase block">Your question</label>
                         <input 
                           type="text" 
                           placeholder="What would you like to ask?"
                           value={pollQuestion}
                           onChange={(e) => setPollQuestion(e.target.value)}
-                          className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white font-sans"
+                          className="w-full bg-[#120E2B] border border-[#292244] rounded-xl px-3 py-2 text-xs text-white font-sans"
                         />
                       </div>
                       <div className="space-y-2">
                         {pollOptionsList.map((opt, i) => (
                           <div key={i} className="flex gap-2 items-center">
-                            <span className="text-[10px] font-mono text-zinc-600 w-3">{i+1}</span>
+                            <span className="text-[10px] font-mono text-[#756D91] w-3">{i+1}</span>
                             <input 
                               type="text"
                               placeholder={`Option ${i+1}`}
                               value={opt}
                               onChange={(e) => { const next = [...pollOptionsList]; next[i] = e.target.value; setPollOptionsList(next); }}
-                              className="flex-1 bg-zinc-900 border border-zinc-800 rounded-xl px-3.5 py-1.5 text-xs text-white"
+                              className="flex-1 bg-[#120E2B] border border-[#292244] rounded-xl px-3.5 py-1.5 text-xs text-white"
                             />
                             {pollOptionsList.length > 2 && (
                               <button onClick={() => setPollOptionsList(prev => prev.filter((_, idx) => idx !== i))} className="text-rose-400"><X className="w-4 h-4" /></button>
@@ -1451,11 +1451,11 @@ export default function MediaCreationEngine({
                   <div>
                     <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wider text-[#B69BFF]">STEP 3 OF 6</span>
                     <h3 className="text-base font-bold text-white">Review your photo or video</h3>
-                    <p className="mt-1 text-xs leading-relaxed text-zinc-400">Check your media before adding a caption and sharing it.</p>
+                    <p className="mt-1 text-xs leading-relaxed text-[#A39BBF]">Check your media before adding a caption and sharing it.</p>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Media render wrapper */}
-                    <div className="aspect-square rounded-2xl border border-zinc-800 bg-black flex items-center justify-center relative overflow-hidden">
+                    <div className="aspect-square rounded-2xl border border-[#292244] bg-black flex items-center justify-center relative overflow-hidden">
                       {selectedImages.length > 0 ? (
                         <div className="relative w-full h-full">
                           <img 
@@ -1484,7 +1484,7 @@ export default function MediaCreationEngine({
                       ) : (videoFileUrl || recordedVideoUrl) ? (
                         <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="h-full w-full bg-black object-contain" />
                       ) : (
-                        <div className="text-center p-6 space-y-2 text-zinc-500">
+                        <div className="text-center p-6 space-y-2 text-[#8E88A7]">
                           <Sliders className="w-8 h-8 mx-auto" />
                           <p className="text-xs">Your photo or video preview will appear here.</p>
                         </div>
@@ -1492,13 +1492,13 @@ export default function MediaCreationEngine({
                     </div>
 
                     {/* Photo adjustments are only shown when a photo is selected. */}
-                    <div className={`${selectedImages.length > 0 ? 'space-y-3.5 bg-zinc-950/40 p-4 rounded-2xl border border-zinc-900/60' : 'hidden'}`}>
-                      <span className="text-[10px] font-mono text-zinc-400 uppercase block tracking-wider pt-1">Photo adjustments</span>
+                    <div className={`${selectedImages.length > 0 ? 'space-y-3.5 bg-[#120E2B]/70 p-4 rounded-2xl border border-[#292244]/60' : 'hidden'}`}>
+                      <span className="text-[10px] font-mono text-[#A39BBF] uppercase block tracking-wider pt-1">Photo adjustments</span>
                       
                       {/* Interactive CSS filters row */}
                       {selectedImages.length > 0 && (
                         <div className="space-y-1.5">
-                          <span className="text-[9px] font-mono text-zinc-500 block uppercase">Choose a look</span>
+                          <span className="text-[9px] font-mono text-[#8E88A7] block uppercase">Choose a look</span>
                           <div className="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
                             {FILTER_PRESETS.map((p) => (
                               <button
@@ -1514,7 +1514,7 @@ export default function MediaCreationEngine({
                                 className={`px-2.5 py-1 text-[10px] font-sans font-bold border rounded-lg transition-all shrink-0 ${
                                   (selectedImages[activeEditIndex || 0]?.filterName || 'Normal') === p.name 
                                     ? 'bg-violet-600 text-white border-violet-500' 
-                                    : 'bg-zinc-900 text-zinc-400 border-zinc-800 hover:text-white'
+                                    : 'bg-[#120E2B] text-[#A39BBF] border-[#292244] hover:text-white'
                                 }`}
                               >
                                 {p.name}
@@ -1525,7 +1525,7 @@ export default function MediaCreationEngine({
                       )}
 
                       {/* Crop/Rotate utilities */}
-                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-zinc-900">
+                      <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#292244]">
                         <button 
                           onClick={() => {
                             setSelectedImages(prev => prev.map((img, idx) => {
@@ -1535,7 +1535,7 @@ export default function MediaCreationEngine({
                               return img;
                             }));
                           }}
-                          className="py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[10px] font-mono text-zinc-300 rounded-lg flex items-center justify-center gap-1"
+                          className="py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[10px] font-mono text-[#D1CBE3] rounded-lg flex items-center justify-center gap-1"
                         >
                           <RotateCw className="w-3.5 h-3.5" /> Rotate photo
                         </button>
@@ -1548,31 +1548,31 @@ export default function MediaCreationEngine({
                               return img;
                             }));
                           }}
-                          className="py-1.5 bg-zinc-900 hover:bg-zinc-800 text-[10px] font-mono text-zinc-300 rounded-lg flex items-center justify-center gap-1"
+                          className="py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[10px] font-mono text-[#D1CBE3] rounded-lg flex items-center justify-center gap-1"
                         >
                           <Crop className="w-3.5 h-3.5" /> Zoom photo
                         </button>
                       </div>
 
                       {/* Adjust Sliders */}
-                      <div className="space-y-2 border-t border-zinc-900 pt-3">
-                        <div className="flex justify-between text-[9px] font-mono text-zinc-400">
+                      <div className="space-y-2 border-t border-[#292244] pt-3">
+                        <div className="flex justify-between text-[9px] font-mono text-[#A39BBF]">
                           <span>🔆 Brightness: {brightness}%</span>
                           <input type="range" min="50" max="150" value={brightness} onChange={(e) => setBrightness(parseInt(e.target.value))} className="accent-violet-500" />
                         </div>
-                        <div className="flex justify-between text-[9px] font-mono text-zinc-400">
+                        <div className="flex justify-between text-[9px] font-mono text-[#A39BBF]">
                           <span>🌓 Contrast: {contrast}%</span>
                           <input type="range" min="50" max="150" value={contrast} onChange={(e) => setContrast(parseInt(e.target.value))} className="accent-violet-500" />
                         </div>
-                        <div className="flex justify-between text-[9px] font-mono text-zinc-400">
+                        <div className="flex justify-between text-[9px] font-mono text-[#A39BBF]">
                           <span>🎨 Saturation: {saturation}%</span>
                           <input type="range" min="50" max="150" value={saturation} onChange={(e) => setSaturation(parseInt(e.target.value))} className="accent-violet-500" />
                         </div>
                       </div>
 
                       {/* Stickers Overlay & Text Overlays */}
-                      <div className="space-y-2 border-t border-zinc-900 pt-3 text-left">
-                        <span className="text-[9px] font-mono text-zinc-500 uppercase block">Stickers and text</span>
+                      <div className="space-y-2 border-t border-[#292244] pt-3 text-left">
+                        <span className="text-[9px] font-mono text-[#8E88A7] uppercase block">Stickers and text</span>
                         <div className="flex gap-2">
                           {['🔥', '⚡', '✨', '🏆', '👾', '🚀', '💯'].map((emo) => (
                             <button key={emo} onClick={() => setStickerOverlay(stickerOverlay === emo ? null : emo)} className={`text-lg p-1 hover:scale-110 transition-transform ${stickerOverlay === emo ? 'bg-violet-600/20 rounded-lg border border-white/10' : ''}`}>
@@ -1586,7 +1586,7 @@ export default function MediaCreationEngine({
                             placeholder="Add text to your photo"
                             value={textOverlay}
                             onChange={(e) => setTextOverlay(e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1 text-[11px] text-white"
+                            className="w-full bg-[#120E2B] border border-[#292244] rounded-lg px-2.5 py-1 text-[11px] text-white"
                           />
                         </div>
                       </div>
@@ -1595,7 +1595,7 @@ export default function MediaCreationEngine({
                     {selectedImages.length === 0 && (videoFileUrl || recordedVideoUrl) && (
                       <div className="flex flex-col justify-center rounded-2xl border border-[#7138FF]/25 bg-[#120E2B] p-5">
                         <span className="mb-2 text-xs font-semibold text-[#B69BFF]">Your video is ready</span>
-                        <p className="text-sm leading-relaxed text-zinc-200">Review your clip on the left. Add a caption and details next, then preview it before sharing.</p>
+                        <p className="text-sm leading-relaxed text-[#EEEAF8]">Review your clip on the left. Add a caption and details next, then preview it before sharing.</p>
                       </div>
                     )}
                   </div>
@@ -1606,22 +1606,22 @@ export default function MediaCreationEngine({
                 /* STEP 4: SMART CAPTION & METADATA DETAILS */
                 <div className="space-y-4 animate-fadeIn">
                   <div className="space-y-1 text-left">
-                    <label className="text-[10px] font-mono text-zinc-400 uppercase">Write a caption</label>
+                    <label className="text-[10px] font-mono text-[#A39BBF] uppercase">Write a caption</label>
                     <textarea
                       rows={3}
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
                       placeholder="Tell people what this is about..."
-                      className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-white/10 resize-none leading-relaxed"
+                      className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl p-3.5 text-xs text-white focus:outline-none focus:border-white/10 resize-none leading-relaxed"
                     />
-                    <div className="flex justify-between text-[9px] font-mono text-zinc-500 px-1">
+                    <div className="flex justify-between text-[9px] font-mono text-[#8E88A7] px-1">
                       <span>{caption.length} of 500 characters</span>
                       {caption.includes('#') && <span className="text-violet-400">⚡ Hashtags detected</span>}
                     </div>
                   </div>
 
                   {/* AI Writing Assistant chips */}
-                  <div className="bg-zinc-950/40 p-3.5 border border-zinc-900 rounded-2xl space-y-2">
+                  <div className="bg-[#120E2B]/70 p-3.5 border border-[#292244] rounded-2xl space-y-2">
                     <div className="flex items-center gap-1.5 text-violet-400 font-mono text-[9px] uppercase tracking-widest">
                       <VohIcon size={14} animated variant="brand" />
                       <span>VOH AI writing help</span>
@@ -1649,53 +1649,53 @@ export default function MediaCreationEngine({
                   {/* Tagging, location and Alt-text metadata */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👥 Tag people</label>
+                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👥 Tag people</label>
                       <input 
                         type="text" 
                         value={taggedUsernames}
                         onChange={(e) => setTaggedUsernames(e.target.value)}
                         placeholder="Enter usernames separated by commas"
-                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                        className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">🏷️ Add topics</label>
+                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">🏷️ Add topics</label>
                       <input 
                         type="text" 
                         value={topics}
                         onChange={(e) => setTopics(e.target.value)}
                         placeholder="e.g. Music, Football, Technology"
-                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                        className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 relative">
                     <div className="space-y-1 relative">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">📍 Location</label>
+                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">📍 Location</label>
                       <input 
                         type="text" 
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="Search for a place..."
-                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                        className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl px-3 py-2 text-xs text-white"
                       />
                       {locationSuggestions.length > 0 && (
-                        <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden shadow-md max-h-32 overflow-y-auto">
+                        <div className="absolute z-20 left-0 right-0 top-full mt-1 bg-[#120E2B] border border-[#292244] rounded-xl overflow-hidden shadow-md max-h-32 overflow-y-auto">
                           {locationSuggestions.map(city => (
-                            <div key={city} onClick={() => { setLocation(city); setLocationSuggestions([]); }} className="px-3 py-1.5 hover:bg-zinc-800 text-xs text-white cursor-pointer">{city}</div>
+                            <div key={city} onClick={() => { setLocation(city); setLocationSuggestions([]); }} className="px-3 py-1.5 hover:bg-[#19143A] text-xs text-white cursor-pointer">{city}</div>
                           ))}
                         </div>
                       )}
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-zinc-400 uppercase block">👁️ Describe this photo (optional)</label>
+                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👁️ Describe this photo (optional)</label>
                       <input 
                         type="text" 
                         value={imageAltText}
                         onChange={(e) => setImageAltText(e.target.value)}
                         placeholder="Describe the photo for people who use screen readers."
-                        className="w-full bg-zinc-950/65 border border-zinc-800 rounded-xl px-3 py-2 text-xs text-white"
+                        className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
                   </div>
@@ -1712,7 +1712,7 @@ export default function MediaCreationEngine({
                   </div>
 
                   {/* Simulated Live Post Card */}
-                  <div className="p-4 bg-zinc-950 border border-zinc-800/80 rounded-2xl space-y-3.5 text-left">
+                  <div className="p-4 bg-[#070511] border border-[#292244]/80 rounded-2xl space-y-3.5 text-left">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center gap-2.5">
                         <img src={currentUser.avatar} className="w-9 h-9 rounded-full object-cover border border-white/10" />
@@ -1721,39 +1721,39 @@ export default function MediaCreationEngine({
                             <span className="text-xs font-black text-white">{currentUser.name}</span>
                             {currentUser.isVerified && <span className="text-blue-400 text-[10px]">✓</span>}
                           </div>
-                          <span className="text-[10px] text-zinc-500 font-mono">@{currentUser.username}</span>
+                          <span className="text-[10px] text-[#8E88A7] font-mono">@{currentUser.username}</span>
                         </div>
                       </div>
                       <span className="text-[9px] font-mono text-violet-400 bg-violet-950/25 px-2 py-0.5 rounded border border-white/10">Preview</span>
                     </div>
 
-                    <p className="text-xs text-zinc-200 leading-relaxed font-sans">{caption || "Your caption will appear here."}</p>
+                    <p className="text-xs text-[#EEEAF8] leading-relaxed font-sans">{caption || "Your caption will appear here."}</p>
 
                     {selectedImages.length > 0 && (
-                      <div className="aspect-video rounded-xl border border-zinc-900 bg-black overflow-hidden">
+                      <div className="aspect-video rounded-xl border border-[#292244] bg-black overflow-hidden">
                         <img src={selectedImages[0]?.url} className="w-full h-full object-cover" style={{ filter: selectedImages[0]?.filterStyle || 'none' }} />
                       </div>
                     )}
                     {(videoFileUrl || recordedVideoUrl) && (
-                      <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[460px] w-full rounded-xl border border-zinc-900 bg-black object-contain" />
+                      <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[460px] w-full rounded-xl border border-[#292244] bg-black object-contain" />
                     )}
 
                     {voiceFileUrl && (
-                      <div className="p-3 bg-zinc-900 border border-zinc-800 rounded-xl flex items-center justify-between text-xs">
+                      <div className="p-3 bg-[#120E2B] border border-[#292244] rounded-xl flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
                           <Play className="w-4 h-4 text-violet-400" />
                           <span>Voice note</span>
                         </div>
-                        <span className="text-[10px] font-mono text-zinc-500">0:{voiceDurationSecs}</span>
+                        <span className="text-[10px] font-mono text-[#8E88A7]">0:{voiceDurationSecs}</span>
                       </div>
                     )}
 
                     {pollQuestion.trim() && (
-                      <div className="p-3.5 bg-zinc-900 border border-zinc-800 rounded-xl space-y-2">
+                      <div className="p-3.5 bg-[#120E2B] border border-[#292244] rounded-xl space-y-2">
                         <span className="text-xs font-bold text-white block">📊 {pollQuestion}</span>
                         <div className="space-y-1">
                           {pollOptionsList.filter(o => o.trim()).map((o, idx) => (
-                            <div key={idx} className="w-full text-left p-2 bg-zinc-950 border border-zinc-800 rounded-lg text-xs font-sans">
+                            <div key={idx} className="w-full text-left p-2 bg-[#070511] border border-[#292244] rounded-lg text-xs font-sans">
                               {o}
                             </div>
                           ))}
@@ -1764,7 +1764,7 @@ export default function MediaCreationEngine({
                   </div>
 
                   {/* Accessibility & Quality audit compliance checklist */}
-                  <div className="p-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl space-y-2.5 text-left">
+                  <div className="p-3.5 bg-[#070511] border border-[#292244] rounded-2xl space-y-2.5 text-left">
                     <span className="text-[9.5px] font-mono text-amber-400 uppercase font-black tracking-widest block">A quick final check</span>
                     <div className="space-y-1.5">
                       {selectedImages.length > 0 && (
@@ -1793,19 +1793,19 @@ export default function MediaCreationEngine({
                       </div>
 
                       {/* Custom options row */}
-                      <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-zinc-900 rounded-2xl text-left">
+                      <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-[#292244] rounded-2xl text-left">
                         <div className="flex flex-col gap-1.5 text-left">
-                          <span className="text-xs font-bold text-zinc-200">Who can see this? Everyone</span>
+                          <span className="text-xs font-bold text-[#EEEAF8]">Who can see this? Everyone</span>
                           <p className="text-[11px] leading-relaxed text-[var(--nx-muted)]">Your post will be visible to everyone on NEXORA.</p>
                         </div>
                       </div>
 
                       {/* Scheduling controls */}
-                      <div className="p-3.5 bg-[#0a0715]/40 border border-zinc-900 rounded-2xl text-left space-y-2">
+                      <div className="p-3.5 bg-[#0a0715]/40 border border-[#292244] rounded-2xl text-left space-y-2">
                         <div className="flex justify-between items-center text-xs">
                           <div>
                             <span className="font-bold text-white block">📅 Schedule your post</span>
-                            <span className="text-[10px] text-zinc-500">Choose when you want your post to be shared.</span>
+                            <span className="text-[10px] text-[#8E88A7]">Choose when you want your post to be shared.</span>
                           </div>
                           <input type="checkbox" checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} className="accent-violet-500" />
                         </div>
@@ -1814,7 +1814,7 @@ export default function MediaCreationEngine({
                             type="datetime-local" 
                             value={scheduledDateTime}
                             onChange={(e) => setScheduledDateTime(e.target.value)}
-                            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-violet-400"
+                            className="w-full bg-[#120E2B] border border-[#292244] rounded-xl p-2.5 text-xs text-violet-400"
                           />
                         )}
                       </div>
@@ -1839,11 +1839,11 @@ export default function MediaCreationEngine({
                       )}
 
                       <div className="space-y-1">
-                        <span className="text-[10px] font-mono text-zinc-500 uppercase block tracking-wider">
+                        <span className="text-[10px] font-mono text-[#8E88A7] uppercase block tracking-wider">
                           {postingStatus === 'publishing' && '📤 Sharing your post...'}
                           {postingStatus === 'completed' && '✨ Your post is live!'}
                         </span>
-                        <p className="text-xs text-zinc-300 font-sans">
+                        <p className="text-xs text-[#D1CBE3] font-sans">
                           {postingStatus === 'completed' ? 'Your post has been shared.' : postingStatus === 'failed' ? (errorMessage || 'Publishing failed. Your content is safe to retry.') : 'Getting your post ready...'}
                         </p>
                       </div>
@@ -1865,7 +1865,7 @@ export default function MediaCreationEngine({
                         <div className="flex gap-2">
                           <button 
                             onClick={() => uploadAbortControllerRef.current?.abort()} 
-                            className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-400 rounded-lg text-xs"
+                            className="px-3 py-1.5 bg-[#120E2B] hover:bg-[#19143A] text-[#A39BBF] rounded-lg text-xs"
                           >
                             Cancel
                           </button>
@@ -1890,11 +1890,11 @@ export default function MediaCreationEngine({
 
         {/* Wizard Footer controls */}
         {activeTab !== 'drafts' && postingStatus === 'idle' && (
-          <div className="border-t border-zinc-800/60 pt-4 flex justify-between items-center shrink-0">
+          <div className="border-t border-[#292244]/60 pt-4 flex justify-between items-center shrink-0">
             <div>
               <button 
                 onClick={saveAsDraftLocally}
-                className="px-4 py-2 border border-zinc-800 hover:bg-zinc-900 rounded-xl text-zinc-400 text-xs font-mono font-bold cursor-pointer transition-colors"
+                className="px-4 py-2 border border-[#292244] hover:bg-[#120E2B] rounded-xl text-[#A39BBF] text-xs font-mono font-bold cursor-pointer transition-colors"
               >
                 Save draft
               </button>
@@ -1903,7 +1903,7 @@ export default function MediaCreationEngine({
               {currentStep > 1 && (
                 <button 
                   onClick={prevStep}
-                  className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-colors"
+                  className="px-4 py-2 bg-[#120E2B] hover:bg-[#19143A] text-white rounded-xl text-xs font-mono font-bold cursor-pointer transition-colors"
                 >
                   ← Back
                 </button>
