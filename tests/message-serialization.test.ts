@@ -53,19 +53,27 @@ describe('message reaction persistence model', () => {
   });
 
   it('migrates legacy aggregate reactions into per-user reaction records', () => {
-    assert.deepEqual(normalizeMessageReactionUsers(undefined, [
+    assert.deepEqual(normalizeMessageReactionUsers({ bob: [] }, [
       { emoji: '❤️', userIds: ['alice', 'bob'] },
       { emoji: '😂', userIds: ['alice'] },
-    ]), { alice: ['❤️', '😂'], bob: ['❤️'] });
+    ]), { alice: ['❤️', '😂'], bob: [] });
   });
 
   it('toggles only the acting user and preserves every other member reaction', () => {
-    const initial = { alice: ['❤️'], bob: ['😂'] };
-    assert.deepEqual(toggleMessageReaction(initial, undefined, 'alice', '❤️'), {
-      alice: [], bob: ['😂'],
+    const initial = { bob: ['😂'] };
+    const legacy = [{ emoji: '❤️', userIds: ['alice', 'bob'] }];
+    assert.deepEqual(toggleMessageReaction(initial, legacy, 'alice', '❤️'), {
+      bob: ['😂'], alice: [],
     });
+    assert.deepEqual(aggregateMessageReactions(
+      toggleMessageReaction(initial, legacy, 'alice', '❤️'),
+      legacy,
+    ), [
+      { emoji: '❤️', userIds: ['bob'] },
+      { emoji: '😂', userIds: ['bob'] },
+    ]);
     assert.deepEqual(toggleMessageReaction(initial, undefined, 'alice', '🔥'), {
-      alice: ['❤️', '🔥'], bob: ['😂'],
+      bob: ['😂'], alice: ['🔥'],
     });
   });
 });
