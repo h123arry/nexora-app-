@@ -93,6 +93,16 @@ describe('trusted Circle member enforcement', () => {
     );
     const events = await circle.collection('auditEvents').where('targetUid', '==', 'bob').where('action', '==', 'member_removed').get();
     assert.equal(events.size, 1);
+    await circle.collection('members').doc('dave').set({ userId: 'dave', role: 'admin', status: 'active' });
+    await circle.update({ admins: ['dave'] });
+    await assert.rejects(
+      moderateCircleMember(db, 'carol', 'governance-circle', 'dave', 'ban', 'Moderator cannot ban admin'),
+      /equal or higher role/,
+    );
+    await moderateCircleMember(db, 'alice', 'governance-circle', 'dave', 'ban', 'Repeated policy violations');
+    assert.equal((await circle.collection('members').doc('dave').get()).exists, false);
+    assert.deepEqual((await circle.get()).get('admins'), []);
+    await moderateCircleMember(db, 'alice', 'governance-circle', 'dave', 'unban', 'Review complete');
   });
 
   it('rejects invalid moderation inputs and unknown ban records without mutating membership', async () => {
