@@ -36,3 +36,8 @@ export function giftDeliveryReferences(senderId: string, key: string): { transac
   const digest = createHash('sha256').update(senderId + ':' + key).digest('hex');
   return { transactionId: 'gift_' + digest, requestId: 'gift_req_' + digest };
 }
+
+
+export function isLiveGiftDeliveryEnabled(session: { status?: unknown; giftsEnabled?: unknown } | null | undefined): boolean {
+  return session?.status === 'live' && session.giftsEnabled === true;
+}
