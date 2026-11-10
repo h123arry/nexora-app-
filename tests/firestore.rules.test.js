@@ -8,6 +8,7 @@ import {
 } from '@firebase/rules-unit-testing';
 import {
   collection,
+  collectionGroup,
   deleteField,
   deleteDoc,
   doc,
@@ -55,6 +56,53 @@ const publicProfile = (uid) => ({
 });
 
  describe('Firestore authorization regression tests', () => {
+  it('protects private WorldWeaves and requires invited membership before contributing', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'worldWeaves', 'private-weave'), {
+        id: 'private-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Graduation Day',
+        description: 'Our shared day', visibility: 'private', participantIds: ['alice'],
+        memberCount: 1, momentCount: 0, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'public-weave'), {
+        id: 'public-weave', ownerId: 'alice', ownerName: 'Alice', title: 'City Festival',
+        description: 'Public story', visibility: 'public', participantIds: ['alice'],
+        memberCount: 1, momentCount: 0, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'worldWeaves', 'private-weave')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave')));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'worldWeaves', 'public-weave')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'moments', 'forged'), {
+      weaveId: 'private-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'I was not invited', mediaType: 'text', createdAt: serverTimestamp()
+    }));
+
+    await assertSucceeds(setDoc(doc(dbFor('alice'), 'worldWeaves', 'private-weave', 'invites', 'bob'), {
+      weaveId: 'private-weave', inviteeId: 'bob', invitedBy: 'alice',
+      ownerName: 'Alice', weaveTitle: 'Graduation Day', status: 'pending', createdAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'invites', 'bob')));
+    await assertSucceeds(getDocs(query(collectionGroup(dbFor('bob'), 'invites'), where('inviteeId', '==', 'bob'))));
+    await assertFails(getDocs(query(collectionGroup(dbFor('charlie'), 'invites'), where('inviteeId', '==', 'bob'))));
+
+    const batch = writeBatch(dbFor('bob'));
+    batch.update(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'invites', 'bob'), {
+      status: 'accepted', acceptedAt: serverTimestamp()
+    });
+    batch.update(doc(dbFor('bob'), 'worldWeaves', 'private-weave'), {
+      participantIds: ['alice', 'bob'], memberCount: 2, updatedAt: serverTimestamp()
+    });
+    await assertSucceeds(batch.commit());
+    await assertSucceeds(setDoc(doc(dbFor('bob'), 'worldWeaves', 'private-weave', 'moments', 'bob-moment'), {
+      weaveId: 'private-weave', authorId: 'bob', authorName: 'Bob', authorUsername: 'bob',
+      authorAvatar: '', text: 'I saw it from the front row.', mediaType: 'text', createdAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('charlie'), 'worldWeaves', 'private-weave', 'moments', 'charlie-moment'), {
+      weaveId: 'private-weave', authorId: 'charlie', authorName: 'Charlie', authorUsername: 'charlie',
+      authorAvatar: '', text: 'Not a member', mediaType: 'text', createdAt: serverTimestamp()
+    }));
+  });
+
   it('allows owners to read retention summaries but reserves all writes to trusted server code', async () => {
     await seed(async adminDb => {
       await setDoc(doc(adminDb, 'userRetention', 'alice'), {
