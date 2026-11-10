@@ -2,7 +2,7 @@ import { httpsCallable } from 'firebase/functions';
 import { auth } from './config';
 import { functions } from '../../lib/firebase';
 
-export type NexoraSearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'poll' | 'announcement';
+export type NexoraSearchKind = 'person' | 'post' | 'video' | 'page' | 'circle' | 'live' | 'event' | 'service' | 'update' | 'poll' | 'announcement' | 'hashtag';
 export interface NexoraSearchHit {
   id: string; kind: NexoraSearchKind; title: string; subtitle: string; excerpt: string;
   image: string; targetId: string; targetPath: string; ownerId: string;
