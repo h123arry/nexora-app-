@@ -3,6 +3,7 @@ import type { Firestore } from 'firebase-admin/firestore';
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { isCircleMuteActive } from './communityGovernance.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const validId = (value: unknown): value is string =>
@@ -29,15 +30,19 @@ export async function createCirclePostForUser(
   const memberRef = communityRef.collection('members').doc(uid);
   const profileRef = store.collection('publicProfiles').doc(uid);
   const statusRef = store.collection('accountStatus').doc(uid);
+  const muteRef = communityRef.collection('mutes').doc(uid);
   const postRef = communityRef.collection('posts').doc(randomUUID());
 
   await store.runTransaction(async tx => {
-    const [community, member, profile, accountStatus] = await Promise.all([
-      tx.get(communityRef), tx.get(memberRef), tx.get(profileRef), tx.get(statusRef),
+    const [community, member, profile, accountStatus, mute] = await Promise.all([
+      tx.get(communityRef), tx.get(memberRef), tx.get(profileRef), tx.get(statusRef), tx.get(muteRef),
     ]);
     if (!community.exists || !member.exists || member.get('status') !== 'active'
       || (Array.isArray(community.get('bannedUsers')) && (community.get('bannedUsers') as unknown[]).includes(uid))) {
       throw new HttpsError('permission-denied', 'Join this Circle to publish a post.');
+    }
+    if (isCircleMuteActive(mute.data(), now)) {
+      throw new HttpsError('permission-denied', 'Your Circle posting access is temporarily muted.');
     }
     const restriction = accountStatus.data() || {};
     if (activeRestriction(restriction, 'postingRestricted', now)
