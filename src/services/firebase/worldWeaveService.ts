@@ -11,7 +11,7 @@ export interface WorldWeave {
   visibility: WorldWeaveVisibility; participantIds: string[]; memberCount: number;
   momentCount: number; createdAt?: unknown; updatedAt?: unknown;
 }
-export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; weaveDescription: string; visibility: WorldWeaveVisibility; status: 'pending' | 'accepted'; createdAt?: unknown; }
+export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; status: 'pending' | 'accepted'; createdAt?: unknown; }
 export interface WorldWeaveMoment {
   id: string; weaveId: string; authorId: string; authorName: string; authorUsername: string;
   authorAvatar: string; text: string; mediaType: 'text' | 'image' | 'video';
@@ -50,18 +50,20 @@ export async function createWorldWeave(input: { title: string; description: stri
 }
 export async function joinPublicWorldWeave(weaveId: string): Promise<WorldWeave> {
   const user = requireUser();
-  const weaveRef = doc(db, 'worldWeaves', weaveId);
-  const weaveSnapshot = await getDoc(weaveRef);
-  if (!weaveSnapshot.exists() || weaveSnapshot.data().visibility !== 'public') {
-    throw new Error('This public WorldWeave is no longer available.');
-  }
-  const data = weaveSnapshot.data();
-  const alreadyJoined = (data.participantIds || []).includes(user.uid);
-  if (!alreadyJoined) await updateDoc(weaveRef, {
-    participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp(),
+  return runTransaction(db, async transaction => {
+    const weaveRef = doc(db, 'worldWeaves', weaveId);
+    const snapshot = await transaction.get(weaveRef);
+    if (!snapshot.exists() || snapshot.data().visibility !== 'public') {
+      throw new Error('This public WorldWeave is no longer available.');
+    }
+    const data = snapshot.data();
+    const alreadyJoined = (data.participantIds || []).includes(user.uid);
+    if (!alreadyJoined) transaction.update(weaveRef, {
+      participantIds: arrayUnion(user.uid), memberCount: increment(1), updatedAt: serverTimestamp(),
+    });
+    return { ...data, id: weaveId, participantIds: [...(data.participantIds || []), ...(alreadyJoined ? [] : [user.uid])],
+      memberCount: (data.memberCount || 1) + (alreadyJoined ? 0 : 1) } as WorldWeave;
   });
-  return { ...data, id: weaveId, participantIds: [...(data.participantIds || []), ...(alreadyJoined ? [] : [user.uid])],
-    memberCount: (data.memberCount || 1) + (alreadyJoined ? 0 : 1) } as WorldWeave;
 }
 export async function inviteToWorldWeave(weaveId: string, inviteeId: string): Promise<void> {
   const user = requireUser();
