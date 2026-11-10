@@ -145,3 +145,16 @@ export async function addWorldWeaveMediaMoment(weaveId: string, author: { id: st
   }
 }
 
+export async function deleteWorldWeaveMoment(weaveId: string, moment: WorldWeaveMoment): Promise<void> {
+  const user = requireUser();
+  if (moment.authorId !== user.uid) {
+    const weave = await getDoc(doc(db, 'worldWeaves', weaveId));
+    if (!weave.exists() || weave.data().ownerId !== user.uid) {
+      throw new Error('Only the contributor or WorldWeave owner can remove this moment.');
+    }
+  }
+  await deleteDoc(doc(db, 'worldWeaves', weaveId, 'moments', moment.id));
+  if (moment.storagePath) {
+    await Promise.allSettled([deleteMediaFile(moment.storagePath)]);
+  }
+}
