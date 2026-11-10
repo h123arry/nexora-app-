@@ -139,7 +139,8 @@ export const requestLiveGuestAccess = onCall({ maxInstances: 20 }, async request
       ]);
       if (!session.exists || session.data()?.status !== 'live') throw new HttpsError('failed-precondition', 'This live room is no longer active.');
       if (session.data()?.hostId === guestId) throw new HttpsError('failed-precondition', 'The host is already on stage.');
-      if (!viewer.exists || !(viewer.data()?.connectionIds || []).includes(connectionId)) {
+      const connections = viewer.data()?.connectionIds;
+      if (!viewer.exists || !Array.isArray(connections) || !connections.includes(connectionId)) {
         throw new HttpsError('permission-denied', 'Join the live room before requesting stage access.');
       }
       if (accountRestricted(status.data(), 'suspended') || accountRestricted(status.data(), 'postingRestricted')) {
