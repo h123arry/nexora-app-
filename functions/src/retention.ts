@@ -1,10 +1,9 @@
 import { FieldValue, Firestore } from "firebase-admin/firestore";
-import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { calculateDailyStreak, DailyStreakRecord } from "./retentionPolicy.js";
 
 export function createDailySessionRecorder(db: Firestore, clock: () => number = Date.now) {
   return async (uid: string) => {
-    if (!uid) throw new HttpsError("unauthenticated", "Sign in to record your NEXORA session.");
+    if (!uid) throw new Error("An authenticated account is required.");
     const reference = db.collection("userRetention").doc(uid);
     return db.runTransaction(async transaction => {
       const snapshot = await transaction.get(reference);
@@ -21,5 +20,3 @@ export function createDailySessionRecorder(db: Firestore, clock: () => number = 
     });
   };
 }
-
-const adminDb = (await import("./runtimeConfig.js")).getFirebaseAdminApp;
