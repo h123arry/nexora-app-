@@ -1178,7 +1178,11 @@ service cloud.firestore {
           && request.resource.data.status in ['delivered', 'read'];
         allow delete: if chatMember(chatId) && resource.data.senderId == request.auth.uid;
       }
-      match /presence/{userId} {
+      // Search projections are written and queried only by trusted server code.
+    // Clients cannot enumerate, mutate, or bypass visibility checks on this index.
+    match /searchIndex/{searchDocumentId} { allow read, write: if false; }
+
+    match /presence/{userId} {
         allow get: if chatMember(chatId);
         allow list: if false;
         allow create, update: if chatMember(chatId)
