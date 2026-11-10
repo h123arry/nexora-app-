@@ -4,6 +4,10 @@ function encode(value: unknown): string {
   return Buffer.from(JSON.stringify(value)).toString('base64url');
 }
 
+export function canPublishLiveVideo(isHost: boolean, guestStatus: unknown): boolean {
+  return isHost || guestStatus === 'approved';
+}
+
 /** Build least-privilege room grants. NEXORA chat uses its authenticated backend, not LiveKit data packets. */
 export function createLiveKitVideoGrant(roomName: string, isHost: boolean) {
   if (!roomName || roomName.length > 135) throw new Error('A valid LiveKit room is required.');

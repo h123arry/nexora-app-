@@ -5,7 +5,7 @@ import GiftLiveOverlay from './GiftLiveOverlay';
 import LiveKitStage from './LiveKitStage';
 import { User } from '../types';
 import { db } from '../lib/firebase';
-import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, sendLiveChatMessage, startLiveSession, updateLiveSessionSettings, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
+import { endLiveSession, heartbeatLiveSession, joinLiveSession, leaveLiveSession, requestLiveGuestAccess, reviewLiveGuestAccess, sendLiveChatMessage, startLiveSession, updateLiveSessionSettings, type LiveChatMessage, type LiveSessionSummary } from '../services/liveSessionsService';
 
 interface LiveViewProps { currentUser: User; onClose: () => void; streamId?: string; }
 function asDate(value: any): string {
@@ -24,6 +24,9 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const [loading,setLoading] = useState(false);
   const [sending,setSending] = useState(false);
   const [settingsSaving,setSettingsSaving] = useState(false);
+  const [guestRequestStatus,setGuestRequestStatus] = useState<'none'|'pending'|'approved'|'denied'>('none');
+  const [guestRequests,setGuestRequests] = useState<Array<{id:string;guestId:string;guestName:string}>>([]);
+  const [guestActionBusy,setGuestActionBusy] = useState(false);
   const [error,setError] = useState('');
   const [giftSoundsEnabled,setGiftSoundsEnabled] = useState(false);
   const [videoMembershipReady,setVideoMembershipReady] = useState(false);
@@ -65,6 +68,22 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     },()=>setError('Live chat could not be loaded.'));
     return ()=>{stopSession();stopMessages();};
   },[selectedId]);
+
+  useEffect(() => {
+    if(!selectedId) { setGuestRequestStatus('none');setGuestRequests([]);return; }
+    const requests=collection(db,'liveSessions',selectedId,'guestRequests');
+    if(isHost) {
+      const pending=query(requests,where('status','==','pending'),limit(10));
+      return onSnapshot(pending,snapshot=>{
+        setGuestRequests(snapshot.docs.map(item=>({id:item.id,guestId:String(item.data().guestId||item.id),guestName:String(item.data().guestName||'NEXORA member')})));
+      },()=>setError('Guest requests could not be loaded.'));
+    }
+    const ownRequest=doc(requests,currentUser.id);
+    return onSnapshot(ownRequest,snapshot=>{
+      const status=snapshot.exists()?snapshot.data().status:'none';
+      setGuestRequestStatus(status==='pending'||status==='approved'||status==='denied'?status:'none');
+    },()=>setError('Your stage request status could not be loaded.'));
+  },[selectedId,isHost,currentUser.id]);
 
   useEffect(() => {
     if(!selectedId) { setVideoMembershipReady(false); return; }
@@ -116,6 +135,20 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
     catch(e:any){setError(e?.message?.replace(/^FirebaseError:\s*/,'')||'The live room setting could not be updated.');}
     finally{setSettingsSaving(false);}
   };
+  const requestStageAccess=async()=>{
+    if(!selectedId||guestActionBusy||isHost)return;
+    setGuestActionBusy(true);setError('');
+    try { await requestLiveGuestAccess(selectedId,connectionId);setGuestRequestStatus('pending'); }
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\\s*/,'')||'Your stage request could not be sent.');}
+    finally{setGuestActionBusy(false);}
+  };
+  const decideGuestRequest=async(guestId:string,decision:'approved'|'denied')=>{
+    if(!selectedId||!isHost||guestActionBusy)return;
+    setGuestActionBusy(true);setError('');
+    try { await reviewLiveGuestAccess(selectedId,guestId,decision); }
+    catch(e:any){setError(e?.message?.replace(/^FirebaseError:\\s*/,'')||'The guest request could not be reviewed.');}
+    finally{setGuestActionBusy(false);}
+  };
   const submitMessage=async()=>{
     if(!selectedId||!message.trim()||sending)return;
     setSending(true);setError('');
@@ -146,7 +179,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
           <div className="relative flex h-full w-full flex-col items-center justify-center bg-[radial-gradient(ellipse_at_center,rgba(91,33,182,.22),transparent_60%)] p-6 text-center">
             <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full bg-rose-600 px-3 py-1.5 text-[10px] font-black tracking-wider"><span className="h-2 w-2 animate-pulse rounded-full bg-white"/> LIVE ROOM</div>
             <div className="absolute right-4 top-4 flex items-center gap-3 rounded-full bg-black/50 px-3 py-1.5 text-xs"><Users size={14}/>{(session?.viewerCount||0).toLocaleString()} viewers</div>
-            <div className="w-full max-w-3xl"><Radio size={36} className="mx-auto text-violet-300"/><h2 className="mt-3 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'You are hosting this broadcast.':'You are watching this creator live.'}</p>{isHost&&<div className="mt-4 flex flex-wrap justify-center gap-2"><button type="button" disabled={settingsSaving} onClick={()=>void toggleRoomSetting('chatEnabled')} aria-pressed={session?.chatEnabled===true} className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-semibold disabled:opacity-50">{session?.chatEnabled===true?'Disable live chat':'Enable live chat'}</button><button type="button" disabled={settingsSaving} onClick={()=>void toggleRoomSetting('giftsEnabled')} aria-pressed={session?.giftsEnabled===true} className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-semibold disabled:opacity-50">{session?.giftsEnabled===true?'Disable gifts':'Enable gifts'}</button></div>}{selectedId&&videoMembershipReady?<LiveKitStage sessionId={selectedId} connectionId={connectionId} isHost={isHost}/>:<p className="mt-5 text-xs text-violet-200">Joining secure video room…</p>}</div>
+            <div className="w-full max-w-3xl"><Radio size={36} className="mx-auto text-violet-300"/><h2 className="mt-3 text-2xl font-black">{session?.title||'Live room'}</h2><p className="mt-2 text-sm text-slate-400">{isHost?'You are hosting this broadcast.':'You are watching this creator live.'}</p>{isHost&&<div className="mt-4 flex flex-wrap justify-center gap-2"><button type="button" disabled={settingsSaving} onClick={()=>void toggleRoomSetting('chatEnabled')} aria-pressed={session?.chatEnabled===true} className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-semibold disabled:opacity-50">{session?.chatEnabled===true?'Disable live chat':'Enable live chat'}</button><button type="button" disabled={settingsSaving} onClick={()=>void toggleRoomSetting('giftsEnabled')} aria-pressed={session?.giftsEnabled===true} className="rounded-full border border-white/15 bg-white/10 px-3 py-2 text-[11px] font-semibold disabled:opacity-50">{session?.giftsEnabled===true?'Disable gifts':'Enable gifts'}</button></div>}{selectedId&&videoMembershipReady?<LiveKitStage key={selectedId+':'+(isHost?'host':guestRequestStatus)} sessionId={selectedId} connectionId={connectionId} isHost={isHost} isGuest={guestRequestStatus==='approved'}/>:<p className="mt-5 text-xs text-violet-200">Joining secure video room…</p>}{!isHost&&videoMembershipReady&&guestRequestStatus!=='approved'&&<div className="mt-3"><button type="button" disabled={guestActionBusy||guestRequestStatus==='pending'} onClick={()=>void requestStageAccess()} className="rounded-full border border-violet-300/30 bg-violet-500/15 px-4 py-2 text-xs font-bold text-violet-100 disabled:opacity-50">{guestActionBusy?'Sending request…':guestRequestStatus==='pending'?'Stage request sent':guestRequestStatus==='denied'?'Request stage access again':'Request to join the stage'}</button></div>}{!isHost&&guestRequestStatus==='approved'&&<p className="mt-3 text-xs font-semibold text-violet-200">The host approved your stage request. Your camera and microphone are ready.</p>}{isHost&&guestRequests.length>0&&<div className="mt-4 w-full rounded-xl border border-white/10 bg-black/30 p-3 text-left"><p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-violet-200">Guest requests</p>{guestRequests.map(item=><div key={item.id} className="flex items-center justify-between gap-2 border-t border-white/5 py-2"><span className="min-w-0 truncate text-xs text-slate-200">{item.guestName}</span><span className="flex shrink-0 gap-1"><button type="button" disabled={guestActionBusy} onClick={()=>void decideGuestRequest(item.guestId,'approved')} className="rounded-lg bg-violet-600 px-2 py-1 text-[10px] font-bold disabled:opacity-50">Approve</button><button type="button" disabled={guestActionBusy} onClick={()=>void decideGuestRequest(item.guestId,'denied')} className="rounded-lg border border-white/15 px-2 py-1 text-[10px] font-bold disabled:opacity-50">Deny</button></span></div>)}</div>}</div>
             {selectedId&&<GiftLiveOverlay streamId={selectedId} soundEnabled={giftSoundsEnabled} audioContext={giftAudioContext.current}/>}
             <div className="absolute bottom-5 left-5 flex items-center gap-2">
               <button type="button" onClick={()=>{if(!giftAudioContext.current&&typeof window!=='undefined'&&window.AudioContext)giftAudioContext.current=new window.AudioContext();if(!giftSoundsEnabled)void giftAudioContext.current?.resume();setGiftSoundsEnabled(v=>!v);}} className="rounded-full border border-white/10 bg-black/50 p-3" aria-label={giftSoundsEnabled?'Mute gift sounds':'Enable gift sounds'}>{giftSoundsEnabled?<Volume2 size={18}/>:<VolumeX size={18}/>}</button>

@@ -44,7 +44,23 @@ export async function updateLiveSessionSettings(sessionId: string, settings: { c
   return (await call({ sessionId, settings })).data;
 }
 
+export async function requestLiveGuestAccess(sessionId: string, connectionId: string) {
+  const call = httpsCallable<
+    { sessionId: string; connectionId: string },
+    { sessionId: string; status: 'pending' | 'approved'; replayed: boolean }
+  >(functions, 'requestLiveGuestAccess');
+  return (await call({ sessionId, connectionId })).data;
+}
+
+export async function reviewLiveGuestAccess(sessionId: string, guestId: string, decision: 'approved' | 'denied') {
+  const call = httpsCallable<
+    { sessionId: string; guestId: string; decision: 'approved' | 'denied' },
+    { sessionId: string; guestId: string; status: 'approved' | 'denied'; updated: true }
+  >(functions, 'reviewLiveGuestAccess');
+  return (await call({ sessionId, guestId, decision })).data;
+}
+
 export async function getLiveKitToken(sessionId: string, connectionId: string) {
-  const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'viewer'; expiresAt: number }>(liveKitFunctions, 'getLiveKitToken');
+  const call = httpsCallable<{ sessionId: string; connectionId: string }, { token: string; wsUrl: string; roomName: string; role: 'host' | 'guest' | 'viewer'; expiresAt: number }>(liveKitFunctions, 'getLiveKitToken');
   return (await call({ sessionId, connectionId })).data;
 }
