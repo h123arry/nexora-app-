@@ -29,7 +29,9 @@ jobs:
           cache: npm
       - name: Generate and import 880 licensed vector artworks
         run: npm run giftverse:import-openmoji
-      - name: Extract individual catalogue artwork files\n        run: npm run giftverse:extract-individual\n      - name: Install dependencies
+      - name: Extract individual catalogue artwork files
+        run: npm run giftverse:extract-individual
+      - name: Install dependencies
         run: npm ci
       - name: Install Firebase Functions dependencies
         run: npm --prefix functions ci
