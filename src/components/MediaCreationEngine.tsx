@@ -12,6 +12,98 @@ import { VoiceEngine } from '../services/voh/voiceEngine';
 import NexoraLoader from './NexoraLoader';
 import { deleteDraft, getDrafts, saveDraft } from '../services/dataService';
 
+type PhotoExportOptions = {
+  rotation: number;
+  zoom: number;
+  filterStyle?: string;
+  brightness: number;
+  contrast: number;
+  saturation: number;
+  blur: number;
+  sticker?: string | null;
+  text?: string;
+  textColor?: string;
+};
+
+/** Bake the adjustments shown in the composer into the image that is uploaded. */
+async function renderEditedPhotoBlob(source: Blob, options: PhotoExportOptions): Promise<Blob> {
+  const objectUrl = URL.createObjectURL(source);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('This photo could not be prepared. Please choose it again.'));
+    });
+
+    const rotated = Math.abs(options.rotation % 180) === 90;
+    // Keep the export lightweight enough for mid-range phones while retaining 4K detail.
+    const resizeRatio = Math.min(1, 4096 / Math.max(image.naturalWidth, image.naturalHeight));
+    const sourceWidth = Math.max(1, Math.round(image.naturalWidth * resizeRatio));
+    const sourceHeight = Math.max(1, Math.round(image.naturalHeight * resizeRatio));
+    const canvas = document.createElement('canvas');
+    canvas.width = rotated ? sourceHeight : sourceWidth;
+    canvas.height = rotated ? sourceWidth : sourceHeight;
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Photo editing is not available in this browser.');
+
+    context.save();
+    context.translate(canvas.width / 2, canvas.height / 2);
+    context.rotate((options.rotation * Math.PI) / 180);
+    context.scale(Math.max(1, options.zoom), Math.max(1, options.zoom));
+    const filters = [
+      options.filterStyle && options.filterStyle !== 'none' ? options.filterStyle : '',
+      `brightness(${options.brightness}%)`,
+      `contrast(${options.contrast}%)`,
+      `saturate(${options.saturation}%)`,
+      options.blur > 0 ? `blur(${options.blur}px)` : '',
+    ].filter(Boolean);
+    context.filter = filters.join(' ');
+    context.drawImage(image, -sourceWidth / 2, -sourceHeight / 2, sourceWidth, sourceHeight);
+    context.restore();
+    context.filter = 'none';
+
+    if (options.sticker) {
+      context.font = `bold ${Math.max(48, Math.round(canvas.width * 0.12))}px sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(options.sticker, canvas.width / 2, canvas.height / 2);
+    }
+    if (options.text?.trim()) {
+      const fontSize = Math.max(24, Math.round(canvas.width * 0.045));
+      const padding = Math.round(fontSize * 0.65);
+      context.font = `700 ${fontSize}px sans-serif`;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      const maxWidth = canvas.width - padding * 2;
+      const words = options.text.trim().split(/\s+/);
+      const lines: string[] = [];
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (line && context.measureText(candidate).width > maxWidth) {
+          lines.push(line);
+          line = word;
+        } else line = candidate;
+      }
+      if (line) lines.push(line);
+      const lineHeight = Math.round(fontSize * 1.25);
+      const blockHeight = lines.length * lineHeight + padding;
+      const top = canvas.height - blockHeight - padding;
+      context.fillStyle = 'rgba(5, 9, 20, 0.72)';
+      context.fillRect(padding / 2, top, canvas.width - padding, blockHeight);
+      context.fillStyle = options.textColor || '#ffffff';
+      lines.forEach((item, index) => context.fillText(item, canvas.width / 2, top + padding / 2 + index * lineHeight + lineHeight / 2, maxWidth));
+    }
+
+    return await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('Your edited photo could not be exported. Please try again.')), 'image/jpeg', 0.92);
+    });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 interface MediaCreationEngineProps {
   currentUser: User;
   onClose: () => void;
@@ -32,7 +124,9 @@ interface MediaCreationEngineProps {
     imageFilter?: string,
     imageFilters?: string[],
     scheduledTime?: string,
-    isBroadcastPost?: boolean
+    isBroadcastPost?: boolean,
+    communityName?: string,
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean }
   ) => string;
   theme: 'neon-cyber' | 'stealth-dark' | 'platinum-light' | 'emerald-glass';
   isStoryModeInitially?: boolean;
@@ -56,6 +150,7 @@ interface DraftItem {
   id: string;
   caption: string;
   images: string[];
+  imageEdits?: Pick<SelectedImage, 'rotation' | 'zoom' | 'cropOffset' | 'filterName' | 'filterStyle'>[];
   videoUrl?: string;
   voiceUrl?: string;
   transcript?: string;
@@ -63,6 +158,17 @@ interface DraftItem {
   audience: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
   type: string;
   timestamp: string;
+  location?: string;
+  taggedUsernames?: string;
+  imageAltText?: string;
+  brightness?: number;
+  contrast?: number;
+  saturation?: number;
+  blur?: number;
+  stickerOverlay?: string | null;
+  textOverlay?: string;
+  textOverlayColor?: string;
+  commentsAllowed?: boolean;
   cloudSynced?: boolean;
   cloudOnly?: boolean;
 }
@@ -154,16 +260,16 @@ export default function MediaCreationEngine({
   const [contrast, setContrast] = useState(() => initialAutosave?.contrast ?? 100);
   const [saturation, setSaturation] = useState(() => initialAutosave?.saturation ?? 100);
   const [blur, setBlur] = useState(() => initialAutosave?.blur ?? 0);
-  const [stickerOverlay, setStickerOverlay] = useState<string | null>(null);
-  const [textOverlay, setTextOverlay] = useState('');
-  const [textOverlayColor, setTextOverlayColor] = useState('#ffffff');
+  const [stickerOverlay, setStickerOverlay] = useState<string | null>(() => initialAutosave?.stickerOverlay || null);
+  const [textOverlay, setTextOverlay] = useState(() => initialAutosave?.textOverlay || '');
+  const [textOverlayColor, setTextOverlayColor] = useState(() => initialAutosave?.textOverlayColor || '#ffffff');
   const [selectedMusic, setSelectedMusic] = useState<string | null>(null);
   const [musicTrimStart, setMusicTrimStart] = useState(0);
   const [musicTrimEnd, setMusicTrimEnd] = useState(15);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
 
   // Publish advanced toggles
-  const [commentsAllowed, setCommentsAllowed] = useState(true);
+  const [commentsAllowed, setCommentsAllowed] = useState(() => initialAutosave?.commentsAllowed !== false);
   const [sharesAllowed, setSharesAllowed] = useState(true);
   const [downloadsAllowed, setDownloadsAllowed] = useState(true);
   const [pinnedOnProfile, setPinnedOnProfile] = useState(false);
@@ -175,11 +281,13 @@ export default function MediaCreationEngine({
   // Media Capture / Import variables
   const [selectedImages, setSelectedImages] = useState<SelectedImage[]>(() => {
     if (initialAutosave?.images && initialAutosave.images.length > 0) {
-      return initialAutosave.images.map((img: string) => ({
+      return initialAutosave.images.map((img: string, index: number) => ({
         url: img,
-        rotation: 0,
-        zoom: 1,
-        cropOffset: { x: 0, y: 0 }
+        rotation: initialAutosave.imageEdits?.[index]?.rotation ?? 0,
+        zoom: initialAutosave.imageEdits?.[index]?.zoom ?? 1,
+        cropOffset: initialAutosave.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        filterName: initialAutosave.imageEdits?.[index]?.filterName,
+        filterStyle: initialAutosave.imageEdits?.[index]?.filterStyle,
       }));
     }
     return [];
@@ -292,8 +400,23 @@ export default function MediaCreationEngine({
     setLocation(nextAutosave?.location || '');
     setTaggedUsernames(nextAutosave?.taggedUsernames || '');
     setImageAltText(nextAutosave?.imageAltText || '');
+    setCommentsAllowed(nextAutosave?.commentsAllowed !== false);
+    setStickerOverlay(nextAutosave?.stickerOverlay || null);
+    setTextOverlay(nextAutosave?.textOverlay || '');
+    setTextOverlayColor(nextAutosave?.textOverlayColor || '#ffffff');
+    setBrightness(nextAutosave?.brightness ?? 100);
+    setContrast(nextAutosave?.contrast ?? 100);
+    setSaturation(nextAutosave?.saturation ?? 100);
+    setBlur(nextAutosave?.blur ?? 0);
     setSelectedImages(Array.isArray(nextAutosave?.images)
-      ? nextAutosave.images.filter((url: unknown): url is string => typeof url === 'string').map((url: string) => ({ url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }))
+      ? nextAutosave.images.filter((url: unknown): url is string => typeof url === 'string').map((url: string, index: number) => ({
+          url,
+          rotation: nextAutosave?.imageEdits?.[index]?.rotation ?? 0,
+          zoom: nextAutosave?.imageEdits?.[index]?.zoom ?? 1,
+          cropOffset: nextAutosave?.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+          filterName: nextAutosave?.imageEdits?.[index]?.filterName,
+          filterStyle: nextAutosave?.imageEdits?.[index]?.filterStyle,
+        }))
       : []);
     setVideoFileUrl(nextAutosave?.videoUrl || null);
     setRecordedVideoUrl(nextAutosave?.recordedVideoUrl || null);
@@ -319,6 +442,7 @@ export default function MediaCreationEngine({
           activeMode,
           currentStep,
           images: selectedImages.map(img => img.url),
+          imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
           videoUrl: videoFileUrl,
           recordedVideoUrl,
           voiceUrl: voiceFileUrl,
@@ -329,7 +453,11 @@ export default function MediaCreationEngine({
           brightness,
           contrast,
           saturation,
-          blur
+          blur,
+          stickerOverlay,
+          textOverlay,
+          textOverlayColor,
+          commentsAllowed
         };
         localStorage.setItem(autosaveKey, JSON.stringify(draft));
       } catch (e) {
@@ -337,7 +465,7 @@ export default function MediaCreationEngine({
       }
     }, 1000);
     return () => clearTimeout(timer);
-  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur, composerStateOwnerId, currentUser.id]);
+  }, [autosaveKey, caption, topics, audience, activeMode, currentStep, selectedImages, videoFileUrl, recordedVideoUrl, voiceFileUrl, voiceTranscript, location, taggedUsernames, imageAltText, brightness, contrast, saturation, blur, stickerOverlay, textOverlay, textOverlayColor, commentsAllowed, composerStateOwnerId, currentUser.id]);
 
   // Restore account-owned text drafts across devices. Media bytes and browser object URLs
   // intentionally remain on the originating device unless they have a durable HTTPS URL.
@@ -675,13 +803,25 @@ export default function MediaCreationEngine({
       id: `draft-${Date.now()}`,
       caption,
       images: selectedImages.map(img => img.url),
+      imageEdits: selectedImages.map(({ rotation, zoom, cropOffset, filterName, filterStyle }) => ({ rotation, zoom, cropOffset, filterName, filterStyle })),
       videoUrl: videoFileUrl || recordedVideoUrl || undefined,
       voiceUrl: voiceFileUrl || undefined,
       transcript: voiceTranscript || undefined,
       topics,
       audience,
       type: activeMode || 'text',
-      timestamp: new Date().toLocaleDateString()
+      timestamp: new Date().toLocaleDateString(),
+      location,
+      taggedUsernames,
+      imageAltText,
+      brightness,
+      contrast,
+      saturation,
+      blur,
+      stickerOverlay,
+      textOverlay,
+      textOverlayColor,
+      commentsAllowed
     };
     let cloudSynced = false;
     if (currentUser.id && currentUser.id !== 'guest_visitor_id' && navigator.onLine) {
@@ -708,8 +848,26 @@ export default function MediaCreationEngine({
     setTopics(draft.topics);
     setAudience('public');
     setActiveMode(draft.type as any);
+    setLocation(draft.location || '');
+    setTaggedUsernames(draft.taggedUsernames || '');
+    setImageAltText(draft.imageAltText || '');
+    setCommentsAllowed(draft.commentsAllowed !== false);
+    setBrightness(draft.brightness ?? 100);
+    setContrast(draft.contrast ?? 100);
+    setSaturation(draft.saturation ?? 100);
+    setBlur(draft.blur ?? 0);
+    setStickerOverlay(draft.stickerOverlay || null);
+    setTextOverlay(draft.textOverlay || '');
+    setTextOverlayColor(draft.textOverlayColor || '#ffffff');
     if (draft.images) {
-      setSelectedImages(draft.images.map(img => ({ url: img, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } })));
+      setSelectedImages(draft.images.map((img, index) => ({
+        url: img,
+        rotation: draft.imageEdits?.[index]?.rotation ?? 0,
+        zoom: draft.imageEdits?.[index]?.zoom ?? 1,
+        cropOffset: draft.imageEdits?.[index]?.cropOffset || { x: 0, y: 0 },
+        filterName: draft.imageEdits?.[index]?.filterName,
+        filterStyle: draft.imageEdits?.[index]?.filterStyle,
+      })));
     }
     if (draft.videoUrl) setVideoFileUrl(draft.videoUrl);
     if (draft.voiceUrl) {
@@ -741,6 +899,12 @@ export default function MediaCreationEngine({
     setPollOptionsList(['', '']);
     setStickerOverlay(null);
     setTextOverlay('');
+    setTextOverlayColor('#ffffff');
+    setBrightness(100);
+    setContrast(100);
+    setSaturation(100);
+    setBlur(0);
+    setCommentsAllowed(true);
     setActiveMode(null);
     setCurrentStep(1);
   };
@@ -760,11 +924,6 @@ export default function MediaCreationEngine({
       setPostingStatus('failed');
       return;
     }
-    if (isScheduled && !scheduledDateTime) {
-      setErrorMessage('Choose a date and time before scheduling this post.');
-      setPostingStatus('failed');
-      return;
-    }
     const uploadController = new AbortController();
     uploadAbortControllerRef.current = uploadController;
     setErrorMessage('');
@@ -776,17 +935,41 @@ export default function MediaCreationEngine({
       let finalVid = videoFileUrl || recordedVideoUrl || undefined;
       const durableImages: string[] = [];
       for (let index = 0; index < selectedImages.length; index += 1) {
-        const imageUrl = selectedImages[index].url;
-        if (imageUrl.startsWith('data:') || imageUrl.startsWith('blob:') || imageUrl.startsWith('db-media://')) {
-          if (isOffline) throw new Error('Connect to the internet before publishing media. Your current draft is still available on this device.');
+        const selectedImage = selectedImages[index];
+        const imageUrl = selectedImage.url;
+        const hasEdits = selectedImage.rotation !== 0
+          || selectedImage.zoom !== 1
+          || Boolean(selectedImage.filterStyle && selectedImage.filterStyle !== 'none')
+          || brightness !== 100
+          || contrast !== 100
+          || saturation !== 100
+          || blur !== 0
+          || Boolean(stickerOverlay)
+          || Boolean(textOverlay.trim());
+        const isLocalImage = imageUrl.startsWith('data:') || imageUrl.startsWith('blob:') || imageUrl.startsWith('db-media://');
+
+        if (isLocalImage || hasEdits) {
+          if (isOffline) throw new Error('Connect to the internet before publishing photos. Your draft is still saved on this device.');
           const imageBlob = imageUrl.startsWith('db-media://')
             ? await getMediaBlob(imageUrl.slice('db-media://'.length))
             : await (await fetch(imageUrl)).blob();
-          if (!imageBlob) throw new Error('A saved image draft could not be recovered. Please choose the image again.');
+          if (!imageBlob) throw new Error('A saved photo could not be recovered. Please choose it again.');
+          const publishBlob = hasEdits ? await renderEditedPhotoBlob(imageBlob, {
+            rotation: selectedImage.rotation,
+            zoom: selectedImage.zoom,
+            filterStyle: selectedImage.filterStyle,
+            brightness,
+            contrast,
+            saturation,
+            blur,
+            sticker: stickerOverlay,
+            text: textOverlay,
+            textColor: textOverlayColor,
+          }) : imageBlob;
           const uploaded = await uploadMediaFile({
-            file: imageBlob,
+            file: publishBlob,
             userId: currentUser.id,
-            fileName: `image-${index + 1}-${Date.now()}.${imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg'}`,
+            fileName: `photo-${index + 1}-${Date.now()}.${hasEdits ? 'jpg' : (imageBlob.type.split('/')[1]?.replace('jpeg', 'jpg') || 'jpg')}`,
             signal: uploadController.signal,
             onProgress: progress => setUploadProgress(progress),
           });
@@ -845,9 +1028,6 @@ export default function MediaCreationEngine({
         finalVoiceUrl = uploadedVoice.downloadUrl;
       }
 
-      const activeFilters = selectedImages.map(img => img.filterStyle || 'none');
-      const activeFilter = activeFilters[0] || 'none';
-
       let pollObj = undefined;
       if (activeMode === 'poll' && pollQuestion.trim()) {
         pollObj = {
@@ -870,10 +1050,17 @@ export default function MediaCreationEngine({
         pollObj,
         activeMode === 'community' ? 'Collaboration' : undefined,
         activeMode === 'pulse' ? (location || 'Nigeria') : undefined,
-        activeFilter,
-        selectedImages.length > 1 ? activeFilters : undefined,
-        isScheduled ? scheduledDateTime : undefined,
-        targetBroadcastChannel
+        'none',
+        undefined,
+        undefined,
+        targetBroadcastChannel,
+        undefined,
+        {
+          location: location.trim() || undefined,
+          taggedUsernames: taggedUsernames.split(',').map(value => value.trim().replace(/^@/, '')).filter(Boolean).slice(0, 20),
+          imageAltText: imageAltText.trim() || undefined,
+          commentsAllowed,
+        }
       );
       if (!createdPostId) throw new Error('Nexora could not confirm this post. Please sign in and retry.');
 
@@ -1465,7 +1652,7 @@ export default function MediaCreationEngine({
                               transform: `rotate(${selectedImages[activeEditIndex || 0]?.rotation}deg) scale(${selectedImages[activeEditIndex || 0]?.zoom})`,
                               transition: 'all 0.2s'
                             }}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-contain"
                           />
                           {stickerOverlay && (
                             <span className="absolute inset-0 flex items-center justify-center text-5xl animate-bounce pointer-events-none select-none">
@@ -1609,6 +1796,7 @@ export default function MediaCreationEngine({
                     <label className="text-[10px] font-mono text-[#A39BBF] uppercase">Write a caption</label>
                     <textarea
                       rows={3}
+                      maxLength={500}
                       value={caption}
                       onChange={(e) => setCaption(e.target.value)}
                       placeholder="Tell people what this is about..."
@@ -1649,12 +1837,13 @@ export default function MediaCreationEngine({
                   {/* Tagging, location and Alt-text metadata */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👥 Tag people</label>
+                      <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👥 Mention usernames</label>
                       <input 
-                        type="text" 
+                        type="text"
+                        maxLength={500}
                         value={taggedUsernames}
                         onChange={(e) => setTaggedUsernames(e.target.value)}
-                        placeholder="Enter usernames separated by commas"
+                        placeholder="@username, @username"
                         className="w-full bg-[#10102A]/85 border border-[#292244] rounded-xl px-3 py-2 text-xs text-white"
                       />
                     </div>
@@ -1674,7 +1863,8 @@ export default function MediaCreationEngine({
                     <div className="space-y-1 relative">
                       <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">📍 Location</label>
                       <input 
-                        type="text" 
+                        type="text"
+                        maxLength={120}
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="Search for a place..."
@@ -1691,7 +1881,8 @@ export default function MediaCreationEngine({
                     <div className="space-y-1">
                       <label className="text-[10px] font-mono text-[#A39BBF] uppercase block">👁️ Describe this photo (optional)</label>
                       <input 
-                        type="text" 
+                        type="text"
+                        maxLength={500}
                         value={imageAltText}
                         onChange={(e) => setImageAltText(e.target.value)}
                         placeholder="Describe the photo for people who use screen readers."
@@ -1730,14 +1921,22 @@ export default function MediaCreationEngine({
                     <p className="text-xs text-[#EEEAF8] leading-relaxed font-sans">{caption || "Your caption will appear here."}</p>
 
                     {selectedImages.length > 0 && (
-                      <div className="aspect-video rounded-xl border border-[#292244] bg-black overflow-hidden">
-                        <img src={selectedImages[0]?.url} className="w-full h-full object-cover" style={{ filter: selectedImages[0]?.filterStyle || 'none' }} />
+                      <div className={`grid gap-2 ${selectedImages.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                        {selectedImages.map((photo, index) => (
+                          <div key={`preview-photo-${index}`} className="relative aspect-square overflow-hidden rounded-xl border border-[#292244] bg-black">
+                            <img src={photo.url} alt={index === 0 ? imageAltText || 'Selected post photo' : `Selected post photo ${index + 1}`} className="h-full w-full object-contain" style={{ filter: `${photo.filterStyle || 'none'} brightness(${brightness}%) contrast(${contrast}%) saturate(${saturation}%) blur(${blur}px)`, transform: `rotate(${photo.rotation}deg) scale(${photo.zoom})` }} />
+                            {stickerOverlay && <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-5xl">{stickerOverlay}</span>}
+                            {textOverlay.trim() && <span className="pointer-events-none absolute bottom-3 inset-x-3 rounded-lg bg-black/70 px-2 py-2 text-center text-xs font-bold" style={{ color: textOverlayColor }}>{textOverlay}</span>}
+                          </div>
+                        ))}
                       </div>
                     )}
                     {(videoFileUrl || recordedVideoUrl) && (
                       <video src={videoFileUrl || recordedVideoUrl || undefined} controls playsInline preload="metadata" className="max-h-[460px] w-full rounded-xl border border-[#292244] bg-black object-contain" />
                     )}
 
+                    {location.trim() && <p className="text-[10px] text-[#A39BBF]">📍 {location}</p>}
+                    {taggedUsernames.trim() && <p className="text-[10px] text-[#B69BFF]">Mentioned: {taggedUsernames}</p>}
                     {voiceFileUrl && (
                       <div className="p-3 bg-[#120E2B] border border-[#292244] rounded-xl flex items-center justify-between text-xs">
                         <div className="flex items-center gap-2">
@@ -1792,31 +1991,19 @@ export default function MediaCreationEngine({
                         <span className="text-sm font-bold text-white">{activeTab === 'story' ? 'Ready to share your story?' : 'Ready to share?'}</span>
                       </div>
 
-                      {/* Custom options row */}
                       <div className="space-y-2.5 bg-[#07070d]/50 p-3.5 border border-[#292244] rounded-2xl text-left">
-                        <div className="flex flex-col gap-1.5 text-left">
-                          <span className="text-xs font-bold text-[#EEEAF8]">Who can see this? Everyone</span>
-                          <p className="text-[11px] leading-relaxed text-[var(--nx-muted)]">Your post will be visible to everyone on NEXORA.</p>
-                        </div>
-                      </div>
-
-                      {/* Scheduling controls */}
-                      <div className="p-3.5 bg-[#0a0715]/40 border border-[#292244] rounded-2xl text-left space-y-2">
-                        <div className="flex justify-between items-center text-xs">
-                          <div>
-                            <span className="font-bold text-white block">📅 Schedule your post</span>
-                            <span className="text-[10px] text-[#8E88A7]">Choose when you want your post to be shared.</span>
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="text-xs font-bold text-[#EEEAF8] block">Public post</span>
+                            <p className="mt-1 text-[11px] leading-relaxed text-[var(--nx-muted)]">Anyone on NEXORA can see this post.</p>
                           </div>
-                          <input type="checkbox" checked={isScheduled} onChange={(e) => setIsScheduled(e.target.checked)} className="accent-violet-500" />
+                          <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[10px] font-semibold text-[#C7B5FF]">Everyone</span>
                         </div>
-                        {isScheduled && (
-                          <input 
-                            type="datetime-local" 
-                            value={scheduledDateTime}
-                            onChange={(e) => setScheduledDateTime(e.target.value)}
-                            className="w-full bg-[#120E2B] border border-[#292244] rounded-xl p-2.5 text-xs text-violet-400"
-                          />
-                        )}
+                        <label className="flex items-center justify-between gap-3 border-t border-[#292244] pt-3 text-xs text-[#EEEAF8]">
+                          <span>Allow comments</span>
+                          <input type="checkbox" checked={commentsAllowed} onChange={(event) => setCommentsAllowed(event.target.checked)} className="h-4 w-4 accent-violet-500" />
+                        </label>
+                        <p className="text-[10px] leading-relaxed text-[#8E88A7]">Private audience options will appear here when they are fully supported and protected.</p>
                       </div>
 
                     </div>

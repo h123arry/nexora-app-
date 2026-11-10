@@ -1504,10 +1504,11 @@ export default function App() {
     imageFilters?: string[],
     scheduledTime?: string,
     isBroadcastPost?: boolean,
-    communityName?: string
+    communityName?: string,
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean }
   ): string => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
-      requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName), 'Sign in to publish content.');
+      requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName, postDetails), 'Sign in to publish content.');
       return '';
     }
     // Parse tags safely
@@ -1531,8 +1532,12 @@ export default function App() {
       videoUrl,
       voiceTranscript,
       voiceAudioUrl,
-      audience: communityName ? 'community' : audience,
+      audience: 'public',
       communityName,
+      location: postDetails?.location || pulseRegion,
+      taggedUsernames: (postDetails?.taggedUsernames || []).slice(0, 20),
+      imageAltText: postDetails?.imageAltText?.slice(0, 500),
+      commentsDisabled: postDetails?.commentsAllowed === false,
       tags: parsedTags,
       likes: 0,
       commentsCount: 0,

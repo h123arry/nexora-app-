@@ -512,7 +512,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
           'id', 'userId', 'authorId', 'username', 'name', 'avatar', 'isVerified', 'content',
           'image', 'imageFilter', 'images', 'imageFilters', 'videoUrl', 'voiceTranscript',
-          'voiceAudioUrl', 'audience', 'communityName', 'tags', 'likes', 'commentsCount',
+          'voiceAudioUrl', 'audience', 'communityName', 'tags', 'taggedUsernames', 'imageAltText', 'likes', 'commentsCount',
           'shares', 'views', 'saves', 'bookmarksCount', 'likeCount', 'commentsDisabled',
           'searchSuggestion', 'timestamp', 'isLikedByUser', 'isBookmarkedByUser', 'location',
           'comments', 'isVoice', 'voiceDuration', 'videoDuration', 'media', 'opportunityType',
@@ -528,6 +528,14 @@ service cloud.firestore {
           || !request.resource.data.isVerified
           || request.auth.token.get('email_verified', false)
           || request.auth.token.get('phone_number_verified', false))
+        && (!request.resource.data.keys().hasAny(['taggedUsernames'])
+          || (request.resource.data.taggedUsernames is list && request.resource.data.taggedUsernames.size() <= 20))
+        && (!request.resource.data.keys().hasAny(['imageAltText'])
+          || (request.resource.data.imageAltText is string && request.resource.data.imageAltText.size() <= 500))
+        && (!request.resource.data.keys().hasAny(['location'])
+          || (request.resource.data.location is string && request.resource.data.location.size() <= 120))
+        && (!request.resource.data.keys().hasAny(['commentsDisabled'])
+          || request.resource.data.commentsDisabled is bool)
         && request.resource.data.get('likes', 0) == 0
         && request.resource.data.get('commentsCount', 0) == 0
         && request.resource.data.get('shares', 0) == 0
@@ -552,11 +560,20 @@ service cloud.firestore {
           && publicPost(request.resource.data)
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'content', 'image', 'images', 'imageFilter', 'imageFilters', 'videoUrl',
-          'voiceTranscript', 'voiceAudioUrl', 'tags',
+          'voiceTranscript', 'voiceAudioUrl', 'tags', 'taggedUsernames', 'imageAltText',
           'commentsDisabled', 'location', 'audience', 'communityName', 'opportunityType',
           'interactivePoll', 'editHistory', 'scheduledTime', 'isDraft', 'isArchived',
           'discussionModeEnabled', 'discussionSideA', 'discussionSideB', 'updatedAt'
-          ]) || isOwnCommentAppend(postId));
+          ])
+          && (!request.resource.data.keys().hasAny(['taggedUsernames'])
+            || (request.resource.data.taggedUsernames is list && request.resource.data.taggedUsernames.size() <= 20))
+          && (!request.resource.data.keys().hasAny(['imageAltText'])
+            || (request.resource.data.imageAltText is string && request.resource.data.imageAltText.size() <= 500))
+          && (!request.resource.data.keys().hasAny(['location'])
+            || (request.resource.data.location is string && request.resource.data.location.size() <= 120))
+          && (!request.resource.data.keys().hasAny(['commentsDisabled'])
+            || request.resource.data.commentsDisabled is bool)
+          || isOwnCommentAppend(postId));
       allow delete: if signedIn() && (resource.data.userId == request.auth.uid || resource.data.authorId == request.auth.uid);
     }
 

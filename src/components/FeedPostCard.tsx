@@ -710,10 +710,11 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             {/* Comment */}
             <button
               type="button"
-              onClick={() => onCommentToggle(post.id)}
-              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer"
-              title="Comment"
-              aria-label={`${isCommentsOpen ? 'Close comments' : 'Open comments'} on post by ${post.name}; ${post.comments?.length || 0} comments`}
+              disabled={Boolean(post.commentsDisabled)}
+              onClick={() => { if (!post.commentsDisabled) onCommentToggle(post.id); }}
+              className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer disabled:cursor-not-allowed disabled:opacity-45"
+              title={post.commentsDisabled ? 'Comments are turned off for this post' : 'Comment'}
+              aria-label={post.commentsDisabled ? 'Comments are turned off' : `${isCommentsOpen ? 'Close comments' : 'Open comments'} on post by ${post.name}; ${post.comments?.length || 0} comments`}
               aria-expanded={isCommentsOpen}
             >
               <MessageCircle className="w-6 h-6 text-white" />

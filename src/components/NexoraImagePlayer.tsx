@@ -27,6 +27,9 @@ interface Post {
   isVerified?: boolean;
   isArchived?: boolean;
   location?: string;
+  taggedUsernames?: string[];
+  imageAltText?: string;
+  commentsDisabled?: boolean;
   soundTitle?: string;
 }
 
@@ -264,7 +267,7 @@ export default function NexoraImagePlayer({
           <>
             <img loading="lazy"
               src={displayImages[currentImageIndex]}
-              alt={post.content || 'Post media'}
+              alt={post.imageAltText || post.content || 'Post media'}
               decoding="async"
               fetchPriority="low"
               aria-hidden={hasImageLoadError}
@@ -378,10 +381,13 @@ export default function NexoraImagePlayer({
         </button>
 
         {/* Comment Button */}
-        <button 
-          onClick={(e) => { e.stopPropagation(); onCommentToggle?.(); }}
-          className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center"
-          title="Comments"
+        <button
+          type="button"
+          disabled={Boolean(post.commentsDisabled)}
+          onClick={(e) => { e.stopPropagation(); if (!post.commentsDisabled) onCommentToggle?.(); }}
+          className="flex flex-col items-center gap-1 group/btn cursor-pointer font-sans text-center disabled:cursor-not-allowed disabled:opacity-45"
+          title={post.commentsDisabled ? 'Comments are turned off for this post' : 'Comments'}
+          aria-label={post.commentsDisabled ? 'Comments are turned off' : 'Open comments'}
         >
           <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/30 hover:bg-black/50 backdrop-blur-md border border-white/10 transition-all duration-300 active:scale-90 shadow-lg">
             <MessageSquare className="w-5 h-5 sm:w-6 sm:h-6 text-white transition-transform duration-300 group-hover/btn:scale-110" />
@@ -608,11 +614,20 @@ export default function NexoraImagePlayer({
           </div>
         )}
 
-        {/* Location if present */}
+        {/* Post details */}
         {post.location && (
           <div className="flex items-center gap-1 text-[11px] font-mono text-zinc-300 drop-shadow-[0_2px_6px_rgba(0,0,0,0.85)]">
-            <span className="text-pink-400">📍</span>
+            <span className="text-violet-300">📍</span>
             <span>{post.location}</span>
+          </div>
+        )}
+        {post.taggedUsernames && post.taggedUsernames.length > 0 && (
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-medium text-violet-200" aria-label="Mentioned accounts">
+            {post.taggedUsernames.map(username => (
+              <button key={username} type="button" onClick={(event) => { event.stopPropagation(); onViewProfile?.(username); }} className="hover:text-white hover:underline focus-visible:outline focus-visible:outline-violet-300">
+                @{username}
+              </button>
+            ))}
           </div>
         )}
 
