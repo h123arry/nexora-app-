@@ -43,13 +43,21 @@ export const getLiveKitToken = onCall(
     if (activeRestriction('suspended') || (session.data()?.hostId === userId && activeRestriction('postingRestricted'))) throw new HttpsError('permission-denied', 'This account cannot join live video.');
     const roomName = 'nexora_' + sessionId;
     const isHost = session.data()?.hostId === userId;
+    let isApprovedGuest = false;
     if (!isHost) {
       const viewerId = createHash('sha256').update(sessionId + ':' + userId).digest('hex');
-      const viewer = await db.collection('liveSessionViewers').doc(viewerId).get();
+      const [viewer, guestRequest] = await Promise.all([
+        db.collection('liveSessionViewers').doc(viewerId).get(),
+        sessionRef.collection('guestRequests').doc(userId).get(),
+      ]);
       const connections: unknown = viewer.data()?.connectionIds;
       if (!viewer.exists || !Array.isArray(connections) || !connections.includes(connectionId)) {
         throw new HttpsError('permission-denied', 'Join this live room before connecting to its video.');
       }
+      isApprovedGuest = guestRequest.data()?.status === 'approved';
+    }
+    if (activeRestriction('postingRestricted') && (isHost || isApprovedGuest)) {
+      throw new HttpsError('permission-denied', 'This account cannot publish live video.');
     }
     const key = apiKey.value();
     const secret = apiSecret.value();
@@ -65,9 +73,9 @@ export const getLiveKitToken = onCall(
       iat: now,
       exp: now + TOKEN_TTL_SECONDS,
       name: String(session.data()?.hostName || 'NEXORA member').slice(0, 80),
-      video: createLiveKitVideoGrant(roomName, isHost),
+      video: createLiveKitVideoGrant(roomName, isHost || isApprovedGuest),
     }, secret);
     await sessionRef.update({ videoTransport: 'livekit', videoTransportConnectedAt: new Date() });
-    return { token, wsUrl, roomName, role: isHost ? 'host' : 'viewer', expiresAt: (now + TOKEN_TTL_SECONDS) * 1000 };
+    return { token, wsUrl, roomName, role: isHost ? 'host' : isApprovedGuest ? 'guest' : 'viewer', expiresAt: (now + TOKEN_TTL_SECONDS) * 1000 };
   },
 );
