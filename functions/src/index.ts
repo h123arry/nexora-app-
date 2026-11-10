@@ -85,7 +85,7 @@ export const createCommunityPoll = onCall({ maxInstances: 10 }, async (request) 
     if (message.includes('valid Circle') || message.includes('Add a question')) {
       throw new HttpsError('invalid-argument', message);
     }
-    if (message.includes('Join this Circle')) throw new HttpsError('permission-denied', message);
+    if (message.includes('Join this Circle') || message.includes('muted in this Circle')) throw new HttpsError('permission-denied', message);
     throw new HttpsError('internal', 'The poll could not be created. Please retry.');
   }
 });
