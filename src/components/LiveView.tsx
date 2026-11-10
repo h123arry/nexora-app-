@@ -15,6 +15,8 @@ function asDate(value: any): string {
 
 export default function LiveView({ currentUser, onClose, streamId }: LiveViewProps) {
   const [rooms,setRooms] = useState<LiveSessionSummary[]>([]);
+  const [roomSearch,setRoomSearch] = useState('');
+  const [roomSort,setRoomSort] = useState<'trending'|'popular'|'newest'>('trending');
   const [selectedId,setSelectedId] = useState<string|null>(null);
   const [session,setSession] = useState<LiveSessionSummary|null>(null);
   const [messages,setMessages] = useState<LiveChatMessage[]>([]);
@@ -37,7 +39,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   useEffect(() => () => { if(giftAudioContext.current && giftAudioContext.current.state!=='closed') void giftAudioContext.current.close(); }, []);
 
   useEffect(() => {
-    const activeQuery=query(collection(db,'liveSessions'),where('status','==','live'),limit(25));
+    const activeQuery=query(collection(db,'liveSessions'),where('status','==','live'),limit(50));
     return onSnapshot(activeQuery,snapshot=>{
       const next=snapshot.docs.map(item=>({id:item.id,...item.data()} as LiveSessionSummary));
       next.sort((a,b)=>{
@@ -106,6 +108,13 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
 
   useEffect(()=>{bottomRef.current?.scrollIntoView({behavior:'smooth'});},[messages.length]);
 
+  const visibleRooms=rooms.filter(room=>(room.title+' '+(room.hostName||'')).toLowerCase().includes(roomSearch.trim().toLowerCase())).sort((a,b)=>{
+    const time=(value:any)=>value?.toDate?.()?.getTime?.()||(typeof value==='string'?new Date(value).getTime():0);
+    if(roomSort==='popular')return Number(b.viewerCount||0)-Number(a.viewerCount||0)||time(b.startedAt)-time(a.startedAt);
+    if(roomSort==='newest')return time(b.startedAt)-time(a.startedAt);
+    const score=(room:LiveSessionSummary)=>Math.log1p(Math.max(0,Number(room.viewerCount||0)))*2+Math.max(0,4-(Date.now()-time(room.startedAt))/3_600_000);
+    return score(b)-score(a);
+  });
   const startRoom=async()=>{
     setLoading(true);setError('');
     try { const result=await startLiveSession(title);setIsHost(true);setSelectedId(result.sessionId);setTitle(''); }
@@ -178,8 +187,10 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
               <input value={title} onChange={e=>setTitle(e.target.value)} maxLength={80} placeholder="What are you going live about?" className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 px-3 text-sm outline-none focus:border-violet-400/50"/>
               <button type="button" onClick={()=>void startRoom()} disabled={loading||title.trim().length<3} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-bold disabled:opacity-40">{loading?<Loader2 size={16} className="animate-spin"/>:<Radio size={16}/>} Start live room</button>
             </div>
-            <div className="space-y-3"><div className="flex items-center justify-between"><h3 className="text-sm font-bold">Happening now</h3><span className="text-[10px] text-slate-500">{rooms.length} rooms</span></div>
-              {!rooms.length?<p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No live rooms right now. Start one and invite your community.</p>:rooms.map(room=><button key={room.id} type="button" onClick={()=>void openRoom(room)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3 text-left hover:border-violet-400/30"><span className="min-w-0"><span className="block truncate text-sm font-bold">{room.title}</span><span className="mt-1 block truncate text-[10px] text-slate-400">{room.hostName||'NEXORA creator'}</span></span><span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-200"><span className="h-1.5 w-1.5 rounded-full bg-rose-400"/> LIVE</span></button>)}
+            <div className="space-y-3"><div className="flex items-center justify-between"><h3 className="text-sm font-bold">Happening now</h3><span className="text-[10px] text-slate-500">{visibleRooms.length} of {rooms.length} rooms</span></div>
+              <input value={roomSearch} onChange={event=>setRoomSearch(event.target.value)} placeholder="Find a live room or creator…" aria-label="Search live rooms" className="w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2.5 text-xs outline-none focus:border-violet-400/50"/>
+              <div className="flex flex-wrap gap-2">{([{id:'trending',label:'Trending'},{id:'popular',label:'Most viewers'},{id:'newest',label:'Newest'}] as const).map(option=><button key={option.id} type="button" onClick={()=>setRoomSort(option.id)} aria-pressed={roomSort===option.id} className={'rounded-full border px-3 py-1.5 text-[10px] font-bold '+(roomSort===option.id?'border-violet-400/50 bg-violet-500/20 text-violet-100':'border-white/10 bg-white/[.03] text-slate-400')}>{option.label}</button>)}</div>
+              {!rooms.length?<p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No live rooms right now. Start one and invite your community.</p>:!visibleRooms.length?<p className="rounded-xl border border-dashed border-white/10 p-5 text-center text-xs text-slate-500">No live rooms match that search. Try another title or creator.</p>:visibleRooms.map(room=><button key={room.id} type="button" onClick={()=>void openRoom(room)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[.03] p-3 text-left hover:border-violet-400/30"><span className="min-w-0"><span className="block truncate text-sm font-bold">{room.title}</span><span className="mt-1 block truncate text-[10px] text-slate-400">{room.hostName||'NEXORA creator'} · {(room.viewerCount||0).toLocaleString()} watching</span></span><span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-rose-500/10 px-2 py-1 text-[10px] font-bold text-rose-200"><span className="h-1.5 w-1.5 rounded-full bg-rose-400"/> LIVE</span></button>)}
             </div>
           </div>
         ) : (
