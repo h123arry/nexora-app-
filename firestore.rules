@@ -1199,6 +1199,12 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time
           && request.resource.data.momentCount == resource.data.get('momentCount', 0) + 1)
         || (!weaveMember()
+          && resource.data.get('visibility', 'private') == 'public'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
+          && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
+          && request.resource.data.updatedAt == request.time)
+        || (!weaveMember()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
           && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
           && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
