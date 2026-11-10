@@ -1,8 +1,8 @@
-import { onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentCreated, onDocumentWritten } from 'firebase-functions/v2/firestore';
 import { setGlobalOptions } from 'firebase-functions/v2';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
-import { getFirestore } from 'firebase-admin/firestore';
+import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
@@ -18,6 +18,7 @@ import { createPageBookingRequest, respondToPageBookingRequest, cancelPageBookin
 import { createGroupChat as createGroupChatRecord } from './groupChats.js';
 import { publishBusinessService, setBusinessServiceStatus } from './businessServices.js';
 import { searchPublicDirectory } from './directorySearch.js';
+import { syncUniversalSearchRecord, searchNexoraContent, getNexoraTrending } from './universalSearch.js';
 import { publishPageChannelUpdate as publishPageChannelUpdateRecord, deletePageChannelUpdate as deletePageChannelUpdateRecord } from './pageChannels.js';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { createDailySessionRecorder } from './retention.js';
@@ -57,6 +58,192 @@ const firestoreDatabaseId = resolveFirestoreDatabaseId();
 const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 
 export const deliverNotificationPush = createNotificationPushDelivery(adminDb, adminApp);
+
+const syncSearch = (kind: Parameters<typeof syncUniversalSearchRecord>[1], id: string, path: string, data: Record<string, unknown> | null, parent?: Record<string, unknown>) =>
+  syncUniversalSearchRecord(adminDb, kind, id, path, data, parent);
+
+const searchFieldsChanged = (
+  before: Record<string, unknown> | null,
+  after: Record<string, unknown> | null,
+  fields: string[],
+): boolean => {
+  if (!before || !after) return true;
+  return fields.some(field => JSON.stringify(before[field] ?? null) !== JSON.stringify(after[field] ?? null));
+};
+
+export const indexPublicPostForSearch = onDocumentWritten('posts/{postId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const after = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  const id = event.params.postId;
+  const path = 'posts/' + id;
+  if (before && after && !searchFieldsChanged(before, after, ['content','audience','tags','videoUrl','mediaType','type','timestamp','likes','likesCount','commentsCount','views','viewCount','image','images','thumbnailUrl','videoThumbnail','username','name','avatar','isVerified','status','userId'])) return;
+  const resolveKind = (data: Record<string, unknown> | null): 'video' | 'post' =>
+    data && (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
+  const previousKind = resolveKind(before);
+  const nextKind = resolveKind(after);
+  if (before && (!after || previousKind !== nextKind)) await syncSearch(previousKind, id, path, null);
+  if (after) await syncSearch(nextKind, id, path, after);
+});
+export const indexPublicProfileForSearch = onDocumentWritten('users/{userId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','bio','isVerified','isBanned','isSuspended','isSeedProfile'])) return;
+  await syncSearch('person', event.params.userId, 'users/' + event.params.userId, data);
+});
+export const indexPageForSearch = onDocumentWritten('pages/{pageId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['username','name','avatar','coverImage','category','description','status','isPrivate','privacy','ownerId','isVerified'])) return;
+  await syncSearch('page', event.params.pageId, 'pages/' + event.params.pageId, data);
+});
+export const indexCircleForSearch = onDocumentWritten('communities/{communityId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['name','description','bannerImage','type','isPrivate','bannedUsers','status','isVerified'])) return;
+  await syncSearch('circle', event.params.communityId, 'communities/' + event.params.communityId, data);
+});
+export const indexLiveRoomForSearch = onDocumentWritten('liveSessions/{sessionId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['title','description','hostName','hostId','status','thumbnailUrl','startedAt','category','isVerified'])) return;
+  await syncSearch('live', event.params.sessionId, 'liveSessions/' + event.params.sessionId, data);
+});
+export const indexCirclePostForSearch = onDocumentWritten('communities/{communityId}/posts/{postId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['content','tags','status','likesCount','commentsCount','image','authorName','authorUsername','authorAvatar','isVerified'])) return;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('post', event.params.postId, event.data?.after.exists ? event.data.after.ref.path : 'communities/' + event.params.communityId + '/posts/' + event.params.postId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexCirclePollForSearch = onDocumentWritten('communities/{communityId}/polls/{pollId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['question','status'])) return;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('poll', event.params.pollId, 'communities/' + event.params.communityId + '/polls/' + event.params.pollId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexCircleAnnouncementForSearch = onDocumentWritten('communities/{communityId}/announcements/{announcementId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['title','body','deleted','status'])) return;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('announcement', event.params.announcementId, 'communities/' + event.params.communityId + '/announcements/' + event.params.announcementId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexCircleEventForSearch = onDocumentWritten('communities/{communityId}/events/{eventId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['title','location','status','startsAt'])) return;
+  const parentSnapshot = await adminDb.collection('communities').doc(event.params.communityId).get();
+  await syncSearch('event', event.params.eventId, 'communities/' + event.params.communityId + '/events/' + event.params.eventId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexPageServiceForSearch = onDocumentWritten('pages/{pageId}/services/{serviceId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['name','serviceName','description','status','durationMinutes','priceMinor','currency','category'])) return;
+  const parentSnapshot = await adminDb.collection('pages').doc(event.params.pageId).get();
+  await syncSearch('service', event.params.serviceId, 'pages/' + event.params.pageId + '/services/' + event.params.serviceId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+export const indexPageChannelUpdateForSearch = onDocumentWritten('pages/{pageId}/channelUpdates/{updateId}', async event => {
+  const before = event.data?.before.exists ? event.data.before.data() as Record<string, unknown> : null;
+  const data = event.data?.after.exists ? event.data.after.data() as Record<string, unknown> : null;
+  if (before && data && !searchFieldsChanged(before, data, ['title','content','body','status','deleted'])) return;
+  const parentSnapshot = await adminDb.collection('pages').doc(event.params.pageId).get();
+  await syncSearch('update', event.params.updateId, 'pages/' + event.params.pageId + '/channelUpdates/' + event.params.updateId,
+    data, parentSnapshot.data() as Record<string, unknown> | undefined);
+});
+
+export const searchNexora = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to search NEXORA.');
+  try {
+    return await searchNexoraContent(adminDb, request.auth.uid, request.data?.query, request.data?.cursor, request.data?.kinds);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('Search terms') || message.includes('Enter a search term') || message.includes('cursor is invalid') || message.includes('cursor is stale')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    throw new HttpsError('internal', 'NEXORA search is temporarily unavailable.');
+  }
+});
+export const getNexoraTrendingTopics = onCall({ maxInstances: 5 }, async request => {
+  if (!request.auth?.uid) throw new HttpsError('unauthenticated', 'Sign in to view NEXORA trends.');
+  try { return { topics: await getNexoraTrending(adminDb) }; }
+  catch { throw new HttpsError('unavailable', 'Trending topics are temporarily unavailable.'); }
+});
+
+/** Admin-only, cursor-based one-time index backfill. Invoke once per source until done=true. */
+export const backfillNexoraSearchIndex = onCall({ maxInstances: 2, timeoutSeconds: 540 }, async request => {
+  const claims = request.auth?.token as Record<string, unknown> | undefined;
+  if (!request.auth?.uid || !(claims?.admin === true || claims?.role === 'admin' || claims?.role === 'founder' || claims?.role === 'super_admin')) {
+    throw new HttpsError('permission-denied', 'Only NEXORA administrators can rebuild the search index.');
+  }
+  const source = request.data?.source;
+  const sources = ['users','posts','pages','communities','liveSessions','circlePosts','circleEvents','circlePolls','circleAnnouncements','pageServices','pageUpdates'];
+  if (typeof source !== 'string' || !sources.includes(source)) throw new HttpsError('invalid-argument', 'Choose a supported search index source.');
+  const cursor = request.data?.cursor;
+  if (cursor !== undefined && cursor !== null && (typeof cursor !== 'string' || cursor.length > 500 || cursor.includes('..'))) {
+    throw new HttpsError('invalid-argument', 'The backfill cursor is invalid.');
+  }
+  const isCollectionGroup = ['circlePosts','circleEvents','circlePolls','circleAnnouncements','pageServices','pageUpdates'].includes(source);
+  const collectionName = source === 'circlePosts' ? 'posts'
+    : source === 'circleEvents' ? 'events'
+      : source === 'circlePolls' ? 'polls'
+        : source === 'circleAnnouncements' ? 'announcements'
+          : source === 'pageServices' ? 'services'
+        : source === 'pageUpdates' ? 'channelUpdates' : source;
+  let query: FirebaseFirestore.Query = isCollectionGroup
+    ? adminDb.collectionGroup(collectionName)
+    : adminDb.collection(collectionName);
+  query = query.orderBy(FieldPath.documentId());
+  if (cursor) {
+    if (isCollectionGroup) {
+      const cursorSegments = cursor.split('/');
+      const expectedCollection = source === 'circlePosts' ? 'posts' : source === 'circleEvents' ? 'events' : source === 'circlePolls' ? 'polls' : source === 'circleAnnouncements' ? 'announcements' : source === 'pageServices' ? 'services' : 'channelUpdates';
+      const expectedRoot = source.startsWith('circle') ? 'communities' : 'pages';
+      if (cursorSegments.length !== 4 || cursorSegments[0] !== expectedRoot || cursorSegments[2] !== expectedCollection) {
+        throw new HttpsError('invalid-argument', 'The backfill cursor does not belong to this source.');
+      }
+      const previous = await adminDb.doc(cursor).get();
+      if (!previous.exists) throw new HttpsError('invalid-argument', 'The backfill cursor is stale. Restart this source.');
+      query = query.startAfter(previous);
+    } else query = query.startAfter(cursor);
+  }
+  const snapshot = await query.limit(100).get();
+  let processed = 0;
+  for (const document of snapshot.docs) {
+    const data = document.data() as Record<string, unknown>;
+    const segments = document.ref.path.split('/');
+    if (source === 'circlePosts' || source === 'circleEvents' || source === 'circlePolls' || source === 'circleAnnouncements') {
+      if (segments.length !== 4 || segments[0] !== 'communities') continue;
+      const parent = await adminDb.collection('communities').doc(segments[1]).get();
+      const kind = source === 'circleEvents' ? 'event' : source === 'circlePolls' ? 'poll' : source === 'circleAnnouncements' ? 'announcement' : 'post';
+      await syncUniversalSearchRecord(adminDb, kind, document.id, document.ref.path, data, parent.data() as Record<string, unknown> | undefined);
+    } else if (source === 'pageServices' || source === 'pageUpdates') {
+      if (segments.length !== 4 || segments[0] !== 'pages') continue;
+      const parent = await adminDb.collection('pages').doc(segments[1]).get();
+      const kind = source === 'pageServices' ? 'service' : 'update';
+      await syncUniversalSearchRecord(adminDb, kind, document.id, document.ref.path, data, parent.data() as Record<string, unknown> | undefined);
+    } else {
+      const kind = source === 'users' ? 'person'
+        : source === 'pages' ? 'page'
+          : source === 'communities' ? 'circle'
+            : source === 'liveSessions' ? 'live'
+              : (data.videoUrl || data.mediaType === 'video' || data.type === 'video') ? 'video' : 'post';
+      await syncUniversalSearchRecord(adminDb, kind, document.id, document.ref.path, data);
+    }
+    processed++;
+  }
+  const nextCursor = snapshot.size === 100
+    ? (isCollectionGroup ? snapshot.docs[snapshot.docs.length - 1].ref.path : snapshot.docs[snapshot.docs.length - 1].id)
+    : null;
+  return { source, processed, nextCursor, done: nextCursor === null };
+});
+
+
 setGlobalOptions({
   region: 'us-central1',
   maxInstances: 5,
