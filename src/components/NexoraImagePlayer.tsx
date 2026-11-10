@@ -622,8 +622,12 @@ export default function NexoraImagePlayer({
           </div>
         )}
         {post.taggedUsernames && post.taggedUsernames.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-medium text-violet-200">
-            {post.taggedUsernames.map(username => <span key={username}>@{username}</span>)}
+          <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-medium text-violet-200" aria-label="Mentioned accounts">
+            {post.taggedUsernames.map(username => (
+              <button key={username} type="button" onClick={(event) => { event.stopPropagation(); onViewProfile?.(username); }} className="hover:text-white hover:underline focus-visible:outline focus-visible:outline-violet-300">
+                @{username}
+              </button>
+            ))}
           </div>
         )}
 
