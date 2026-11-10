@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/giftverse-licensed-artwork-pipeline
+      - feat/giftverse-individual-artwork-assets
     paths:
       - scripts/giftverse/build-openmoji-expansion.mjs
       - .github/workflows/giftverse-artwork-import.yml
@@ -28,7 +29,7 @@ jobs:
           cache: npm
       - name: Generate and import 880 licensed vector artworks
         run: npm run giftverse:import-openmoji
-      - name: Install dependencies
+      - name: Extract individual catalogue artwork files\n        run: npm run giftverse:extract-individual\n      - name: Install dependencies
         run: npm ci
       - name: Install Firebase Functions dependencies
         run: npm --prefix functions ci
