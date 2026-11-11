@@ -7,7 +7,7 @@ import { canAddStudioImageLayer, getStudioImageLayerFrame, normalizeStudioImageL
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
-import { getStudioExportDimensions, type StudioExportResolution } from '../utils/studioExportPolicy';
+import { getStudioExportDimensions, getStudioExpectedExportDuration, type StudioExportResolution } from '../utils/studioExportPolicy';
 import { getStudioExportValidationError } from '../utils/studioExportValidationPolicy';
 import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
@@ -932,10 +932,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     try {
       const blob = await renderProject();
       const dimensions = getStudioExportDimensions(aspectRatio, exportResolution);
-      const overlapSeconds = transition === 'cross-dissolve'
-        ? clips.slice(0, -1).reduce((sum, clip, index) => sum + Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clip.end - clip.start), Math.max(0, clips[index + 1].end - clips[index + 1].start)), 0)
-        : 0;
-      const expectedDuration = Math.max(0, totalDuration - overlapSeconds);
+      const expectedDuration = getStudioExpectedExportDuration(
+        clips.map(clip => clip.end - clip.start),
+        transition,
+        STUDIO_CROSS_DISSOLVE_SECONDS,
+      );
       const metadata = await inspectStudioExport(blob);
       const validationError = getStudioExportValidationError({
         mimeType: blob.type,
