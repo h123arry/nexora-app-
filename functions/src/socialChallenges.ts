@@ -21,12 +21,11 @@ export interface CommunityCapabilitySnapshot {
 
 export async function getCommunityCapabilitySnapshot(db: Firestore, uid: string): Promise<CommunityCapabilitySnapshot> {
   if (!validUid(uid)) throw new Error('A valid account is required.');
-  const challenges = await db.collection('socialChallenges').limit(200).get();
+  const participants = await db.collectionGroup('participants').where('userId', '==', uid).limit(100).get();
   let totalVerifiedContributions = 0;
   let distinctChallengesContributed = 0;
-  for (const challenge of challenges.docs) {
-    const participant = await challenge.ref.collection('participants').doc(uid).get();
-    if (!participant.exists) continue;
+  for (const participant of participants.docs) {
+    if (participant.ref.parent.id !== 'participants' || !participant.ref.parent.parent || participant.ref.parent.parent.parent.id !== 'socialChallenges') continue;
     const count = Math.max(0, Number(participant.get('contributionCount')) || 0);
     if (count > 0) {
       distinctChallengesContributed += 1;
