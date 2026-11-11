@@ -32,7 +32,7 @@ async function sha256FinalizedObject(bucketName: string, objectName: string, gen
 
 export const verifyFinalizedMedia = onObjectFinalized(async event => {
   const object = event.data;
-  const match = object.name?.match(/^users\\/([A-Za-z0-9_-]{1,128})\\/media\\/([A-Za-z0-9_-]{1,128})$/);
+  const match = object.name?.match(/^users\/([A-Za-z0-9_-]{1,128})\/media\/([A-Za-z0-9_-]{1,128})$/);
   if (!match || !object.name) return;
   const [, ownerId, mediaId] = match;
   const contentType = String(object.contentType || '').toLowerCase();
@@ -46,7 +46,7 @@ export const verifyFinalizedMedia = onObjectFinalized(async event => {
     && size <= (kind ? MAX_BYTES[kind] : 0)
     && object.metadata?.ownerId === ownerId
     && object.metadata?.mediaId === mediaId
-    && /^\\d{1,32}$/.test(generation)
+    && /^\d{1,32}$/.test(generation)
     && typeof object.bucket === 'string'
     && object.bucket.length > 0,
   );
