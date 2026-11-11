@@ -67,7 +67,7 @@ export const cleanupExpiredStudioMp4Exports = onSchedule('every 6 hours', async 
     if (page.empty) break;
     for (const snapshot of page.docs) {
       if (isStudioExportExpired(snapshot.data() || {}, Date.now())) {
-        await deleteExportAsset(snapshot);
+        await deleteExportAsset(snapshot).catch(() => undefined);
       }
     }
     if (page.size < 200) break;
