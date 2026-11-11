@@ -24,6 +24,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Multiple independently timed text layers with separate colour, placement, font size, opacity, scale and rotation; edits are previewed and baked into export.
 - Creator-imported PNG, JPEG and WebP image layers with independent timing, position, scale, rotation and opacity; layers are included in preview and export.
 - Independently timed subtitle segments with a separate track from the post caption, live preview, local autosave, undo/redo and burned-in export.
+- Shared global playhead with seek mapping across concatenated source clips, plus visual video, audio, image, text and subtitle lanes. Selecting a lane segment seeks the preview to its global timeline start.
 - On-screen post caption.
 - Per-account IndexedDB project autosave.
 - Export upload through the authenticated Firebase media service and post creation through the existing NEXORA post path.
@@ -44,7 +45,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 ## Remaining delivery phases
 
 ### Phase 3 · Timeline and motion
-- Independent video, audio and sticker lanes with a shared, seekable playhead.
+- [x] Independent video, audio, image, text and subtitle lanes with a shared seekable playhead and clip-aware global seeking.
+- Full continuous synchronized playback of all audio and visual lanes (still required).
 - User-authored keyframes for independent animation of text, sticker and video layers.
 - Cross-dissolve and selected transition presets beyond fade-through-black.
 
@@ -52,7 +54,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Clip-aligned waveform scrubbing and multi-region voiceover editing.
 - Live mix preview with timeline-synchronized audio playback and audio/video sync validation.
 - Rights-cleared NEXORA soundtrack library; no unlicensed commercial tracks.
-- Caption/subtitle tracks with timed segments, editable text and accessible defaults.
+- [x] Caption/subtitle tracks with timed segments, editable text and accessible defaults.
 - Audio/video sync checks and export loudness safeguards.
 
 ### Phase 5 · Visual toolkit
@@ -82,7 +84,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Current export is WebM and depends on browser MediaRecorder, canvas capture and Web Audio support.
 - Voiceover waveform decoding is capped at 30 MB per recording to avoid excessive memory use on mobile devices; larger recordings remain attachable and exportable but do not receive a generated waveform preview.
 - Current project drafts are local to the same browser/device; cloud draft sync is not implemented.
-- The preview focuses on the selected clip; a full synchronized multi-layer timeline preview is still part of the timeline phase.
+- The shared timeline now seeks across video clips and shows independently timed visual/audio lanes. Continuous playback synchronization of soundtrack, voiceover, and every visual lane is still in progress.
 - Fade-through-black is not a cross-dissolve.
 - The editor supports multiple title layers; a dedicated caption/subtitle track with timed segments remains future work.
 - Browser export has not been manually verified on every supported mobile browser; CI type-check/build and repository tests do not replace device acceptance testing.
