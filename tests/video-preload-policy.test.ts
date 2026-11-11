@@ -58,6 +58,22 @@ test('does not start speculative video requests while offline', () => {
   });
 });
 
+test('releases distant video resources while offline without preloading', () => {
+  assert.deepEqual(getVideoPreloadPlan({
+    ...base,
+    isActive: false,
+    isOffline: true,
+    postIndex: 8,
+    activePostIndex: 3,
+    postVideoIndex: 6,
+    activeVideoIndex: 1,
+  }), {
+    shouldPreload: false,
+    isReleased: true,
+    preloadMode: 'none',
+  });
+});
+
 test('releases distant videos and avoids preparing non-video content', () => {
   assert.equal(getVideoPreloadPlan({
     ...base,
