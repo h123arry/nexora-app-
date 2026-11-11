@@ -1603,7 +1603,7 @@ export default function MediaCreationEngine({
                               <button type="button" onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
                             </div>
                           </div>
-                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="photo"
+                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="photo" countdownTimer={countdownTimer}
                             onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
                             onCapture={blob => {
                               const url = trackObjectUrl(URL.createObjectURL(blob));
@@ -1702,7 +1702,7 @@ export default function MediaCreationEngine({
                               <button type="button" disabled={isRecording || isSavingRecordedVideo} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
                             </div>
                           </div>
-                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="video"
+                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="video" countdownTimer={countdownTimer}
                             onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
                             onCapture={blob => {
                               const url = trackObjectUrl(URL.createObjectURL(blob));
