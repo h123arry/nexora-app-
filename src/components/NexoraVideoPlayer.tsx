@@ -6,7 +6,6 @@ import { useResolvedUrl } from '../utils/indexedDbStorage';
 import { globalVideoPlaybackManager } from '../utils/VideoPlaybackManager';
 import VideoBottomSheet from './VideoBottomSheet';
 import NexoraLoader from './NexoraLoader';
-import NexoraWatermark from './branding/NexoraWatermark';
 import NexoraPostRollCard from './branding/NexoraPostRollCard';
 import { Play, Pause, Volume2, VolumeX, Maximize2, Bookmark, Check, Plus, FolderHeart, Download, Settings, MoreVertical, Radio, Zap, RotateCcw, Heart, MessageSquare, Send, X, AlertTriangle, EyeOff, Search, CheckCircle, Sun, Archive, Trash, UserPlus, Edit3, Music } from 'lucide-react';
 
@@ -18,6 +17,7 @@ import { hasAnalyticsObservationConsent, trackClientObservation } from '../servi
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { app } from '../services/firebase/config';
 import { playNexoraSound } from '../services/soundExperience';
+import { exportNexoraBrandedVideo } from '../services/nexoraBrandedVideoExport';
 
 interface Post {
   id: string;
@@ -197,7 +197,6 @@ export default function NexoraVideoPlayer({
   const [duration, setDuration] = useState(0);
   const [isReady, setIsReady] = useState(false);
   const [showPostRoll, setShowPostRoll] = useState(false);
-  const [watermarkPosition, setWatermarkPosition] = useState(0);
   const [retryCount, setRetryCount] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [isLongPressing, setIsLongPressing] = useState(false);
@@ -223,7 +222,6 @@ export default function NexoraVideoPlayer({
   const singleTapTimeoutRef = useRef<any>(null);
   const controlsTimeoutRef = useRef<any>(null);
   const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const watermarkCycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const postRollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sonicAudioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -295,18 +293,6 @@ export default function NexoraVideoPlayer({
       setShowTapForSound(false);
     }
   }, [isPlaying, isMuted]);
-
-  useEffect(() => {
-    if (watermarkCycleRef.current) clearInterval(watermarkCycleRef.current);
-    if (!isPlaying || showPostRoll) return;
-    watermarkCycleRef.current = setInterval(() => {
-      setWatermarkPosition(position => (position + 1) % 4);
-    }, 5000);
-    return () => {
-      if (watermarkCycleRef.current) clearInterval(watermarkCycleRef.current);
-      watermarkCycleRef.current = null;
-    };
-  }, [isPlaying, showPostRoll]);
 
   useEffect(() => () => {
     if (postRollTimeoutRef.current) clearTimeout(postRollTimeoutRef.current);
@@ -940,59 +926,42 @@ export default function NexoraVideoPlayer({
     setNewCollectionName('');
   };
 
-  // Download video asset directly and reliably as playable MP4
+  // Download only a branded export: the watermark is burned into every frame.
   const handleSimulateDownload = async () => {
     if (!downloadsOn) {
       window.dispatchEvent(new CustomEvent('toast', { detail: '🔒 Downloads are restricted for this video by creator settings!' }));
       return;
     }
 
-    setExportState({
-      isExporting: true,
-      progress: 25,
-      statusText: 'Preparing video download...'
-    });
-
+    setExportState({ isExporting: true, progress: 2, statusText: 'Preparing branded NEXORA export...' });
     const videoSrc = finalVideoUrl || videoUrl;
-    const safeUsername = post.username || 'creator';
-    const filename = `Nexora_${safeUsername}_${post.id || Date.now()}.mp4`;
+    const safeUsername = (post.username || 'creator').replace(/[^a-z0-9_-]/gi, '_').slice(0, 40);
+    const filenameBase = `Nexora_${safeUsername}_${post.id || Date.now()}`;
 
     try {
-      setExportState(prev => prev ? { ...prev, progress: 60, statusText: 'Fetching original video asset...' } : null);
-      const response = await fetch(videoSrc, { mode: 'cors' });
-      if (!response.ok) throw new Error('Network response was not ok');
-      const blob = await response.blob();
-      
-      const blobUrl = URL.createObjectURL(blob);
+      const exported = await exportNexoraBrandedVideo(videoSrc, post.username || 'creator', progress => {
+        setExportState(previous => previous ? {
+          ...previous,
+          progress,
+          statusText: progress >= 94 ? 'Adding NEXORA sonic identity...' : 'Rendering permanent creator watermark...',
+        } : null);
+      });
+      const blobUrl = URL.createObjectURL(exported.blob);
       const link = document.createElement('a');
       link.href = blobUrl;
-      link.download = filename;
+      link.download = `${filenameBase}.${exported.extension}`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
-      setTimeout(() => {
-        URL.revokeObjectURL(blobUrl);
-      }, 10000);
-
-      setExportState(prev => prev ? { ...prev, progress: 100, statusText: 'Download complete!' } : null);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video downloaded successfully as playable MP4.' }));
-      setTimeout(() => {
-        setExportState(null);
-      }, 800);
-    } catch (err) {
-      console.warn('Direct blob fetch download fallback triggered:', err);
-      // Fallback to direct anchor download
-      const link = document.createElement('a');
-      link.href = videoSrc;
-      link.download = filename;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video stream download initiated.' }));
+      window.setTimeout(() => URL.revokeObjectURL(blobUrl), 30_000);
+      setExportState(previous => previous ? { ...previous, progress: 100, statusText: 'Branded download ready!' } : null);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA watermark and sonic identity embedded in your download.' }));
+      window.setTimeout(() => setExportState(null), 900);
+    } catch (error) {
+      console.error('NEXORA branded video export failed:', error);
       setExportState(null);
+      const message = error instanceof Error ? error.message : 'Branded export failed. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     }
   };
 
@@ -1076,28 +1045,9 @@ export default function NexoraVideoPlayer({
               style={{ filter: `brightness(${brightnessLevel}%)` }}
             />
             <audio ref={sonicAudioRef} src="/sounds/nexora-sonic-logo.mp3" preload="auto" aria-hidden="true" />
-            <AnimatePresence mode="wait">
-              {!showPostRoll && (
-                <motion.div
-                  key={`watermark-${watermarkPosition}`}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.28 }}
-                  className={`absolute z-[18] ${[
-                    'bottom-[29%] right-4 sm:right-6',
-                    'top-[23%] left-4 sm:left-6',
-                    'bottom-[23%] left-4 sm:left-6',
-                    'top-[29%] right-4 sm:right-6',
-                  ][watermarkPosition]}`}
-                >
-                  <NexoraWatermark username={post.username} isVerified={post.isVerified} size="md" />
-                </motion.div>
-              )}
-              {showPostRoll && (
-                <NexoraPostRollCard username={post.username} isVerified={post.isVerified} avatar={post.avatar} />
-              )}
-            </AnimatePresence>
+            {showPostRoll && (
+              <NexoraPostRollCard username={post.username} isVerified={post.isVerified} avatar={post.avatar} />
+            )}
             {hasVideoError && (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/90 text-center p-6 z-20 animate-fade-in">
                 <AlertTriangle className="w-10 h-10 text-pink-500 mb-2 animate-pulse" />
