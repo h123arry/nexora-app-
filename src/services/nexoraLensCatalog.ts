@@ -7,7 +7,8 @@ export type NexoraLensCategory =
   | 'AR'
   | 'Fantasy'
   | 'Playful'
-  | 'World';
+  | 'World'
+  | 'Retro';
 
 export type NexoraLensSticker =
   | 'none' | 'crown' | 'cat' | 'halo' | 'glasses' | 'hearts'
@@ -39,6 +40,7 @@ const collections: Array<{
   { category: 'AR', prefixes: ['Nexa', 'Orbit', 'Icon', 'Persona', 'Playform'], suffixes: ['Crown', 'Whiskers', 'Halo', 'Spectacles', 'HeartEyes', 'Spark'], description: 'A face-tracked NEXORA character or accessory effect.', base: { brightness: 1, contrast: 1.04, saturate: 1.1, hue: 0, sepia: 0 } },
   { category: 'Fantasy', prefixes: ['Astral', 'Celestia', 'Mythic', 'Stardust', 'Ethereal'], suffixes: ['Wings', 'Aurora', 'Moonbeam', 'Enchanted', 'Nebula', 'Dream'], description: 'A fantastical colour world with animated visual accents.', base: { brightness: 1.08, contrast: 1.1, saturate: 1.22, hue: 24, sepia: 0.025 } },
   { category: 'Playful', prefixes: ['Bubbly', 'Giggle', 'Jelly', 'Popstar', 'Sunny'], suffixes: ['Bounce', 'Candy', 'Confetti', 'Smile', 'Twist', 'Fizz'], description: 'A bright, playful look for expressive moments.', base: { brightness: 1.1, contrast: 1.05, saturate: 1.3, hue: -12, sepia: 0 } },
+  { category: 'Retro', prefixes: ['Analog', 'Vintage', 'Archive', 'Polaroid', 'Oldschool'], suffixes: ['Memory', 'Grain', 'Flash', 'Sunday', 'Snapshot', 'Rewind'], description: 'A nostalgic film-inspired finish with a distinct NEXORA colour recipe.', base: { brightness: 1.01, contrast: 1.13, saturate: 0.86, hue: -8, sepia: 0.12 } },
   { category: 'World', prefixes: ['Terra', 'Coastal', 'Urban', 'Desert', 'Evergreen'], suffixes: ['Morning', 'Golden', 'Coastline', 'Afterglow', 'Rainfall', 'Horizon'], description: 'An environment-inspired look for places, travel and everyday scenes.', base: { brightness: 1.03, contrast: 1.08, saturate: 1.12, hue: 8, sepia: 0.035 } },
 ];
 
@@ -107,7 +109,7 @@ export const NEXORA_LENS_CATALOG_SIZE = NEXORA_LENS_CATALOG.length;
 
 export const NEXORA_LENS_CATEGORIES = [
   'For you', 'Camera Enhance', 'Beauty', 'Cinema', 'Colour',
-  'Creator', 'AR', 'Fantasy', 'Playful', 'World', 'Favourites',
+  'Creator', 'AR', 'Fantasy', 'Playful', 'Retro', 'World', 'Favourites',
 ] as const;
 
 export const NEXORA_FEATURED_LENS_IDS = NEXORA_LENS_CATALOG
