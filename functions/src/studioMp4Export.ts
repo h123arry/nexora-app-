@@ -1,4 +1,4 @@
-import { FieldPath, getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
+import { getFirestore, type DocumentSnapshot } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
@@ -22,10 +22,10 @@ async function deleteExportAsset(snapshot: DocumentSnapshot): Promise<void> {
   if (!ownerId || asset?.sourcePurpose !== 'studio-export' || asset?.status === 'processing') return;
   const sourcePath = `users/${ownerId}/media/${mediaId}`;
   if (asset.storagePath === sourcePath) {
-    await bucket().file(sourcePath).delete({ ignoreNotFound: true }).catch(() => undefined);
+    await bucket().file(sourcePath).delete({ ignoreNotFound: true });
   }
-  await bucket().deleteFiles({ prefix: `processed/${ownerId}/${mediaId}/` }).catch(() => undefined);
-  await snapshot.ref.delete().catch(() => undefined);
+  await bucket().deleteFiles({ prefix: `processed/${ownerId}/${mediaId}/` });
+  await snapshot.ref.delete();
 }
 
 export const getStudioExportMp4Url = onCall({ maxInstances: 30 }, async request => {
@@ -83,7 +83,6 @@ export const cleanupExpiredStudioMp4Exports = onSchedule('every 6 hours', async 
   while (true) {
     let query = db.collection('mediaAssets')
       .where('sourcePurpose', '==', 'studio-export')
-      .orderBy(FieldPath.documentId())
       .limit(200);
     if (cursor) query = query.startAfter(cursor);
     const page = await query.get();
