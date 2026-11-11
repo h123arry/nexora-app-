@@ -2490,12 +2490,11 @@ export default function App() {
                       </div>
 
                       <button
-                        onClick={() => {
-                          window.dispatchEvent(new CustomEvent('toast', { detail: 'Nexora is ready to be installed! Follow the helper guide above.' }));
-                        }}
+                        type="button"
+                        onClick={handleMaybeLaterPWA}
                         className="w-full py-2.5 rounded-xl bg-violet-600/10 hover:bg-violet-600/20 border border-white/10 text-violet-300 font-sans text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer text-center"
                       >
-                        Activate Features ✓
+                        Got it
                       </button>
                     </div>
                   )}
