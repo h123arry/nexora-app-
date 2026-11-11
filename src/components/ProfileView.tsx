@@ -1479,6 +1479,31 @@ export default function ProfileView({
               <div className="space-y-4 shrink-0">
                 <div className="flex items-center justify-between border-b border-white/5 pb-3">
                   <h3 className="text-xs font-mono text-zinc-300 font-black uppercase tracking-wider">Profile Options</h3>
+                  <button
+                    type="button"
+                    onClick={() => setActivePanel('profile')}
+                    className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
+                    aria-label="Close profile options"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(`https://nexora.app/@${currentUser.username}`);
+                      window.dispatchEvent(new CustomEvent('toast', { detail: 'Profile link copied to clipboard.' }));
+                      setActivePanel('profile');
+                    }}
+                    className="w-full text-left p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] transition-all flex items-center gap-3"
+                  >
+                    <LinkIcon className="w-5 h-5 text-zinc-400" />
+                    <div className="space-y-0.5">
+                      <span className="block text-sm font-semibold text-white">Copy Profile Link</span>
+                      <span className="block text-xs text-zinc-500 font-mono">Copy this creator's profile URL</span>
+                    </div>
+                  </button>
                   {!isOwnProfile && (
                     <>
                       <button
@@ -2061,7 +2086,7 @@ export default function ProfileView({
                             <p className="text-[10px] font-mono text-zinc-500">BLOCKED USERS ({blockedUsers.length})</p>
                             {blockedUsers.map(usr => (
                               <div key={usr} className="flex justify-between items-center bg-black/20 p-2 rounded-xl text-xs">
-                                <span className="font-mono text-zinc-300">@{usr}</span>
+                                <span className="font-mono text-zinc-300">Account {usr.slice(0, 10)}</span>
                                 <button 
                                   onClick={() => { void handleUnblockAccount(usr); }}
                                   disabled={isSafetyActionBusy}
