@@ -288,6 +288,80 @@ function createThreeLensRuntime(THREE: any, canvas: HTMLCanvasElement, width: nu
     sparkles.add(star);
   }
 
+  const puppy = makeGroup('puppy');
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.SphereGeometry(0.34, 20, 16), violet);
+    ear.scale.set(0.82, 1.5, 0.55);
+    ear.position.set(side * 0.76, -0.02, 0.08);
+    ear.rotation.z = side * -0.24;
+    puppy.add(ear);
+  }
+  const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 16), lilac);
+  muzzle.scale.set(1.1, 0.72, 0.48);
+  muzzle.position.set(0, -0.62, 0.22);
+  puppy.add(muzzle);
+  const puppyNose = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), darkGlass);
+  puppyNose.position.set(0, -0.53, 0.47);
+  puppy.add(puppyNose);
+
+  const bunny = makeGroup('bunny');
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.19, 1.2, 16), lilac);
+    ear.position.set(side * 0.42, 0.8, 0);
+    ear.rotation.z = side * -0.16;
+    bunny.add(ear);
+    const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.11, 0.92, 12), violet);
+    inner.position.set(side * 0.42, 0.82, 0.12);
+    inner.rotation.z = side * -0.16;
+    bunny.add(inner);
+  }
+
+  const flower = makeGroup('flower');
+  for (let i = 0; i < 9; i += 1) {
+    const angle = Math.PI + i * Math.PI / 8;
+    const petal = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), i % 2 ? lilac : violet);
+    petal.scale.set(0.72, 1.15, 0.42);
+    petal.position.set(Math.cos(angle) * 0.9, 0.42 + Math.sin(angle) * 0.42, 0.12);
+    flower.add(petal);
+    const center = new THREE.Mesh(new THREE.SphereGeometry(0.055, 12, 8), gold);
+    center.position.copy(petal.position);
+    center.position.z += 0.13;
+    flower.add(center);
+  }
+
+  const robot = makeGroup('robot');
+  const visor = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.62, 0.22), darkGlass);
+  visor.position.set(0, -0.42, 0.12);
+  robot.add(visor);
+  const visorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.72, 0.12), lilac);
+  visorFrame.position.set(0, -0.42, 0.02);
+  robot.add(visorFrame);
+  for (const side of [-1, 1]) {
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.095, 16, 12), gold);
+    eye.position.set(side * 0.48, -0.42, 0.28);
+    robot.add(eye);
+  }
+  const antenna = new THREE.Mesh(new THREE.SphereGeometry(0.12, 16, 12), violet);
+  antenna.position.set(0, 0.48, 0.12);
+  robot.add(antenna);
+
+  const butterfly = makeGroup('butterfly');
+  for (const side of [-1, 1]) {
+    const upperWing = new THREE.Mesh(new THREE.SphereGeometry(0.42, 18, 14), lilac);
+    upperWing.scale.set(1.05, 1.35, 0.18);
+    upperWing.position.set(side * 0.68, 0.28, 0.1);
+    upperWing.rotation.z = side * -0.28;
+    butterfly.add(upperWing);
+    const lowerWing = new THREE.Mesh(new THREE.SphereGeometry(0.32, 18, 14), violet);
+    lowerWing.scale.set(0.9, 1.2, 0.18);
+    lowerWing.position.set(side * 0.62, -0.22, 0.12);
+    lowerWing.rotation.z = side * 0.3;
+    butterfly.add(lowerWing);
+  }
+  const butterflyBody = new THREE.Mesh(new THREE.CapsuleGeometry(0.08, 0.52, 4, 8), gold);
+  butterflyBody.position.set(0, 0.02, 0.22);
+  butterfly.add(butterflyBody);
+
   const setLens = (sticker: Lens['sticker']) => {
     Object.entries(objects).forEach(([key, group]) => { group.visible = sticker === key || (sticker === 'sparkles' && key === 'sparkles'); });
   };
