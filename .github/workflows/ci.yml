@@ -42,6 +42,9 @@ jobs:
       - name: Install Functions dependencies
         run: npm ci --prefix functions --no-audit --no-fund
 
+      - name: Audit Math.random call sites
+        run: node scripts/audit-math-random.mjs
+
       - name: Scan tracked files for secrets
         run: npm run security:scan
 
