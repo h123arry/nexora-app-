@@ -78,7 +78,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Robust MP4 output where a supported native/server renderer is available; WebM remains an explicitly labelled fallback.
 - [x] Firebase resumable publishing upload with live progress, user cancellation and retry without re-rendering the export.
 - Publish to posts and Reels through the existing publishing pipeline.
-- Cloud draft sync and project recovery across signed-in devices.
+- [x] Versioned cloud draft manifests with private Studio-only Storage-backed source media, owner-only Firestore access, revision conflict detection and cross-device restore.
+- [x] Local IndexedDB remains the fast recovery layer; cloud sync retries manually and automatically after local autosave.
 - [x] Browser-side export validation for duration, dimensions, supported WebM MIME type and decodable metadata before the export is marked ready.
 - Deeper server-side validation for codecs, audio-track presence and second-account playback remains required.
 
@@ -93,7 +94,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 
 - Current export is WebM and depends on browser MediaRecorder, canvas capture and Web Audio support.
 - Voiceover waveform decoding is capped at 30 MB per recording to avoid excessive memory use on mobile devices; larger recordings remain attachable and exportable but do not receive a generated waveform preview.
-- Current project drafts are local to the same browser/device; cloud draft sync is not implemented.
+- Studio drafts are saved in IndexedDB and backed up to a private, versioned Firestore manifest with source media in a dedicated owner-only Studio Storage path. Concurrent edits are rejected rather than silently overwriting another device. Browser/device acceptance and recovery drills remain required.
 - The shared timeline seeks across video clips and shows independently timed visual/audio lanes. Preview playback now advances sequentially across trimmed clips while soundtrack and voiceover follow the global playhead, with voiceover offsets, soundtrack looping, fade envelopes and music ducking. Device-specific sync acceptance remains outstanding.
 - Fade-through-black and cross-dissolve are separate transition modes; cross-dissolve currently uses a fixed 0.6-second overlap.
 - The editor supports multiple title layers and a dedicated timed subtitle track. Automatic speech-to-text transcription and continuous synchronized playback across all audio and visual lanes remain future work.

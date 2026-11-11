@@ -1526,6 +1526,32 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('bob'), 'liveSessionViewers', 'forged'), { sessionId: 'active-room', viewerId: 'bob' }));
   });
 
+  it('isolates versioned Studio cloud drafts to their owner and rejects stale revisions', async () => {
+    const aliceDraft = doc(dbFor('alice'), 'studioCloudDrafts', 'alice');
+    const manifest = { schemaVersion: 1, project: { clips: [], caption: 'private edit' }, assets: {} };
+    await assertSucceeds(setDoc(aliceDraft, {
+      userId: 'alice', revision: 1, manifest, updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(getDoc(aliceDraft));
+    await assertFails(getDoc(doc(dbFor('bob'), 'studioCloudDrafts', 'alice')));
+    await assertFails(getDocs(collection(dbFor('alice'), 'studioCloudDrafts')));
+    await assertFails(setDoc(doc(dbFor('bob'), 'studioCloudDrafts', 'bob'), {
+      userId: 'alice', revision: 1, manifest, updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(updateDoc(aliceDraft, {
+      revision: 2, manifest: { ...manifest, project: { clips: [], caption: 'newer edit' } },
+      updatedAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(aliceDraft, { revision: 4, updatedAt: serverTimestamp() }));
+    await assertFails(updateDoc(aliceDraft, {
+      revision: 3, manifest: { schemaVersion: 2, project: {}, assets: {} },
+      updatedAt: serverTimestamp()
+    }));
+    await assertSucceeds(deleteDoc(aliceDraft));
+    const deletedDraft = await assertSucceeds(getDoc(aliceDraft));
+    assert.equal(deletedDraft.exists(), false);
+  });
+
   it('keeps universal search projections inaccessible to every client context', async () => {
     await seed(async adminDb => setDoc(doc(adminDb, 'searchIndex', 'post_private-projection'), {
       kind: 'post', title: 'Indexed public content', isPublic: true, searchKeys: ['p:in']

@@ -39,6 +39,25 @@ service firebase.storage {
     // Chat metadata lives in a named Firestore database. Storage Rules can only
     // look up the default database, so private chat media is served by the
     // authenticated API after it checks membership in the actual database.
+    // Studio source assets are private editing material, not published media.
+    // This path intentionally does not match the media lifecycle/transcoding trigger.
+    match /users/{userId}/studio-drafts/{draftId}/assets/{assetId} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && draftId == 'active'
+        && request.resource.size > 0
+        && request.resource.metadata.ownerId == userId
+        && request.resource.metadata.draftId == draftId
+        && request.resource.metadata.assetId == assetId
+        && (
+          (request.resource.contentType in ['image/jpeg', 'image/png', 'image/webp'] && request.resource.size <= 12582912)
+          || (request.resource.contentType in ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'] && request.resource.size <= 262144000)
+          || (request.resource.contentType in ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/aac'] && request.resource.size <= 52428800)
+        );
+      allow update: if false;
+      allow delete: if isOwner(userId);
+    }
+
     match /chats/{chatId}/audio/{userId}/{mediaId} {
       allow read, write: if false;
     }
