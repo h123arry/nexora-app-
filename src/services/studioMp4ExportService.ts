@@ -12,25 +12,6 @@ type Mp4UrlResponse = {
 
 export type StudioMp4Download = { downloadUrl: string; renditionHeight: number; expiresAt: number };
 
-function wait(milliseconds: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if (signal?.aborted) {
-      reject(new DOMException('MP4 export cancelled.', 'AbortError'));
-      return;
-    }
-    const timer = window.setTimeout(() => {
-      signal?.removeEventListener('abort', abort);
-      resolve();
-    }, milliseconds);
-    const abort = () => {
-      window.clearTimeout(timer);
-      signal?.removeEventListener('abort', abort);
-      reject(new DOMException('MP4 export cancelled.', 'AbortError'));
-    };
-    signal?.addEventListener('abort', abort, { once: true });
-  });
-}
-
 function waitForStudioMp4Asset(
   mediaAssetId: string,
   userId: string,
