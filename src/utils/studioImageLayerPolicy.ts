@@ -60,9 +60,10 @@ export function getStudioImageLayerFrame(layer: StudioImageLayer, elapsed: numbe
   if (!isStudioImageLayerVisible(layer, safeElapsed, totalDuration)) return null;
   const frames = layer.keyframes || [];
   if (!frames.length) return { x: layer.x, y: layer.y, scale: layer.scale, rotation: layer.rotation, opacity: layer.opacity };
-  if (safeElapsed <= frames[0].time) return frames[0];
+  const toFrame = (frame: StudioImageKeyframe): StudioImageLayerFrame => ({ x: frame.x, y: frame.y, scale: frame.scale, rotation: frame.rotation, opacity: frame.opacity });
+  if (safeElapsed <= frames[0].time) return toFrame(frames[0]);
   const last = frames[frames.length - 1];
-  if (safeElapsed >= last.time) return last;
+  if (safeElapsed >= last.time) return toFrame(last);
   const rightIndex = frames.findIndex(frame => frame.time >= safeElapsed);
   const left = frames[rightIndex - 1];
   const right = frames[rightIndex];
