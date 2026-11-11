@@ -6,7 +6,8 @@ export function safeVideoRenditions(value: unknown, ownerId: string, mediaAssetI
   return value.flatMap((item: VideoRendition) => {
     if (!item || !Number.isSafeInteger(item.height) || (item.height as number) < 144 || (item.height as number) > 4320
       || typeof item.mp4Path !== 'string' || !item.mp4Path.startsWith(prefix)
-      || item.mp4Path.includes('..') || item.mp4Path.includes('\\\\')) return [];
+      || item.mp4Path.split('/').some(segment => !segment || segment === '.' || segment === '..')
+      || item.mp4Path.includes(String.fromCharCode(92))) return [];
     return [{ height: item.height as number, path: item.mp4Path }];
   }).sort((a, b) => a.height - b.height);
 }
