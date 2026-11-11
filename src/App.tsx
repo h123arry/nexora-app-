@@ -1607,21 +1607,8 @@ export default function App() {
             // Record comment activity event
             addHelpfulCommentDb(currentUser.id, newComment.id, p.userId);
 
-            // Trigger notification to host of post (if not yourself)
-            if (p.userId !== currentUser.id) {
-              const newNotif: Notification = {
-                id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-                type: 'comment',
-                userId: currentUser.id,
-                username: currentUser.username,
-                avatar: currentUser.avatar,
-                targetId: p.id,
-                content: `commented on your post: "${commentContent.slice(0, 30)}..."`,
-                timestamp: new Date().toISOString(),
-                isRead: false
-              };
-              setNotifications(prev => [newNotif, ...prev]);
-            }
+            // The trusted post-update trigger creates the durable inbox record.
+            // The realtime notification subscription delivers it to the post owner.
 
             const updatedPost = {
               ...p,
