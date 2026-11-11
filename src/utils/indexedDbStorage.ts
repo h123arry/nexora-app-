@@ -10,26 +10,44 @@ const DB_NAME = 'NexoraMediaDB';
 const DB_VERSION = 1;
 const STORE_NAME = 'media';
 
+// Reuse one database connection instead of opening a new connection for every
+// media lookup. Browsers can otherwise accumulate idle IndexedDB connections.
+let mediaDbPromise: Promise<IDBDatabase> | null = null;
+
 export function initMediaDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
+  if (mediaDbPromise) return mediaDbPromise;
+
+  mediaDbPromise = new Promise((resolve, reject) => {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
       console.error('Failed to open Nexora IndexedDB media storage');
+      mediaDbPromise = null;
       reject(request.error);
     };
 
     request.onsuccess = () => {
-      resolve(request.result);
+      const db = request.result;
+      db.onversionchange = () => {
+        db.close();
+        mediaDbPromise = null;
+      };
+      resolve(db);
     };
 
-    request.onupgradeneeded = (event: any) => {
-      const db = event.target.result;
+    request.onblocked = () => {
+      console.warn('[Storage] IndexedDB upgrade is blocked by another open connection');
+    };
+
+    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+      const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
       }
     };
   });
+
+  return mediaDbPromise;
 }
 
 /**
@@ -74,8 +92,10 @@ export async function getMediaBlob(id: string): Promise<Blob | null> {
   });
 }
 
-// In-memory cache of resolved db-media object URLs to avoid redundant blob url creation
+// Cache both completed and in-flight resolutions. The in-flight map prevents
+// simultaneous feed cards from creating duplicate object URLs for the same blob.
 const objectUrlCache = new Map<string, string>();
+const objectUrlPromises = new Map<string, Promise<string>>();
 
 /**
  * Resolves any custom `db-media://` URL to a usable browser object URL.
@@ -86,25 +106,36 @@ export async function resolveMediaUrl(url: string): Promise<string> {
     return url;
   }
 
-  if (objectUrlCache.has(url)) {
-    return objectUrlCache.get(url)!;
+  const cached = objectUrlCache.get(url);
+  if (cached) return cached;
+
+  const pending = objectUrlPromises.get(url);
+  if (pending) return pending;
+
+  const resolution = (async () => {
+    const basePart = url.split('#')[0].split('?')[0];
+    const hashPart = url.includes('#') ? '#' + url.split('#')[1] : '';
+    const queryPart = url.includes('?') ? '?' + url.split('?')[1].split('#')[0] : '';
+
+    const id = basePart.replace('db-media://', '');
+    const blob = await getMediaBlob(id);
+    if (!blob) {
+      console.warn(`[Storage] Blob not found in IndexedDB for URL: ${url}`);
+      return '';
+    }
+
+    const objectUrl = URL.createObjectURL(blob);
+    const resolvedWithSuffix = objectUrl + queryPart + hashPart;
+    objectUrlCache.set(url, resolvedWithSuffix);
+    return resolvedWithSuffix;
+  })();
+
+  objectUrlPromises.set(url, resolution);
+  try {
+    return await resolution;
+  } finally {
+    objectUrlPromises.delete(url);
   }
-
-  const basePart = url.split('#')[0].split('?')[0];
-  const hashPart = url.includes('#') ? '#' + url.split('#')[1] : '';
-  const queryPart = url.includes('?') ? '?' + url.split('?')[1].split('#')[0] : '';
-
-  const id = basePart.replace('db-media://', '');
-  const blob = await getMediaBlob(id);
-  if (!blob) {
-    console.warn(`[Storage] Blob not found in IndexedDB for URL: ${url}`);
-    return '';
-  }
-
-  const objectUrl = URL.createObjectURL(blob);
-  const resolvedWithSuffix = objectUrl + queryPart + hashPart;
-  objectUrlCache.set(url, resolvedWithSuffix);
-  return resolvedWithSuffix;
 }
 
 /**
@@ -133,6 +164,8 @@ export function generateVideoThumbnail(videoBlob: Blob): Promise<string> {
     const cleanup = () => {
       clearTimeout(timeoutId);
       URL.revokeObjectURL(url);
+      video.removeAttribute('src');
+      video.load();
       video.onloadeddata = null;
       video.onloadedmetadata = null;
       video.oncanplay = null;
