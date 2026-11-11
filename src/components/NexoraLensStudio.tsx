@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NEXORA_LENS_CATALOG, NEXORA_LENS_CATEGORIES, type NexoraLens } from '../services/nexoraLensCatalog';
-import { listMyCreatorLenses, saveCreatorLens as saveCreatorLensCloud, submitCreatorLensForReview } from '../services/creatorLensService';
+import { listMyCreatorLenses, listPublishedCreatorLenses, saveCreatorLens as saveCreatorLensCloud, submitCreatorLensForReview } from '../services/creatorLensService';
 import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search } from 'lucide-react';
 
 type Facing = 'user' | 'environment';
@@ -369,7 +369,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [customContrast, setCustomContrast] = useState(100);
   const [customSaturation, setCustomSaturation] = useState(100);
   const [customHue, setCustomHue] = useState(0);
-  const [isSubmittingCreatorLens, setIsSubmittingCreatorLens] = useState(false);\n  const [customLenses, setCustomLenses] = useState<NexoraLens[]>(() => {
+  const [isSubmittingCreatorLens, setIsSubmittingCreatorLens] = useState(false);\n  const [communityLenses, setCommunityLenses] = useState<NexoraLens[]>([]);\n  const [customLenses, setCustomLenses] = useState<NexoraLens[]>(() => {
     try {
       const parsed: unknown = JSON.parse(localStorage.getItem(`nexora_custom_lenses_${userId}`) || '[]');
       return Array.isArray(parsed) ? parsed.filter((item): item is NexoraLens =>
@@ -429,7 +429,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [threeReady, setThreeReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
-  const allLenses = [...LENSES, ...customLenses];
+  const allLenses = [...LENSES, ...customLenses, ...communityLenses];
   const allLensesRef = useRef(allLenses);
   allLensesRef.current = allLenses;
   const activeLensRef = useRef(activeLens);
