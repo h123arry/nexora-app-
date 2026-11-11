@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon } from 'lucide-react';
+import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search } from 'lucide-react';
 
 type Facing = 'user' | 'environment';
 type Lens = {
@@ -135,7 +135,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamCallbackRef = useRef(onStreamReady);
   const [activeLens, setActiveLens] = useState('natural');
-  const [category, setCategory] = useState<'For you' | 'Beauty' | 'Mood' | 'AR'>('For you');
+  const [category, setCategory] = useState<'For you' | 'Beauty' | 'Mood' | 'AR' | 'Favourites'>('For you');
+  const [searchQuery, setSearchQuery] = useState('');
   const [favourites, setFavourites] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]'); } catch { return []; }
   });
@@ -264,9 +265,12 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
     } finally { setIsCapturing(false); }
   };
 
-  const visibleLenses = category === 'For you'
+  const categoryLenses = category === 'For you'
     ? LENSES.filter(item => item.category === 'For you' || favourites.includes(item.id))
-    : LENSES.filter(item => item.category === category);
+    : category === 'Favourites'
+      ? LENSES.filter(item => favourites.includes(item.id))
+      : LENSES.filter(item => item.category === category);
+  const visibleLenses = categoryLenses.filter(item => item.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
 
   return (
     <div className="space-y-3">
@@ -288,8 +292,12 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
         </div>
       </div>
 
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8E88A7]" />
+        <input value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder="Find a lens" aria-label="Search lenses" className="w-full rounded-xl border border-white/10 bg-[#120E2B] py-2.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-[#756D91] focus:border-[#8A3FFC]" />
+      </div>
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {(['For you', 'Beauty', 'Mood', 'AR'] as const).map(item => (
+        {(['For you', 'Beauty', 'Mood', 'AR', 'Favourites'] as const).map(item => (
           <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${category === item ? 'border-[#A78BFA] bg-[#7138FF]/25 text-white' : 'border-white/10 bg-white/[0.04] text-[#A39BBF]'}`}>{item}</button>
         ))}
       </div>
