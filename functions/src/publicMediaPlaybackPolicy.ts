@@ -18,3 +18,16 @@ export function chooseVideoRendition(renditions: Array<{ height: number; path: s
     || renditions[0]
     || null;
 }
+
+export function canResolvePublicPostMedia(
+  post: Record<string, unknown> | undefined,
+  asset: Record<string, unknown> | undefined,
+  mediaAssetId: string,
+): boolean {
+  return post?.audience === 'public'
+    && post.mediaAssetId === mediaAssetId
+    && typeof post.userId === 'string'
+    && post.userId.length > 0
+    && asset?.ownerId === post.userId
+    && asset.kind === 'video';
+}
