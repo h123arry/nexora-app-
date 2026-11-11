@@ -499,8 +499,9 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
                 threeRuntime.setLens(lens.sticker);
                 const activeModel = threeRuntime.objects[lens.sticker];
                 if (activeModel) {
+                  if (activeModel.userData.baseY === undefined) activeModel.userData.baseY = activeModel.position.y;
                   activeModel.rotation.y = Math.sin(now / 620) * 0.12;
-                  activeModel.position.y += Math.sin(now / 360) * 0.002;
+                  activeModel.position.y = activeModel.userData.baseY + Math.sin(now / 360) * 0.025;
                 }
                 if (lens.sticker !== 'none') {
                   threeRuntime.render();
