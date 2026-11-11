@@ -19,18 +19,19 @@ function waitForStudioMp4Asset(
   onProgress?: (progress: number) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    let unsubscribe = () => undefined;
+    let unsubscribe: () => void = () => {};
+    let timeout: number | null = null;
     let settled = false;
     const finish = (error?: Error) => {
       if (settled) return;
       settled = true;
-      window.clearTimeout(timeout);
+      if (timeout !== null) window.clearTimeout(timeout);
       signal?.removeEventListener('abort', abort);
       unsubscribe();
       if (error) reject(error); else resolve();
     };
     const abort = () => finish(new DOMException('MP4 export cancelled.', 'AbortError'));
-    const timeout = window.setTimeout(() => {
+    timeout = window.setTimeout(() => {
       finish(new Error('MP4 preparation is taking longer than expected. Your original export and Studio draft are safe; try again later.'));
     }, 10 * 60 * 1000);
     if (signal?.aborted) {
