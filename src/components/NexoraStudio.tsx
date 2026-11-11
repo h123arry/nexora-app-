@@ -136,6 +136,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [cloudProgress, setCloudProgress] = useState(0);
   const [mp4Exporting, setMp4Exporting] = useState(false);
   const [mp4Progress, setMp4Progress] = useState(0);
+  const [mp4Download, setMp4Download] = useState<{ downloadUrl: string; renditionHeight: number; expiresAt: number } | null>(null);
   const [cloudConflict, setCloudConflict] = useState(false);
   const [message, setMessage] = useState('');
   const [ready, setReady] = useState(false);
@@ -335,6 +336,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   useEffect(() => {
     if (!ready) return;
     setExportBlob(null);
+    setMp4Download(null);
     const timer = window.setTimeout(() => {
       const project: StudioProject = {
         clips, soundtrack, voiceover, caption, overlay: textLayers[0]?.text || '',
@@ -1046,7 +1048,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   };
 
   const handleExport = async () => {
-    setRendering(true); setExportBlob(null); setMessage('Rendering and validating your timeline…');
+    setRendering(true); setExportBlob(null); setMp4Download(null); setMessage('Rendering and validating your timeline…');
     try {
       const blob = await renderProject();
       const dimensions = getStudioExportDimensions(aspectRatio, exportResolution);
@@ -1077,25 +1079,30 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
 
   const handleMp4Export = async () => {
     if (!exportBlob || mp4Exporting) return;
+    if (mp4Download && mp4Download.expiresAt > Date.now() + 5_000) {
+      const anchor = document.createElement('a');
+      anchor.href = mp4Download.downloadUrl;
+      anchor.download = `nexora-studio-${Date.now()}.mp4`;
+      anchor.rel = 'noopener';
+      anchor.click();
+      setMessage(`MP4 download started · ${mp4Download.renditionHeight}p. The private temporary server copy expires within 24 hours.`);
+      return;
+    }
+    setMp4Download(null);
     const controller = new AbortController();
     mp4AbortRef.current = controller;
     setMp4Exporting(true);
     setMp4Progress(0);
     setMessage('Preparing a downloadable MP4 on NEXORA’s media renderer…');
     try {
-      const mp4 = await createStudioMp4Export(
+      const prepared = await createStudioMp4Export(
         exportBlob,
         currentUser.id,
         progress => setMp4Progress(Math.min(100, Math.max(0, progress))),
         controller.signal,
       );
-      const url = URL.createObjectURL(mp4);
-      const anchor = document.createElement('a');
-      anchor.href = url;
-      anchor.download = `nexora-studio-${Date.now()}.mp4`;
-      anchor.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      setMessage(`MP4 export ready · ${(mp4.size / (1024 * 1024)).toFixed(1)} MB`);
+      setMp4Download(prepared);
+      setMessage(`MP4 ready · ${prepared.renditionHeight}p. Tap Download MP4 again to save it.`);
     } catch (error) {
       setMessage(controller.signal.aborted
         ? 'MP4 preparation cancelled. Your original export and Studio draft are safe.'
@@ -1243,7 +1250,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               {selectedSubtitleSegment ? <><textarea value={selectedSubtitleSegment.text} maxLength={180} rows={2} onChange={event => updateSelectedSubtitle({ text: event.target.value })} className="w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white" aria-label="Subtitle text"/><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Start (s)<input type="number" min="0" max={totalDuration} step=".1" value={selectedSubtitleSegment.start} onChange={event => updateSelectedSubtitle({ start: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label><label className="block text-[10px] text-[#A39BBF]">End (s)<input type="number" min="0" max={totalDuration} step=".1" value={selectedSubtitleSegment.end} onChange={event => updateSelectedSubtitle({ end: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-2 py-2 text-xs text-white"/></label></div></> : <p className="text-[10px] text-[#827B9C]">Add timed subtitle segments to display and export captions with your video.</p>}
               <p className="text-[9px] text-[#827B9C]">Subtitles are separate from your post caption. Up to 30 timed segments are saved in your Studio draft and burned into export.</p>
             </div>
-            <div className="space-y-2 rounded-xl border border-[#34265E] bg-[#100C20] p-3"><div className="flex items-center justify-between gap-2"><div><h2 className="text-xs font-bold">MP4 download</h2><p className="mt-1 text-[9px] text-[#827B9C]">NEXORA’s server renderer converts your verified Studio export into a compatible MP4.</p></div><button type="button" onClick={handleMp4Export} disabled={!exportBlob || mp4Exporting || rendering || publishing} className="shrink-0 rounded-lg border border-violet-400/40 px-3 py-2 text-[10px] font-bold text-violet-100 disabled:opacity-40">{mp4Exporting ? 'Preparing · ' + mp4Progress + '%' : 'Download MP4'}</button></div>{mp4Exporting && <div className="space-y-2"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: mp4Progress + '%'}}/></div><button type="button" onClick={() => mp4AbortRef.current?.abort()} className="text-[9px] font-semibold text-rose-300">Cancel MP4 preparation</button></div>}</div>
+            <div className="space-y-2 rounded-xl border border-[#34265E] bg-[#100C20] p-3"><div className="flex items-center justify-between gap-2"><div><h2 className="text-xs font-bold">MP4 download</h2><p className="mt-1 text-[9px] text-[#827B9C]">NEXORA’s server renderer converts your verified Studio export into a compatible MP4.</p></div><button type="button" onClick={handleMp4Export} disabled={!exportBlob || mp4Exporting || rendering || publishing} className="shrink-0 rounded-lg border border-violet-400/40 px-3 py-2 text-[10px] font-bold text-violet-100 disabled:opacity-40">{mp4Exporting ? 'Preparing · ' + mp4Progress + '%' : mp4Download && mp4Download.expiresAt > Date.now() ? 'Download MP4 · ' + mp4Download.renditionHeight + 'p' : 'Prepare MP4'}</button></div>{mp4Exporting && <div className="space-y-2"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: mp4Progress + '%'}}/></div><button type="button" onClick={() => mp4AbortRef.current?.abort()} className="text-[9px] font-semibold text-rose-300">Cancel MP4 preparation</button></div>}</div>
             <div className="space-y-2"><label className="block text-xs font-bold">Post caption</label><textarea value={caption} onChange={event=>setCaption(event.target.value.slice(0,500))} maxLength={500} rows={3} placeholder="Write a caption for your finished video…" className="w-full resize-y rounded-xl border border-[#34265E] bg-[#100C20] p-3 text-xs text-white outline-none focus:border-violet-400"/><div className="text-right text-[10px] text-[#827B9C]">{caption.length}/500</div></div>
             <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><div className="flex items-center justify-between gap-2 rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2"><span className="min-w-0 text-[9px] text-[#AFA5D0]">{cloudStatus}{cloudProgress > 0 && cloudProgress < 100 ? ' · ' + cloudProgress + '%' : ''}</span><button type="button" onClick={() => void requestCloudSync()} disabled={publishing || rendering || !clips.length || cloudConflict || cloudStatus === 'Syncing cloud backup…'} className="shrink-0 text-[9px] font-bold text-violet-300 disabled:opacity-40">Sync now</button></div>{cloudConflict && <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-950/10 p-3"><p className="text-[9px] text-amber-100">This project was also edited on another device. Your local draft is safe. Choose which copy should become the latest version.</p><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => void restoreCloudVersion()} className="rounded-lg border border-[#59458C] px-2 py-2 text-[9px] font-bold text-violet-100">Use cloud copy</button><button type="button" onClick={() => void keepThisDeviceVersion()} className="rounded-lg border border-amber-400/40 px-2 py-2 text-[9px] font-bold text-amber-100">Keep this device</button></div></div>}<button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering || mp4Exporting} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing ? 'Uploading · ' + uploadProgress + '%' : <><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button>{publishing && <div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-3"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: uploadProgress + '%'}}/></div><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-[#A39BBF]">Resumable upload · {uploadProgress}%</span><button type="button" onClick={cancelPublish} className="font-semibold text-rose-300">Cancel upload</button></div></div>}<p className="text-center text-[9px] text-[#827B9C]">Failed uploads can be retried without rendering again.</p></div>
           </aside>
