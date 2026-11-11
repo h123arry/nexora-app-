@@ -248,6 +248,8 @@ export function useResolvedUrl(url: string | undefined): string {
       return;
     }
     
+    // Never keep showing the previous post's media while a new URL resolves.
+    setResolved('');
     let active = true;
     resolveMediaUrl(url)
       .then(res => {
