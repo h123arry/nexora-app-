@@ -1,4 +1,3 @@
-import { createSecureId } from '../utils/secureId';
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical, MoreHorizontal, Radio, ShieldCheck, Gift } from 'lucide-react';
 import VohIcon from './VohIcon';
