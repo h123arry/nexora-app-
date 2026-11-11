@@ -25,6 +25,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Creator-imported PNG, JPEG and WebP image layers with independent timing, position, scale, rotation and opacity; layers are included in preview and export.
 - Independently timed subtitle segments with a separate track from the post caption, live preview, local autosave, undo/redo and burned-in export.
 - Shared global playhead with seek mapping across concatenated source clips, plus visual video, audio, image, text and subtitle lanes. Selecting a lane segment seeks the preview to its global timeline start.
+- Timeline-synchronized preview playback for soundtrack and voiceover, including voiceover start offsets, soundtrack looping, seek correction, fade envelopes and music ducking. Original clip audio remains attached to the selected video source.
+- Balanced and high-quality WebM export bitrate presets with explicit browser capability checks.
 - On-screen post caption.
 - Per-account IndexedDB project autosave.
 - Export upload through the authenticated Firebase media service and post creation through the existing NEXORA post path.
@@ -46,13 +48,13 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 
 ### Phase 3 · Timeline and motion
 - [x] Independent video, audio, image, text and subtitle lanes with a shared seekable playhead and clip-aware global seeking.
-- Full continuous synchronized playback of all audio and visual lanes (still required).
+- [x] Continuous preview synchronization for source video, soundtrack and voiceover, including shared-playhead seeking and audio envelopes.
 - User-authored keyframes for independent animation of text, sticker and video layers.
 - Cross-dissolve and selected transition presets beyond fade-through-black.
 
 ### Phase 4 · Audio and captions
 - Clip-aligned waveform scrubbing and multi-region voiceover editing.
-- Live mix preview with timeline-synchronized audio playback and audio/video sync validation.
+- [x] Live mix preview with timeline-synchronized soundtrack and voiceover playback; device-level audio/video sync acceptance remains required.
 - Rights-cleared NEXORA soundtrack library; no unlicensed commercial tracks.
 - [x] Caption/subtitle tracks with timed segments, editable text and accessible defaults.
 - Audio/video sync checks and export loudness safeguards.
@@ -65,7 +67,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - NEXORA brand-safe templates that use the existing logo assets, never a replacement logo.
 
 ### Phase 6 · Export and publishing
-- Device-aware resolution and bitrate presets.
+- [x] Balanced and high-quality WebM bitrate presets; device-aware resolution selection and measured performance tuning remain.
 - Robust MP4 output where a supported native/server renderer is available; WebM remains an explicitly labelled fallback.
 - Background upload with resumable progress, retry and cancellation.
 - Publish to posts and Reels through the existing publishing pipeline.
@@ -84,7 +86,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Current export is WebM and depends on browser MediaRecorder, canvas capture and Web Audio support.
 - Voiceover waveform decoding is capped at 30 MB per recording to avoid excessive memory use on mobile devices; larger recordings remain attachable and exportable but do not receive a generated waveform preview.
 - Current project drafts are local to the same browser/device; cloud draft sync is not implemented.
-- The shared timeline now seeks across video clips and shows independently timed visual/audio lanes. Continuous playback synchronization of soundtrack, voiceover, and every visual lane is still in progress.
+- The shared timeline seeks across video clips and shows independently timed visual/audio lanes. Preview playback now follows the shared playhead for source video, soundtrack and voiceover, with voiceover offsets, soundtrack looping, fade envelopes and music ducking. Device-specific sync acceptance remains outstanding.
 - Fade-through-black is not a cross-dissolve.
 - The editor supports multiple title layers and a dedicated timed subtitle track. Automatic speech-to-text transcription and continuous synchronized playback across all audio and visual lanes remain future work.
 - Browser export has not been manually verified on every supported mobile browser; CI type-check/build and repository tests do not replace device acceptance testing.
