@@ -6,6 +6,7 @@ import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer
 import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
+import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
@@ -82,6 +83,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [overlayEnd, setOverlayEnd] = useState(0);
   const [overlayPosition, setOverlayPosition] = useState<'top' | 'center' | 'bottom'>('bottom');
   const [playing, setPlaying] = useState(false);
+  const [exportQuality, setExportQuality] = useState<'balanced' | 'high'>('balanced');
+  const [audioMetadataRevision, setAudioMetadataRevision] = useState(0);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState('');
@@ -90,6 +93,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const soundtrackPreviewRef = useRef<HTMLAudioElement>(null);
+  const voiceoverPreviewRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const projectUrls = useRef<string[]>([]);
   const voiceoverRecorderRef = useRef<MediaRecorder | null>(null);
@@ -203,6 +208,34 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       .finally(() => { void decoder.close().catch(() => undefined); });
     return () => { cancelled = true; };
   }, [voiceover]);
+
+  useEffect(() => {
+    if (videoRef.current && selectedClip) videoRef.current.volume = selectedClip.volume;
+  }, [selectedClip?.id, selectedClip?.volume]);
+
+  useEffect(() => {
+    const music = soundtrackPreviewRef.current;
+    const narration = voiceoverPreviewRef.current;
+    const elapsed = Math.max(0, previewGlobalTime);
+    if (music && soundtrack) {
+      const musicPosition = getStudioTimelineAudioPosition(elapsed, 0, Number.isFinite(music.duration) ? music.duration : null, true);
+      if (Number.isFinite(music.duration) && music.duration > 0 && Math.abs(music.currentTime - musicPosition.sourceTime) > 0.75) music.currentTime = musicPosition.sourceTime;
+      music.volume = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration: narration && Number.isFinite(narration.duration) ? narration.duration : 0, duckingLevel: musicDuckingLevel });
+      if (playing && music.paused) void music.play().catch(() => setMessage('Tap play again to allow soundtrack preview.'));
+      if (!playing && !music.paused) music.pause();
+    } else if (music) music.pause();
+    if (narration && voiceover) {
+      const narrationPosition = getStudioTimelineAudioPosition(elapsed, voiceoverStart, Number.isFinite(narration.duration) ? narration.duration : null);
+      const narrationTime = narrationPosition.sourceTime;
+      narration.volume = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: narrationTime, totalDuration: Number.isFinite(narration.duration) ? narration.duration : 0, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
+      if (narrationPosition.active) {
+        if (Math.abs(narration.currentTime - narrationTime) > 0.75) narration.currentTime = narrationTime;
+        if (playing && narration.paused) void narration.play().catch(() => setMessage('Tap play again to allow voiceover preview.'));
+        if (!playing && !narration.paused) narration.pause();
+      } else narration.pause();
+    } else if (narration) narration.pause();
+    if (!playing) { music?.pause(); narration?.pause(); }
+  }, [playing, previewGlobalTime, soundtrack, voiceover, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, voiceoverStart, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, musicDuckingLevel, totalDuration, audioMetadataRevision]);
 
   useEffect(() => {
     if (!ready) return;
@@ -476,9 +509,23 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const togglePreview = async () => {
     const video = videoRef.current;
     if (!video || !selectedClip) return;
-    if (playing) { video.pause(); setPlaying(false); return; }
+    if (playing) { video.pause(); soundtrackPreviewRef.current?.pause(); voiceoverPreviewRef.current?.pause(); setPlaying(false); return; }
     if (video.currentTime < selectedClip.start || video.currentTime >= selectedClip.end) video.currentTime = selectedClip.start;
-    try { await video.play(); setPlaying(true); } catch { setMessage('Playback could not start. Tap play again.'); }
+    try {
+      await video.play();
+      const elapsed = previewGlobalTime;
+      const music = soundtrackPreviewRef.current;
+      const narration = voiceoverPreviewRef.current;
+      if (music && soundtrack) {
+        if (Number.isFinite(music.duration) && music.duration > 0) music.currentTime = getStudioTimelineAudioPosition(elapsed, 0, music.duration, true).sourceTime;
+        await music.play().catch(() => undefined);
+      }
+      if (narration && voiceover && elapsed >= voiceoverStart && (!Number.isFinite(narration.duration) || elapsed - voiceoverStart < narration.duration)) {
+        narration.currentTime = getStudioTimelineAudioPosition(elapsed, voiceoverStart, Number.isFinite(narration.duration) ? narration.duration : null).sourceTime;
+        await narration.play().catch(() => undefined);
+      }
+      setPlaying(true);
+    } catch { setMessage('Playback could not start. Tap play again.'); }
   };
 
   const renderProject = async (): Promise<Blob> => {
@@ -557,7 +604,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       }
       mixedAudio.stream.getAudioTracks().forEach(track => stream.addTrack(track));
     }
-    const recorder = new MediaRecorder(stream, { mimeType });
+    const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: exportQuality === 'high' ? 8_000_000 : 4_000_000, audioBitsPerSecond: 128_000 });
     const chunks: Blob[] = [];
     const imageAssets = new Map<string, CanvasImageSource>();
     const stopped = new Promise<Blob>((resolve, reject) => {
@@ -778,11 +825,13 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             <button type="button" onClick={onClose} aria-label="Close Studio" className="rounded-xl border border-white/10 p-2 text-[#C7B5FF]"><ArrowLeft size={18}/></button>
             <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.24em] text-violet-300">NEXORA</p><h1 className="truncate text-lg font-black tracking-tight sm:text-xl">Studio</h1></div>
           </div>
-          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><button type="button" onClick={handleExport} disabled={rendering || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
+          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><select aria-label="Export quality" value={exportQuality} onChange={event => setExportQuality(event.target.value as 'balanced' | 'high')} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="balanced">Balanced</option><option value="high">High quality</option></select><button type="button" onClick={handleExport} disabled={rendering || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
         </header>
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
+              {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
+              {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="h-full w-full object-contain" playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end) { event.currentTarget.pause(); setPlaying(false); } }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
               {imageLayers.filter(layer => isStudioImageLayerVisible(layer, previewGlobalTime, totalDuration)).map(layer => <img key={layer.id} src={getUrlForClip(layer.blob)} alt={layer.name} draggable={false} className="pointer-events-none absolute z-[5] max-w-none object-contain" style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, width: `${layer.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`, opacity: layer.opacity }}/>) }
               {subtitleSegments.filter(segment => previewGlobalTime >= segment.start && previewGlobalTime < segment.end && segment.text.trim()).map(segment => <div key={segment.id} className="pointer-events-none absolute bottom-[12%] left-[5%] z-[8] w-[90%] rounded-lg bg-[#050914]/80 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg">{segment.text}</div>)}
