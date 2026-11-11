@@ -64,7 +64,8 @@ async function encodeValue(
     }
     return encoded;
   }
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (value === null) return null;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
   return null;
 }
 
@@ -114,7 +115,7 @@ async function decodeValue(value: Encoded, assets: Record<string, CloudAsset>, u
       const blob = new Blob([bytes], { type: asset.contentType });
       assetIds.set(blob, assetId);
       uploadedBlobs.set(blob, Promise.resolve(asset));
-      uploadedBlobByPath.set(asset.storagePath, blob);
+      uploadedBlobByPath.set(asset.storagePath, new WeakRef(blob));
       return blob;
     }
     const decoded: Record<string, unknown> = {};
