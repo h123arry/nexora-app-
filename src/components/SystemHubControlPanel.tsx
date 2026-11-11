@@ -59,37 +59,49 @@ export default function SystemHubControlPanel({
   setLazyLoadImages
 }: SystemHubControlPanelProps) {
   
-  // Local telemetry states
-  const [fps, setFps] = useState(60);
-  const [latency, setLatency] = useState(1.8);
-  const [cacheSize, setCacheSize] = useState('14.2 MB');
-  const [isFlushingCache, setIsFlushingCache] = useState(false);
-  const [cacheFlushed, setCacheFlushed] = useState(false);
+  const [browserOnline, setBrowserOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : false);
   const [activeTab, setActiveTab] = useState<'ux' | 'accessibility' | 'performance' | 'trust'>('ux');
   const [hapticHumVolume, setHapticHumVolume] = useState(0.3);
   const [audioFeedbackEnabled, setAudioFeedbackEnabled] = useState(true);
-  
-  // Permission statuses
+  const showOfflineTestControls = import.meta.env.DEV || import.meta.env.VITE_NEXORA_ENV === 'staging';
+
+  // Read browser state; do not invent FPS, latency, cache size or permission values.
   const [permissions, setPermissions] = useState({
-    camera: 'granted',
-    microphone: 'granted',
-    location: 'prompt',
-    notifications: 'granted'
+    camera: 'unknown',
+    microphone: 'unknown',
+    location: 'unknown',
+    notifications: 'unknown',
   });
 
-  // FPS ticker loop (simulated realistic jitter)
   useEffect(() => {
-    const interval = setInterval(() => {
-      const baseFps = reducedMotion ? 30 : 60;
-      const jitter = Math.random() > 0.85 ? Math.floor(Math.random() * 4) + 1 : 0;
-      const calculatedFps = Math.max(28, baseFps - jitter);
-      setFps(calculatedFps);
-      
-      const newLatency = Number((1.2 + Math.random() * 0.9).toFixed(2));
-      setLatency(newLatency);
-    }, 1500);
-    return () => clearInterval(interval);
-  }, [reducedMotion]);
+    const handleOnline = () => setBrowserOnline(true);
+    const handleOffline = () => setBrowserOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const checkBrowserPermissions = async () => {
+    const next: Record<string, string> = {};
+    const permissionQueries: Array<[string, PermissionName]> = [
+      ['camera', 'camera' as PermissionName],
+      ['microphone', 'microphone' as PermissionName],
+      ['location', 'geolocation' as PermissionName],
+    ];
+    await Promise.all(permissionQueries.map(async ([key, name]) => {
+      try {
+        const result = await navigator.permissions.query({ name });
+        next[key] = result.state;
+      } catch {
+        next[key] = 'unavailable';
+      }
+    }));
+    next.notifications = typeof Notification !== 'undefined' ? Notification.permission : 'unavailable';
+    setPermissions(previous => ({ ...previous, ...next }));
+  };
 
   // Web Audio Synth Haptic Click Generator
   const playHapticHum = (frequency = 120, duration = 0.08) => {
@@ -132,21 +144,6 @@ export default function SystemHubControlPanel({
       utterance.volume = 0.8;
       window.speechSynthesis?.speak(utterance);
     } catch (e) {}
-  };
-
-  // Cache Flusher simulation
-  const handleFlushCache = () => {
-    playHapticHum(240, 0.2);
-    setIsFlushingCache(true);
-    speakAnnouncement("Flushing active media blobs and cleaning IndexedDB caches.");
-    
-    setTimeout(() => {
-      setIsFlushingCache(false);
-      setCacheFlushed(true);
-      setCacheSize('0.0 KB');
-      speakAnnouncement("Cache clean operation successfully completed.");
-      setTimeout(() => setCacheFlushed(false), 3000);
-    }, 1800);
   };
 
   // Toggle helpers with voice synthesis
