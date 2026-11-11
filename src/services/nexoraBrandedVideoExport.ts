@@ -165,7 +165,7 @@ export async function exportNexoraBrandedVideo(
     // then a short NEXORA end card is rendered into the same exported file.
     cancelAnimationFrame(frameRequest);
     onProgress?.(94);
-    const outroDurationMs = 2400;
+    const outroDurationMs = Math.max(2400, sonicBuffer ? sonicBuffer.duration * 1000 : 0);
     const outroStartedAt = performance.now();
     const drawOutroFrame = (now: number) => {
       const elapsed = Math.min(1, (now - outroStartedAt) / outroDurationMs);
@@ -207,8 +207,13 @@ export async function exportNexoraBrandedVideo(
       context.font = '500 ' + Math.round(Math.max(10, w * 0.012)) + 'px Arial, sans-serif';
       context.fillText("THE WORLD'S LIVING SOCIAL NETWORK", centerX, h * 0.81, w * 0.88);
       context.restore();
-      if (elapsed < 1) frameRequest = requestAnimationFrame(drawOutroFrame);
     };
+    if (sonicBuffer) {
+      const sonicSource = audioContext!.createBufferSource();
+      sonicSource.buffer = sonicBuffer;
+      sonicSource.connect(audioOutput);
+      sonicSource.start();
+    }
     await new Promise<void>(resolve => {
       const finishOutro = () => { settled = true; resolve(); };
       const outroLoop = (now: number) => {
@@ -218,17 +223,6 @@ export async function exportNexoraBrandedVideo(
       };
       frameRequest = requestAnimationFrame(outroLoop);
     });
-    if (sonicBuffer) {
-      await new Promise<void>(resolve => {
-        const sonicSource = audioContext!.createBufferSource();
-        sonicSource.buffer = sonicBuffer;
-        sonicSource.connect(audioOutput);
-        sonicSource.onended = () => resolve();
-        sonicSource.start();
-        window.setTimeout(resolve, Math.ceil(sonicBuffer!.duration * 1000) + 500);
-      });
-    }
-
     recorder.stop();
     const blob = await completed;
     onProgress?.(100);
