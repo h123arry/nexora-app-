@@ -72,3 +72,11 @@ Make participation, contribution quality, feed ranking, and safety outcomes unde
 - Members can list upcoming/active events and RSVP through authenticated callables. Attendance markers are per-account and counts update transactionally.
 - Events support bounded date windows, optional capacity, duplicate-safe RSVP, withdrawal, and automatic completion when listing discovers an expired event.
 - No event rewards, NEX issuance, attendance claims, or production events are fabricated.
+
+
+## Backend-verified mission capability unlocks
+
+- Added a signed-in capability snapshot based on server-recorded challenge contributions, not client-submitted counters.
+- The Advanced Challenge Host capability unlocks only after at least 10 verified public-post contributions across at least 3 distinct challenges.
+- The unlocked capability raises the active challenge creation ceiling from 5 to 10; the backend enforces the limit during challenge creation.
+- No reputation score, likes, views, NEX balance, admin role, moderation power, financial entitlement, or identity-verification state is changed by this unlock.
