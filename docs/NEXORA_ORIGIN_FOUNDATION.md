@@ -108,6 +108,7 @@ The first O1 increment is connected to the existing trusted Cloud Storage finali
 - Initial records use the neutral `upload_ingest` or `studio_export` origin kind and the `uploader` contribution role. This records that an account uploaded the bytes to NEXORA; it does **not** claim that the uploader created the work or owns its rights.
 - Credential state begins as `absent`, lineage as `unlinked`, and disclosure as `unknown`. No authenticity claim is inferred from an upload.
 - Firestore Rules allow owner-only reads and deny all client writes to origin records and event history.
+- Account deletion and temporary Studio-export expiry cascade through origin event subcollections before deleting their parent records, preventing orphaned private provenance history.
 - Policy and emulator tests cover record validation, stable generation IDs, privacy, and client-write denial.
 
 This is an initial upload-provenance foundation only. Remix lineage, creator declarations, C2PA validation, public viewer projections, UI integration, deletion propagation, and staging/device acceptance remain outstanding until separately implemented and verified.
