@@ -5,7 +5,7 @@ import { HttpsError, onCall, onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirebaseProjectId, resolveFirestoreDatabaseId, PRODUCTION_FIREBASE_PROJECT_ID } from './runtimeConfig.js';
 import { applyNexBalanceEntries, buildNexTransferEntries } from './nexLedgerPolicy.js';
-import { calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
+import { advanceBankLookupQuota, calculateNgnPayoutKobo, livePayoutGatesPassed, verifyPaystackWebhookSignature } from './paystackPayoutPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const PAYSTACK_SECRET_KEY = defineSecret('PAYSTACK_SECRET_KEY');
@@ -75,21 +75,12 @@ async function consumeBankLookupQuota(uid: string): Promise<void> {
   let retryAfterMs = 0;
   await db.runTransaction(async tx => {
     const snapshot = await tx.get(ref);
-    const data = snapshot.data() || {};
-    const startedAt = data.windowStartedAt;
-    const attempts = data.attempts;
-    const validWindow = Number.isSafeInteger(startedAt) && startedAt <= now
-      && now - startedAt < BANK_LOOKUP_WINDOW_MS && Number.isSafeInteger(attempts) && attempts >= 0;
-    if (!validWindow) {
-      tx.set(ref, { windowStartedAt: now, attempts: 1, expiresAt: now + BANK_LOOKUP_WINDOW_MS * 2,
-        updatedAt: FieldValue.serverTimestamp() });
+    const decision = advanceBankLookupQuota(snapshot.data() || {}, now, BANK_LOOKUP_MAX_ATTEMPTS, BANK_LOOKUP_WINDOW_MS);
+    if (!decision.allowed) {
+      retryAfterMs = decision.retryAfterMs;
       return;
     }
-    if (attempts >= BANK_LOOKUP_MAX_ATTEMPTS) {
-      retryAfterMs = BANK_LOOKUP_WINDOW_MS - (now - startedAt);
-      return;
-    }
-    tx.set(ref, { windowStartedAt: startedAt, attempts: attempts + 1,
+    tx.set(ref, { windowStartedAt: decision.windowStartedAt, attempts: decision.attempts,
       expiresAt: now + BANK_LOOKUP_WINDOW_MS * 2, updatedAt: FieldValue.serverTimestamp() });
   });
   if (retryAfterMs > 0) {
