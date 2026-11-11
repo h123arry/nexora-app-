@@ -8,7 +8,8 @@ export type NexoraLensCategory =
   | 'Fantasy'
   | 'Playful'
   | 'World'
-  | 'Retro';
+  | 'Retro'
+  | 'Community';
 
 export type NexoraLensSticker =
   | 'none' | 'crown' | 'cat' | 'halo' | 'glasses' | 'hearts'
@@ -109,7 +110,7 @@ export const NEXORA_LENS_CATALOG_SIZE = NEXORA_LENS_CATALOG.length;
 
 export const NEXORA_LENS_CATEGORIES = [
   'For you', 'Camera Enhance', 'Beauty', 'Cinema', 'Colour',
-  'Creator', 'AR', 'Fantasy', 'Playful', 'Retro', 'World', 'Favourites',
+  'Creator', 'Community', 'AR', 'Fantasy', 'Playful', 'Retro', 'World', 'Favourites',
 ] as const;
 
 export const NEXORA_FEATURED_LENS_IDS = NEXORA_LENS_CATALOG
