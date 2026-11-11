@@ -124,6 +124,7 @@ This is an initial upload-provenance foundation only. Remix lineage, creator dec
 
 ### O2 — Creative DNA and remix lineage
 - Add explicit remix/edit entry points to supported Create and Studio flows.
+- Initial backend increment: authenticated callable records one-to-five source assets for an already-uploaded derivative, with idempotent event IDs, same-owner source validation, cycle prevention, and an eight-level graph-depth cap. Cross-account remix permissions remain denied until O3 creator controls exist.
 - Resolve parent asset IDs server-side and validate permissions before derivative publication.
 - Persist multi-parent lineage and prevent cycles, cross-account leaks, and unbounded graph traversal.
 - Add a privacy-safe lineage viewer.
