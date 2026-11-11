@@ -40,6 +40,7 @@ import {
   addFollow,
   removeFollow
 } from './services/dataService';
+import { ActivityService } from './services/activityService';
 import { ProfileService } from './services/firebase/profileService';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
@@ -1649,13 +1650,9 @@ export default function App() {
           const updatedPost = { ...p, shares: (p.shares || 0) + 1 };
           savePostToDb(updatedPost);
           if (p.userId && p.userId !== currentUser.id) {
-            void import('./services/activityService').then(({ ActivityService }) =>
-              ActivityService.recordActivityEvent(p.userId!, 'share_received', postId, { fromUserId: currentUser.id })
-            ).catch(error => console.warn('Unable to record share activity.', error));
+            ActivityService.recordActivityEvent(p.userId, 'share_received', postId, { fromUserId: currentUser.id });
           }
-          void import('./services/activityService').then(({ ActivityService }) =>
-            ActivityService.recordActivityEvent(currentUser.id, 'repost_create', `repost_${postId}_${Date.now()}`)
-          ).catch(error => console.warn('Unable to record repost activity.', error));
+          ActivityService.recordActivityEvent(currentUser.id, 'repost_create', `repost_${postId}_${Date.now()}`);
           return updatedPost;
         }
         return p;
