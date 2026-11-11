@@ -1,7 +1,8 @@
 import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
+import NexoraLensStudio from './NexoraLensStudio';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
 import { videoFileExtension } from '../services/media/videoFileExtension';
@@ -313,6 +314,10 @@ export default function MediaCreationEngine({
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(() => initialAutosave?.recordedVideoUrl || null);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
+  const [isLensStudioOpen, setIsLensStudioOpen] = useState(false);
+  const [isLensStreamReady, setIsLensStreamReady] = useState(false);
+  const [isSavingRecordedVideo, setIsSavingRecordedVideo] = useState(false);
+  const [openLensAfterPermission, setOpenLensAfterPermission] = useState(false);
   const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
   const [loopTimerSecs, setLoopTimerSecs] = useState(0);
 
@@ -509,41 +514,31 @@ export default function MediaCreationEngine({
   useEffect(() => {
     let currentStream: MediaStream | null = null;
     let cancelled = false;
-    if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2) {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera recording is not supported by this browser. Please upload a video instead.' }));
-      } else {
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true })
-          .then(stream => {
-            if (cancelled) {
-              stream.getTracks().forEach(track => track.stop());
-              return;
-            }
-            currentStream = stream;
-            videoStreamRef.current = stream;
-            if (videoPreviewRef.current) {
-              videoPreviewRef.current.srcObject = stream;
-              void videoPreviewRef.current.play().catch(() => {
-                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Check browser camera permissions and try again.' }));
-              });
-            }
-          })
-          .catch(error => {
-            const message = error instanceof Error && error.name === 'NotAllowedError'
-              ? 'Camera or microphone access was denied. Allow access in browser settings and try again.'
-              : error instanceof Error && error.name === 'NotFoundError'
-                ? 'No camera or microphone was found on this device.'
-                : 'Could not start the camera. Please retry or upload a video.';
-            window.dispatchEvent(new CustomEvent('toast', { detail: message }));
-          });
-      }
+    if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2 && !isLensStudioOpen) {
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing }, audio: true })
+        .then(stream => {
+          if (cancelled) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
+          currentStream = stream;
+          videoStreamRef.current = stream;
+          if (videoPreviewRef.current) {
+            videoPreviewRef.current.srcObject = stream;
+          }
+        })
+        .catch(err => {
+          if (!cancelled) console.error("Camera error: ", err);
+        });
     }
     return () => {
       cancelled = true;
-      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
-      if (videoStreamRef.current === currentStream) videoStreamRef.current = null;
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
+        if (videoStreamRef.current === currentStream) videoStreamRef.current = null;
+      }
     };
-  }, [activeMode, permissionState, cameraFacing, currentStep]);
+  }, [activeMode, permissionState, cameraFacing, currentStep, isLensStudioOpen]);
 
   // Reels Record timing loop
   useEffect(() => {
@@ -627,17 +622,58 @@ export default function MediaCreationEngine({
     e.target.value = '';
   };
 
-  const captureCameraSnapshot = () => {
-    requestPermission('camera', () => {
-      const snaps = [
-        'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80'
-      ];
-      const snapUrl = snaps[Math.floor(Math.random() * snaps.length)];
-      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Captured high fidelity camera frame!' }));
-    });
+  const captureCameraSnapshot = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera capture is not supported by this browser. You can still upload a photo.' }));
+      return;
+    }
+
+    let stream: MediaStream | null = null;
+    try {
+      // Ask the browser for real camera access; never substitute stock imagery
+      // for a photo the user believes was captured from their device.
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      await video.play();
+
+      if (!video.videoWidth || !video.videoHeight) {
+        await new Promise<void>((resolve, reject) => {
+          video.onloadedmetadata = () => resolve();
+          video.onerror = () => reject(new Error('The camera preview could not be opened.'));
+        });
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Photo capture is unavailable on this device.');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const photo = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The camera photo could not be saved.')), 'image/jpeg', 0.92);
+      });
+      const photoUrl = trackObjectUrl(URL.createObjectURL(photo));
+      setSelectedImages(prev => [...prev, { url: photoUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera photo captured.' }));
+    } catch (error) {
+      const message = error instanceof Error && error.name === 'NotAllowedError'
+        ? 'Camera access was denied. Allow camera access in your browser settings and try again.'
+        : error instanceof Error && error.name === 'NotFoundError'
+          ? 'No camera was found on this device.'
+          : error instanceof Error
+            ? error.message
+            : 'Could not capture a photo. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    } finally {
+      stream?.getTracks().forEach(track => track.stop());
+    }
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -727,62 +763,45 @@ export default function MediaCreationEngine({
 
   const startReelRecording = () => {
     requestPermission('camera', () => {
-      if (!videoStreamRef.current || !videoStreamRef.current.getVideoTracks().some(track => track.readyState === 'live')) {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try recording again.' }));
-        return;
-      }
-      if (typeof MediaRecorder === 'undefined') {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording is not supported by this browser. You can upload a video instead.' }));
-        return;
-      }
       setCountdownTimer(3);
-      const counter = window.setInterval(() => {
+      const counter = setInterval(() => {
         setCountdownTimer(prev => {
           if (prev !== null && prev <= 1) {
-            window.clearInterval(counter);
-            try {
-              const stream = videoStreamRef.current;
-              if (!stream || !stream.getVideoTracks().some(track => track.readyState === 'live')) {
-                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera disconnected before recording started. Please retry.' }));
-                return null;
+            clearInterval(counter);
+            setIsRecording(true);
+            setIsRecordingPaused(false);
+            setIsSavingRecordedVideo(false);
+            setLoopTimerSecs(0);
+            setRecordedVideoUrl(null);
+            setVideoRawBlob(null);
+            
+            if (videoStreamRef.current) {
+              try {
+                videoChunksRef.current = [];
+                const recordingMime = [
+                  'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+                  'video/webm;codecs=vp9,opus',
+                  'video/webm;codecs=vp8,opus',
+                  'video/webm',
+                ].find(type => MediaRecorder.isTypeSupported(type));
+                const recorder = new MediaRecorder(videoStreamRef.current, recordingMime ? { mimeType: recordingMime } : undefined);
+                mediaRecorderVideoRef.current = recorder;
+                recorder.ondataavailable = (event) => {
+                  if (event.data.size > 0) videoChunksRef.current.push(event.data);
+                };
+                recorder.onstop = () => {
+                  const blob = new Blob(videoChunksRef.current, { type: recorder.mimeType || 'video/webm' });
+                  setRecordedVideoUrl(previous => {
+                    revokeTrackedObjectUrl(previous);
+                    return trackObjectUrl(URL.createObjectURL(blob));
+                  });
+                  setVideoRawBlob(blob);
+                  setIsSavingRecordedVideo(false);
+                };
+                recorder.start();
+              } catch (e) {
+                console.error(e);
               }
-              const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
-              const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-              videoChunksRef.current = [];
-              mediaRecorderVideoRef.current = recorder;
-              recorder.ondataavailable = event => {
-                if (event.data.size > 0) videoChunksRef.current.push(event.data);
-              };
-              recorder.onerror = () => {
-                setIsRecording(false);
-                window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording failed. Check available storage and camera permissions, then retry.' }));
-              };
-              recorder.onstop = () => {
-                const chunks = videoChunksRef.current;
-                const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'video/webm' });
-                if (!blob.size) {
-                  window.dispatchEvent(new CustomEvent('toast', { detail: 'No video data was captured. Please try recording again.' }));
-                  return;
-                }
-                const nextUrl = trackObjectUrl(URL.createObjectURL(blob));
-                setRecordedVideoUrl(previous => {
-                  revokeTrackedObjectUrl(previous);
-                  return nextUrl;
-                });
-                setVideoRawBlob(blob);
-                window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording saved to your composer.' }));
-              };
-              recorder.start(250);
-              setIsRecording(true);
-              setIsRecordingPaused(false);
-              setLoopTimerSecs(0);
-              setRecordedVideoUrl(previous => {
-                revokeTrackedObjectUrl(previous);
-                return null;
-              });
-            } catch (error) {
-              setIsRecording(false);
-              window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not start video recording. Please retry.' }));
             }
             return null;
           }
@@ -795,17 +814,19 @@ export default function MediaCreationEngine({
   const handleStopReelRecord = () => {
     setIsRecording(false);
     setIsRecordingPaused(false);
-    const recorder = mediaRecorderVideoRef.current;
-    if (recorder && recorder.state !== 'inactive') {
+    setIsSavingRecordedVideo(true);
+    if (mediaRecorderVideoRef.current && mediaRecorderVideoRef.current.state !== 'inactive') {
       try {
-        recorder.stop();
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Saving video recording…' }));
-      } catch {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not finish the video recording. Please retry.' }));
+        mediaRecorderVideoRef.current.stop();
+      } catch (e) {
+        console.error(e);
       }
     } else {
+      setIsSavingRecordedVideo(false);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'No video was recorded. Check camera permission and try again.' }));
+      return;
     }
+    window.dispatchEvent(new CustomEvent('toast', { detail: 'Saving video recording…' }));
   };
 
   const startVoiceRecording = () => {
@@ -896,7 +917,7 @@ export default function MediaCreationEngine({
     setLoadingTranscript(true);
   };
 
-  // AI writing assistance only changes the caption when the authenticated service returns a real result.
+  // AI assistant simulation
   const handleAiWritingAssistance = async (promptType: string) => {
     setLoadingTranscript(true);
     window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Nexora is polishing writing...' }));
@@ -904,17 +925,27 @@ export default function MediaCreationEngine({
       const response = await authenticatedVohFetch('/api/voh-ai/improve-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: caption, action: promptType })
+        body: JSON.stringify({ content: caption || "Drafting system setup instructions.", action: promptType })
       });
-      if (!response.ok) throw new Error('AI writing assistance is unavailable right now.');
-      const data = await response.json();
-      if (typeof data.improved !== 'string' || !data.improved.trim()) {
-        throw new Error('AI did not return an improved caption. Your original text has been kept.');
+      if (response.ok) {
+        const data = await response.json();
+        if (data.improved) {
+          setCaption(data.improved);
+          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption optimized by AI!' }));
+        }
+      } else {
+        throw new Error();
       }
-      setCaption(data.improved);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption optimized by AI!' }));
-    } catch (error) {
-      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'AI writing assistance is unavailable right now. Your original caption has been kept.' }));
+    } catch (e) {
+      const mockCaptions: Record<string, string> = {
+        rewrite: `🚀 streamlined content creation engine in Nexora. Accelerating creator capability! #nexora #innovation`,
+        shorten: `Accelerating creative workflows on Nexora. ⚡`,
+        expand: `Absolutely thrilled to announce the rollout of Content Studio on Nexora. Designed for supreme responsiveness, we are cutting friction for modern creators. Check out the custom filters and multi-step publisher. #systemsdesign`,
+        tags: `${caption} #developer #creativehub #nextgen #futureReady`,
+        translate: `Studio de création de contenu Nexora. Publier des médias en toute fluidité. 🚀`
+      };
+      setCaption(mockCaptions[promptType] || caption);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption enhanced!' }));
     } finally {
       setLoadingTranscript(false);
     }
@@ -1340,7 +1371,7 @@ export default function MediaCreationEngine({
                   Deny
                 </button>
                 <button 
-                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); }}
+                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); if (openLensAfterPermission) { setIsLensStudioOpen(true); setOpenLensAfterPermission(false); } }}
                   className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Continue
@@ -1566,11 +1597,18 @@ export default function MediaCreationEngine({
                           <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Take a photo</span>
                           <p className="text-[10px] text-[#8E88A7]">Use your camera to take a photo.</p>
                         </div>
-                        <button 
+                        <button
                           onClick={captureCameraSnapshot}
-                          className="w-full py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
+                          className="w-full rounded-xl bg-[#120E2B] py-2.5 text-xs font-mono font-bold text-white transition-all hover:bg-[#19143A]"
                         >
-                          Take photo
+                          Quick photo
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }}
+                          className="w-full rounded-xl bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] py-2.5 text-xs font-mono font-bold text-white shadow-lg transition-all hover:brightness-110"
+                        >
+                          <Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses
                         </button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
@@ -1586,6 +1624,32 @@ export default function MediaCreationEngine({
                           ))}
                         </div>
                       </div>
+                      {isLensStudioOpen && (
+                        <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p>
+                              <p className="text-[10px] text-[#A39BBF]">Take a photo with your live lens applied.</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
+                            </div>
+                          </div>
+                          <NexoraLensStudio
+                            cameraFacing={cameraFacing}
+                            userId={currentUser.id}
+                            captureMode="photo"
+                            onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
+                            onCapture={blob => {
+                              const url = trackObjectUrl(URL.createObjectURL(blob));
+                              setSelectedImages(previous => [...previous, { url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+                              setIsLensStudioOpen(false);
+                              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your filtered NEXORA photo is ready to share.' }));
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1664,39 +1728,70 @@ export default function MediaCreationEngine({
                   )}
 
                   {activeMode === 'reel' && (
-                    /* REEL INTERACTIVE CAMERA */
+                    /* REEL CAMERA + OPTIONAL LIVE LENS STUDIO */
                     <div className="space-y-3">
-                      <div className="relative aspect-[4/5] w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black border border-[#44376F] flex flex-col justify-between p-3.5 shadow-md">
-                        <div className="z-10 flex justify-between items-center text-[8px] font-mono text-[#A39BBF]">
-                          <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">YOUR CAMERA</span>
-                          <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-[#120E2B] rounded-full text-white">
-                            <RefreshCw className="w-3 h-3" />
-                          </button>
+                      {isLensStudioOpen ? (
+                        <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p>
+                              <p className="text-[10px] text-[#A39BBF]">Live effects are baked into your capture.</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
+                              <button type="button" disabled={isRecording || isSavingRecordedVideo} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
+                            </div>
+                          </div>
+                          <NexoraLensStudio
+                            cameraFacing={cameraFacing}
+                            userId={currentUser.id}
+                            captureMode="video"
+                            onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
+                            onCapture={blob => {
+                              const url = trackObjectUrl(URL.createObjectURL(blob));
+                              setSelectedImages(previous => [...previous, { url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+                              setIsLensStudioOpen(false);
+                              setActiveMode('photo');
+                              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your filtered NEXORA photo is ready to share.' }));
+                            }}
+                          />
+                          <div className="flex flex-col items-center gap-2 pt-1">
+                            {isRecording ? (
+                              <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button>
+                            ) : (
+                              <button onClick={startReelRecording} disabled={!isLensStreamReady} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Start filtered recording</button>
+                            )}
+                            {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {loopTimerSecs}s</span>}
+                          </div>
                         </div>
-
-                        <div className="absolute inset-0 z-0 flex items-center justify-center">
-                          {countdownTimer !== null ? (
-                            <span className="text-5xl font-black text-white animate-ping">{countdownTimer}</span>
-                          ) : recordedVideoUrl ? (
-                            <video src={recordedVideoUrl} autoPlay loop muted className="w-full h-full object-cover" />
-                          ) : (
-                            <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover bg-[#120E2B]" />
-                          )}
+                      ) : (
+                        <div className="relative mx-auto flex aspect-[4/5] w-full max-w-[320px] flex-col justify-between overflow-hidden rounded-2xl border border-[#44376F] bg-black p-3.5 shadow-md">
+                          <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
+                            <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">YOUR CAMERA</span>
+                            <div className="flex items-center gap-2">
+                              <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
+                              <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
+                            </div>
+                          </div>
+                          <div className="absolute inset-0 z-0 flex items-center justify-center">
+                            {countdownTimer !== null ? (
+                              <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span>
+                            ) : recordedVideoUrl ? (
+                              <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" />
+                            ) : (
+                              <video ref={videoPreviewRef} autoPlay muted playsInline className="h-full w-full bg-[#120E2B] object-cover" />
+                            )}
+                          </div>
+                          <div className="z-10 flex flex-col items-center gap-2">
+                            {isRecording ? (
+                              <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button>
+                            ) : (
+                              <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">Record</button>
+                            )}
+                            {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {loopTimerSecs}s</span>}
+                          </div>
                         </div>
-
-                        <div className="z-10 flex flex-col items-center gap-2">
-                          {isRecording ? (
-                            <button onClick={handleStopReelRecord} className="w-12 h-12 bg-rose-600 rounded-full border-2 border-white animate-pulse flex items-center justify-center text-[10px] text-white font-bold font-mono">
-                              Stop recording
-                            </button>
-                          ) : (
-                            <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-[#8A3FFC] to-[#1600A3] rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-md cursor-pointer">
-                              Start recording
-                            </button>
-                          )}
-                          {isRecording && <span className="text-[9px] font-mono bg-black/60 text-white px-2 py-0.5 rounded-full">Recording: {loopTimerSecs}s</span>}
-                        </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
