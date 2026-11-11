@@ -731,6 +731,7 @@ export default function MediaCreationEngine({
   };
 
   const startReelRecording = () => {
+    if (countdownTimer !== null || isRecording || isSavingRecordedVideo) return;
     requestPermission('camera', () => {
       if (!videoStreamRef.current || !videoStreamRef.current.getVideoTracks().some(track => track.readyState === 'live')) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try recording again.' }));
@@ -1699,7 +1700,7 @@ export default function MediaCreationEngine({
                             <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Live effects are baked into your capture.</p></div>
                             <div className="flex gap-2">
                               <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
-                              <button type="button" disabled={isRecording || isSavingRecordedVideo} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
+                              <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{countdownTimer !== null ? 'Starting…' : isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
                             </div>
                           </div>
                           <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="video" countdownTimer={countdownTimer}
@@ -1713,7 +1714,7 @@ export default function MediaCreationEngine({
                             }}
                           />
                           <div className="flex flex-col items-center gap-2 pt-1">
-                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Start filtered recording</button>}
+                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Start filtered recording</button>}
                             {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {loopTimerSecs}s</span>}
                           </div>
                         </div>
