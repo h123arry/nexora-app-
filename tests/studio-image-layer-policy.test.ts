@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer } from '../src/utils/studioImageLayerPolicy';
+import { canAddStudioImageLayer, getStudioImageLayerFrame, isStudioImageLayerVisible, normalizeStudioImageLayer } from '../src/utils/studioImageLayerPolicy';
 
 test('image layers clamp placement, scale, rotation and opacity', () => {
   const layer = normalizeStudioImageLayer({ name: 'x'.repeat(140), x: 3, y: -1, scale: 5, rotation: -240, opacity: 2, start: -1 }, 'image-1');
@@ -38,4 +38,29 @@ test('image layer imports enforce supported formats and memory limits', () => {
   assert.equal(canAddStudioImageLayer([], oversized), false);
   assert.equal(canAddStudioImageLayer(existing(20, 1), small), false);
   assert.equal(canAddStudioImageLayer(existing(4, 10 * 1024 * 1024), small), false);
+});
+
+test('image keyframes normalize, sort, clamp and cap transform values', () => {
+  const layer = normalizeStudioImageLayer({ keyframes: [
+    { time: 4, x: 2, y: -1, scale: 3, rotation: 240, opacity: 2 },
+    { time: 1, x: -1, y: 2, scale: 0, rotation: -240, opacity: -1 },
+  ] }, 'animated-image');
+  assert.deepEqual(layer.keyframes, [
+    { time: 1, x: 0, y: 1, scale: 0.05, rotation: -180, opacity: 0 },
+    { time: 4, x: 1, y: 0, scale: 1, rotation: 180, opacity: 1 },
+  ]);
+});
+
+test('image keyframes interpolate position, size, rotation and opacity', () => {
+  const layer = normalizeStudioImageLayer({ start: 0, end: 8, keyframes: [
+    { time: 0, x: 0.2, y: 0.4, scale: 0.2, rotation: -30, opacity: 0 },
+    { time: 4, x: 0.8, y: 0.6, scale: 0.6, rotation: 30, opacity: 1 },
+  ] }, 'animated-image');
+  assert.deepEqual(getStudioImageLayerFrame(layer, 2, 8), {
+    x: 0.5, y: 0.5, scale: 0.4, rotation: 0, opacity: 0.5,
+  });
+  assert.deepEqual(getStudioImageLayerFrame(layer, 6, 8), {
+    x: 0.8, y: 0.6, scale: 0.6, rotation: 30, opacity: 1,
+  });
+  assert.equal(getStudioImageLayerFrame(layer, 9, 8), null);
 });
