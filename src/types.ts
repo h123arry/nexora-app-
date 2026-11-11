@@ -163,6 +163,8 @@ export interface Post {
   images?: string[];
   imageFilters?: string[];
   videoUrl?: string;
+  /** Owner-scoped mediaAssets document created for this uploaded source. */
+  mediaAssetId?: string;
   voiceTranscript?: string;
   voiceAudioUrl?: string;
   audience?: 'public' | 'circle' | 'community' | 'followers' | 'onlyme';
