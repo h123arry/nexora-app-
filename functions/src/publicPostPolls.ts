@@ -19,25 +19,19 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
   const postRef = db.collection('posts').doc(postId);
   const voteRef = postRef.collection('pollVotes').doc(uid);
 
-  // Capture a validated public snapshot before entering the transaction. If a
-  // competing request wins, the retry can return the existing vote marker
-  // without relying on an emulator retry snapshot for the parent post.
-  const initialPost = await postRef.get();
-  if (!initialPost.exists || initialPost.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
-  const initialPoll = initialPost.get('interactivePoll');
-  if (!initialPoll || typeof initialPoll.question !== 'string') throw new Error('This post does not contain a valid poll.');
-  const initialOptions = readOptions(initialPoll.options);
-
   const result = await db.runTransaction(async tx => {
-    const existingVote = await tx.get(voteRef);
+    // Read both documents from one transaction snapshot. Concurrent duplicate
+    // submissions then retry against the winning vote marker and return it.
+    const [post, existingVote] = await tx.getAll(postRef, voteRef);
     if (existingVote.exists) {
+      const poll = post.exists ? post.get('interactivePoll') : null;
       return {
         voted: false as const,
         selectedOptionId: existingVote.get('optionId') as string,
+        options: poll && Array.isArray(poll.options) ? readOptions(poll.options) : [],
       };
     }
 
-    const post = await tx.get(postRef);
     if (!post.exists || post.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
     const poll = post.get('interactivePoll');
     if (!poll || typeof poll.question !== 'string') throw new Error('This post does not contain a valid poll.');
@@ -53,12 +47,7 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
     return { voted: true as const, selectedOptionId: optionId, options: nextOptions };
   });
 
-  if (result.voted) return result;
-  return {
-    voted: false,
-    selectedOptionId: result.selectedOptionId,
-    options: initialOptions,
-  };
+  return result;
 }
 
 export async function getMyPublicPostPollVotes(db: Firestore, uid: string, postIds: unknown) {
