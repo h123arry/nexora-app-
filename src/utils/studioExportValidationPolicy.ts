@@ -16,7 +16,7 @@ export function getStudioExportValidationError(
   actual: StudioExportMetadata,
   expected: StudioExportExpectation,
 ): string | null {
-  if (!/^video\\/webm(?:;|$)/i.test(actual.mimeType)) {
+  if (!/^video\/webm(?:;|$)/i.test(actual.mimeType)) {
     return 'The browser returned an unsupported export format. Studio currently exports WebM video.';
   }
   if (!Number.isFinite(actual.sizeBytes) || actual.sizeBytes <= 0) {
