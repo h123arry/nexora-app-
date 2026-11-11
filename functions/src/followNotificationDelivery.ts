@@ -18,10 +18,13 @@ export function createFollowInboxNotification(db: Firestore) {
         || !followerId || !followingId || followerId === followingId
         || followerId.includes('/') || followingId.includes('/')) return;
 
-      const [publicProfile, privateProfile] = await Promise.all([
+      const [publicProfile, privateProfile, recipientProfile] = await Promise.all([
         db.collection('publicProfiles').doc(followerId).get(),
         db.collection('users').doc(followerId).get(),
+        db.collection('publicProfiles').doc(followingId).get(),
       ]);
+      // Page follows share the same canonical edge collection but are not user inboxes.
+      if (!recipientProfile.exists) return;
       const profile = publicProfile.exists ? publicProfile : privateProfile;
       const username = typeof profile.get('username') === 'string' ? profile.get('username') : 'nexora_member';
       const actorName = typeof profile.get('name') === 'string' ? profile.get('name') : username;
