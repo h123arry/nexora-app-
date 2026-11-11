@@ -6,7 +6,6 @@ import { canResolvePublicPostMedia, chooseVideoRendition, safeVideoRenditions } 
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
-const bucket = getStorage(app).bucket(resolveFirebaseStorageBucket());
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
 const URL_TTL_MS = 15 * 60 * 1000;
 
@@ -40,13 +39,21 @@ export const getPublicPostPlayback = onCall({ maxInstances: 40 }, async request 
   const selected = chooseVideoRendition(renditions);
   if (!selected) return { ready: false as const };
   const expiresAt = Date.now() + URL_TTL_MS;
-  const file = bucket.file(selected.path);
-  const [exists] = await file.exists();
-  if (!exists) return { ready: false as const };
-  const [url] = await file.getSignedUrl({
-    action: 'read',
-    expires: expiresAt,
-    version: 'v4',
-  });
-  return { ready: true as const, playbackUrl: url, renditionHeight: selected.height, expiresAt };
+  try {
+    // Resolve Storage lazily so an unconfigured bucket cannot prevent unrelated
+    // Firebase Functions from loading or deploying.
+    const bucket = getStorage(app).bucket(resolveFirebaseStorageBucket());
+    const file = bucket.file(selected.path);
+    const [exists] = await file.exists();
+    if (!exists) return { ready: false as const };
+    const [url] = await file.getSignedUrl({
+      action: 'read',
+      expires: expiresAt,
+      version: 'v4',
+    });
+    return { ready: true as const, playbackUrl: url, renditionHeight: selected.height, expiresAt };
+  } catch (error) {
+    console.error('[MediaPlayback] Signed rendition delivery is unavailable.', error);
+    throw new HttpsError('unavailable', 'Processed playback is temporarily unavailable.');
+  }
 });
