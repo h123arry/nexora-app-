@@ -74,11 +74,13 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 ### Phase 6 · Export and publishing
 - [x] Balanced and high-quality WebM bitrate presets.
 - [x] Explicit 720p and 1080p export dimensions for portrait, square and landscape formats; device-specific performance acceptance remains.
+- [x] Validate rendered WebM output metadata (format, non-empty payload, duration and selected dimensions) before download or publish; failed validation preserves the local draft.
 - Robust MP4 output where a supported native/server renderer is available; WebM remains an explicitly labelled fallback.
 - Background upload with resumable progress, retry and cancellation.
 - Publish to posts and Reels through the existing publishing pipeline.
 - Cloud draft sync and project recovery across signed-in devices.
-- Export validation for duration, dimensions, codecs, audio tracks and playable output.
+- [x] Browser-side export validation for duration, dimensions, supported WebM MIME type and decodable metadata before the export is marked ready.
+- Deeper server-side validation for codecs, audio-track presence and second-account playback remains required.
 
 ### Phase 7 · Quality and release
 - Automated timeline policy tests and browser media integration tests.
