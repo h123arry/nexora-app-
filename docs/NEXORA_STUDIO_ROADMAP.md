@@ -26,6 +26,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Creator-imported PNG, JPEG and WebP image layers with independent timing, position, scale, rotation and opacity; layers are included in preview and export.
 - Independently timed subtitle segments with a separate track from the post caption, live preview, local autosave, undo/redo and burned-in export.
 - Shared global playhead with seek mapping across concatenated source clips, plus visual video, audio, image, text and subtitle lanes. Selecting a lane segment seeks the preview to its global timeline start.
+- Continuous sequential preview playback advances automatically from each trimmed clip to the next while preserving the global playhead and synchronized soundtrack/voiceover; the final clip stops cleanly.
 - Timeline-synchronized preview playback for soundtrack and voiceover, including voiceover start offsets, soundtrack looping, seek correction, fade envelopes and music ducking. Original clip audio remains attached to the selected video source.
 - Balanced and high-quality WebM export bitrate presets with explicit browser capability checks.
 - On-screen post caption.
@@ -89,7 +90,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Current export is WebM and depends on browser MediaRecorder, canvas capture and Web Audio support.
 - Voiceover waveform decoding is capped at 30 MB per recording to avoid excessive memory use on mobile devices; larger recordings remain attachable and exportable but do not receive a generated waveform preview.
 - Current project drafts are local to the same browser/device; cloud draft sync is not implemented.
-- The shared timeline seeks across video clips and shows independently timed visual/audio lanes. Preview playback now follows the shared playhead for source video, soundtrack and voiceover, with voiceover offsets, soundtrack looping, fade envelopes and music ducking. Device-specific sync acceptance remains outstanding.
+- The shared timeline seeks across video clips and shows independently timed visual/audio lanes. Preview playback now advances sequentially across trimmed clips while soundtrack and voiceover follow the global playhead, with voiceover offsets, soundtrack looping, fade envelopes and music ducking. Device-specific sync acceptance remains outstanding.
 - Fade-through-black is not a cross-dissolve.
 - The editor supports multiple title layers and a dedicated timed subtitle track. Automatic speech-to-text transcription and continuous synchronized playback across all audio and visual lanes remain future work.
 - Browser export has not been manually verified on every supported mobile browser; CI type-check/build and repository tests do not replace device acceptance testing.
