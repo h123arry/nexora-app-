@@ -11,9 +11,8 @@ export function getStudioTimelineAudioPosition(
   const safeStart = Math.max(0, Number.isFinite(start) ? start : 0);
   const localTime = elapsed - safeStart;
   if (localTime < 0) return { active: false, sourceTime: 0 };
-  if (duration === null || !Number.isFinite(duration) || duration <= 0) {
-    return { active: true, sourceTime: localTime };
-  }
+  if (duration === null || !Number.isFinite(duration)) return { active: true, sourceTime: localTime };
+  if (duration <= 0) return { active: false, sourceTime: 0 };
   if (loop) return { active: true, sourceTime: localTime % duration };
   return { active: localTime < duration, sourceTime: Math.min(localTime, duration) };
 }
