@@ -5,7 +5,7 @@ import { appendHistorySnapshot, reorderById } from '../utils/studioHistoryPolicy
 import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer } from '../utils/studioTextLayerPolicy';
 import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
-import { getStudioClipTimelinePosition, normalizeStudioTimelineTime } from '../utils/studioTimelinePolicy';
+import { getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
