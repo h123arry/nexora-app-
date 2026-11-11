@@ -54,3 +54,12 @@ Make participation, contribution quality, feed ranking, and safety outcomes unde
 - Creator progression now derives six named levels from the existing reputation score (Newcomer through Legacy Builder). The dashboard shows current level, next threshold, and points remaining. This is a recognition layer only: it does not mint NEX, grant paid entitlements, or bypass moderation and verification.
 - Creator milestones now include separate Helpful Contributor and Trusted Guide recognitions, driven by the existing helpfulness component of the reputation breakdown. Likes and views cannot unlock these recognitions; the UI does not present them as fact-checking or proof that an individual claim is true.
 - Unit coverage verifies level boundaries, invalid reputation handling, and the separation between helpfulness and popularity signals.
+
+
+## Additional implementation — helpful-content endorsements
+
+- Added a trusted callable for a one-per-account endorsement on public posts.
+- Self-endorsement is rejected, repeat calls are idempotent, and the count is updated transactionally by the server.
+- Each account is limited to 20 new endorsements per UTC day. The limit is a friction control, not a claim that endorsements prove factual accuracy.
+- Feed cards expose a lightweight “Helpful” action; the control is disabled for the post author and after a successful endorsement in the current card session.
+- Emulator tests cover idempotency, self-endorsement, private-post rejection, malformed IDs, and daily limits.
