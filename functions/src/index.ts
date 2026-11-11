@@ -17,7 +17,7 @@ import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './com
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary, getReferralInvitePreview } from './referrals.js';
-import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost, getCommunityCapabilitySnapshot } from './socialChallenges.js';
+import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost, getCommunityCapabilitySnapshot, extractSocialChallengeIds } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
 import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries as listMyContentSeriesRecord, listContentSeriesEpisodes } from './contentSeries.js';
 import { voteOnPublicPostPoll, getMyPublicPostPollVotes } from './publicPostPolls.js';
@@ -999,9 +999,9 @@ export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', asyn
   const post = event.data?.data();
   if (!post || post.audience !== 'public' || typeof post.userId !== 'string') return;
   const source = [post.content, ...(Array.isArray(post.tags) ? post.tags : [])].filter(value => typeof value === 'string').join(' ');
-  const matches = [...source.matchAll(/#nxchallenge_([A-Za-z0-9_-]{1,150})/g)];
-  for (const match of matches.slice(0, 3)) {
-    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, match[1]); }
+  const challengeIds = extractSocialChallengeIds(source);
+  for (const challengeId of challengeIds) {
+    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, challengeId);
     catch (error) { console.error('[Challenges] Contribution tracking failed.', error); }
   }
 });
