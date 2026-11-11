@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getStudioClipTimelinePosition, normalizeStudioTimelineTime } from '../src/utils/studioTimelinePolicy';
+import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition, normalizeStudioTimelineTime } from '../src/utils/studioTimelinePolicy';
 
 const clips = [
   { id: 'a', start: 2, end: 7 },
@@ -36,4 +36,15 @@ test('shared timeline safely rejects invalid and empty timelines', () => {
   assert.equal(getStudioClipTimelinePosition([], 1), null);
   assert.equal(getStudioClipTimelinePosition(clips, Number.NaN), null);
   assert.equal(getStudioClipTimelinePosition([{ id: 'empty', start: 2, end: 2 }], 0), null);
+});
+
+test('sequential playback advances to the next clip at its trimmed source start', () => {
+  assert.deepEqual(getNextStudioClipTimelinePosition(clips, 'a'), {
+    clipId: 'b', clipIndex: 1, globalTime: 5, localTime: 1, clipOffset: 5,
+  });
+  assert.deepEqual(getNextStudioClipTimelinePosition(clips, 'b'), {
+    clipId: 'c', clipIndex: 2, globalTime: 8, localTime: 0, clipOffset: 8,
+  });
+  assert.equal(getNextStudioClipTimelinePosition(clips, 'c'), null);
+  assert.equal(getNextStudioClipTimelinePosition(clips, 'unknown'), null);
 });
