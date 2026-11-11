@@ -26,7 +26,7 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
   if (!initialPost.exists || initialPost.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
   const initialPoll = initialPost.get('interactivePoll');
   if (!initialPoll || typeof initialPoll.question !== 'string') throw new Error('This post does not contain a valid poll.');
-  const initialOptions = readOptions(initialPoll.options);
+  readOptions(initialPoll.options);
 
   let result: {
     voted: boolean;
