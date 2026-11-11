@@ -2,6 +2,7 @@ import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { buildRemixLineageRecord } from './originLineagePolicy.js';
+import { canRemixOrigin } from './originPermissionPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
 const SAFE_ID = /^[A-Za-z0-9_-]{1,128}$/;
@@ -21,6 +22,7 @@ export const recordMyRemixLineage = onCall({ maxInstances: 20 }, async request =
   const derivativeOriginRef = db.collection('mediaOrigins').doc(derivativeAssetId);
   const eventRef = derivativeOriginRef.collection('events').doc(`derivative_${derivativeAssetId}`);
   const parentRefs = parentAssetIds.map((id: string) => db.collection('mediaOrigins').doc(id));
+  const parentAssetRefs = parentAssetIds.map((id: string) => db.collection('mediaAssets').doc(id));
 
   try {
     return await db.runTransaction(async transaction => {
@@ -48,9 +50,25 @@ export const recordMyRemixLineage = onCall({ maxInstances: 20 }, async request =
         throw new HttpsError('already-exists', 'Conflicting remix lineage is already recorded for this derivative.');
       }
 
+      const parentAssetSnapshots = await Promise.all(parentAssetRefs.map(ref => transaction.get(ref)));
       const parents = parentSnapshots.map(snapshot => snapshot.data());
-      if (parentSnapshots.some((snapshot, index) => !snapshot.exists || parents[index]?.ownerUid !== uid)) {
-        throw new HttpsError('permission-denied', 'Only source assets owned by your account can be linked at this stage.');
+      const parentAssets = parentAssetSnapshots.map(snapshot => snapshot.data());
+      if (parentSnapshots.some((snapshot, index) => !snapshot.exists
+        || !parentAssetSnapshots[index]?.exists
+        || !parents[index]?.ownerUid
+        || parentAssets[index]?.ownerId !== parents[index]?.ownerUid
+        || !['uploaded', 'ready'].includes(String(parentAssets[index]?.status)))) {
+        throw new HttpsError('failed-precondition', 'Every source must be an existing, processed NEXORA media asset.');
+      }
+      const parentPermissionSnapshots = parents.map(parent =>
+        parent?.ownerUid === uid ? 'owner_remix' as const : 'allow_with_attribution' as const,
+      );
+      if (parents.some(parent => !canRemixOrigin({
+        derivativeOwnerUid: uid,
+        sourceOwnerUid: String(parent?.ownerUid ?? ''),
+        sourcePolicy: parent?.remixPolicy,
+      }))) {
+        throw new HttpsError('permission-denied', 'A source creator has not enabled remixing with attribution.');
       }
       const record = buildRemixLineageRecord({
         derivativeAssetId,
@@ -58,6 +76,8 @@ export const recordMyRemixLineage = onCall({ maxInstances: 20 }, async request =
         parentAssetIds,
         parentLineageAncestors: parents.map(parent => Array.isArray(parent?.lineageAncestors) ? parent.lineageAncestors : []),
         parentLineageDepths: parents.map(parent => typeof parent?.lineageDepth === 'number' && Number.isInteger(parent.lineageDepth) ? parent.lineageDepth : 0),
+        parentOwnerUids: parents.map(parent => String(parent?.ownerUid ?? '')),
+        parentPermissionSnapshots,
       });
       transaction.update(derivativeOriginRef, {
         parentAssetIds: record.parentAssetIds,
