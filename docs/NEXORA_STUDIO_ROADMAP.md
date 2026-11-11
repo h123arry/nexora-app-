@@ -55,7 +55,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - [x] User-authored keyframes for text opacity, scale, rotation and vertical offset, with interpolation shared by preview and export.
 - [x] User-authored keyframes for image/sticker position, scale, rotation and opacity, with preview/export interpolation.
 - [x] User-authored video-layer keyframes for position, scale, rotation and opacity, with preview/export interpolation.
-- [x] Cross-dissolve transition composited across adjacent clips in preview and export.
+- [x] Cross-dissolve transition composited across adjacent clips in preview and export, with equal-power outgoing/incoming source-audio blending.
 
 ### Phase 4 · Audio and captions
 - Clip-aligned waveform scrubbing and multi-region voiceover editing.
@@ -96,7 +96,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Voiceover waveform decoding is capped at 30 MB per recording to avoid excessive memory use on mobile devices; larger recordings remain attachable and exportable but do not receive a generated waveform preview.
 - Studio drafts are saved in IndexedDB and backed up to a private, versioned Firestore manifest with source media in a dedicated owner-only Studio Storage path. Concurrent edits are rejected rather than silently overwriting another device. Browser/device acceptance and recovery drills remain required.
 - The shared timeline seeks across video clips and shows independently timed visual/audio lanes. Preview playback now advances sequentially across trimmed clips while soundtrack and voiceover follow the global playhead, with voiceover offsets, soundtrack looping, fade envelopes and music ducking. Device-specific sync acceptance remains outstanding.
-- Fade-through-black and cross-dissolve are separate transition modes; cross-dissolve currently uses a fixed 0.6-second overlap.
+- Fade-through-black and cross-dissolve are separate transition modes; cross-dissolve uses a fixed 0.6-second visual and equal-power audio overlap.
 - The editor supports multiple title layers and a dedicated timed subtitle track. Automatic speech-to-text transcription and continuous synchronized playback across all audio and visual lanes remain future work.
 - Browser export has not been manually verified on every supported mobile browser; CI type-check/build and repository tests do not replace device acceptance testing.
 
