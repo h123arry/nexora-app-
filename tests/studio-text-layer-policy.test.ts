@@ -47,3 +47,37 @@ test('slide and pop animations produce bounded starting frames', () => {
   assert.ok((getStudioTextLayerFrame(pop, 0, 10)?.scale || 0) < 0.6);
   assert.equal(getStudioTextLayerFrame(pop, 1, 10)?.scale, 1);
 });
+
+test('text keyframes normalize, sort, clamp and cap values', () => {
+  const layer = normalizeStudioTextLayer({ text: 'Keyframes', keyframes: [
+    { time: 4, opacity: 2, scale: 3, rotation: 240, offsetY: 1400 },
+    { time: 1, opacity: -1, scale: 0.1, rotation: -240, offsetY: -1400 },
+    { time: 4, opacity: 0.5, scale: 1, rotation: 0, offsetY: 0 },
+  ] }, 'keyframed');
+  assert.deepEqual(layer.keyframes, [
+    { time: 1, opacity: 0, scale: 0.5, rotation: -180, offsetY: -1000 },
+    { time: 4, opacity: 1, scale: 2, rotation: 180, offsetY: 1000 },
+  ]);
+});
+
+test('user-authored text keyframes interpolate opacity, scale, rotation and vertical position', () => {
+  const layer = normalizeStudioTextLayer({ text: 'Motion', keyframes: [
+    { time: 2, opacity: 0, scale: 0.5, rotation: -20, offsetY: 40 },
+    { time: 6, opacity: 1, scale: 1.5, rotation: 20, offsetY: -40 },
+  ] }, 'motion');
+  assert.deepEqual(getStudioTextLayerFrame(layer, 4, 10), {
+    opacity: 0.5, scale: 1, rotation: 0, offsetY: 0,
+  });
+  assert.deepEqual(getStudioTextLayerFrame(layer, 8, 10), {
+    opacity: 1, scale: 1.5, rotation: 20, offsetY: -40,
+  });
+});
+
+test('keyframes compose with existing entrance animation and stay inside layer timing', () => {
+  const layer = normalizeStudioTextLayer({ text: 'Layer', start: 2, end: 8, animation: 'fade', animationDuration: 2, keyframes: [
+    { time: 2, opacity: 1, scale: 1, rotation: 0, offsetY: 0 },
+    { time: 6, opacity: 0.5, scale: 1.2, rotation: 10, offsetY: 12 },
+  ] }, 'combined');
+  assert.equal(getStudioTextLayerFrame(layer, 1, 10), null);
+  assert.equal(getStudioTextLayerFrame(layer, 3, 10)?.opacity, 0.4375);
+});
