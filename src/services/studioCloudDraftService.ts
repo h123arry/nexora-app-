@@ -52,7 +52,7 @@ async function encodeValue(
     const encoded: Record<string, Encoded> = {};
     for (const [key, item] of Object.entries(value as Record<string, unknown>)) {
       if (item !== undefined && typeof item !== 'function') {
-        encoded[key] = await encodeValue(item, userId, assets, progress, signal);
+        encoded[key] = await encodeValue(item, userId, assets, progress, createdAssets, signal);
       }
     }
     return encoded;
