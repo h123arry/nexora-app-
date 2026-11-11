@@ -508,21 +508,40 @@ export default function MediaCreationEngine({
   // Camera preview management
   useEffect(() => {
     let currentStream: MediaStream | null = null;
+    let cancelled = false;
     if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2) {
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing }, audio: true })
-        .then(stream => {
-          currentStream = stream;
-          videoStreamRef.current = stream;
-          if (videoPreviewRef.current) {
-            videoPreviewRef.current.srcObject = stream;
-          }
-        })
-        .catch(err => console.error("Camera error: ", err));
+      if (!navigator.mediaDevices?.getUserMedia) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera recording is not supported by this browser. Please upload a video instead.' }));
+      } else {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: true })
+          .then(stream => {
+            if (cancelled) {
+              stream.getTracks().forEach(track => track.stop());
+              return;
+            }
+            currentStream = stream;
+            videoStreamRef.current = stream;
+            if (videoPreviewRef.current) {
+              videoPreviewRef.current.srcObject = stream;
+              void videoPreviewRef.current.play().catch(() => {
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Check browser camera permissions and try again.' }));
+              });
+            }
+          })
+          .catch(error => {
+            const message = error instanceof Error && error.name === 'NotAllowedError'
+              ? 'Camera or microphone access was denied. Allow access in browser settings and try again.'
+              : error instanceof Error && error.name === 'NotFoundError'
+                ? 'No camera or microphone was found on this device.'
+                : 'Could not start the camera. Please retry or upload a video.';
+            window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+          });
+      }
     }
     return () => {
-      if (currentStream) {
-        currentStream.getTracks().forEach(track => track.stop());
-      }
+      cancelled = true;
+      if (currentStream) currentStream.getTracks().forEach(track => track.stop());
+      if (videoStreamRef.current === currentStream) videoStreamRef.current = null;
     };
   }, [activeMode, permissionState, cameraFacing, currentStep]);
 
@@ -708,36 +727,62 @@ export default function MediaCreationEngine({
 
   const startReelRecording = () => {
     requestPermission('camera', () => {
+      if (!videoStreamRef.current || !videoStreamRef.current.getVideoTracks().some(track => track.readyState === 'live')) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try recording again.' }));
+        return;
+      }
+      if (typeof MediaRecorder === 'undefined') {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording is not supported by this browser. You can upload a video instead.' }));
+        return;
+      }
       setCountdownTimer(3);
-      const counter = setInterval(() => {
+      const counter = window.setInterval(() => {
         setCountdownTimer(prev => {
           if (prev !== null && prev <= 1) {
-            clearInterval(counter);
-            setIsRecording(true);
-            setIsRecordingPaused(false);
-            setLoopTimerSecs(0);
-            setRecordedVideoUrl(null);
-            
-            if (videoStreamRef.current) {
-              try {
-                videoChunksRef.current = [];
-                const recorder = new MediaRecorder(videoStreamRef.current);
-                mediaRecorderVideoRef.current = recorder;
-                recorder.ondataavailable = (event) => {
-                  if (event.data.size > 0) videoChunksRef.current.push(event.data);
-                };
-                recorder.onstop = () => {
-                  const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
-                  setRecordedVideoUrl(previous => {
-                    revokeTrackedObjectUrl(previous);
-                    return trackObjectUrl(URL.createObjectURL(blob));
-                  });
-                  setVideoRawBlob(blob);
-                };
-                recorder.start();
-              } catch (e) {
-                console.error(e);
+            window.clearInterval(counter);
+            try {
+              const stream = videoStreamRef.current;
+              if (!stream || !stream.getVideoTracks().some(track => track.readyState === 'live')) {
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera disconnected before recording started. Please retry.' }));
+                return null;
               }
+              const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+              const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+              videoChunksRef.current = [];
+              mediaRecorderVideoRef.current = recorder;
+              recorder.ondataavailable = event => {
+                if (event.data.size > 0) videoChunksRef.current.push(event.data);
+              };
+              recorder.onerror = () => {
+                setIsRecording(false);
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording failed. Check available storage and camera permissions, then retry.' }));
+              };
+              recorder.onstop = () => {
+                const chunks = videoChunksRef.current;
+                const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'video/webm' });
+                if (!blob.size) {
+                  window.dispatchEvent(new CustomEvent('toast', { detail: 'No video data was captured. Please try recording again.' }));
+                  return;
+                }
+                const nextUrl = trackObjectUrl(URL.createObjectURL(blob));
+                setRecordedVideoUrl(previous => {
+                  revokeTrackedObjectUrl(previous);
+                  return nextUrl;
+                });
+                setVideoRawBlob(blob);
+                window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording saved to your composer.' }));
+              };
+              recorder.start(250);
+              setIsRecording(true);
+              setIsRecordingPaused(false);
+              setLoopTimerSecs(0);
+              setRecordedVideoUrl(previous => {
+                revokeTrackedObjectUrl(previous);
+                return null;
+              });
+            } catch (error) {
+              setIsRecording(false);
+              window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not start video recording. Please retry.' }));
             }
             return null;
           }
@@ -750,17 +795,17 @@ export default function MediaCreationEngine({
   const handleStopReelRecord = () => {
     setIsRecording(false);
     setIsRecordingPaused(false);
-    if (mediaRecorderVideoRef.current && mediaRecorderVideoRef.current.state !== 'inactive') {
+    const recorder = mediaRecorderVideoRef.current;
+    if (recorder && recorder.state !== 'inactive') {
       try {
-        mediaRecorderVideoRef.current.stop();
-      } catch (e) {
-        console.error(e);
+        recorder.stop();
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Saving video recording…' }));
+      } catch {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not finish the video recording. Please retry.' }));
       }
     } else {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'No video was recorded. Check camera permission and try again.' }));
-      return;
     }
-    window.dispatchEvent(new CustomEvent('toast', { detail: 'Saving video recording…' }));
   };
 
   const startVoiceRecording = () => {
@@ -851,7 +896,7 @@ export default function MediaCreationEngine({
     setLoadingTranscript(true);
   };
 
-  // AI assistant simulation
+  // AI writing assistance only changes the caption when the authenticated service returns a real result.
   const handleAiWritingAssistance = async (promptType: string) => {
     setLoadingTranscript(true);
     window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Nexora is polishing writing...' }));
@@ -859,27 +904,17 @@ export default function MediaCreationEngine({
       const response = await authenticatedVohFetch('/api/voh-ai/improve-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: caption || "Drafting system setup instructions.", action: promptType })
+        body: JSON.stringify({ content: caption, action: promptType })
       });
-      if (response.ok) {
-        const data = await response.json();
-        if (data.improved) {
-          setCaption(data.improved);
-          window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption optimized by AI!' }));
-        }
-      } else {
-        throw new Error();
+      if (!response.ok) throw new Error('AI writing assistance is unavailable right now.');
+      const data = await response.json();
+      if (typeof data.improved !== 'string' || !data.improved.trim()) {
+        throw new Error('AI did not return an improved caption. Your original text has been kept.');
       }
-    } catch (e) {
-      const mockCaptions: Record<string, string> = {
-        rewrite: `🚀 streamlined content creation engine in Nexora. Accelerating creator capability! #nexora #innovation`,
-        shorten: `Accelerating creative workflows on Nexora. ⚡`,
-        expand: `Absolutely thrilled to announce the rollout of Content Studio on Nexora. Designed for supreme responsiveness, we are cutting friction for modern creators. Check out the custom filters and multi-step publisher. #systemsdesign`,
-        tags: `${caption} #developer #creativehub #nextgen #futureReady`,
-        translate: `Studio de création de contenu Nexora. Publier des médias en toute fluidité. 🚀`
-      };
-      setCaption(mockCaptions[promptType] || caption);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption enhanced!' }));
+      setCaption(data.improved);
+      window.dispatchEvent(new CustomEvent('toast', { detail: '✨ Caption optimized by AI!' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'AI writing assistance is unavailable right now. Your original caption has been kept.' }));
     } finally {
       setLoadingTranscript(false);
     }
