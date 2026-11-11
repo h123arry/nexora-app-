@@ -1548,7 +1548,8 @@ const publicProfile = (uid) => ({
       updatedAt: serverTimestamp()
     }));
     await assertSucceeds(deleteDoc(aliceDraft));
-    await assertFails(getDoc(aliceDraft));
+    const deletedDraft = await assertSucceeds(getDoc(aliceDraft));
+    assert.equal(deletedDraft.exists(), false);
   });
 
   it('keeps universal search projections inaccessible to every client context', async () => {
