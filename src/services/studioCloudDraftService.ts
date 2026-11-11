@@ -2,6 +2,7 @@ import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore
 import { getBytes, ref } from 'firebase/storage';
 import { auth, db, storage } from './firebase/config';
 import { deleteMediaFile, uploadMediaFile } from './firebase/storageService';
+import { isStudioCloudAssetPathOwnedByUser, isStudioCloudRevisionCurrent } from '../utils/studioCloudDraftPolicy';
 
 type CloudAsset = { storagePath: string; contentType: string; size: number };
 type Encoded = null | string | number | boolean | Encoded[] | { [key: string]: Encoded };
@@ -97,7 +98,7 @@ async function decodeValue(value: Encoded, assets: Record<string, CloudAsset>, u
     const assetId = (value as Record<string, Encoded>).$studioAsset;
     if (typeof assetId === 'string') {
       const asset = assets[assetId];
-      if (!asset || !asset.storagePath.startsWith(`users/${userId}/media/`)) {
+      if (!asset || !isStudioCloudAssetPathOwnedByUser(asset.storagePath, userId)) {
         throw new Error('A Studio draft media asset is missing or does not belong to this account.');
       }
       if (!storage) throw new Error('Cloud media storage is unavailable.');
@@ -139,7 +140,7 @@ export async function saveStudioCloudDraft<T>(
   const draftRef = doc(db!, 'studioCloudDrafts', userId);
   const before = await getDoc(draftRef);
   const currentRevision = before.exists() && Number.isInteger(before.data().revision) ? before.data().revision : 0;
-  if (currentRevision !== expectedRevision) {
+  if (!isStudioCloudRevisionCurrent(expectedRevision, currentRevision)) {
     throw new Error('This Studio draft changed on another device. Reload the cloud version before syncing to avoid overwriting those edits.');
   }
   const oldManifest = before.exists() ? before.data().manifest as CloudManifest | undefined : undefined;
@@ -153,19 +154,19 @@ export async function saveStudioCloudDraft<T>(
   collectBytes(project);
   const progressByAsset = new Map<string, number>();
   const createdAssets: Array<{ blob: Blob; asset: CloudAsset }> = [];
-  const encoded = await encodeValue(project, userId, assets, (assetId, bytes) => {
-    progressByAsset.set(assetId, bytes);
-    const uploadedBytes = [...progressByAsset.values()].reduce((sum, value) => sum + value, 0);
-    onProgress?.(totalBytes ? Math.min(99, Math.round(uploadedBytes / totalBytes * 100)) : 99);
-  }, createdAssets, signal);
-  const manifest: CloudManifest = { schemaVersion: 1, project: encoded, assets };
   const nextRevision = expectedRevision + 1;
   try {
+    const encoded = await encodeValue(project, userId, assets, (assetId, bytes) => {
+      progressByAsset.set(assetId, bytes);
+      const uploadedBytes = [...progressByAsset.values()].reduce((sum, value) => sum + value, 0);
+      onProgress?.(totalBytes ? Math.min(99, Math.round(uploadedBytes / totalBytes * 100)) : 99);
+    }, createdAssets, signal);
+    const manifest: CloudManifest = { schemaVersion: 1, project: encoded, assets };
     if (signal?.aborted) throw new DOMException('Cloud draft sync cancelled.', 'AbortError');
     await runTransaction(db!, async transaction => {
       const latest = await transaction.get(draftRef);
       const latestRevision = latest.exists() && Number.isInteger(latest.data().revision) ? latest.data().revision : 0;
-      if (latestRevision !== expectedRevision) {
+      if (!isStudioCloudRevisionCurrent(expectedRevision, latestRevision)) {
         throw new Error('This Studio draft changed on another device. Reload the cloud version before syncing to avoid overwriting those edits.');
       }
       transaction.set(draftRef, {
