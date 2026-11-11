@@ -369,7 +369,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [customContrast, setCustomContrast] = useState(100);
   const [customSaturation, setCustomSaturation] = useState(100);
   const [customHue, setCustomHue] = useState(0);
-  const [isSubmittingCreatorLens, setIsSubmittingCreatorLens] = useState(false);\n  const [communityLenses, setCommunityLenses] = useState<NexoraLens[]>([]);\n  const [customLenses, setCustomLenses] = useState<NexoraLens[]>(() => {
+  const [isSubmittingCreatorLens, setIsSubmittingCreatorLens] = useState(false);
+  const [communityLenses, setCommunityLenses] = useState<NexoraLens[]>([]);\n  const [customLenses, setCustomLenses] = useState<NexoraLens[]>(() => {
     try {
       const parsed: unknown = JSON.parse(localStorage.getItem(`nexora_custom_lenses_${userId}`) || '[]');
       return Array.isArray(parsed) ? parsed.filter((item): item is NexoraLens =>
