@@ -23,6 +23,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Source clip audio and optional soundtrack mixed through Web Audio when supported.
 - Multiple independently timed text layers with separate colour, placement, font size, opacity, scale and rotation; edits are previewed and baked into export.
 - Creator-imported PNG, JPEG and WebP image layers with independent timing, position, scale, rotation and opacity; layers are included in preview and export.
+- Independently timed subtitle segments with a separate track from the post caption, live preview, local autosave, undo/redo and burned-in export.
 - On-screen post caption.
 - Per-account IndexedDB project autosave.
 - Export upload through the authenticated Firebase media service and post creation through the existing NEXORA post path.
