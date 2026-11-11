@@ -19,6 +19,7 @@ test('Studio MP4 delivery is restricted to the owning account and tagged tempora
   assert.equal(isOwnedStudioExportAsset(asset, 'bob', 'export-1'), false);
   assert.equal(isOwnedStudioExportAsset({ ...asset, sourcePurpose: 'post-upload' }, 'alice', 'export-1'), false);
   assert.equal(isOwnedStudioExportAsset({ ...asset, storagePath: 'users/bob/media/export-1' }, 'alice', 'export-1'), false);
+  assert.equal(isOwnedStudioExportAsset({ ownerId: 'alice', purpose: 'studio-export', storagePath: 'users/alice/media/export-1' }, 'alice', 'export-1'), true);
 });
 
 test('MP4 delivery selects the highest server-generated rendition available', () => {
@@ -35,4 +36,5 @@ test('temporary export cleanup waits until expiry and never deletes active proce
   assert.equal(isStudioExportExpired(asset, 1000), true);
   assert.equal(isStudioExportExpired({ ...asset, status: 'processing' }, 5000), false);
   assert.equal(isStudioExportExpired({ ...asset, studioExportExpiresAt: null }, 5000), false);
+  assert.equal(isStudioExportExpired({ ...asset, studioExportExpiresAt: undefined, createdAt: { toMillis: () => 100 } }, 24 * 60 * 60 * 1000 + 100), true);
 });
