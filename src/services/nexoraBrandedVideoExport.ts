@@ -76,12 +76,15 @@ export async function exportNexoraBrandedVideo(
     const sourceAudio = audioContext.createMediaElementSource(video);
     const audioOutput = audioContext.createMediaStreamDestination();
     sourceAudio.connect(audioOutput);
-    let sonicBuffer: AudioBuffer | null = null;
+    // Audio is part of the NEXORA outro identity, so do not silently export
+    // a silent closing card when the official sonic signature is unavailable.
+    const sonicResponse = await fetch('/sounds/nexora-sonic-logo.mp3');
+    if (!sonicResponse.ok) throw new Error('The NEXORA sonic signature could not be loaded. Branded export was stopped.');
+    let sonicBuffer: AudioBuffer;
     try {
-      const sonicResponse = await fetch('/sounds/nexora-sonic-logo.mp3');
-      if (sonicResponse.ok) sonicBuffer = await audioContext.decodeAudioData(await sonicResponse.arrayBuffer());
+      sonicBuffer = await audioContext.decodeAudioData(await sonicResponse.arrayBuffer());
     } catch {
-      // The permanent visual watermark remains mandatory if the optional sonic tag is unavailable.
+      throw new Error('The NEXORA sonic signature could not be decoded. Branded export was stopped.');
     }
 
     const canvasStream = canvas.captureStream(30);
@@ -165,7 +168,7 @@ export async function exportNexoraBrandedVideo(
     // then a short NEXORA end card is rendered into the same exported file.
     cancelAnimationFrame(frameRequest);
     onProgress?.(94);
-    const outroDurationMs = Math.max(2400, sonicBuffer ? sonicBuffer.duration * 1000 : 0);
+    const outroDurationMs = Math.max(2400, sonicBuffer.duration * 1000);
     const outroStartedAt = performance.now();
     const drawOutroFrame = (now: number) => {
       const elapsed = Math.min(1, (now - outroStartedAt) / outroDurationMs);
@@ -208,7 +211,7 @@ export async function exportNexoraBrandedVideo(
       context.fillText("THE WORLD'S LIVING SOCIAL NETWORK", centerX, h * 0.81, w * 0.88);
       context.restore();
     };
-    if (sonicBuffer) {
+    {
       const sonicSource = audioContext!.createBufferSource();
       sonicSource.buffer = sonicBuffer;
       sonicSource.connect(audioOutput);
