@@ -966,7 +966,6 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                 </button>
 
                 {PHONE_AUTH_ENABLED && (
-                  {/* Phone Auth Option */}
                   <button
                     type="button"
                     onClick={() => {
@@ -1028,8 +1027,8 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                     >
                       <Smartphone className="w-5 h-5 text-violet-400 shrink-0" />
                       <span>Continue with Phone</span>
-                    </button
-                  )}>
+                    </button>
+                  )}
 
                   <button
                     type="button"
