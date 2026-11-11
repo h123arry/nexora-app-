@@ -17,9 +17,14 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const functions = getFunctions(app, 'us-central1');
 
-const appCheckSiteKey = (globalThis as typeof globalThis & {
-  __NEXORA_APPCHECK_SITE_KEY__?: string;
-}).__NEXORA_APPCHECK_SITE_KEY__;
+const appCheckSiteKey = viteEnv.VITE_FIREBASE_APPCHECK_SITE_KEY?.trim()
+  || (globalThis as typeof globalThis & { __NEXORA_APPCHECK_SITE_KEY__?: string }).__NEXORA_APPCHECK_SITE_KEY__?.trim()
+  || '';
+
+if (firebaseEnvironment.environment === 'staging' && !appCheckSiteKey) {
+  throw new Error('Staging requires VITE_FIREBASE_APPCHECK_SITE_KEY before the app can initialize.');
+}
+
 export const appCheck: AppCheck | null = !firebaseEnvironment.useEmulators && appCheckSiteKey
   ? initializeAppCheck(app, {
       provider: new ReCaptchaEnterpriseProvider(appCheckSiteKey),

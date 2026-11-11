@@ -16,6 +16,7 @@ const requiredNames = [
   'VITE_FIREBASE_DATABASE_ID',
   'VITE_FIREBASE_STORAGE_BUCKET',
   'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APPCHECK_SITE_KEY',
 ];
 const validConfig = {
   NEXORA_ENV: 'staging',
@@ -30,6 +31,7 @@ const validConfig = {
   VITE_FIREBASE_DATABASE_ID: 'staging-db',
   VITE_FIREBASE_STORAGE_BUCKET: 'nexora-staging-example.appspot.com',
   VITE_FIREBASE_MESSAGING_SENDER_ID: '123456',
+  VITE_FIREBASE_APPCHECK_SITE_KEY: 'staging-recaptcha-enterprise-site-key',
 };
 
 function runValidator(overrides = {}) {
@@ -53,13 +55,20 @@ test('accepts a complete, isolated non-production staging configuration', () => 
   const output = JSON.parse(result.stdout);
   assert.equal(output.status, 'valid');
   assert.equal(output.projectId, validConfig.NEXORA_STAGING_PROJECT_ID);
-  assert.match(output.note, /does not prove Firebase access or deployment/);
+  assert.equal(output.appCheckSiteKeyConfigured, true);
+  assert.match(output.note, /does not prove Firebase access, deployed rules\/Functions, or Console-side App Check enforcement/);
 });
 
 test('rejects missing required staging values', () => {
   const result = runValidator({ NEXORA_STAGING_PROJECT_ID: '' });
   assert.notEqual(result.status, 0);
   assert.match(result.stderr, /Missing staging configuration: NEXORA_STAGING_PROJECT_ID/);
+});
+
+test('rejects staging configuration without the App Check site key', () => {
+  const result = runValidator({ VITE_FIREBASE_APPCHECK_SITE_KEY: '' });
+  assert.notEqual(result.status, 0);
+  assert.match(result.stderr, /Missing staging configuration: VITE_FIREBASE_APPCHECK_SITE_KEY/);
 });
 
 test('rejects a non-staging runtime mode', () => {
