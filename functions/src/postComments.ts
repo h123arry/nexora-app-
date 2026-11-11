@@ -43,7 +43,10 @@ export async function addPublicPostComment(
     const currentCountValue = post.get('commentsCount');
     const currentCount = Number.isSafeInteger(currentCountValue) && currentCountValue >= 0
       ? currentCountValue as number : comments.length;
-    if (existing) return { comment: existing as PublicPostComment, created: false, commentsCount: currentCount };
+    if (existing) {
+      if (existing.userId !== uid) throw new Error('This comment ID is already in use.');
+      return { comment: existing as PublicPostComment, created: false, commentsCount: currentCount };
+    }
     if (comments.length >= 1000) throw new Error('This post has reached its comment limit.');
 
     const actor = await transaction.get(actorRef);
@@ -70,7 +73,7 @@ export async function addPublicPostComment(
 
     if (recipientProfile?.exists && authorId && authorId !== uid) {
       const notification = buildCommentNotification({
-        eventId: commentId, commentId, postId, actorId: uid, recipientId: authorId,
+        eventId: `${postId}:${commentId}`, commentId, postId, actorId: uid, recipientId: authorId,
         username: comment.username, avatar: comment.avatar, content, timestamp,
       });
       if (notification) {
