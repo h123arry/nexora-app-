@@ -107,8 +107,8 @@ export function getStudioTextLayerFrame(layer: StudioTextLayer, elapsed: number,
   else if (layer.animation === 'pop') base = { ...base, opacity: layer.opacity * Math.min(entrance, exit), scale: layer.scale * (0.55 + 0.45 * easeOutBack(entrance)) * (0.9 + 0.1 * exit) };
   const keyframe = interpolateKeyframes(layer.keyframes || [], safeElapsed);
   return keyframe ? {
-    opacity: keyframe.opacity,
-    scale: keyframe.scale,
+    opacity: keyframe.opacity * (layer.animation === 'none' ? 1 : Math.min(entrance, exit)),
+    scale: keyframe.scale * (layer.scale > 0 ? base.scale / layer.scale : 1),
     rotation: keyframe.rotation,
     offsetY: base.offsetY + keyframe.offsetY,
   } : base;
