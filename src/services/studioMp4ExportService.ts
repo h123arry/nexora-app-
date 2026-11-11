@@ -9,6 +9,8 @@ type Mp4UrlResponse = {
   expiresAt?: number;
 };
 
+export type StudioMp4Download = { downloadUrl: string; renditionHeight: number; expiresAt: number };
+
 function wait(milliseconds: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
     if (signal?.aborted) {
@@ -33,7 +35,7 @@ export async function createStudioMp4Export(
   userId: string,
   onProgress?: (progress: number) => void,
   signal?: AbortSignal,
-): Promise<Blob> {
+): Promise<StudioMp4Download> {
   if (!source.size || !source.type.toLowerCase().startsWith('video/')) {
     throw new Error('Export a valid Studio video before preparing its MP4 version.');
   }
@@ -48,24 +50,17 @@ export async function createStudioMp4Export(
     onProgress: progress => onProgress?.(Math.round(progress * 0.4)),
   });
   const getUrl = httpsCallable<{ mediaAssetId: string }, Mp4UrlResponse>(functions, 'getStudioExportMp4Url');
-  const cleanup = httpsCallable<{ mediaAssetId: string }, { cleaned: boolean }>(functions, 'cleanupStudioExportAsset');
   const maxAttempts = 300;
   for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
     if (signal?.aborted) throw new DOMException('MP4 export cancelled.', 'AbortError');
     const result = (await getUrl({ mediaAssetId: uploaded.mediaId })).data;
     if (result.ready && result.downloadUrl) {
-      onProgress?.(92);
-      const response = await fetch(result.downloadUrl, { signal, cache: 'no-store' });
-      if (!response.ok) throw new Error('The prepared MP4 could not be downloaded. Try preparing it again.');
-      const contentType = (response.headers.get('content-type') || '').toLowerCase();
-      const mp4 = await response.blob();
-      if (!mp4.size || (!contentType.startsWith('video/mp4') && !mp4.type.toLowerCase().startsWith('video/mp4'))) {
-        throw new Error('The server returned an invalid MP4 export. Your original Studio video remains available.');
-      }
-      onProgress?.(98);
-      await cleanup({ mediaAssetId: uploaded.mediaId }).catch(() => undefined);
       onProgress?.(100);
-      return mp4;
+      return {
+        downloadUrl: result.downloadUrl,
+        renditionHeight: result.renditionHeight || 0,
+        expiresAt: result.expiresAt || Date.now() + 15 * 60 * 1000,
+      };
     }
     onProgress?.(40 + Math.round((attempt / maxAttempts) * 48));
     await wait(2_000, signal);
