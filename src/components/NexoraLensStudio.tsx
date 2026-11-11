@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { NEXORA_LENS_CATALOG, NEXORA_LENS_CATEGORIES, type NexoraLens } from '../services/nexoraLensCatalog';
 import { readNexoraFaceExpressions, getNexoraExpressionMotion } from '../services/nexoraLensExpressions';
+import { getNexoraSceneEffectProfile, getNexoraSceneParticles } from '../services/nexoraLensSceneEffects';
 import { listMyCreatorLenses, listPublishedCreatorLenses, saveCreatorLens as saveCreatorLensCloud, submitCreatorLensForReview } from '../services/creatorLensService';
 import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search } from 'lucide-react';
 
@@ -579,6 +580,49 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             } else {
               drawLens(context, latestLandmarks, lens, canvas.width, canvas.height, now);
             }
+          }
+          const sceneProfile = getNexoraSceneEffectProfile(lens.category);
+          if (sceneProfile && effectIntensityRef.current > 0) {
+            const particles = getNexoraSceneParticles(canvas.width, canvas.height, now, sceneProfile);
+            context.save();
+            context.globalAlpha = sceneProfile.opacity * (effectIntensityRef.current / 100);
+            if (sceneProfile.mode === 'aurora') {
+              const glow = context.createLinearGradient(0, canvas.height * 0.08, canvas.width, canvas.height * 0.72);
+              glow.addColorStop(0, 'rgba(113,56,255,0)');
+              glow.addColorStop(0.48, 'rgba(138,63,252,.22)');
+              glow.addColorStop(1, 'rgba(75,16,242,0)');
+              context.fillStyle = glow;
+              context.fillRect(0, 0, canvas.width, canvas.height);
+            } else if (sceneProfile.mode === 'film') {
+              context.fillStyle = 'rgba(20,12,5,.12)';
+              context.fillRect(0, 0, canvas.width, canvas.height);
+              context.strokeStyle = 'rgba(245,231,205,.16)';
+              context.lineWidth = 1;
+              for (let y = 0; y < canvas.height; y += 7) {
+                context.beginPath(); context.moveTo(0, y); context.lineTo(canvas.width, y); context.stroke();
+              }
+            }
+            particles.forEach((particle, index) => {
+              const color = sceneProfile.palette[index % sceneProfile.palette.length];
+              context.save();
+              context.globalAlpha *= particle.alpha;
+              context.translate(particle.x, particle.y);
+              context.rotate(particle.rotation);
+              context.fillStyle = color;
+              if (sceneProfile.mode === 'petals') {
+                context.beginPath();
+                context.ellipse(0, 0, particle.radius * 0.7, particle.radius * 1.65, 0, 0, Math.PI * 2);
+                context.fill();
+              } else if (sceneProfile.mode === 'confetti') {
+                context.fillRect(-particle.radius, -particle.radius * 0.55, particle.radius * 2, particle.radius * 1.1);
+              } else {
+                context.beginPath();
+                context.arc(0, 0, particle.radius * (sceneProfile.mode === 'film' ? 0.35 : 0.55), 0, Math.PI * 2);
+                context.fill();
+              }
+              context.restore();
+            });
+            context.restore();
           }
           context.restore();
           animationFrame = requestAnimationFrame(render);
