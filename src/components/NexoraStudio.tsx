@@ -9,6 +9,8 @@ import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
 import { getStudioExportDimensions, getStudioExpectedExportDuration, type StudioExportResolution } from '../utils/studioExportPolicy';
 import { getStudioExportValidationError } from '../utils/studioExportValidationPolicy';
+import { isStudioCloudDraftNewer } from '../utils/studioCloudDraftPolicy';
+import { loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
 import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
@@ -129,6 +131,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [cloudStatus, setCloudStatus] = useState('Checking cloud backup…');
+  const [cloudProgress, setCloudProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [ready, setReady] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -142,6 +146,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const projectUrls = useRef<string[]>([]);
   const voiceoverRecorderRef = useRef<MediaRecorder | null>(null);
   const publishAbortRef = useRef<AbortController | null>(null);
+  const cloudRevisionRef = useRef(0);
+  const latestCloudProjectRef = useRef<StudioProject | null>(null);
+  const cloudSyncInFlightRef = useRef(false);
+  const cloudSyncPendingRef = useRef(false);
+  const cloudSyncAbortRef = useRef<AbortController | null>(null);
   const voiceoverStreamRef = useRef<MediaStream | null>(null);
   const voiceoverChunksRef = useRef<Blob[]>([]);
   const draggedClipIdRef = useRef<string | null>(null);
@@ -171,11 +180,68 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   }, [clips]);
   const snapshot = useMemo<StudioSnapshot>(() => ({ clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition }), [clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition]);
 
+  const requestCloudSync = useCallback(async () => {
+    if (!latestCloudProjectRef.current?.clips.length) return;
+    if (cloudSyncInFlightRef.current) {
+      cloudSyncPendingRef.current = true;
+      return;
+    }
+    cloudSyncInFlightRef.current = true;
+    const controller = new AbortController();
+    cloudSyncAbortRef.current = controller;
+    setCloudStatus('Syncing cloud backup…');
+    try {
+      const result = await saveStudioCloudDraft(
+        currentUser.id,
+        latestCloudProjectRef.current,
+        cloudRevisionRef.current,
+        setCloudProgress,
+        controller.signal,
+      );
+      cloudRevisionRef.current = result.revision;
+      setCloudStatus('Cloud backup synced');
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : 'Cloud backup pending. Your on-device draft is safe.');
+    } finally {
+      if (cloudSyncAbortRef.current === controller) cloudSyncAbortRef.current = null;
+      cloudSyncInFlightRef.current = false;
+      setCloudProgress(0);
+      if (cloudSyncPendingRef.current) {
+        cloudSyncPendingRef.current = false;
+        void requestCloudSync();
+      }
+    }
+  }, [currentUser.id]);
+
   useEffect(() => {
     let active = true;
     const projectKey = `active-project-v1:${currentUser.id}`;
-    loadProject(projectKey).then(project => {
-      if (!active || !project) return;
+    Promise.all([
+      loadProject(projectKey),
+      loadStudioCloudDraft<StudioProject>(currentUser.id).catch(error => {
+        if (active) setCloudStatus(error instanceof Error ? 'Cloud backup unavailable. Your on-device draft is still available.' : 'Cloud backup unavailable.');
+        return null;
+      }),
+    ]).then(async ([localProject, cloudDraft]) => {
+      if (!active) return;
+      cloudRevisionRef.current = cloudDraft?.revision || 0;
+      const useCloudProject = Boolean(cloudDraft && (
+        !localProject || isStudioCloudDraftNewer(localProject.updatedAt, cloudDraft.updatedAt)
+      ));
+      const project = useCloudProject ? cloudDraft!.project : localProject;
+      if (useCloudProject && project) {
+        await saveProject(project, projectKey).catch(() => undefined);
+        setCloudStatus('Restored the latest cloud backup');
+      } else if (localProject && cloudDraft && localProject.updatedAt > cloudDraft.updatedAt) {
+        setCloudStatus('Newer on-device edits found · syncing cloud backup');
+      } else if (cloudDraft) {
+        setCloudStatus('Cloud backup synced');
+      } else if (localProject) {
+        setCloudStatus('On-device draft found · creating cloud backup');
+      } else {
+        setCloudStatus('Cloud backup will start after your first video is added');
+      }
+      if (!project) return;
       setClips((project.clips || []).map(clip => normalizeStudioVideoLayer({ ...clip, volume: typeof clip.volume === 'number' ? clip.volume : 1 })));
       setSelectedId(project.clips?.[0]?.id || null);
       setSoundtrack(project.soundtrack || null);
@@ -224,6 +290,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     return () => {
       active = false;
       publishAbortRef.current?.abort();
+      cloudSyncAbortRef.current?.abort();
       projectUrls.current.forEach(URL.revokeObjectURL);
       const recorder = voiceoverRecorderRef.current;
       if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
@@ -235,12 +302,26 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     if (!ready) return;
     setExportBlob(null);
     const timer = window.setTimeout(() => {
-      void saveProject({ clips, soundtrack, voiceover, caption, overlay: textLayers[0]?.text || '', overlayColor: textLayers[0]?.color || '#FFFFFF', textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart: textLayers[0]?.start || 0, overlayEnd: textLayers[0]?.end || 0, overlayPosition: textLayers[0]?.position || 'bottom', updatedAt: Date.now() }, `active-project-v1:${currentUser.id}`)
-        .then(() => setMessage('Draft saved on this device'))
+      const project: StudioProject = {
+        clips, soundtrack, voiceover, caption, overlay: textLayers[0]?.text || '',
+        overlayColor: textLayers[0]?.color || '#FFFFFF', textLayers, selectedTextLayerId,
+        imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId,
+        aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut,
+        duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn,
+        voiceoverFadeOut, voiceoverStart, overlayStart: textLayers[0]?.start || 0,
+        overlayEnd: textLayers[0]?.end || 0, overlayPosition: textLayers[0]?.position || 'bottom',
+        updatedAt: Date.now(),
+      };
+      latestCloudProjectRef.current = project;
+      void saveProject(project, `active-project-v1:${currentUser.id}`)
+        .then(() => {
+          setMessage('Draft saved on this device');
+          if (clips.length) void requestCloudSync();
+        })
         .catch(() => setMessage('This draft could not be saved on this device.'));
-    }, 500);
+    }, 650);
     return () => window.clearTimeout(timer);
-  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
+  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id, requestCloudSync]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1097,7 +1178,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <p className="text-[9px] text-[#827B9C]">Subtitles are separate from your post caption. Up to 30 timed segments are saved in your Studio draft and burned into export.</p>
             </div>
             <div className="space-y-2"><label className="block text-xs font-bold">Post caption</label><textarea value={caption} onChange={event=>setCaption(event.target.value.slice(0,500))} maxLength={500} rows={3} placeholder="Write a caption for your finished video…" className="w-full resize-y rounded-xl border border-[#34265E] bg-[#100C20] p-3 text-xs text-white outline-none focus:border-violet-400"/><div className="text-right text-[10px] text-[#827B9C]">{caption.length}/500</div></div>
-            <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing ? 'Uploading · ' + uploadProgress + '%' : <><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button>{publishing && <div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-3"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: uploadProgress + '%'}}/></div><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-[#A39BBF]">Resumable upload · {uploadProgress}%</span><button type="button" onClick={cancelPublish} className="font-semibold text-rose-300">Cancel upload</button></div></div>}<p className="text-center text-[9px] text-[#827B9C]">Failed uploads can be retried without rendering again.</p></div>
+            <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><div className="flex items-center justify-between gap-2 rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2"><span className="min-w-0 text-[9px] text-[#AFA5D0]">{cloudStatus}{cloudProgress > 0 && cloudProgress < 100 ? ' · ' + cloudProgress + '%' : ''}</span><button type="button" onClick={() => void requestCloudSync()} disabled={publishing || rendering || !clips.length || cloudStatus === 'Syncing cloud backup…'} className="shrink-0 text-[9px] font-bold text-violet-300 disabled:opacity-40">Sync now</button></div><button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing ? 'Uploading · ' + uploadProgress + '%' : <><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button>{publishing && <div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-3"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: uploadProgress + '%'}}/></div><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-[#A39BBF]">Resumable upload · {uploadProgress}%</span><button type="button" onClick={cancelPublish} className="font-semibold text-rose-300">Cancel upload</button></div></div>}<p className="text-center text-[9px] text-[#827B9C]">Failed uploads can be retried without rendering again.</p></div>
           </aside>
         </main>
       </motion.div>
