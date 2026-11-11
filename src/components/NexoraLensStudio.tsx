@@ -263,6 +263,9 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
   const [activeLens, setActiveLens] = useState('natural');
   const [category, setCategory] = useState<'For you' | 'Beauty' | 'Mood' | 'AR' | 'Favourites'>('For you');
   const [searchQuery, setSearchQuery] = useState('');
+  const [beautyIntensity, setBeautyIntensity] = useState(32);
+  const beautyIntensityRef = useRef(32);
+  beautyIntensityRef.current = beautyIntensity;
   const [favourites, setFavourites] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]'); } catch { return []; }
   });
@@ -326,6 +329,28 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
               latestLandmarks = result.faceLandmarks?.[0] || null;
             } catch { latestLandmarks = null; }
             lastDetectAt = now;
+          }
+          if (latestLandmarks && (lens.id === 'soft-light' || lens.id === 'violet-glow') && beautyIntensityRef.current > 0) {
+            const forehead = point(latestLandmarks, 10, canvas.width, canvas.height);
+            const chin = point(latestLandmarks, 152, canvas.width, canvas.height);
+            const leftCheek = point(latestLandmarks, 234, canvas.width, canvas.height);
+            const rightCheek = point(latestLandmarks, 454, canvas.width, canvas.height);
+            if (forehead && chin && leftCheek && rightCheek) {
+              context.save();
+              context.beginPath();
+              context.ellipse(
+                (leftCheek.x + rightCheek.x) / 2,
+                (forehead.y + chin.y) / 2,
+                Math.hypot(rightCheek.x - leftCheek.x, rightCheek.y - leftCheek.y) * 0.48,
+                Math.abs(chin.y - forehead.y) * 0.49,
+                0, 0, Math.PI * 2,
+              );
+              context.clip();
+              context.globalAlpha = beautyIntensityRef.current / 100 * 0.28;
+              context.filter = 'blur(2.4px) saturate(1.04)';
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              context.restore();
+            }
           }
           if (latestLandmarks) {
             if (threeRuntime) {
@@ -471,6 +496,13 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
           <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${category === item ? 'border-[#A78BFA] bg-[#7138FF]/25 text-white' : 'border-white/10 bg-white/[0.04] text-[#A39BBF]'}`}>{item}</button>
         ))}
       </div>
+      {(category === 'Beauty' || ['soft-light', 'violet-glow'].includes(activeLens)) && (
+        <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
+          <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Skin softening</span>
+          <input type="range" min="0" max="100" value={beautyIntensity} onChange={event => setBeautyIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Skin softening intensity" />
+          <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{beautyIntensity}%</span>
+        </label>
+      )}
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
         {visibleLenses.map(lens => {
           const selected = activeLens === lens.id;
