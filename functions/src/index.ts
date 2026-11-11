@@ -36,6 +36,7 @@ export { setCreatorEconomyDisplayCurrency, getCreatorGiftAnalytics, createGiftCo
 export { getNgnPayoutProviderStatus, getNgnPayoutPolicyForFinance, getNgnPayoutOtpQueue, finalizeNgnPayoutTransfer, getCreatorPayoutComplianceQueue, configureNgnPayoutPolicy, reviewCreatorPayoutCompliance, getNgnBanks, resolveNgnBankAccount, setCreatorPayoutBeneficiary, getCreatorPayoutReadiness, requestCreatorPayout, paystackPayoutWebhook, reconcilePaystackCreatorPayouts } from './paystackPayouts.js';
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
+export { cleanupDeletedWorldWeaveMoment, cleanupUnpublishedWorldWeaveMedia } from './worldWeaveCleanup.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
