@@ -20,6 +20,9 @@ import { ProfileService } from '../services/firebase/profileService';
 import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 
+const runtimeEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
+const PHONE_AUTH_ENABLED = runtimeEnv.VITE_NEXORA_ENV === 'staging' && runtimeEnv.VITE_NEXORA_PHONE_AUTH_ENABLED === 'true';
+
 interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
   promptReason?: string;
@@ -264,6 +267,10 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   // Handle Phone OTP Request (Production Firebase SMS Auth)
   const handlePhoneOtpRequest = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!PHONE_AUTH_ENABLED) {
+      setErrorMsg('Phone verification is not available yet. Please use email sign-in.');
+      return;
+    }
     setErrorMsg('');
     setSuccessMsg('');
 
@@ -305,6 +312,10 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
   // Handle Phone OTP Verify (Production Firebase SMS Verification)
   const handlePhoneOtpVerify = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!PHONE_AUTH_ENABLED) {
+      setErrorMsg('Phone verification is not available yet. Please use email sign-in.');
+      return;
+    }
     setErrorMsg('');
 
     const cleanCode = verificationCode.trim();
@@ -869,7 +880,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                     <Mail className="w-4 h-4 text-[var(--nx-muted)]" aria-hidden="true" />
                   </div>
                 </div>
-                <p className="text-[11px] text-[var(--nx-muted)]">Phone sign-in uses the separate verification-code option.</p>
+                {PHONE_AUTH_ENABLED ? <p className="text-[11px] text-[var(--nx-muted)]">Phone sign-in uses the separate verification-code option.</p> : <p className="text-[11px] text-[var(--nx-muted)]">Phone verification is not available yet. Use email to sign in.</p>}
               </div>
 
               {/* Password Input */}
@@ -954,18 +965,19 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                   <span>Google</span>
                 </button>
 
-                {/* Phone Auth Option */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchAuthMode('signup');
-                    setSignupMethod('phone');
-                  }}
-                  className="py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
-                >
-                  <Smartphone className="w-4 h-4 text-violet-400 shrink-0" />
-                  <span>Phone</span>
-                </button>
+                {PHONE_AUTH_ENABLED && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      switchAuthMode('signup');
+                      setSignupMethod('phone');
+                    }}
+                    className="py-3 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-2 transition-all cursor-pointer"
+                  >
+                    <Smartphone className="w-4 h-4 text-violet-400 shrink-0" />
+                    <span>Phone</span>
+                  </button>
+                )}
               </div>{/* Bottom Switch to Signup */}
               <div className="pt-2 text-center text-xs text-zinc-400">
                 Don't have an account?{' '}
@@ -1007,14 +1019,16 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
                     <span>Continue with Google</span>
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => setSignupMethod('phone')}
-                    className="w-full py-3.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-3 transition-all cursor-pointer"
-                  >
-                    <Smartphone className="w-5 h-5 text-violet-400 shrink-0" />
-                    <span>Continue with Phone</span>
-                  </button>
+                  {PHONE_AUTH_ENABLED && (
+                    <button
+                      type="button"
+                      onClick={() => setSignupMethod('phone')}
+                      className="w-full py-3.5 px-4 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl text-xs font-bold text-white flex items-center justify-center gap-3 transition-all cursor-pointer"
+                    >
+                      <Smartphone className="w-5 h-5 text-violet-400 shrink-0" />
+                      <span>Continue with Phone</span>
+                    </button>
+                  )}
 
                   <button
                     type="button"
@@ -1143,7 +1157,7 @@ export default function AuthView({ onLoginSuccess, promptReason }: AuthViewProps
               )}
 
               {/* Phone Signup / Auth Form */}
-              {signupMethod === 'phone' && (
+              {PHONE_AUTH_ENABLED && signupMethod === 'phone' && (
                 <div className="space-y-4">
                   {!smsSent ? (
                     <form onSubmit={handlePhoneOtpRequest} className="space-y-4">
