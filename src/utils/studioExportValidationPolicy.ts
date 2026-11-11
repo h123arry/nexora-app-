@@ -16,7 +16,7 @@ export function getStudioExportValidationError(
   actual: StudioExportMetadata,
   expected: StudioExportExpectation,
 ): string | null {
-  if (!actual.mimeType.toLowerCase().startsWith('video/webm')) {
+  if (!/^video\\/webm(?:;|$)/i.test(actual.mimeType)) {
     return 'The browser returned an unsupported export format. Studio currently exports WebM video.';
   }
   if (!Number.isFinite(actual.sizeBytes) || actual.sizeBytes <= 0) {
@@ -31,7 +31,7 @@ export function getStudioExportValidationError(
   if (actual.width !== expected.width || actual.height !== expected.height) {
     return `The export dimensions did not match the selected format (${expected.width}×${expected.height}). Try rendering again.`;
   }
-  const tolerance = Math.max(1.5, expected.durationSeconds * 0.08);
+  const tolerance = Math.max(0.75, expected.durationSeconds * 0.08);
   if (!Number.isFinite(expected.durationSeconds) || expected.durationSeconds <= 0 ||
       Math.abs(actual.durationSeconds - expected.durationSeconds) > tolerance) {
     return 'The exported video duration does not match your timeline. Your draft is safe; try rendering again.';
