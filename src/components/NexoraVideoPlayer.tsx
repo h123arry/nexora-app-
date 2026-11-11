@@ -226,7 +226,7 @@ export default function NexoraVideoPlayer({
   const watermarkCycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const postRollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playStateIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const doubleTapHeartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const doubleTapHeartTimeoutRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const exportStateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sonicAudioRef = useRef<HTMLAudioElement | null>(null);
   
