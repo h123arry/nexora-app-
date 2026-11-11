@@ -49,7 +49,7 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
     if (!nextOptions.every(option => Number.isSafeInteger(option.votes))) throw new Error('Poll vote totals are invalid.');
 
     tx.create(voteRef, { userId: uid, postId, optionId, createdAt: FieldValue.serverTimestamp() });
-    tx.update(postRef, { 'interactivePoll.options': nextOptions });
+    tx.update(postRef, 'interactivePoll.options', nextOptions);
     return { voted: true as const, selectedOptionId: optionId, options: nextOptions };
   });
 

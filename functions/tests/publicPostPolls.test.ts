@@ -69,7 +69,9 @@ describe('trusted public feed polls', () => {
       assert.equal(results.filter(result => result.voted).length, 1);
       assert.equal(results[0].selectedOptionId, results[1].selectedOptionId);
       const post = await postRef.get();
-      const totalVotes = post.get('interactivePoll.options').reduce((total: number, option: { votes: number }) => total + option.votes, 0);
+      const updatedOptions = post.get('interactivePoll.options');
+      assert.ok(Array.isArray(updatedOptions), 'poll option counters must remain nested under interactivePoll.options');
+      const totalVotes = updatedOptions.reduce((total: number, option: { votes: number }) => total + option.votes, 0);
       assert.equal(totalVotes, 1);
       const voteDocs = await postRef.collection('pollVotes').get();
       assert.equal(voteDocs.size, 1);
