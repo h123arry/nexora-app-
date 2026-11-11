@@ -110,6 +110,7 @@ export function uploadMediaFile(options: MediaUploadOptions): Promise<MediaUploa
       contentType,
       size: file.size,
       status: 'pending_upload',
+      ...(options.metadata?.purpose === 'studio-export' ? { purpose: 'studio-export' } : {}),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     }).then(() => {

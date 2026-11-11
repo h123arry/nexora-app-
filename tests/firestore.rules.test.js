@@ -478,6 +478,36 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('alice'), 'mediaAssets', 'alice-uploaded')));
   });
 
+  it('allows only the Studio export purpose on private media upload intents', async () => {
+    const studioRef = doc(dbFor('alice'), 'mediaAssets', 'alice-studio-export');
+    await assertSucceeds(setDoc(studioRef, {
+      id: 'alice-studio-export',
+      ownerId: 'alice',
+      storagePath: 'users/alice/media/alice-studio-export',
+      kind: 'video',
+      contentType: 'video/webm',
+      size: 1024,
+      status: 'pending_upload',
+      purpose: 'studio-export',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'mediaAssets', 'alice-forged-purpose'), {
+      id: 'alice-forged-purpose',
+      ownerId: 'alice',
+      storagePath: 'users/alice/media/alice-forged-purpose',
+      kind: 'video',
+      contentType: 'video/webm',
+      size: 1024,
+      status: 'pending_upload',
+      purpose: 'public-admin-export',
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp()
+    }));
+    await assertFails(getDoc(doc(dbFor('bob'), 'mediaAssets', 'alice-studio-export')));
+    await assertSucceeds(deleteDoc(studioRef));
+  });
+
   it('stores inbox organisation preferences per account and only for chats the user belongs to', async () => {
     await seed(async (db) => {
       await setDoc(doc(db, 'chats', 'chat-1'), { participants: ['alice', 'bob'], lastMessage: '' });

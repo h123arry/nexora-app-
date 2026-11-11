@@ -47,6 +47,29 @@ export function videoRenditionsForHeight(sourceHeight, renditions) {
   return renditions.filter(rendition => Number.isSafeInteger(rendition.height) && rendition.height > 0 && rendition.height <= sourceHeight);
 }
 
+export function videoRenditionsForSize(sourceWidth, sourceHeight, renditions) {
+  if (!Number.isSafeInteger(sourceWidth) || sourceWidth <= 0 ||
+      !Number.isSafeInteger(sourceHeight) || sourceHeight <= 0) {
+    throw new Error('Valid source video dimensions are required');
+  }
+  const shortEdge = Math.min(sourceWidth, sourceHeight);
+  return renditions.filter(rendition => Number.isSafeInteger(rendition.height) && rendition.height > 0 && rendition.height <= shortEdge);
+}
+
+export function videoRenditionDimensions(sourceWidth, sourceHeight, targetShortEdge) {
+  if (!Number.isSafeInteger(sourceWidth) || sourceWidth <= 0 ||
+      !Number.isSafeInteger(sourceHeight) || sourceHeight <= 0 ||
+      !Number.isSafeInteger(targetShortEdge) || targetShortEdge <= 0 ||
+      targetShortEdge > Math.min(sourceWidth, sourceHeight)) {
+    throw new Error('The requested video rendition must fit within the source dimensions');
+  }
+  const scale = targetShortEdge / Math.min(sourceWidth, sourceHeight);
+  return {
+    width: Math.max(2, Math.round(sourceWidth * scale / 2) * 2),
+    height: Math.max(2, Math.round(sourceHeight * scale / 2) * 2),
+  };
+}
+
 export function canClaimMediaProcessing(current, nowMs = Date.now(), staleAfterMs = 15 * 60 * 1000) {
   if (!current) return true;
   if (current.status === 'pending_upload' || current.status === 'uploaded' || current.status === 'failed') return true;

@@ -36,6 +36,7 @@ export { getNgnPayoutProviderStatus, getNgnPayoutPolicyForFinance, getNgnPayoutO
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
 export { getPublicPostPlayback } from './publicMediaPlayback.js';
+export { getStudioExportMp4Url, cleanupExpiredStudioMp4Exports } from './studioMp4Export.js';
 export { cleanupDeletedWorldWeaveMoment, cleanupUnpublishedWorldWeaveMedia } from './worldWeaveCleanup.js';
 export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatchAnalytics.js';
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
