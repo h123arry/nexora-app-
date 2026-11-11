@@ -84,6 +84,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [overlayPosition, setOverlayPosition] = useState<'top' | 'center' | 'bottom'>('bottom');
   const [playing, setPlaying] = useState(false);
   const [exportQuality, setExportQuality] = useState<'balanced' | 'high'>('balanced');
+  const [audioMetadataRevision, setAudioMetadataRevision] = useState(0);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [message, setMessage] = useState('');
@@ -234,7 +235,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       } else narration.pause();
     } else if (narration) narration.pause();
     if (!playing) { music?.pause(); narration?.pause(); }
-  }, [playing, previewGlobalTime, soundtrack, voiceover, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, voiceoverStart, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, musicDuckingLevel, totalDuration]);
+  }, [playing, previewGlobalTime, soundtrack, voiceover, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, voiceoverStart, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, musicDuckingLevel, totalDuration, audioMetadataRevision]);
 
   useEffect(() => {
     if (!ready) return;
@@ -829,8 +830,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
-              {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" className="hidden"/>}
-              {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" className="hidden"/>}
+              {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
+              {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="h-full w-full object-contain" playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); }} onVolumeChange={event => { if (!event.currentTarget.muted && selectedClip) event.currentTarget.volume = selectedClip.volume; }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end) { event.currentTarget.pause(); setPlaying(false); } }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
               {imageLayers.filter(layer => isStudioImageLayerVisible(layer, previewGlobalTime, totalDuration)).map(layer => <img key={layer.id} src={getUrlForClip(layer.blob)} alt={layer.name} draggable={false} className="pointer-events-none absolute z-[5] max-w-none object-contain" style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, width: `${layer.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`, opacity: layer.opacity }}/>) }
               {subtitleSegments.filter(segment => previewGlobalTime >= segment.start && previewGlobalTime < segment.end && segment.text.trim()).map(segment => <div key={segment.id} className="pointer-events-none absolute bottom-[12%] left-[5%] z-[8] w-[90%] rounded-lg bg-[#050914]/80 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg">{segment.text}</div>)}
