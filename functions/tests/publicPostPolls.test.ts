@@ -69,7 +69,9 @@ describe('trusted public feed polls', () => {
       assert.equal(results.filter(result => result.voted).length, 1);
       assert.equal(results[0].selectedOptionId, results[1].selectedOptionId);
       const post = await postRef.get();
-      const totalVotes = post.get('interactivePoll.options').reduce((total: number, option: { votes: number }) => total + option.votes, 0);
+      const pollOptions = post.data()?.interactivePoll?.options;
+      assert.ok(Array.isArray(pollOptions), `Expected poll options on the updated post, received: ${JSON.stringify(post.data())}`);
+      const totalVotes = pollOptions.reduce((total: number, option: { votes: number }) => total + option.votes, 0);
       assert.equal(totalVotes, 1);
       const voteDocs = await postRef.collection('pollVotes').get();
       assert.equal(voteDocs.size, 1);
