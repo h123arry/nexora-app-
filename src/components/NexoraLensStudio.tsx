@@ -1,43 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import { NEXORA_LENS_CATALOG, NEXORA_LENS_CATEGORIES, type NexoraLens } from '../services/nexoraLensCatalog';
 import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search } from 'lucide-react';
 
 type Facing = 'user' | 'environment';
-type Lens = {
-  id: string;
-  name: string;
-  category: 'For you' | 'Beauty' | 'Mood' | 'AR';
-  filter: string;
-  sticker: 'none' | 'crown' | 'cat' | 'halo' | 'glasses' | 'hearts' | 'sparkles' | 'puppy' | 'bunny' | 'flower' | 'robot' | 'butterfly';
-};
+type Lens = NexoraLens;
 
-type Props = {
-  cameraFacing: Facing;
-  userId: string;
-  captureMode: 'photo' | 'video';
-  countdownTimer?: number | null;
-  onStreamReady: (stream: MediaStream | null) => void;
-  onCapture: (blob: Blob) => void;
-};
-
-const LENSES: Lens[] = [
-  { id: 'natural', name: 'Original', category: 'For you', filter: 'none', sticker: 'none' },
-  { id: 'violet-glow', name: 'Violet Glow', category: 'Beauty', filter: 'brightness(1.08) saturate(1.18) contrast(1.03)', sticker: 'sparkles' },
-  { id: 'soft-light', name: 'Soft Light', category: 'Beauty', filter: 'brightness(1.12) contrast(.94) saturate(1.04)', sticker: 'none' },
-  { id: 'golden-hour', name: 'Golden Hour', category: 'Mood', filter: 'sepia(.22) saturate(1.28) brightness(1.06)', sticker: 'none' },
-  { id: 'midnight', name: 'Midnight', category: 'Mood', filter: 'brightness(.82) contrast(1.2) saturate(.82) hue-rotate(12deg)', sticker: 'none' },
-  { id: 'mono', name: 'Mono', category: 'Mood', filter: 'grayscale(1) contrast(1.12)', sticker: 'none' },
-  { id: 'royal-crown', name: 'Royal Crown', category: 'AR', filter: 'none', sticker: 'crown' },
-  { id: 'starlight', name: 'Starlight', category: 'AR', filter: 'saturate(1.12) brightness(1.04)', sticker: 'sparkles' },
-  { id: 'halo', name: 'Halo', category: 'AR', filter: 'none', sticker: 'halo' },
-  { id: 'cat-mode', name: 'Cat Mode', category: 'AR', filter: 'none', sticker: 'cat' },
-  { id: 'heart-eyes', name: 'Heart Eyes', category: 'AR', filter: 'none', sticker: 'hearts' },
-  { id: 'violet-shades', name: 'Violet Shades', category: 'AR', filter: 'none', sticker: 'glasses' },
-  { id: 'puppy-face', name: 'Puppy Face', category: 'AR', filter: 'none', sticker: 'puppy' },
-  { id: 'bunny-pop', name: 'Bunny Pop', category: 'AR', filter: 'none', sticker: 'bunny' },
-  { id: 'flower-crown', name: 'Flower Crown', category: 'AR', filter: 'saturate(1.08)', sticker: 'flower' },
-  { id: 'robot-mask', name: 'Robot Mask', category: 'AR', filter: 'contrast(1.08) saturate(1.12)', sticker: 'robot' },
-  { id: 'butterfly-dream', name: 'Butterfly Dream', category: 'AR', filter: 'brightness(1.04) saturate(1.12)', sticker: 'butterfly' },
-];
+const LENSES = NEXORA_LENS_CATALOG;
 
 const VISION_VERSION = '0.10.14';
 const WASM_ROOT = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VISION_VERSION}/wasm`;
@@ -382,8 +350,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamCallbackRef = useRef(onStreamReady);
-  const [activeLens, setActiveLens] = useState('natural');
-  const [category, setCategory] = useState<'For you' | 'Beauty' | 'Mood' | 'AR' | 'Favourites'>('For you');
+  const [activeLens, setActiveLens] = useState(NEXORA_LENS_CATALOG[0].id);
+  const [category, setCategory] = useState<(typeof NEXORA_LENS_CATEGORIES)[number]>('For you');
   const [searchQuery, setSearchQuery] = useState('');
   const [beautyIntensity, setBeautyIntensity] = useState(32);
   const beautyIntensityRef = useRef(32);
@@ -608,15 +576,19 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   };
 
   const categoryLenses = category === 'For you'
-    ? LENSES.filter(item => ['natural', 'violet-glow', 'soft-light', 'royal-crown', 'cat-mode', 'puppy-face'].includes(item.id) || favourites.includes(item.id))
+    ? LENSES.filter(item => item.featured || favourites.includes(item.id))
     : category === 'Favourites'
       ? LENSES.filter(item => favourites.includes(item.id))
       : LENSES.filter(item => item.category === category);
-  const visibleLenses = categoryLenses.filter(item => item.name.toLowerCase().includes(searchQuery.trim().toLowerCase()));
+  const normalizedSearch = searchQuery.trim().toLowerCase();
+  const visibleLenses = categoryLenses.filter(item =>
+    item.name.toLowerCase().includes(normalizedSearch) ||
+    item.description.toLowerCase().includes(normalizedSearch)
+  );
 
   return (
     <div className="space-y-3">
-      <div className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[1.6rem] border border-[#44376F] bg-[#050914] shadow-[0_16px_48px_rgba(0,0,0,.38)]">
+      <div className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[1.6rem] border border-[#44376F] bg-[#050914] shadow-[0_16px_48px_rgba(0,0,0,.38)]" data-lensverse-catalog-size={NEXORA_LENS_CATALOG.length}>
         <video ref={videoRef} autoPlay muted playsInline className="hidden" />
         <canvas ref={canvasRef} className="h-full w-full object-cover" aria-label="Live NEXORA camera preview with selected lens" />
         {countdownTimer !== null && <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#050914]/20"><span className="animate-ping text-7xl font-black text-white drop-shadow-[0_0_24px_rgba(138,63,252,.9)]">{countdownTimer}</span></div>}
@@ -641,8 +613,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8E88A7]" />
         <input value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder="Find a lens" aria-label="Search lenses" className="w-full rounded-xl border border-white/10 bg-[#120E2B] py-2.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-[#756D91] focus:border-[#8A3FFC]" />
       </div>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {(['For you', 'Beauty', 'Mood', 'AR', 'Favourites'] as const).map(item => (
+      <div className="flex snap-x gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]">
+        {NEXORA_LENS_CATEGORIES.map(item => (
           <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${category === item ? 'border-[#A78BFA] bg-[#7138FF]/25 text-white' : 'border-white/10 bg-white/[0.04] text-[#A39BBF]'}`}>{item}</button>
         ))}
       </div>
@@ -653,15 +625,18 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{beautyIntensity}%</span>
         </label>
       )}
-      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]">
         {visibleLenses.map(lens => {
           const selected = activeLens === lens.id;
           const Icon = lens.sticker === 'crown' ? Crown : lens.sticker === 'cat' ? Cat : lens.sticker === 'glasses' ? Glasses : lens.sticker === 'hearts' ? Heart : lens.sticker === 'halo' ? Sun : lens.sticker === 'sparkles' ? Sparkles : lens.id === 'midnight' || lens.id === 'mono' ? Moon : Star;
           return (
-            <div key={lens.id} className="relative min-w-0">
+            <div key={lens.id} className="relative w-[76px] shrink-0 snap-start">
               <button type="button" onClick={() => setActiveLens(lens.id)} className={`flex w-full flex-col items-center gap-1.5 rounded-xl border p-2 transition ${selected ? 'border-[#A78BFA] bg-[#7138FF]/20 text-white' : 'border-white/[0.08] bg-[#120E2B] text-[#B8AED4]'}`}>
-                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#7138FF]/35 to-[#1600A3]/40"><Icon className="h-4 w-4" /></span>
-                <span className="w-full truncate text-[9px] font-semibold">{lens.name}</span>
+                <span className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-[#7138FF]/35 via-[#21133F] to-[#1600A3]/50" style={{ filter: lens.filter }}>
+                  <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.28),transparent_62%)]" />
+                  <Icon className="relative h-5 w-5 drop-shadow" />
+                </span>
+                <span className="w-full truncate text-[9px] font-semibold" title={lens.name}>{lens.name}</span>
               </button>
               <button type="button" onClick={() => toggleFavourite(lens.id)} aria-label={favourites.includes(lens.id) ? 'Remove lens from favourites' : 'Add lens to favourites'} className="absolute right-1 top-1 rounded-full bg-[#050914]/80 p-1 text-[#D7C7FF]"><Heart className={`h-3 w-3 ${favourites.includes(lens.id) ? 'fill-current text-fuchsia-300' : ''}`} /></button>
             </div>
