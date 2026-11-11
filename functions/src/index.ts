@@ -17,7 +17,7 @@ import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './com
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary, getReferralInvitePreview } from './referrals.js';
-import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
+import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost, getCommunityCapabilitySnapshot } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
 import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries as listMyContentSeriesRecord, listContentSeriesEpisodes } from './contentSeries.js';
 import { voteOnPublicPostPoll, getMyPublicPostPollVotes } from './publicPostPolls.js';
@@ -924,6 +924,12 @@ export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request =>
     if (message.includes('closed or unavailable')) throw new HttpsError('failed-precondition', message);
     throw new HttpsError('internal', 'The challenge could not be joined. Please retry.');
   }
+});
+
+export const getMyCommunityCapabilities = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view community progression.');
+  try { return await getCommunityCapabilitySnapshot(adminDb, request.auth.uid); }
+  catch { throw new HttpsError('unavailable', 'Community progression is temporarily unavailable.'); }
 });
 
 export const listSocialChallenges = onCall({ maxInstances: 10 }, async request => {
