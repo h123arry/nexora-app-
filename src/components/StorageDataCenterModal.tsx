@@ -471,70 +471,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
     { id: 'bak-3', deviceName: 'London Ledger Hub NAS', date: 'Jun 28, 2026 23:59', size: '14.8 GB', includeItems: 'All Media, Broadcast Archives, Settings', secure: true }
   ];
 
-  // Conversation storage list
-  const [conversationsList, setConversationsList] = useState<MockConversationStorage[]>([
-    {
-      id: 'chat-1',
-      name: 'Sophia Sterling',
-      username: '@sophia_sterling',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
-      totalSize: '1.24 GB',
-      sizeBytes: 1240000000,
-      breakdown: { photos: '210 MB', videos: '840 MB', voiceNotes: '92 MB', gifs: '25 MB', stickers: '14 MB', documents: '54 MB', links: '4 MB', messages: '1 MB' },
-      mediaItems: [
-        { id: 'm-1-1', type: 'photo', url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=300', name: 'Security_Flowchart.png', size: '4.2 MB', date: 'Jul 09, 2026', isFavorite: true, isPinned: true },
-        { id: 'm-1-2', type: 'video', url: 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=300', name: 'Nexora_Launch_Video.mp4', size: '112.5 MB', date: 'Jul 08, 2026', isFavorite: true },
-        { id: 'm-1-3', type: 'voice', url: '', name: 'Encrypted_Voice_Note_09.ogg', size: '1.8 MB', date: 'Jul 07, 2026' },
-        { id: 'm-1-4', type: 'document', url: '', name: 'Whitepaper_Draft_v4.pdf', size: '18.4 MB', date: 'Jul 05, 2026', isPinned: true },
-        { id: 'm-1-5', type: 'gif', url: 'https://media.giphy.com/media/t3ki06DCH9fQA/giphy.gif', name: ' celebratory_wave.gif', size: '3.4 MB', date: 'Jul 03, 2026' },
-        { id: 'm-1-6', type: 'photo', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300', name: 'NFT_Banner_Art.jpg', size: '8.9 MB', date: 'Jul 01, 2026' }
-      ]
-    },
-    {
-      id: 'chat-2',
-      name: 'Lucas Cyber',
-      username: '@lucas_cyber',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      totalSize: '654 MB',
-      sizeBytes: 654000000,
-      breakdown: { photos: '120 MB', videos: '390 MB', voiceNotes: '42 MB', gifs: '12 MB', stickers: '6 MB', documents: '82 MB', links: '1.5 MB', messages: '0.5 MB' },
-      mediaItems: [
-        { id: 'm-2-1', type: 'video', url: '', name: 'Database_Sync_Screencast.mp4', size: '78.2 MB', date: 'Jul 08, 2026' },
-        { id: 'm-2-2', type: 'photo', url: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=300', name: 'Terminal_Theme_Preview.jpg', size: '1.2 MB', date: 'Jul 07, 2026', isFavorite: true },
-        { id: 'm-2-3', type: 'document', url: '', name: 'Drizzle_Schema_Draft.ts', size: '24 KB', date: 'Jul 06, 2026', isPinned: true },
-        { id: 'm-2-4', type: 'voice', url: '', name: 'Voice_Briefing_July.ogg', size: '14.5 MB', date: 'Jul 04, 2026' }
-      ]
-    },
-    {
-      id: 'chat-3',
-      name: 'Luna Stellar',
-      username: '@luna_stellar',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-      totalSize: '412 MB',
-      sizeBytes: 412000000,
-      breakdown: { photos: '185 MB', videos: '120 MB', voiceNotes: '31 MB', gifs: '18 MB', stickers: '8 MB', documents: '48 MB', links: '1 MB', messages: '1 MB' },
-      mediaItems: [
-        { id: 'm-3-1', type: 'photo', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=300', name: 'Ambient_Background_Mockup.jpg', size: '12.4 MB', date: 'Jul 09, 2026', isFavorite: true },
-        { id: 'm-3-2', type: 'document', url: '', name: 'Interface_Style_Tokens.json', size: '145 KB', date: 'Jul 08, 2026', isPinned: true },
-        { id: 'm-3-3', type: 'gif', url: '', name: 'smooth_loading_spinner.gif', size: '1.2 MB', date: 'Jul 05, 2026' }
-      ]
-    },
-    {
-      id: 'chat-4',
-      name: 'Global Dev Community',
-      username: 'group-main',
-      avatar: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=150',
-      totalSize: '2.84 GB',
-      sizeBytes: 2840000000,
-      breakdown: { photos: '812 MB', videos: '1.45 GB', voiceNotes: '142 MB', gifs: '95 MB', stickers: '34 MB', documents: '310 MB', links: '12 MB', messages: '5 MB' },
-      mediaItems: [
-        { id: 'm-4-1', type: 'video', url: '', name: 'Build_Process_Recording.mov', size: '345.0 MB', date: 'Jul 09, 2026' },
-        { id: 'm-4-2', type: 'photo', url: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=300', name: 'Workstation_Photo.png', size: '6.4 MB', date: 'Jul 08, 2026' },
-        { id: 'm-4-3', type: 'document', url: '', name: 'Docker-Compose.yml', size: '12 KB', date: 'Jul 07, 2026', isPinned: true },
-        { id: 'm-4-4', type: 'document', url: '', name: 'Kubernetes_Configuration.yaml', size: '84 KB', date: 'Jul 06, 2026' }
-      ]
-    }
-  ]);
+  // No production conversation/media storage provider is connected to this panel yet.
+  // Keep the ledger empty rather than presenting sample accounts and stock photos as user data.
+  const [conversationsList, setConversationsList] = useState<MockConversationStorage[]>([]);
 
   // Sync back state modifications to local storages
   useEffect(() => {
@@ -565,8 +504,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
   const totalNexoraSpaceGB = useMemo(() => {
     const mediaGB = totalMediaBytes / 1000000000;
     const cacheGB = Number(totalCacheMB) / 1000;
-    const dbSizeGB = 0.25; // Constant base db size
-    return (mediaGB + cacheGB + dbSizeGB).toFixed(2);
+    // Only report locally measured cache and real loaded media records.
+    // Do not invent a database-size baseline while no storage telemetry provider is connected.
+    return (mediaGB + cacheGB).toFixed(2);
   }, [totalMediaBytes, totalCacheMB]);
 
   // Handle single recommendation cleanup
@@ -1165,6 +1105,13 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       </div>
 
                       {/* Conversations listing */}
+                      {filteredConversations.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-white/10 bg-black/20 px-5 py-8 text-center">
+                          <Database className="mx-auto h-7 w-7 text-zinc-500" />
+                          <p className="mt-3 text-sm font-semibold text-white">No conversation storage data available</p>
+                          <p className="mt-1 text-xs leading-relaxed text-zinc-400">This panel is not connected to a durable chat-media index yet. Your conversations and attachments have not been scanned or changed.</p>
+                        </div>
+                      ) : (
                       <div className="space-y-3">
                         {filteredConversations.map(chat => (
                           <div key={chat.id} className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-white/10 transition-all">
@@ -1224,6 +1171,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                           </div>
                         ))}
                       </div>
+                      )}
                     </>
                   ) : (
                     // Conversation's Interactive Media Explorer Screen!
