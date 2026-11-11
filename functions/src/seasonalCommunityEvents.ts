@@ -57,7 +57,8 @@ export async function listSeasonalCommunityEvents(db: Firestore, uid: string) {
       status: startsAt <= now ? 'active' : 'scheduled',
     };
   }));
-  return { events: events.filter(Boolean).sort((a, b) => new Date(a!.startsAt || 0).getTime() - new Date(b!.startsAt || 0).getTime()) };
+  const visibleEvents = events.filter((event): event is NonNullable<typeof event> => event !== null);
+  return { events: visibleEvents.sort((a, b) => new Date(a.startsAt || 0).getTime() - new Date(b.startsAt || 0).getTime()) };
 }
 
 export async function setSeasonalCommunityEventRsvp(db: Firestore, uid: string, eventId: string, attending: boolean) {
