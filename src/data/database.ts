@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import { User, Post, SocialMission, Circle, Chat, Message, Notification } from '../types';
 import { ActivityService } from '../services/activityService';
 import { userScopedStorageKey, writeUserScopedJson } from '../utils/userScopedStorage';
@@ -265,7 +266,7 @@ export function addReputationDb(userId: string, change: number, reason: Reputati
   initDb();
   const events: ReputationRecord[] = JSON.parse(localStorage.getItem(KEYS.REPUTATION) || '[]');
   events.push({
-    id: `rep-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    id: createSecureId('rep'),
     userId,
     change,
     reason,
@@ -283,7 +284,7 @@ export function addSparkDb(fromUserId: string, toUserId: string, targetType: Spa
   const sparks: SparkRecord[] = JSON.parse(localStorage.getItem(KEYS.SPARKS) || '[]');
   if (!sparks.some(s => s.fromUserId === fromUserId && s.targetType === targetType && s.targetId === targetId)) {
     sparks.push({
-      id: `spark-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      id: createSecureId('spark'),
       fromUserId,
       toUserId,
       targetType,
