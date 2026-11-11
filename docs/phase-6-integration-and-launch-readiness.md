@@ -48,7 +48,7 @@ The CI workflow does not deploy Firebase, Cloud Run, Eventarc, CDN, hosting, pay
 - A UI-local fallback is not cross-device persistence. Mark it as local-only wherever it remains.
 
 ### Creator, NEX and GiftVerse
-- NEXORA Studio uploads now attach the validated `mediaAssets` document ID to the published post record. This establishes a durable source-asset link; it does **not** yet expose owner-only processing metadata to public feed viewers or switch playback to adaptive renditions. That public playback projection remains a separate integration gate.
+- NEXORA Studio uploads attach the validated `mediaAssets` document ID to the published post record. Authenticated feed playback can now request a short-lived signed MP4 rendition through `getPublicPostPlayback`; the callable verifies the post is currently public, the post references that exact asset, and the asset owner matches the post author. The `mediaAssets` collection remains owner-only, and the client falls back to the original published URL while processing is incomplete or rendition signing is unavailable. This is a verified 720p-preferred MP4 path, not adaptive HLS playback; real bucket IAM, Cloud Run processing, staging playback and expiry/retry behavior remain release gates.
 - Verify catalogue identity and pricing against the trusted server catalogue; never trust client-supplied prices, balances or earnings.
 - Verify each gift debit/credit with ledger invariants, idempotent retries, creator revenue calculations, reversals and audit events.
 - Keep paid subscriptions, checkout and withdrawals disabled until provider approval, compliance, funding, reconciliation, refunds and live transfer acceptance are complete.
