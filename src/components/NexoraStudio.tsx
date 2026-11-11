@@ -7,7 +7,8 @@ import { canAddStudioImageLayer, getStudioImageLayerFrame, normalizeStudioImageL
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
-import { getStudioExportDimensions, type StudioExportResolution } from '../utils/studioExportPolicy';
+import { getStudioExportDimensions, getStudioExpectedExportDuration, type StudioExportResolution } from '../utils/studioExportPolicy';
+import { getStudioExportValidationError } from '../utils/studioExportValidationPolicy';
 import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
@@ -16,7 +17,7 @@ type StudioClip = StudioVideoLayer & { name: string; blob: Blob; duration: numbe
 type StudioSubtitleSegment = { id: string; text: string; start: number; end: number };
 type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; imageLayers: StudioImageLayer[]; selectedImageLayerId: string | null; subtitleSegments: StudioSubtitleSegment[]; selectedSubtitleSegmentId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade' | 'cross-dissolve'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type StudioSnapshot = Omit<StudioProject, 'updatedAt'> & { selectedId: string | null };
-type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string) => Promise<void> };
+type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string, onProgress?: (progress: number) => void, signal?: AbortSignal) => Promise<void> };
 
 const DB_NAME = 'nexora-studio-projects';
 const STORE_NAME = 'projects';
@@ -48,6 +49,42 @@ async function loadProject(projectKey: string): Promise<StudioProject | null> {
   });
   db.close();
   return value;
+}
+
+async function inspectStudioExport(blob: Blob): Promise<{ durationSeconds: number; width: number; height: number }> {
+  const url = URL.createObjectURL(blob);
+  const video = document.createElement('video');
+  video.preload = 'metadata';
+  video.muted = true;
+  try {
+    return await new Promise((resolve, reject) => {
+      let timeout = 0;
+      const cleanup = () => {
+        if (timeout) window.clearTimeout(timeout);
+        video.removeAttribute('src');
+        video.load();
+        URL.revokeObjectURL(url);
+      };
+      timeout = window.setTimeout(() => {
+        cleanup();
+        reject(new Error('The exported video metadata could not be read. Your Studio draft is safe; try rendering again.'));
+      }, 12_000);
+      video.onloadedmetadata = () => {
+        const metadata = { durationSeconds: video.duration, width: video.videoWidth, height: video.videoHeight };
+        cleanup();
+        resolve(metadata);
+      };
+      video.onerror = () => {
+        cleanup();
+        reject(new Error('The exported video could not be decoded for validation. Your Studio draft is safe; try rendering again.'));
+      };
+      video.src = url;
+      video.load();
+    });
+  } catch (error) {
+    URL.revokeObjectURL(url);
+    throw error;
+  }
 }
 
 function makeId(): string {
@@ -91,6 +128,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [audioMetadataRevision, setAudioMetadataRevision] = useState(0);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [ready, setReady] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -103,6 +141,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const projectUrls = useRef<string[]>([]);
   const voiceoverRecorderRef = useRef<MediaRecorder | null>(null);
+  const publishAbortRef = useRef<AbortController | null>(null);
   const voiceoverStreamRef = useRef<MediaStream | null>(null);
   const voiceoverChunksRef = useRef<Blob[]>([]);
   const draggedClipIdRef = useRef<string | null>(null);
@@ -184,6 +223,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       .finally(() => { if (active) setReady(true); });
     return () => {
       active = false;
+      publishAbortRef.current?.abort();
       projectUrls.current.forEach(URL.revokeObjectURL);
       const recorder = voiceoverRecorderRef.current;
       if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
@@ -891,28 +931,65 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   };
 
   const handleExport = async () => {
-    setRendering(true); setMessage('Rendering your timeline…');
+    setRendering(true); setExportBlob(null); setMessage('Rendering and validating your timeline…');
     try {
       const blob = await renderProject();
-      setMessage(`Export ready · ${(blob.size / (1024 * 1024)).toFixed(1)} MB · WebM`);
+      const dimensions = getStudioExportDimensions(aspectRatio, exportResolution);
+      const expectedDuration = getStudioExpectedExportDuration(
+        clips.map(clip => clip.end - clip.start),
+        transition,
+        STUDIO_CROSS_DISSOLVE_SECONDS,
+      );
+      const metadata = await inspectStudioExport(blob);
+      const validationError = getStudioExportValidationError({
+        mimeType: blob.type,
+        sizeBytes: blob.size,
+        ...metadata,
+      }, { durationSeconds: expectedDuration, ...dimensions });
+      if (validationError) throw new Error(validationError);
+      setMessage(`Export verified · ${(blob.size / (1024 * 1024)).toFixed(1)} MB · ${dimensions.width}×${dimensions.height} · WebM`);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = `nexora-studio-${Date.now()}.webm`;
       anchor.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setExportBlob(blob);
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Export failed.'); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Export failed. Your Studio draft remains saved.'); }
     finally { setRendering(false); }
   };
   const [exportBlob, setExportBlob] = useState<Blob | null>(null);
 
   const handlePublish = async () => {
     if (!exportBlob) { await handleExport(); return; }
+    const controller = new AbortController();
+    publishAbortRef.current = controller;
     setPublishing(true);
-    try { await onPublish(exportBlob, caption); setMessage('Your Studio video has been published.'); }
-    catch (error) { setMessage(error instanceof Error ? error.message : 'Publishing failed. Your draft remains saved.'); }
-    finally { setPublishing(false); }
+    setUploadProgress(0);
+    setMessage('Uploading your verified Studio export…');
+    try {
+      await onPublish(
+        exportBlob,
+        caption,
+        progress => setUploadProgress(Math.min(100, Math.max(0, Number.isFinite(progress) ? progress : 0))),
+        controller.signal,
+      );
+      setUploadProgress(100);
+      setMessage('Your Studio video has been published.');
+    } catch (error) {
+      setMessage(controller.signal.aborted
+        ? 'Upload cancelled. Your verified export and Studio draft are still available.'
+        : error instanceof Error ? error.message : 'Publishing failed. Your draft remains saved. You can retry.');
+    } finally {
+      if (publishAbortRef.current === controller) publishAbortRef.current = null;
+      setPublishing(false);
+    }
+  };
+
+  const cancelPublish = () => {
+    if (!publishAbortRef.current || !publishing) return;
+    setMessage('Cancelling upload…');
+    publishAbortRef.current.abort();
   };
 
   const previewUrl = selectedClip ? getUrlForClip(selectedClip.blob) : '';
@@ -1020,7 +1097,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <p className="text-[9px] text-[#827B9C]">Subtitles are separate from your post caption. Up to 30 timed segments are saved in your Studio draft and burned into export.</p>
             </div>
             <div className="space-y-2"><label className="block text-xs font-bold">Post caption</label><textarea value={caption} onChange={event=>setCaption(event.target.value.slice(0,500))} maxLength={500} rows={3} placeholder="Write a caption for your finished video…" className="w-full resize-y rounded-xl border border-[#34265E] bg-[#100C20] p-3 text-xs text-white outline-none focus:border-violet-400"/><div className="text-right text-[10px] text-[#827B9C]">{caption.length}/500</div></div>
-            <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing?'Publishing…':<><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button><p className="text-center text-[9px] text-[#827B9C]">Export first, then publish your rendered video.</p></div>
+            <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing ? 'Uploading · ' + uploadProgress + '%' : <><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button>{publishing && <div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-3"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: uploadProgress + '%'}}/></div><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-[#A39BBF]">Resumable upload · {uploadProgress}%</span><button type="button" onClick={cancelPublish} className="font-semibold text-rose-300">Cancel upload</button></div></div>}<p className="text-center text-[9px] text-[#827B9C]">Failed uploads can be retried without rendering again.</p></div>
           </aside>
         </main>
       </motion.div>

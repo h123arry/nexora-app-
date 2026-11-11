@@ -2353,13 +2353,14 @@ export default function App() {
               key={currentUser.id}
               currentUser={currentUser}
               onClose={() => setIsNexoraStudioOpen(false)}
-              onPublish={async (video, caption) => {
+              onPublish={async (video, caption, onProgress, signal) => {
                 const file = new File([video], `nexora-studio-${Date.now()}.webm`, { type: video.type || 'video/webm' });
                 const uploaded = await uploadMediaFile({
                   file,
                   userId: currentUser.id,
                   fileName: file.name,
-                  onProgress: () => undefined,
+                  onProgress,
+                  signal,
                 });
                 const postId = handleAddPost(caption || 'Created with NEXORA Studio', undefined, undefined, undefined, uploaded.downloadUrl, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, { mediaAssetId: uploaded.mediaId });
                 if (!postId) throw new Error('The video uploaded, but the post could not be created. Your Studio draft is still saved.');
