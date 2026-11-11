@@ -4,12 +4,12 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
+import { chooseStudioMp4Rendition, isOwnedStudioExportAsset, isStudioExportExpired } from './studioMp4ExportPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
 const URL_TTL_MS = 15 * 60 * 1000;
-const EXPORT_TTL_MS = 24 * 60 * 60 * 1000;
 
 function bucket() {
   return getStorage(app).bucket(resolveFirebaseStorageBucket());
@@ -19,7 +19,7 @@ async function deleteExportAsset(snapshot: DocumentSnapshot): Promise<void> {
   const asset = snapshot.data();
   const ownerId = typeof asset?.ownerId === 'string' ? asset.ownerId : '';
   const mediaId = snapshot.id;
-  if (!ownerId || asset?.sourcePurpose !== 'studio-export' || asset?.status === 'processing') return;
+  if (!isOwnedStudioExportAsset(asset, ownerId, mediaId) || asset?.status === 'processing') return;
   const sourcePath = `users/${ownerId}/media/${mediaId}`;
   if (asset.storagePath === sourcePath) {
     await bucket().file(sourcePath).delete({ ignoreNotFound: true });
@@ -37,19 +37,16 @@ export const getStudioExportMp4Url = onCall({ maxInstances: 30 }, async request 
   }
   const snapshot = await db.collection('mediaAssets').doc(mediaAssetId).get();
   const asset = snapshot.data();
-  if (!snapshot.exists || asset?.ownerId !== uid) {
+  if (!snapshot.exists || !isOwnedStudioExportAsset(asset, uid, mediaAssetId)) {
     throw new HttpsError('not-found', 'This Studio export is unavailable.');
   }
-  if (asset.sourcePurpose !== 'studio-export') {
-    if (asset.status === 'ready') throw new HttpsError('not-found', 'This media asset is not a Studio export.');
-    return { ready: false as const };
-  }
+  if (asset.sourcePurpose !== 'studio-export') return { ready: false as const };
   if (asset.status === 'failed' || asset.status === 'rejected') {
     throw new HttpsError('failed-precondition', 'The server could not prepare this MP4. Your original Studio export is still available.');
   }
   if (asset.status !== 'ready') return { ready: false as const };
   const renditions = safeVideoRenditions(asset.renditions, uid, mediaAssetId);
-  const selected = [...renditions].sort((a, b) => b.height - a.height)[0];
+  const selected = chooseStudioMp4Rendition(renditions);
   if (!selected) throw new HttpsError('unavailable', 'The MP4 rendition is not ready yet.');
   const file = bucket().file(selected.path);
   const [exists] = await file.exists();
@@ -68,7 +65,7 @@ export const cleanupStudioExportAsset = onCall({ maxInstances: 20 }, async reque
   }
   const snapshot = await db.collection('mediaAssets').doc(mediaAssetId).get();
   const asset = snapshot.data();
-  if (!snapshot.exists || asset?.ownerId !== uid || asset?.sourcePurpose !== 'studio-export') {
+  if (!snapshot.exists || !isOwnedStudioExportAsset(asset, uid, mediaAssetId)) {
     throw new HttpsError('not-found', 'This temporary Studio export is unavailable.');
   }
   if (asset.status === 'processing') {
@@ -88,9 +85,7 @@ export const cleanupExpiredStudioMp4Exports = onSchedule('every 6 hours', async 
     const page = await query.get();
     if (page.empty) break;
     for (const snapshot of page.docs) {
-      const expiresAt = snapshot.get('studioExportExpiresAt');
-      const expiry = typeof expiresAt?.toMillis === 'function' ? expiresAt.toMillis() : 0;
-      if (expiry > 0 && expiry <= Date.now() && snapshot.get('status') !== 'processing') {
+      if (isStudioExportExpired(snapshot.data() || {}, Date.now())) {
         await deleteExportAsset(snapshot);
       }
     }
