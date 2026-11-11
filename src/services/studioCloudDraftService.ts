@@ -44,7 +44,7 @@ async function encodeValue(
   }
   if (Array.isArray(value)) {
     const encoded: Encoded[] = [];
-    for (const item of value) encoded.push(await encodeValue(item, userId, assets, progress, signal));
+    for (const item of value) encoded.push(await encodeValue(item, userId, assets, progress, createdAssets, signal));
     return encoded;
   }
   if (value && typeof value === 'object') {
