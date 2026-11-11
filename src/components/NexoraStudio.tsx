@@ -12,7 +12,7 @@ import { getStudioExportValidationError } from '../utils/studioExportValidationP
 import { isStudioCloudDraftNewer } from '../utils/studioCloudDraftPolicy';
 import { getStudioCloudDraftRevision, loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
 import { createStudioMp4Export } from '../services/studioMp4ExportService';
-import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
+import { getCrossDissolveAudioGains, getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
@@ -378,20 +378,23 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   }, [voiceover]);
 
   useEffect(() => {
-    if (videoRef.current && selectedClip) videoRef.current.volume = selectedClip.volume;
-  }, [selectedClip?.id, selectedClip?.volume]);
-
-  useEffect(() => {
     const nextVideo = nextPreviewRef.current;
-    if (!nextVideo || !nextPreviewClip || transition !== 'cross-dissolve' || crossDissolveProgress <= 0 || !playing) {
+    const activeCrossDissolve = Boolean(nextVideo && nextPreviewClip && transition === 'cross-dissolve' && crossDissolveProgress > 0 && playing);
+    const audioGains = getCrossDissolveAudioGains(activeCrossDissolve ? crossDissolveProgress : 0);
+    if (videoRef.current && selectedClip) {
+      videoRef.current.volume = selectedClip.volume * audioGains.outgoing;
+    }
+    if (!nextVideo || !nextPreviewClip || !activeCrossDissolve) {
       nextVideo?.pause();
+      if (nextVideo) { nextVideo.muted = true; nextVideo.volume = 0; }
       return;
     }
     const expectedTime = Math.min(nextPreviewClip.end, nextPreviewClip.start + crossDissolveProgress * crossDissolveDuration);
     if (Math.abs(nextVideo.currentTime - expectedTime) > 0.2) nextVideo.currentTime = expectedTime;
-    nextVideo.muted = true;
+    nextVideo.muted = muted;
+    nextVideo.volume = nextPreviewClip.volume * audioGains.incoming;
     if (nextVideo.paused) void nextVideo.play().catch(() => setMessage('The next scene could not be preloaded for its transition.'));
-  }, [nextPreviewClip?.id, nextPreviewClip?.start, nextPreviewClip?.end, transition, crossDissolveProgress, crossDissolveDuration, playing]);
+  }, [selectedClip?.id, selectedClip?.volume, nextPreviewClip?.id, nextPreviewClip?.start, nextPreviewClip?.end, nextPreviewClip?.volume, transition, crossDissolveProgress, crossDissolveDuration, playing, muted]);
 
   useEffect(() => {
     const music = soundtrackPreviewRef.current;
@@ -748,7 +751,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     const preview = document.createElement('video');
     const transitionPreview = document.createElement('video');
     transitionPreview.playsInline = true;
-    transitionPreview.muted = true;
+    transitionPreview.muted = false;
     transitionPreview.preload = 'auto';
     preview.playsInline = true;
     preview.muted = false;
@@ -761,6 +764,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let voiceoverElement: HTMLAudioElement | null = null;
     let voiceoverObjectUrl: string | null = null;
     let clipGain: GainNode | null = null;
+    let transitionClipGain: GainNode | null = null;
     let soundtrackGain: GainNode | null = null;
     let voiceoverGain: GainNode | null = null;
     let voiceoverStartTimer: number | null = null;
@@ -779,6 +783,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       clipGain = audioContext.createGain();
       audioContext.createMediaElementSource(preview).connect(clipGain);
       clipGain.connect(mixedAudio);
+      transitionClipGain = audioContext.createGain();
+      transitionClipGain.gain.value = 0;
+      audioContext.createMediaElementSource(transitionPreview).connect(transitionClipGain);
+      transitionClipGain.connect(mixedAudio);
       if (soundtrack) {
         audioElement = new Audio();
         audioElement.src = audioObjectUrl = URL.createObjectURL(soundtrack);
@@ -958,6 +966,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         const transitionDuration = transition === 'cross-dissolve' && clipIndex < clips.length - 1 ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clip.end - clip.start), Math.max(0, clips[clipIndex + 1].end - clips[clipIndex + 1].start)) : 0;
         const sourceStart = Math.min(clip.end, clip.start + overlapFromPrevious);
         if (clipGain) clipGain.gain.value = clip.volume;
+        if (transitionClipGain) transitionClipGain.gain.value = 0;
         if (soundtrackGain) soundtrackGain.gain.value = soundtrackVolume;
         preview.src = URL.createObjectURL(clip.blob);
         const clipUrl = preview.src;
@@ -1007,6 +1016,9 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             const remaining = Math.max(0, clip.end - preview.currentTime);
             if (transitionDuration > 0 && remaining <= transitionDuration) {
               transitionProgress = getCrossDissolveProgress(preview.currentTime, clip.end, transitionDuration);
+              const audioGains = getCrossDissolveAudioGains(transitionProgress);
+              if (clipGain) clipGain.gain.value = clip.volume * audioGains.outgoing;
+              if (transitionClipGain) transitionClipGain.gain.value = clips[clipIndex + 1].volume * audioGains.incoming;
               if (!transitionStarted && transitionProgress > 0) { transitionStarted = true; void transitionPreview.play().catch(() => undefined); }
               if (transitionStarted && transitionPreview.readyState >= 2) {
                 const expectedTransitionTime = Math.min(clips[clipIndex + 1].end, clips[clipIndex + 1].start + transitionProgress * transitionDuration);
@@ -1015,7 +1027,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             }
             if (soundtrackGain) soundtrackGain.gain.value = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration, duckingLevel: musicDuckingLevel });
             if (voiceoverGain) voiceoverGain.gain.value = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: Math.max(0, elapsed - voiceoverStart), totalDuration: voiceoverDuration, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
-            if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); transitionPreview.pause(); transitionProgress = 0; resolve(); }
+            if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); transitionPreview.pause(); if (transitionClipGain) transitionClipGain.gain.value = 0; transitionProgress = 0; resolve(); }
             else window.setTimeout(check, 40);
           };
           check();
