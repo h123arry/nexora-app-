@@ -13,6 +13,7 @@ type Lens = {
 type Props = {
   cameraFacing: Facing;
   userId: string;
+  captureMode: 'photo' | 'video';
   onStreamReady: (stream: MediaStream | null) => void;
   onCapture: (blob: Blob) => void;
 };
@@ -129,7 +130,7 @@ function drawLens(context: CanvasRenderingContext2D, landmarks: any[], lens: Len
   context.restore();
 }
 
-export default function NexoraLensStudio({ cameraFacing, userId, onStreamReady, onCapture }: Props) {
+export default function NexoraLensStudio({ cameraFacing, userId, captureMode, onStreamReady, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamCallbackRef = useRef(onStreamReady);
@@ -163,7 +164,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, onStreamReady, 
         if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is not supported in this browser.');
         cameraStream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1280 }, height: { ideal: 720 } },
-          audio: true,
+          audio: captureMode === 'video',
         });
         if (cancelled) { cameraStream.getTracks().forEach(track => track.stop()); return; }
         video.srcObject = cameraStream;
@@ -243,7 +244,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, onStreamReady, 
       cameraStream?.getTracks().forEach(track => track.stop());
       if (video) { video.pause(); video.srcObject = null; }
     };
-  }, [cameraFacing]);
+  }, [cameraFacing, captureMode]);
 
   const toggleFavourite = (id: string) => {
     setFavourites(previous => {
