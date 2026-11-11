@@ -276,7 +276,7 @@ export function addReputationDb(userId: string, change: number, reason: Reputati
 }
 
 export function createPostDb(userId: string, postId?: string, postType: 'post_create' | 'media_upload' | 'video_publish' | 'pulse_create' | 'voice_publish' = 'post_create') {
-  ActivityService.recordActivityEvent(userId, postType, postId || `post_${Date.now()}`);
+  ActivityService.recordActivityEvent(userId, postType, postId || createSecureId('post'));
 }
 
 export function addSparkDb(fromUserId: string, toUserId: string, targetType: SparkRecord['targetType'], targetId: string) {
@@ -297,9 +297,10 @@ export function addSparkDb(fromUserId: string, toUserId: string, targetType: Spa
 }
 
 export function addHelpfulCommentDb(userId: string, commentId?: string, postAuthorId?: string) {
-  ActivityService.recordActivityEvent(userId, 'comment_create', commentId || `comment_${Date.now()}`);
+  const activityCommentId = commentId || createSecureId('comment');
+  ActivityService.recordActivityEvent(userId, 'comment_create', activityCommentId);
   if (postAuthorId && postAuthorId !== userId) {
-    ActivityService.recordActivityEvent(postAuthorId, 'comment_received', commentId || `comment_${Date.now()}`, { fromUserId: userId });
+    ActivityService.recordActivityEvent(postAuthorId, 'comment_received', activityCommentId, { fromUserId: userId });
   }
 }
 
