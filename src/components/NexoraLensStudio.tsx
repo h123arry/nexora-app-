@@ -387,6 +387,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [cameraError, setCameraError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
   const allLenses = [...LENSES, ...customLenses];
+  const allLensesRef = useRef(allLenses);
+  allLensesRef.current = allLenses;
   const activeLensRef = useRef(activeLens);
   activeLensRef.current = activeLens;
   streamCallbackRef.current = onStreamReady;
@@ -436,7 +438,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
 
         const render = (now: number) => {
           if (cancelled || !video.videoWidth) return;
-          const lens = allLenses.find(item => item.id === activeLensRef.current) || LENSES[0];
+          const lens = allLensesRef.current.find(item => item.id === activeLensRef.current) || LENSES[0];
           context.save();
           if (cameraFacing === 'user') {
             context.translate(canvas.width, 0);
