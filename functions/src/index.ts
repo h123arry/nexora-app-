@@ -51,6 +51,7 @@ export { cleanupExpiredStories } from './storyCleanup.js';
 export { moderateLiveParticipant } from './liveModeration.js';
 export { sendPageBookingReminders } from './pageBookingReminders.js';
 import { createNotificationPushDelivery } from './pushDelivery.js';
+import { createFollowInboxNotification } from './followNotificationDelivery.js';
 import {
   saveAcademyCourseDraft, saveAcademyLesson, submitAcademyCourseForReview, reviewAcademyCourse,
   getPublishedAcademyCourse, listPublishedAcademyCourses, createAcademyAssessment, publishAcademyAssessment, submitAcademyAssessment,
@@ -65,6 +66,7 @@ const firestoreDatabaseId = resolveFirestoreDatabaseId();
 const adminDb = getFirestore(adminApp, firestoreDatabaseId);
 
 export const deliverNotificationPush = createNotificationPushDelivery(adminDb, adminApp);
+export const deliverFollowInboxNotification = createFollowInboxNotification(adminDb);
 
 const syncSearch = (kind: Parameters<typeof syncUniversalSearchRecord>[1], id: string, path: string, data: Record<string, unknown> | null, parent?: Record<string, unknown>) =>
   syncUniversalSearchRecord(adminDb, kind, id, path, data, parent);
