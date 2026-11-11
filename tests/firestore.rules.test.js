@@ -1617,4 +1617,31 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('alice'), 'creatorLensAuditEvents', 'fake'), { event: 'approved' }));
   });
 
+  it('keeps NEXORA Origin provenance private to its owner and server-write-only', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'mediaOrigins', 'alice-origin'), {
+        assetId: 'alice-origin', ownerUid: 'alice', originKind: 'upload_ingest',
+        contentDigest: 'a'.repeat(64), digestAlgorithm: 'sha256', mediaGeneration: '123456',
+        credentialState: 'absent', lineageState: 'unlinked', schemaVersion: 1
+      });
+      await setDoc(doc(adminDb, 'mediaOrigins', 'alice-origin', 'events', 'generation_123456'), {
+        eventId: 'generation_123456', assetId: 'alice-origin', actorUid: 'alice',
+        eventType: 'uploaded_to_nexora', contributionRole: 'uploader'
+      });
+    });
+
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'mediaOrigins', 'alice-origin')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'mediaOrigins', 'alice-origin', 'events', 'generation_123456')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'mediaOrigins', 'alice-origin')));
+    await assertFails(getDocs(collection(dbFor('bob'), 'mediaOrigins', 'alice-origin', 'events')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'mediaOrigins', 'forged'), {
+      assetId: 'forged', ownerUid: 'alice', contentDigest: 'b'.repeat(64)
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'mediaOrigins', 'alice-origin'), { ownerUid: 'bob' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'mediaOrigins', 'alice-origin')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'mediaOrigins', 'alice-origin', 'events', 'forged'), {
+      eventType: 'original_creator'
+    }));
+  });
+
 });
