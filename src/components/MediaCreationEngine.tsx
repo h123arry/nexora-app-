@@ -512,20 +512,29 @@ export default function MediaCreationEngine({
   // Camera preview management
   useEffect(() => {
     let currentStream: MediaStream | null = null;
+    let cancelled = false;
     if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2 && !isLensStudioOpen) {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: cameraFacing }, audio: true })
         .then(stream => {
+          if (cancelled) {
+            stream.getTracks().forEach(track => track.stop());
+            return;
+          }
           currentStream = stream;
           videoStreamRef.current = stream;
           if (videoPreviewRef.current) {
             videoPreviewRef.current.srcObject = stream;
           }
         })
-        .catch(err => console.error("Camera error: ", err));
+        .catch(err => {
+          if (!cancelled) console.error("Camera error: ", err);
+        });
     }
     return () => {
+      cancelled = true;
       if (currentStream) {
         currentStream.getTracks().forEach(track => track.stop());
+        if (videoStreamRef.current === currentStream) videoStreamRef.current = null;
       }
     };
   }, [activeMode, permissionState, cameraFacing, currentStep, isLensStudioOpen]);
