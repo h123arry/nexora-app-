@@ -38,6 +38,31 @@ describe('Firebase Storage authorization regression tests', () => {
     await assertSucceeds(deleteObject(ref(storage, 'users/alice/media/media-1')));
   });
 
+  it('keeps Studio source assets private and separate from published media paths', async () => {
+    const aliceStorage = ctx('alice').storage();
+    const path = 'users/alice/studio-drafts/active/assets/studio-asset-1';
+    await assertSucceeds(uploadBytes(ref(aliceStorage, path), audio(), {
+      contentType: 'audio/webm',
+      customMetadata: { ownerId: 'alice', draftId: 'active', assetId: 'studio-asset-1', purpose: 'nexora-studio-draft' }
+    }));
+    await assertSucceeds(getBytes(ref(aliceStorage, path)));
+    await assertFails(getBytes(ref(ctx('bob').storage(), path)));
+    await assertFails(uploadBytes(ref(aliceStorage, 'users/alice/studio-drafts/active/assets/forged'), audio(), {
+      contentType: 'audio/webm',
+      customMetadata: { ownerId: 'bob', draftId: 'active', assetId: 'forged' }
+    }));
+    await assertFails(uploadBytes(ref(aliceStorage, 'users/alice/studio-drafts/other/assets/wrong-draft'), audio(), {
+      contentType: 'audio/webm',
+      customMetadata: { ownerId: 'alice', draftId: 'active', assetId: 'wrong-draft' }
+    }));
+    await assertFails(uploadBytes(ref(aliceStorage, 'users/alice/studio-drafts/active/assets/unsupported'), new Blob(['text'], { type: 'text/plain' }), {
+      contentType: 'text/plain',
+      customMetadata: { ownerId: 'alice', draftId: 'active', assetId: 'unsupported' }
+    }));
+    await assertFails(deleteObject(ref(ctx('bob').storage(), path)));
+    await assertSucceeds(deleteObject(ref(aliceStorage, path)));
+  });
+
   it('denies direct client access to chat audio so membership is checked against the named database by the server', async () => {
     const path = 'chats/chat-1/audio/alice/voice-1';
     await assertFails(uploadBytes(ref(ctx('alice').storage(), path), audio(), {
