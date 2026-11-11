@@ -2,6 +2,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { chooseVideoRendition, safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -9,7 +10,6 @@ const bucket = getStorage(app).bucket(resolveFirebaseStorageBucket());
 const ID = /^[A-Za-z0-9_-]{1,128}$/;
 const URL_TTL_MS = 15 * 60 * 1000;
 
-import { chooseVideoRendition, safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
 
 /**
  * Resolve playback only after checking the post's current public audience and
