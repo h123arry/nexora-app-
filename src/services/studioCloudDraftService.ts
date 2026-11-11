@@ -143,7 +143,12 @@ export async function loadStudioCloudDraft<T>(userId: string): Promise<StudioClo
     throw new Error('The cloud Studio draft has an unsupported format. Your local draft is untouched.');
   }
   const project = await decodeValue(manifest.project, manifest.assets, userId) as T;
-  const updatedAt = typeof data.updatedAt?.toMillis === 'function' ? data.updatedAt.toMillis() : 0;
+  const projectTimestamp = project && typeof project === 'object'
+    ? (project as { updatedAt?: unknown }).updatedAt
+    : undefined;
+  const updatedAt = typeof projectTimestamp === 'number' && Number.isFinite(projectTimestamp)
+    ? projectTimestamp
+    : typeof data.updatedAt?.toMillis === 'function' ? data.updatedAt.toMillis() : 0;
   return { project, revision: Number.isInteger(data.revision) ? data.revision : 0, updatedAt };
 }
 
