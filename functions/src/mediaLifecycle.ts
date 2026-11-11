@@ -30,7 +30,12 @@ async function sha256FinalizedObject(bucketName: string, objectName: string, gen
   return digest.digest('hex');
 }
 
-export const verifyFinalizedMedia = onObjectFinalized(async event => {
+export const verifyFinalizedMedia = onObjectFinalized({
+  retry: true,
+  timeoutSeconds: 540,
+  memory: '512MiB',
+  maxInstances: 10,
+}, async event => {
   const object = event.data;
   const match = object.name?.match(/^users\/([A-Za-z0-9_-]{1,128})\/media\/([A-Za-z0-9_-]{1,128})$/);
   if (!match || !object.name) return;
