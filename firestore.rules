@@ -182,6 +182,18 @@ service cloud.firestore {
 
     // Default-deny for every path not explicitly listed below.
     match /{document=**} { allow read, write: if false; }
+ 
+    // Creator lenses are written and reviewed only by trusted callables.
+    // Clients may read approved public lenses and their own private drafts.
+    match /creatorLenses/{lensId} {
+      allow get, list: if resource.data.get('status', '') == 'approved'
+        || owner(resource.data.get('ownerId', ''));
+      allow create, update, delete: if false;
+    }
+    match /creatorLensAuditEvents/{eventId} {
+      allow read, write: if false;
+    }
+
 
 
     // NEXORA Institute content is published by trusted Academy callables.
