@@ -754,6 +754,8 @@ export default function NewInboxView({
               {/* Call & Media Buttons */}
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
+                  aria-label={`Start a voice call with ${activeChat.partnerName}`}
                   onClick={() => setActiveCall({ type: 'voice', partnerName: activeChat.partnerName, partnerAvatar: activeChat.partnerAvatar })}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Voice Call"
@@ -761,6 +763,8 @@ export default function NewInboxView({
                   <Phone className="w-4 h-4" />
                 </button>
                 <button
+                  type="button"
+                  aria-label={`View media and files shared with ${activeChat.partnerName}`}
                   onClick={() => setShowMediaGallery(true)}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Media & Files"
@@ -788,7 +792,7 @@ export default function NewInboxView({
                   </div>
                   <h4 className="text-xs font-bold text-white mb-1 font-sans">Secure conversation started</h4>
                   <p className="text-[11px] text-zinc-500 max-w-xs font-sans">
-                    Send a message, photo, video, or voice note to begin chatting securely with {activeChat.partnerName}.
+                    Send a message or voice note to begin chatting with {activeChat.partnerName}. Photos and videos are not available in direct messages yet.
                   </p>
                 </div>
               ) : (
@@ -857,6 +861,8 @@ export default function NewInboxView({
             <div className="p-3 border-t border-white/10 bg-black/80 backdrop-blur-md relative">
               <div className="flex items-center gap-2">
                 <button
+                  type="button"
+                  aria-label="Open attachment options"
                   onClick={() => setShowAttachmentMenu(true)}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Attach"
@@ -865,6 +871,9 @@ export default function NewInboxView({
                 </button>
 
                 <button
+                  type="button"
+                  aria-label={showEmojiPicker ? "Close emoji picker" : "Open emoji picker"}
+                  aria-expanded={showEmojiPicker}
                   onClick={() => setShowEmojiPicker(prev => !prev)}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Emoji"
@@ -882,11 +891,14 @@ export default function NewInboxView({
                       handleSendMessage();
                     }
                   }}
-                  placeholder="Type a secure message..."
+                  aria-label="Message"
+                  placeholder="Type a message..."
                   className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-4 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-violet-500 transition-all font-sans"
                 />
 
                 <button
+                  type="button"
+                  aria-label="Record a voice note"
                   onClick={() => setShowVoiceRecorder(true)}
                   className="p-2.5 bg-white/5 hover:bg-violet-600/30 text-zinc-300 hover:text-white rounded-xl transition-all cursor-pointer"
                   title="Voice Note"
@@ -895,6 +907,8 @@ export default function NewInboxView({
                 </button>
 
                 <button
+                  type="button"
+                  aria-label="Send message"
                   onClick={() => handleSendMessage()}
                   disabled={!newMessageText.trim()}
                   className="p-2.5 bg-violet-600 hover:bg-violet-500 disabled:opacity-40 disabled:hover:bg-violet-600 text-white rounded-xl shadow-lg transition-all flex items-center justify-center cursor-pointer"
