@@ -225,6 +225,9 @@ export default function NexoraVideoPlayer({
   const bufferingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const watermarkCycleRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const postRollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playStateIndicatorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const doubleTapHeartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const exportStateTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sonicAudioRef = useRef<HTMLAudioElement | null>(null);
   
   // Double-tap pulse effect
@@ -310,6 +313,10 @@ export default function NexoraVideoPlayer({
 
   useEffect(() => () => {
     if (postRollTimeoutRef.current) clearTimeout(postRollTimeoutRef.current);
+    if (singleTapTimeoutRef.current) clearTimeout(singleTapTimeoutRef.current);
+    if (playStateIndicatorTimeoutRef.current) clearTimeout(playStateIndicatorTimeoutRef.current);
+    if (doubleTapHeartTimeoutRef.current) clearTimeout(doubleTapHeartTimeoutRef.current);
+    if (exportStateTimeoutRef.current) clearTimeout(exportStateTimeoutRef.current);
     sonicAudioRef.current?.pause();
   }, []);
 
@@ -692,8 +699,10 @@ export default function NexoraVideoPlayer({
           }
         });
     }
-    setTimeout(() => {
+    if (playStateIndicatorTimeoutRef.current) clearTimeout(playStateIndicatorTimeoutRef.current);
+    playStateIndicatorTimeoutRef.current = setTimeout(() => {
       setShowPlayStateIndicator(null);
+      playStateIndicatorTimeoutRef.current = null;
     }, 600);
   };
 
@@ -762,7 +771,11 @@ export default function NexoraVideoPlayer({
       recordReelSignal(post.id, { liked: true }, currentUser?.id);
       setHeartPosition({ x: clientX, y: clientY });
       setShowDoubleTapHeart(true);
-      window.setTimeout(() => setShowDoubleTapHeart(false), 700);
+      if (doubleTapHeartTimeoutRef.current) clearTimeout(doubleTapHeartTimeoutRef.current);
+      doubleTapHeartTimeoutRef.current = window.setTimeout(() => {
+        setShowDoubleTapHeart(false);
+        doubleTapHeartTimeoutRef.current = null;
+      }, 700);
       return;
     }
     lastTapRef.current = now;
@@ -977,8 +990,10 @@ export default function NexoraVideoPlayer({
 
       setExportState(prev => prev ? { ...prev, progress: 100, statusText: 'Download complete!' } : null);
       window.dispatchEvent(new CustomEvent('toast', { detail: '✅ Video downloaded successfully as playable MP4.' }));
-      setTimeout(() => {
+      if (exportStateTimeoutRef.current) clearTimeout(exportStateTimeoutRef.current);
+      exportStateTimeoutRef.current = setTimeout(() => {
         setExportState(null);
+        exportStateTimeoutRef.current = null;
       }, 800);
     } catch (err) {
       console.warn('Direct blob fetch download fallback triggered:', err);
