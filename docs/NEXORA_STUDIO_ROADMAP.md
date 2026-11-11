@@ -22,6 +22,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Browser-side canvas + MediaRecorder WebM export.
 - Source clip audio and optional soundtrack mixed through Web Audio when supported.
 - Multiple independently timed text layers with separate colour, placement, font size, opacity, scale and rotation; edits are previewed and baked into export.
+- User-authored text motion keyframes for opacity, scale, rotation and vertical offset, interpolated in preview and export with existing entrance animation curves.
 - Creator-imported PNG, JPEG and WebP image layers with independent timing, position, scale, rotation and opacity; layers are included in preview and export.
 - Independently timed subtitle segments with a separate track from the post caption, live preview, local autosave, undo/redo and burned-in export.
 - Shared global playhead with seek mapping across concatenated source clips, plus visual video, audio, image, text and subtitle lanes. Selecting a lane segment seeks the preview to its global timeline start.
@@ -49,7 +50,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 ### Phase 3 · Timeline and motion
 - [x] Independent video, audio, image, text and subtitle lanes with a shared seekable playhead and clip-aware global seeking.
 - [x] Continuous preview synchronization for source video, soundtrack and voiceover, including shared-playhead seeking and audio envelopes.
-- User-authored keyframes for independent animation of text, sticker and video layers.
+- [x] User-authored keyframes for text opacity, scale, rotation and vertical offset, with interpolation shared by preview and export.
+- User-authored keyframes for independent animation of image/sticker and video layers.
 - Cross-dissolve and selected transition presets beyond fade-through-black.
 
 ### Phase 4 · Audio and captions
