@@ -960,11 +960,7 @@ export default function PrivacySettingsModal({
                           <span className="text-[10.5px] font-black block">{opt.label}</span>
                           <span className="text-[8.5px] font-mono text-zinc-500 mt-1 block leading-none">{opt.desc}</span>
                         </button>
-                      )) : (
-                        <p className="rounded-xl border border-dashed border-white/10 bg-black/20 p-3 text-[10px] leading-relaxed text-zinc-400">
-                          Restrict is not currently connected to account-level enforcement. Use Block User for the block controls that are saved to your account.
-                        </p>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
