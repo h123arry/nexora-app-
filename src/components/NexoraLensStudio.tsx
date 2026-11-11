@@ -562,7 +562,10 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           if (!cancelled) setFaceTracking('unavailable');
         }
       } catch (error) {
-        setCameraError(error instanceof Error ? error.message : 'Could not start the NEXORA camera.');
+        outputStream?.getTracks().forEach(track => track.stop());
+        cameraStream?.getTracks().forEach(track => track.stop());
+        streamCallbackRef.current(null);
+        if (!cancelled) setCameraError(error instanceof Error ? error.message : 'Could not start the NEXORA camera.');
       }
     };
 
