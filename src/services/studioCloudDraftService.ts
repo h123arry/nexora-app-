@@ -1,7 +1,6 @@
 import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore';
-import { getBytes, ref } from 'firebase/storage';
+import { deleteObject, getBytes, ref, uploadBytesResumable, type UploadMetadata } from 'firebase/storage';
 import { auth, db, storage } from './firebase/config';
-import { deleteMediaFile, uploadMediaFile } from './firebase/storageService';
 import { isStudioCloudAssetPathOwnedByUser, isStudioCloudRevisionCurrent } from '../utils/studioCloudDraftPolicy';
 
 type CloudAsset = { storagePath: string; contentType: string; size: number };
@@ -19,6 +18,55 @@ const MAX_CLOUD_MANIFEST_BYTES = 700 * 1024;
 
 function makeAssetId(): string {
   return crypto.randomUUID();
+}
+
+function studioDraftAssetPath(userId: string, assetId: string): string {
+  return `users/${userId}/studio-drafts/active/assets/${assetId}`;
+}
+
+function uploadStudioDraftAsset(
+  blob: Blob,
+  userId: string,
+  assetId: string,
+  signal?: AbortSignal,
+  onProgress?: (percent: number) => void,
+): Promise<CloudAsset> {
+  if (!storage) return Promise.reject(new Error('Cloud media storage is unavailable.'));
+  const contentType = blob.type.split(';')[0].trim().toLowerCase();
+  const imageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+  const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/ogg'];
+  const audioTypes = ['audio/mpeg', 'audio/mp4', 'audio/wav', 'audio/webm', 'audio/ogg', 'audio/aac'];
+  const maxBytes = imageTypes.includes(contentType) ? 12 * 1024 * 1024
+    : videoTypes.includes(contentType) ? 250 * 1024 * 1024
+    : audioTypes.includes(contentType) ? 50 * 1024 * 1024 : 0;
+  if (!maxBytes || blob.size <= 0 || blob.size > maxBytes) {
+    return Promise.reject(new Error('A Studio source asset has an unsupported format or exceeds its upload limit. Your local draft is safe.'));
+  }
+  const storagePath = studioDraftAssetPath(userId, assetId);
+  const metadata: UploadMetadata = {
+    contentType,
+    customMetadata: { ownerId: userId, draftId: 'active', assetId, purpose: 'nexora-studio-draft' },
+  };
+  return new Promise((resolve, reject) => {
+    const task = uploadBytesResumable(ref(storage, storagePath), blob, metadata);
+    const abort = () => task.cancel();
+    if (signal?.aborted) task.cancel();
+    signal?.addEventListener('abort', abort, { once: true });
+    task.on('state_changed',
+      snapshot => {
+        const percent = snapshot.totalBytes ? Math.round(snapshot.bytesTransferred / snapshot.totalBytes * 100) : 0;
+        onProgress?.(percent);
+      },
+      error => {
+        signal?.removeEventListener('abort', abort);
+        reject(error);
+      },
+      () => {
+        signal?.removeEventListener('abort', abort);
+        resolve({ storagePath, contentType, size: blob.size });
+      },
+    );
+  });
 }
 
 function assertSignedIn(userId: string): void {
@@ -79,16 +127,13 @@ async function uploadAssetWithId(
 ): Promise<CloudAsset> {
   const existing = uploadedBlobs.get(blob);
   if (existing) return existing;
-  const pending = uploadMediaFile({
-    file: blob,
+  const pending = uploadStudioDraftAsset(
+    blob,
     userId,
-    mediaId: id,
-    fileName: `studio-asset-${id}`,
-    metadata: { purpose: 'studio-draft', draftOwnerId: userId },
+    id,
     signal,
-    onProgress: percent => progress?.(id, Math.round(blob.size * percent / 100)),
-  }).then(result => {
-    const asset = { storagePath: result.storagePath, contentType: result.contentType, size: result.size };
+    percent => progress?.(id, Math.round(blob.size * percent / 100)),
+  ).then(asset => {
     createdAssets.push({ blob, asset });
     uploadedBlobByPath.set(asset.storagePath, new WeakRef(blob));
     return asset;
@@ -218,7 +263,7 @@ export async function saveStudioCloudDraft<T>(
       uploadedBlobs.delete(blob);
       assetIds.delete(blob);
       uploadedBlobByPath.delete(asset.storagePath);
-      await deleteMediaFile(asset.storagePath);
+      if (storage) await deleteObject(ref(storage, asset.storagePath));
     }));
     throw error;
   }
@@ -233,7 +278,7 @@ export async function saveStudioCloudDraft<T>(
       assetIds.delete(oldBlob);
       uploadedBlobByPath.delete(path);
     }
-    await deleteMediaFile(path);
+    if (storage) await deleteObject(ref(storage, path));
   }));
   onProgress?.(100);
   return { revision: nextRevision, uploadedBytes: totalBytes };
