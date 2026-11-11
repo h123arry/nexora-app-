@@ -5,6 +5,7 @@ import { processAccountDeletion } from './accountDeletionWorker.js';
 import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { endorsePublicPostAsHelpful } from './helpfulContent.js';
+import { createSeasonalCommunityEvent as createSeasonalEventRecord, listSeasonalCommunityEvents as listSeasonalEventRecords, setSeasonalCommunityEventRsvp } from './seasonalCommunityEvents.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
 import { setPublicPostCommentLike } from './postCommentReactions.js';
@@ -946,6 +947,40 @@ export const endorsePublicPostHelpful = onCall({ maxInstances: 10 }, async reque
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     if (message.includes('valid account') || message.includes('verifiable author')) throw new HttpsError('invalid-argument', message);
     throw new HttpsError('internal', 'Your helpfulness endorsement could not be saved.');
+  }
+});
+
+
+export const createSeasonalCommunityEvent = onCall({ maxInstances: 5 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage seasonal events.');
+  const token = request.auth.token || {};
+  const role = typeof token.role === 'string' ? token.role : '';
+  if (!(token.admin === true || role === 'admin' || role === 'founder')) {
+    throw new HttpsError('permission-denied', 'Platform event management access is required.');
+  }
+  try { return await createSeasonalEventRecord(adminDb, request.auth.uid, request.data || {}); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('details are invalid') || message.includes('valid event manager')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'The seasonal event could not be created.');
+  }
+});
+
+export const listSeasonalCommunityEvents = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore seasonal events.');
+  try { return await listSeasonalEventRecords(adminDb, request.auth.uid); }
+  catch { throw new HttpsError('unavailable', 'Seasonal events are temporarily unavailable.'); }
+});
+
+export const respondToSeasonalCommunityEvent = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to RSVP.');
+  try { return await setSeasonalCommunityEventRsvp(adminDb, request.auth.uid, request.data?.eventId, request.data?.attending); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid event')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('RSVPs are closed')) throw new HttpsError('failed-precondition', message);
+    if (message.includes('capacity')) throw new HttpsError('resource-exhausted', message);
+    throw new HttpsError('internal', 'Your event RSVP could not be saved.');
   }
 });
 
