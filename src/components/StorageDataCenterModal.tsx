@@ -756,13 +756,9 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
             {/* Left Sidebar Tab selectors */}
             <div className="w-full md:w-64 border-r border-white/5 bg-black/20 overflow-y-auto p-3 space-y-1 shrink-0">
               {[
-                { id: 'dashboard', label: 'Storage Dashboard', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
-                { id: 'analyzer', label: 'AI Storage Scanner', icon: Sparkles, badge: recommendations.length > 0 ? `${recommendations.length} items` : '' },
+                { id: 'dashboard', label: 'Local Storage Snapshot', icon: HardDrive, badge: `${totalNexoraSpaceGB} GB` },
                 { id: 'conversations', label: 'Conversations Ledger', icon: Database, count: conversationsList.length },
-                { id: 'downloads', label: 'Auto-Download Control', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' },
-                { id: 'backups', label: 'Backup Demo (Not Connected)', icon: ShieldCheck },
-                { id: 'network', label: 'Network & Bandwidth', icon: BarChart2 },
-                { id: 'optimization', label: 'Performance Center ⚡', icon: Cpu, badge: `${optimizationScore}%` }
+                { id: 'downloads', label: 'Auto-Download Preferences', icon: Download, badge: downloads.adaptiveDataSaver ? 'Saver On' : '' }
               ].map(tab => {
                 const Icon = tab.icon;
                 const isSelected = activeTab === tab.id;
@@ -826,158 +822,38 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
               
               {/* DASHBOARD TAB */}
               {activeTab === 'dashboard' && (
-                <div className="space-y-6 text-left">
-                  {/* Top quick stats cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    
-                    {/* Ring indicator block */}
-                    <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl flex items-center gap-4">
-                      {/* Animated circular meter */}
-                      <div className="relative w-16 h-16 flex items-center justify-center shrink-0">
-                        <svg className="w-full h-full transform -rotate-90">
-                          <circle cx="32" cy="32" r="28" fill="transparent" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
-                          <circle cx="32" cy="32" r="28" fill="transparent" stroke="url(#violetGradient)" strokeWidth="6" strokeDasharray={175} strokeDashoffset={175 - (175 * (Number(totalNexoraSpaceGB) / 10))} className="transition-all duration-1000" />
-                          <defs>
-                            <linearGradient id="violetGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                              <stop offset="0%" stopColor="#8b5cf6" />
-                              <stop offset="100%" stopColor="#ec4899" />
-                            </linearGradient>
-                          </defs>
-                        </svg>
-                        <div className="absolute text-center">
-                          <span className="text-[10px] font-mono text-zinc-500 block leading-none">Usage</span>
-                          <span className="text-xs font-black text-white">{totalNexoraSpaceGB}G</span>
-                        </div>
+                <div className="space-y-5 text-left">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
+                    <div className="flex items-center gap-2">
+                      <HardDrive className="h-5 w-5 text-violet-400" />
+                      <h4 className="text-sm font-bold text-white">Local storage snapshot</h4>
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-400">
+                      This panel reports only browser-local cache and media records currently indexed by this device. Cloud storage usage, server backups, CPU, memory, battery and network telemetry are not connected here.
+                    </p>
+                    <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                      <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Local cache</p>
+                        <p className="mt-1 text-xl font-black text-white">{totalCacheMB} MB</p>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-black text-zinc-400 uppercase tracking-wider font-mono">Nexora Size</h4>
-                        <p className="text-lg font-black text-white mt-1">{totalNexoraSpaceGB} GB</p>
-                        <span className="text-[9px] font-mono text-emerald-400">Total verified on-device blockchain cache</span>
+                      <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Indexed media</p>
+                        <p className="mt-1 text-xl font-black text-white">{totalMediaGB} GB</p>
+                      </div>
+                      <div className="rounded-xl border border-white/5 bg-black/20 p-4">
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">Measured local total</p>
+                        <p className="mt-1 text-xl font-black text-white">{totalNexoraSpaceGB} GB</p>
                       </div>
                     </div>
-
-                    <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-zinc-400 uppercase font-mono">System Cache</span>
-                        <span title="Clear cache log" className="cursor-pointer text-zinc-500 hover:text-white" onClick={handleClearAllCache}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </span>
-                      </div>
-                      <p className="text-lg font-black text-white mt-2">{totalCacheMB} MB</p>
-                      <div className="w-full bg-white/5 h-1.5 rounded-full mt-2 overflow-hidden">
-                        <div className="bg-pink-500 h-full rounded-full" style={{ width: `${Math.min(100, (Number(totalCacheMB)/1000)*100)}%` }} />
-                      </div>
-                      <span className="text-[9px] text-zinc-500 mt-1.5 block leading-none">Temporary imagery, database journals and indices.</span>
-                    </div>
-
-                    <div className="p-4 bg-slate-950/70 border border-white/5 rounded-2xl">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-black text-zinc-400 uppercase font-mono">Cloud Backup Sync</span>
-                        <span className="text-[8px] font-mono uppercase px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold">Encrypted</span>
-                      </div>
-                      <p className="text-lg font-black text-white mt-2">2.4 GB</p>
-                      <p className="text-[9px] text-zinc-500 mt-1 leading-normal">Last synchronized: <b className="text-zinc-300">Today at 04:00 AM</b></p>
-                      <button onClick={triggerManualBackup} className="text-[9px] text-violet-400 hover:underline hover:text-violet-300 font-mono flex items-center gap-1 mt-2 cursor-pointer">
-                        <RefreshCw className="w-2.5 h-2.5 animate-spin" /> Sync Cloud Ledger Now
-                      </button>
-                    </div>
-
-                  </div>
-
-                  {/* Complete categorized breakdown progress strip */}
-                  <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4">
-                    <div>
-                      <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Ledger Category Breakdown</h4>
-                      <p className="text-[10px] text-zinc-500 mt-0.5">Understand how different media formats and data packets occupy space on your system partition.</p>
-                    </div>
-
-                    {/* Integrated visual progressive bar */}
-                    <div className="w-full bg-white/5 h-4 rounded-lg flex overflow-hidden">
-                      <div className="bg-violet-600 h-full" style={{ width: '45%' }} title="Videos (45%)" />
-                      <div className="bg-pink-500 h-full" style={{ width: '22%' }} title="Images (22%)" />
-                      <div className="bg-amber-500 h-full" style={{ width: '12%' }} title="Voice Notes (12%)" />
-                      <div className="bg-emerald-500 h-full" style={{ width: '10%' }} title="Documents (10%)" />
-                      <div className="bg-cyan-500 h-full" style={{ width: '6%' }} title="Database / Temp (6%)" />
-                      <div className="bg-indigo-500 h-full" style={{ width: '5%' }} title="Gifs / Stickers (5%)" />
-                    </div>
-
-                    {/* Legend keys */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-                      {[
-                        { label: 'Videos', color: 'bg-violet-600', size: '1.45 GB', percent: '45%' },
-                        { label: 'Images', color: 'bg-pink-500', size: '515 MB', percent: '22%' },
-                        { label: 'Voice Notes', color: 'bg-amber-500', size: '165 MB', percent: '12%' },
-                        { label: 'Documents', color: 'bg-emerald-500', size: '184 MB', percent: '10%' },
-                        { label: 'Database & DB Cache', color: 'bg-cyan-500', size: '265 MB', percent: '6%' },
-                        { label: 'Gifs / Stickers', color: 'bg-indigo-500', size: '94 MB', percent: '5%' }
-                      ].map(leg => (
-                        <div key={leg.label} className="p-2.5 bg-black/40 border border-white/5 rounded-xl space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            <span className={`w-2 h-2 rounded-full ${leg.color}`} />
-                            <span className="text-[10px] text-zinc-400 font-bold truncate">{leg.label}</span>
-                          </div>
-                          <div className="flex justify-between text-[9px] font-mono leading-none pt-0.5">
-                            <span className="text-white font-bold">{leg.size}</span>
-                            <span className="text-zinc-600">{leg.percent}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Cache Manager segment */}
-                  <div className="p-5 bg-slate-950/60 border border-white/5 rounded-2xl space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h4 className="text-xs font-black text-zinc-300 uppercase tracking-wider font-mono">Asset Cache Controller</h4>
-                        <p className="text-[10px] text-zinc-500 mt-0.5">Asset cache speeds up message retrieval and avatars but is entirely safe to clear anytime.</p>
-                      </div>
-                      <button 
-                        onClick={handleClearAllCache}
-                        className="px-3 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-lg text-[10px] font-mono cursor-pointer"
-                      >
-                        Clear All Temporary Asset Tables
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-                      {[
-                        { key: 'image', label: 'Images Cache', size: `${cacheLevels.image} MB`, effect: 'Avatars and profile photos will re-download as you scroll.' },
-                        { key: 'video', label: 'Videos Cache', size: `${cacheLevels.video} MB`, effect: 'Cached video file segments will be cleared from memory.' },
-                        { key: 'thumbnail', label: 'Thumbnails', size: `${cacheLevels.thumbnail} MB`, effect: 'Small chat and status preview images will be regenerated.' },
-                        { key: 'sticker', label: 'Sticker Cache', size: `${cacheLevels.sticker} MB`, effect: 'Animated and custom stickers will load from files.' },
-                        { key: 'gif', label: 'GIF Indices', size: `${cacheLevels.gif} MB`, effect: 'Clears preview GIFs and trending results cache.' },
-                        { key: 'emoji', label: 'Emoji Cache', size: `${cacheLevels.emoji} MB`, effect: 'Clears recent search and usage frequency indicators.' },
-                        { key: 'search', label: 'Search Index', size: `${cacheLevels.search} MB`, effect: 'Rebuilds database search catalog when query runs.' },
-                        { key: 'ai', label: 'AI Memory Cache', size: `${cacheLevels.ai} MB`, effect: 'Temporary workspace arrays for Nida & VOH AI assistant agents.' },
-                        { key: 'temporary', label: 'Temp Exports', size: `${cacheLevels.temporary} MB`, effect: 'Unsent media drafts and temporary voice records deleted.' },
-                        { key: 'database', label: 'Database Cache', size: `${cacheLevels.database} MB`, effect: 'Clears local journals. Message index remains fully preserved.' }
-                      ].map(cache => (
-                        <div key={cache.key} className="p-3 bg-black/40 border border-white/5 rounded-xl flex flex-col justify-between text-left space-y-2 group">
-                          <div>
-                            <span className="text-[10px] font-bold text-zinc-300 block">{cache.label}</span>
-                            <span className="text-[11px] font-mono font-black text-pink-400 mt-0.5 block">{cache.size}</span>
-                          </div>
-                          
-                          {/* Cache descriptive details popup */}
-                          <div className="text-[8px] text-zinc-600 line-clamp-2 leading-tight group-hover:text-zinc-400 transition-colors">
-                            {cache.effect}
-                          </div>
-
-                          <button
-                            onClick={() => handleClearSpecificCache(cache.key as any, cache.label)}
-                            className="w-full py-1 text-[8px] font-mono bg-zinc-900 border border-white/10 rounded-md text-zinc-400 hover:text-white hover:bg-zinc-800 cursor-pointer"
-                          >
-                            Flush Table
-                          </button>
-                        </div>
-                      ))}
+                    <div className="mt-4 rounded-xl border border-dashed border-white/10 p-3 text-[11px] text-zinc-400">
+                      <span className="font-semibold text-zinc-300">Cloud storage index:</span> Not connected
+                      <span className="mx-2 text-zinc-700">•</span>
+                      <span className="font-semibold text-zinc-300">Cloud backup:</span> Not connected
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* AI STORAGE SCANNER TAB */}
               {activeTab === 'analyzer' && (
                 <div className="space-y-6 text-left">
                   <div className="flex items-center justify-between">
