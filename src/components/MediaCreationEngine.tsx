@@ -2,7 +2,7 @@ import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import NexoraLensStudio from './NexoraLensStudio';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
 import { videoFileExtension } from '../services/media/videoFileExtension';
@@ -775,13 +775,19 @@ export default function MediaCreationEngine({
             if (videoStreamRef.current) {
               try {
                 videoChunksRef.current = [];
-                const recorder = new MediaRecorder(videoStreamRef.current);
+                const recordingMime = [
+                  'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+                  'video/webm;codecs=vp9,opus',
+                  'video/webm;codecs=vp8,opus',
+                  'video/webm',
+                ].find(type => MediaRecorder.isTypeSupported(type));
+                const recorder = new MediaRecorder(videoStreamRef.current, recordingMime ? { mimeType: recordingMime } : undefined);
                 mediaRecorderVideoRef.current = recorder;
                 recorder.ondataavailable = (event) => {
                   if (event.data.size > 0) videoChunksRef.current.push(event.data);
                 };
                 recorder.onstop = () => {
-                  const blob = new Blob(videoChunksRef.current, { type: 'video/webm' });
+                  const blob = new Blob(videoChunksRef.current, { type: recorder.mimeType || 'video/webm' });
                   setRecordedVideoUrl(previous => {
                     revokeTrackedObjectUrl(previous);
                     return trackObjectUrl(URL.createObjectURL(blob));
