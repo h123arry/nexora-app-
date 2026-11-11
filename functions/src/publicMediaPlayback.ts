@@ -35,7 +35,8 @@ export const getPublicPostPlayback = onCall({ maxInstances: 40 }, async request 
   }
   if (asset?.status !== 'ready') return { ready: false as const };
 
-  const renditions = safeVideoRenditions(asset.renditions, post.userId, mediaAssetId);
+  const ownerId = typeof post?.userId === 'string' ? post.userId : '';
+  const renditions = safeVideoRenditions(asset?.renditions, ownerId, mediaAssetId);
   const selected = chooseVideoRendition(renditions);
   if (!selected) return { ready: false as const };
   const expiresAt = Date.now() + URL_TTL_MS;
