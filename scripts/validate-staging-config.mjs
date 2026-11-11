@@ -13,6 +13,7 @@ const required = [
   'VITE_FIREBASE_DATABASE_ID',
   'VITE_FIREBASE_STORAGE_BUCKET',
   'VITE_FIREBASE_MESSAGING_SENDER_ID',
+  'VITE_FIREBASE_APPCHECK_SITE_KEY',
 ];
 const missing = required.filter((name) => !process.env[name]?.trim());
 if (missing.length > 0) {
@@ -77,6 +78,7 @@ console.log(JSON.stringify({
   browserProjectId,
   browserDatabaseId,
   browserStorageBucket: browserBucket,
+  appCheckSiteKeyConfigured: Boolean(process.env.VITE_FIREBASE_APPCHECK_SITE_KEY?.trim()),
   appUrl,
-  note: 'This validates configuration shape and target separation only; it does not prove Firebase access or deployment.',
+  note: 'This validates configuration shape, App Check client-key presence, and target separation only; it does not prove Firebase access, deployed rules/Functions, or Console-side App Check enforcement.',
 }, null, 2));
