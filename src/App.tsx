@@ -1701,18 +1701,8 @@ export default function App() {
         const targetCreator = (Object.values(globalUsersMap) as User[]).find(c => c.id === creatorId);
         if (targetCreator) {
           recordRecommendationEvent('follow', { creatorId, creatorUsername: targetCreator.username });
-          
-          const newNotif: Notification = {
-            id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-            type: 'follow',
-            userId: targetCreator.id,
-            username: targetCreator.username,
-            avatar: targetCreator.avatar,
-            content: `joined your close friends circle with your studio channel.`,
-            timestamp: new Date().toISOString(),
-            isRead: false
-          };
-          setNotifications(prev => [newNotif, ...prev]);
+          // The trusted follows/{followerId}_{creatorId} write creates the durable
+          // inbox notification; the realtime subscription delivers it to this UI.
         }
       }
 
