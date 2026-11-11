@@ -66,7 +66,7 @@ describe('server-backed social challenges', () => {
   });
 });
 
-test('advanced challenge hosting unlocks only after verified activity across three challenges', async () => {
+it('advanced challenge hosting unlocks only after verified activity across three challenges', async () => {
   const idsForUnlock: string[] = [];
   for (let i = 0; i < 3; i += 1) {
     const created = await createSocialChallenge(db, 'unlock-host', {
