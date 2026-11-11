@@ -45,7 +45,7 @@ export function getNexoraSceneParticles(
     const travel = (baseY + seconds * speed) % 1;
     return {
       x: Math.max(0, Math.min(width, baseX * width + drift)),
-      y: Math.max(0, Math.min(height, (profile.mode === 'petals' ? travel : (baseY + Math.sin(seconds + seed) * 0.025) % 1) * height)),
+      y: Math.max(0, Math.min(height, (profile.mode === 'petals' ? travel : fract(baseY + Math.sin(seconds + seed) * 0.025)) * height)),
       radius: 1.5 + fract(Math.sin(seed * 19.19) * 8912.3) * 5.5,
       alpha: 0.35 + fract(Math.sin(seed * 43.3) * 3123.7) * 0.65,
       rotation: seconds * (0.25 + baseX) + seed,
