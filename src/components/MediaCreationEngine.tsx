@@ -1,6 +1,7 @@
 import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
 import NexoraLensStudio from './NexoraLensStudio';
+import { NEXORA_LENS_CATALOG } from '../services/nexoraLensCatalog';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
@@ -207,12 +208,8 @@ function readLocalAutosave(key: string): Record<string, any> | null {
 }
 
 const FILTER_PRESETS = [
-  { name: 'Normal', style: 'none' },
-  { name: 'Clarendon', style: 'contrast(1.2) brightness(1.1) saturate(1.2)' },
-  { name: 'Lark', style: 'saturate(1.35) hue-rotate(-10deg)' },
-  { name: 'Noir', style: 'grayscale(1) contrast(1.4)' },
-  { name: 'Sepia', style: 'sepia(0.8) contrast(0.95)' },
-  { name: 'Cyberpunk', style: 'hue-rotate(280deg) saturate(1.5) contrast(1.1)' }
+  { name: 'Original', style: 'none' },
+  ...NEXORA_LENS_CATALOG.map(lens => ({ name: lens.name, style: lens.filter })),
 ];
 
 const WIZARD_STEPS = [
@@ -1872,7 +1869,7 @@ export default function MediaCreationEngine({
                       {/* Interactive CSS filters row */}
                       {selectedImages.length > 0 && (
                         <div className="space-y-1.5">
-                          <span className="text-[9px] font-mono text-[#8E88A7] block uppercase">Choose a look</span>
+                          <span className="text-[9px] font-mono text-[#8E88A7] block uppercase">Choose a NEXORA look · {FILTER_PRESETS.length} original styles</span>
                           <div className="flex gap-2 overflow-x-auto pb-1.5 custom-scrollbar">
                             {FILTER_PRESETS.map((p) => (
                               <button
