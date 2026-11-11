@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useEffect, useRef, useState } from 'react';
 import { collection, doc, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { AlertCircle, Gift, Loader2, MessageSquare, Radio, Send, Users, Volume2, VolumeX, X } from 'lucide-react';
@@ -47,7 +48,7 @@ export default function LiveView({ currentUser, onClose, streamId }: LiveViewPro
   const [videoMembershipReady,setVideoMembershipReady] = useState(false);
   const giftAudioContext = useRef<AudioContext|null>(null);
   const bottomRef = useRef<HTMLDivElement|null>(null);
-  const connectionId = useRef('live_' + Math.random().toString(36).slice(2) + Date.now().toString(36)).current;
+  const connectionId = useRef(createSecureId('live')).current;
 
   useEffect(() => () => { if(giftAudioContext.current && giftAudioContext.current.state!=='closed') void giftAudioContext.current.close(); }, []);
 
