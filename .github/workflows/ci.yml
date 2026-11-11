@@ -2,7 +2,7 @@ name: Nexora CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, phase-c-community-trust]
   pull_request:
     branches: [main]
 
