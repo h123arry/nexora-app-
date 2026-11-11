@@ -1124,7 +1124,7 @@ export default function App() {
       if (!message) return;
       playNexoraSound('interface.confirmation');
       
-      const id = `${Date.now()}-${Math.random()}`;
+      const id = crypto.randomUUID();
       setToasts(prev => [...prev, { id, message }]);
       
       setTimeout(() => {
@@ -1522,7 +1522,7 @@ export default function App() {
       ? tagsString.split(',').map(t => t.trim().replace('#', '')).filter(t => t.length > 0)
       : [];
 
-    const postId = `post-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+    const postId = `post-${crypto.randomUUID()}`;
     const newPost: Post = {
       id: postId,
       userId: currentUser.id,
@@ -1590,7 +1590,7 @@ export default function App() {
 
   const handleAddComment = (postId: string, commentContent: string) => {
     requireAuth(() => {
-      const commentId = `comment-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+      const commentId = `comment-${crypto.randomUUID()}`;
       void addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId)
         .then(result => {
           if (result.created) {
@@ -1771,7 +1771,7 @@ export default function App() {
     let cid = existingChat?.id;
 
     if (!existingChat) {
-      cid = `chat-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+      cid = `chat-${crypto.randomUUID()}`;
       const newChat: Chat = {
         id: cid,
         partnerId: partner.id,
@@ -1788,7 +1788,7 @@ export default function App() {
         ...prev,
         [cid!]: [
           {
-            id: `msg-welcome-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
+            id: `msg-welcome-${crypto.randomUUID()}`,
             chatId: cid!,
             senderId: partner!.id,
             content: `Hello! Welcome to my secure channel. Let's exchange thoughts in orbit.`,
