@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NEXORA_LENS_CATALOG, NEXORA_LENS_CATEGORIES, type NexoraLens } from '../services/nexoraLensCatalog';
+import { readNexoraFaceExpressions, getNexoraExpressionMotion } from '../services/nexoraLensExpressions';
 import { listMyCreatorLenses, listPublishedCreatorLenses, saveCreatorLens as saveCreatorLensCloud, submitCreatorLensForReview } from '../services/creatorLensService';
 import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search } from 'lucide-react';
 
@@ -449,6 +450,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     const threeCanvas = document.createElement('canvas');
     let lastDetectAt = 0;
     let latestLandmarks: any[] | null = null;
+    let latestExpressions = readNexoraFaceExpressions(undefined);
     const video = videoRef.current;
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d', { alpha: false });
@@ -515,6 +517,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             try {
               const result = landmarker.detectForVideo(video, now);
               latestLandmarks = result.faceLandmarks?.[0] || null;
+              latestExpressions = readNexoraFaceExpressions(result.faceBlendshapes?.[0]?.categories, latestExpressions);
             } catch { latestLandmarks = null; }
             lastDetectAt = now;
           }
@@ -561,8 +564,12 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
                 const activeModel = threeRuntime.objects[lens.sticker];
                 if (activeModel) {
                   if (activeModel.userData.baseY === undefined) activeModel.userData.baseY = activeModel.position.y;
+                  const expressionMotion = getNexoraExpressionMotion(latestExpressions);
                   activeModel.rotation.y = Math.sin(now / 620) * 0.12;
-                  activeModel.position.y = activeModel.userData.baseY + Math.sin(now / 360) * 0.025;
+                  activeModel.rotation.x = expressionMotion.pitch;
+                  activeModel.rotation.z = expressionMotion.tilt;
+                  activeModel.scale.set(expressionMotion.scaleX, expressionMotion.scaleY, 1);
+                  activeModel.position.y = activeModel.userData.baseY + Math.sin(now / 360) * 0.025 + expressionMotion.lift;
                 }
                 if (lens.sticker !== 'none') {
                   threeRuntime.render();
@@ -590,6 +597,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             minFaceDetectionConfidence: 0.5,
             minFacePresenceConfidence: 0.5,
             minTrackingConfidence: 0.5,
+            outputFaceBlendshapes: true,
           };
           try {
             landmarker = await vision.FaceLandmarker.createFromOptions(fileset, options);
