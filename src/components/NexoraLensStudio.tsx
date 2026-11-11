@@ -5,6 +5,15 @@ import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search }
 type Facing = 'user' | 'environment';
 type Lens = NexoraLens;
 
+type Props = {
+  cameraFacing: Facing;
+  userId: string;
+  captureMode: 'photo' | 'video';
+  countdownTimer?: number | null;
+  onStreamReady: (stream: MediaStream | null) => void;
+  onCapture: (blob: Blob) => void;
+};
+
 const LENSES = NEXORA_LENS_CATALOG;
 
 const VISION_VERSION = '0.10.14';
