@@ -6,6 +6,7 @@ import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
+import { addPublicPostComment } from './postComments.js';
 import { setPublicPostCommentLike } from './postCommentReactions.js';
 import { deletePublicPostComment } from './postCommentDeletion.js';
 import { createCirclePoll, castCirclePollVote } from './communityPolls.js';
@@ -351,6 +352,29 @@ export const setCommunityAnnouncementPinned = onCall({ maxInstances: 10 }, async
     if (message.includes('Only active Circle owners, admins, or moderators')) throw new HttpsError('permission-denied', message);
     if (message.includes('unavailable')) throw new HttpsError('not-found', message);
     throw new HttpsError('internal', 'The announcement could not be updated. Please retry.');
+  }
+});
+
+export const addPublicPostCommentEntry = onCall({ maxInstances: 20 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to comment on a post.');
+  const postId = request.data?.postId;
+  const commentId = request.data?.commentId;
+  const content = request.data?.content;
+  if (typeof postId !== 'string' || typeof commentId !== 'string' || typeof content !== 'string') {
+    throw new HttpsError('invalid-argument', 'A post, comment ID and comment body are required.');
+  }
+  try {
+    return await addPublicPostComment(adminDb, request.auth.uid, postId, content, commentId);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('unavailable')) throw new HttpsError('not-found', 'This public post is unavailable.');
+    if (message.includes('disabled') || message.includes('Complete your public profile')) {
+      throw new HttpsError('failed-precondition', message);
+    }
+    if (message.includes('valid') || message.includes('between 1 and 500')) {
+      throw new HttpsError('invalid-argument', message);
+    }
+    throw new HttpsError('internal', 'The comment could not be saved. Please retry.');
   }
 });
 
