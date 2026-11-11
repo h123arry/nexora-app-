@@ -42,7 +42,6 @@ import {
   removeFollow
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
-import { CommunityService } from './services/firebase/communityService';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { mergeRealtimePosts } from './services/posts/postCollection';
@@ -96,7 +95,6 @@ const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import OfflineBanner from './components/OfflineBanner';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
-import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, logout } = useFirebase();
@@ -190,9 +188,13 @@ export default function App() {
     if (!inviteToken) return;
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
     let active = true;
-    CommunityService.redeemInvite(inviteToken)
+    import('./services/firebase/communityService')
+      .then(({ CommunityService }) => {
+        if (!active) return null;
+        return CommunityService.redeemInvite(inviteToken);
+      })
       .then(result => {
-        if (!active) return;
+        if (!active || !result) return;
         window.dispatchEvent(new CustomEvent('toast', {
           detail: result.joined ? 'You joined the Circle from your invitation.' : 'You are already a member of this Circle.',
         }));
@@ -1725,7 +1727,8 @@ export default function App() {
 
     recordRecommendationEvent('visit_profile', { creatorId: finalUserToView.id, creatorUsername: finalUserToView.username });
 
-    // Get instantly from ProfileEngine with quiet background revalidation
+    // Load the profile cache engine only when opening another member's profile.
+    const { ProfileEngine } = await import('./services/voh/profileEngine');
     const instantUser = ProfileEngine.getProfileInstantly(finalUserToView, (freshUser) => {
       setViewedUser(freshUser);
     });
@@ -1817,7 +1820,9 @@ export default function App() {
       };
 
       // Invalidate profile cache so ProfileView receives fresh data
-      ProfileEngine.invalidateProfile(freshUser.id);
+      void import('./services/voh/profileEngine').then(({ ProfileEngine }) => {
+        ProfileEngine.invalidateProfile(freshUser.id);
+      }).catch(error => console.warn('Unable to invalidate profile cache.', error));
 
       // Update global user map so all views pick up the updated profile instantly
       setGlobalUsersMap(prevMap => ({
