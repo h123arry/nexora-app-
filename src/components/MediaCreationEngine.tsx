@@ -315,6 +315,8 @@ export default function MediaCreationEngine({
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(() => initialAutosave?.recordedVideoUrl || null);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
   const [isLensStudioOpen, setIsLensStudioOpen] = useState(false);
+  const [isLensStreamReady, setIsLensStreamReady] = useState(false);
+  const [openLensAfterPermission, setOpenLensAfterPermission] = useState(false);
   const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
   const [loopTimerSecs, setLoopTimerSecs] = useState(0);
 
@@ -1348,7 +1350,7 @@ export default function MediaCreationEngine({
                   Deny
                 </button>
                 <button 
-                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); }}
+                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); if (openLensAfterPermission) { setIsLensStudioOpen(true); setOpenLensAfterPermission(false); } }}
                   className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Continue
@@ -1683,12 +1685,12 @@ export default function MediaCreationEngine({
                             </div>
                             <div className="flex gap-2">
                               <button type="button" onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
-                              <button type="button" onClick={() => { if (isRecording) handleStopReelRecord(); setIsLensStudioOpen(false); }} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
+                              <button type="button" disabled={isRecording} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{isRecording ? 'Stop recording first' : 'Close'}</button>
                             </div>
                           </div>
                           <NexoraLensStudio
                             cameraFacing={cameraFacing}
-                            onStreamReady={stream => { videoStreamRef.current = stream; }}
+                            onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
                             onCapture={blob => {
                               const url = trackObjectUrl(URL.createObjectURL(blob));
                               setSelectedImages(previous => [...previous, { url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
@@ -1701,7 +1703,7 @@ export default function MediaCreationEngine({
                             {isRecording ? (
                               <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button>
                             ) : (
-                              <button onClick={startReelRecording} disabled={!videoStreamRef.current} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Start filtered recording</button>
+                              <button onClick={startReelRecording} disabled={!isLensStreamReady} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Start filtered recording</button>
                             )}
                             {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {loopTimerSecs}s</span>}
                           </div>
@@ -1711,7 +1713,7 @@ export default function MediaCreationEngine({
                           <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
                             <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">YOUR CAMERA</span>
                             <div className="flex items-center gap-2">
-                              <button type="button" onClick={() => requestPermission('camera', () => setIsLensStudioOpen(true))} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
+                              <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
                               <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
                             </div>
                           </div>
