@@ -130,9 +130,10 @@ This is an initial upload-provenance foundation only. Remix lineage, creator dec
 - Add a privacy-safe lineage viewer.
 
 ### O3 — Attribution and creator controls
-- Add contributor roles and attribution previews.
-- Add opt-in/explicit remix permissions, correction requests, dispute handling, and moderation hooks.
-- Ensure blocks, private accounts, deleted sources, and removed posts are respected.
+- Initial backend increment: creators can set a per-asset remix policy (`closed` by default or `allow_with_attribution`) through an authenticated callable; changes append an owner-private audit event.
+- Cross-account remix requests are rejected unless every source creator explicitly opted in. Accepted lineage events snapshot each source asset, creator account, and permission basis; same-owner remix remains available.
+- Source media must still exist, be processed, and match its server-recorded owner. Clients cannot write permission or attribution records directly.
+- Remaining O3 work: creator UI, attribution preview, correction requests, disputes, moderation hooks, and explicit block/private/deleted-source integration before public-facing remix entry points.
 
 ### O4 — Credential interoperability
 - Add bounded C2PA manifest extraction and cryptographic validation.
