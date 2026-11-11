@@ -322,13 +322,11 @@ service cloud.firestore {
           'username', 'name', 'avatar', 'bio', 'location', 'website', 'coverImage', 'profileFrameId', 'profileBadgeId',
           'interestDNA', 'skills', 'statusText', 'statusEmoji', 'pinnedMusicSong',
           'pinnedMusicArtist', 'pinnedMusicUrl', 'pinnedPosts', 'preferredLanguage',
-          'savedCollections', 'updatedAt', 'isVerified'
+          'savedCollections', 'updatedAt'
         ])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileFrameId']) || request.resource.data.profileFrameId in ['frame-aurora', 'frame-regalia', 'frame-eclipse', 'frame-royal', 'frame-obsidian', 'frame-solstice', 'frame-starlight', 'frame-nocturne'])
         && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['profileBadgeId']) || request.resource.data.profileBadgeId in ['badge-aurora', 'badge-regalia', 'badge-eclipse', 'badge-royal', 'badge-obsidian', 'badge-solstice', 'badge-starlight', 'badge-nocturne'])
-        && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['isVerified'])
-          || request.resource.data.isVerified == request.auth.token.get('email_verified', false)
-          || request.resource.data.isVerified == request.auth.token.get('phone_number_verified', false));
+;
       allow delete: if false;
 
       match /searchHistory/{searchId} {
