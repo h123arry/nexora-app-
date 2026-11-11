@@ -428,7 +428,7 @@ export default function NexoraVideoPlayer({
     if (!videoRef.current) return;
     const shouldPlay = typeof isActive === 'boolean' ? isActive && isVisible : isNearby && isVisible;
     if (shouldPlay && finalVideoUrl) {
-        globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
+        globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl)
           .then((played) => {
             if (played) {
               setIsPlaying(true);
@@ -474,7 +474,7 @@ export default function NexoraVideoPlayer({
         setHasVideoError(false);
         setIsReady(false);
         videoRef.current.load();
-        globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl).catch(() => {});
+        globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl).catch(() => {});
       }
     };
     window.addEventListener('online', handleOnline);
@@ -684,7 +684,7 @@ export default function NexoraVideoPlayer({
         handleVolumeToggle(false);
       }
       
-      globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
+      globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl)
         .then((played) => {
           if (played) {
             setIsPlaying(true);
@@ -894,7 +894,7 @@ export default function NexoraVideoPlayer({
     setIsBuffering(true);
     videoRef.current.load();
     if (isActive !== false && isVisible) {
-      globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl).catch(() => {});
+      globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl).catch(() => {});
     }
   };
 
