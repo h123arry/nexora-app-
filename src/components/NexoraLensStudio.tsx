@@ -309,7 +309,10 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
           if (video.readyState >= 2) resolve();
           else video.onloadeddata = () => resolve();
         });
-        canvas.width = Math.min(1280, video.videoWidth || 720);
+        const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+        const constrainedDevice = (typeof deviceMemory === 'number' && deviceMemory <= 4) || navigator.hardwareConcurrency <= 4;
+        const renderWidth = constrainedDevice ? 720 : 1280;
+        canvas.width = Math.min(renderWidth, video.videoWidth || 720);
         canvas.height = Math.round(canvas.width * (video.videoHeight || 1280) / (video.videoWidth || 720));
         const canvasStream = canvas.captureStream(30);
         outputStream = new MediaStream([...canvasStream.getVideoTracks(), ...cameraStream.getAudioTracks()]);
@@ -326,7 +329,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
           context.filter = lens.filter;
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
           context.filter = 'none';
-          if (landmarker && now - lastDetectAt >= 66) {
+          if (landmarker && now - lastDetectAt >= (constrainedDevice ? 100 : 66)) {
             try {
               const result = landmarker.detectForVideo(video, now);
               latestLandmarks = result.faceLandmarks?.[0] || null;
