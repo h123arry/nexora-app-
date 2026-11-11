@@ -267,6 +267,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
     try { return JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]'); } catch { return []; }
   });
   const [faceTracking, setFaceTracking] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [threeReady, setThreeReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
   const activeLensRef = useRef(activeLens);
@@ -279,6 +280,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
     let outputStream: MediaStream | null = null;
     let animationFrame = 0;
     let landmarker: any = null;
+    let threeRuntime: any = null;
+    const threeCanvas = document.createElement('canvas');
     let lastDetectAt = 0;
     let latestLandmarks: any[] | null = null;
     const video = videoRef.current;
@@ -324,7 +327,33 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
             } catch { latestLandmarks = null; }
             lastDetectAt = now;
           }
-          if (latestLandmarks) drawLens(context, latestLandmarks, lens, canvas.width, canvas.height, now);
+          if (latestLandmarks) {
+            if (threeRuntime) {
+              const leftEye = point(latestLandmarks, 33, canvas.width, canvas.height);
+              const rightEye = point(latestLandmarks, 263, canvas.width, canvas.height);
+              const forehead = point(latestLandmarks, 10, canvas.width, canvas.height);
+              const nose = point(latestLandmarks, 1, canvas.width, canvas.height);
+              if (leftEye && rightEye && forehead && nose) {
+                const eyeDistance = Math.hypot(rightEye.x - leftEye.x, rightEye.y - leftEye.y);
+                const eyeAngle = Math.atan2(rightEye.y - leftEye.y, rightEye.x - leftEye.x);
+                const eyeMidX = (leftEye.x + rightEye.x) / 2;
+                const centerX = eyeMidX;
+                const centerY = forehead.y + eyeDistance * 0.08;
+                const aspect = canvas.width / canvas.height;
+                const yaw = Math.max(-0.8, Math.min(0.8, ((nose.x - eyeMidX) / Math.max(1, eyeDistance)) * 1.2));
+                threeRuntime.root.position.set((centerX / canvas.width - 0.5) * 2 * aspect, (0.5 - centerY / canvas.height) * 2, 0);
+                threeRuntime.root.rotation.set(0, yaw, -eyeAngle);
+                threeRuntime.root.scale.setScalar(eyeDistance / canvas.width * 1.8);
+                threeRuntime.setLens(lens.sticker);
+                if (lens.sticker !== 'none') {
+                  threeRuntime.render();
+                  context.drawImage(threeCanvas, 0, 0, canvas.width, canvas.height);
+                }
+              }
+            } else {
+              drawLens(context, latestLandmarks, lens, canvas.width, canvas.height, now);
+            }
+          }
           context.restore();
           animationFrame = requestAnimationFrame(render);
         };
@@ -351,7 +380,21 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
               baseOptions: { modelAssetPath: FACE_MODEL, delegate: 'CPU' },
             });
           }
-          if (!cancelled) setFaceTracking('ready');
+          if (!cancelled) {
+            setFaceTracking('ready');
+            try {
+              const threeUrl = 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
+              const THREE: any = await import(/* @vite-ignore */ threeUrl);
+              if (!cancelled) {
+                threeCanvas.width = canvas.width;
+                threeCanvas.height = canvas.height;
+                threeRuntime = createThreeLensRuntime(THREE, threeCanvas, canvas.width, canvas.height);
+                setThreeReady(true);
+              }
+            } catch (threeError) {
+              console.warn('[NEXORA Lenses] 3D renderer unavailable; using tracked 2D lens overlays.', threeError);
+            }
+          }
         } catch (error) {
           console.warn('[NEXORA Lenses] Face tracking model unavailable; visual filters remain available.', error);
           if (!cancelled) setFaceTracking('unavailable');
@@ -366,6 +409,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
       cancelled = true;
       cancelAnimationFrame(animationFrame);
       landmarker?.close?.();
+      threeRuntime?.dispose?.();
       streamCallbackRef.current(null);
       outputStream?.getTracks().forEach(track => track.stop());
       cameraStream?.getTracks().forEach(track => track.stop());
@@ -407,7 +451,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
           <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_10px_#8A3FFC]" /> NEXORA LENSES
         </div>
         <div className="absolute right-3 top-3 rounded-full bg-[#050914]/75 px-2.5 py-1.5 text-[9px] text-[#D7C7FF] backdrop-blur">
-          {faceTracking === 'ready' ? 'Face tracking ready' : faceTracking === 'loading' ? 'Preparing AR…' : 'Filters ready · AR offline'}
+          {threeReady ? '3D AR ready' : faceTracking === 'ready' ? 'Face tracking ready' : faceTracking === 'loading' ? 'Preparing AR…' : 'Filters ready · AR offline'}
         </div>
         {cameraError && <div className="absolute inset-0 flex items-center justify-center bg-[#050914]/90 p-6 text-center text-sm text-rose-200">{cameraError}</div>}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
