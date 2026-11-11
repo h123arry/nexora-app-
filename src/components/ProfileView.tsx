@@ -2100,7 +2100,7 @@ export default function ProfileView({
                             <p className="text-[10px] font-mono text-zinc-500 mt-2">MUTED USERS ({mutedUsers.length})</p>
                             {mutedUsers.map(usr => (
                               <div key={usr} className="flex justify-between items-center bg-black/20 p-2 rounded-xl text-xs">
-                                <span className="font-mono text-zinc-300">@{usr}</span>
+                                <span className="font-mono text-zinc-300">Account {usr.slice(0, 10)}</span>
                                 <button 
                                   onClick={() => { void handleMuteAccount(usr, false); }}
                                   disabled={isSafetyActionBusy}
