@@ -4,6 +4,7 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
+import { endorsePublicPostAsHelpful } from './helpfulContent.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
 import { setPublicPostCommentLike } from './postCommentReactions.js';
@@ -928,6 +929,24 @@ export const listSocialChallenges = onCall({ maxInstances: 10 }, async request =
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore challenges.');
   try { return await listSocialChallengesRecords(adminDb, request.auth.uid); }
   catch { throw new HttpsError('unavailable', 'Challenges are temporarily unavailable.'); }
+});
+
+
+export const endorsePublicPostHelpful = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to recognize helpful content.');
+  const postId = request.data?.postId;
+  if (typeof postId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(postId)) {
+    throw new HttpsError('invalid-argument', 'A valid post ID is required.');
+  }
+  try { return await endorsePublicPostAsHelpful(adminDb, request.auth.uid, postId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('own post')) throw new HttpsError('failed-precondition', message);
+    if (message.includes('daily helpfulness')) throw new HttpsError('resource-exhausted', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    if (message.includes('valid account') || message.includes('verifiable author')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'Your helpfulness endorsement could not be saved.');
+  }
 });
 
 export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', async event => {
