@@ -209,15 +209,15 @@ function createThreeLensRuntime(THREE: any, canvas: HTMLCanvasElement, width: nu
   const glasses = makeGroup('glasses');
   for (const side of [-1, 1]) {
     const lens = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.055, 10, 36), lilac);
-    lens.position.set(side * 0.48, 0.02, 0.12);
+    lens.position.set(side * 0.48, -0.42, 0.12);
     glasses.add(lens);
     const glassFill = new THREE.Mesh(new THREE.CircleGeometry(0.39, 32), darkGlass);
-    glassFill.position.set(side * 0.48, 0.02, 0.08);
+    glassFill.position.set(side * 0.48, -0.42, 0.08);
     glasses.add(glassFill);
   }
   const bridge = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 12), gold);
   bridge.rotation.z = Math.PI / 2;
-  bridge.position.set(0, 0.02, 0.14);
+  bridge.position.set(0, -0.42, 0.14);
   glasses.add(bridge);
 
   const hearts = makeGroup('hearts');
@@ -229,7 +229,7 @@ function createThreeLensRuntime(THREE: any, canvas: HTMLCanvasElement, width: nu
   for (const side of [-1, 1]) {
     const heart = new THREE.Mesh(heartGeometry, lilac);
     heart.scale.setScalar(0.55);
-    heart.position.set(side * 0.48, 0.28, 0.15);
+    heart.position.set(side * 0.48, -0.42, 0.15);
     hearts.add(heart);
   }
 
