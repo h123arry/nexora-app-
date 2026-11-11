@@ -12,7 +12,7 @@ export type StudioCloudSaveResult = { revision: number; uploadedBytes: number };
 
 const uploadedBlobs = new WeakMap<Blob, Promise<CloudAsset>>();
 const assetIds = new WeakMap<Blob, string>();
-const uploadedBlobByPath = new Map<string, Blob>();
+const uploadedBlobByPath = new Map<string, WeakRef<Blob>>();
 const MAX_CLOUD_DRAFT_BYTES = 500 * 1024 * 1024;
 const MAX_CLOUD_DRAFT_ASSETS = 100;
 const MAX_CLOUD_MANIFEST_BYTES = 700 * 1024;
@@ -89,7 +89,7 @@ async function uploadAssetWithId(
   }).then(result => {
     const asset = { storagePath: result.storagePath, contentType: result.contentType, size: result.size };
     createdAssets.push({ blob, asset });
-    uploadedBlobByPath.set(asset.storagePath, blob);
+    uploadedBlobByPath.set(asset.storagePath, new WeakRef(blob));
     return asset;
   }).catch(error => {
     uploadedBlobs.delete(blob);
@@ -209,7 +209,7 @@ export async function saveStudioCloudDraft<T>(
     .map(asset => asset.storagePath)
     .filter(path => !currentPaths.has(path));
   await Promise.allSettled(obsoletePaths.map(async path => {
-    const oldBlob = uploadedBlobByPath.get(path);
+    const oldBlob = uploadedBlobByPath.get(path)?.deref();
     if (oldBlob) {
       uploadedBlobs.delete(oldBlob);
       assetIds.delete(oldBlob);
