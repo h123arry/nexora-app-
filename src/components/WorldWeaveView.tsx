@@ -6,7 +6,7 @@ import {
   addWorldWeaveMediaMoment, addWorldWeaveTextMoment, createWorldWeave, deleteWorldWeaveMoment, fetchOlderWorldWeaveMoments, updateWorldWeaveDetails,
   acceptWorldWeaveInvite, declineWorldWeaveInvite, inviteToWorldWeaveByUsername, joinPublicWorldWeave, revokeWorldWeaveInvite, subscribeToWorldWeaveInvites, subscribeToMyWorldWeaveInvites,
   subscribeToMyWorldWeaves, subscribeToPublicWorldWeaves, subscribeToWorldWeaveMoments,
-  type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
+  MAX_WORLDWEAVE_MEMBERS, type WorldWeave, type WorldWeaveInvite, type WorldWeaveMoment,
 } from '../services/firebase/worldWeaveService';
 
 interface Props { currentUser: User; }
@@ -218,7 +218,7 @@ export default function WorldWeaveView({ currentUser }: Props) {
           <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-violet-200"><Sparkles size={13}/> NEXORA WORLDWEAVE <span className="text-white/30">·</span>{selected.visibility === 'public' ? 'Public experience' : 'Private experience'}</div>
           <h1 className="mt-3 text-3xl font-black tracking-tight text-white md:text-4xl">{selected.title}</h1>
           {selected.description && <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-300">{selected.description}</p>}
-          <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1} contributors</span><span>{moments.length} loaded · {selected.momentCount || moments.length} moments published</span><span>Started by {selected.ownerName}</span></div>
+          <div className="mt-5 flex flex-wrap gap-4 text-xs text-slate-300"><span className="inline-flex items-center gap-1.5"><Users size={14}/>{selected.memberCount || selected.participantIds?.length || 1}/{MAX_WORLDWEAVE_MEMBERS} contributors</span><span>{moments.length} loaded · {selected.momentCount || moments.length} moments published</span><span>Started by {selected.ownerName}</span></div>
         </section>
         {selected.ownerId === currentUser.id && <div className="flex justify-end"><button type="button" onClick={() => { setEditTitle(selected.title); setEditDescription(selected.description); setEditVisibility(selected.visibility); setEditingDetails(value => !value); }} className="rounded-xl border border-violet-400/20 px-3 py-2 text-xs font-semibold text-violet-200 hover:bg-violet-500/10">{editingDetails ? 'Close settings' : 'Edit experience'}</button></div>}
         {editingDetails && selected.ownerId === currentUser.id && <form onSubmit={handleUpdateDetails} className="rounded-3xl border border-violet-400/20 bg-[#0b1221] p-4">
@@ -230,7 +230,8 @@ export default function WorldWeaveView({ currentUser }: Props) {
         {error && <p role="alert" className="rounded-xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>}
         {!isMember && selected.visibility === 'public' && <div className="rounded-3xl border border-violet-400/20 bg-violet-500/[.06] p-5">
           <p className="text-sm text-slate-300">You can follow this public experience or join its contributors to add your own perspective.</p>
-          <button disabled={busy} onClick={() => void handleJoinPublic()} className="mt-3 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">Join this WorldWeave</button>
+          {selected.memberCount >= MAX_WORLDWEAVE_MEMBERS && <p className="mt-2 text-xs text-amber-200">This WorldWeave has reached its contributor limit.</p>}
+          <button disabled={busy || selected.memberCount >= MAX_WORLDWEAVE_MEMBERS} onClick={() => void handleJoinPublic()} className="mt-3 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">Join this WorldWeave</button>
         </div>}
         {isMember && <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_300px]">
           <form onSubmit={handleMoment} className="rounded-3xl border border-white/10 bg-[#0b1221] p-4 md:p-5">
@@ -249,8 +250,9 @@ export default function WorldWeaveView({ currentUser }: Props) {
             <form onSubmit={handleInvite} className="h-fit rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 text-sm font-bold text-white">Bring someone in</div>
               <p className="mb-3 text-xs leading-5 text-slate-400">Invite another NEXORA member to add their own perspective.</p>
+              {selected.memberCount >= MAX_WORLDWEAVE_MEMBERS && <p className="mb-2 text-xs text-amber-200">Contributor capacity reached. New invitations are paused.</p>}
               <input value={inviteUsername} onChange={e => setInviteUsername(e.target.value)} placeholder="@username" className="w-full rounded-xl border border-white/10 bg-[#070d19] px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-500 focus:border-violet-400/60"/>
-              <button disabled={busy || !inviteUsername.trim()} className="mt-2 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-100 disabled:opacity-40">Send invitation</button>
+              <button disabled={busy || !inviteUsername.trim() || selected.memberCount >= MAX_WORLDWEAVE_MEMBERS} className="mt-2 w-full rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2.5 text-xs font-bold text-violet-100 disabled:opacity-40">Send invitation</button>
             </form>
             <section className="rounded-3xl border border-white/10 bg-[#0b1221] p-4">
               <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-white">Pending invitations</h3><span className="text-[10px] text-slate-500">{sentInvitations.length}/50</span></div>
