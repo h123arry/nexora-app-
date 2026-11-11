@@ -10,6 +10,7 @@ const app = initializeApp({ projectId }, 'helpful-content-tests');
 const db = getFirestore(app);
 const author = 'helpful-author';
 const member = 'helpful-member';
+const limitMember = 'helpful-limit-member';
 const postId = 'helpful-public-post';
 
 before(async () => {
@@ -21,6 +22,7 @@ after(async () => {
   await db.doc(`posts/${postId}`).delete();
   await db.recursiveDelete(db.doc(`posts/${postId}`).collection('helpfulnessEndorsements'));
   await db.recursiveDelete(db.doc(`users/${member}`).collection('helpfulnessLimits'));
+  await db.recursiveDelete(db.doc(`users/${limitMember}`).collection('helpfulnessLimits'));
   await deleteApp(app);
 });
 
@@ -39,7 +41,7 @@ test('rejects self-endorsement, private posts and malformed IDs', async () => {
 
 test('limits daily endorsements to twenty per account', async () => {
   const day = new Date().toISOString().slice(0, 10);
-  await db.doc(`users/${member}/helpfulnessLimits/${day}`).set({ count: 20 });
+  await db.doc(`users/${limitMember}/helpfulnessLimits/${day}`).set({ count: 20 });
   await db.doc(`posts/${postId}`).update({ audience: 'public' });
-  await assert.rejects(endorsePublicPostAsHelpful(db, member, postId), /daily helpfulness endorsement limit/);
+  await assert.rejects(endorsePublicPostAsHelpful(db, limitMember, postId), /daily helpfulness endorsement limit/);
 });
