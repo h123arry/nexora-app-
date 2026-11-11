@@ -747,7 +747,7 @@ export default function SystemHubControlPanel({
                     </div>
                     
                     <p className="text-[10px] text-zinc-500 font-sans mt-1">
-                      Stores local audio voice drafts, logs, and video indexes inside browser database space.
+                      IndexedDB stores are not enumerated by this panel yet; local cache size and clearing remain unavailable.
                     </p>
 
                     <p className="rounded-xl border border-dashed border-white/10 p-3 text-[10px] leading-relaxed text-zinc-400">
