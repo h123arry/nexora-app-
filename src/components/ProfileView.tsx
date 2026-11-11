@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useState, useEffect, useRef } from 'react';
 import { MapPin, Link as LinkIcon, Calendar, Edit3, Check, Heart, MessageSquare, Award, Zap, Sparkles, Play, Pause, Volume2, Users, Compass, FileText, UserPlus, MessageCircle, Download, Terminal, Pin, Flame, UserCheck, Search, X, ArrowLeft, Settings, Shield, Lock, Eye, Bell, BellOff, Ban, Flag, Sliders, Globe, Trash2, HelpCircle, Info, Activity, Video, Film, Camera, Image as ImageIcon, Mic, Menu, BarChart2, FolderClosed, QrCode, AlertTriangle, LogOut, ChevronRight, TrendingUp, TrendingDown, Coins, Music, Plus, Tv, EyeOff, UserX, VolumeX, CheckCircle2, LockKeyhole, Briefcase, Layers, Crown, Laptop, Smartphone, Key, RefreshCw, ChevronDown, LayoutGrid, Bookmark, Repeat2, HardDrive, Share2, MoreVertical, MoreHorizontal, Radio, ShieldCheck, Gift } from 'lucide-react';
 import VohIcon from './VohIcon';
@@ -2496,7 +2497,7 @@ export default function ProfileView({
                                 <Check className="w-5 h-5" />
                               </div>
                               <h4 className="text-xs font-bold text-emerald-400">Transmission Dispatched!</h4>
-                              <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Your report packet has been assigned to ticket ID #{Math.floor(Math.random() * 9000) + 1000}. A technical agent node will calibrate soon.</p>
+                              <p className="text-[9px] text-zinc-500 font-mono leading-relaxed">Support ticketing is not connected yet. Your message has not been sent or assigned a ticket.</p>
                             </div>
                           ) : (
                             <div className="space-y-3 text-xs">
@@ -2531,7 +2532,7 @@ export default function ProfileView({
                                     alert('⚠️ Please explain the issue details.');
                                     return;
                                   }
-                                  setSupportSubmitted(true);
+                                  window.dispatchEvent(new CustomEvent('toast', { detail: 'Support ticketing is not connected yet. Your message was not sent.' }));
                                   setSupportMessage('');
                                 }}
                                 className="w-full py-2 bg-pink-600 hover:bg-pink-500 text-white font-mono text-[9px] uppercase font-black tracking-wider rounded-lg transition-all"
