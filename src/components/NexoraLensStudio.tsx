@@ -427,7 +427,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     } catch { return []; }
   });
   const [faceTracking, setFaceTracking] = useState<'loading' | 'ready' | 'unavailable'>('loading');
-  const [cameraReady, setCameraReady] = useState(false);
+  const [cameraReady, setCameraReady] = useState(false);\n  const [previewFrame, setPreviewFrame] = useState<string | null>(null);
   const [threeReady, setThreeReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
@@ -477,6 +477,18 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         canvas.width = Math.min(renderWidth, video.videoWidth || 720);
         canvas.height = Math.round(canvas.width * (video.videoHeight || 1280) / (video.videoWidth || 720));
         setCameraReady(true);
+        const previewCanvas = document.createElement('canvas');
+        previewCanvas.width = 180;
+        previewCanvas.height = 225;
+        const previewContext = previewCanvas.getContext('2d');
+        if (previewContext) {
+          if (cameraFacing === 'user') {
+            previewContext.translate(previewCanvas.width, 0);
+            previewContext.scale(-1, 1);
+          }
+          previewContext.drawImage(video, 0, 0, previewCanvas.width, previewCanvas.height);
+          setPreviewFrame(previewCanvas.toDataURL('image/jpeg', 0.72));
+        }
         const canvasStream = canvas.captureStream(30);
         outputStream = new MediaStream([...canvasStream.getVideoTracks(), ...cameraStream.getAudioTracks()]);
         streamCallbackRef.current(outputStream);
@@ -812,9 +824,13 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           return (
             <div key={lens.id} className="relative w-[76px] shrink-0 snap-start">
               <button type="button" onClick={() => setActiveLens(lens.id)} className={`flex w-full flex-col items-center gap-1.5 rounded-xl border p-2 transition ${selected ? 'border-[#A78BFA] bg-[#7138FF]/20 text-white' : 'border-white/[0.08] bg-[#120E2B] text-[#B8AED4]'}`}>
-                <span className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-[#7138FF]/35 via-[#21133F] to-[#1600A3]/50" style={{ filter: lens.filter }}>
-                  <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.28),transparent_62%)]" />
-                  <Icon className="relative h-5 w-5 drop-shadow" />
+                <span className="relative flex h-12 w-full items-center justify-center overflow-hidden rounded-lg bg-gradient-to-br from-[#7138FF]/35 via-[#21133F] to-[#1600A3]/50">
+                  {previewFrame ? (
+                    <img src={previewFrame} alt={`${lens.name} live try-on sample`} className="absolute inset-0 h-full w-full object-cover" style={{ filter: lens.filter }} />
+                  ) : (
+                    <span className="absolute inset-0 bg-[radial-gradient(circle_at_50%_35%,rgba(255,255,255,.28),transparent_62%)]" style={{ filter: lens.filter }} />
+                  )}
+                  <span className="absolute inset-0 flex items-center justify-center bg-[#050914]/10"><Icon className="h-5 w-5 drop-shadow" /></span>
                 </span>
                 <span className="w-full truncate text-[9px] font-semibold" title={lens.name}>{lens.name}</span>
               </button>
