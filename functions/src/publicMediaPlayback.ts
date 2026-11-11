@@ -40,7 +40,10 @@ export const getPublicPostPlayback = onCall({ maxInstances: 40 }, async request 
   const selected = chooseVideoRendition(renditions);
   if (!selected) return { ready: false as const };
   const expiresAt = Date.now() + URL_TTL_MS;
-  const [url] = await bucket.file(selected.path).getSignedUrl({
+  const file = bucket.file(selected.path);
+  const [exists] = await file.exists();
+  if (!exists) return { ready: false as const };
+  const [url] = await file.getSignedUrl({
     action: 'read',
     expires: expiresAt,
     version: 'v4',
