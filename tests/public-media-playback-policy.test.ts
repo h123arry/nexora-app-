@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { chooseVideoRendition, safeVideoRenditions } from '../functions/src/publicMediaPlaybackPolicy.js';
+import { canResolvePublicPostMedia, chooseVideoRendition, safeVideoRenditions } from '../functions/src/publicMediaPlaybackPolicy.js';
 
 describe('public media playback policy', () => {
   it('accepts only rendition paths scoped to the verified owner and asset', () => {
@@ -12,6 +12,17 @@ describe('public media playback policy', () => {
       { height: 12000, mp4Path: 'processed/owner-1/asset-1/12000p/video.mp4' },
     ], 'owner-1', 'asset-1');
     assert.deepEqual(result.map(item => item.height), [360, 720]);
+  });
+
+
+  it('only resolves public video assets attached to their actual author', () => {
+    const post = { audience: 'public', mediaAssetId: 'asset-1', userId: 'owner-1' };
+    const asset = { ownerId: 'owner-1', kind: 'video', status: 'ready' };
+    assert.equal(canResolvePublicPostMedia(post, asset, 'asset-1'), true);
+    assert.equal(canResolvePublicPostMedia({ ...post, audience: 'followers' }, asset, 'asset-1'), false);
+    assert.equal(canResolvePublicPostMedia({ ...post, mediaAssetId: 'asset-2' }, asset, 'asset-1'), false);
+    assert.equal(canResolvePublicPostMedia(post, { ...asset, ownerId: 'attacker' }, 'asset-1'), false);
+    assert.equal(canResolvePublicPostMedia(post, { ...asset, kind: 'image' }, 'asset-1'), false);
   });
 
   it('chooses 720p when available and otherwise the highest rendition below it', () => {
