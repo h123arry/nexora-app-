@@ -12,7 +12,7 @@ import { getStudioExportValidationError } from '../utils/studioExportValidationP
 import { isStudioCloudDraftNewer } from '../utils/studioCloudDraftPolicy';
 import { getStudioCloudDraftRevision, loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
 import { createStudioMp4Export } from '../services/studioMp4ExportService';
-import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
+import { getCrossDissolveAudioGains, getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
@@ -378,20 +378,23 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   }, [voiceover]);
 
   useEffect(() => {
-    if (videoRef.current && selectedClip) videoRef.current.volume = selectedClip.volume;
-  }, [selectedClip?.id, selectedClip?.volume]);
-
-  useEffect(() => {
     const nextVideo = nextPreviewRef.current;
-    if (!nextVideo || !nextPreviewClip || transition !== 'cross-dissolve' || crossDissolveProgress <= 0 || !playing) {
+    const activeCrossDissolve = Boolean(nextVideo && nextPreviewClip && transition === 'cross-dissolve' && crossDissolveProgress > 0 && playing);
+    const audioGains = getCrossDissolveAudioGains(activeCrossDissolve ? crossDissolveProgress : 0);
+    if (videoRef.current && selectedClip) {
+      videoRef.current.volume = selectedClip.volume * audioGains.outgoing;
+    }
+    if (!nextVideo || !nextPreviewClip || !activeCrossDissolve) {
       nextVideo?.pause();
+      if (nextVideo) { nextVideo.muted = true; nextVideo.volume = 0; }
       return;
     }
     const expectedTime = Math.min(nextPreviewClip.end, nextPreviewClip.start + crossDissolveProgress * crossDissolveDuration);
     if (Math.abs(nextVideo.currentTime - expectedTime) > 0.2) nextVideo.currentTime = expectedTime;
-    nextVideo.muted = true;
+    nextVideo.muted = muted;
+    nextVideo.volume = nextPreviewClip.volume * audioGains.incoming;
     if (nextVideo.paused) void nextVideo.play().catch(() => setMessage('The next scene could not be preloaded for its transition.'));
-  }, [nextPreviewClip?.id, nextPreviewClip?.start, nextPreviewClip?.end, transition, crossDissolveProgress, crossDissolveDuration, playing]);
+  }, [selectedClip?.id, selectedClip?.volume, nextPreviewClip?.id, nextPreviewClip?.start, nextPreviewClip?.end, nextPreviewClip?.volume, transition, crossDissolveProgress, crossDissolveDuration, playing, muted]);
 
   useEffect(() => {
     const music = soundtrackPreviewRef.current;
@@ -748,7 +751,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     const preview = document.createElement('video');
     const transitionPreview = document.createElement('video');
     transitionPreview.playsInline = true;
-    transitionPreview.muted = true;
+    transitionPreview.muted = false;
     transitionPreview.preload = 'auto';
     preview.playsInline = true;
     preview.muted = false;
@@ -761,6 +764,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let voiceoverElement: HTMLAudioElement | null = null;
     let voiceoverObjectUrl: string | null = null;
     let clipGain: GainNode | null = null;
+    let transitionClipGain: GainNode | null = null;
     let soundtrackGain: GainNode | null = null;
     let voiceoverGain: GainNode | null = null;
     let voiceoverStartTimer: number | null = null;
@@ -779,6 +783,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       clipGain = audioContext.createGain();
       audioContext.createMediaElementSource(preview).connect(clipGain);
       clipGain.connect(mixedAudio);
+      transitionClipGain = audioContext.createGain();
+      transitionClipGain.gain.value = 0;
+      audioContext.createMediaElementSource(transitionPreview).connect(transitionClipGain);
+      transitionClipGain.connect(mixedAudio);
       if (soundtrack) {
         audioElement = new Audio();
         audioElement.src = audioObjectUrl = URL.createObjectURL(soundtrack);
@@ -958,6 +966,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         const transitionDuration = transition === 'cross-dissolve' && clipIndex < clips.length - 1 ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clip.end - clip.start), Math.max(0, clips[clipIndex + 1].end - clips[clipIndex + 1].start)) : 0;
         const sourceStart = Math.min(clip.end, clip.start + overlapFromPrevious);
         if (clipGain) clipGain.gain.value = clip.volume;
+        if (transitionClipGain) transitionClipGain.gain.value = 0;
         if (soundtrackGain) soundtrackGain.gain.value = soundtrackVolume;
         preview.src = URL.createObjectURL(clip.blob);
         const clipUrl = preview.src;
@@ -1007,6 +1016,9 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             const remaining = Math.max(0, clip.end - preview.currentTime);
             if (transitionDuration > 0 && remaining <= transitionDuration) {
               transitionProgress = getCrossDissolveProgress(preview.currentTime, clip.end, transitionDuration);
+              const audioGains = getCrossDissolveAudioGains(transitionProgress);
+              if (clipGain) clipGain.gain.value = clip.volume * audioGains.outgoing;
+              if (transitionClipGain) transitionClipGain.gain.value = clips[clipIndex + 1].volume * audioGains.incoming;
               if (!transitionStarted && transitionProgress > 0) { transitionStarted = true; void transitionPreview.play().catch(() => undefined); }
               if (transitionStarted && transitionPreview.readyState >= 2) {
                 const expectedTransitionTime = Math.min(clips[clipIndex + 1].end, clips[clipIndex + 1].start + transitionProgress * transitionDuration);
@@ -1015,7 +1027,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             }
             if (soundtrackGain) soundtrackGain.gain.value = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration, duckingLevel: musicDuckingLevel });
             if (voiceoverGain) voiceoverGain.gain.value = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: Math.max(0, elapsed - voiceoverStart), totalDuration: voiceoverDuration, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
-            if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); transitionPreview.pause(); transitionProgress = 0; resolve(); }
+            if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); transitionPreview.pause(); if (transitionClipGain) transitionClipGain.gain.value = 0; transitionProgress = 0; resolve(); }
             else window.setTimeout(check, 40);
           };
           check();
@@ -1173,7 +1185,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {selectedClip ? <><video ref={videoRef} key={selectedClip.id} src={previewUrl} className="absolute h-full w-full object-contain" style={selectedVideoFrame ? { left: `${selectedVideoFrame.x * 100}%`, top: `${selectedVideoFrame.y * 100}%`, transform: `translate(-50%, -50%) rotate(${selectedVideoFrame.rotation}deg) scale(${selectedVideoFrame.scale})`, opacity: selectedVideoFrame.opacity } : undefined} playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (continuePlaybackRef.current) { void event.currentTarget.play().then(() => { continuePlaybackRef.current = false; setPlaying(true); }).catch(() => { continuePlaybackRef.current = false; setPlaying(false); setMessage('The next clip could not start. Tap play to continue.'); }); } }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end && !continuePlaybackRef.current) { const next = getNextStudioClipTimelinePosition(clips, selectedClip.id); if (next) { continuePlaybackRef.current = true; const overlap = transition === 'cross-dissolve' ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, selectedClip.end - selectedClip.start), Math.max(0, clips[selectedClipIndex + 1]?.end - clips[selectedClipIndex + 1]?.start)) : 0;
-                  pendingSeekRef.current = { clipId: next.clipId, localTime: next.localTime + overlap }; setPreviewGlobalTime(next.globalTime); setSelectedId(next.clipId); } else { event.currentTarget.pause(); setPlaying(false); } } }} onPlay={() => setPlaying(true)} onPause={() => { if (!continuePlaybackRef.current) setPlaying(false); }}/>{nextPreviewClip && transition === 'cross-dissolve' && <video ref={nextPreviewRef} key={`transition-${nextPreviewClip.id}`} src={getUrlForClip(nextPreviewClip.blob)} muted playsInline preload="auto" onLoadedMetadata={event => { event.currentTarget.currentTime = nextPreviewClip.start; }} className="pointer-events-none absolute inset-0 h-full w-full object-contain" style={{ opacity: crossDissolveProgress, zIndex: 2 }}/>}</> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
+                  pendingSeekRef.current = { clipId: next.clipId, localTime: next.localTime + overlap }; setPreviewGlobalTime(next.globalTime); setSelectedId(next.clipId); } else { event.currentTarget.pause(); setPlaying(false); } } }} onPlay={() => setPlaying(true)} onPause={() => { if (!continuePlaybackRef.current) setPlaying(false); }}/>{nextPreviewClip && transition === 'cross-dissolve' && <video ref={nextPreviewRef} key={`transition-${nextPreviewClip.id}`} src={getUrlForClip(nextPreviewClip.blob)} playsInline preload="auto" onLoadedMetadata={event => { event.currentTarget.currentTime = Math.min(nextPreviewClip.end, nextPreviewClip.start + crossDissolveProgress * crossDissolveDuration); }} className="pointer-events-none absolute inset-0 h-full w-full object-contain" style={{ opacity: crossDissolveProgress, zIndex: 2 }}/>}</> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
               {imageLayers.map(layer => { const frame = getStudioImageLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <img key={layer.id} src={getUrlForClip(layer.blob)} alt={layer.name} draggable={false} className="pointer-events-none absolute z-[5] max-w-none object-contain" style={{ left: `${frame.x * 100}%`, top: `${frame.y * 100}%`, width: `${frame.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${frame.rotation}deg)`, opacity: frame.opacity }}/>; })}
               {subtitleSegments.filter(segment => previewGlobalTime >= segment.start && previewGlobalTime < segment.end && segment.text.trim()).map(segment => <div key={segment.id} className="pointer-events-none absolute bottom-[12%] left-[5%] z-[8] w-[90%] rounded-lg bg-[#050914]/80 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg">{segment.text}</div>)}
               {textLayers.map(layer => { const frame = getStudioTextLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <div key={layer.id} className="pointer-events-none absolute z-10 max-w-[90%] whitespace-pre-wrap text-center font-black drop-shadow-[0_2px_8px_rgba(0,0,0,.9)]" style={{ left: '50%', top: layer.position === 'top' ? '9%' : layer.position === 'center' ? '50%' : undefined, bottom: layer.position === 'bottom' ? '9%' : undefined, transform: `translate(-50%, -50%) translateY(${frame.offsetY}px) rotate(${layer.rotation + frame.rotation}deg) scale(${frame.scale})`, fontSize: `${Math.max(12, layer.fontSize * (aspectRatio === 'portrait' ? 0.48 : 0.62))}px`, opacity: frame.opacity, color: layer.color }}>{layer.text}</div>; })}
@@ -1231,7 +1243,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <h2 className="text-xs font-bold">Video format</h2>
               <label className="block text-[10px] text-[#A39BBF]">Canvas ratio<select value={aspectRatio} onChange={event => setAspectRatio(event.target.value as typeof aspectRatio)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="portrait">9:16 · Reels and vertical video</option><option value="square">1:1 · Square posts</option><option value="landscape">16:9 · Landscape video</option></select></label>
-              <label className="block text-[10px] text-[#A39BBF]">Scene transition<select value={transition} onChange={event => setTransition(event.target.value as typeof transition)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="cut">Clean cut</option><option value="fade">Fade through black</option><option value="cross-dissolve">Cross-dissolve · 0.6s</option></select></label>
+              <label className="block text-[10px] text-[#A39BBF]">Scene transition<select value={transition} onChange={event => setTransition(event.target.value as typeof transition)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="cut">Clean cut</option><option value="fade">Fade through black</option><option value="cross-dissolve">Cross-dissolve · 0.6s + audio blend</option></select></label>
             </div>
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Type size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Text layers</h2></div><button type="button" onClick={addTextLayer} className="inline-flex items-center gap-1 rounded-lg border border-violet-400/30 px-2 py-1.5 text-[10px] font-semibold text-violet-100"><Plus size={12}/> Add text</button></div>
