@@ -181,14 +181,22 @@ export default function NexoraLensStudio({ cameraFacing, onStreamReady, onCaptur
           const moduleUrl = `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${VISION_VERSION}/+esm`;
           const vision: any = await import(/* @vite-ignore */ moduleUrl);
           const fileset = await vision.FilesetResolver.forVisionTasks(WASM_ROOT);
-          landmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
+          const options = {
             baseOptions: { modelAssetPath: FACE_MODEL, delegate: 'GPU' },
             runningMode: 'VIDEO',
             numFaces: 1,
             minFaceDetectionConfidence: 0.5,
             minFacePresenceConfidence: 0.5,
             minTrackingConfidence: 0.5,
+          };
+          try {
+            landmarker = await vision.FaceLandmarker.createFromOptions(fileset, options);
+          } catch {
+            landmarker = await vision.FaceLandmarker.createFromOptions(fileset, {
+              ...options,
+              baseOptions: { modelAssetPath: FACE_MODEL, delegate: 'CPU' },
           });
+          }
           if (!cancelled) setFaceTracking('ready');
         } catch (error) {
           console.warn('[NEXORA Lenses] Face tracking model unavailable; visual filters remain available.', error);
