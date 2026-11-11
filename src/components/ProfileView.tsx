@@ -752,7 +752,6 @@ export default function ProfileView({
         const days = diff / (1000 * 60 * 60 * 24); // days limit
         if (days < 7) {
           window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Display Name change is locked for 7 days.' }));
-          alert('⚠️ Change locked: Display name can only be edited once every 7 days.');
           return;
         }
       }
@@ -763,7 +762,6 @@ export default function ProfileView({
       const usernameError = validateUsername(editUsername, currentUser.id);
       if (usernameError) {
         window.dispatchEvent(new CustomEvent('toast', { detail: `⚠️ ${usernameError}` }));
-        alert(`⚠️ ${usernameError}`);
         return;
       }
 
@@ -773,7 +771,6 @@ export default function ProfileView({
         const days = diff / (1000 * 60 * 60 * 24);
         if (days < 30) {
           window.dispatchEvent(new CustomEvent('toast', { detail: '⚠️ Username change is locked for 30 days.' }));
-          alert('⚠️ Change locked: @username can only be edited once every 30 days.');
           return;
         }
       }
