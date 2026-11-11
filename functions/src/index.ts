@@ -974,7 +974,12 @@ export const createSeasonalCommunityEvent = onCall({ maxInstances: 5 }, async re
 
 export const listSeasonalCommunityEvents = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore seasonal events.');
-  try { return await listSeasonalEventRecords(adminDb, request.auth.uid); }
+  try {
+    const result = await listSeasonalEventRecords(adminDb, request.auth.uid);
+    const token = request.auth.token || {};
+    const role = typeof token.role === 'string' ? token.role : '';
+    return { ...result, canManage: token.admin === true || role === 'admin' || role === 'founder' };
+  }
   catch { throw new HttpsError('unavailable', 'Seasonal events are temporarily unavailable.'); }
 });
 
