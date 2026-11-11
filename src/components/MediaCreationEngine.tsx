@@ -380,6 +380,7 @@ export default function MediaCreationEngine({
   useEffect(() => () => {
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
     videoStreamRef.current?.getTracks().forEach(track => track.stop());
+    photoStreamRef.current?.getTracks().forEach(track => track.stop());
     if (mediaRecorderVideoRef.current?.state !== 'inactive') mediaRecorderVideoRef.current?.stop();
     if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
     clearTrackedObjectUrls();
@@ -558,6 +559,7 @@ export default function MediaCreationEngine({
 
     let cancelled = false;
     let currentStream: MediaStream | null = null;
+    let removeVideoListeners = () => {};
     setPhotoCameraReady(false);
 
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -583,14 +585,46 @@ export default function MediaCreationEngine({
         return;
       }
 
+      const metadataReady = new Promise<void>((resolve, reject) => {
+        if (video.readyState >= HTMLMediaElement.HAVE_METADATA && video.videoWidth > 0 && video.videoHeight > 0) {
+          resolve();
+          return;
+        }
+        const onLoadedMetadata = () => {
+          removeVideoListeners();
+          resolve();
+        };
+        const onVideoError = () => {
+          removeVideoListeners();
+          reject(new Error('The camera did not provide a usable preview.'));
+        };
+        removeVideoListeners = () => {
+          video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          video.removeEventListener('error', onVideoError);
+        };
+        video.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+        video.addEventListener('error', onVideoError, { once: true });
+      });
+
       video.srcObject = stream;
       try {
+        await metadataReady;
+        if (cancelled) return;
         await video.play();
-        if (!cancelled && video.videoWidth > 0 && video.videoHeight > 0) {
-          setPhotoCameraReady(true);
+        if (cancelled) return;
+        if (video.videoWidth <= 0 || video.videoHeight <= 0) {
+          throw new Error('The camera preview is not ready yet.');
         }
-      } catch {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Check browser camera permissions and try again.' }));
+        setPhotoCameraReady(true);
+      } catch (error) {
+        stream.getTracks().forEach(track => track.stop());
+        if (photoStreamRef.current === stream) photoStreamRef.current = null;
+        if (video.srcObject === stream) video.srcObject = null;
+        if (!cancelled) {
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: error instanceof Error ? error.message : 'Camera preview could not start. Check browser camera permissions and try again.',
+          }));
+        }
       }
     }).catch(error => {
       if (cancelled) return;
@@ -604,6 +638,7 @@ export default function MediaCreationEngine({
 
     return () => {
       cancelled = true;
+      removeVideoListeners();
       currentStream?.getTracks().forEach(track => track.stop());
       if (photoStreamRef.current === currentStream) photoStreamRef.current = null;
       if (photoPreviewRef.current) photoPreviewRef.current.srcObject = null;
