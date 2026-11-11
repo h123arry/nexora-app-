@@ -21,7 +21,7 @@ test('cloud draft revision checks reject stale writers', () => {
 });
 
 test('cloud draft media references must stay inside the signed-in owner path', () => {
-  assert.equal(isStudioCloudAssetPathOwnedByUser('users/u1/media/a1', 'u1'), true);
-  assert.equal(isStudioCloudAssetPathOwnedByUser('users/u2/media/a1', 'u1'), false);
-  assert.equal(isStudioCloudAssetPathOwnedByUser('users/u1/media/../u2/a1', 'u1'), false);
+  assert.equal(isStudioCloudAssetPathOwnedByUser('users/u1/studio-drafts/active/assets/a1', 'u1'), true);
+  assert.equal(isStudioCloudAssetPathOwnedByUser('users/u2/studio-drafts/active/assets/a1', 'u1'), false);
+  assert.equal(isStudioCloudAssetPathOwnedByUser('users/u1/studio-drafts/active/assets/../u2/a1', 'u1'), false);
 });
