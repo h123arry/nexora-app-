@@ -838,7 +838,7 @@ export default function StorageDataCenterModal({ isOpen, onClose }: StorageDataC
                       </div>
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Indexed media</p>
-                        <p className="mt-1 text-xl font-black text-white">{totalMediaGB} GB</p>
+                        <p className="mt-1 text-xl font-black text-white">{mediaGB.toFixed(2)} GB</p>
                       </div>
                       <div className="rounded-xl border border-white/5 bg-black/20 p-4">
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">Measured local total</p>
