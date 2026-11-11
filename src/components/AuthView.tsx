@@ -21,7 +21,7 @@ import { EmailService } from '../services/firebase/emailService';
 import { SecurityNotificationService } from '../services/firebase/securityNotificationService';
 
 const runtimeEnv = ((import.meta as unknown as { env?: Record<string, string | undefined> }).env || {}) as Record<string, string | undefined>;
-const PHONE_AUTH_ENABLED = runtimeEnv.VITE_NEXORA_PHONE_AUTH_ENABLED === 'true';
+const PHONE_AUTH_ENABLED = runtimeEnv.VITE_NEXORA_ENV === 'staging' && runtimeEnv.VITE_NEXORA_PHONE_AUTH_ENABLED === 'true';
 
 interface AuthViewProps {
   onLoginSuccess: (loggedUser: User) => void;
