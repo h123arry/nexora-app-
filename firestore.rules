@@ -1270,6 +1270,7 @@ service cloud.firestore {
           && request.resource.data.updatedAt == request.time)
         || (!weaveMember()
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['participantIds', 'memberCount', 'updatedAt'])
+          && resource.data.participantIds.size() < 500
           && request.resource.data.participantIds == resource.data.participantIds.concat([request.auth.uid])
           && request.resource.data.memberCount == resource.data.get('memberCount', 1) + 1
           && request.resource.data.updatedAt == request.time
