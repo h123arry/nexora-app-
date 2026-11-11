@@ -316,6 +316,7 @@ export default function MediaCreationEngine({
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
   const [isLensStudioOpen, setIsLensStudioOpen] = useState(false);
   const [isLensStreamReady, setIsLensStreamReady] = useState(false);
+  const [isSavingRecordedVideo, setIsSavingRecordedVideo] = useState(false);
   const [openLensAfterPermission, setOpenLensAfterPermission] = useState(false);
   const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
   const [loopTimerSecs, setLoopTimerSecs] = useState(0);
@@ -769,8 +770,10 @@ export default function MediaCreationEngine({
             clearInterval(counter);
             setIsRecording(true);
             setIsRecordingPaused(false);
+            setIsSavingRecordedVideo(false);
             setLoopTimerSecs(0);
             setRecordedVideoUrl(null);
+            setVideoRawBlob(null);
             
             if (videoStreamRef.current) {
               try {
@@ -793,6 +796,7 @@ export default function MediaCreationEngine({
                     return trackObjectUrl(URL.createObjectURL(blob));
                   });
                   setVideoRawBlob(blob);
+                  setIsSavingRecordedVideo(false);
                 };
                 recorder.start();
               } catch (e) {
@@ -810,6 +814,7 @@ export default function MediaCreationEngine({
   const handleStopReelRecord = () => {
     setIsRecording(false);
     setIsRecordingPaused(false);
+    setIsSavingRecordedVideo(true);
     if (mediaRecorderVideoRef.current && mediaRecorderVideoRef.current.state !== 'inactive') {
       try {
         mediaRecorderVideoRef.current.stop();
@@ -817,6 +822,7 @@ export default function MediaCreationEngine({
         console.error(e);
       }
     } else {
+      setIsSavingRecordedVideo(false);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'No video was recorded. Check camera permission and try again.' }));
       return;
     }
@@ -1733,7 +1739,7 @@ export default function MediaCreationEngine({
                             </div>
                             <div className="flex gap-2">
                               <button type="button" onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
-                              <button type="button" disabled={isRecording} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{isRecording ? 'Stop recording first' : 'Close'}</button>
+                              <button type="button" disabled={isRecording || isSavingRecordedVideo} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
                             </div>
                           </div>
                           <NexoraLensStudio
