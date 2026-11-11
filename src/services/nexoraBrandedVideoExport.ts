@@ -33,7 +33,6 @@ export async function exportNexoraBrandedVideo(
   video.crossOrigin = 'anonymous';
   video.playsInline = true;
   video.preload = 'auto';
-  video.src = sourceUrl;
 
   const brandLogo = new Image();
   brandLogo.src = '/logo.svg';
@@ -62,7 +61,13 @@ export async function exportNexoraBrandedVideo(
   });
 
   try {
-    if (video.readyState < HTMLMediaElement.HAVE_METADATA) await waitFor('loadedmetadata', video);
+    if (video.readyState < HTMLMediaElement.HAVE_METADATA) {
+      const metadataReady = waitFor('loadedmetadata', video);
+      video.src = sourceUrl;
+      await metadataReady;
+    } else {
+      video.src = sourceUrl;
+    }
     if (!video.videoWidth || !video.videoHeight) throw new Error('The source video has no usable video frames.');
 
     canvas.width = Math.min(1920, video.videoWidth);
@@ -108,10 +113,16 @@ export async function exportNexoraBrandedVideo(
       context.save();
       context.globalAlpha = 0.9;
       context.font = '600 ' + Math.round(fontSize * 0.9) + 'px Arial, sans-serif';
-      const handleWidth = context.measureText(handle).width;
-      const pillHeight = Math.round(fontSize * 2.55);
-      const pillWidth = pad * 2.2 + logoSize + handleWidth + pad * 0.85;
       const margin = Math.round(canvas.width * 0.035);
+      const pillHeight = Math.round(fontSize * 2.55);
+      const maxPillWidth = Math.max(120, canvas.width - margin * 2);
+      const maxHandleWidth = Math.max(24, maxPillWidth - pad * 2.2 - logoSize - pad * 0.85);
+      let displayHandle = handle;
+      while (displayHandle.length > 2 && context.measureText(displayHandle).width > maxHandleWidth) {
+        displayHandle = displayHandle.slice(0, -2) + '…';
+      }
+      const handleWidth = Math.min(context.measureText(displayHandle).width, maxHandleWidth);
+      const pillWidth = Math.min(maxPillWidth, pad * 2.2 + logoSize + handleWidth + pad * 0.85);
       // TikTok-style alternating placement: the complete logo + creator handle
       // moves together between opposite corners as the video plays.
       const positionSlot = Math.floor(video.currentTime / 3) % 2;
@@ -133,7 +144,7 @@ export async function exportNexoraBrandedVideo(
       context.fillStyle = '#F5F7FF';
       context.shadowColor = 'rgba(0, 0, 0, 0.55)';
       context.shadowBlur = Math.max(2, 4 * scale);
-      context.fillText(handle, logoX + logoSize + pad * 0.55, centerY);
+      context.fillText(displayHandle, logoX + logoSize + pad * 0.55, centerY, maxHandleWidth);
       context.restore();
       const progress = Math.min(92, Math.round((video.currentTime / Math.max(1, video.duration)) * 92));
       if (progress !== lastProgress) { lastProgress = progress; onProgress?.(progress); }
@@ -150,9 +161,63 @@ export async function exportNexoraBrandedVideo(
     drawFrame();
     await playbackFinished;
 
-    settled = true;
+    // TikTok-style downloaded-video outro: the source footage ends first,
+    // then a short NEXORA end card is rendered into the same exported file.
     cancelAnimationFrame(frameRequest);
     onProgress?.(94);
+    const outroDurationMs = 2400;
+    const outroStartedAt = performance.now();
+    const drawOutroFrame = (now: number) => {
+      const elapsed = Math.min(1, (now - outroStartedAt) / outroDurationMs);
+      const eased = 1 - Math.pow(1 - elapsed, 3);
+      const w = canvas.width;
+      const h = canvas.height;
+      const gradient = context.createLinearGradient(0, 0, w, h);
+      gradient.addColorStop(0, '#050914');
+      gradient.addColorStop(0.52, '#120B2D');
+      gradient.addColorStop(1, '#260A68');
+      context.fillStyle = gradient;
+      context.fillRect(0, 0, w, h);
+      const glow = context.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.42, Math.max(w, h) * 0.62);
+      glow.addColorStop(0, 'rgba(113, 56, 255, 0.34)');
+      glow.addColorStop(1, 'rgba(113, 56, 255, 0)');
+      context.fillStyle = glow;
+      context.fillRect(0, 0, w, h);
+      const centerX = w / 2;
+      const centerY = h * 0.43;
+      const logoSize = Math.round(Math.min(w * 0.25, h * 0.19) * (0.86 + eased * 0.14));
+      context.save();
+      context.globalAlpha = eased;
+      context.shadowColor = 'rgba(138, 63, 252, 0.65)';
+      context.shadowBlur = Math.max(12, logoSize * 0.22);
+      if (brandLogo.complete && brandLogo.naturalWidth > 0) {
+        context.drawImage(brandLogo, centerX - logoSize / 2, centerY - logoSize / 2, logoSize, logoSize);
+      }
+      context.shadowBlur = 0;
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillStyle = '#F5F7FF';
+      context.font = '700 ' + Math.round(Math.max(22, w * 0.045)) + 'px Arial, sans-serif';
+      context.fillText('NEXORA', centerX, h * 0.63);
+      context.fillStyle = 'rgba(245, 247, 255, 0.88)';
+      context.font = '600 ' + Math.round(Math.max(15, w * 0.023)) + 'px Arial, sans-serif';
+      const outroHandle = '@' + username.replace(/^@+/, '').slice(0, 32);
+      context.fillText(outroHandle, centerX, h * 0.71, w * 0.82);
+      context.fillStyle = 'rgba(196, 181, 253, 0.78)';
+      context.font = '500 ' + Math.round(Math.max(10, w * 0.012)) + 'px Arial, sans-serif';
+      context.fillText("THE WORLD'S LIVING SOCIAL NETWORK", centerX, h * 0.81, w * 0.88);
+      context.restore();
+      if (elapsed < 1) frameRequest = requestAnimationFrame(drawOutroFrame);
+    };
+    await new Promise<void>(resolve => {
+      const finishOutro = () => { settled = true; resolve(); };
+      const outroLoop = (now: number) => {
+        drawOutroFrame(now);
+        if (now - outroStartedAt >= outroDurationMs) finishOutro();
+        else frameRequest = requestAnimationFrame(outroLoop);
+      };
+      frameRequest = requestAnimationFrame(outroLoop);
+    });
     if (sonicBuffer) {
       await new Promise<void>(resolve => {
         const sonicSource = audioContext!.createBufferSource();
