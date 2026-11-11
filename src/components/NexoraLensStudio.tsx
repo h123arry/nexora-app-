@@ -7,7 +7,7 @@ type Lens = {
   name: string;
   category: 'For you' | 'Beauty' | 'Mood' | 'AR';
   filter: string;
-  sticker: 'none' | 'crown' | 'cat' | 'halo' | 'glasses' | 'hearts' | 'sparkles';
+  sticker: 'none' | 'crown' | 'cat' | 'halo' | 'glasses' | 'hearts' | 'sparkles' | 'puppy' | 'bunny' | 'flower' | 'robot' | 'butterfly';
 };
 
 type Props = {
@@ -31,6 +31,11 @@ const LENSES: Lens[] = [
   { id: 'cat-mode', name: 'Cat Mode', category: 'AR', filter: 'none', sticker: 'cat' },
   { id: 'heart-eyes', name: 'Heart Eyes', category: 'AR', filter: 'none', sticker: 'hearts' },
   { id: 'violet-shades', name: 'Violet Shades', category: 'AR', filter: 'none', sticker: 'glasses' },
+  { id: 'puppy-face', name: 'Puppy Face', category: 'AR', filter: 'none', sticker: 'puppy' },
+  { id: 'bunny-pop', name: 'Bunny Pop', category: 'AR', filter: 'none', sticker: 'bunny' },
+  { id: 'flower-crown', name: 'Flower Crown', category: 'AR', filter: 'saturate(1.08)', sticker: 'flower' },
+  { id: 'robot-mask', name: 'Robot Mask', category: 'AR', filter: 'contrast(1.08) saturate(1.12)', sticker: 'robot' },
+  { id: 'butterfly-dream', name: 'Butterfly Dream', category: 'AR', filter: 'brightness(1.04) saturate(1.12)', sticker: 'butterfly' },
 ];
 
 const VISION_VERSION = '0.10.14';
@@ -117,6 +122,48 @@ function drawLens(context: CanvasRenderingContext2D, landmarks: any[], lens: Len
     };
     drawHeart(leftEye.x, leftEye.y - eyeDistance * .1, eyeDistance * .24);
     drawHeart(rightEye.x, rightEye.y - eyeDistance * .1, eyeDistance * .24);
+  } else if (lens.sticker === 'puppy') {
+    context.fillStyle = '#8B5CF6';
+    context.strokeStyle = '#E9D5FF';
+    context.lineWidth = Math.max(2, eyeDistance * .025);
+    for (const side of [-1, 1]) {
+      context.beginPath();
+      context.ellipse(forehead.x + side * faceWidth * .4, forehead.y + eyeDistance * .12, eyeDistance * .2, eyeDistance * .42, side * 0.25, 0, Math.PI * 2);
+      context.fill(); context.stroke();
+    }
+    context.fillStyle = '#C084FC';
+    context.beginPath(); context.ellipse(nose.x, nose.y + eyeDistance * .7, eyeDistance * .13, eyeDistance * .1, 0, 0, Math.PI * 2); context.fill();
+  } else if (lens.sticker === 'bunny') {
+    context.fillStyle = '#E9D5FF';
+    context.strokeStyle = '#B69BFF';
+    context.lineWidth = Math.max(2, eyeDistance * .025);
+    for (const side of [-1, 1]) {
+      context.beginPath(); context.ellipse(forehead.x + side * eyeDistance * .38, forehead.y - eyeDistance * .7, eyeDistance * .17, eyeDistance * .62, side * -0.16, 0, Math.PI * 2); context.fill(); context.stroke();
+    }
+  } else if (lens.sticker === 'flower') {
+    for (let i = 0; i < 7; i += 1) {
+      const angle = Math.PI + i * Math.PI / 6;
+      const x = forehead.x + Math.cos(angle) * faceWidth * .42;
+      const y = forehead.y + Math.sin(angle) * eyeDistance * .25;
+      context.fillStyle = i % 2 ? '#D8B4FE' : '#A78BFA';
+      context.beginPath(); context.arc(x, y, eyeDistance * .16, 0, Math.PI * 2); context.fill();
+      context.fillStyle = '#FDE68A'; context.beginPath(); context.arc(x, y, eyeDistance * .055, 0, Math.PI * 2); context.fill();
+    }
+  } else if (lens.sticker === 'robot') {
+    context.fillStyle = 'rgba(75,16,242,.58)';
+    context.strokeStyle = '#D8B4FE';
+    context.lineWidth = Math.max(3, eyeDistance * .04);
+    context.beginPath(); context.roundRect(leftEye.x - eyeDistance * .34, leftEye.y - eyeDistance * .18, eyeDistance * 1.68, eyeDistance * .58, eyeDistance * .12); context.fill(); context.stroke();
+    context.fillStyle = '#F5F7FF';
+    for (const eye of [leftEye, rightEye]) { context.beginPath(); context.arc(eye.x, eye.y, eyeDistance * .055, 0, Math.PI * 2); context.fill(); }
+  } else if (lens.sticker === 'butterfly') {
+    context.fillStyle = '#C4B5FD';
+    for (const side of [-1, 1]) {
+      context.save(); context.translate(forehead.x + side * faceWidth * .38, forehead.y - eyeDistance * .15); context.rotate(side * -.35);
+      context.beginPath(); context.ellipse(0, 0, eyeDistance * .22, eyeDistance * .38, side * .4, 0, Math.PI * 2); context.fill();
+      context.beginPath(); context.ellipse(side * eyeDistance * .06, eyeDistance * .28, eyeDistance * .16, eyeDistance * .24, side * -.4, 0, Math.PI * 2); context.fill();
+      context.restore();
+    }
   } else if (lens.sticker === 'sparkles') {
     context.fillStyle = '#E9D5FF';
     for (let i = 0; i < 5; i += 1) {
