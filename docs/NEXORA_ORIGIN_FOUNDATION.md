@@ -100,6 +100,18 @@ Use the published C2PA specification and maintained validator/tooling rather tha
 
 Origin may provide verified events to existing creator analytics and creator-economy services. It must not directly issue Nex Coins, create paid status, or alter trust/reputation. Any future originality reward programme requires separate anti-fraud rules, eligibility, budget controls, auditability, and approval. A content hash or first-upload timestamp alone is not sufficient proof of authorship or rights ownership.
 
+## O1 implementation baseline
+
+The first O1 increment is connected to the existing trusted Cloud Storage finalization trigger:
+- The trigger streams the immutable uploaded object generation and computes a SHA-256 digest without loading the full asset into memory.
+- A generation-scoped, idempotent upload event and private media-origin record are committed in the same Firestore transaction as the existing media lifecycle transition.
+- Initial records use the neutral `upload_ingest` or `studio_export` origin kind and the `uploader` contribution role. This records that an account uploaded the bytes to NEXORA; it does **not** claim that the uploader created the work or owns its rights.
+- Credential state begins as `absent`, lineage as `unlinked`, and disclosure as `unknown`. No authenticity claim is inferred from an upload.
+- Firestore Rules allow owner-only reads and deny all client writes to origin records and event history.
+- Policy and emulator tests cover record validation, stable generation IDs, privacy, and client-write denial.
+
+This is an initial upload-provenance foundation only. Remix lineage, creator declarations, C2PA validation, public viewer projections, UI integration, deletion propagation, and staging/device acceptance remain outstanding until separately implemented and verified.
+
 ## Delivery sequence
 
 ### O1 — Audit and provenance foundation
