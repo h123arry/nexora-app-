@@ -60,7 +60,10 @@ export const recordMyRemixLineage = onCall({ maxInstances: 20 }, async request =
         parentLineageDepths: parents.map(parent => Number.isInteger(parent?.lineageDepth) ? parent.lineageDepth : 0),
       });
       transaction.update(derivativeOriginRef, {
-        ...record,
+        parentAssetIds: record.parentAssetIds,
+        lineageAncestors: record.lineageAncestors,
+        lineageDepth: record.lineageDepth,
+        lineageState: record.lineageState,
         updatedAt: FieldValue.serverTimestamp(),
       });
       transaction.create(eventRef, {
