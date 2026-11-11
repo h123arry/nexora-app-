@@ -55,6 +55,28 @@ const publicProfile = (uid) => ({
 });
 
  describe('Firestore authorization regression tests', () => {
+  it('keeps seasonal event participation and helpfulness rate limits server-managed', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'seasonalCommunityEvents', 'seasonal-1'), {
+        id: 'seasonal-1', title: 'Community Week', status: 'scheduled'
+      });
+      await setDoc(doc(adminDb, 'seasonalCommunityEvents', 'seasonal-1', 'participants', 'alice'), {
+        userId: 'alice'
+      });
+      await setDoc(doc(adminDb, 'users', 'alice', 'helpfulnessLimits', '2026-11-11'), { count: 1 });
+      await setDoc(doc(adminDb, 'posts', 'helpful-1'), {
+        id: 'helpful-1', userId: 'bob', audience: 'public', helpfulnessCount: 0
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'seasonalCommunityEvents', 'seasonal-1')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'seasonalCommunityEvents', 'seasonal-1', 'participants', 'alice')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'seasonalCommunityEvents', 'seasonal-1', 'participants', 'alice')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'seasonalCommunityEvents', 'seasonal-1'), { title: 'Forged event' }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'seasonalCommunityEvents', 'seasonal-1', 'participants', 'alice'), { userId: 'alice' }));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'users', 'alice', 'helpfulnessLimits', '2026-11-11')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'users', 'alice', 'helpfulnessLimits', '2026-11-11'), { count: 999 }));
+    await assertFails(setDoc(doc(dbFor('alice'), 'posts', 'helpful-1', 'helpfulnessEndorsements', 'alice'), { userId: 'alice' }));
+  });
   it('allows owners to read retention summaries but reserves all writes to trusted server code', async () => {
     await seed(async adminDb => {
       await setDoc(doc(adminDb, 'userRetention', 'alice'), {
