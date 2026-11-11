@@ -14,6 +14,7 @@ type Props = {
   cameraFacing: Facing;
   userId: string;
   captureMode: 'photo' | 'video';
+  countdownTimer?: number | null;
   onStreamReady: (stream: MediaStream | null) => void;
   onCapture: (blob: Blob) => void;
 };
@@ -377,7 +378,7 @@ function createThreeLensRuntime(THREE: any, canvas: HTMLCanvasElement, width: nu
   return { renderer, scene, camera, root, objects, setLens, render, dispose };
 }
 
-export default function NexoraLensStudio({ cameraFacing, userId, captureMode, onStreamReady, onCapture }: Props) {
+export default function NexoraLensStudio({ cameraFacing, userId, captureMode, countdownTimer = null, onStreamReady, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamCallbackRef = useRef(onStreamReady);
@@ -612,6 +613,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
       <div className="relative mx-auto aspect-[4/5] w-full max-w-[420px] overflow-hidden rounded-[1.6rem] border border-[#44376F] bg-[#050914] shadow-[0_16px_48px_rgba(0,0,0,.38)]">
         <video ref={videoRef} autoPlay muted playsInline className="hidden" />
         <canvas ref={canvasRef} className="h-full w-full object-cover" aria-label="Live NEXORA camera preview with selected lens" />
+        {countdownTimer !== null && <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#050914]/20"><span className="animate-ping text-7xl font-black text-white drop-shadow-[0_0_24px_rgba(138,63,252,.9)]">{countdownTimer}</span></div>}
         <div className="absolute left-3 top-3 flex items-center gap-2 rounded-full border border-white/10 bg-[#050914]/75 px-3 py-1.5 text-[10px] font-semibold text-white backdrop-blur">
           <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_10px_#8A3FFC]" /> NEXORA LENSES
         </div>
