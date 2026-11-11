@@ -58,13 +58,17 @@ async function inspectStudioExport(blob: Blob): Promise<{ durationSeconds: numbe
   video.muted = true;
   try {
     return await new Promise((resolve, reject) => {
-      const timeout = window.setTimeout(() => reject(new Error('The exported video metadata could not be read. Your Studio draft is safe; try rendering again.')), 12_000);
+      let timeout = 0;
       const cleanup = () => {
-        window.clearTimeout(timeout);
+        if (timeout) window.clearTimeout(timeout);
         video.removeAttribute('src');
         video.load();
         URL.revokeObjectURL(url);
       };
+      timeout = window.setTimeout(() => {
+        cleanup();
+        reject(new Error('The exported video metadata could not be read. Your Studio draft is safe; try rendering again.'));
+      }, 12_000);
       video.onloadedmetadata = () => {
         const metadata = { durationSeconds: video.duration, width: video.videoWidth, height: video.videoHeight };
         cleanup();
