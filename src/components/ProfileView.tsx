@@ -11,6 +11,9 @@ import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
 import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
+import ReportModal from './ReportModal';
+import { auth } from '../services/firebase/config';
+import { SettingsService } from '../services/firebase/settingsService';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
@@ -391,6 +394,100 @@ export default function ProfileView({
     };
   }, [currentUser.id, deletionRequest?.status]);
 
+  const refreshSafetyLists = async () => {
+    const ownerId = auth.currentUser?.uid;
+    if (!ownerId) {
+      setBlockedUsers([]);
+      setMutedUsers([]);
+      return;
+    }
+    try {
+      const settings = await SettingsService.getSettings(ownerId);
+      setBlockedUsers(settings.messaging.blockedUserIds);
+      setMutedUsers(settings.feed.mutedCreatorIds);
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Your safety lists could not be loaded. Please retry.' }));
+    }
+  };
+
+  useEffect(() => {
+    void refreshSafetyLists();
+  }, [auth.currentUser?.uid]);
+
+  const handleBlockProfile = async () => {
+    const ownerId = auth.currentUser?.uid;
+    if (!ownerId) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Sign in to manage blocked accounts.' }));
+      return;
+    }
+    if (currentUser.id === ownerId || isSafetyActionBusy) return;
+    setIsSafetyActionBusy(true);
+    try {
+      const settings = await SettingsService.getSettings(ownerId);
+      const currentlyBlocked = settings.messaging.blockedUserIds.includes(currentUser.id);
+      const blockedIds = currentlyBlocked
+        ? settings.messaging.blockedUserIds.filter(id => id !== currentUser.id)
+        : [...new Set([...settings.messaging.blockedUserIds, currentUser.id])].slice(0, 500);
+      const blockedCreatorIds = currentlyBlocked
+        ? settings.feed.blockedCreatorIds.filter(id => id !== currentUser.id)
+        : [...new Set([...settings.feed.blockedCreatorIds, currentUser.id])].slice(0, 500);
+      await Promise.all([
+        SettingsService.updateMessagingPreferences(ownerId, { blockedUserIds: blockedIds }),
+        SettingsService.updateFeed(ownerId, { blockedCreatorIds }),
+      ]);
+      setBlockedUsers(blockedIds);
+      window.dispatchEvent(new CustomEvent('toast', { detail: currentlyBlocked ? 'Account unblocked.' : 'Account blocked in messaging and feed preferences.' }));
+      setActivePanel('profile');
+    } catch {
+      await refreshSafetyLists();
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'The block setting could not be saved completely. Please retry.' }));
+    } finally {
+      setIsSafetyActionBusy(false);
+    }
+  };
+
+  const handleMuteAccount = async (targetId: string, muted: boolean) => {
+    const ownerId = auth.currentUser?.uid;
+    if (!ownerId || isSafetyActionBusy) return;
+    setIsSafetyActionBusy(true);
+    try {
+      const settings = await SettingsService.getSettings(ownerId);
+      const mutedIds = muted
+        ? [...new Set([...settings.feed.mutedCreatorIds, targetId])].slice(0, 500)
+        : settings.feed.mutedCreatorIds.filter(id => id !== targetId);
+      await SettingsService.updateFeed(ownerId, { mutedCreatorIds: mutedIds });
+      setMutedUsers(mutedIds);
+      window.dispatchEvent(new CustomEvent('toast', { detail: muted ? 'Creator muted in your feed preferences.' : 'Creator unmuted.' }));
+    } catch {
+      await refreshSafetyLists();
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This mute setting could not be saved. Please retry.' }));
+    } finally {
+      setIsSafetyActionBusy(false);
+    }
+  };
+
+  const handleUnblockAccount = async (targetId: string) => {
+    const ownerId = auth.currentUser?.uid;
+    if (!ownerId || isSafetyActionBusy) return;
+    setIsSafetyActionBusy(true);
+    try {
+      const settings = await SettingsService.getSettings(ownerId);
+      const blockedIds = settings.messaging.blockedUserIds.filter(id => id !== targetId);
+      const blockedCreatorIds = settings.feed.blockedCreatorIds.filter(id => id !== targetId);
+      await Promise.all([
+        SettingsService.updateMessagingPreferences(ownerId, { blockedUserIds: blockedIds }),
+        SettingsService.updateFeed(ownerId, { blockedCreatorIds }),
+      ]);
+      setBlockedUsers(blockedIds);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account unblocked.' }));
+    } catch {
+      await refreshSafetyLists();
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This account could not be unblocked. Please retry.' }));
+    } finally {
+      setIsSafetyActionBusy(false);
+    }
+  };
+
   // Appearance customization
   const [accentColor, setAccentColor] = useState('violet'); // 'violet' | 'pink' | 'emerald' | 'cyan'
   const [textSize, setTextSize] = useState('medium'); // 'xs' | 'sm' | 'medium' | 'lg' | 'xl'
@@ -438,8 +535,8 @@ export default function ProfileView({
   const [exclusiveContentList, setExclusiveContentList] = useState<any[]>([]);
   const [billingSummary, setBillingSummary] = useState<BillingSummary | null>(null);
   const [billingSummaryError, setBillingSummaryError] = useState(false);
-  const [blockedUsers, setBlockedUsers] = useState<string[]>(['toxic_spammer', 'scambot_v8']);
-  const [mutedUsers, setMutedUsers] = useState<string[]>(['overposter_reels', 'ad_beacon_hq']);
+  const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
+  const [mutedUsers, setMutedUsers] = useState<string[]>([]);
   const [closeFriends, setCloseFriends] = useState<string[]>([]);
 
   useEffect(() => {
@@ -476,6 +573,8 @@ export default function ProfileView({
 
   // Profile dropdown menu state
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isSafetyActionBusy, setIsSafetyActionBusy] = useState(false);
 
   const handleAccountExport = async () => {
     if (isLifecycleBusy) return;
@@ -1380,57 +1479,45 @@ export default function ProfileView({
               <div className="space-y-4 shrink-0">
                 <div className="flex items-center justify-between border-b border-white/5 pb-3">
                   <h3 className="text-xs font-mono text-zinc-300 font-black uppercase tracking-wider">Profile Options</h3>
-                  <button 
-                    onClick={() => setActivePanel('profile')}
-                    className="p-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-all"
-                  >
-                    <X className="w-4.5 h-4.5" />
-                  </button>
-                </div>
-                
-                <div className="space-y-2">
-                  <button 
-                    onClick={() => {
-                      navigator.clipboard.writeText(`nexora.ai/${currentUser.username}`);
-                      window.dispatchEvent(new CustomEvent('toast', { detail: 'Profile link copied to clipboard' }));
-                      setActivePanel('profile');
-                    }}
-                    className="w-full text-left p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] transition-all flex items-center gap-3"
-                  >
-                    <span className="text-zinc-400 font-bold">➥</span>
-                    <div className="space-y-0.5">
-                      <span className="block text-sm font-semibold text-white">Copy Profile Link</span>
-                      <span className="block text-xs text-zinc-500 font-mono">Copy profile URL to clipboard</span>
-                    </div>
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('toast', { detail: `@${currentUser.username} has been blocked.` }));
-                      setActivePanel('profile');
-                    }}
-                    className="w-full text-left p-4 rounded-2xl bg-red-500/5 hover:bg-red-500/10 transition-all flex items-center gap-3"
-                  >
-                    <Ban className="w-5 h-5 text-red-400" />
-                    <div className="space-y-0.5">
-                      <span className="block text-sm font-semibold text-red-400">Block User</span>
-                      <span className="block text-xs text-red-400/60 font-mono">Restrict all interactions</span>
-                    </div>
-                  </button>
-
-                  <button 
-                    onClick={() => {
-                      window.dispatchEvent(new CustomEvent('toast', { detail: `Report submitted for review.` }));
-                      setActivePanel('profile');
-                    }}
-                    className="w-full text-left p-4 rounded-2xl bg-red-500/5 hover:bg-red-500/10 transition-all flex items-center gap-3"
-                  >
-                    <Flag className="w-5 h-5 text-red-400" />
-                    <div className="space-y-0.5">
-                      <span className="block text-sm font-semibold text-red-400">Report User</span>
-                      <span className="block text-xs text-red-400/60 font-mono">Flag inappropriate behavior</span>
-                    </div>
-                  </button>
+                  {!isOwnProfile && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => { void handleBlockProfile(); }}
+                        disabled={isSafetyActionBusy}
+                        className="w-full text-left p-4 rounded-2xl bg-red-500/5 hover:bg-red-500/10 disabled:opacity-50 transition-all flex items-center gap-3"
+                      >
+                        <Ban className="w-5 h-5 text-red-400" />
+                        <div className="space-y-0.5">
+                          <span className="block text-sm font-semibold text-red-400">{blockedUsers.includes(currentUser.id) ? 'Unblock User' : 'Block User'}</span>
+                          <span className="block text-xs text-red-400/60 font-mono">Persist this account in your safety preferences</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { void handleMuteAccount(currentUser.id, !mutedUsers.includes(currentUser.id)); }}
+                        disabled={isSafetyActionBusy}
+                        className="w-full text-left p-4 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] disabled:opacity-50 transition-all flex items-center gap-3"
+                      >
+                        <VolumeX className="w-5 h-5 text-violet-400" />
+                        <div className="space-y-0.5">
+                          <span className="block text-sm font-semibold text-white">{mutedUsers.includes(currentUser.id) ? 'Unmute User' : 'Mute User'}</span>
+                          <span className="block text-xs text-zinc-500 font-mono">Persist this creator in your feed preferences</span>
+                        </div>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsReportModalOpen(true)}
+                        className="w-full text-left p-4 rounded-2xl bg-red-500/5 hover:bg-red-500/10 transition-all flex items-center gap-3"
+                      >
+                        <Flag className="w-5 h-5 text-red-400" />
+                        <div className="space-y-0.5">
+                          <span className="block text-sm font-semibold text-red-400">Report User</span>
+                          <span className="block text-xs text-red-400/60 font-mono">Submit a durable moderation report</span>
+                        </div>
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -1976,11 +2063,9 @@ export default function ProfileView({
                               <div key={usr} className="flex justify-between items-center bg-black/20 p-2 rounded-xl text-xs">
                                 <span className="font-mono text-zinc-300">@{usr}</span>
                                 <button 
-                                  onClick={() => {
-                                    setBlockedUsers(blockedUsers.filter(u => u !== usr));
-                                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔓 Unblocked @${usr}` }));
-                                  }}
-                                  className="text-[9px] font-mono font-black text-violet-400 uppercase hover:text-violet-300"
+                                  onClick={() => { void handleUnblockAccount(usr); }}
+                                  disabled={isSafetyActionBusy}
+                                  className="text-[9px] font-mono font-black text-violet-400 uppercase hover:text-violet-300 disabled:opacity-50"
                                 >
                                   Unblock
                                 </button>
@@ -1992,11 +2077,9 @@ export default function ProfileView({
                               <div key={usr} className="flex justify-between items-center bg-black/20 p-2 rounded-xl text-xs">
                                 <span className="font-mono text-zinc-300">@{usr}</span>
                                 <button 
-                                  onClick={() => {
-                                    setMutedUsers(mutedUsers.filter(u => u !== usr));
-                                    window.dispatchEvent(new CustomEvent('toast', { detail: `🔊 Unmuted @${usr}` }));
-                                  }}
-                                  className="text-[9px] font-mono font-black text-violet-400 uppercase hover:text-violet-300"
+                                  onClick={() => { void handleMuteAccount(usr, false); }}
+                                  disabled={isSafetyActionBusy}
+                                  className="text-[9px] font-mono font-black text-violet-400 uppercase hover:text-violet-300 disabled:opacity-50"
                                 >
                                   Unmute
                                 </button>
@@ -3642,6 +3725,14 @@ export default function ProfileView({
           tags: [],
           likes: currentUser.followers || 0,
         }}
+      />
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetType="user"
+        targetId={currentUser.id}
+        targetContent={currentUser.bio || currentUser.name}
+        reporterUsername={auth.currentUser?.displayName || 'NEXORA member'}
       />
       <StorageDataCenterModal isOpen={isStorageCenterOpen} onClose={() => setIsStorageCenterOpen(false)} />
       </div>
