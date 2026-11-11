@@ -35,6 +35,8 @@ function notificationTitle(type: string): string {
   if (type === 'message') return 'New message on NEXORA';
   if (type === 'follow') return 'You have a new follower';
   if (type === 'comment') return 'New comment on NEXORA';
+  if (type === 'comment_reply') return 'Someone replied to your comment';
+  if (type === 'repost') return 'Someone reposted your post';
   if (type === 'mention') return 'You were mentioned on NEXORA';
   if (type === 'spark' || type === 'like') return 'Someone engaged with your post';
   return 'NEXORA notification';
