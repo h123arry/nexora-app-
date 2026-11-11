@@ -24,7 +24,15 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
     // snapshot from the Firestore emulator or incrementing the poll twice.
     const existingVote = await tx.get(voteRef);
     if (existingVote.exists) {
-      return { voted: false, selectedOptionId: existingVote.get('optionId') as string };
+      const post = await tx.get(postRef);
+      if (!post.exists || post.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
+      const poll = post.get('interactivePoll');
+      if (!poll || typeof poll.question !== 'string') throw new Error('This post does not contain a valid poll.');
+      return {
+        voted: false,
+        selectedOptionId: existingVote.get('optionId') as string,
+        options: readOptions(poll.options),
+      };
     }
     const post = await tx.get(postRef);
     if (!post.exists || post.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
@@ -37,15 +45,9 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
     if (!nextOptions.every(option => Number.isSafeInteger(option.votes))) throw new Error('Poll vote totals are invalid.');
     tx.create(voteRef, { userId: uid, postId, optionId, createdAt: FieldValue.serverTimestamp() });
     tx.update(postRef, { 'interactivePoll.options': nextOptions });
-    return { voted: true, selectedOptionId: optionId };
+    return { voted: true, selectedOptionId: optionId, options: nextOptions };
   });
-  // Return the latest aggregate after the transaction. This also ensures a
-  // replayed vote receives current totals when other accounts voted meanwhile.
-  const latestPost = await postRef.get();
-  if (!latestPost.exists || latestPost.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
-  const poll = latestPost.get('interactivePoll');
-  if (!poll || typeof poll.question !== 'string') throw new Error('This post does not contain a valid poll.');
-  return { ...result, options: readOptions(poll.options) };
+  return result;
 }
 
 export async function getMyPublicPostPollVotes(db: Firestore, uid: string, postIds: unknown) {
