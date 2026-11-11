@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react';
 import { buildWaveformPeaks, getAudioEnvelopeGain, getDuckedMusicGain } from '../utils/studioAudioPolicy';
 import { appendHistorySnapshot, reorderById } from '../utils/studioHistoryPolicy';
 import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer } from '../utils/studioTextLayerPolicy';
-import { canAddStudioImageLayer, getStudioImageLayerFrame, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
+import { canAddStudioImageLayer, getStudioImageLayerFrame, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
