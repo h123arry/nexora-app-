@@ -31,6 +31,7 @@ import {
 import { ActivityService } from './services/activityService';
 import { 
   getGlobalPostsPage,
+  addPublicPostCommentDb,
   subscribeToPosts, 
   subscribeToUsers, 
   savePostToDb, 
@@ -1589,51 +1590,27 @@ export default function App() {
 
   const handleAddComment = (postId: string, commentContent: string) => {
     requireAuth(() => {
-      const newComment = {
-        id: `comment-${Date.now()}`,
-        postId,
-        userId: currentUser.id,
-        username: currentUser.username,
-        name: currentUser.name,
-        avatar: currentUser.avatar,
-        content: commentContent,
-        timestamp: new Date().toISOString(),
-        likes: 0
-      };
-
-      setPosts(prevPosts =>
-        prevPosts.map(p => {
-          if (p.id === postId) {
-            // Record comment activity event
-            addHelpfulCommentDb(currentUser.id, newComment.id, p.userId);
-
-            // Trigger notification to host of post (if not yourself)
-            if (p.userId !== currentUser.id) {
-              const newNotif: Notification = {
-                id: `notif-${Date.now()}-${Math.floor(Math.random() * 1000000)}`,
-                type: 'comment',
-                userId: currentUser.id,
-                username: currentUser.username,
-                avatar: currentUser.avatar,
-                targetId: p.id,
-                content: `commented on your post: "${commentContent.slice(0, 30)}..."`,
-                timestamp: new Date().toISOString(),
-                isRead: false
-              };
-              setNotifications(prev => [newNotif, ...prev]);
-            }
-
-            const updatedPost = {
-              ...p,
-              commentsCount: p.commentsCount + 1,
-              comments: [...p.comments, newComment]
-            };
-            savePostToDb(updatedPost);
-            return updatedPost;
+      const commentId = `comment-${Date.now()}-${Math.floor(Math.random() * 1000000)}`;
+      void addPublicPostCommentDb(currentUser.id, postId, commentContent, commentId)
+        .then(result => {
+          if (result.created) {
+            const targetPost = posts.find(post => post.id === postId);
+            if (targetPost) void addHelpfulCommentDb(currentUser.id, result.comment.id, targetPost.userId);
           }
-          return p;
+          setPosts(prevPosts => prevPosts.map(post => {
+            if (post.id !== postId) return post;
+            const alreadyPresent = post.comments.some(comment => comment.id === result.comment.id);
+            return {
+              ...post,
+              commentsCount: result.commentsCount,
+              comments: alreadyPresent ? post.comments : [...post.comments, result.comment],
+            };
+          }));
         })
-      );
+        .catch(error => {
+          const message = error instanceof Error ? error.message : 'Could not post your comment. Please retry.';
+          window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+        });
     }, 'Join Nexora to comment on posts and join community discussions.');
   };
 
