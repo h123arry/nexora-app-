@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { NEXORA_LENS_CATALOG, NEXORA_LENS_CATEGORIES, type NexoraLens } from '../services/nexoraLensCatalog';
 import { readNexoraFaceExpressions, getNexoraExpressionMotion } from '../services/nexoraLensExpressions';
 import { getNexoraSceneEffectProfile, getNexoraSceneParticles } from '../services/nexoraLensSceneEffects';
+import { detectCurrentNexoraWorldArCapabilities, getNexoraWorldArStatusLabel, type NexoraWorldArCapabilities } from '../services/nexoraWorldArCapabilities';
 import { listMyCreatorLenses, listPublishedCreatorLenses, saveCreatorLens as saveCreatorLensCloud, submitCreatorLensForReview } from '../services/creatorLensService';
 import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search } from 'lucide-react';
 
@@ -429,6 +430,12 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     } catch { return []; }
   });
   const [faceTracking, setFaceTracking] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [worldArCapabilities, setWorldArCapabilities] = useState<NexoraWorldArCapabilities | null>(null);
+  useEffect(() => {
+    let active = true;
+    void detectCurrentNexoraWorldArCapabilities().then(result => { if (active) setWorldArCapabilities(result); });
+    return () => { active = false; };
+  }, []);
   const [cameraReady, setCameraReady] = useState(false);
   const [previewFrame, setPreviewFrame] = useState<string | null>(null);
   const [threeReady, setThreeReady] = useState(false);
