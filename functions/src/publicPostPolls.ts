@@ -26,38 +26,65 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
   if (!initialPost.exists || initialPost.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
   const initialPoll = initialPost.get('interactivePoll');
   if (!initialPoll || typeof initialPoll.question !== 'string') throw new Error('This post does not contain a valid poll.');
-  const initialOptions = readOptions(initialPoll.options);
+  readOptions(initialPoll.options);
 
-  const result = await db.runTransaction(async tx => {
-    const existingVote = await tx.get(voteRef);
-    if (existingVote.exists) {
-      return {
-        voted: false as const,
-        selectedOptionId: existingVote.get('optionId') as string,
-      };
+  let result: {
+    voted: boolean;
+    selectedOptionId: string;
+    options?: Array<{ id: string; text: string; votes: number }>;
+  };
+
+  try {
+    result = await db.runTransaction(async tx => {
+      const existingVote = await tx.get(voteRef);
+      if (existingVote.exists) {
+        return {
+          voted: false as const,
+          selectedOptionId: existingVote.get('optionId') as string,
+        };
+      }
+
+      const post = await tx.get(postRef);
+      if (!post.exists || post.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
+      const poll = post.get('interactivePoll');
+      if (!poll || typeof poll.question !== 'string') throw new Error('This post does not contain a valid poll.');
+      const options = readOptions(poll.options);
+      if (!options.some(option => option.id === optionId)) throw new Error('Choose a valid poll option.');
+
+      const nextOptions = options.map(option => option.id === optionId
+        ? { ...option, votes: option.votes + 1 } : option);
+      if (!nextOptions.every(option => Number.isSafeInteger(option.votes))) throw new Error('Poll vote totals are invalid.');
+
+      tx.create(voteRef, { userId: uid, postId, optionId, createdAt: FieldValue.serverTimestamp() });
+      tx.update(postRef, 'interactivePoll.options', nextOptions);
+      return { voted: true as const, selectedOptionId: optionId, options: nextOptions };
+    });
+  } catch (error) {
+    // A competing request from this account may commit the unique vote marker
+    // while this transaction is retrying. Recover only when that durable marker
+    // exists and the post is still public; otherwise preserve the original error.
+    const [existingVote, latestPost] = await Promise.all([voteRef.get(), postRef.get()]);
+    if (!existingVote.exists || !latestPost.exists || latestPost.get('audience') !== 'public') {
+      throw error;
     }
-
-    const post = await tx.get(postRef);
-    if (!post.exists || post.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
-    const poll = post.get('interactivePoll');
-    if (!poll || typeof poll.question !== 'string') throw new Error('This post does not contain a valid poll.');
-    const options = readOptions(poll.options);
-    if (!options.some(option => option.id === optionId)) throw new Error('Choose a valid poll option.');
-
-    const nextOptions = options.map(option => option.id === optionId
-      ? { ...option, votes: option.votes + 1 } : option);
-    if (!nextOptions.every(option => Number.isSafeInteger(option.votes))) throw new Error('Poll vote totals are invalid.');
-
-    tx.create(voteRef, { userId: uid, postId, optionId, createdAt: FieldValue.serverTimestamp() });
-    tx.update(postRef, 'interactivePoll.options', nextOptions);
-    return { voted: true as const, selectedOptionId: optionId, options: nextOptions };
-  });
+    const latestPoll = latestPost.get('interactivePoll');
+    if (!latestPoll || typeof latestPoll.question !== 'string') throw error;
+    return {
+      voted: false,
+      selectedOptionId: existingVote.get('optionId') as string,
+      options: readOptions(latestPoll.options),
+    };
+  }
 
   if (result.voted) return result;
+  const latestPost = await postRef.get();
+  if (!latestPost.exists || latestPost.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
+  const latestPoll = latestPost.get('interactivePoll');
+  if (!latestPoll || typeof latestPoll.question !== 'string') throw new Error('This post does not contain a valid poll.');
   return {
     voted: false,
     selectedOptionId: result.selectedOptionId,
-    options: initialOptions,
+    options: readOptions(latestPoll.options),
   };
 }
 
