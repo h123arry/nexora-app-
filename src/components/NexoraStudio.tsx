@@ -4,6 +4,7 @@ import { buildWaveformPeaks, getAudioEnvelopeGain, getDuckedMusicGain } from '..
 import { appendHistorySnapshot, reorderById } from '../utils/studioHistoryPolicy';
 import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer } from '../utils/studioTextLayerPolicy';
 import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
+import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
@@ -136,7 +137,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       }
       setImageLayers(restoredImageLayers);
       setSelectedImageLayerId(restoredImageLayers.some(layer => layer.id === project.selectedImageLayerId) ? project.selectedImageLayerId : restoredImageLayers[0]?.id || null);
-      const restoredSubtitles = Array.isArray(project.subtitleSegments) ? project.subtitleSegments.slice(0, 30).map((segment, index) => normalizeStudioSubtitleSegment(segment, `subtitle-${index}`, totalDuration || 600)) : [];
+      const restoredDuration = (project.clips || []).reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0) || 600;
+      const restoredSubtitles = Array.isArray(project.subtitleSegments) ? project.subtitleSegments.slice(0, 30).map((segment, index) => normalizeStudioSubtitleSegment(segment, `subtitle-${index}`, restoredDuration)) : [];
       setSubtitleSegments(restoredSubtitles);
       setSelectedSubtitleSegmentId(restoredSubtitles.some(segment => segment.id === project.selectedSubtitleSegmentId) ? project.selectedSubtitleSegmentId : restoredSubtitles[0]?.id || null);
       setAspectRatio(project.aspectRatio || 'portrait');
@@ -171,7 +173,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         .catch(() => setMessage('This draft could not be saved on this device.'));
     }, 500);
     return () => window.clearTimeout(timer);
-  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
+  }, [ready, clips, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition, currentUser.id]);
 
   useEffect(() => {
     let cancelled = false;
