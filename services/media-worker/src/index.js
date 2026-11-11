@@ -8,7 +8,7 @@ import sharp from 'sharp';
 import { mkdtemp, mkdir, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, canClaimMediaProcessing, MAX_DURATION_SECONDS } from './policies.js';
+import { classifyStorageObject, imageRenditionWidths, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing, MAX_DURATION_SECONDS } from './policies.js';
 
 const projectId = process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT;
 const bucketName = process.env.MEDIA_BUCKET;
@@ -99,12 +99,12 @@ async function processObject(event){
     const outputRoot=`processed/${ownerId}/${mediaId}/${generation}`;
     const master=[];
     const actual=[];
-    for(const rendition of videoRenditionsForHeight(metadata.height,RENDITIONS)){
+    for(const rendition of videoRenditionsForSize(metadata.width,metadata.height,RENDITIONS)){
       const dir=path.join(work,String(rendition.height)); await mkdir(dir,{recursive:true});
       const mp4=path.join(dir,'video.mp4');
-      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height}\\,ih)`,'-c:v','libx264','-preset','veryfast','-profile:v','main','-b:v',rendition.bitrate,'-maxrate',rendition.bitrate,'-bufsize',`${parseInt(rendition.bitrate,10)*2}k`,'-c:a','aac','-b:a',rendition.audio,'-movflags','+faststart','-pix_fmt','yuv420p',mp4]);
+      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale='if(gte(iw,ih),-2,${rendition.height})':'if(gte(iw,ih),${rendition.height},-2)'`,'-c:v','libx264','-preset','veryfast','-profile:v','main','-b:v',rendition.bitrate,'-maxrate',rendition.bitrate,'-bufsize',`${parseInt(rendition.bitrate,10)*2}k`,'-c:a','aac','-b:a',rendition.audio,'-movflags','+faststart','-pix_fmt','yuv420p',mp4]);
       const hls=path.join(dir,'index.m3u8');
-      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale=-2:min(${rendition.height}\\,ih)`,'-c:v','libx264','-preset','veryfast','-b:v',rendition.bitrate,'-c:a','aac','-b:a',rendition.audio,'-hls_time','6','-hls_playlist_type','vod','-hls_segment_filename',path.join(dir,'segment_%05d.ts'),hls]);
+      await run('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',input,'-vf',`scale='if(gte(iw,ih),-2,${rendition.height})':'if(gte(iw,ih),${rendition.height},-2)'`,'-c:v','libx264','-preset','veryfast','-b:v',rendition.bitrate,'-c:a','aac','-b:a',rendition.audio,'-hls_time','6','-hls_playlist_type','vod','-hls_segment_filename',path.join(dir,'segment_%05d.ts'),hls]);
       const prefix=`${outputRoot}/${rendition.height}p`;
       const playlist=(await readFile(hls,'utf8')).split(String.fromCharCode(10)).map(rawLine=>{
         const line=rawLine.replaceAll(String.fromCharCode(13),'');
@@ -114,7 +114,7 @@ async function processObject(event){
       await upload(mp4,`${prefix}/video.mp4`,'video/mp4');
       await upload(hls,`${prefix}/index.m3u8`,'application/vnd.apple.mpegurl','public,max-age=60');
       for(const entry of await (await import('node:fs/promises')).readdir(dir)) if(entry.endsWith('.ts')) await upload(path.join(dir,entry),`${prefix}/${entry}`,'video/mp2t');
-      master.push('#EXT-X-STREAM-INF:BANDWIDTH='+ (parseInt(rendition.bitrate,10)*1000) + ',RESOLUTION=' + Math.round(metadata.width*rendition.height/metadata.height) + 'x' + rendition.height + String.fromCharCode(10) + signedCdnUrl(prefix+'/index.m3u8',rendition.height+'p/index.m3u8'));
+      master.push('#EXT-X-STREAM-INF:BANDWIDTH='+ (parseInt(rendition.bitrate,10)*1000) + ',RESOLUTION=' + videoRenditionDimensions(metadata.width,metadata.height,rendition.height).width + 'x' + videoRenditionDimensions(metadata.width,metadata.height,rendition.height).height + String.fromCharCode(10) + signedCdnUrl(prefix+'/index.m3u8',rendition.height+'p/index.m3u8'));
       actual.push({height:rendition.height,bitrate:rendition.bitrate,mp4Path:`${prefix}/video.mp4`,hlsPath:`${prefix}/index.m3u8`});
     }
     if(!actual.length) throw new Error('No supported rendition could be generated');
