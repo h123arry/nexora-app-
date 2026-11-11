@@ -394,7 +394,9 @@ class VideoPlaybackManager {
 
   public clearMemory() {
     this.preloadElements.forEach((el) => {
-      el.src = '';
+      el.pause();
+      el.preload = 'none';
+      el.removeAttribute('src');
       el.load();
     });
     this.preloadElements.clear();

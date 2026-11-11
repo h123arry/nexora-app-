@@ -40,7 +40,9 @@ export function getVideoPreloadPlan(input: VideoPreloadPlanInput): VideoPreloadP
     : input.activePostIndex < 0 || Math.abs(input.postIndex - input.activePostIndex) > 2;
 
   if (input.isOffline) {
-    return { shouldPreload: false, isReleased: false, preloadMode: 'none' };
+    // Offline mode suppresses speculative requests, but distant players must
+    // still release decoded and buffered media resources.
+    return { shouldPreload: false, isReleased, preloadMode: 'none' };
   }
 
   const shouldPreload = isAdjacentVideo;
