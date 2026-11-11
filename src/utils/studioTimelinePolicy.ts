@@ -35,3 +35,21 @@ export function normalizeStudioTimelineTime(requestedTime: number, totalDuration
   if (!Number.isFinite(requestedTime)) return 0;
   return Math.round(Math.min(Math.max(0, totalDuration - 0.001), Math.max(0, requestedTime)) * 1000) / 1000;
 }
+
+export function getNextStudioClipTimelinePosition(
+  clips: StudioTimelineClip[],
+  currentClipId: string,
+): StudioTimelinePosition | null {
+  const currentIndex = clips.findIndex(clip => clip.id === currentClipId);
+  if (currentIndex < 0 || currentIndex >= clips.length - 1) return null;
+  const clipOffset = clips.slice(0, currentIndex + 1)
+    .reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0);
+  const next = clips[currentIndex + 1];
+  return {
+    clipId: next.id,
+    clipIndex: currentIndex + 1,
+    globalTime: clipOffset,
+    localTime: next.start,
+    clipOffset,
+  };
+}
