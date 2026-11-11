@@ -29,6 +29,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Continuous sequential preview playback advances automatically from each trimmed clip to the next while preserving the global playhead and synchronized soundtrack/voiceover; the final clip stops cleanly.
 - Timeline-synchronized preview playback for soundtrack and voiceover, including voiceover start offsets, soundtrack looping, seek correction, fade envelopes and music ducking. Original clip audio remains attached to the selected video source.
 - Balanced and high-quality WebM export bitrate presets with explicit browser capability checks.
+- Explicit 720p and 1080p export resolution controls preserving portrait, square and landscape framing.
 - On-screen post caption.
 - Per-account IndexedDB project autosave.
 - Export upload through the authenticated Firebase media service and post creation through the existing NEXORA post path.
@@ -71,7 +72,8 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - NEXORA brand-safe templates that use the existing logo assets, never a replacement logo.
 
 ### Phase 6 · Export and publishing
-- [x] Balanced and high-quality WebM bitrate presets; device-aware resolution selection and measured performance tuning remain.
+- [x] Balanced and high-quality WebM bitrate presets.
+- [x] Explicit 720p and 1080p export dimensions for portrait, square and landscape formats; device-specific performance acceptance remains.
 - Robust MP4 output where a supported native/server renderer is available; WebM remains an explicitly labelled fallback.
 - Background upload with resumable progress, retry and cancellation.
 - Publish to posts and Reels through the existing publishing pipeline.
