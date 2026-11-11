@@ -19,10 +19,15 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
   const postRef = db.collection('posts').doc(postId);
   const voteRef = postRef.collection('pollVotes').doc(uid);
 
-  // The unique per-user marker is the transaction's idempotency boundary.
-  // A retry after a competing vote returns the marker without attempting a
-  // second counter update. Read the post after the transaction in that path;
-  // this avoids emulator/server retry snapshots returning a stale post read.
+  // Capture a validated public snapshot before entering the transaction. If a
+  // competing request wins, the retry can return the existing vote marker
+  // without relying on an emulator retry snapshot for the parent post.
+  const initialPost = await postRef.get();
+  if (!initialPost.exists || initialPost.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
+  const initialPoll = initialPost.get('interactivePoll');
+  if (!initialPoll || typeof initialPoll.question !== 'string') throw new Error('This post does not contain a valid poll.');
+  const initialOptions = readOptions(initialPoll.options);
+
   const result = await db.runTransaction(async tx => {
     const existingVote = await tx.get(voteRef);
     if (existingVote.exists) {
@@ -49,17 +54,10 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
   });
 
   if (result.voted) return result;
-
-  // A duplicate concurrent request is a successful idempotent read, not a
-  // second vote. Revalidate public visibility before returning poll details.
-  const post = await postRef.get();
-  if (!post.exists || post.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
-  const poll = post.get('interactivePoll');
-  if (!poll || typeof poll.question !== 'string') throw new Error('This post does not contain a valid poll.');
   return {
     voted: false,
     selectedOptionId: result.selectedOptionId,
-    options: readOptions(poll.options),
+    options: initialOptions,
   };
 }
 
