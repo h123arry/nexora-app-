@@ -1,7 +1,8 @@
 import { authenticatedVohFetch } from '../services/voh/authenticatedVohFetch';
 import React, { useState, useEffect, useRef } from 'react';
+import NexoraLensStudio from './NexoraLensStudio';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Settings, Info, Tag } from 'lucide-react';
+import { X, Check, Plus, Camera, Video, Mic, BarChart2, FileText, MapPin, ChevronRight, Trash2, Play, Pause, RefreshCw, Volume2, RotateCw, Crop, Sliders, VolumeX, Save, ChevronLeft, ArrowUp, ArrowDown, Users, FolderHeart, ShieldAlert, BadgeInfo, Calendar, Smile, FileImage, SlidersHorizontal, Eye, HelpCircle, Sparkle, Sparkles, Settings, Info, Tag } from 'lucide-react';
 import VohIcon from './VohIcon';
 import { User } from '../types';
 import { videoFileExtension } from '../services/media/videoFileExtension';
@@ -313,6 +314,10 @@ export default function MediaCreationEngine({
   const [isRecordingPaused, setIsRecordingPaused] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(() => initialAutosave?.recordedVideoUrl || null);
   const [cameraFacing, setCameraFacing] = useState<'user' | 'environment'>('user');
+  const [isLensStudioOpen, setIsLensStudioOpen] = useState(false);
+  const [isLensStreamReady, setIsLensStreamReady] = useState(false);
+  const [isSavingRecordedVideo, setIsSavingRecordedVideo] = useState(false);
+  const [openLensAfterPermission, setOpenLensAfterPermission] = useState(false);
   const [countdownTimer, setCountdownTimer] = useState<number | null>(null);
   const [loopTimerSecs, setLoopTimerSecs] = useState(0);
 
@@ -509,7 +514,7 @@ export default function MediaCreationEngine({
   useEffect(() => {
     let currentStream: MediaStream | null = null;
     let cancelled = false;
-    if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2) {
+    if (activeMode === 'reel' && permissionState === 'granted' && currentStep === 2 && !isLensStudioOpen) {
       if (!navigator.mediaDevices?.getUserMedia) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera recording is not supported by this browser. Please upload a video instead.' }));
       } else {
@@ -543,7 +548,7 @@ export default function MediaCreationEngine({
       if (currentStream) currentStream.getTracks().forEach(track => track.stop());
       if (videoStreamRef.current === currentStream) videoStreamRef.current = null;
     };
-  }, [activeMode, permissionState, cameraFacing, currentStep]);
+  }, [activeMode, permissionState, cameraFacing, currentStep, isLensStudioOpen]);
 
   // Reels Record timing loop
   useEffect(() => {
@@ -726,6 +731,7 @@ export default function MediaCreationEngine({
   };
 
   const startReelRecording = () => {
+    if (countdownTimer !== null || isRecording || isSavingRecordedVideo) return;
     requestPermission('camera', () => {
       if (!videoStreamRef.current || !videoStreamRef.current.getVideoTracks().some(track => track.readyState === 'live')) {
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try recording again.' }));
@@ -746,7 +752,7 @@ export default function MediaCreationEngine({
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera disconnected before recording started. Please retry.' }));
                 return null;
               }
-              const mimeType = ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
+              const mimeType = ['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'].find(type => MediaRecorder.isTypeSupported(type));
               const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
               videoChunksRef.current = [];
               mediaRecorderVideoRef.current = recorder;
@@ -755,12 +761,14 @@ export default function MediaCreationEngine({
               };
               recorder.onerror = () => {
                 setIsRecording(false);
+                setIsSavingRecordedVideo(false);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording failed. Check available storage and camera permissions, then retry.' }));
               };
               recorder.onstop = () => {
                 const chunks = videoChunksRef.current;
                 const blob = new Blob(chunks, { type: recorder.mimeType || chunks[0]?.type || 'video/webm' });
                 if (!blob.size) {
+                  setIsSavingRecordedVideo(false);
                   window.dispatchEvent(new CustomEvent('toast', { detail: 'No video data was captured. Please try recording again.' }));
                   return;
                 }
@@ -770,10 +778,12 @@ export default function MediaCreationEngine({
                   return nextUrl;
                 });
                 setVideoRawBlob(blob);
+                setIsSavingRecordedVideo(false);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Video recording saved to your composer.' }));
               };
               recorder.start(250);
               setIsRecording(true);
+              setIsSavingRecordedVideo(false);
               setIsRecordingPaused(false);
               setLoopTimerSecs(0);
               setRecordedVideoUrl(previous => {
@@ -795,15 +805,18 @@ export default function MediaCreationEngine({
   const handleStopReelRecord = () => {
     setIsRecording(false);
     setIsRecordingPaused(false);
+    setIsSavingRecordedVideo(true);
     const recorder = mediaRecorderVideoRef.current;
     if (recorder && recorder.state !== 'inactive') {
       try {
         recorder.stop();
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Saving video recording…' }));
       } catch {
+        setIsSavingRecordedVideo(false);
         window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not finish the video recording. Please retry.' }));
       }
     } else {
+      setIsSavingRecordedVideo(false);
       window.dispatchEvent(new CustomEvent('toast', { detail: 'No video was recorded. Check camera permission and try again.' }));
     }
   };
@@ -1340,7 +1353,7 @@ export default function MediaCreationEngine({
                   Deny
                 </button>
                 <button 
-                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); }}
+                  onClick={() => { setPermissionState('granted'); setPermissionTarget(null); if (openLensAfterPermission) { setIsLensStudioOpen(true); setOpenLensAfterPermission(false); } }}
                   className="flex-1 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-mono font-bold cursor-pointer transition-all"
                 >
                   Continue
@@ -1566,12 +1579,8 @@ export default function MediaCreationEngine({
                           <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Take a photo</span>
                           <p className="text-[10px] text-[#8E88A7]">Use your camera to take a photo.</p>
                         </div>
-                        <button 
-                          onClick={captureCameraSnapshot}
-                          className="w-full py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
-                        >
-                          Take photo
-                        </button>
+                        <button onClick={captureCameraSnapshot} className="w-full rounded-xl bg-[#120E2B] py-2.5 text-xs font-mono font-bold text-white transition-all hover:bg-[#19143A]">Quick photo</button>
+                        <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="w-full rounded-xl bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] py-2.5 text-xs font-mono font-bold text-white shadow-lg transition-all hover:brightness-110"><Sparkles className="mr-1 inline h-3.5 w-3.5" /> Open Filters & Lenses</button>
                         <div className="flex flex-wrap gap-1.5 justify-center mt-2">
                           {selectedImages.map((img, i) => (
                             <div key={i} className="relative w-12 h-12 rounded-lg border border-[#44376F] overflow-hidden shrink-0">
@@ -1586,6 +1595,26 @@ export default function MediaCreationEngine({
                           ))}
                         </div>
                       </div>
+                      {isLensStudioOpen && (
+                        <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3 sm:col-span-2">
+                          <div className="flex items-center justify-between">
+                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Take a photo with your live lens applied.</p></div>
+                            <div className="flex gap-2">
+                              <button type="button" onClick={() => setCameraFacing(previous => previous === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
+                              <button type="button" onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white">Close</button>
+                            </div>
+                          </div>
+                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="photo" countdownTimer={countdownTimer}
+                            onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
+                            onCapture={blob => {
+                              const url = trackObjectUrl(URL.createObjectURL(blob));
+                              setSelectedImages(previous => [...previous, { url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+                              setIsLensStudioOpen(false);
+                              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your filtered NEXORA photo is ready to share.' }));
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -1664,39 +1693,49 @@ export default function MediaCreationEngine({
                   )}
 
                   {activeMode === 'reel' && (
-                    /* REEL INTERACTIVE CAMERA */
                     <div className="space-y-3">
-                      <div className="relative aspect-[4/5] w-full max-w-[320px] mx-auto rounded-2xl overflow-hidden bg-black border border-[#44376F] flex flex-col justify-between p-3.5 shadow-md">
-                        <div className="z-10 flex justify-between items-center text-[8px] font-mono text-[#A39BBF]">
-                          <span className="bg-black/70 px-2 py-0.5 rounded border border-white/5">YOUR CAMERA</span>
-                          <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="p-1.5 bg-[#120E2B] rounded-full text-white">
-                            <RefreshCw className="w-3 h-3" />
-                          </button>
+                      {isLensStudioOpen ? (
+                        <div className="space-y-3 rounded-2xl border border-[#44376F] bg-[#090714] p-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Live effects are baked into your capture.</p></div>
+                            <div className="flex gap-2">
+                              <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
+                              <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{countdownTimer !== null ? 'Starting…' : isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
+                            </div>
+                          </div>
+                          <NexoraLensStudio cameraFacing={cameraFacing} userId={currentUser.id} captureMode="video" countdownTimer={countdownTimer}
+                            onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
+                            onCapture={blob => {
+                              const url = trackObjectUrl(URL.createObjectURL(blob));
+                              setSelectedImages(previous => [...previous, { url, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+                              setIsLensStudioOpen(false);
+                              setActiveMode('photo');
+                              window.dispatchEvent(new CustomEvent('toast', { detail: 'Your filtered NEXORA photo is ready to share.' }));
+                            }}
+                          />
+                          <div className="flex flex-col items-center gap-2 pt-1">
+                            {isRecording ? <button onClick={handleStopReelRecord} className="h-12 rounded-full bg-rose-600 px-6 text-xs font-bold text-white shadow-lg">Stop recording</button> : <button onClick={startReelRecording} disabled={!isLensStreamReady || isSavingRecordedVideo || countdownTimer !== null} className="h-12 rounded-full bg-gradient-to-r from-[#8A3FFC] to-[#1600A3] px-6 text-xs font-bold text-white shadow-lg disabled:opacity-40">Start filtered recording</button>}
+                            {isRecording && <span className="rounded-full bg-black/60 px-3 py-1 text-[10px] text-white">Recording: {loopTimerSecs}s</span>}
+                          </div>
                         </div>
-
-                        <div className="absolute inset-0 z-0 flex items-center justify-center">
-                          {countdownTimer !== null ? (
-                            <span className="text-5xl font-black text-white animate-ping">{countdownTimer}</span>
-                          ) : recordedVideoUrl ? (
-                            <video src={recordedVideoUrl} autoPlay loop muted className="w-full h-full object-cover" />
-                          ) : (
-                            <video ref={videoPreviewRef} autoPlay muted playsInline className="w-full h-full object-cover bg-[#120E2B]" />
-                          )}
+                      ) : (
+                        <div className="relative mx-auto flex aspect-[4/5] w-full max-w-[320px] flex-col justify-between overflow-hidden rounded-2xl border border-[#44376F] bg-black p-3.5 shadow-md">
+                          <div className="z-10 flex items-center justify-between text-[8px] font-mono text-[#A39BBF]">
+                            <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">YOUR CAMERA</span>
+                            <div className="flex items-center gap-2">
+                              <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
+                              <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
+                            </div>
+                          </div>
+                          <div className="absolute inset-0 z-0 flex items-center justify-center">
+                            {countdownTimer !== null ? <span className="animate-ping text-5xl font-black text-white">{countdownTimer}</span> : recordedVideoUrl ? <video src={recordedVideoUrl} autoPlay loop muted className="h-full w-full object-cover" /> : <video ref={videoPreviewRef} autoPlay muted playsInline className="h-full w-full bg-[#120E2B] object-cover" />}
+                          </div>
+                          <div className="z-10 flex flex-col items-center gap-2">
+                            {isRecording ? <button onClick={handleStopReelRecord} className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-rose-600 text-[10px] font-bold text-white">Stop</button> : <button onClick={startReelRecording} className="flex h-14 w-14 items-center justify-center rounded-full border-4 border-black bg-gradient-to-tr from-[#8A3FFC] to-[#1600A3] text-[10px] font-black text-white shadow-md">Record</button>}
+                            {isRecording && <span className="rounded-full bg-black/60 px-2 py-0.5 text-[9px] font-mono text-white">Recording: {loopTimerSecs}s</span>}
+                          </div>
                         </div>
-
-                        <div className="z-10 flex flex-col items-center gap-2">
-                          {isRecording ? (
-                            <button onClick={handleStopReelRecord} className="w-12 h-12 bg-rose-600 rounded-full border-2 border-white animate-pulse flex items-center justify-center text-[10px] text-white font-bold font-mono">
-                              Stop recording
-                            </button>
-                          ) : (
-                            <button onClick={startReelRecording} className="w-14 h-14 bg-linear-to-tr from-[#8A3FFC] to-[#1600A3] rounded-full border-4 border-black flex items-center justify-center text-[10px] text-white font-black font-mono shadow-md cursor-pointer">
-                              Start recording
-                            </button>
-                          )}
-                          {isRecording && <span className="text-[9px] font-mono bg-black/60 text-white px-2 py-0.5 rounded-full">Recording: {loopTimerSecs}s</span>}
-                        </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
