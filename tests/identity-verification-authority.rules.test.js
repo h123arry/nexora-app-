@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 
-const projectId = 'demo-nexora-rules';
+const projectId = 'demo-nexora-identity-rules';
 let env;
 
 before(async () => {
