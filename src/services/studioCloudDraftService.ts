@@ -102,7 +102,11 @@ async function uploadAssetWithId(
 }
 
 async function decodeValue(value: Encoded, assets: Record<string, CloudAsset>, userId: string): Promise<unknown> {
-  if (Array.isArray(value)) return Promise.all(value.map(item => decodeValue(item, assets, userId)));
+  if (Array.isArray(value)) {
+    const decoded: unknown[] = [];
+    for (const item of value) decoded.push(await decodeValue(item, assets, userId));
+    return decoded;
+  }
   if (value && typeof value === 'object') {
     const assetId = (value as Record<string, Encoded>).$studioAsset;
     if (typeof assetId === 'string') {
