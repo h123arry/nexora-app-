@@ -1560,6 +1560,12 @@ export default function FeedView({
     () => currentDisplayList.filter(post => Boolean(post.videoUrl)),
     [currentDisplayList],
   );
+  // Build the video-position lookup once per visible feed slice. The render
+  // loop uses this map instead of scanning the video array for every post.
+  const videoIndexByPostId = useMemo(
+    () => new Map(videoPosts.map((post, index) => [post.id, index])),
+    [videoPosts],
+  );
   const activeVideoIndex = useMemo(
     () => videoPosts.findIndex(post => post.id === activePostId),
     [videoPosts, activePostId],
@@ -2203,7 +2209,7 @@ export default function FeedView({
 
           // ─── INTENSE MEDIA MANAGEMENT AND PREDICTIVE BUFFERING ───
           const hasVideo = !!post.videoUrl;
-          const postVideoIndex = videoPosts.findIndex(p => p.id === post.id);
+          const postVideoIndex = videoIndexByPostId.get(post.id) ?? -1;
           const preloadPlan = getVideoPreloadPlan({
             isVideo: hasVideo,
             isActive: activePostId === post.id,
