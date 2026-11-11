@@ -835,8 +835,14 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             transitionPreview.onloadedmetadata = () => resolve();
             transitionPreview.onerror = () => reject(new Error(`Could not preload ${nextClip.name} for its transition.`));
           });
-          transitionPreview.currentTime = nextClip.start;
-          await new Promise<void>(resolve => { transitionPreview.onseeked = () => resolve(); });
+          if (Math.abs(transitionPreview.currentTime - nextClip.start) > 0.05) {
+            await new Promise<void>((resolve, reject) => {
+              const timeout = window.setTimeout(() => reject(new Error('The incoming transition clip could not seek to its opening frame.')), 8000);
+              transitionPreview.onseeked = () => { window.clearTimeout(timeout); resolve(); };
+              transitionPreview.onerror = () => { window.clearTimeout(timeout); reject(new Error('The incoming transition clip could not be decoded.')); };
+              transitionPreview.currentTime = nextClip.start;
+            });
+          }
         }
         await new Promise<void>(resolve => {
           const check = () => {
@@ -845,7 +851,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             if (transitionDuration > 0 && remaining <= transitionDuration) {
               transitionProgress = getCrossDissolveProgress(preview.currentTime, clip.end, transitionDuration);
               if (!transitionStarted && transitionProgress > 0) { transitionStarted = true; void transitionPreview.play().catch(() => undefined); }
-              if (transitionStarted && transitionPreview.readyState >= 2) transitionPreview.currentTime = Math.min(clips[clipIndex + 1].end, clips[clipIndex + 1].start + transitionProgress * transitionDuration);
+              if (transitionStarted && transitionPreview.readyState >= 2) {
+                const expectedTransitionTime = Math.min(clips[clipIndex + 1].end, clips[clipIndex + 1].start + transitionProgress * transitionDuration);
+                if (Math.abs(transitionPreview.currentTime - expectedTransitionTime) > 0.2) transitionPreview.currentTime = expectedTransitionTime;
+              }
             }
             if (soundtrackGain) soundtrackGain.gain.value = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration, duckingLevel: musicDuckingLevel });
             if (voiceoverGain) voiceoverGain.gain.value = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: Math.max(0, elapsed - voiceoverStart), totalDuration: voiceoverDuration, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
