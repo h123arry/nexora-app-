@@ -80,3 +80,6 @@ Make participation, contribution quality, feed ranking, and safety outcomes unde
 - The Advanced Challenge Host capability unlocks only after at least 10 verified public-post contributions across at least 3 distinct challenges.
 - The unlocked capability raises the active challenge creation ceiling from 5 to 10; the backend enforces the limit during challenge creation.
 - No reputation score, likes, views, NEX balance, admin role, moderation power, financial entitlement, or identity-verification state is changed by this unlock.
+
+
+- Each public post can contribute to at most one challenge, even if multiple challenge tags are included. This prevents one piece of content from multiplying progress across several challenges to bypass the capability-unlock threshold.
