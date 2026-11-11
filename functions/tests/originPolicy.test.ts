@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildOriginUploadRecords } from '../functions/src/originPolicy';
+import { buildOriginUploadRecords } from '../src/originPolicy.js';
 
 const valid = {
   assetId: 'asset_123',
