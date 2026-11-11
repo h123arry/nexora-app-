@@ -212,7 +212,7 @@ export default function PrivacySettingsModal({
   const [selectedBlockedId, setSelectedBlockedId] = useState<string | null>(null);
 
   // 10. Restricted Accounts
-  const [restrictedUsers, setRestrictedUsers] = useState<any[]>(() => readPrivacyList('nx_privacy_restricted', ['r-1']));
+  const [restrictedUsers, setRestrictedUsers] = useState<any[]>([]);
 
   // 11. Hidden Chats PIN Configuration
   const [hiddenChats, setHiddenChats] = useState(() => {
@@ -259,12 +259,22 @@ export default function PrivacySettingsModal({
     if (!isOpen || !userId) return;
     let active = true;
     SettingsService.getSettings(userId).then(settings => {
-      if (active) setProfile(previous => ({ ...previous, ...settings.privacy.profileVisibility }));
+      if (!active) return;
+      setProfile(previous => ({ ...previous, ...settings.privacy.profileVisibility }));
+      if (!syncedBlockedUsers) {
+        setBlockedUsers(settings.messaging.blockedUserIds.map(id => ({
+          id,
+          name: `Account ${id.slice(0, 10)}`,
+          username: id,
+          avatar: '',
+          reason: 'Blocked in account settings',
+        })));
+      }
     }).catch(() => {
-      if (active) setPrivacySaveError('Could not load account privacy preferences. Changes may not be current.');
+      if (active) setPrivacySaveError('Could not load account privacy and safety preferences. Changes may not be current.');
     });
     return () => { active = false; };
-  }, [isOpen, userId]);
+  }, [isOpen, userId, syncedBlockedUsers]);
 
   // Sync legacy local-only controls. Profile visibility is cloud-backed when signed in.
   useEffect(() => {
@@ -300,12 +310,8 @@ export default function PrivacySettingsModal({
   }, [discoverability]);
 
   useEffect(() => {
-    if (!onUnblockUser) localStorage.setItem('nx_privacy_blocked', JSON.stringify(blockedUsers));
-  }, [blockedUsers, onUnblockUser]);
-
-  useEffect(() => {
-    localStorage.setItem('nx_privacy_restricted', JSON.stringify(restrictedUsers));
-  }, [restrictedUsers]);
+    if (!userId && !onUnblockUser) localStorage.setItem('nx_privacy_blocked', JSON.stringify(blockedUsers));
+  }, [blockedUsers, onUnblockUser, userId]);
 
   useEffect(() => {
     localStorage.setItem('nx_privacy_hidden_chats', JSON.stringify(hiddenChats));
@@ -401,22 +407,49 @@ export default function PrivacySettingsModal({
   }, [blockedUsers, blockedSearchQuery]);
 
   // Bulk unblock
-  const handleBulkUnblock = () => {
+  const handleBulkUnblock = async () => {
     if (onBulkUnblock) {
       onBulkUnblock();
       return;
     }
-    setBlockedUsers([]);
-    window.dispatchEvent(new CustomEvent('toast', { detail: "🟢 All connections unblocked!" }));
+    if (!userId) {
+      setBlockedUsers([]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Cleared this device-only blocked list.' }));
+      return;
+    }
+    try {
+      await Promise.all([
+        SettingsService.updateMessagingPreferences(userId, { blockedUserIds: [] }),
+        SettingsService.updateFeed(userId, { blockedCreatorIds: [] }),
+      ]);
+      setBlockedUsers([]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'All blocked accounts were removed from your saved safety preferences.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'The blocked list could not be cleared. Please retry.' }));
+    }
   };
 
-  const handleUnblockUser = (id: string) => {
+  const handleUnblockUser = async (id: string) => {
     if (onUnblockUser) {
       onUnblockUser(id);
       return;
     }
-    setBlockedUsers(prev => prev.filter(u => u.id !== id));
-    window.dispatchEvent(new CustomEvent('toast', { detail: "🟢 Connection successfully re-established on network!" }));
+    if (!userId) {
+      setBlockedUsers(prev => prev.filter(u => u.id !== id));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Removed from this device-only blocked list.' }));
+      return;
+    }
+    try {
+      const settings = await SettingsService.getSettings(userId);
+      await Promise.all([
+        SettingsService.updateMessagingPreferences(userId, { blockedUserIds: settings.messaging.blockedUserIds.filter(value => value !== id) }),
+        SettingsService.updateFeed(userId, { blockedCreatorIds: settings.feed.blockedCreatorIds.filter(value => value !== id) }),
+      ]);
+      setBlockedUsers(prev => prev.filter(u => u.id !== id));
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Account unblocked in your saved safety preferences.' }));
+    } catch {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'This account could not be unblocked. Please retry.' }));
+    }
   };
 
   // Toggle Custom Person list
@@ -1093,7 +1126,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldBan className="w-4 h-4 text-rose-400" /> Decentralized Connection Blacklists
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1 font-mono uppercase tracking-tight">Active ledger blocks. Blocked connections are strictly forbidden from establishing sockets with your node.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1 font-mono uppercase tracking-tight">Saved block settings are applied to messaging and feed preferences. Other surfaces still require end-to-end enforcement verification.</p>
                   </div>
 
                   {/* Filters Header */}
@@ -1128,10 +1161,10 @@ export default function PrivacySettingsModal({
                           <div className="absolute inset-0 bg-gradient-to-r from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                           <div className="flex items-center gap-3 min-w-0 relative">
-                            <img src={user.avatar} alt="" className="w-10 h-10 rounded-xl object-cover border border-white/10" />
+                            {user.avatar ? <img src={user.avatar} alt="" className="w-10 h-10 rounded-xl object-cover border border-white/10" /> : <div className="w-10 h-10 rounded-xl border border-white/10 bg-white/5 flex items-center justify-center"><User className="w-4 h-4 text-zinc-400" /></div>}
                             <div className="min-w-0 text-left">
                               <span className="text-xs font-black block text-zinc-100 truncate">{user.name}</span>
-                              <span className="text-[9.5px] font-mono text-rose-400 block mt-0.5">{user.username}</span>
+                              <span className="text-[9.5px] font-mono text-rose-400 block mt-0.5">Account ID: {user.username.slice(0, 10)}</span>
                               <span className="text-[8.5px] font-mono text-zinc-600 block mt-1 truncate max-w-[140px]">{user.reason}</span>
                             </div>
                           </div>
@@ -1164,7 +1197,7 @@ export default function PrivacySettingsModal({
                     </div>
 
                     <div className="space-y-2">
-                      {restrictedUsers.map(res => (
+                      {restrictedUsers.length > 0 ? restrictedUsers.map(res => (
                         <div key={res.id} className="p-3 bg-black/40 border border-white/5 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-2.5">
                             <img src={res.avatar} alt="" className="w-8 h-8 rounded-lg object-cover" />
@@ -1180,7 +1213,11 @@ export default function PrivacySettingsModal({
                             Lift Restriction
                           </button>
                         </div>
-                      ))}
+                      )) : (
+                        <p className="rounded-xl border border-dashed border-white/10 bg-black/20 p-3 text-[10px] leading-relaxed text-zinc-400">
+                          Restrict is not currently connected to account-level enforcement. Use Block User for the block controls saved to your account.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
