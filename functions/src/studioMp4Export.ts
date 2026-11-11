@@ -19,7 +19,7 @@ async function deleteExportAsset(snapshot: DocumentSnapshot): Promise<void> {
   const asset = snapshot.data();
   const ownerId = typeof asset?.ownerId === 'string' ? asset.ownerId : '';
   const mediaId = snapshot.id;
-  if (!isOwnedStudioExportAsset(asset, ownerId, mediaId) || asset?.status === 'processing') return;
+  if (!asset || !isOwnedStudioExportAsset(asset, ownerId, mediaId) || asset.status === 'processing') return;
   const sourcePath = `users/${ownerId}/media/${mediaId}`;
   if (asset.storagePath === sourcePath) {
     await bucket().file(sourcePath).delete({ ignoreNotFound: true });
@@ -37,7 +37,7 @@ export const getStudioExportMp4Url = onCall({ maxInstances: 30 }, async request 
   }
   const snapshot = await db.collection('mediaAssets').doc(mediaAssetId).get();
   const asset = snapshot.data();
-  if (!snapshot.exists || !isOwnedStudioExportAsset(asset, uid, mediaAssetId)) {
+  if (!snapshot.exists || !asset || !isOwnedStudioExportAsset(asset, uid, mediaAssetId)) {
     throw new HttpsError('not-found', 'This Studio export is unavailable.');
   }
   if (asset.sourcePurpose !== 'studio-export') return { ready: false as const };
