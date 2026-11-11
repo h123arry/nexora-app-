@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { NEXORA_LENS_CATALOG, NEXORA_LENS_CATEGORIES, type NexoraLens } from '../services/nexoraLensCatalog';
+import { listMyCreatorLenses, saveCreatorLens as saveCreatorLensCloud, submitCreatorLensForReview } from '../services/creatorLensService';
 import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, Search } from 'lucide-react';
 
 type Facing = 'user' | 'environment';
@@ -368,7 +369,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [customContrast, setCustomContrast] = useState(100);
   const [customSaturation, setCustomSaturation] = useState(100);
   const [customHue, setCustomHue] = useState(0);
-  const [customLenses, setCustomLenses] = useState<NexoraLens[]>(() => {
+  const [isSubmittingCreatorLens, setIsSubmittingCreatorLens] = useState(false);\n  const [customLenses, setCustomLenses] = useState<NexoraLens[]>(() => {
     try {
       const parsed: unknown = JSON.parse(localStorage.getItem(`nexora_custom_lenses_${userId}`) || '[]');
       return Array.isArray(parsed) ? parsed.filter((item): item is NexoraLens =>
@@ -378,6 +379,39 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
       ).slice(0, 100) : [];
     } catch { return []; }
   });
+  useEffect(() => {
+    let active = true;
+    void listMyCreatorLenses().then(records => {
+      if (!active) return;
+      const remoteLenses: NexoraLens[] = records.map(record => ({
+        id: record.id,
+        name: record.name,
+        category: 'Creator',
+        filter: record.filter,
+        sticker: 'none',
+        description: record.status === 'approved'
+          ? 'A community-approved creator lens.'
+          : record.status === 'pending_review'
+            ? 'Your lens is awaiting NEXORA moderation.'
+            : record.status === 'rejected'
+              ? record.reviewNote || 'This lens needs changes before resubmission.'
+              : 'Your private creator lens draft.',
+        intensity: 100,
+        featured: record.status === 'approved',
+      }));
+      setCustomLenses(previous => {
+        const merged = new Map(previous.map(lens => [lens.id, lens]));
+        remoteLenses.forEach(lens => merged.set(lens.id, lens));
+        const next = [...merged.values()].slice(0, 100);
+        try { localStorage.setItem(`nexora_custom_lenses_${userId}`, JSON.stringify(next)); } catch { /* Cloud remains the durable copy. */ }
+        return next;
+      });
+    }).catch(error => {
+      console.info('[NEXORA Lensverse] Cloud creator lenses are unavailable; local lenses remain available.', error);
+    });
+    return () => { active = false; };
+  }, [userId]);
+
   const [beautyIntensity, setBeautyIntensity] = useState(32);
   const beautyIntensityRef = useRef(32);
   beautyIntensityRef.current = beautyIntensity;
@@ -642,6 +676,40 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     window.dispatchEvent(new CustomEvent('toast', { detail: 'Your original lens has been saved on this device.' }));
   };
 
+  const submitCustomLensForReview = async () => {
+    const name = customLensName.trim();
+    if (name.length < 3) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Give your lens a name with at least three characters.' }));
+      return;
+    }
+    setIsSubmittingCreatorLens(true);
+    try {
+      const recipe = { brightness: customBrightness, contrast: customContrast, saturation: customSaturation, hue: customHue };
+      const saved = await saveCreatorLensCloud({ name: name.slice(0, 32), recipe });
+      await submitCreatorLensForReview(saved.lensId);
+      const lens: NexoraLens = {
+        id: saved.lensId, name: name.slice(0, 32), category: 'Creator',
+        filter: `brightness(${(customBrightness / 100).toFixed(2)}) contrast(${(customContrast / 100).toFixed(2)}) saturate(${(customSaturation / 100).toFixed(2)}) hue-rotate(${customHue}deg)`,
+        sticker: 'none', description: 'Your lens is awaiting NEXORA moderation.',
+        intensity: 100, featured: false,
+      };
+      setCustomLenses(previous => {
+        const next = [lens, ...previous.filter(item => item.id !== lens.id)].slice(0, 100);
+        try { localStorage.setItem(`nexora_custom_lenses_${userId}`, JSON.stringify(next)); } catch { /* Cloud copy is authoritative. */ }
+        return next;
+      });
+      setActiveLens(lens.id);
+      setCategory('Creator');
+      setCustomLensName('');
+      setIsCreatorPanelOpen(false);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Lens submitted. It will enter the public library after moderation approval.' }));
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not submit your lens. Please try again.' }));
+    } finally {
+      setIsSubmittingCreatorLens(false);
+    }
+  };
+
   const categoryLenses = category === 'For you'
     ? allLenses.filter(item => item.featured || favourites.includes(item.id))
     : category === 'Favourites'
@@ -707,7 +775,10 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           ))}
           <div className="flex items-center justify-between gap-2">
             <span className="text-[9px] text-[#8E88A7]">Preview is applied to your live camera.</span>
-            <button type="button" onClick={saveCustomLens} className="rounded-lg bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-2 text-[10px] font-bold text-white">Save my lens</button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" onClick={saveCustomLens} className="rounded-lg border border-white/15 px-3 py-2 text-[10px] font-bold text-white">Save on device</button>
+              <button type="button" disabled={isSubmittingCreatorLens} onClick={() => void submitCustomLensForReview()} className="rounded-lg bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-3 py-2 text-[10px] font-bold text-white disabled:opacity-50">{isSubmittingCreatorLens ? 'Submitting…' : 'Submit for review'}</button>
+            </div>
           </div>
         </div>
       )}
