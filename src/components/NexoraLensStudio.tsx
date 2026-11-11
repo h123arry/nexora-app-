@@ -291,6 +291,9 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
     const canvas = canvasRef.current;
     const context = canvas?.getContext('2d', { alpha: false });
     if (!video || !canvas || !context) return;
+    setCameraError('');
+    setFaceTracking('loading');
+    setThreeReady(false);
 
     const start = async () => {
       try {
