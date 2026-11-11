@@ -353,6 +353,22 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [activeLens, setActiveLens] = useState(NEXORA_LENS_CATALOG[0].id);
   const [category, setCategory] = useState<(typeof NEXORA_LENS_CATEGORIES)[number]>('For you');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreatorPanelOpen, setIsCreatorPanelOpen] = useState(false);
+  const [customLensName, setCustomLensName] = useState('');
+  const [customBrightness, setCustomBrightness] = useState(100);
+  const [customContrast, setCustomContrast] = useState(100);
+  const [customSaturation, setCustomSaturation] = useState(100);
+  const [customHue, setCustomHue] = useState(0);
+  const [customLenses, setCustomLenses] = useState<NexoraLens[]>(() => {
+    try {
+      const parsed: unknown = JSON.parse(localStorage.getItem(`nexora_custom_lenses_${userId}`) || '[]');
+      return Array.isArray(parsed) ? parsed.filter((item): item is NexoraLens =>
+        item && typeof item.id === 'string' && typeof item.name === 'string' &&
+        item.category === 'Creator' && typeof item.filter === 'string' &&
+        typeof item.description === 'string' && item.sticker === 'none'
+      ).slice(0, 100) : [];
+    } catch { return []; }
+  });
   const [beautyIntensity, setBeautyIntensity] = useState(32);
   const beautyIntensityRef = useRef(32);
   beautyIntensityRef.current = beautyIntensity;
@@ -370,6 +386,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [threeReady, setThreeReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
+  const allLenses = [...LENSES, ...customLenses];
   const activeLensRef = useRef(activeLens);
   activeLensRef.current = activeLens;
   streamCallbackRef.current = onStreamReady;
@@ -419,7 +436,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
 
         const render = (now: number) => {
           if (cancelled || !video.videoWidth) return;
-          const lens = LENSES.find(item => item.id === activeLensRef.current) || LENSES[0];
+          const lens = allLenses.find(item => item.id === activeLensRef.current) || LENSES[0];
           context.save();
           if (cameraFacing === 'user') {
             context.translate(canvas.width, 0);
@@ -584,11 +601,41 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     } finally { setIsCapturing(false); }
   };
 
+  const saveCustomLens = () => {
+    const name = customLensName.trim();
+    if (name.length < 3) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Give your lens a name with at least three characters.' }));
+      return;
+    }
+    const id = `creator-${userId}-${Date.now().toString(36)}`;
+    const lens: NexoraLens = {
+      id,
+      name: name.slice(0, 32),
+      category: 'Creator',
+      filter: `brightness(${(customBrightness / 100).toFixed(2)}) contrast(${(customContrast / 100).toFixed(2)}) saturate(${(customSaturation / 100).toFixed(2)}) hue-rotate(${customHue}deg)`,
+      sticker: 'none',
+      description: 'A custom look created in NEXORA Lensverse.',
+      intensity: 100,
+      featured: true,
+    };
+    setCustomLenses(previous => {
+      const next = [lens, ...previous].slice(0, 100);
+      try { localStorage.setItem(`nexora_custom_lenses_${userId}`, JSON.stringify(next)); }
+      catch { window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not save this lens on your device.' })); }
+      return next;
+    });
+    setActiveLens(id);
+    setCategory('Creator');
+    setCustomLensName('');
+    setIsCreatorPanelOpen(false);
+    window.dispatchEvent(new CustomEvent('toast', { detail: 'Your original lens has been saved on this device.' }));
+  };
+
   const categoryLenses = category === 'For you'
-    ? LENSES.filter(item => item.featured || favourites.includes(item.id))
+    ? allLenses.filter(item => item.featured || favourites.includes(item.id))
     : category === 'Favourites'
-      ? LENSES.filter(item => favourites.includes(item.id))
-      : LENSES.filter(item => item.category === category);
+      ? allLenses.filter(item => favourites.includes(item.id))
+      : allLenses.filter(item => item.category === category);
   const normalizedSearch = searchQuery.trim().toLowerCase();
   const visibleLenses = categoryLenses.filter(item =>
     item.name.toLowerCase().includes(normalizedSearch) ||
@@ -609,7 +656,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         </div>
         {cameraError && <div className="absolute inset-0 flex items-center justify-center bg-[#050914]/90 p-6 text-center text-sm text-rose-200">{cameraError}</div>}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-          <span className="rounded-full bg-black/60 px-3 py-1.5 text-[10px] text-white">{LENSES.find(item => item.id === activeLens)?.name}</span>
+          <span className="rounded-full bg-black/60 px-3 py-1.5 text-[10px] text-white">{allLenses.find(item => item.id === activeLens)?.name}</span>
           {captureMode === 'photo' && (
             <button type="button" onClick={() => void capturePhoto()} disabled={!cameraReady || isCapturing || Boolean(cameraError)} className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-br from-[#8A3FFC] to-[#4B10F2] text-white shadow-lg disabled:opacity-50" aria-label="Capture filtered photo">
               <Camera className="h-5 w-5" />
@@ -625,6 +672,34 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         </div>
         <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[9px] font-semibold text-[#D7C7FF]">NEXORA ORIGINALS</span>
       </div>
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <p className="text-xs font-bold text-white">Create your own lens</p>
+          <p className="text-[10px] text-[#8E88A7]">Mix your own colour recipe and save it to your Creator collection.</p>
+        </div>
+        <button type="button" onClick={() => setIsCreatorPanelOpen(value => !value)} className="shrink-0 rounded-full border border-[#7138FF]/50 bg-[#7138FF]/20 px-3 py-2 text-[10px] font-bold text-white">{isCreatorPanelOpen ? 'Close studio' : '+ Make a lens'}</button>
+      </div>
+      {isCreatorPanelOpen && (
+        <div className="space-y-3 rounded-xl border border-[#44376F] bg-[#120E2B] p-3">
+          <input value={customLensName} onChange={event => setCustomLensName(event.target.value)} maxLength={32} placeholder="Name your original lens" className="w-full rounded-lg border border-white/10 bg-[#090714] px-3 py-2 text-xs text-white outline-none focus:border-violet-400" />
+          {[
+            { label: 'Brightness', value: customBrightness, set: setCustomBrightness, min: 70, max: 140 },
+            { label: 'Contrast', value: customContrast, set: setCustomContrast, min: 70, max: 150 },
+            { label: 'Saturation', value: customSaturation, set: setCustomSaturation, min: 0, max: 180 },
+            { label: 'Colour shift', value: customHue, set: setCustomHue, min: -180, max: 180 },
+          ].map(control => (
+            <label key={control.label} className="flex items-center gap-3 text-[10px] text-[#D7C7FF]">
+              <span className="w-20 shrink-0">{control.label}</span>
+              <input type="range" min={control.min} max={control.max} value={control.value} onChange={event => control.set(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" />
+              <span className="w-10 text-right tabular-nums">{control.value}{control.label === 'Colour shift' ? '°' : '%'}</span>
+            </label>
+          ))}
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[9px] text-[#8E88A7]">Preview is applied to your live camera.</span>
+            <button type="button" onClick={saveCustomLens} className="rounded-lg bg-gradient-to-r from-[#8A3FFC] to-[#4B10F2] px-4 py-2 text-[10px] font-bold text-white">Save my lens</button>
+          </div>
+        </div>
+      )}
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8E88A7]" />
         <input value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder="Find a lens" aria-label="Search lenses" className="w-full rounded-xl border border-white/10 bg-[#120E2B] py-2.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-[#756D91] focus:border-[#8A3FFC]" />
