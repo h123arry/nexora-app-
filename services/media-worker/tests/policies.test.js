@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, canClaimMediaProcessing,
+  classifyStorageObject, imageRenditionWidths, videoRenditionsForHeight, videoRenditionsForSize, videoRenditionDimensions, canClaimMediaProcessing,
   MAX_INPUT_BYTES, MAX_IMAGE_BYTES,
 } from '../src/policies.js';
 
@@ -60,6 +60,19 @@ describe('NEXORA media rendition planning', () => {
     assert.deepEqual(imageRenditionWidths(1080), [320, 640]);
     assert.deepEqual(imageRenditionWidths(1920), [320, 640, 1280]);
     assert.throws(() => imageRenditionWidths(0));
+  });
+
+  it('preserves portrait, landscape and square short-edge resolutions without upscaling', () => {
+    const plan = [{ height: 360 }, { height: 720 }, { height: 1080 }];
+    assert.deepEqual(videoRenditionsForSize(1080, 1920, plan), plan);
+    assert.deepEqual(videoRenditionsForSize(1920, 1080, plan), plan);
+    assert.deepEqual(videoRenditionsForSize(720, 1280, plan), [{ height: 360 }, { height: 720 }]);
+    assert.deepEqual(videoRenditionsForSize(1080, 1080, plan), plan);
+    assert.deepEqual(videoRenditionDimensions(1080, 1920, 1080), { width: 1080, height: 1920 });
+    assert.deepEqual(videoRenditionDimensions(1920, 1080, 720), { width: 1280, height: 720 });
+    assert.deepEqual(videoRenditionDimensions(1080, 1920, 720), { width: 720, height: 1280 });
+    assert.throws(() => videoRenditionsForSize(0, 1920, plan));
+    assert.throws(() => videoRenditionDimensions(720, 1280, 1080));
   });
 
   it('only creates video renditions supported by the source height', () => {
