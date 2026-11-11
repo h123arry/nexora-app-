@@ -586,6 +586,35 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Private, versioned NEXORA Studio project manifests. Media bytes live in the
+    // owner's media Storage path; this document contains only project metadata and references.
+    match /studioCloudDrafts/{userId} {
+      function validStudioManifest() {
+        return request.resource.data.manifest is map
+          && request.resource.data.manifest.keys().hasOnly(['schemaVersion', 'project', 'assets'])
+          && request.resource.data.manifest.schemaVersion == 1
+          && request.resource.data.manifest.project is map
+          && request.resource.data.manifest.assets is map
+          && request.resource.data.manifest.assets.size() <= 100;
+      }
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list: if false;
+      allow create: if signedIn()
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['userId', 'revision', 'manifest', 'updatedAt'])
+        && request.resource.data.userId == userId
+        && request.resource.data.revision == 1
+        && validStudioManifest();
+      allow update: if signedIn()
+        && request.auth.uid == userId
+        && resource.data.userId == userId
+        && request.resource.data.keys().hasOnly(['userId', 'revision', 'manifest', 'updatedAt'])
+        && request.resource.data.userId == userId
+        && request.resource.data.revision == resource.data.revision + 1
+        && validStudioManifest();
+      allow delete: if signedIn() && request.auth.uid == userId && resource.data.userId == userId;
+    }
+
     match /drafts/{draftId} {
       allow get, list: if signedIn() && resource.data.userId == request.auth.uid;
       allow create: if accountMayPost()
