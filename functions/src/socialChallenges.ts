@@ -11,6 +11,37 @@ function validUid(value: unknown): value is string {
   return typeof value === 'string' && ID_PATTERN.test(value);
 }
 
+
+export interface CommunityCapabilitySnapshot {
+  totalVerifiedContributions: number;
+  distinctChallengesContributed: number;
+  advancedChallengeHostingUnlocked: boolean;
+  activeChallengeLimit: number;
+}
+
+export async function getCommunityCapabilitySnapshot(db: Firestore, uid: string): Promise<CommunityCapabilitySnapshot> {
+  if (!validUid(uid)) throw new Error('A valid account is required.');
+  const challenges = await db.collection('socialChallenges').limit(200).get();
+  let totalVerifiedContributions = 0;
+  let distinctChallengesContributed = 0;
+  for (const challenge of challenges.docs) {
+    const participant = await challenge.ref.collection('participants').doc(uid).get();
+    if (!participant.exists) continue;
+    const count = Math.max(0, Number(participant.get('contributionCount')) || 0);
+    if (count > 0) {
+      distinctChallengesContributed += 1;
+      totalVerifiedContributions += count;
+    }
+  }
+  const advancedChallengeHostingUnlocked = distinctChallengesContributed >= 3 && totalVerifiedContributions >= 10;
+  return {
+    totalVerifiedContributions,
+    distinctChallengesContributed,
+    advancedChallengeHostingUnlocked,
+    activeChallengeLimit: advancedChallengeHostingUnlocked ? 10 : 5,
+  };
+}
+
 export interface SocialChallengeInput {
   title?: unknown;
   description?: unknown;
@@ -36,8 +67,9 @@ export async function createSocialChallenge(db: Firestore, creatorId: string, in
   const challengeId = randomUUID();
   const challengeRef = db.collection('socialChallenges').doc(challengeId);
   const participantRef = challengeRef.collection('participants').doc(creatorId);
-  const activeChallenges = await db.collection('socialChallenges').where('creatorId', '==', creatorId).where('status', '==', 'active').limit(5).get();
-  if (activeChallenges.size >= 5) throw new Error('You have reached the active challenge limit.');
+  const capability = await getCommunityCapabilitySnapshot(db, creatorId);
+  const activeChallenges = await db.collection('socialChallenges').where('creatorId', '==', creatorId).where('status', '==', 'active').limit(capability.activeChallengeLimit).get();
+  if (activeChallenges.size >= capability.activeChallengeLimit) throw new Error('You have reached the active challenge limit for your current community level.');
   await db.runTransaction(async tx => {
     tx.create(challengeRef, {
       id: challengeId, creatorId, title, description, topic,
