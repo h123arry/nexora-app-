@@ -300,7 +300,7 @@ export default function SystemHubControlPanel({
               <span>LOCAL DEVICE STATUS</span>
               <span className={`flex items-center gap-1 ${isOffline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-red-400' : 'bg-emerald-400 animate-ping'}`} />
-                {isOffline ? 'OFFLINE' : 'ONLINE'}
+                {isOffline ? 'OFFLINE SIMULATION' : browserOnline ? 'BROWSER ONLINE' : 'BROWSER OFFLINE'}
               </span>
             </div>
             
@@ -686,44 +686,30 @@ export default function SystemHubControlPanel({
             {activeTab === 'performance' && (
               <div className="space-y-5 animate-fade-in text-left">
                 
-                {/* 1. Offline Mode Simulator */}
-                <div className={`p-4 rounded-2xl border ${
-                  isOffline
-                    ? isHighContrast
-                      ? 'border-2 border-white bg-black'
-                      : 'border-red-500/20 bg-red-950/20 text-red-100'
-                    : isHighContrast
-                      ? 'border border-white bg-black'
-                      : 'bg-[#10b981]/5 border-[#10b981]/15 text-[#10b981]'
-                } flex items-center justify-between gap-4`}>
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      {isOffline ? <WifiOff className="w-5 h-5 text-red-400" /> : <Wifi className="w-5 h-5 text-emerald-400" />}
-                      <h4 className="text-[11px] font-sans font-black uppercase tracking-wider text-white">
-                        Offline Connection Simulator
-                      </h4>
+                {showOfflineTestControls && (
+                  <div className="p-4 rounded-2xl border border-white/10 bg-white/[0.02] flex items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        {isOffline ? <WifiOff className="w-5 h-5 text-red-400" /> : <Wifi className="w-5 h-5 text-violet-400" />}
+                        <h4 className="text-[11px] font-sans font-black uppercase tracking-wider text-white">Offline simulation (staging only)</h4>
+                      </div>
+                      <p className="text-[10px] text-zinc-400 leading-normal font-sans">
+                        {isOffline
+                          ? 'Offline simulation is active. This test toggle does not verify local data durability.'
+                          : browserOnline
+                            ? 'The browser reports a network connection. Server reachability is not measured here.'
+                            : 'The browser reports no network connection.'}
+                      </p>
                     </div>
-                    <p className="text-[10px] text-zinc-400 leading-normal font-sans">
-                      {isOffline 
-                        ? 'Simulating disconnected state. Creations are safely stored inside local IndexedDB and local state.' 
-                        : 'Online. Interfacing live client with blockchain consensus and AI mesh servers.'}
-                    </p>
+                    <button
+                      onMouseEnter={() => speakAnnouncement(`Simulate ${isOffline ? 'online' : 'offline'} state.`)}
+                      onClick={toggleOfflineSimulator}
+                      className="px-4 py-2 text-xs font-mono font-bold rounded-xl border border-white/10 bg-white/5 text-zinc-300 hover:text-white hover:bg-white/10"
+                    >
+                      {isOffline ? 'CONNECT' : 'DISCONNECT'}
+                    </button>
                   </div>
-
-                  <button
-                    onMouseEnter={() => speakAnnouncement(`Simulate ${isOffline ? 'online' : 'offline'} state.`)}
-                    onClick={toggleOfflineSimulator}
-                    className={`px-4 py-2 text-xs font-mono font-bold rounded-xl border transition-all cursor-pointer ${
-                      isOffline
-                        ? 'bg-red-500 hover:bg-red-600 border-transparent text-white'
-                        : isHighContrast
-                          ? 'border-white hover:bg-white hover:text-black text-white'
-                          : 'bg-white/5 border-white/10 text-zinc-300 hover:text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {isOffline ? 'CONNECT' : 'DISCONNECT'}
-                  </button>
-                </div>
+                )}
 
                 {/* 2. Image pre-rendering & Lazy loading toggles */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -871,8 +857,8 @@ export default function SystemHubControlPanel({
 
           {/* Footer controls status */}
           <div className="pt-4 mt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-2 text-[9px] font-mono text-zinc-500">
-            <span>Linked via Nexora-Core Orchestrator v3.5</span>
-            <span className="uppercase text-[#8B5CF6]">Strict security validation: active</span>
+            <span>Browser settings and accessibility controls</span>
+            <span className="uppercase text-[#8B5CF6]">Live telemetry: not connected</span>
           </div>
 
         </div>
