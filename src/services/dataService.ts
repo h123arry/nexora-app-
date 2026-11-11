@@ -16,7 +16,7 @@ import {
   onSnapshot,
   writeBatch
 } from 'firebase/firestore';
-import { PrivacySettings, User, Post, Circle as Community, Page, Notification, Message, Chat } from '../types';
+import { PrivacySettings, User, Post, Comment, Circle as Community, Page, Notification, Message, Chat } from '../types';
 import { functions } from '../lib/firebase';
 import { httpsCallable } from 'firebase/functions';
 import { cacheManager } from './cache/cacheService';
@@ -406,6 +406,23 @@ export async function addFollow(followerId: string, followingId: string) {
 
 export async function removeFollow(followerId: string, followingId: string) {
   await syncEngine.enqueue('removeFollow', { followerId, followingId });
+}
+
+export async function addPublicPostCommentDb(
+  uid: string,
+  postId: string,
+  content: string,
+  commentId: string,
+): Promise<{ comment: Comment; created: boolean; commentsCount: number }> {
+  if (!auth.currentUser || auth.currentUser.uid !== uid) {
+    throw new Error('Only the signed-in account can comment.');
+  }
+  const submitComment = httpsCallable<
+    { postId: string; commentId: string; content: string },
+    { comment: Comment; created: boolean; commentsCount: number }
+  >(functions, 'addPublicPostCommentEntry');
+  const result = await submitComment({ postId, commentId, content });
+  return result.data;
 }
 
 export async function addNotification(userId: string, type: string, content: string) {
