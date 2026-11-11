@@ -12,6 +12,10 @@ export type StudioCloudSaveResult = { revision: number; uploadedBytes: number };
 
 const uploadedBlobs = new WeakMap<Blob, Promise<CloudAsset>>();
 const assetIds = new WeakMap<Blob, string>();
+const uploadedBlobByPath = new Map<string, Blob>();
+const MAX_CLOUD_DRAFT_BYTES = 500 * 1024 * 1024;
+const MAX_CLOUD_DRAFT_ASSETS = 100;
+const MAX_CLOUD_MANIFEST_BYTES = 700 * 1024;
 
 function makeAssetId(): string {
   return crypto.randomUUID();
@@ -38,6 +42,9 @@ async function encodeValue(
     if (!id) {
       id = makeAssetId();
       assetIds.set(value, id);
+    }
+    if (!assets[id] && Object.keys(assets).length >= MAX_CLOUD_DRAFT_ASSETS) {
+      throw new Error('This Studio project contains too many separate media assets for cloud backup. Your local draft is safe.');
     }
     const asset = await uploadAssetWithId(value, userId, id, signal, progress, createdAssets);
     assets[id] = asset;
@@ -82,6 +89,7 @@ async function uploadAssetWithId(
   }).then(result => {
     const asset = { storagePath: result.storagePath, contentType: result.contentType, size: result.size };
     createdAssets.push({ blob, asset });
+    uploadedBlobByPath.set(asset.storagePath, blob);
     return asset;
   }).catch(error => {
     uploadedBlobs.delete(blob);
@@ -106,6 +114,7 @@ async function decodeValue(value: Encoded, assets: Record<string, CloudAsset>, u
       const blob = new Blob([bytes], { type: asset.contentType });
       assetIds.set(blob, assetId);
       uploadedBlobs.set(blob, Promise.resolve(asset));
+      uploadedBlobByPath.set(asset.storagePath, blob);
       return blob;
     }
     const decoded: Record<string, unknown> = {};
@@ -146,12 +155,19 @@ export async function saveStudioCloudDraft<T>(
   const oldManifest = before.exists() ? before.data().manifest as CloudManifest | undefined : undefined;
   const assets: Record<string, CloudAsset> = {};
   let totalBytes = 0;
+  const countedBlobs = new Set<Blob>();
   const collectBytes = (value: unknown): void => {
-    if (value instanceof Blob) { totalBytes += value.size; return; }
+    if (value instanceof Blob) {
+      if (!countedBlobs.has(value)) { countedBlobs.add(value); totalBytes += value.size; }
+      return;
+    }
     if (Array.isArray(value)) value.forEach(collectBytes);
     else if (value && typeof value === 'object') Object.values(value as Record<string, unknown>).forEach(collectBytes);
   };
   collectBytes(project);
+  if (totalBytes > MAX_CLOUD_DRAFT_BYTES) {
+    throw new Error('This Studio project exceeds the 500 MB cloud-backup limit. Your on-device draft remains available.');
+  }
   const progressByAsset = new Map<string, number>();
   const createdAssets: Array<{ blob: Blob; asset: CloudAsset }> = [];
   const nextRevision = expectedRevision + 1;
@@ -162,6 +178,9 @@ export async function saveStudioCloudDraft<T>(
       onProgress?.(totalBytes ? Math.min(99, Math.round(uploadedBytes / totalBytes * 100)) : 99);
     }, createdAssets, signal);
     const manifest: CloudManifest = { schemaVersion: 1, project: encoded, assets };
+    if (new TextEncoder().encode(JSON.stringify(manifest)).byteLength > MAX_CLOUD_MANIFEST_BYTES) {
+      throw new Error('This Studio project metadata is too large to back up safely. Your on-device draft remains available.');
+    }
     if (signal?.aborted) throw new DOMException('Cloud draft sync cancelled.', 'AbortError');
     await runTransaction(db!, async transaction => {
       const latest = await transaction.get(draftRef);
@@ -180,6 +199,7 @@ export async function saveStudioCloudDraft<T>(
     await Promise.allSettled(createdAssets.map(async ({ blob, asset }) => {
       uploadedBlobs.delete(blob);
       assetIds.delete(blob);
+      uploadedBlobByPath.delete(asset.storagePath);
       await deleteMediaFile(asset.storagePath);
     }));
     throw error;
@@ -188,7 +208,15 @@ export async function saveStudioCloudDraft<T>(
   const obsoletePaths = Object.values(oldManifest?.assets || {})
     .map(asset => asset.storagePath)
     .filter(path => !currentPaths.has(path));
-  await Promise.allSettled(obsoletePaths.map(path => deleteMediaFile(path)));
+  await Promise.allSettled(obsoletePaths.map(async path => {
+    const oldBlob = uploadedBlobByPath.get(path);
+    if (oldBlob) {
+      uploadedBlobs.delete(oldBlob);
+      assetIds.delete(oldBlob);
+      uploadedBlobByPath.delete(path);
+    }
+    await deleteMediaFile(path);
+  }));
   onProgress?.(100);
   return { revision: nextRevision, uploadedBytes: totalBytes };
 }
