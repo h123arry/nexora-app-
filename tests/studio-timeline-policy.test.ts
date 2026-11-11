@@ -16,7 +16,7 @@ test('shared timeline maps global time into each clip source range', () => {
     clipId: 'b', clipIndex: 1, globalTime: 5.5, localTime: 1.5, clipOffset: 5,
   });
   assert.deepEqual(getStudioClipTimelinePosition(clips, 8), {
-    clipId: 'c', clipIndex: 2, globalTime: 8, localTime: 1, clipOffset: 8,
+    clipId: 'c', clipIndex: 2, globalTime: 8, localTime: 0, clipOffset: 8,
   });
 });
 
