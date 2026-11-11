@@ -147,6 +147,40 @@ const publicProfile = (uid) => ({
     await assertSucceeds(deleteDoc(doc(dbFor('alice'), 'worldWeaves', 'private-weave', 'moments', 'alice-moment')));
   });
 
+  it('caps WorldWeave membership at 500 contributors for public joins and accepted invitations', async () => {
+    const members = ['alice', ...Array.from({ length: 499 }, (_, index) => 'member-' + index)];
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'worldWeaves', 'full-public-weave'), {
+        id: 'full-public-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Full public story',
+        description: '', visibility: 'public', participantIds: members, memberCount: 500,
+        momentCount: 0, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'full-private-weave'), {
+        id: 'full-private-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Full private story',
+        description: '', visibility: 'private', participantIds: members, memberCount: 500,
+        momentCount: 0, createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+      await setDoc(doc(adminDb, 'worldWeaves', 'full-private-weave', 'invites', 'bob'), {
+        weaveId: 'full-private-weave', inviteeId: 'bob', invitedBy: 'alice',
+        ownerName: 'Alice', weaveTitle: 'Full private story', status: 'pending', createdAt: Timestamp.now()
+      });
+    });
+
+    await assertFails(updateDoc(doc(dbFor('bob'), 'worldWeaves', 'full-public-weave'), {
+      participantIds: [...members, 'bob'], memberCount: 501, updatedAt: serverTimestamp()
+    }));
+
+    const bobDb = dbFor('bob');
+    const acceptance = writeBatch(bobDb);
+    acceptance.update(doc(bobDb, 'worldWeaves', 'full-private-weave', 'invites', 'bob'), {
+      status: 'accepted', acceptedAt: serverTimestamp()
+    });
+    acceptance.update(doc(bobDb, 'worldWeaves', 'full-private-weave'), {
+      participantIds: [...members, 'bob'], memberCount: 501, updatedAt: serverTimestamp()
+    });
+    await assertFails(acceptance.commit());
+  });
+
   it('allows owners to read retention summaries but reserves all writes to trusted server code', async () => {
     await seed(async adminDb => {
       await setDoc(doc(adminDb, 'userRetention', 'alice'), {
