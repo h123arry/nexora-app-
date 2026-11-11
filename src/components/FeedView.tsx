@@ -2362,13 +2362,16 @@ export default function FeedView({
                                   <input 
                                     type="text"
                                     placeholder="Write nested thread reply..."
+                                    aria-label={`Reply to ${c.username}'s comment`}
                                     value={replyInputs[c.id] || ''}
                                     onChange={(e) => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
-                                    onKeyDown={(e) => { if(e.key === 'Enter') handleAddReplySubmit(post.id, c.id); }}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddReplySubmit(post.id, c.id); } }}
                                     className="flex-1 bg-slate-900 border border-white/10 rounded-xl py-1 px-3 text-xs text-white focus:outline-hidden"
                                   />
                                   <button 
+                                    type="button"
                                     onClick={() => handleAddReplySubmit(post.id, c.id)}
+                                    aria-label={`Send reply to ${c.username}'s comment`}
                                     className="bg-violet-600 hover:bg-violet-550 p-1.5 rounded-xl text-white cursor-pointer"
                                   >
                                     <Send className="w-3.5 h-3.5" />
@@ -2398,13 +2401,16 @@ export default function FeedView({
                         <input 
                           type="text" 
                           placeholder="Write your comment..."
+                          aria-label={`Write a comment on @${post.username}'s post`}
                           value={commentInputs[post.id] || ''}
                           onChange={(e) => setCommentInputs({ ...commentInputs, [post.id]: e.target.value })}
-                          onKeyDown={(e) => { if(e.key==='Enter') handleAddCommentSubmit(post.id); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAddCommentSubmit(post.id); } }}
                           className="flex-1 bg-slate-950/60 border border-white/5 focus:border-white/10 text-xs text-white placeholder:text-violet-400/40 py-2.5 px-4 rounded-xl focus:outline-hidden"
                         />
                         <button 
+                          type="button"
                           onClick={() => handleAddCommentSubmit(post.id)}
+                          aria-label={`Send comment on @${post.username}'s post`}
                           className="p-2.5 bg-violet-600 hover:bg-violet-550 rounded-xl text-white transition-colors cursor-pointer"
                         >
                           <Send className="w-4 h-4" />
