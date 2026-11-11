@@ -58,10 +58,16 @@ async function processObject(event){
   const {object,ownerId,mediaId,isVideo,isImage,generation}=classification;
   const ref=db.collection('mediaAssets').doc(mediaId);
   const token=randomUUID();
+  const sourcePurpose=object.metadata?.purpose==='studio-export'?'studio-export':null;
+  const studioExportExpiresAt=sourcePurpose?new Date(Date.now()+24*60*60*1000):null;
   const accepted=await db.runTransaction(async tx=>{
     const snap=await tx.get(ref); const current=snap.data();
     if(current && (current.ownerId!==ownerId || !['pending_upload','uploaded','failed'].includes(current.status))) return false;
-    tx.set(ref,{ownerId,status:'processing',processor:'nexora-ffmpeg-v1',processingToken:token,processingStartedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp()},{merge:true});
+    tx.set(ref,{
+      ownerId,status:'processing',processor:'nexora-ffmpeg-v1',processingToken:token,
+      processingStartedAt:FieldValue.serverTimestamp(),updatedAt:FieldValue.serverTimestamp(),
+      ...(sourcePurpose?{sourcePurpose,studioExportExpiresAt}:{}),
+    },{merge:true});
     return true;
   });
   if(!accepted) return {ignored:true,reason:'already-processed-or-owned'};
