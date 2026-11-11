@@ -79,7 +79,7 @@ export const cleanupExpiredStudioMp4Exports = onSchedule('every 6 hours', async 
   let cursor: DocumentSnapshot | null = null;
   while (true) {
     let query = db.collection('mediaAssets')
-      .where('sourcePurpose', '==', 'studio-export')
+      .where('purpose', '==', 'studio-export')
       .limit(200);
     if (cursor) query = query.startAfter(cursor);
     const page = await query.get();
