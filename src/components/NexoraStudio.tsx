@@ -7,12 +7,14 @@ import { canAddStudioImageLayer, getStudioImageLayerFrame, normalizeStudioImageL
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
+import { getStudioExportDimensions, type StudioExportResolution } from '../utils/studioExportPolicy';
+import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = StudioVideoLayer & { name: string; blob: Blob; duration: number };
 type StudioSubtitleSegment = { id: string; text: string; start: number; end: number };
-type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; imageLayers: StudioImageLayer[]; selectedImageLayerId: string | null; subtitleSegments: StudioSubtitleSegment[]; selectedSubtitleSegmentId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
+type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; imageLayers: StudioImageLayer[]; selectedImageLayerId: string | null; subtitleSegments: StudioSubtitleSegment[]; selectedSubtitleSegmentId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade' | 'cross-dissolve'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type StudioSnapshot = Omit<StudioProject, 'updatedAt'> & { selectedId: string | null };
 type Props = { currentUser: { id: string; name?: string; username?: string }; onClose: () => void; onPublish: (video: Blob, caption: string) => Promise<void> };
 
@@ -72,7 +74,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [previewGlobalTime, setPreviewGlobalTime] = useState(0);
   const [overlayColor, setOverlayColor] = useState('#FFFFFF');
   const [aspectRatio, setAspectRatio] = useState<'portrait' | 'square' | 'landscape'>('portrait');
-  const [transition, setTransition] = useState<'cut' | 'fade'>('cut');
+  const [transition, setTransition] = useState<'cut' | 'fade' | 'cross-dissolve'>('cut');
   const [soundtrackVolume, setSoundtrackVolume] = useState(0.8);
   const [soundtrackFadeIn, setSoundtrackFadeIn] = useState(0);
   const [soundtrackFadeOut, setSoundtrackFadeOut] = useState(0);
@@ -85,6 +87,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [overlayPosition, setOverlayPosition] = useState<'top' | 'center' | 'bottom'>('bottom');
   const [playing, setPlaying] = useState(false);
   const [exportQuality, setExportQuality] = useState<'balanced' | 'high'>('balanced');
+  const [exportResolution, setExportResolution] = useState<StudioExportResolution>('720p');
   const [audioMetadataRevision, setAudioMetadataRevision] = useState(0);
   const [rendering, setRendering] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -94,6 +97,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [canUndo, setCanUndo] = useState(false);
   const [canRedo, setCanRedo] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const nextPreviewRef = useRef<HTMLVideoElement>(null);
   const soundtrackPreviewRef = useRef<HTMLAudioElement>(null);
   const voiceoverPreviewRef = useRef<HTMLAudioElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -111,6 +115,10 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const selectedSubtitleSegment = subtitleSegments.find(segment => segment.id === selectedSubtitleSegmentId) || subtitleSegments[0] || null;
   const selectedClipIndex = selectedClip ? clips.findIndex(clip => clip.id === selectedClip.id) : -1;
   const selectedClipGlobalOffset = useMemo(() => clips.slice(0, Math.max(0, selectedClipIndex)).reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips, selectedClipIndex]);
+  const nextPreviewClip = selectedClipIndex >= 0 ? clips[selectedClipIndex + 1] || null : null;
+  const selectedClipLocalTime = selectedClip ? selectedClip.start + Math.max(0, previewGlobalTime - selectedClipGlobalOffset) : 0;
+  const crossDissolveDuration = selectedClip && nextPreviewClip ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, selectedClip.end - selectedClip.start), Math.max(0, nextPreviewClip.end - nextPreviewClip.start)) : 0;
+  const crossDissolveProgress = transition === 'cross-dissolve' ? getCrossDissolveProgress(selectedClipLocalTime, selectedClip?.end || 0, crossDissolveDuration) : 0;
   const selectedVideoFrame = selectedClip ? getStudioVideoLayerFrame(selectedClip, Math.max(0, previewGlobalTime - selectedClipGlobalOffset)) : null;
   const totalDuration = useMemo(() => clips.reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips]);
   const timelineClipSegments = useMemo(() => {
@@ -215,6 +223,18 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   useEffect(() => {
     if (videoRef.current && selectedClip) videoRef.current.volume = selectedClip.volume;
   }, [selectedClip?.id, selectedClip?.volume]);
+
+  useEffect(() => {
+    const nextVideo = nextPreviewRef.current;
+    if (!nextVideo || !nextPreviewClip || transition !== 'cross-dissolve' || crossDissolveProgress <= 0 || !playing) {
+      nextVideo?.pause();
+      return;
+    }
+    const expectedTime = Math.min(nextPreviewClip.end, nextPreviewClip.start + crossDissolveProgress * crossDissolveDuration);
+    if (Math.abs(nextVideo.currentTime - expectedTime) > 0.2) nextVideo.currentTime = expectedTime;
+    nextVideo.muted = true;
+    if (nextVideo.paused) void nextVideo.play().catch(() => setMessage('The next scene could not be preloaded for its transition.'));
+  }, [nextPreviewClip?.id, nextPreviewClip?.start, nextPreviewClip?.end, transition, crossDissolveProgress, crossDissolveDuration, playing]);
 
   useEffect(() => {
     const music = soundtrackPreviewRef.current;
@@ -566,9 +586,13 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     if (!mimeType) throw new Error('This browser does not provide a supported video export format.');
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Video rendering is unavailable on this device.');
-    const dimensions = aspectRatio === 'portrait' ? { width: 720, height: 1280 } : aspectRatio === 'square' ? { width: 1080, height: 1080 } : { width: 1280, height: 720 };
+    const dimensions = getStudioExportDimensions(aspectRatio, exportResolution);
     canvas.width = dimensions.width; canvas.height = dimensions.height;
     const preview = document.createElement('video');
+    const transitionPreview = document.createElement('video');
+    transitionPreview.playsInline = true;
+    transitionPreview.muted = true;
+    transitionPreview.preload = 'auto';
     preview.playsInline = true;
     preview.muted = false;
     preview.volume = 1;
@@ -586,6 +610,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let voiceoverDuration = 0;
     let elapsed = 0;
     let fadeOpacity = transition === 'fade' ? 1 : 0;
+    let transitionProgress = 0;
+    let transitionPreviewUrl: string | null = null;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) throw new Error('Audio mixing is not supported by this browser. Export is paused to avoid silently dropping your clip audio.');
     if (AudioContextClass) {
@@ -657,6 +683,15 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         context.rotate(videoFrame.rotation * Math.PI / 180);
         context.scale(videoFrame.scale, videoFrame.scale);
         context.drawImage(preview, -width / 2, -height / 2, width, height);
+        context.restore();
+      }
+      if (transitionProgress > 0 && transitionPreview.readyState >= 2 && transitionPreview.videoWidth > 0) {
+        const fit = Math.min(canvas.width / transitionPreview.videoWidth, canvas.height / transitionPreview.videoHeight);
+        const width = transitionPreview.videoWidth * fit;
+        const height = transitionPreview.videoHeight * fit;
+        context.save();
+        context.globalAlpha = transitionProgress;
+        context.drawImage(transitionPreview, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
         context.restore();
       }
       for (const layer of imageLayers) {
@@ -762,6 +797,9 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       recorder.start(250);
       draw();
       for (const [clipIndex, clip] of clips.entries()) {
+        const overlapFromPrevious = transition === 'cross-dissolve' && clipIndex > 0 ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clips[clipIndex - 1].end - clips[clipIndex - 1].start), Math.max(0, clip.end - clip.start)) : 0;
+        const transitionDuration = transition === 'cross-dissolve' && clipIndex < clips.length - 1 ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clip.end - clip.start), Math.max(0, clips[clipIndex + 1].end - clips[clipIndex + 1].start)) : 0;
+        const sourceStart = Math.min(clip.end, clip.start + overlapFromPrevious);
         if (clipGain) clipGain.gain.value = clip.volume;
         if (soundtrackGain) soundtrackGain.gain.value = soundtrackVolume;
         preview.src = URL.createObjectURL(clip.blob);
@@ -770,11 +808,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           preview.onloadedmetadata = () => resolve();
           preview.onerror = () => reject(new Error(`Could not open ${clip.name} for export.`));
         });
-        if (Math.abs(preview.currentTime - clip.start) > 0.05) {
+        if (Math.abs(preview.currentTime - sourceStart) > 0.05) {
           await new Promise<void>((resolve, reject) => {
             const timeout = window.setTimeout(() => reject(new Error('The editor could not seek to the selected clip range.')), 8000);
             preview.onseeked = () => { window.clearTimeout(timeout); resolve(); };
-            preview.currentTime = clip.start;
+            preview.currentTime = sourceStart;
           });
         }
         await preview.play();
@@ -783,15 +821,35 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           if (audioElement) await audioElement.play().catch(() => undefined);
           if (voiceoverElement) voiceoverStartTimer = window.setTimeout(() => { void voiceoverElement?.play().catch(() => undefined); }, Math.max(0, voiceoverStart * 1000));
         }
-        const clipElapsedStart = elapsed;
+        const clipElapsedStart = elapsed - overlapFromPrevious;
         activeClip = clip;
         activeClipElapsedStart = clipElapsedStart;
+        let transitionStarted = false;
+        if (transitionDuration > 0) {
+          const nextClip = clips[clipIndex + 1];
+          transitionPreview.pause();
+          if (transitionPreviewUrl) URL.revokeObjectURL(transitionPreviewUrl);
+          transitionPreviewUrl = URL.createObjectURL(nextClip.blob);
+          transitionPreview.src = transitionPreviewUrl;
+          await new Promise<void>((resolve, reject) => {
+            transitionPreview.onloadedmetadata = () => resolve();
+            transitionPreview.onerror = () => reject(new Error(`Could not preload ${nextClip.name} for its transition.`));
+          });
+          transitionPreview.currentTime = nextClip.start;
+          await new Promise<void>(resolve => { transitionPreview.onseeked = () => resolve(); });
+        }
         await new Promise<void>(resolve => {
           const check = () => {
             elapsed = clipElapsedStart + Math.max(0, preview.currentTime - clip.start);
+            const remaining = Math.max(0, clip.end - preview.currentTime);
+            if (transitionDuration > 0 && remaining <= transitionDuration) {
+              transitionProgress = getCrossDissolveProgress(preview.currentTime, clip.end, transitionDuration);
+              if (!transitionStarted && transitionProgress > 0) { transitionStarted = true; void transitionPreview.play().catch(() => undefined); }
+              if (transitionStarted && transitionPreview.readyState >= 2) transitionPreview.currentTime = Math.min(clips[clipIndex + 1].end, clips[clipIndex + 1].start + transitionProgress * transitionDuration);
+            }
             if (soundtrackGain) soundtrackGain.gain.value = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration, duckingLevel: musicDuckingLevel });
             if (voiceoverGain) voiceoverGain.gain.value = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: Math.max(0, elapsed - voiceoverStart), totalDuration: voiceoverDuration, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
-            if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); resolve(); }
+            if (preview.currentTime >= clip.end || preview.ended) { preview.pause(); transitionPreview.pause(); transitionProgress = 0; resolve(); }
             else window.setTimeout(check, 40);
           };
           check();
@@ -810,6 +868,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       throw error;
     } finally {
       preview.pause();
+      transitionPreview.pause();
+      if (transitionPreviewUrl) URL.revokeObjectURL(transitionPreviewUrl);
       if (voiceoverStartTimer !== null) window.clearTimeout(voiceoverStartTimer);
       if (audioElement) audioElement.pause();
       if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
@@ -865,14 +925,14 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             <button type="button" onClick={onClose} aria-label="Close Studio" className="rounded-xl border border-white/10 p-2 text-[#C7B5FF]"><ArrowLeft size={18}/></button>
             <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[.24em] text-violet-300">NEXORA</p><h1 className="truncate text-lg font-black tracking-tight sm:text-xl">Studio</h1></div>
           </div>
-          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><select aria-label="Export quality" value={exportQuality} onChange={event => setExportQuality(event.target.value as 'balanced' | 'high')} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="balanced">Balanced</option><option value="high">High quality</option></select><button type="button" onClick={handleExport} disabled={rendering || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
+          <div className="flex items-center gap-2"><span className="hidden text-[10px] text-[#8E88A7] sm:inline">{currentUser.name || currentUser.username || 'Creator'} · {Math.round(totalDuration)}s</span><button type="button" onClick={undo} disabled={!canUndo} aria-label="Undo edit" title="Undo · Ctrl/⌘ Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Undo2 size={16}/></button><button type="button" onClick={redo} disabled={!canRedo} aria-label="Redo edit" title="Redo · Ctrl/⌘ Shift Z" className="rounded-lg border border-[#34265E] p-2 text-[#D7CCF7] disabled:opacity-30"><Redo2 size={16}/></button><select aria-label="Export resolution" value={exportResolution} onChange={event => setExportResolution(event.target.value as StudioExportResolution)} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="720p">720p</option><option value="1080p">1080p</option></select><select aria-label="Export quality" value={exportQuality} onChange={event => setExportQuality(event.target.value as 'balanced' | 'high')} className="max-w-24 rounded-lg border border-[#34265E] bg-[#100C20] px-2 py-2 text-[10px] text-white"><option value="balanced">Balanced bitrate</option><option value="high">High bitrate</option></select><button type="button" onClick={handleExport} disabled={rendering || !clips.length} className="rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-2 text-xs font-bold disabled:opacity-50">{rendering ? 'Rendering…' : 'Export video'}</button></div>
         </header>
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
               {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
-              {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="absolute h-full w-full object-contain" style={selectedVideoFrame ? { left: `${selectedVideoFrame.x * 100}%`, top: `${selectedVideoFrame.y * 100}%`, transform: `translate(-50%, -50%) rotate(${selectedVideoFrame.rotation}deg) scale(${selectedVideoFrame.scale})`, opacity: selectedVideoFrame.opacity } : undefined} playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (continuePlaybackRef.current) { void event.currentTarget.play().then(() => { continuePlaybackRef.current = false; setPlaying(true); }).catch(() => { continuePlaybackRef.current = false; setPlaying(false); setMessage('The next clip could not start. Tap play to continue.'); }); } }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end && !continuePlaybackRef.current) { const next = getNextStudioClipTimelinePosition(clips, selectedClip.id); if (next) { continuePlaybackRef.current = true; pendingSeekRef.current = { clipId: next.clipId, localTime: next.localTime }; setPreviewGlobalTime(next.globalTime); setSelectedId(next.clipId); } else { event.currentTarget.pause(); setPlaying(false); } } }} onPlay={() => setPlaying(true)} onPause={() => { if (!continuePlaybackRef.current) setPlaying(false); }}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
+              {selectedClip ? <><video ref={videoRef} key={selectedClip.id} src={previewUrl} className="absolute h-full w-full object-contain" style={selectedVideoFrame ? { left: `${selectedVideoFrame.x * 100}%`, top: `${selectedVideoFrame.y * 100}%`, transform: `translate(-50%, -50%) rotate(${selectedVideoFrame.rotation}deg) scale(${selectedVideoFrame.scale})`, opacity: selectedVideoFrame.opacity } : undefined} playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (continuePlaybackRef.current) { void event.currentTarget.play().then(() => { continuePlaybackRef.current = false; setPlaying(true); }).catch(() => { continuePlaybackRef.current = false; setPlaying(false); setMessage('The next clip could not start. Tap play to continue.'); }); } }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end && !continuePlaybackRef.current) { const next = getNextStudioClipTimelinePosition(clips, selectedClip.id); if (next) { continuePlaybackRef.current = true; pendingSeekRef.current = { clipId: next.clipId, localTime: next.localTime }; setPreviewGlobalTime(next.globalTime); setSelectedId(next.clipId); } else { event.currentTarget.pause(); setPlaying(false); } } }} onPlay={() => setPlaying(true)} onPause={() => { if (!continuePlaybackRef.current) setPlaying(false); }}/>{nextPreviewClip && transition === 'cross-dissolve' && <video ref={nextPreviewRef} key={`transition-${nextPreviewClip.id}`} src={getUrlForClip(nextPreviewClip.blob)} muted playsInline preload="auto" onLoadedMetadata={event => { event.currentTarget.currentTime = nextPreviewClip.start; }} className="pointer-events-none absolute inset-0 h-full w-full object-contain" style={{ opacity: crossDissolveProgress, zIndex: 2 }}/>}</> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
               {imageLayers.map(layer => { const frame = getStudioImageLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <img key={layer.id} src={getUrlForClip(layer.blob)} alt={layer.name} draggable={false} className="pointer-events-none absolute z-[5] max-w-none object-contain" style={{ left: `${frame.x * 100}%`, top: `${frame.y * 100}%`, width: `${frame.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${frame.rotation}deg)`, opacity: frame.opacity }}/>; })}
               {subtitleSegments.filter(segment => previewGlobalTime >= segment.start && previewGlobalTime < segment.end && segment.text.trim()).map(segment => <div key={segment.id} className="pointer-events-none absolute bottom-[12%] left-[5%] z-[8] w-[90%] rounded-lg bg-[#050914]/80 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg">{segment.text}</div>)}
               {textLayers.map(layer => { const frame = getStudioTextLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <div key={layer.id} className="pointer-events-none absolute z-10 max-w-[90%] whitespace-pre-wrap text-center font-black drop-shadow-[0_2px_8px_rgba(0,0,0,.9)]" style={{ left: '50%', top: layer.position === 'top' ? '9%' : layer.position === 'center' ? '50%' : undefined, bottom: layer.position === 'bottom' ? '9%' : undefined, transform: `translate(-50%, -50%) translateY(${frame.offsetY}px) rotate(${layer.rotation + frame.rotation}deg) scale(${frame.scale})`, fontSize: `${Math.max(12, layer.fontSize * (aspectRatio === 'portrait' ? 0.48 : 0.62))}px`, opacity: frame.opacity, color: layer.color }}>{layer.text}</div>; })}
@@ -930,7 +990,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <h2 className="text-xs font-bold">Video format</h2>
               <label className="block text-[10px] text-[#A39BBF]">Canvas ratio<select value={aspectRatio} onChange={event => setAspectRatio(event.target.value as typeof aspectRatio)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="portrait">9:16 · Reels and vertical video</option><option value="square">1:1 · Square posts</option><option value="landscape">16:9 · Landscape video</option></select></label>
-              <label className="block text-[10px] text-[#A39BBF]">Scene transition<select value={transition} onChange={event => setTransition(event.target.value as typeof transition)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="cut">Clean cut</option><option value="fade">Fade through black</option></select></label>
+              <label className="block text-[10px] text-[#A39BBF]">Scene transition<select value={transition} onChange={event => setTransition(event.target.value as typeof transition)} className="mt-1 w-full rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2 text-xs text-white"><option value="cut">Clean cut</option><option value="fade">Fade through black</option><option value="cross-dissolve">Cross-dissolve · 0.6s</option></select></label>
             </div>
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <div className="flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Type size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Text layers</h2></div><button type="button" onClick={addTextLayer} className="inline-flex items-center gap-1 rounded-lg border border-violet-400/30 px-2 py-1.5 text-[10px] font-semibold text-violet-100"><Plus size={12}/> Add text</button></div>
