@@ -1823,7 +1823,9 @@ export default function App() {
       };
 
       // Invalidate profile cache so ProfileView receives fresh data
-      ProfileEngine.invalidateProfile(freshUser.id);
+      void import('./services/voh/profileEngine').then(({ ProfileEngine }) => {
+        ProfileEngine.invalidateProfile(freshUser.id);
+      }).catch(error => console.warn('Unable to invalidate profile cache.', error));
 
       // Update global user map so all views pick up the updated profile instantly
       setGlobalUsersMap(prevMap => ({
