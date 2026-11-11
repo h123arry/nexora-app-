@@ -53,7 +53,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - [x] Continuous preview synchronization for source video, soundtrack and voiceover, including shared-playhead seeking and audio envelopes.
 - [x] User-authored keyframes for text opacity, scale, rotation and vertical offset, with interpolation shared by preview and export.
 - [x] User-authored keyframes for image/sticker position, scale, rotation and opacity, with preview/export interpolation.
-- User-authored keyframes for independent animation of video layers.
+- [x] User-authored video-layer keyframes for position, scale, rotation and opacity, with preview/export interpolation.
 - Cross-dissolve and selected transition presets beyond fade-through-black.
 
 ### Phase 4 · Audio and captions

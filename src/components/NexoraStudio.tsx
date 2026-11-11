@@ -7,9 +7,10 @@ import { canAddStudioImageLayer, getStudioImageLayerFrame, normalizeStudioImageL
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
+import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
-type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
+type StudioClip = StudioVideoLayer & { name: string; blob: Blob; duration: number };
 type StudioSubtitleSegment = { id: string; text: string; start: number; end: number };
 type StudioProject = { clips: StudioClip[]; soundtrack: Blob | null; voiceover: Blob | null; caption: string; overlay: string; overlayColor: string; textLayers: StudioTextLayer[]; selectedTextLayerId: string | null; imageLayers: StudioImageLayer[]; selectedImageLayerId: string | null; subtitleSegments: StudioSubtitleSegment[]; selectedSubtitleSegmentId: string | null; aspectRatio: 'portrait' | 'square' | 'landscape'; transition: 'cut' | 'fade'; soundtrackVolume: number; soundtrackFadeIn: number; soundtrackFadeOut: number; duckMusicUnderVoiceover: boolean; musicDuckingLevel: number; voiceoverVolume: number; voiceoverFadeIn: number; voiceoverFadeOut: number; voiceoverStart: number; overlayStart: number; overlayEnd: number; overlayPosition: 'top' | 'center' | 'bottom'; updatedAt: number };
 type StudioSnapshot = Omit<StudioProject, 'updatedAt'> & { selectedId: string | null };
@@ -110,6 +111,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const selectedSubtitleSegment = subtitleSegments.find(segment => segment.id === selectedSubtitleSegmentId) || subtitleSegments[0] || null;
   const selectedClipIndex = selectedClip ? clips.findIndex(clip => clip.id === selectedClip.id) : -1;
   const selectedClipGlobalOffset = useMemo(() => clips.slice(0, Math.max(0, selectedClipIndex)).reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips, selectedClipIndex]);
+  const selectedVideoFrame = selectedClip ? getStudioVideoLayerFrame(selectedClip, Math.max(0, previewGlobalTime - selectedClipGlobalOffset)) : null;
   const totalDuration = useMemo(() => clips.reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips]);
   const timelineClipSegments = useMemo(() => {
     let cursor = 0;
@@ -127,7 +129,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     const projectKey = `active-project-v1:${currentUser.id}`;
     loadProject(projectKey).then(project => {
       if (!active || !project) return;
-      setClips((project.clips || []).map(clip => ({ ...clip, volume: typeof clip.volume === 'number' ? Math.min(1, Math.max(0, clip.volume)) : 1 })));
+      setClips((project.clips || []).map(clip => normalizeStudioVideoLayer({ ...clip, volume: typeof clip.volume === 'number' ? clip.volume : 1 })));
       setSelectedId(project.clips?.[0]?.id || null);
       setSoundtrack(project.soundtrack || null);
       setVoiceover(project.voiceover || null);
@@ -367,7 +369,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         probe.onerror = () => { URL.revokeObjectURL(url); reject(new Error(`Could not read ${file.name}`)); };
         probe.src = url;
       }).catch(() => 0);
-      if (duration > 0) additions.push({ id: makeId(), name: file.name, blob: file, start: 0, end: duration, duration, volume: 1 });
+      if (duration > 0) additions.push(normalizeStudioVideoLayer({ id: makeId(), name: file.name, blob: file, start: 0, end: duration, duration, volume: 1, x: 0.5, y: 0.5, scale: 1, rotation: 0, opacity: 1, keyframes: [] }));
     }
     if (!additions.length) { setMessage('Choose a supported video file to add to your timeline.'); return; }
     setClips(previous => [...previous, ...additions]);
@@ -423,7 +425,15 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
 
   const updateSelected = (patch: Partial<StudioClip>) => {
     if (!selectedClip) return;
-    setClips(previous => previous.map(clip => clip.id === selectedClip.id ? { ...clip, ...patch } : clip));
+    setClips(previous => previous.map(clip => clip.id === selectedClip.id ? normalizeStudioVideoLayer({ ...clip, ...patch }) : clip));
+  };
+
+  const addVideoKeyframe = () => {
+    if (!selectedClip) return;
+    const time = Math.max(0, previewGlobalTime - selectedClipGlobalOffset);
+    const keyframe = { time, x: selectedClip.x, y: selectedClip.y, scale: selectedClip.scale, rotation: selectedClip.rotation, opacity: selectedClip.opacity };
+    updateSelected({ keyframes: [...selectedClip.keyframes.filter(frame => Math.abs(frame.time - time) > 0.01), keyframe] });
+    setMessage(`Video motion keyframe saved at ${time.toFixed(1)}s.`);
   };
 
   const addTextLayer = () => {
@@ -631,14 +641,23 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       recorder.onstop = () => chunks.length ? resolve(new Blob(chunks, { type: recorder.mimeType || mimeType })) : reject(new Error('The export did not contain any video data.'));
     });
     let frame = 0;
+    let activeClip: StudioClip | null = null;
+    let activeClipElapsedStart = 0;
     const draw = () => {
       context.fillStyle = '#050914';
       context.fillRect(0, 0, canvas.width, canvas.height);
       if (preview.readyState >= 2) {
-        const scale = Math.min(canvas.width / preview.videoWidth, canvas.height / preview.videoHeight);
-        const width = preview.videoWidth * scale;
-        const height = preview.videoHeight * scale;
-        context.drawImage(preview, (canvas.width - width) / 2, (canvas.height - height) / 2, width, height);
+        const fitScale = Math.min(canvas.width / preview.videoWidth, canvas.height / preview.videoHeight);
+        const width = preview.videoWidth * fitScale;
+        const height = preview.videoHeight * fitScale;
+        const videoFrame = activeClip ? getStudioVideoLayerFrame(activeClip, Math.max(0, elapsed - activeClipElapsedStart)) : { x: 0.5, y: 0.5, scale: 1, rotation: 0, opacity: 1 };
+        context.save();
+        context.globalAlpha = videoFrame.opacity;
+        context.translate(canvas.width * videoFrame.x, canvas.height * videoFrame.y);
+        context.rotate(videoFrame.rotation * Math.PI / 180);
+        context.scale(videoFrame.scale, videoFrame.scale);
+        context.drawImage(preview, -width / 2, -height / 2, width, height);
+        context.restore();
       }
       for (const layer of imageLayers) {
         const frame = getStudioImageLayerFrame(layer, elapsed, totalDuration);
@@ -765,6 +784,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           if (voiceoverElement) voiceoverStartTimer = window.setTimeout(() => { void voiceoverElement?.play().catch(() => undefined); }, Math.max(0, voiceoverStart * 1000));
         }
         const clipElapsedStart = elapsed;
+        activeClip = clip;
+        activeClipElapsedStart = clipElapsedStart;
         await new Promise<void>(resolve => {
           const check = () => {
             elapsed = clipElapsedStart + Math.max(0, preview.currentTime - clip.start);
@@ -851,7 +872,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
               {soundtrack && <audio ref={soundtrackPreviewRef} src={getUrlForClip(soundtrack)} loop preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
               {voiceover && <audio ref={voiceoverPreviewRef} src={getUrlForClip(voiceover)} preload="auto" onLoadedMetadata={() => setAudioMetadataRevision(value => value + 1)} className="hidden"/>}
-              {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="h-full w-full object-contain" playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (continuePlaybackRef.current) { void event.currentTarget.play().then(() => { continuePlaybackRef.current = false; setPlaying(true); }).catch(() => { continuePlaybackRef.current = false; setPlaying(false); setMessage('The next clip could not start. Tap play to continue.'); }); } }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end && !continuePlaybackRef.current) { const next = getNextStudioClipTimelinePosition(clips, selectedClip.id); if (next) { continuePlaybackRef.current = true; pendingSeekRef.current = { clipId: next.clipId, localTime: next.localTime }; setPreviewGlobalTime(next.globalTime); setSelectedId(next.clipId); } else { event.currentTarget.pause(); setPlaying(false); } } }} onPlay={() => setPlaying(true)} onPause={() => { if (!continuePlaybackRef.current) setPlaying(false); }}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
+              {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="absolute h-full w-full object-contain" style={selectedVideoFrame ? { left: `${selectedVideoFrame.x * 100}%`, top: `${selectedVideoFrame.y * 100}%`, transform: `translate(-50%, -50%) rotate(${selectedVideoFrame.rotation}deg) scale(${selectedVideoFrame.scale})`, opacity: selectedVideoFrame.opacity } : undefined} playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (continuePlaybackRef.current) { void event.currentTarget.play().then(() => { continuePlaybackRef.current = false; setPlaying(true); }).catch(() => { continuePlaybackRef.current = false; setPlaying(false); setMessage('The next clip could not start. Tap play to continue.'); }); } }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end && !continuePlaybackRef.current) { const next = getNextStudioClipTimelinePosition(clips, selectedClip.id); if (next) { continuePlaybackRef.current = true; pendingSeekRef.current = { clipId: next.clipId, localTime: next.localTime }; setPreviewGlobalTime(next.globalTime); setSelectedId(next.clipId); } else { event.currentTarget.pause(); setPlaying(false); } } }} onPlay={() => setPlaying(true)} onPause={() => { if (!continuePlaybackRef.current) setPlaying(false); }}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
               {imageLayers.map(layer => { const frame = getStudioImageLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <img key={layer.id} src={getUrlForClip(layer.blob)} alt={layer.name} draggable={false} className="pointer-events-none absolute z-[5] max-w-none object-contain" style={{ left: `${frame.x * 100}%`, top: `${frame.y * 100}%`, width: `${frame.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${frame.rotation}deg)`, opacity: frame.opacity }}/>; })}
               {subtitleSegments.filter(segment => previewGlobalTime >= segment.start && previewGlobalTime < segment.end && segment.text.trim()).map(segment => <div key={segment.id} className="pointer-events-none absolute bottom-[12%] left-[5%] z-[8] w-[90%] rounded-lg bg-[#050914]/80 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg">{segment.text}</div>)}
               {textLayers.map(layer => { const frame = getStudioTextLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <div key={layer.id} className="pointer-events-none absolute z-10 max-w-[90%] whitespace-pre-wrap text-center font-black drop-shadow-[0_2px_8px_rgba(0,0,0,.9)]" style={{ left: '50%', top: layer.position === 'top' ? '9%' : layer.position === 'center' ? '50%' : undefined, bottom: layer.position === 'bottom' ? '9%' : undefined, transform: `translate(-50%, -50%) translateY(${frame.offsetY}px) rotate(${layer.rotation + frame.rotation}deg) scale(${frame.scale})`, fontSize: `${Math.max(12, layer.fontSize * (aspectRatio === 'portrait' ? 0.48 : 0.62))}px`, opacity: frame.opacity, color: layer.color }}>{layer.text}</div>; })}
@@ -889,7 +910,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <div className="flex items-center gap-2"><Scissors size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Clip trim</h2></div>
               <label className="block text-[10px] text-[#A39BBF]">In · {selectedClip.start.toFixed(1)}s<input type="range" min="0" max={Math.max(0,selectedClip.end-0.25)} step=".1" value={selectedClip.start} onChange={event => updateSelected({start:Math.min(Number(event.target.value),selectedClip.end-0.25)})} className="mt-2 w-full accent-violet-500"/></label>
               <label className="block text-[10px] text-[#A39BBF]">Out · {selectedClip.end.toFixed(1)}s<input type="range" min={Math.min(selectedClip.duration,selectedClip.start+0.25)} max={selectedClip.duration} step=".1" value={selectedClip.end} onChange={event => updateSelected({end:Math.max(Number(event.target.value),selectedClip.start+0.25)})} className="mt-2 w-full accent-violet-500"/></label>
-              <label className="block text-[10px] text-[#A39BBF]">Clip volume · {Math.round(selectedClip.volume * 100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.volume} onChange={event => updateSelected({volume:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label>
+              <label className="block text-[10px] text-[#A39BBF]">Clip volume · {Math.round(selectedClip.volume * 100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.volume} onChange={event => updateSelected({volume:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><div className="grid grid-cols-2 gap-2"><label className="block text-[10px] text-[#A39BBF]">Horizontal · {Math.round(selectedClip.x*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.x} onChange={event=>updateSelected({x:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Vertical · {Math.round(selectedClip.y*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.y} onChange={event=>updateSelected({y:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Scale · {selectedClip.scale.toFixed(2)}x<input type="range" min=".25" max="2" step=".05" value={selectedClip.scale} onChange={event=>updateSelected({scale:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Rotation · {selectedClip.rotation}°<input type="range" min="-180" max="180" step="5" value={selectedClip.rotation} onChange={event=>updateSelected({rotation:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label><label className="block text-[10px] text-[#A39BBF]">Opacity · {Math.round(selectedClip.opacity*100)}%<input type="range" min="0" max="1" step=".05" value={selectedClip.opacity} onChange={event=>updateSelected({opacity:Number(event.target.value)})} className="mt-2 w-full accent-violet-500"/></label></div><div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-2"><div className="flex items-center justify-between gap-2"><span className="text-[10px] font-semibold text-violet-200">Video motion · {selectedClip.keyframes.length}/100</span><button type="button" onClick={addVideoKeyframe} disabled={selectedClip.keyframes.length>=100} className="rounded-md border border-violet-400/40 px-2 py-1 text-[9px] font-semibold text-violet-100 disabled:opacity-40">Add at {(previewGlobalTime-selectedClipGlobalOffset).toFixed(1)}s</button></div>{selectedClip.keyframes.map(frame=><div key={frame.time} className="flex items-center justify-between gap-2 text-[9px]"><button type="button" onClick={()=>seekToGlobalTime(selectedClipGlobalOffset+frame.time)} className="min-w-0 flex-1 text-left text-[#C7B5FF]">{frame.time.toFixed(1)}s · {Math.round(frame.opacity*100)}% · {frame.scale.toFixed(2)}x · {frame.rotation}°</button><button type="button" onClick={()=>updateSelected({keyframes:selectedClip.keyframes.filter(item=>item.time!==frame.time)})} className="rounded px-2 py-1 text-rose-300">Remove</button></div>)}{!selectedClip.keyframes.length && <p className="text-[9px] text-[#827B9C]">Move the playhead, adjust the video transform, then save a keyframe. Transform values interpolate through this clip.</p>}</div>
             </div>}
             <div className="space-y-3 rounded-xl border border-[#292244] bg-[#100C20] p-3">
               <div className="flex items-center gap-2"><Music2 size={15} className="text-violet-300"/><h2 className="text-xs font-bold">Soundtrack</h2></div>
