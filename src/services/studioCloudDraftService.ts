@@ -23,36 +23,12 @@ function assertSignedIn(userId: string): void {
   }
 }
 
-async function uploadAsset(blob: Blob, userId: string, signal?: AbortSignal): Promise<CloudAsset> {
-  const existing = uploadedBlobs.get(blob);
-  if (existing) return existing;
-  const id = makeAssetId();
-  assetIds.set(blob, id);
-  const pending = uploadMediaFile({
-    file: blob,
-    userId,
-    mediaId: id,
-    fileName: `studio-asset-${id}`,
-    metadata: { purpose: 'studio-draft', draftOwnerId: userId },
-    signal,
-  }).then(result => ({
-    storagePath: result.storagePath,
-    contentType: result.contentType,
-    size: result.size,
-  })).catch(error => {
-    uploadedBlobs.delete(blob);
-    assetIds.delete(blob);
-    throw error;
-  });
-  uploadedBlobs.set(blob, pending);
-  return pending;
-}
-
 async function encodeValue(
   value: unknown,
   userId: string,
   assets: Record<string, CloudAsset>,
-  progress: (bytes: number) => void,
+  progress: (assetId: string, bytes: number) => void,
+  createdAssets: Array<{ blob: Blob; asset: CloudAsset }>,
   signal?: AbortSignal,
 ): Promise<Encoded> {
   if (signal?.aborted) throw new DOMException('Cloud draft sync cancelled.', 'AbortError');
@@ -62,7 +38,7 @@ async function encodeValue(
       id = makeAssetId();
       assetIds.set(value, id);
     }
-    const asset = await uploadAssetWithId(value, userId, id, signal, progress);
+    const asset = await uploadAssetWithId(value, userId, id, signal, progress, createdAssets);
     assets[id] = asset;
     return { $studioAsset: id };
   }
@@ -89,7 +65,8 @@ async function uploadAssetWithId(
   userId: string,
   id: string,
   signal?: AbortSignal,
-  progress?: (bytes: number) => void,
+  progress?: (assetId: string, bytes: number) => void,
+  createdAssets: Array<{ blob: Blob; asset: CloudAsset }> = [],
 ): Promise<CloudAsset> {
   const existing = uploadedBlobs.get(blob);
   if (existing) return existing;
@@ -100,12 +77,12 @@ async function uploadAssetWithId(
     fileName: `studio-asset-${id}`,
     metadata: { purpose: 'studio-draft', draftOwnerId: userId },
     signal,
-    onProgress: percent => progress?.(Math.round(blob.size * percent / 100)),
-  }).then(result => ({
-    storagePath: result.storagePath,
-    contentType: result.contentType,
-    size: result.size,
-  })).catch(error => {
+    onProgress: percent => progress?.(id, Math.round(blob.size * percent / 100)),
+  }).then(result => {
+    const asset = { storagePath: result.storagePath, contentType: result.contentType, size: result.size };
+    createdAssets.push({ blob, asset });
+    return asset;
+  }).catch(error => {
     uploadedBlobs.delete(blob);
     assetIds.delete(blob);
     throw error;
@@ -174,14 +151,17 @@ export async function saveStudioCloudDraft<T>(
     else if (value && typeof value === 'object') Object.values(value as Record<string, unknown>).forEach(collectBytes);
   };
   collectBytes(project);
-  let uploadedBytes = 0;
-  const encoded = await encodeValue(project, userId, assets, bytes => {
-    onProgress?.(totalBytes ? Math.min(99, Math.round((uploadedBytes + bytes) / totalBytes * 100)) : 99);
-  }, signal);
-  if (signal?.aborted) throw new DOMException('Cloud draft sync cancelled.', 'AbortError');
+  const progressByAsset = new Map<string, number>();
+  const createdAssets: Array<{ blob: Blob; asset: CloudAsset }> = [];
+  const encoded = await encodeValue(project, userId, assets, (assetId, bytes) => {
+    progressByAsset.set(assetId, bytes);
+    const uploadedBytes = [...progressByAsset.values()].reduce((sum, value) => sum + value, 0);
+    onProgress?.(totalBytes ? Math.min(99, Math.round(uploadedBytes / totalBytes * 100)) : 99);
+  }, createdAssets, signal);
   const manifest: CloudManifest = { schemaVersion: 1, project: encoded, assets };
   const nextRevision = expectedRevision + 1;
   try {
+    if (signal?.aborted) throw new DOMException('Cloud draft sync cancelled.', 'AbortError');
     await runTransaction(db!, async transaction => {
       const latest = await transaction.get(draftRef);
       const latestRevision = latest.exists() && Number.isInteger(latest.data().revision) ? latest.data().revision : 0;
@@ -196,9 +176,11 @@ export async function saveStudioCloudDraft<T>(
       });
     });
   } catch (error) {
-    const oldPaths = new Set(Object.values(oldManifest?.assets || {}).map(asset => asset.storagePath));
-    const newlyUploaded = Object.values(assets).filter(asset => !oldPaths.has(asset.storagePath));
-    await Promise.allSettled(newlyUploaded.map(asset => deleteMediaFile(asset.storagePath)));
+    await Promise.allSettled(createdAssets.map(async ({ blob, asset }) => {
+      uploadedBlobs.delete(blob);
+      assetIds.delete(blob);
+      await deleteMediaFile(asset.storagePath);
+    }));
     throw error;
   }
   const currentPaths = new Set(Object.values(assets).map(asset => asset.storagePath));
