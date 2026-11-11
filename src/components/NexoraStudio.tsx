@@ -573,7 +573,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         context.textBaseline = 'middle';
         const lines: string[] = [];
         let line = '';
-        for (const word of segment.text.trim().split(/\\s+/)) {
+        for (const word of segment.text.trim().split(/\s+/)) {
           const candidate = line ? `${line} ${word}` : word;
           if (line && context.measureText(candidate).width > canvas.width - 100) { lines.push(line); line = word; } else line = candidate;
         }
