@@ -103,6 +103,18 @@ The current repository already contains Firebase-backed account/profile, feed an
 - Vault: private saved collections and personal archives with export and deletion controls.
 - Foundation: transparent grant programmes, eligibility, applications, reviewer separation, conflict-of-interest declarations, award decisions, and public accountability reporting. Financial disbursement requires verified payment operations.
 
+### 12. NEXORA Origin — Creative Provenance and Attribution
+- Create a durable, privacy-aware origin record for media created through NEXORA's camera, Studio, Lensverse, and other first-party creative tools.
+- Preserve source-to-derivative relationships for permitted remixes, edits, templates, sounds, and collaborative works; show a readable creative lineage without exposing private source material.
+- Attribute contributors using verified account IDs and explicit contribution roles; distinguish original creator, editor, remix creator, collaborator, and platform-generated assets.
+- Verify asset integrity with content hashes and append-only, server-authoritative provenance events. Never treat a hash as proof that depicted events are true or that a person owns every underlying right.
+- Import and validate interoperable C2PA Content Credentials when present; retain clear states for verified credentials, absent credentials, invalid credentials, and unknown provenance. Never label unverified uploads as authentic.
+- Record AI assistance and material edits only when supported by trustworthy tool-generated signals or creator disclosure; do not claim reliable AI detection from visual inspection alone.
+- Give creators controls over attribution display, remix permissions, source visibility, and opt-out/appeal workflows, subject to safety, legal, and platform integrity requirements.
+- Keep original media private where appropriate; expose only approved lineage metadata. Respect deletion, blocks, consent, moderation holds, and account export/deletion.
+- Reward eligible original contributions only through separately validated creator-economy rules; provenance alone must not mint Nex Coins or determine reputation.
+- Add tests for forged parent IDs, cross-account access, cyclic lineage, duplicate events, edited/re-encoded assets, deleted sources, private sources, C2PA validation failures, and attribution disputes.
+
 ## Suggested implementation sequence
 
 1. Audit existing code paths and classify each workstream as existing, partial, prototype, missing, or externally blocked.

@@ -36,6 +36,7 @@ export { setCreatorEconomyDisplayCurrency, getCreatorGiftAnalytics, createGiftCo
 export { getNgnPayoutProviderStatus, getNgnPayoutPolicyForFinance, getNgnPayoutOtpQueue, finalizeNgnPayoutTransfer, getCreatorPayoutComplianceQueue, configureNgnPayoutPolicy, reviewCreatorPayoutCompliance, getNgnBanks, resolveNgnBankAccount, setCreatorPayoutBeneficiary, getCreatorPayoutReadiness, requestCreatorPayout, paystackPayoutWebhook, reconcilePaystackCreatorPayouts } from './paystackPayouts.js';
 export { scheduleCreatorPost, cancelCreatorScheduledPost, listCreatorScheduledPosts, publishDueCreatorPosts } from './creatorScheduling.js';
 export { verifyFinalizedMedia } from './mediaLifecycle.js';
+export { recordMyRemixLineage } from './originLineage.js';
 export { getPublicPostPlayback } from './publicMediaPlayback.js';
 export { getStudioExportMp4Url, cleanupExpiredStudioMp4Exports } from './studioMp4Export.js';
 export { cleanupDeletedWorldWeaveMoment, cleanupUnpublishedWorldWeaveMedia } from './worldWeaveCleanup.js';

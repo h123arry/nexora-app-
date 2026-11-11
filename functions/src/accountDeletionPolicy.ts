@@ -1,4 +1,5 @@
 import type { Firestore } from 'firebase-admin/firestore';
+import { deleteOwnedOriginRecord } from './originCleanup.js';
 
 const PAGE_SIZE = 200;
 
@@ -17,6 +18,7 @@ export const ACCOUNT_OWNED_COLLECTIONS: ReadonlyArray<{ name: string; field: str
   { name: 'pages', field: 'ownerId' },
   { name: 'communities', field: 'ownerId' },
   { name: 'mediaAssets', field: 'ownerId' },
+  { name: 'mediaOrigins', field: 'ownerUid' },
   { name: 'academyProgress', field: 'userId' },
   { name: 'academyLessonNotes', field: 'userId' },
 ];
@@ -40,6 +42,13 @@ export async function deleteUserOwnedDocuments(db: Firestore, userId: string): P
     while (true) {
       const snapshot = await db.collection(target.name).where(target.field, '==', userId).limit(PAGE_SIZE).get();
       if (snapshot.empty) break;
+      if (target.name === 'mediaOrigins') {
+        for (const document of snapshot.docs) {
+          deleted += await deleteOwnedOriginRecord(db, document.id, userId);
+        }
+        if (snapshot.size < PAGE_SIZE) break;
+        continue;
+      }
       const batch = db.batch();
       snapshot.docs.forEach(document => batch.delete(document.ref));
       await batch.commit();

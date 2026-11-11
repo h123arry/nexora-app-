@@ -5,6 +5,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
 import { chooseStudioMp4Rendition, isOwnedStudioExportAsset, isStudioExportExpired } from './studioMp4ExportPolicy.js';
+import { deleteOwnedOriginRecord } from './originCleanup.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -25,6 +26,7 @@ async function deleteExportAsset(snapshot: DocumentSnapshot): Promise<void> {
     await bucket().file(sourcePath).delete({ ignoreNotFound: true });
   }
   await bucket().deleteFiles({ prefix: `processed/${ownerId}/${mediaId}/` });
+  await deleteOwnedOriginRecord(db, mediaId, ownerId);
   await snapshot.ref.delete();
 }
 

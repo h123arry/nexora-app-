@@ -278,6 +278,19 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.ownerId == request.auth.uid
         && resource.data.status == 'pending_upload';
     }
+    // NEXORA Origin records are created and advanced only by trusted media Functions.
+    // Owners can inspect their own private provenance; public projections use a separate future API.
+    match /mediaOrigins/{mediaId} {
+      allow get, list: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow create, update, delete: if false;
+
+      match /events/{eventId} {
+        allow get, list: if signedIn()
+          && get(/databases/$(database)/documents/mediaOrigins/$(mediaId)).data.ownerUid == request.auth.uid;
+        allow create, update, delete: if false;
+      }
+    }
+
     // Streaks and last-visit markers are server-owned. Owners may read their
     // own summary, but clients cannot forge streaks or reset activity dates.
     match /userRetention/{userId} {

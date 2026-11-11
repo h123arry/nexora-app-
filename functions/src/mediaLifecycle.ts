@@ -1,7 +1,10 @@
+import { createHash } from 'node:crypto';
+import { getStorage } from 'firebase-admin/storage';
 import { FieldValue, getFirestore } from 'firebase-admin/firestore';
 import { onObjectFinalized } from 'firebase-functions/v2/storage';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
 import { shouldAcceptFinalizedMediaTransition } from './mediaLifecyclePolicy.js';
+import { buildOriginUploadRecords } from './originPolicy.js';
 
 const app = getFirebaseAdminApp();
 const databaseId = resolveFirestoreDatabaseId();
@@ -19,7 +22,20 @@ function classify(contentType: string): 'image' | 'video' | 'audio' | null {
   return null;
 }
 
-export const verifyFinalizedMedia = onObjectFinalized(async event => {
+async function sha256FinalizedObject(bucketName: string, objectName: string, generation: string): Promise<string> {
+  const file = getStorage(app).bucket(bucketName).file(objectName, { generation });
+  const digest = createHash('sha256');
+  // Stream the immutable Cloud Storage generation; never load a full video into memory.
+  for await (const chunk of file.createReadStream()) digest.update(chunk as Buffer);
+  return digest.digest('hex');
+}
+
+export const verifyFinalizedMedia = onObjectFinalized({
+  retry: true,
+  timeoutSeconds: 540,
+  memory: '512MiB',
+  maxInstances: 10,
+}, async event => {
   const object = event.data;
   const match = object.name?.match(/^users\/([A-Za-z0-9_-]{1,128})\/media\/([A-Za-z0-9_-]{1,128})$/);
   if (!match || !object.name) return;
@@ -27,24 +43,33 @@ export const verifyFinalizedMedia = onObjectFinalized(async event => {
   const contentType = String(object.contentType || '').toLowerCase();
   const kind = classify(contentType);
   const size = Number(object.size || 0);
+  const generation = String(object.generation || '');
   const ref = db.collection('mediaAssets').doc(mediaId);
   const isValid = Boolean(
     kind
     && size > 0
     && size <= (kind ? MAX_BYTES[kind] : 0)
     && object.metadata?.ownerId === ownerId
-    && object.metadata?.mediaId === mediaId,
+    && object.metadata?.mediaId === mediaId
+    && /^\d{1,32}$/.test(generation)
+    && typeof object.bucket === 'string'
+    && object.bucket.length > 0,
   );
 
-  // Storage finalization is delivered at least once. Use a transaction so a
-  // duplicate or racing event cannot overwrite a later processing/ready state,
-  // or mutate another account's mediaAssets record if an ID is ever reused.
+  // Compute a real SHA-256 over the exact immutable object generation. This is
+  // streamed so large videos do not need to fit in function memory.
+  const contentDigest = isValid && kind
+    ? await sha256FinalizedObject(object.bucket, object.name, generation)
+    : null;
+
+  // Storage finalization is delivered at least once. The asset lifecycle,
+  // origin record, and generation-scoped event commit atomically.
   await db.runTransaction(async transaction => {
     const existing = await transaction.get(ref);
     const current = existing.data();
     if (!shouldAcceptFinalizedMediaTransition(current, ownerId)) return;
 
-    if (!isValid || !kind) {
+    if (!isValid || !kind || !contentDigest) {
       transaction.set(ref, {
         id: mediaId,
         ownerId,
@@ -56,10 +81,45 @@ export const verifyFinalizedMedia = onObjectFinalized(async event => {
       return;
     }
 
-    // This worker verifies the finalized object and records a durable uploaded
-    // state. A configured transcoder may later advance uploaded -> processing
-    // -> ready. No fake duration, thumbnail, moderation or playback variant
-    // is written here.
+    const originRef = db.collection('mediaOrigins').doc(mediaId);
+    const originEventId = `generation_${generation}`;
+    const eventRef = originRef.collection('events').doc(originEventId);
+    const [originSnapshot, eventSnapshot] = await Promise.all([
+      transaction.get(originRef),
+      transaction.get(eventRef),
+    ]);
+    const records = buildOriginUploadRecords({
+      assetId: mediaId,
+      ownerUid: ownerId,
+      mediaGeneration: generation,
+      contentDigest,
+      contentType,
+      byteSize: size,
+      studioExport: object.metadata?.purpose === 'studio-export',
+    });
+
+    if (originSnapshot.exists) {
+      const prior = originSnapshot.data();
+      if (prior?.ownerUid !== ownerId
+        || prior?.mediaGeneration !== generation
+        || prior?.contentDigest !== contentDigest) {
+        throw new Error('Origin record conflicts with the finalized media generation.');
+      }
+    } else {
+      transaction.create(originRef, {
+        ...records.origin,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+    if (!eventSnapshot.exists) {
+      transaction.create(eventRef, {
+        ...records.event,
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+
+    // No fabricated duration, thumbnail, moderation or playback variant is written here.
     transaction.set(ref, {
       id: mediaId,
       ownerId,
@@ -67,7 +127,7 @@ export const verifyFinalizedMedia = onObjectFinalized(async event => {
       kind,
       contentType,
       size,
-      generation: object.generation || null,
+      generation,
       md5Hash: object.md5Hash || null,
       status: 'uploaded',
       uploadedAt: FieldValue.serverTimestamp(),
