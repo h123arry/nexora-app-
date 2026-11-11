@@ -222,34 +222,71 @@ export default function NexoraImagePlayer({
   })();
   
   const rawImages = images && images.length > 0 ? images : (image ? [image] : []);
-  const [displayImages, setDisplayImages] = useState<string[]>([]);
-  
+  const rawImagesKey = rawImages.join('\u0000');
+  // Keep resolved URLs by their original carousel index. Only the active image
+  // and its immediate successor are resolved, rather than every image at once.
+  const [displayImages, setDisplayImages] = useState<Array<string | undefined>>([]);
+
   useEffect(() => {
+    setCurrentImageIndex(0);
+    setDisplayImages([]);
+  }, [rawImagesKey]);
+
+  useEffect(() => {
+    if (rawImages.length === 0) {
+      setIsResolvingMedia(false);
+      setIsImageLoading(false);
+      setHasImageLoadError(true);
+      return;
+    }
+
     let active = true;
-    setIsResolvingMedia(true);
+    const indexes = [currentImageIndex, currentImageIndex + 1]
+      .filter((index, position, all) => index < rawImages.length && all.indexOf(index) === position);
+    const missingIndexes = indexes.filter(index => !displayImages[index]);
+
     setHasImageLoadError(false);
     setIsImageLoading(true);
-    Promise.all(rawImages.map(url => resolveMediaUrl(url)))
+    if (displayImages[currentImageIndex]) {
+      setIsResolvingMedia(false);
+    } else {
+      setIsResolvingMedia(true);
+    }
+
+    if (missingIndexes.length === 0) {
+      setIsResolvingMedia(false);
+      return () => { active = false; };
+    }
+
+    Promise.all(missingIndexes.map(async index => {
+      try {
+        return { index, url: await resolveMediaUrl(rawImages[index]) };
+      } catch {
+        // A failed adjacent prefetch must not prevent the visible image loading.
+        return { index, url: '' };
+      }
+    }))
       .then(resolved => {
-        if (active) {
-          setDisplayImages(resolved.filter(Boolean) as string[]);
-          setIsResolvingMedia(false);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setDisplayImages([]);
-          setIsResolvingMedia(false);
+        if (!active) return;
+        setDisplayImages(previous => {
+          const next = [...previous];
+          for (const item of resolved) next[item.index] = item.url || undefined;
+          return next;
+        });
+        setIsResolvingMedia(false);
+        if (resolved.some(item => item.index === currentImageIndex && !item.url)) {
           setIsImageLoading(false);
+          setHasImageLoadError(true);
         }
       });
+
     return () => { active = false; };
-  }, [rawImages.join(',')]);
+  }, [rawImagesKey, currentImageIndex]);
 
   useEffect(() => {
     setIsImageLoading(true);
     setHasImageLoadError(false);
-  }, [currentImageIndex, displayImages]);
+  }, [currentImageIndex]);
 
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
 
@@ -308,10 +345,10 @@ export default function NexoraImagePlayer({
       </div>
 
       {/* Carousel navigation controls if multiple images */}
-      {displayImages.length > 1 && (
+      {rawImages.length > 1 && (
         <>
           <div className="absolute top-4 right-4 z-20 bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full text-[10px] font-mono text-white font-bold border border-white/10 shadow-lg">
-            {currentImageIndex + 1} / {displayImages.length}
+            {currentImageIndex + 1} / {rawImages.length}
           </div>
           {currentImageIndex > 0 && (
             <button
@@ -321,7 +358,7 @@ export default function NexoraImagePlayer({
               ‹
             </button>
           )}
-          {currentImageIndex < displayImages.length - 1 && (
+          {currentImageIndex < rawImages.length - 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); setCurrentImageIndex(prev => prev + 1); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-black/80 backdrop-blur-md border border-white/20 text-white flex items-center justify-center transition-all cursor-pointer shadow-lg active:scale-90"
