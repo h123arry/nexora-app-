@@ -608,17 +608,58 @@ export default function MediaCreationEngine({
     e.target.value = '';
   };
 
-  const captureCameraSnapshot = () => {
-    requestPermission('camera', () => {
-      const snaps = [
-        'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80'
-      ];
-      const snapUrl = snaps[Math.floor(Math.random() * snaps.length)];
-      setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Captured high fidelity camera frame!' }));
-    });
+  const captureCameraSnapshot = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera capture is not supported by this browser. You can still upload a photo.' }));
+      return;
+    }
+
+    let stream: MediaStream | null = null;
+    try {
+      // Ask the browser for real camera access; never substitute stock imagery
+      // for a photo the user believes was captured from their device.
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false,
+      });
+      const video = document.createElement('video');
+      video.muted = true;
+      video.playsInline = true;
+      video.srcObject = stream;
+      await video.play();
+
+      if (!video.videoWidth || !video.videoHeight) {
+        await new Promise<void>((resolve, reject) => {
+          video.onloadedmetadata = () => resolve();
+          video.onerror = () => reject(new Error('The camera preview could not be opened.'));
+        });
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (!context) throw new Error('Photo capture is unavailable on this device.');
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const photo = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error('The camera photo could not be saved.')), 'image/jpeg', 0.92);
+      });
+      const photoUrl = trackObjectUrl(URL.createObjectURL(photo));
+      setSelectedImages(prev => [...prev, { url: photoUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera photo captured.' }));
+    } catch (error) {
+      const message = error instanceof Error && error.name === 'NotAllowedError'
+        ? 'Camera access was denied. Allow camera access in your browser settings and try again.'
+        : error instanceof Error && error.name === 'NotFoundError'
+          ? 'No camera was found on this device.'
+          : error instanceof Error
+            ? error.message
+            : 'Could not capture a photo. Please try again.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    } finally {
+      stream?.getTracks().forEach(track => track.stop());
+    }
   };
 
   const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
