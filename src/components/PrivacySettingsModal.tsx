@@ -212,7 +212,7 @@ export default function PrivacySettingsModal({
   const [selectedBlockedId, setSelectedBlockedId] = useState<string | null>(null);
 
   // 10. Restricted Accounts
-  const [restrictedUsers] = useState<any[]>([]);
+  const [restrictedUsers, setRestrictedUsers] = useState<any[]>([]);
 
   // 11. Hidden Chats PIN Configuration
   const [hiddenChats, setHiddenChats] = useState(() => {
@@ -310,8 +310,8 @@ export default function PrivacySettingsModal({
   }, [discoverability]);
 
   useEffect(() => {
-    if (!onUnblockUser) localStorage.setItem('nx_privacy_blocked', JSON.stringify(blockedUsers));
-  }, [blockedUsers, onUnblockUser]);
+    if (!userId && !onUnblockUser) localStorage.setItem('nx_privacy_blocked', JSON.stringify(blockedUsers));
+  }, [blockedUsers, onUnblockUser, userId]);
 
   useEffect(() => {
     localStorage.setItem('nx_privacy_hidden_chats', JSON.stringify(hiddenChats));
@@ -1130,7 +1130,7 @@ export default function PrivacySettingsModal({
                     <h4 className="text-sm font-bold text-white flex items-center gap-2">
                       <ShieldBan className="w-4 h-4 text-rose-400" /> Decentralized Connection Blacklists
                     </h4>
-                    <p className="text-[11px] text-zinc-400 mt-1 font-mono uppercase tracking-tight">Active ledger blocks. Blocked connections are strictly forbidden from establishing sockets with your node.</p>
+                    <p className="text-[11px] text-zinc-400 mt-1 font-mono uppercase tracking-tight">Saved block settings are applied to messaging and feed preferences. Other surfaces still require end-to-end enforcement verification.</p>
                   </div>
 
                   {/* Filters Header */}
@@ -1217,7 +1217,11 @@ export default function PrivacySettingsModal({
                             Lift Restriction
                           </button>
                         </div>
-                      ))}
+                      )) : (
+                        <p className="rounded-xl border border-dashed border-white/10 bg-black/20 p-3 text-[10px] leading-relaxed text-zinc-400">
+                          Restrict is not currently connected to account-level enforcement. Use Block User for the block controls saved to your account.
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
