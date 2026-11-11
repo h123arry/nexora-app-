@@ -26,8 +26,8 @@ export async function endorsePublicPostAsHelpful(
     const authorId = String(post.get('userId') || post.get('authorId') || '');
     if (!authorId) throw new Error('This post has no verifiable author.');
     if (authorId === uid) throw new Error('You cannot endorse your own post.');
-    const count = Number.isSafeInteger(post.get('helpfulnessCount')) && post.get('helpfulnessCount') >= 0
-      ? Number(post.get('helpfulnessCount')) : 0;
+    const rawCount = post.get('helpfulnessCount');
+    const count = Number.isSafeInteger(rawCount) && Number(rawCount) >= 0 ? Number(rawCount) : 0;
     if (endorsement.exists) return { endorsed: true, helpfulnessCount: count, changed: false };
     const used = Number(daily.get('count') || 0);
     if (used >= DAILY_LIMIT) throw new Error('You have reached the daily helpfulness endorsement limit.');
