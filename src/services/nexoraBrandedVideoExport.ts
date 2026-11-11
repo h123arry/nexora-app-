@@ -100,51 +100,39 @@ export async function exportNexoraBrandedVideo(
       if (settled) return;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const scale = Math.max(0.75, canvas.width / 1080);
-      const pad = Math.round(18 * scale);
+      const pad = Math.round(22 * scale);
       const fontSize = Math.round(Math.max(13, canvas.width * 0.018));
-      const brand = 'NEXORA';
       const handle = '@' + username.replace(/^@+/, '').slice(0, 32);
-      const logoSize = Math.round(fontSize * 1.35);
+      const logoSize = Math.round(fontSize * 1.65);
       context.save();
-      context.globalAlpha = 0.88;
-      context.font = '700 ' + fontSize + 'px Arial, sans-serif';
-      const brandWidth = context.measureText(brand).width;
-      context.font = '600 ' + Math.round(fontSize * 0.82) + 'px Arial, sans-serif';
+      context.globalAlpha = 0.9;
+      context.font = '600 ' + Math.round(fontSize * 0.9) + 'px Arial, sans-serif';
       const handleWidth = context.measureText(handle).width;
-      const pillWidth = pad * 3 + logoSize + brandWidth + handleWidth + pad * 1.5;
-      const pillHeight = Math.round(fontSize * 2.6);
-      const x = canvas.width - pillWidth - pad;
-      const y = canvas.height - pillHeight - pad;
-      context.fillStyle = 'rgba(5, 9, 20, 0.76)';
+      const pillHeight = Math.round(fontSize * 2.55);
+      const pillWidth = pad * 2.2 + logoSize + handleWidth + pad * 0.85;
+      const margin = Math.round(canvas.width * 0.035);
+      // TikTok-style alternating placement: the complete logo + creator handle
+      // moves together between opposite corners as the video plays.
+      const positionSlot = Math.floor(video.currentTime / 3) % 2;
+      const atTopLeft = positionSlot === 0;
+      const x = atTopLeft ? margin : canvas.width - pillWidth - margin;
+      const y = atTopLeft ? margin : canvas.height - pillHeight - margin;
+      context.fillStyle = 'rgba(5, 9, 20, 0.72)';
       context.beginPath();
       context.roundRect(x, y, pillWidth, pillHeight, pillHeight / 2);
       context.fill();
-      context.strokeStyle = 'rgba(168, 85, 247, 0.62)';
-      context.lineWidth = Math.max(1, scale);
-      context.stroke();
       const centerY = y + pillHeight / 2;
-      const logoX = x + pad;
-      context.fillStyle = '#050914';
-      context.beginPath();
-      context.roundRect(logoX, centerY - logoSize / 2, logoSize, logoSize, Math.round(logoSize * 0.22));
-      context.fill();
+      const logoX = x + pad * 0.65;
       if (brandLogo.complete && brandLogo.naturalWidth > 0) {
         context.drawImage(brandLogo, logoX, centerY - logoSize / 2, logoSize, logoSize);
-      } else {
-        context.fillStyle = '#A855F7';
-        context.font = '900 ' + Math.round(logoSize * 0.66) + 'px Arial, sans-serif';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
-        context.fillText('N', logoX + logoSize / 2, centerY + 0.5);
       }
       context.textAlign = 'left';
-      context.font = '800 ' + fontSize + 'px Arial, sans-serif';
-      const brandX = logoX + logoSize + pad * 0.55;
+      context.textBaseline = 'middle';
+      context.font = '600 ' + Math.round(fontSize * 0.9) + 'px Arial, sans-serif';
       context.fillStyle = '#F5F7FF';
-      context.fillText(brand, brandX, centerY);
-      context.font = '600 ' + Math.round(fontSize * 0.82) + 'px Arial, sans-serif';
-      context.fillStyle = '#C4B5FD';
-      context.fillText(handle, brandX + brandWidth + pad * 0.8, centerY);
+      context.shadowColor = 'rgba(0, 0, 0, 0.55)';
+      context.shadowBlur = Math.max(2, 4 * scale);
+      context.fillText(handle, logoX + logoSize + pad * 0.55, centerY);
       context.restore();
       const progress = Math.min(92, Math.round((video.currentTime / Math.max(1, video.duration)) * 92));
       if (progress !== lastProgress) { lastProgress = progress; onProgress?.(progress); }
