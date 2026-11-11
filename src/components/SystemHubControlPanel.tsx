@@ -307,11 +307,11 @@ export default function SystemHubControlPanel({
             <div className="grid grid-cols-2 gap-1 mt-2.5 pt-2 border-t border-white/5 font-mono text-[10px]">
               <div>
                 <span className="block text-zinc-600 text-[8px] uppercase">Local frame sample</span>
-                <span className="font-bold text-white text-xs">{fps} FPS</span>
+                <span className="font-bold text-white text-xs">Not measured</span>
               </div>
               <div>
                 <span className="block text-zinc-600 text-[8px] uppercase">Local timing sample</span>
-                <span className="font-bold text-violet-400 text-xs">{latency}ms</span>
+                <span className="font-bold text-violet-400 text-xs">Not measured</span>
               </div>
             </div>
           </div>
@@ -757,81 +757,31 @@ export default function SystemHubControlPanel({
                   } text-left flex flex-col justify-between h-28`}>
                     <div className="flex items-center justify-between text-[11px] font-sans font-black uppercase">
                       <span>IndexedDB Media Cache</span>
-                      <span className="font-mono text-cyan-400">{cacheSize}</span>
+                      <span className="font-mono text-cyan-400">Not measured</span>
                     </div>
                     
                     <p className="text-[10px] text-zinc-500 font-sans mt-1">
                       Stores local audio voice drafts, logs, and video indexes inside browser database space.
                     </p>
 
-                    <button
-                      disabled={isFlushingCache || cacheFlushed}
-                      onClick={handleFlushCache}
-                      className={`w-full py-1.5 rounded-xl text-[10px] font-mono font-bold border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                        cacheFlushed
-                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                          : isHighContrast
-                            ? 'border-white hover:bg-white hover:text-black'
-                            : 'bg-white/5 hover:bg-white/10 text-zinc-300 border-white/5'
-                      }`}
-                    >
-                      {isFlushingCache ? (
-                        <>
-                          <Activity className="w-3 h-3 animate-spin text-violet-400" />
-                          CLEANING MEMORY INDEX...
-                        </>
-                      ) : cacheFlushed ? (
-                        <>
-                          <Check className="w-3 h-3 text-emerald-400" />
-                          CACHES FULLY FLUSHED
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="w-3 h-3" />
-                          FLUSH MEDIA BLOB CACHE
-                        </>
-                      )}
-                    </button>
+                    <p className="rounded-xl border border-dashed border-white/10 p-3 text-[10px] leading-relaxed text-zinc-400">
+                      Cache inspection and clearing are not connected to the browser's actual IndexedDB stores yet. No cache size or successful flush is reported here.
+                    </p>
                   </div>
 
                 </div>
 
-                {/* 3. Performance stats log */}
-                <div className={`p-4 rounded-2xl ${
-                  isHighContrast ? 'border border-white' : 'bg-black/35 border border-white/5'
-                } space-y-2`}>
+                {/* Performance telemetry is intentionally not simulated. */}
+                <div className="rounded-2xl border border-white/5 bg-black/35 p-4 space-y-2">
                   <div className="flex items-center justify-between text-[11px] font-sans font-black text-white uppercase">
                     <span>Client Render Health</span>
-                    <span className="text-[9px] font-mono text-[#8B5CF6]">SYSTEM RE-RENDERS OPTIMIZED</span>
+                    <span className="text-[9px] font-mono text-zinc-500">NOT CONNECTED</span>
                   </div>
-                  
-                  <div className="space-y-1 text-[10px] font-mono text-zinc-400">
-                    <p className="flex justify-between">
-                      <span>Browser Canvas Thread (60Hz limit)</span>
-                      <span className="text-emerald-400 font-bold">Stable 60 FPS</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span>VOH AI API Proxies Latency</span>
-                      <span className="text-violet-400 font-bold">{latency}ms</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span>Interactive Voice Audio Chunking</span>
-                      <span className="text-white font-bold">0.02ms latency</span>
-                    </p>
-                    <p className="flex justify-between">
-                      <span>Local IndexedDB Key Size</span>
-                      <span className="text-zinc-500">12,408 bytes</span>
-                    </p>
-                  </div>
+                  <p className="text-[10px] leading-relaxed text-zinc-400">
+                    Frame rate, AI service latency, audio chunk timing and IndexedDB byte usage are not measured by this panel. No simulated performance figures are displayed.
+                  </p>
                 </div>
 
-              </div>
-            )}
-
-            {/* TAB CONTENT: PRIVACY & TRUST */}
-            {activeTab === 'trust' && (
-              <div className="space-y-5 animate-fade-in text-left">
-                
                 {/* 1. Privacy Statement Card */}
                 <div className={`p-4 rounded-2xl ${
                   isHighContrast ? 'border border-white bg-black' : 'bg-violet-600/5 border border-white/10'
