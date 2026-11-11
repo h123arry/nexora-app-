@@ -63,3 +63,12 @@ Make participation, contribution quality, feed ranking, and safety outcomes unde
 - Each account is limited to 20 new endorsements per UTC day. The limit is a friction control, not a claim that endorsements prove factual accuracy.
 - Feed cards expose a lightweight “Helpful” action; the control is disabled for the post author and after a successful endorsement in the current card session.
 - Emulator tests cover idempotency, self-endorsement, private-post rejection, malformed IDs, and daily limits.
+
+
+## Seasonal platform events
+
+- Added a separate platform-managed seasonal event collection; ordinary Circle events remain distinct.
+- Only accounts carrying trusted admin/founder claims can publish official events.
+- Members can list upcoming/active events and RSVP through authenticated callables. Attendance markers are per-account and counts update transactionally.
+- Events support bounded date windows, optional capacity, duplicate-safe RSVP, withdrawal, and automatic completion when listing discovers an expired event.
+- No event rewards, NEX issuance, attendance claims, or production events are fabricated.
