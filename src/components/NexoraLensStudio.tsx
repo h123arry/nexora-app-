@@ -605,7 +605,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   };
 
   const categoryLenses = category === 'For you'
-    ? LENSES.filter(item => item.category === 'For you' || favourites.includes(item.id))
+    ? LENSES.filter(item => ['natural', 'violet-glow', 'soft-light', 'royal-crown', 'cat-mode', 'puppy-face'].includes(item.id) || favourites.includes(item.id))
     : category === 'Favourites'
       ? LENSES.filter(item => favourites.includes(item.id))
       : LENSES.filter(item => item.category === category);
