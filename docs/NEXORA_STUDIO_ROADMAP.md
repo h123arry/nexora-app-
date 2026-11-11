@@ -86,7 +86,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Current project drafts are local to the same browser/device; cloud draft sync is not implemented.
 - The shared timeline now seeks across video clips and shows independently timed visual/audio lanes. Continuous playback synchronization of soundtrack, voiceover, and every visual lane is still in progress.
 - Fade-through-black is not a cross-dissolve.
-- The editor supports multiple title layers; a dedicated caption/subtitle track with timed segments remains future work.
+- The editor supports multiple title layers and a dedicated timed subtitle track. Automatic speech-to-text transcription and continuous synchronized playback across all audio and visual lanes remain future work.
 - Browser export has not been manually verified on every supported mobile browser; CI type-check/build and repository tests do not replace device acceptance testing.
 
 ## Release gates
