@@ -5,6 +5,7 @@ import { appendHistorySnapshot, reorderById } from '../utils/studioHistoryPolicy
 import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer } from '../utils/studioTextLayerPolicy';
 import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
+import { getStudioClipTimelinePosition, normalizeStudioTimelineTime } from '../utils/studioTimelinePolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
@@ -95,6 +96,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const voiceoverStreamRef = useRef<MediaStream | null>(null);
   const voiceoverChunksRef = useRef<Blob[]>([]);
   const draggedClipIdRef = useRef<string | null>(null);
+  const pendingSeekRef = useRef<{ clipId: string; localTime: number } | null>(null);
   const historyRef = useRef<{ past: StudioSnapshot[]; future: StudioSnapshot[]; current: StudioSnapshot | null; applying: boolean }>({ past: [], future: [], current: null, applying: false });
   const selectedClip = clips.find(clip => clip.id === selectedId) || clips[0] || null;
   const selectedTextLayer = textLayers.find(layer => layer.id === selectedTextLayerId) || textLayers[0] || null;
@@ -103,6 +105,15 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const selectedClipIndex = selectedClip ? clips.findIndex(clip => clip.id === selectedClip.id) : -1;
   const selectedClipGlobalOffset = useMemo(() => clips.slice(0, Math.max(0, selectedClipIndex)).reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips, selectedClipIndex]);
   const totalDuration = useMemo(() => clips.reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips]);
+  const timelineClipSegments = useMemo(() => {
+    let cursor = 0;
+    return clips.map(clip => {
+      const start = cursor;
+      const duration = Math.max(0, clip.end - clip.start);
+      cursor += duration;
+      return { clip, start, end: cursor, duration };
+    });
+  }, [clips]);
   const snapshot = useMemo<StudioSnapshot>(() => ({ clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition }), [clips, selectedId, soundtrack, voiceover, caption, overlay, overlayColor, textLayers, selectedTextLayerId, imageLayers, selectedImageLayerId, subtitleSegments, selectedSubtitleSegmentId, aspectRatio, transition, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, musicDuckingLevel, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, voiceoverStart, overlayStart, overlayEnd, overlayPosition]);
 
   useEffect(() => {
@@ -284,6 +295,22 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     window.addEventListener('keydown', handleHistoryShortcut);
     return () => window.removeEventListener('keydown', handleHistoryShortcut);
   }, [undo, redo]);
+
+  const seekToGlobalTime = useCallback((requestedTime: number) => {
+    if (!clips.length || totalDuration <= 0) return;
+    const position = getStudioClipTimelinePosition(clips, requestedTime);
+    if (!position) return;
+    pendingSeekRef.current = { clipId: position.clipId, localTime: position.localTime };
+    setPreviewGlobalTime(position.globalTime);
+    setPlaying(false);
+    if (selectedId === position.clipId && videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = position.localTime;
+      pendingSeekRef.current = null;
+    } else {
+      setSelectedId(position.clipId);
+    }
+  }, [clips, selectedId, totalDuration]);
 
   const getUrl = useCallback((blob: Blob) => {
     const url = URL.createObjectURL(blob);
@@ -756,10 +783,14 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         <main className="grid min-h-0 flex-1 grid-rows-[minmax(220px,1fr)_auto] overflow-y-auto lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-1">
           <section className="flex min-h-[260px] flex-col items-center justify-center gap-3 border-b border-[#292244] bg-[radial-gradient(ellipse_at_top,rgba(75,16,242,.16),transparent_65%)] p-4 lg:border-b-0 lg:border-r">
             <div className={`relative flex ${aspectRatio === 'portrait' ? 'aspect-[9/16] max-w-sm' : aspectRatio === 'square' ? 'aspect-square max-w-2xl' : 'aspect-video max-w-5xl'} w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34265E] bg-black shadow-[0_20px_80px_rgba(75,16,242,.14)]`}>
-              {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="h-full w-full object-contain" playsInline controls muted={muted} onLoadedMetadata={event => { event.currentTarget.currentTime = selectedClip.start; setPreviewGlobalTime(selectedClipGlobalOffset); }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end) { event.currentTarget.pause(); setPlaying(false); } }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
+              {selectedClip ? <video ref={videoRef} key={selectedClip.id} src={previewUrl} className="h-full w-full object-contain" playsInline controls muted={muted} onLoadedMetadata={event => { const pending = pendingSeekRef.current; const localTime = pending?.clipId === selectedClip.id ? pending.localTime : selectedClip.start; event.currentTarget.currentTime = Math.min(selectedClip.end, Math.max(selectedClip.start, localTime)); if (pending?.clipId === selectedClip.id) pendingSeekRef.current = null; setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); }} onTimeUpdate={event => { setPreviewGlobalTime(selectedClipGlobalOffset + Math.max(0, event.currentTarget.currentTime - selectedClip.start)); if (event.currentTarget.currentTime >= selectedClip.end) { event.currentTarget.pause(); setPlaying(false); } }} onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}/> : <div className="px-6 text-center"><Clapperboard size={42} className="mx-auto mb-3 text-violet-300"/><p className="font-semibold">Your creative timeline starts here</p><p className="mt-1 text-xs text-[#8E88A7]">Add video clips to begin editing.</p></div>}
               {imageLayers.filter(layer => isStudioImageLayerVisible(layer, previewGlobalTime, totalDuration)).map(layer => <img key={layer.id} src={getUrlForClip(layer.blob)} alt={layer.name} draggable={false} className="pointer-events-none absolute z-[5] max-w-none object-contain" style={{ left: `${layer.x * 100}%`, top: `${layer.y * 100}%`, width: `${layer.scale * 100}%`, transform: `translate(-50%, -50%) rotate(${layer.rotation}deg)`, opacity: layer.opacity }}/>) }
               {subtitleSegments.filter(segment => previewGlobalTime >= segment.start && previewGlobalTime < segment.end && segment.text.trim()).map(segment => <div key={segment.id} className="pointer-events-none absolute bottom-[12%] left-[5%] z-[8] w-[90%] rounded-lg bg-[#050914]/80 px-3 py-2 text-center text-sm font-semibold text-white shadow-lg">{segment.text}</div>)}
               {textLayers.map(layer => { const frame = getStudioTextLayerFrame(layer, previewGlobalTime, totalDuration); if (!frame) return null; return <div key={layer.id} className="pointer-events-none absolute z-10 max-w-[90%] whitespace-pre-wrap text-center font-black drop-shadow-[0_2px_8px_rgba(0,0,0,.9)]" style={{ left: '50%', top: layer.position === 'top' ? '9%' : layer.position === 'center' ? '50%' : undefined, bottom: layer.position === 'bottom' ? '9%' : undefined, transform: `translate(-50%, -50%) translateY(${frame.offsetY}px) rotate(${layer.rotation + frame.rotation}deg) scale(${frame.scale})`, fontSize: `${Math.max(12, layer.fontSize * (aspectRatio === 'portrait' ? 0.48 : 0.62))}px`, opacity: frame.opacity, color: layer.color }}>{layer.text}</div>; })}
+            </div>
+            <div className="w-full max-w-3xl space-y-1 rounded-xl border border-[#292244] bg-[#100C20] px-3 py-2">
+              <div className="flex items-center justify-between text-[10px] text-[#A39BBF]"><span>Shared playhead</span><span className="tabular-nums">{previewGlobalTime.toFixed(1)}s / {totalDuration.toFixed(1)}s</span></div>
+              <input aria-label="Seek across the full Studio timeline" type="range" min="0" max={Math.max(0,totalDuration)} step="0.05" value={Math.min(previewGlobalTime,totalDuration)} disabled={!totalDuration} onChange={event => seekToGlobalTime(Number(event.target.value))} className="w-full accent-violet-500"/>
             </div>
             <div className="flex items-center gap-2">
               <button type="button" onClick={togglePreview} disabled={!selectedClip} className="rounded-full border border-violet-400/40 bg-violet-500/15 p-3 text-violet-100"><span className="sr-only">{playing ? 'Pause' : 'Play'}</span>{playing ? <Pause size={18}/> : <Play size={18}/>}</button>
@@ -771,6 +802,13 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           <aside className="flex min-h-0 flex-col gap-4 overflow-y-auto p-4 sm:p-5">
             <div className="space-y-2">
               <div className="flex items-center justify-between"><h2 className="text-sm font-bold">Timeline</h2><label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-violet-400/30 bg-violet-500/10 px-3 py-2 text-xs font-semibold text-violet-100"><Plus size={14}/> Add clips<input className="hidden" type="file" accept="video/*" multiple onChange={event => { if (event.target.files) void addVideoFiles(event.target.files); event.target.value=''; }}/></label></div>
+              <div className="space-y-3 rounded-xl border border-[#292244] bg-[#0B0916] p-3">
+                <div className="flex items-center justify-between text-[10px] text-[#A39BBF]"><span>All tracks · shared time</span><span className="tabular-nums">{previewGlobalTime.toFixed(1)}s</span></div>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2"><span className="w-14 shrink-0 text-[9px] text-[#8E88A7]">Video</span><div className="relative flex h-7 min-w-0 flex-1 overflow-hidden rounded-md bg-[#171329]">{timelineClipSegments.map(segment => <button key={segment.clip.id} type="button" title={`${segment.clip.name} · ${segment.duration.toFixed(1)}s`} onClick={() => seekToGlobalTime(segment.start)} className={`h-full min-w-0 border-r border-[#090714] text-[8px] font-semibold ${selectedId===segment.clip.id?'bg-violet-500/70 text-white':'bg-violet-950 text-violet-200'}`} style={{width:`${totalDuration ? segment.duration/totalDuration*100 : 0}%`}}>{segment.duration >= 1.5 ? segment.clip.name.slice(0,12) : ''}</button>)}</div></div>
+                  {[{label:'Audio',items:[...(soundtrack?[{id:'soundtrack',name:'Music',start:0,end:totalDuration}]:[]),...(voiceover?[{id:'voiceover',name:'Voiceover',start:voiceoverStart,end:Math.min(totalDuration,voiceoverStart+Math.max(1,totalDuration-voiceoverStart))}]:[])] ,color:'bg-emerald-500/60'},{label:'Images',items:imageLayers.map(layer=>({id:layer.id,name:layer.name,start:layer.start,end:layer.end||totalDuration})),color:'bg-fuchsia-500/60'},{label:'Text',items:textLayers.map(layer=>({id:layer.id,name:layer.text||'Text',start:layer.start,end:layer.end||totalDuration})),color:'bg-amber-400/70'},{label:'Subs',items:subtitleSegments.map(segment=>({id:segment.id,name:segment.text,start:segment.start,end:segment.end})),color:'bg-sky-400/70'}].map(track => <div key={track.label} className="flex items-center gap-2"><span className="w-14 shrink-0 text-[9px] text-[#8E88A7]">{track.label}</span><div className="relative h-5 min-w-0 flex-1 overflow-hidden rounded-md bg-[#171329]">{track.items.map(item=>{const start=Math.max(0,Math.min(totalDuration,item.start));const end=Math.max(start,Math.min(totalDuration,item.end));const width=totalDuration?(end-start)/totalDuration*100:0;return <button key={item.id} type="button" title={`${item.name} · ${start.toFixed(1)}–${end.toFixed(1)}s`} onClick={()=>seekToGlobalTime(start)} className={`absolute inset-y-0 rounded-sm ${track.color}`} style={{left:`${totalDuration?start/totalDuration*100:0}%`,width:`${width}%`,minWidth:width>0?'2px':0}} aria-label={`Seek to ${track.label} ${item.name}`}/>})}</div></div>)}
+                </div>
+              </div>
               <div className="space-y-2">
                 {clips.map((clip,index) => <div key={clip.id} draggable onDragStart={event=>{draggedClipIdRef.current=clip.id; event.dataTransfer.effectAllowed="move"; event.dataTransfer.setData("text/plain",clip.id);}} onDragOver={event=>event.preventDefault()} onDrop={event=>{event.preventDefault(); const sourceId=event.dataTransfer.getData("text/plain")||draggedClipIdRef.current; if(sourceId) reorderClip(sourceId,clip.id); draggedClipIdRef.current=null;}} onDragEnd={()=>{draggedClipIdRef.current=null;}} className={`cursor-grab rounded-xl border p-3 active:cursor-grabbing ${selectedId===clip.id?'border-violet-400/60 bg-violet-500/10':'border-[#292244] bg-[#100C20]'}`}>
                   <button type="button" onClick={() => setSelectedId(clip.id)} className="flex w-full items-center gap-2 text-left"><Film size={15} className="shrink-0 text-violet-300"/><span className="min-w-0 flex-1 truncate text-xs font-semibold">{index+1}. {clip.name}</span><span className="text-[10px] text-[#8E88A7]">{(clip.end-clip.start).toFixed(1)}s</span></button>
