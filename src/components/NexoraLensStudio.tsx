@@ -356,6 +356,9 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
   const [beautyIntensity, setBeautyIntensity] = useState(32);
   const beautyIntensityRef = useRef(32);
   beautyIntensityRef.current = beautyIntensity;
+  const [effectIntensity, setEffectIntensity] = useState(100);
+  const effectIntensityRef = useRef(100);
+  effectIntensityRef.current = effectIntensity;
   const [favourites, setFavourites] = useState<string[]>(() => {
     try {
       const saved = JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]');
@@ -422,8 +425,14 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             context.translate(canvas.width, 0);
             context.scale(-1, 1);
           }
-          context.filter = lens.filter;
           context.drawImage(video, 0, 0, canvas.width, canvas.height);
+          if (effectIntensityRef.current > 0 && lens.filter !== 'none') {
+            context.save();
+            context.globalAlpha = effectIntensityRef.current / 100;
+            context.filter = lens.filter;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            context.restore();
+          }
           context.filter = 'none';
           if (landmarker && now - lastDetectAt >= (constrainedDevice ? 100 : 66)) {
             try {
@@ -432,7 +441,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
             } catch { latestLandmarks = null; }
             lastDetectAt = now;
           }
-          if (latestLandmarks && (lens.id === 'soft-light' || lens.id === 'violet-glow') && beautyIntensityRef.current > 0) {
+          if (latestLandmarks && lens.category === 'Beauty' && beautyIntensityRef.current > 0) {
             const forehead = point(latestLandmarks, 10, canvas.width, canvas.height);
             const chin = point(latestLandmarks, 152, canvas.width, canvas.height);
             const leftCheek = point(latestLandmarks, 234, canvas.width, canvas.height);
@@ -609,6 +618,13 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         </div>
       </div>
 
+      <div className="flex items-center justify-between gap-2 px-1">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-white">Lensverse</p>
+          <p className="text-[10px] text-[#8E88A7]">{visibleLenses.length} lenses in this collection · 300 original NEXORA lenses</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-[#7138FF]/40 bg-[#7138FF]/15 px-2.5 py-1 text-[9px] font-semibold text-[#D7C7FF]">NEXORA ORIGINALS</span>
+      </div>
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8E88A7]" />
         <input value={searchQuery} onChange={event => setSearchQuery(event.target.value)} placeholder="Find a lens" aria-label="Search lenses" className="w-full rounded-xl border border-white/10 bg-[#120E2B] py-2.5 pl-9 pr-3 text-xs text-white outline-none placeholder:text-[#756D91] focus:border-[#8A3FFC]" />
@@ -618,14 +634,19 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           <button key={item} type="button" onClick={() => setCategory(item)} className={`shrink-0 rounded-full border px-3.5 py-2 text-xs font-semibold transition ${category === item ? 'border-[#A78BFA] bg-[#7138FF]/25 text-white' : 'border-white/10 bg-white/[0.04] text-[#A39BBF]'}`}>{item}</button>
         ))}
       </div>
-      {(category === 'Beauty' || ['soft-light', 'violet-glow'].includes(activeLens)) && (
+      <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
+        <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Effect strength</span>
+        <input type="range" min="0" max="100" value={effectIntensity} onChange={event => setEffectIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Lens effect strength" />
+        <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{effectIntensity}%</span>
+      </label>
+      {(category === 'Beauty' || LENSES.find(item => item.id === activeLens)?.category === 'Beauty') && (
         <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
           <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Skin softening</span>
           <input type="range" min="0" max="100" value={beautyIntensity} onChange={event => setBeautyIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Skin softening intensity" />
           <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{beautyIntensity}%</span>
         </label>
       )}
-      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]">
+      <div className="flex snap-x snap-mandatory gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin]" aria-label="Horizontally scrollable lens previews">
         {visibleLenses.map(lens => {
           const selected = activeLens === lens.id;
           const Icon = lens.sticker === 'crown' ? Crown : lens.sticker === 'cat' ? Cat : lens.sticker === 'glasses' ? Glasses : lens.sticker === 'hearts' ? Heart : lens.sticker === 'halo' ? Sun : lens.sticker === 'sparkles' ? Sparkles : lens.id === 'midnight' || lens.id === 'mono' ? Moon : Star;
