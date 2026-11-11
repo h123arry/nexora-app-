@@ -19,7 +19,10 @@ export async function voteOnPublicPostPoll(db: Firestore, uid: string, postId: s
   const postRef = db.collection('posts').doc(postId);
   const voteRef = postRef.collection('pollVotes').doc(uid);
   return db.runTransaction(async tx => {
-    const [post, existingVote] = await Promise.all([tx.get(postRef), tx.get(voteRef)]);
+    // Keep reads ordered inside this contention-sensitive transaction. The emulator
+    // can otherwise surface a stale missing-post snapshot when same-account votes race.
+    const post = await tx.get(postRef);
+    const existingVote = await tx.get(voteRef);
     if (!post.exists || post.get('audience') !== 'public') throw new Error('This public poll is unavailable.');
     const poll = post.get('interactivePoll');
     if (!poll || typeof poll.question !== 'string') throw new Error('This post does not contain a valid poll.');
