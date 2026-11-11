@@ -8,6 +8,7 @@ import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getNextStudioClipTimelinePosition, getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
 import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
 import { getStudioExportDimensions, type StudioExportResolution } from '../utils/studioExportPolicy';
+import { getStudioExportValidationError } from '../utils/studioExportValidationPolicy';
 import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
@@ -48,6 +49,38 @@ async function loadProject(projectKey: string): Promise<StudioProject | null> {
   });
   db.close();
   return value;
+}
+
+async function inspectStudioExport(blob: Blob): Promise<{ durationSeconds: number; width: number; height: number }> {
+  const url = URL.createObjectURL(blob);
+  const video = document.createElement('video');
+  video.preload = 'metadata';
+  video.muted = true;
+  try {
+    return await new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => reject(new Error('The exported video metadata could not be read. Your Studio draft is safe; try rendering again.')), 12_000);
+      const cleanup = () => {
+        window.clearTimeout(timeout);
+        video.removeAttribute('src');
+        video.load();
+        URL.revokeObjectURL(url);
+      };
+      video.onloadedmetadata = () => {
+        const metadata = { durationSeconds: video.duration, width: video.videoWidth, height: video.videoHeight };
+        cleanup();
+        resolve(metadata);
+      };
+      video.onerror = () => {
+        cleanup();
+        reject(new Error('The exported video could not be decoded for validation. Your Studio draft is safe; try rendering again.'));
+      };
+      video.src = url;
+      video.load();
+    });
+  } catch (error) {
+    URL.revokeObjectURL(url);
+    throw error;
+  }
 }
 
 function makeId(): string {
@@ -891,18 +924,30 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   };
 
   const handleExport = async () => {
-    setRendering(true); setMessage('Rendering your timeline…');
+    setRendering(true); setExportBlob(null); setMessage('Rendering and validating your timeline…');
     try {
       const blob = await renderProject();
-      setMessage(`Export ready · ${(blob.size / (1024 * 1024)).toFixed(1)} MB · WebM`);
+      const dimensions = getStudioExportDimensions(aspectRatio, exportResolution);
+      const overlapSeconds = transition === 'cross-dissolve'
+        ? clips.slice(0, -1).reduce((sum, clip, index) => sum + Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clip.end - clip.start), Math.max(0, clips[index + 1].end - clips[index + 1].start)), 0)
+        : 0;
+      const expectedDuration = Math.max(0, totalDuration - overlapSeconds);
+      const metadata = await inspectStudioExport(blob);
+      const validationError = getStudioExportValidationError({
+        mimeType: blob.type,
+        sizeBytes: blob.size,
+        ...metadata,
+      }, { durationSeconds: expectedDuration, ...dimensions });
+      if (validationError) throw new Error(validationError);
+      setMessage(`Export verified · ${(blob.size / (1024 * 1024)).toFixed(1)} MB · ${dimensions.width}×${dimensions.height} · WebM`);
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       anchor.href = url;
       anchor.download = `nexora-studio-${Date.now()}.webm`;
       anchor.click();
-      URL.revokeObjectURL(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       setExportBlob(blob);
-    } catch (error) { setMessage(error instanceof Error ? error.message : 'Export failed.'); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : 'Export failed. Your Studio draft remains saved.'); }
     finally { setRendering(false); }
   };
   const [exportBlob, setExportBlob] = useState<Blob | null>(null);
