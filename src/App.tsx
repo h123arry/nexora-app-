@@ -28,7 +28,6 @@ import {
   INITIAL_MESSAGES, 
   INITIAL_NOTIFICATIONS
 } from './data/database';
-import { ActivityService } from './services/activityService';
 import { 
   getGlobalPostsPage,
   addPublicPostCommentDb,
@@ -42,7 +41,6 @@ import {
   removeFollow
 } from './services/dataService';
 import { ProfileService } from './services/firebase/profileService';
-import { CommunityService } from './services/firebase/communityService';
 import { db } from './lib/firebase';
 import { functions } from './lib/firebase';
 import { mergeRealtimePosts } from './services/posts/postCollection';
@@ -96,7 +94,6 @@ const SettingsView = lazy(() => import('./components/SettingsView'));
 import NexoraLoader from './components/NexoraLoader';
 import OfflineBanner from './components/OfflineBanner';
 import PwaUpdatePrompt from './components/PwaUpdatePrompt';
-import { ProfileEngine } from './services/voh/profileEngine';
 
 export default function App() {
   const { firebaseUser, user: firebaseProfile, initializing: authInitializing, error: authError, logout } = useFirebase();
@@ -190,9 +187,13 @@ export default function App() {
     if (!inviteToken) return;
     window.history.replaceState({}, '', window.location.pathname + window.location.search);
     let active = true;
-    CommunityService.redeemInvite(inviteToken)
+    import('./services/firebase/communityService')
+      .then(({ CommunityService }) => {
+        if (!active) return null;
+        return CommunityService.redeemInvite(inviteToken);
+      })
       .then(result => {
-        if (!active) return;
+        if (!active || !result) return;
         window.dispatchEvent(new CustomEvent('toast', {
           detail: result.joined ? 'You joined the Circle from your invitation.' : 'You are already a member of this Circle.',
         }));
@@ -1648,9 +1649,13 @@ export default function App() {
           const updatedPost = { ...p, shares: (p.shares || 0) + 1 };
           savePostToDb(updatedPost);
           if (p.userId && p.userId !== currentUser.id) {
-            ActivityService.recordActivityEvent(p.userId, 'share_received', postId, { fromUserId: currentUser.id });
+            void import('./services/activityService').then(({ ActivityService }) =>
+              ActivityService.recordActivityEvent(p.userId!, 'share_received', postId, { fromUserId: currentUser.id })
+            ).catch(error => console.warn('Unable to record share activity.', error));
           }
-          ActivityService.recordActivityEvent(currentUser.id, 'repost_create', `repost_${postId}_${Date.now()}`);
+          void import('./services/activityService').then(({ ActivityService }) =>
+            ActivityService.recordActivityEvent(currentUser.id, 'repost_create', `repost_${postId}_${Date.now()}`)
+          ).catch(error => console.warn('Unable to record repost activity.', error));
           return updatedPost;
         }
         return p;
@@ -1725,7 +1730,8 @@ export default function App() {
 
     recordRecommendationEvent('visit_profile', { creatorId: finalUserToView.id, creatorUsername: finalUserToView.username });
 
-    // Get instantly from ProfileEngine with quiet background revalidation
+    // Load the profile cache engine only when opening another member's profile.
+    const { ProfileEngine } = await import('./services/voh/profileEngine');
     const instantUser = ProfileEngine.getProfileInstantly(finalUserToView, (freshUser) => {
       setViewedUser(freshUser);
     });
