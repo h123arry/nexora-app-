@@ -598,6 +598,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     let elapsed = 0;
     let fadeOpacity = transition === 'fade' ? 1 : 0;
     let transitionProgress = 0;
+    let transitionPreviewUrl: string | null = null;
     const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextClass) throw new Error('Audio mixing is not supported by this browser. Export is paused to avoid silently dropping your clip audio.');
     if (AudioContextClass) {
@@ -803,7 +804,9 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         if (transition === 'cross-dissolve' && clipIndex < clips.length - 1) {
           const nextClip = clips[clipIndex + 1];
           transitionPreview.pause();
-          transitionPreview.src = URL.createObjectURL(nextClip.blob);
+          if (transitionPreviewUrl) URL.revokeObjectURL(transitionPreviewUrl);
+          transitionPreviewUrl = URL.createObjectURL(nextClip.blob);
+          transitionPreview.src = transitionPreviewUrl;
           await new Promise<void>((resolve, reject) => {
             transitionPreview.onloadedmetadata = () => resolve();
             transitionPreview.onerror = () => reject(new Error(`Could not preload ${nextClip.name} for its transition.`));
@@ -841,6 +844,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       throw error;
     } finally {
       preview.pause();
+      transitionPreview.pause();
+      if (transitionPreviewUrl) URL.revokeObjectURL(transitionPreviewUrl);
       if (voiceoverStartTimer !== null) window.clearTimeout(voiceoverStartTimer);
       if (audioElement) audioElement.pause();
       if (audioObjectUrl) URL.revokeObjectURL(audioObjectUrl);
