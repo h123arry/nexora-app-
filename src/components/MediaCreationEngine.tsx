@@ -350,6 +350,9 @@ export default function MediaCreationEngine({
   // Refs
   const videoPreviewRef = useRef<HTMLVideoElement>(null);
   const videoStreamRef = useRef<MediaStream | null>(null);
+  const photoPreviewRef = useRef<HTMLVideoElement>(null);
+  const photoStreamRef = useRef<MediaStream | null>(null);
+  const [photoCameraReady, setPhotoCameraReady] = useState(false);
   const mediaRecorderVideoRef = useRef<MediaRecorder | null>(null);
   const videoChunksRef = useRef<Blob[]>([]);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -545,6 +548,69 @@ export default function MediaCreationEngine({
     };
   }, [activeMode, permissionState, cameraFacing, currentStep]);
 
+  // Photo camera preview is opened only while the photo-add step is visible.
+  // The stream is released whenever the user leaves this step or changes camera mode.
+  useEffect(() => {
+    if (activeMode !== 'photo' || permissionState !== 'granted' || currentStep !== 2) {
+      setPhotoCameraReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    let currentStream: MediaStream | null = null;
+    setPhotoCameraReady(false);
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not supported by this browser. Please choose a photo from your device.' }));
+      return;
+    }
+
+    navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    }).then(async stream => {
+      if (cancelled) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
+      currentStream = stream;
+      photoStreamRef.current = stream;
+      const video = photoPreviewRef.current;
+      if (!video) {
+        stream.getTracks().forEach(track => track.stop());
+        if (photoStreamRef.current === stream) photoStreamRef.current = null;
+        return;
+      }
+
+      video.srcObject = stream;
+      try {
+        await video.play();
+        if (!cancelled && video.videoWidth > 0 && video.videoHeight > 0) {
+          setPhotoCameraReady(true);
+        }
+      } catch {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Check browser camera permissions and try again.' }));
+      }
+    }).catch(error => {
+      if (cancelled) return;
+      const message = error instanceof Error && error.name === 'NotAllowedError'
+        ? 'Camera access was denied. Allow access in browser settings and try again.'
+        : error instanceof Error && error.name === 'NotFoundError'
+          ? 'No camera was found on this device.'
+          : 'Could not start the camera. Please retry or choose a photo from your device.';
+      window.dispatchEvent(new CustomEvent('toast', { detail: message }));
+    });
+
+    return () => {
+      cancelled = true;
+      currentStream?.getTracks().forEach(track => track.stop());
+      if (photoStreamRef.current === currentStream) photoStreamRef.current = null;
+      if (photoPreviewRef.current) photoPreviewRef.current.srcObject = null;
+      setPhotoCameraReady(false);
+    };
+  }, [activeMode, permissionState, cameraFacing, currentStep]);
+
   // Reels Record timing loop
   useEffect(() => {
     if (isRecording && !isRecordingPaused) {
@@ -629,14 +695,25 @@ export default function MediaCreationEngine({
 
   const captureCameraSnapshot = () => {
     requestPermission('camera', () => {
-      const snaps = [
-        'https://images.unsplash.com/photo-1547394765-185e1e68f34e?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=80',
-        'https://images.unsplash.com/photo-1607604276583-eef5d076aa5f?w=800&auto=format&fit=crop&q=80'
-      ];
-      const snapUrl = snaps[Math.floor(Math.random() * snaps.length)];
+      const video = photoPreviewRef.current;
+      if (!photoCameraReady || !video || video.videoWidth === 0 || video.videoHeight === 0) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not ready yet. Wait for the preview, then try again.' }));
+        return;
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext('2d');
+      if (!context) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'Could not capture the frame. Please try again.' }));
+        return;
+      }
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const snapUrl = canvas.toDataURL('image/jpeg', 0.92);
       setSelectedImages(prev => [...prev, { url: snapUrl, rotation: 0, zoom: 1, cropOffset: { x: 0, y: 0 } }]);
-      window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Captured high fidelity camera frame!' }));
+      window.dispatchEvent(new CustomEvent('toast', { detail: '📸 Photo captured.' }));
     });
   };
 
@@ -1566,8 +1643,19 @@ export default function MediaCreationEngine({
                           <span className="text-[9px] font-mono text-violet-400 uppercase tracking-wider block">Take a photo</span>
                           <p className="text-[10px] text-[#8E88A7]">Use your camera to take a photo.</p>
                         </div>
-                        <button 
+                        <video
+                          ref={photoPreviewRef}
+                          autoPlay
+                          muted
+                          playsInline
+                          className="w-full aspect-video rounded-xl object-cover bg-[#120E2B]"
+                          aria-label="Live camera preview"
+                        />
+                        <button
                           onClick={captureCameraSnapshot}
+                          disabled={!photoCameraReady}
+                          aria-disabled={!photoCameraReady}
+                          title={photoCameraReady ? 'Capture a photo from your camera' : 'Waiting for camera preview'}
                           className="w-full py-2.5 bg-[linear-gradient(135deg,#8A3FFC_0%,#4B10F2_58%,#1600A3_100%)] text-white text-xs font-mono font-bold rounded-xl shadow-lg cursor-pointer hover:brightness-110 active:scale-95 transition-all"
                         >
                           Take photo
