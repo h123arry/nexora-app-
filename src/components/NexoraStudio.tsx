@@ -223,6 +223,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       .finally(() => { if (active) setReady(true); });
     return () => {
       active = false;
+      publishAbortRef.current?.abort();
       projectUrls.current.forEach(URL.revokeObjectURL);
       const recorder = voiceoverRecorderRef.current;
       if (recorder && recorder.state !== 'inactive') { recorder.onstop = null; recorder.stop(); }
