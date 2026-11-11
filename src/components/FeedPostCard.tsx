@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from '../lib/firebase';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { getMotionPreset } from '../utils/motionPresets';
 import { 
-  Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, 
+  Zap, Repeat, Quote, MessageCircle, Bookmark, Play, Pause, Volume2, Send, ThumbsUp, 
   Globe, CheckCircle, MoreHorizontal, EyeOff, FolderPlus, ShieldAlert, 
   Edit2, UserPlus, VolumeX, Pin, BookOpen, Archive, Trash, Sparkles, 
   BarChart2, Sliders, X, Check
@@ -15,6 +17,7 @@ import RelativeTime from './RelativeTime';
 
 interface FeedPostCardProps {
   post: Post;
+  feedReasons?: string[];
   index: number;
   isActive: boolean;
   activeCommentsPostId: string | null;
@@ -66,6 +69,7 @@ interface FeedPostCardProps {
 
 const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   post,
+  feedReasons,
   index,
   isActive,
   activeCommentsPostId,
@@ -114,6 +118,21 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
   setExpandedPostIds
 }) => {
   const reduceMotion = useReducedMotion();
+  const [helpfulnessCount, setHelpfulnessCount] = useState(Number((post as any).helpfulnessCount || 0));
+  const [endorsedHelpful, setEndorsedHelpful] = useState(false);
+  const [helpfulnessBusy, setHelpfulnessBusy] = useState(false);
+  const endorseHelpful = async () => {
+    if (!currentUser || helpfulnessBusy || endorsedHelpful) return;
+    setHelpfulnessBusy(true);
+    try {
+      const call = httpsCallable<{ postId: string }, { endorsed: boolean; helpfulnessCount: number }>(functions, 'endorsePublicPostHelpful');
+      const result = await call({ postId: post.id });
+      setEndorsedHelpful(result.data.endorsed);
+      setHelpfulnessCount(result.data.helpfulnessCount);
+    } catch (error) {
+      window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not recognize this post as helpful.' }));
+    } finally { setHelpfulnessBusy(false); }
+  };
   const isCommentsOpen = activeCommentsPostId === post.id;
   const isOwnPost = currentUser && (post.userId === currentUser.id || post.username === currentUser.username);
   const hasMediaCaptionOverlay = Boolean(post.videoUrl || ((post.image || (post.images && post.images.length > 0)) && !post.opportunityType));
@@ -259,6 +278,22 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
             )}
           </div>
         </div>
+
+        {feedReasons && feedReasons.length > 0 && (
+          <details className="mx-4 sm:mx-6 mb-2 group/feed-reason rounded-xl border border-violet-400/10 bg-violet-500/[0.035] px-3 py-2">
+            <summary className="cursor-pointer list-none text-[10px] font-semibold text-violet-200/80 focus-visible:outline-2 focus-visible:outline-violet-300">
+              Why am I seeing this?
+            </summary>
+            <ul className="mt-2 space-y-1.5 border-t border-violet-400/10 pt-2">
+              {feedReasons.slice(0, 4).map((reason, reasonIndex) => (
+                <li key={reasonIndex} className="flex items-start gap-2 text-[10px] leading-relaxed text-zinc-400">
+                  <span aria-hidden="true" className="mt-1 h-1 w-1 shrink-0 rounded-full bg-violet-400" />
+                  {reason}
+                </li>
+              ))}
+            </ul>
+          </details>
+        )}
 
         {/* Badges & Menu Button */}
         <div className="flex flex-col items-end gap-1.5 text-[9.5px] font-mono shrink-0">
@@ -721,6 +756,11 @@ const FeedPostCardImpl: React.FC<FeedPostCardProps> = ({
               <span className="text-[10px] font-mono font-bold">{post.comments?.length || 0}</span>
             </button>
 
+            <button type="button" onClick={() => void endorseHelpful()} disabled={!currentUser || helpfulnessBusy || endorsedHelpful || isOwnPost} className="min-w-11 min-h-11 px-1 flex flex-col items-center justify-center gap-1 group cursor-pointer disabled:opacity-45" title="Recognize helpful content" aria-label={endorsedHelpful ? 'You marked this post helpful' : 'Mark this post helpful'} aria-pressed={endorsedHelpful}>
+              <ThumbsUp className={`w-5 h-5 ${endorsedHelpful ? 'fill-violet-400 text-violet-300' : 'text-white'}`} />
+              <span className="text-[10px] font-mono font-bold">{helpfulnessCount || 'Helpful'}</span>
+            </button>
+
             {/* Repost */}
             <button
               type="button"
@@ -782,11 +822,13 @@ export const FeedPostCard = React.memo(FeedPostCardImpl, (prev, next) => {
   if (prev.isReleased !== next.isReleased) return false;
   if (prev.preloadMode !== next.preloadMode) return false;
   if (prev.selectedTag !== next.selectedTag) return false;
+  if ((prev.feedReasons || []).join('|') !== (next.feedReasons || []).join('|')) return false;
 
   // Post core metrics and contents
   if (
     prev.post.isLikedByUser !== next.post.isLikedByUser ||
     prev.post.likes !== next.post.likes ||
+    (prev.post as any).helpfulnessCount !== (next.post as any).helpfulnessCount ||
     prev.post.isBookmarkedByUser !== next.post.isBookmarkedByUser ||
     prev.post.bookmarksCount !== next.post.bookmarksCount ||
     prev.post.shares !== next.post.shares ||

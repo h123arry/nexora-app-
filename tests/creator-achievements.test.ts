@@ -50,3 +50,30 @@ test('consistent creator counts only non-archived published posts', () => {
   assert.equal(result.consistent_creator.progress, 67);
   assert.equal(result.consistent_creator.unlocked, false);
 });
+
+test('creator progression levels use clamped reputation and expose the next milestone', async () => {
+  const { buildCreatorProgressionLevel } = await import('../src/services/analytics/creatorAchievements');
+  assert.equal(buildCreatorProgressionLevel(0).title, 'Newcomer');
+  assert.equal(buildCreatorProgressionLevel(100).title, 'Contributor');
+  assert.equal(buildCreatorProgressionLevel(250).title, 'Community Voice');
+  const next = buildCreatorProgressionLevel(400);
+  assert.equal(next.title, 'Community Leader');
+  assert.equal(next.nextLevel, 'NEXORA Ambassador');
+  assert.equal(next.pointsToNext, 350);
+  assert.equal(buildCreatorProgressionLevel(1200).nextLevel, null);
+  assert.equal(buildCreatorProgressionLevel(-10).currentReputation, 0);
+  assert.equal(buildCreatorProgressionLevel(Number.NaN).currentReputation, 0);
+});
+
+
+test('helpfulness badges depend on the separate helpfulness reputation signal, not likes or views', () => {
+  const posts = [{ videoUrl: '', views: 100000, likes: 100000, isArchived: false }];
+  const noHelpfulness = buildCreatorAchievements(posts, 0, false, 0);
+  const helpful = buildCreatorAchievements(posts, 0, false, 25);
+  const guide = buildCreatorAchievements(posts, 0, false, 100);
+  const byId = (items: typeof noHelpfulness, id: string) => items.find(item => item.id === id)!;
+  assert.equal(byId(noHelpfulness, 'helpful_contributor').unlocked, false);
+  assert.equal(byId(helpful, 'helpful_contributor').unlocked, true);
+  assert.equal(byId(helpful, 'trusted_guide').unlocked, false);
+  assert.equal(byId(guide, 'trusted_guide').unlocked, true);
+});

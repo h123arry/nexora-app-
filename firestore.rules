@@ -404,6 +404,11 @@ service cloud.firestore {
         allow get, list: if owner(userId);
         allow create, update, delete: if false;
       }
+      // Daily helpfulness rate-limit markers are private and callable-managed.
+      match /helpfulnessLimits/{dayId} {
+        allow get, list: if owner(userId);
+        allow create, update, delete: if false;
+      }
       // Comment reaction markers are private and written only by the trusted callable.
       match /commentLikes/{reactionId} {
         allow get, list: if owner(userId);
@@ -974,6 +979,16 @@ service cloud.firestore {
       allow get, list: if (resource.data.status == 'active' && resource.data.bookable == true)
           || (signedIn() && get(/databases/$(database)/documents/pages/$(pageId)).data.ownerId == request.auth.uid);
       allow create, update, delete: if false;
+    }
+
+    // Seasonal platform events are public to signed-in members; all writes use trusted callables.
+    match /seasonalCommunityEvents/{eventId} {
+      allow get, list: if signedIn();
+      allow create, update, delete: if false;
+      match /participants/{userId} {
+        allow get: if owner(userId);
+        allow list, create, update, delete: if false;
+      }
     }
 
     match /communities/{communityId} {

@@ -4,6 +4,8 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import { processAccountDeletion } from './accountDeletionWorker.js';
 import { FieldPath, getFirestore } from 'firebase-admin/firestore';
 import { setPostLike } from './postEngagement.js';
+import { endorsePublicPostAsHelpful } from './helpfulContent.js';
+import { createSeasonalCommunityEvent as createSeasonalEventRecord, listSeasonalCommunityEvents as listSeasonalEventRecords, setSeasonalCommunityEventRsvp } from './seasonalCommunityEvents.js';
 import { createPublicPostRepost } from './postReposts.js';
 import { addPublicPostCommentReply } from './postReplies.js';
 import { setPublicPostCommentLike } from './postCommentReactions.js';
@@ -15,7 +17,7 @@ import { setCircleMemberRole, moderateCircleMember, listCircleBans } from './com
 import { submitCircleReport, listCircleReports, resolveCircleReport } from './communityReports.js';
 import { createCircleInvite, redeemCircleInvite, revokeCircleInvite } from './communityInvites.js';
 import { createReferralCode, claimReferral, qualifyReferral, getReferralSummary, getReferralInvitePreview } from './referrals.js';
-import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost } from './socialChallenges.js';
+import { createSocialChallenge as createSocialChallengeRecord, joinSocialChallenge as joinSocialChallengeRecord, listSocialChallenges as listSocialChallengesRecords, recordSocialChallengePost, getCommunityCapabilitySnapshot, extractSocialChallengeIds } from './socialChallenges.js';
 import { getAuth } from 'firebase-admin/auth';
 import { createContentSeries as createContentSeriesRecord, appendPostToSeries, listMyContentSeries as listMyContentSeriesRecord, listContentSeriesEpisodes } from './contentSeries.js';
 import { voteOnPublicPostPoll, getMyPublicPostPollVotes } from './publicPostPolls.js';
@@ -39,7 +41,7 @@ export { recordVideoWatchHeartbeat, getCreatorVideoRetention } from './videoWatc
 export { setCreatorFollowState, recordCreatorProfileVisit, getCreatorAudienceAnalytics } from './creatorAudienceAnalytics.js';
 export { createCommunityPost } from './communityPosts.js';
 export { getCommunityInsights } from './communityAnalytics.js';
-export { submitModerationReport, reviewModerationReport, submitModerationAppeal } from './moderation.js';
+export { submitModerationReport, reviewModerationReport, submitModerationAppeal, listMyModerationReports } from './moderation.js';
 export { ingestClientAnalytics, aggregateAnalyticsDaily, getPlatformAnalytics } from './analytics.js';
 export { getMonetizationCatalog, createCheckoutSession, getBillingSummary, getFinanceOverview } from './monetization.js';
 export { listCreatorMembershipTiers, createCreatorMembershipTier, updateCreatorMembershipTier, archiveCreatorMembershipTier } from './creatorMemberships.js';
@@ -925,19 +927,82 @@ export const joinSocialChallenge = onCall({ maxInstances: 10 }, async request =>
   }
 });
 
+export const getMyCommunityCapabilities = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to view community progression.');
+  try { return await getCommunityCapabilitySnapshot(adminDb, request.auth.uid); }
+  catch { throw new HttpsError('unavailable', 'Community progression is temporarily unavailable.'); }
+});
+
 export const listSocialChallenges = onCall({ maxInstances: 10 }, async request => {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore challenges.');
-  try { return await listSocialChallengesRecords(adminDb); }
+  try { return await listSocialChallengesRecords(adminDb, request.auth.uid); }
   catch { throw new HttpsError('unavailable', 'Challenges are temporarily unavailable.'); }
+});
+
+
+export const endorsePublicPostHelpful = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to recognize helpful content.');
+  const postId = request.data?.postId;
+  if (typeof postId !== 'string' || !/^[A-Za-z0-9_-]{1,150}$/.test(postId)) {
+    throw new HttpsError('invalid-argument', 'A valid post ID is required.');
+  }
+  try { return await endorsePublicPostAsHelpful(adminDb, request.auth.uid, postId); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('own post')) throw new HttpsError('failed-precondition', message);
+    if (message.includes('daily helpfulness')) throw new HttpsError('resource-exhausted', message);
+    if (message.includes('unavailable')) throw new HttpsError('not-found', message);
+    if (message.includes('valid account') || message.includes('verifiable author')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'Your helpfulness endorsement could not be saved.');
+  }
+});
+
+
+export const createSeasonalCommunityEvent = onCall({ maxInstances: 5 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to manage seasonal events.');
+  const token = request.auth.token || {};
+  const role = typeof token.role === 'string' ? token.role : '';
+  if (!(token.admin === true || role === 'admin' || role === 'founder')) {
+    throw new HttpsError('permission-denied', 'Platform event management access is required.');
+  }
+  try { return await createSeasonalEventRecord(adminDb, request.auth.uid, request.data || {}); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('details are invalid') || message.includes('valid event manager')) throw new HttpsError('invalid-argument', message);
+    throw new HttpsError('internal', 'The seasonal event could not be created.');
+  }
+});
+
+export const listSeasonalCommunityEvents = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to explore seasonal events.');
+  try {
+    const result = await listSeasonalEventRecords(adminDb, request.auth.uid);
+    const token = request.auth.token || {};
+    const role = typeof token.role === 'string' ? token.role : '';
+    return { ...result, canManage: token.admin === true || role === 'admin' || role === 'founder' };
+  }
+  catch { throw new HttpsError('unavailable', 'Seasonal events are temporarily unavailable.'); }
+});
+
+export const respondToSeasonalCommunityEvent = onCall({ maxInstances: 10 }, async request => {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to RSVP.');
+  try { return await setSeasonalCommunityEventRsvp(adminDb, request.auth.uid, request.data?.eventId, request.data?.attending); }
+  catch (error) {
+    const message = error instanceof Error ? error.message : '';
+    if (message.includes('valid event')) throw new HttpsError('invalid-argument', message);
+    if (message.includes('unavailable') || message.includes('RSVPs are closed')) throw new HttpsError('failed-precondition', message);
+    if (message.includes('capacity')) throw new HttpsError('resource-exhausted', message);
+    throw new HttpsError('internal', 'Your event RSVP could not be saved.');
+  }
 });
 
 export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', async event => {
   const post = event.data?.data();
   if (!post || post.audience !== 'public' || typeof post.userId !== 'string') return;
   const source = [post.content, ...(Array.isArray(post.tags) ? post.tags : [])].filter(value => typeof value === 'string').join(' ');
-  const matches = [...source.matchAll(/#nxchallenge_([A-Za-z0-9_-]{1,150})/g)];
-  for (const match of matches.slice(0, 3)) {
-    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, match[1]); }
+  const challengeIds = extractSocialChallengeIds(source);
+  for (const challengeId of challengeIds) {
+    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, challengeId); }
     catch (error) { console.error('[Challenges] Contribution tracking failed.', error); }
   }
 });

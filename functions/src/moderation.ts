@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { listOwnModerationReports } from './moderationReportTracking.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -192,4 +193,11 @@ export const submitModerationAppeal = onCall({ maxInstances: 10 }, async (reques
   });
   await db.collection('moderationAuditEvents').add({ type: 'appeal_submitted', appealId, enforcementId: enforcement.id, actorId: userId, createdAt: FieldValue.serverTimestamp() });
   return { accepted: true, duplicate: false, appealId };
+});
+
+
+/** Owner-scoped report history. Private reviewer notes and evidence stay internal. */
+export const listMyModerationReports = onCall({ maxInstances: 10 }, async request => {
+  const userId = requireAuth(request);
+  return { reports: await listOwnModerationReports(db, userId) };
 });

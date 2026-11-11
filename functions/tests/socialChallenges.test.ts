@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { createSocialChallenge, joinSocialChallenge, recordSocialChallengePost } from '../src/socialChallenges.js';
+import { createSocialChallenge, joinSocialChallenge, recordSocialChallengePost, listSocialChallenges, getCommunityCapabilitySnapshot, extractSocialChallengeIds } from '../src/socialChallenges.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-challenges' }, 'social-challenge-tests');
 const db = getFirestore(app);
@@ -30,6 +30,11 @@ describe('server-backed social challenges', () => {
     ids.push(created.challengeId);
     assert.match(created.postTag, /^#nxchallenge_/);
     assert.equal((await db.doc(`socialChallenges/${created.challengeId}/participants/creator-a`).get()).exists, true);
+    const listed = await listSocialChallenges(db, 'creator-a');
+    const own = listed.challenges.find(item => item.id === created.challengeId);
+    assert.equal(own?.joinedByMe, true);
+    assert.equal(own?.myContributionCount, 0);
+    assert.equal((await listSocialChallenges(db, 'someone-else')).challenges.find(item => item.id === created.challengeId)?.joinedByMe, false);
   });
 
   it('joins once and increments the participant count once', async () => {
@@ -59,4 +64,38 @@ describe('server-backed social challenges', () => {
   it('rejects malformed challenge definitions', async () => {
     await assert.rejects(createSocialChallenge(db, 'creator-d', { title: 'x', description: 'short', topic: 'a', durationDays: 90 }), /details are invalid/);
   });
+});
+
+it('advanced challenge hosting unlocks only after verified activity across three challenges', async () => {
+  const idsForUnlock: string[] = [];
+  for (let i = 0; i < 3; i += 1) {
+    const created = await createSocialChallenge(db, 'unlock-host', {
+      title: 'Contribution challenge ' + i, description: 'Publish useful public contributions for the community.',
+      topic: 'Community', durationDays: 7, targetPosts: 20,
+    });
+    idsForUnlock.push(created.challengeId);
+    await joinSocialChallenge(db, 'unlock-host', created.challengeId);
+    for (let j = 0; j < (i === 2 ? 4 : 3); j += 1) {
+      await recordSocialChallengePost(db, 'unlock-host', 'unlock-post-' + i + '-' + j, created.challengeId);
+    }
+  }
+  const capability = await getCommunityCapabilitySnapshot(db, 'unlock-host');
+  assert.equal(capability.totalVerifiedContributions, 10);
+  assert.equal(capability.distinctChallengesContributed, 3);
+  assert.equal(capability.advancedChallengeHostingUnlocked, true);
+  assert.equal(capability.activeChallengeLimit, 10);
+  for (const id of idsForUnlock) {
+    const ref = db.collection('socialChallenges').doc(id);
+    for (const name of ['participants', 'entries']) {
+      const docs = await ref.collection(name).get();
+      await Promise.all(docs.docs.map(item => item.ref.delete()));
+    }
+    await ref.delete();
+  }
+});
+
+it('allows a public post to contribute to only one challenge even when multiple tags are supplied', () => {
+  assert.deepEqual(extractSocialChallengeIds('A useful update #nxchallenge_first #nxchallenge_second'), ['first']);
+  assert.deepEqual(extractSocialChallengeIds('No challenge tag here'), []);
+  assert.deepEqual(extractSocialChallengeIds(null), []);
 });

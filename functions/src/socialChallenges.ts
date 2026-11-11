@@ -11,6 +11,43 @@ function validUid(value: unknown): value is string {
   return typeof value === 'string' && ID_PATTERN.test(value);
 }
 
+/** A public post contributes to at most one challenge, preventing cross-tag multiplier farming. */
+export function extractSocialChallengeIds(source: unknown): string[] {
+  if (typeof source !== 'string') return [];
+  const match = source.match(/#nxchallenge_([A-Za-z0-9_-]{1,150})/);
+  return match ? [match[1]] : [];
+}
+
+
+export interface CommunityCapabilitySnapshot {
+  totalVerifiedContributions: number;
+  distinctChallengesContributed: number;
+  advancedChallengeHostingUnlocked: boolean;
+  activeChallengeLimit: number;
+}
+
+export async function getCommunityCapabilitySnapshot(db: Firestore, uid: string): Promise<CommunityCapabilitySnapshot> {
+  if (!validUid(uid)) throw new Error('A valid account is required.');
+  const participants = await db.collectionGroup('participants').where('userId', '==', uid).limit(100).get();
+  let totalVerifiedContributions = 0;
+  let distinctChallengesContributed = 0;
+  for (const participant of participants.docs) {
+    if (participant.ref.parent.id !== 'participants' || !participant.ref.parent.parent || participant.ref.parent.parent.parent.id !== 'socialChallenges') continue;
+    const count = Math.max(0, Number(participant.get('contributionCount')) || 0);
+    if (count > 0) {
+      distinctChallengesContributed += 1;
+      totalVerifiedContributions += count;
+    }
+  }
+  const advancedChallengeHostingUnlocked = distinctChallengesContributed >= 3 && totalVerifiedContributions >= 10;
+  return {
+    totalVerifiedContributions,
+    distinctChallengesContributed,
+    advancedChallengeHostingUnlocked,
+    activeChallengeLimit: advancedChallengeHostingUnlocked ? 10 : 5,
+  };
+}
+
 export interface SocialChallengeInput {
   title?: unknown;
   description?: unknown;
@@ -36,8 +73,9 @@ export async function createSocialChallenge(db: Firestore, creatorId: string, in
   const challengeId = randomUUID();
   const challengeRef = db.collection('socialChallenges').doc(challengeId);
   const participantRef = challengeRef.collection('participants').doc(creatorId);
-  const activeChallenges = await db.collection('socialChallenges').where('creatorId', '==', creatorId).where('status', '==', 'active').limit(5).get();
-  if (activeChallenges.size >= 5) throw new Error('You have reached the active challenge limit.');
+  const capability = await getCommunityCapabilitySnapshot(db, creatorId);
+  const activeChallenges = await db.collection('socialChallenges').where('creatorId', '==', creatorId).where('status', '==', 'active').limit(capability.activeChallengeLimit).get();
+  if (activeChallenges.size >= capability.activeChallengeLimit) throw new Error('You have reached the active challenge limit for your current community level.');
   await db.runTransaction(async tx => {
     tx.create(challengeRef, {
       id: challengeId, creatorId, title, description, topic,
@@ -68,21 +106,27 @@ export async function joinSocialChallenge(db: Firestore, uid: string, challengeI
   });
 }
 
-export async function listSocialChallenges(db: Firestore) {
+export async function listSocialChallenges(db: Firestore, uid: string) {
+  if (!validUid(uid)) throw new Error('A valid account is required.');
   const snapshot = await db.collection('socialChallenges').where('status', '==', 'active').limit(40).get();
   const now = Date.now();
-  return {
-    challenges: snapshot.docs.filter(doc => {
+  const activeDocs = snapshot.docs.filter(doc => {
       const endAt = doc.get('endAt')?.toDate?.()?.getTime?.() || 0;
       return endAt > now;
-    }).sort((a, b) => (b.get('createdAt')?.toDate?.()?.getTime?.() || 0) - (a.get('createdAt')?.toDate?.()?.getTime?.() || 0)).map(doc => ({
+  }).sort((a, b) => (b.get('createdAt')?.toDate?.()?.getTime?.() || 0) - (a.get('createdAt')?.toDate?.()?.getTime?.() || 0));
+  const challenges = await Promise.all(activeDocs.map(async doc => {
+    const participant = await doc.ref.collection('participants').doc(uid).get();
+    return {
       id: doc.id, creatorId: doc.get('creatorId'), title: doc.get('title'),
       description: doc.get('description'), topic: doc.get('topic'),
       targetPosts: doc.get('targetPosts'), participantCount: doc.get('participantCount') || 0,
       contributionCount: doc.get('contributionCount') || 0,
+      joinedByMe: participant.exists,
+      myContributionCount: participant.exists ? Number(participant.get('contributionCount') || 0) : 0,
       endAt: doc.get('endAt')?.toDate?.()?.toISOString?.() || null,
-    })),
-  };
+    };
+  }));
+  return { challenges };
 }
 
 /** Called only by the trusted post-created trigger; the tag opts a public post into a challenge. */

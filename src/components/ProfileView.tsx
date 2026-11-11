@@ -11,11 +11,13 @@ import NexoraBranding from './NexoraBranding';
 import CreatorGiftGallery from './CreatorGiftGallery';
 import GiftVerseView from './GiftVerseView';
 import { validateUsername } from '../utils/username';
+import { buildCreatorProgressionLevel } from '../services/analytics/creatorAchievements';
 import RelativeTimestamp from './RelativeTimestamp';
 import NexoraVideoPlayer from './NexoraVideoPlayer';
 import NexoraLoader from './NexoraLoader';
 import NexoraVideo from './NexoraVideo';
 import CreatorDashboardView from './CreatorDashboardView';
+import MyReportsPanel from './MyReportsPanel';
 import ImmersiveVideoViewer from './ImmersiveVideoViewer';
 import { AuthService } from '../services/firebase/authService';
 import StorageDataCenterModal from './StorageDataCenterModal';
@@ -864,6 +866,7 @@ export default function ProfileView({
   // Pinned items filtering
   const pinnedPostIdsList = currentUser.pinnedPosts || [];
   const myPosts = posts.filter(p => p.username === currentUser.username || p.userId === currentUser.id);
+  const progressionLevel = buildCreatorProgressionLevel(currentUser.reputationPoints);
   const [, setMetricsUpdateTick] = useState(0);
   
   useEffect(() => {
@@ -1181,6 +1184,7 @@ export default function ProfileView({
                       {currentUser.name || (isOwnProfile ? 'Set your display name' : 'Member')}
                     </h1>
                     {currentUser.isVerified && <PurpleVerifiedBadge className="w-4 h-4 shrink-0" type="founder" />}
+                    <span title={`${progressionLevel.currentReputation.toLocaleString()} reputation points`} className="inline-flex items-center rounded-full border border-violet-400/20 bg-violet-500/10 px-2 py-0.5 text-[9px] font-bold text-violet-200">{progressionLevel.title}</span>
                     {profileBadgeAsset && <img src={profileBadgeAsset.path} alt="Creator badge" title={profileBadgeAsset.title} className="h-5 w-5 shrink-0 object-contain" />}
                   </div>
                   <p className={`text-xs sm:text-sm font-bold font-mono tracking-wider mt-0.5 ${!currentUser.username ? 'text-violet-400/60 italic' : 'text-violet-400/90'}`}>
@@ -2382,6 +2386,7 @@ export default function ProfileView({
                     {/* Drill down Panel 7: Technical support desk */}
                     {settingsActiveSubPanel === 'support' && (
                       <div className="space-y-4 text-left">
+                        <MyReportsPanel userId={currentUser.id} />
                         <div className="p-4 rounded-2xl bg-[#0e0c24] border border-white/10 space-y-3">
                           <span className="text-[9px] font-mono text-pink-400 font-extrabold uppercase tracking-widest block">💬 Lagos Technical Grid Support</span>
                           
