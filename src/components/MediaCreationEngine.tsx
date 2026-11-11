@@ -1633,6 +1633,7 @@ export default function MediaCreationEngine({
                           <NexoraLensStudio
                             cameraFacing={cameraFacing}
                             userId={currentUser.id}
+                            captureMode="photo"
                             onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
                             onCapture={blob => {
                               const url = trackObjectUrl(URL.createObjectURL(blob));
@@ -1738,6 +1739,7 @@ export default function MediaCreationEngine({
                           <NexoraLensStudio
                             cameraFacing={cameraFacing}
                             userId={currentUser.id}
+                            captureMode="video"
                             onStreamReady={stream => { videoStreamRef.current = stream; setIsLensStreamReady(Boolean(stream)); }}
                             onCapture={blob => {
                               const url = trackObjectUrl(URL.createObjectURL(blob));
