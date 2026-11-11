@@ -5,5 +5,5 @@ export function getStudioExportDimensions(aspectRatio: StudioAspectRatio, resolu
   const longEdge = dimensionsByResolution[resolution] ?? dimensionsByResolution['720p'];
   if (aspectRatio === 'portrait') return { width: Math.round(longEdge * 9 / 16), height: longEdge };
   if (aspectRatio === 'square') return { width: longEdge, height: longEdge };
-  return { width: longEdge, height: Math.round(longEdge * 9 / 16) };
+  return { width: Math.round(longEdge * 16 / 9), height: longEdge };
 }
