@@ -52,27 +52,8 @@ export const getStudioExportMp4Url = onCall({ maxInstances: 30 }, async request 
   const [exists] = await file.exists();
   if (!exists) throw new HttpsError('unavailable', 'The MP4 file is not available yet.');
   const expiresAt = Date.now() + URL_TTL_MS;
-  const [downloadUrl] = await file.getSignedUrl({ action: 'read', expires: expiresAt, version: 'v4' });
+  const [downloadUrl] = await file.getSignedUrl({ action: 'read', expires: expiresAt, version: 'v4', responseDisposition: 'attachment; filename="nexora-studio-export.mp4"' });
   return { ready: true as const, downloadUrl, renditionHeight: selected.height, expiresAt };
-});
-
-export const cleanupStudioExportAsset = onCall({ maxInstances: 20 }, async request => {
-  const uid = request.auth?.uid;
-  const mediaAssetId = request.data?.mediaAssetId;
-  if (!uid) throw new HttpsError('unauthenticated', 'Sign in to clean up this Studio export.');
-  if (typeof mediaAssetId !== 'string' || !ID.test(mediaAssetId)) {
-    throw new HttpsError('invalid-argument', 'A valid Studio export asset is required.');
-  }
-  const snapshot = await db.collection('mediaAssets').doc(mediaAssetId).get();
-  const asset = snapshot.data();
-  if (!snapshot.exists || !asset || !isOwnedStudioExportAsset(asset, uid, mediaAssetId)) {
-    throw new HttpsError('not-found', 'This temporary Studio export is unavailable.');
-  }
-  if (asset.status === 'processing') {
-    throw new HttpsError('failed-precondition', 'The MP4 conversion is still processing.');
-  }
-  await deleteExportAsset(snapshot);
-  return { cleaned: true as const };
 });
 
 export const cleanupExpiredStudioMp4Exports = onSchedule('every 6 hours', async () => {
