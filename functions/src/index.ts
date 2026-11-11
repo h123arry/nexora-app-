@@ -1001,7 +1001,7 @@ export const trackSocialChallengePost = onDocumentCreated('posts/{postId}', asyn
   const source = [post.content, ...(Array.isArray(post.tags) ? post.tags : [])].filter(value => typeof value === 'string').join(' ');
   const challengeIds = extractSocialChallengeIds(source);
   for (const challengeId of challengeIds) {
-    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, challengeId);
+    try { await recordSocialChallengePost(adminDb, post.userId, event.params.postId, challengeId); }
     catch (error) { console.error('[Challenges] Contribution tracking failed.', error); }
   }
 });
