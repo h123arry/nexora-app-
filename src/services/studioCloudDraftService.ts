@@ -124,6 +124,14 @@ async function decodeValue(value: Encoded, assets: Record<string, CloudAsset>, u
   return value;
 }
 
+export async function getStudioCloudDraftRevision(userId: string): Promise<number> {
+  assertSignedIn(userId);
+  const snapshot = await getDoc(doc(db!, 'studioCloudDrafts', userId));
+  if (!snapshot.exists()) return 0;
+  const revision = snapshot.data().revision;
+  return Number.isInteger(revision) && revision >= 0 ? revision : 0;
+}
+
 export async function loadStudioCloudDraft<T>(userId: string): Promise<StudioCloudDraft<T> | null> {
   assertSignedIn(userId);
   const snapshot = await getDoc(doc(db!, 'studioCloudDrafts', userId));
