@@ -10,7 +10,7 @@ import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPoli
 import { getStudioExportDimensions, getStudioExpectedExportDuration, type StudioExportResolution } from '../utils/studioExportPolicy';
 import { getStudioExportValidationError } from '../utils/studioExportValidationPolicy';
 import { isStudioCloudDraftNewer } from '../utils/studioCloudDraftPolicy';
-import { loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
+import { getStudioCloudDraftRevision, loadStudioCloudDraft, saveStudioCloudDraft } from '../services/studioCloudDraftService';
 import { getCrossDissolveProgress, STUDIO_CROSS_DISSOLVE_SECONDS } from '../utils/studioTransitionPolicy';
 import { getStudioVideoLayerFrame, normalizeStudioVideoLayer, type StudioVideoLayer } from '../utils/studioVideoLayerPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
@@ -133,6 +133,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const [uploadProgress, setUploadProgress] = useState(0);
   const [cloudStatus, setCloudStatus] = useState('Checking cloud backup…');
   const [cloudProgress, setCloudProgress] = useState(0);
+  const [cloudConflict, setCloudConflict] = useState(false);
   const [message, setMessage] = useState('');
   const [ready, setReady] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -199,8 +200,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         controller.signal,
       );
       cloudRevisionRef.current = result.revision;
+      setCloudConflict(false);
       setCloudStatus('Cloud backup synced');
     } catch (error) {
+      const conflict = error instanceof Error && error.message.includes('changed on another device');
+      setCloudConflict(conflict);
       setCloudStatus(error instanceof Error ? error.message : 'Cloud backup pending. Your on-device draft is safe.');
     } finally {
       if (cloudSyncAbortRef.current === controller) cloudSyncAbortRef.current = null;
@@ -210,6 +214,29 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
         cloudSyncPendingRef.current = false;
         void requestCloudSync();
       }
+    }
+  }, [currentUser.id]);
+
+  const keepThisDeviceVersion = useCallback(async () => {
+    try {
+      cloudRevisionRef.current = await getStudioCloudDraftRevision(currentUser.id);
+      setCloudConflict(false);
+      setCloudStatus('Keeping this device’s edits and updating the cloud copy…');
+      void requestCloudSync();
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : 'Could not check the latest cloud revision.');
+    }
+  }, [currentUser.id, requestCloudSync]);
+
+  const restoreCloudVersion = useCallback(async () => {
+    try {
+      const cloudDraft = await loadStudioCloudDraft<StudioProject>(currentUser.id);
+      if (!cloudDraft) throw new Error('No cloud draft is available to restore.');
+      await saveProject(cloudDraft.project, `active-project-v1:${currentUser.id}`);
+      setCloudStatus('Cloud version restored. Reopening Studio…');
+      window.location.reload();
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : 'Could not restore the cloud version. Your local draft is safe.');
     }
   }, [currentUser.id]);
 
@@ -1178,7 +1205,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
               <p className="text-[9px] text-[#827B9C]">Subtitles are separate from your post caption. Up to 30 timed segments are saved in your Studio draft and burned into export.</p>
             </div>
             <div className="space-y-2"><label className="block text-xs font-bold">Post caption</label><textarea value={caption} onChange={event=>setCaption(event.target.value.slice(0,500))} maxLength={500} rows={3} placeholder="Write a caption for your finished video…" className="w-full resize-y rounded-xl border border-[#34265E] bg-[#100C20] p-3 text-xs text-white outline-none focus:border-violet-400"/><div className="text-right text-[10px] text-[#827B9C]">{caption.length}/500</div></div>
-            <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><div className="flex items-center justify-between gap-2 rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2"><span className="min-w-0 text-[9px] text-[#AFA5D0]">{cloudStatus}{cloudProgress > 0 && cloudProgress < 100 ? ' · ' + cloudProgress + '%' : ''}</span><button type="button" onClick={() => void requestCloudSync()} disabled={publishing || rendering || !clips.length || cloudStatus === 'Syncing cloud backup…'} className="shrink-0 text-[9px] font-bold text-violet-300 disabled:opacity-40">Sync now</button></div><button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing ? 'Uploading · ' + uploadProgress + '%' : <><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button>{publishing && <div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-3"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: uploadProgress + '%'}}/></div><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-[#A39BBF]">Resumable upload · {uploadProgress}%</span><button type="button" onClick={cancelPublish} className="font-semibold text-rose-300">Cancel upload</button></div></div>}<p className="text-center text-[9px] text-[#827B9C]">Failed uploads can be retried without rendering again.</p></div>
+            <div className="mt-auto space-y-2 border-t border-[#292244] pt-3"><p aria-live="polite" className="min-h-4 text-[10px] text-[#A39BBF]">{message || 'Your edits are saved automatically on this device.'}</p><div className="flex items-center justify-between gap-2 rounded-lg border border-[#34265E] bg-[#080611] px-3 py-2"><span className="min-w-0 text-[9px] text-[#AFA5D0]">{cloudStatus}{cloudProgress > 0 && cloudProgress < 100 ? ' · ' + cloudProgress + '%' : ''}</span><button type="button" onClick={() => void requestCloudSync()} disabled={publishing || rendering || !clips.length || cloudConflict || cloudStatus === 'Syncing cloud backup…'} className="shrink-0 text-[9px] font-bold text-violet-300 disabled:opacity-40">Sync now</button></div>{cloudConflict && <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-950/10 p-3"><p className="text-[9px] text-amber-100">This project was also edited on another device. Your local draft is safe. Choose which copy should become the latest version.</p><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => void restoreCloudVersion()} className="rounded-lg border border-[#59458C] px-2 py-2 text-[9px] font-bold text-violet-100">Use cloud copy</button><button type="button" onClick={() => void keepThisDeviceVersion()} className="rounded-lg border border-amber-400/40 px-2 py-2 text-[9px] font-bold text-amber-100">Keep this device</button></div></div>}<button type="button" onClick={handlePublish} disabled={!exportBlob || publishing || rendering} className="w-full rounded-xl bg-gradient-to-r from-[#8A3FFC] via-[#4B10F2] to-[#1600A3] px-4 py-3 text-xs font-black disabled:opacity-50">{publishing ? 'Uploading · ' + uploadProgress + '%' : <><Check size={14} className="mr-2 inline"/>Publish to NEXORA</>}</button>{publishing && <div className="space-y-2 rounded-lg border border-[#34265E] bg-[#080611] p-3"><div className="h-1.5 overflow-hidden rounded-full bg-[#211A36]"><div className="h-full rounded-full bg-violet-400 transition-[width]" style={{width: uploadProgress + '%'}}/></div><div className="flex items-center justify-between gap-2 text-[10px]"><span className="text-[#A39BBF]">Resumable upload · {uploadProgress}%</span><button type="button" onClick={cancelPublish} className="font-semibold text-rose-300">Cancel upload</button></div></div>}<p className="text-center text-[9px] text-[#827B9C]">Failed uploads can be retried without rendering again.</p></div>
           </aside>
         </main>
       </motion.div>
