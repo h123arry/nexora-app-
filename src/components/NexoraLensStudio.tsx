@@ -130,6 +130,132 @@ function drawLens(context: CanvasRenderingContext2D, landmarks: any[], lens: Len
   context.restore();
 }
 
+function createThreeLensRuntime(THREE: any, canvas: HTMLCanvasElement, width: number, height: number) {
+  const aspect = width / Math.max(1, height);
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true, powerPreference: 'low-power' });
+  renderer.setPixelRatio(1);
+  renderer.setSize(width, height, false);
+  renderer.setClearColor(0x000000, 0);
+  const scene = new THREE.Scene();
+  const camera = new THREE.OrthographicCamera(-aspect, aspect, 1, -1, 0.1, 30);
+  camera.position.z = 10;
+  scene.add(new THREE.AmbientLight(0xffffff, 1.35));
+  const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+  keyLight.position.set(-2, 3, 5);
+  scene.add(keyLight);
+  const rimLight = new THREE.PointLight(0x9b5cff, 2.5, 8);
+  rimLight.position.set(1, 1, 3);
+  scene.add(rimLight);
+
+  const root = new THREE.Group();
+  scene.add(root);
+  const objects: Record<string, any> = {};
+  const makeGroup = (name: string) => {
+    const group = new THREE.Group();
+    group.name = name;
+    root.add(group);
+    objects[name] = group;
+    return group;
+  };
+  const violet = new THREE.MeshStandardMaterial({ color: 0x7138ff, metalness: 0.62, roughness: 0.24, emissive: 0x23065c });
+  const lilac = new THREE.MeshStandardMaterial({ color: 0xd9c4ff, metalness: 0.35, roughness: 0.2, emissive: 0x392078 });
+  const darkGlass = new THREE.MeshStandardMaterial({ color: 0x32116e, metalness: 0.35, roughness: 0.12, transparent: true, opacity: 0.78 });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xf0c66b, metalness: 0.8, roughness: 0.22 });
+
+  const crown = makeGroup('crown');
+  const crownShape = new THREE.Shape();
+  crownShape.moveTo(-0.95, -0.28);
+  crownShape.lineTo(-0.82, 0.28);
+  crownShape.lineTo(-0.38, -0.02);
+  crownShape.lineTo(0, 0.62);
+  crownShape.lineTo(0.38, -0.02);
+  crownShape.lineTo(0.82, 0.28);
+  crownShape.lineTo(0.95, -0.28);
+  crownShape.closePath();
+  const crownGeometry = new THREE.ExtrudeGeometry(crownShape, { depth: 0.16, bevelEnabled: true, bevelSegments: 3, steps: 1, bevelSize: 0.045, bevelThickness: 0.045 });
+  crownGeometry.center();
+  const crownMesh = new THREE.Mesh(crownGeometry, violet);
+  crownMesh.position.y = 0.38;
+  crown.add(crownMesh);
+  const crownBand = new THREE.Mesh(new THREE.BoxGeometry(1.78, 0.16, 0.2), gold);
+  crownBand.position.y = -0.18;
+  crown.add(crownBand);
+  const crownGem = new THREE.Mesh(new THREE.OctahedronGeometry(0.13, 0), lilac);
+  crownGem.position.set(0, 0.63, 0.15);
+  crown.add(crownGem);
+
+  const cat = makeGroup('cat');
+  for (const side of [-1, 1]) {
+    const ear = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.9, 4), violet);
+    ear.position.set(side * 0.68, 0.56, 0);
+    ear.rotation.z = side * -0.28;
+    cat.add(ear);
+    const innerEar = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.54, 4), lilac);
+    innerEar.position.set(side * 0.68, 0.56, 0.13);
+    innerEar.rotation.z = side * -0.28;
+    cat.add(innerEar);
+  }
+
+  const halo = makeGroup('halo');
+  const haloRing = new THREE.Mesh(new THREE.TorusGeometry(0.68, 0.065, 12, 48), gold);
+  haloRing.position.y = 0.98;
+  haloRing.rotation.x = 0.16;
+  halo.add(haloRing);
+  const haloGlow = new THREE.Mesh(new THREE.TorusGeometry(0.76, 0.018, 8, 48), lilac);
+  haloGlow.position.y = 0.98;
+  haloGlow.rotation.x = 0.16;
+  halo.add(haloGlow);
+
+  const glasses = makeGroup('glasses');
+  for (const side of [-1, 1]) {
+    const lens = new THREE.Mesh(new THREE.TorusGeometry(0.43, 0.055, 10, 36), lilac);
+    lens.position.set(side * 0.48, 0.02, 0.12);
+    glasses.add(lens);
+    const glassFill = new THREE.Mesh(new THREE.CircleGeometry(0.39, 32), darkGlass);
+    glassFill.position.set(side * 0.48, 0.02, 0.08);
+    glasses.add(glassFill);
+  }
+  const bridge = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.42, 12), gold);
+  bridge.rotation.z = Math.PI / 2;
+  bridge.position.set(0, 0.02, 0.14);
+  glasses.add(bridge);
+
+  const hearts = makeGroup('hearts');
+  const heartShape = new THREE.Shape();
+  heartShape.moveTo(0, -0.28);
+  heartShape.bezierCurveTo(-0.5, 0.02, -0.38, 0.42, 0, 0.2);
+  heartShape.bezierCurveTo(0.38, 0.42, 0.5, 0.02, 0, -0.28);
+  const heartGeometry = new THREE.ExtrudeGeometry(heartShape, { depth: 0.08, bevelEnabled: true, bevelSegments: 2, bevelSize: 0.025, bevelThickness: 0.025 });
+  for (const side of [-1, 1]) {
+    const heart = new THREE.Mesh(heartGeometry, lilac);
+    heart.scale.setScalar(0.55);
+    heart.position.set(side * 0.48, 0.28, 0.15);
+    hearts.add(heart);
+  }
+
+  const sparkles = makeGroup('sparkles');
+  for (let i = 0; i < 6; i += 1) {
+    const star = new THREE.Mesh(new THREE.OctahedronGeometry(0.13 + (i % 2) * 0.06, 0), i % 2 ? gold : lilac);
+    const angle = i * Math.PI / 3;
+    star.position.set(Math.cos(angle) * 1.02, 0.15 + Math.sin(angle) * 0.62, 0.12);
+    sparkles.add(star);
+  }
+
+  const setLens = (sticker: Lens['sticker']) => {
+    Object.entries(objects).forEach(([key, group]) => { group.visible = sticker === key || (sticker === 'sparkles' && key === 'sparkles'); });
+  };
+  const render = () => renderer.render(scene, camera);
+  const dispose = () => {
+    renderer.dispose();
+    Object.values(objects).forEach((group: any) => group.traverse((item: any) => {
+      item.geometry?.dispose?.();
+      if (Array.isArray(item.material)) item.material.forEach((material: any) => material.dispose?.());
+      else item.material?.dispose?.();
+    }));
+  };
+  return { renderer, scene, camera, root, objects, setLens, render, dispose };
+}
+
 export default function NexoraLensStudio({ cameraFacing, userId, captureMode, onStreamReady, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
