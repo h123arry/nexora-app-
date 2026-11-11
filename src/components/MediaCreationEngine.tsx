@@ -381,7 +381,8 @@ export default function MediaCreationEngine({
 
   useEffect(() => () => {
     if (loopTimerRef.current) clearInterval(loopTimerRef.current);
-    videoStreamRef.current?.getTracks().forEach(track => track.stop());\n    photoStreamRef.current?.getTracks().forEach(track => track.stop());
+    videoStreamRef.current?.getTracks().forEach(track => track.stop());
+    photoStreamRef.current?.getTracks().forEach(track => track.stop());
     if (mediaRecorderVideoRef.current?.state !== 'inactive') mediaRecorderVideoRef.current?.stop();
     if (mediaRecorderRef.current?.state !== 'inactive') mediaRecorderRef.current?.stop();
     clearTrackedObjectUrls();
