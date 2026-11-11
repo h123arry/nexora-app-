@@ -1591,4 +1591,30 @@ const publicProfile = (uid) => ({
     await assertFails(setDoc(doc(dbFor('alice'), 'searchIndex', 'forged'), { kind: 'post', isPublic: true }));
     await assertFails(updateDoc(doc(dbFor('alice'), 'searchIndex', 'post_private-projection'), { title: 'forged result' }));
   });
+  it('allows only approved creator lenses or owner-scoped drafts and denies all client writes', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'creatorLenses', 'public-lens'), {
+        id: 'public-lens', ownerId: 'alice', name: 'Violet Hour', status: 'approved', recipe: { brightness: 100 }
+      });
+      await setDoc(doc(adminDb, 'creatorLenses', 'private-draft'), {
+        id: 'private-draft', ownerId: 'alice', name: 'Private Recipe', status: 'draft', recipe: { brightness: 110 }
+      });
+      await setDoc(doc(adminDb, 'creatorLensAuditEvents', 'review-event'), {
+        lensId: 'public-lens', event: 'approved'
+      });
+    });
+    await assertSucceeds(getDoc(doc(dbFor('bob'), 'creatorLenses', 'public-lens')));
+    await assertFails(getDoc(doc(dbFor('bob'), 'creatorLenses', 'private-draft')));
+    await assertSucceeds(getDoc(doc(dbFor('alice'), 'creatorLenses', 'private-draft')));
+    await assertSucceeds(getDocs(query(collection(dbFor('bob'), 'creatorLenses'), where('status', '==', 'approved'))));
+    await assertSucceeds(getDocs(query(collection(dbFor('alice'), 'creatorLenses'), where('ownerId', '==', 'alice'))));
+    await assertFails(getDoc(doc(dbFor('alice'), 'creatorLensAuditEvents', 'review-event')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'creatorLenses', 'forged'), {
+      id: 'forged', ownerId: 'alice', name: 'Forged', status: 'approved'
+    }));
+    await assertFails(updateDoc(doc(dbFor('alice'), 'creatorLenses', 'public-lens'), { status: 'approved', ownerId: 'alice' }));
+    await assertFails(deleteDoc(doc(dbFor('alice'), 'creatorLenses', 'public-lens')));
+    await assertFails(setDoc(doc(dbFor('alice'), 'creatorLensAuditEvents', 'fake'), { event: 'approved' }));
+  });
+
 });
