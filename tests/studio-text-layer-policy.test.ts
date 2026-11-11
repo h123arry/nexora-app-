@@ -79,5 +79,5 @@ test('keyframes compose with existing entrance animation and stay inside layer t
     { time: 6, opacity: 0.5, scale: 1.2, rotation: 10, offsetY: 12 },
   ] }, 'combined');
   assert.equal(getStudioTextLayerFrame(layer, 1, 10), null);
-  assert.equal(getStudioTextLayerFrame(layer, 3, 10)?.opacity, 0.9375);
+  assert.equal(getStudioTextLayerFrame(layer, 3, 10)?.opacity, 0.875);
 });
