@@ -621,9 +621,11 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
         {cameraError && <div className="absolute inset-0 flex items-center justify-center bg-[#050914]/90 p-6 text-center text-sm text-rose-200">{cameraError}</div>}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
           <span className="rounded-full bg-black/60 px-3 py-1.5 text-[10px] text-white">{LENSES.find(item => item.id === activeLens)?.name}</span>
-          <button type="button" onClick={() => void capturePhoto()} disabled={isCapturing || Boolean(cameraError)} className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-br from-[#8A3FFC] to-[#4B10F2] text-white shadow-lg disabled:opacity-50" aria-label="Capture filtered photo">
-            <Camera className="h-5 w-5" />
-          </button>
+          {captureMode === 'photo' && (
+            <button type="button" onClick={() => void capturePhoto()} disabled={isCapturing || Boolean(cameraError)} className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-br from-[#8A3FFC] to-[#4B10F2] text-white shadow-lg disabled:opacity-50" aria-label="Capture filtered photo">
+              <Camera className="h-5 w-5" />
+            </button>
+          )}
         </div>
       </div>
 
