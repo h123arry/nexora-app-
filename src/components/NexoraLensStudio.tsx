@@ -427,7 +427,8 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     } catch { return []; }
   });
   const [faceTracking, setFaceTracking] = useState<'loading' | 'ready' | 'unavailable'>('loading');
-  const [cameraReady, setCameraReady] = useState(false);\n  const [previewFrame, setPreviewFrame] = useState<string | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [previewFrame, setPreviewFrame] = useState<string | null>(null);
   const [threeReady, setThreeReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
