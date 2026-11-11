@@ -552,24 +552,32 @@ export default function MediaCreationEngine({
   }, [activeMode, permissionState, cameraFacing, currentStep, isLensStudioOpen]);
 
   // Photo camera preview is opened only while the photo-add step is visible.
-  // The stream is released whenever the user leaves this step or opens the lens studio.
+  // Wait for real video metadata before enabling capture, especially on mobile browsers.
   useEffect(() => {
     if (activeMode !== 'photo' || permissionState !== 'granted' || currentStep !== 2 || isLensStudioOpen) {
       setPhotoCameraReady(false);
       return;
     }
+
     let cancelled = false;
     let currentStream: MediaStream | null = null;
+    let removeVideoListeners = () => {};
     setPhotoCameraReady(false);
+
     if (!navigator.mediaDevices?.getUserMedia) {
       window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera is not supported by this browser. Please choose a photo from your device.' }));
       return;
     }
+
     navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: cameraFacing }, width: { ideal: 1920 }, height: { ideal: 1080 } },
       audio: false,
     }).then(async stream => {
-      if (cancelled) { stream.getTracks().forEach(track => track.stop()); return; }
+      if (cancelled) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+
       currentStream = stream;
       photoStreamRef.current = stream;
       const video = photoPreviewRef.current;
@@ -578,12 +586,47 @@ export default function MediaCreationEngine({
         if (photoStreamRef.current === stream) photoStreamRef.current = null;
         return;
       }
+
+      const metadataReady = new Promise<void>((resolve, reject) => {
+        if (video.readyState >= HTMLMediaElement.HAVE_METADATA && video.videoWidth > 0 && video.videoHeight > 0) {
+          resolve();
+          return;
+        }
+        const onLoadedMetadata = () => {
+          removeVideoListeners();
+          resolve();
+        };
+        const onVideoError = () => {
+          removeVideoListeners();
+          reject(new Error('The camera did not provide a usable preview.'));
+        };
+        removeVideoListeners = () => {
+          video.removeEventListener('loadedmetadata', onLoadedMetadata);
+          video.removeEventListener('error', onVideoError);
+        };
+        video.addEventListener('loadedmetadata', onLoadedMetadata, { once: true });
+        video.addEventListener('error', onVideoError, { once: true });
+      });
+
       video.srcObject = stream;
       try {
+        await metadataReady;
+        if (cancelled) return;
         await video.play();
-        if (!cancelled && video.videoWidth > 0 && video.videoHeight > 0) setPhotoCameraReady(true);
-      } catch {
-        window.dispatchEvent(new CustomEvent('toast', { detail: 'Camera preview could not start. Check browser camera permissions and try again.' }));
+        if (cancelled) return;
+        if (video.videoWidth <= 0 || video.videoHeight <= 0) {
+          throw new Error('The camera preview is not ready yet.');
+        }
+        setPhotoCameraReady(true);
+      } catch (error) {
+        stream.getTracks().forEach(track => track.stop());
+        if (photoStreamRef.current === stream) photoStreamRef.current = null;
+        if (video.srcObject === stream) video.srcObject = null;
+        if (!cancelled) {
+          window.dispatchEvent(new CustomEvent('toast', {
+            detail: error instanceof Error ? error.message : 'Camera preview could not start. Check browser camera permissions and try again.',
+          }));
+        }
       }
     }).catch(error => {
       if (cancelled) return;
@@ -594,8 +637,10 @@ export default function MediaCreationEngine({
           : 'Could not start the camera. Please retry or choose a photo from your device.';
       window.dispatchEvent(new CustomEvent('toast', { detail: message }));
     });
+
     return () => {
       cancelled = true;
+      removeVideoListeners();
       currentStream?.getTracks().forEach(track => track.stop());
       if (photoStreamRef.current === currentStream) photoStreamRef.current = null;
       if (photoPreviewRef.current) photoPreviewRef.current.srcObject = null;
