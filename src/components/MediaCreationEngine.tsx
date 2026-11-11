@@ -790,6 +790,7 @@ export default function MediaCreationEngine({
                 revokeTrackedObjectUrl(previous);
                 return null;
               });
+              setVideoRawBlob(null);
             } catch (error) {
               setIsRecording(false);
               window.dispatchEvent(new CustomEvent('toast', { detail: error instanceof Error ? error.message : 'Could not start video recording. Please retry.' }));
