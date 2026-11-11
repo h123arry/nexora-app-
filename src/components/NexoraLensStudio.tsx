@@ -716,7 +716,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         <input type="range" min="0" max="100" value={effectIntensity} onChange={event => setEffectIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Lens effect strength" />
         <span className="w-8 text-right text-[10px] tabular-nums text-[#A39BBF]">{effectIntensity}%</span>
       </label>
-      {(category === 'Beauty' || LENSES.find(item => item.id === activeLens)?.category === 'Beauty') && (
+      {(category === 'Beauty' || allLenses.find(item => item.id === activeLens)?.category === 'Beauty') && (
         <label className="flex items-center gap-3 rounded-xl border border-white/10 bg-[#120E2B] px-3 py-2.5">
           <span className="shrink-0 text-[10px] font-semibold text-[#D7C7FF]">Skin softening</span>
           <input type="range" min="0" max="100" value={beautyIntensity} onChange={event => setBeautyIntensity(Number(event.target.value))} className="min-w-0 flex-1 accent-violet-500" aria-label="Skin softening intensity" />
