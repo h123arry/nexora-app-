@@ -250,7 +250,7 @@ service cloud.firestore {
       allow get: if signedIn() && resource.data.ownerId == request.auth.uid;
       allow list: if signedIn() && resource.data.ownerId == request.auth.uid;
       allow create: if signedIn()
-        && request.resource.data.keys().hasOnly(['id', 'ownerId', 'storagePath', 'kind', 'contentType', 'size', 'status', 'createdAt', 'updatedAt'])
+        && request.resource.data.keys().hasOnly(['id', 'ownerId', 'storagePath', 'kind', 'contentType', 'size', 'status', 'purpose', 'createdAt', 'updatedAt'])
         && request.resource.data.id == mediaId
         && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.storagePath == 'users/' + request.auth.uid + '/media/' + mediaId
@@ -259,6 +259,7 @@ service cloud.firestore {
         && request.resource.data.size is int
         && request.resource.data.size > 0
         && request.resource.data.status == 'pending_upload'
+        && (!request.resource.data.keys().hasAny(['purpose']) || request.resource.data.purpose == 'studio-export')
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time;
       allow update: if false;
