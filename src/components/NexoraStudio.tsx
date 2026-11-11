@@ -331,6 +331,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   }, [undo, redo]);
 
   const seekToGlobalTime = useCallback((requestedTime: number) => {
+    continuePlaybackRef.current = false;
     if (!clips.length || totalDuration <= 0) return;
     const position = getStudioClipTimelinePosition(clips, requestedTime);
     if (!position) return;
