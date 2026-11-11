@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirestoreDatabaseId } from './runtimeConfig.js';
+import { consumeModerationReportQuota } from './moderationPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -68,11 +69,22 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
   const normalizedTargetId = targetId.trim();
   const reportId = stableReportId(reporterId, targetType, normalizedTargetId);
   const reportRef = db.collection('moderationReports').doc(reportId);
+  const quotaRef = db.collection('moderationReportQuotas').doc(reporterId);
   const duplicate = await db.runTransaction(async (transaction) => {
-    const existing = await transaction.get(reportRef);
-    // One report per reporter/target pair, even after closure. This keeps retries
-    // idempotent and prevents concurrent submissions from creating duplicate work.
+    const [existing, quotaSnapshot] = await Promise.all([
+      transaction.get(reportRef),
+      transaction.get(quotaRef),
+    ]);
+    // Retries of an existing report remain idempotent and do not consume quota.
     if (existing.exists) return true;
+
+    const quota = consumeModerationReportQuota(
+      quotaSnapshot.exists ? quotaSnapshot.data() : null,
+      Date.now(),
+    );
+    if (!quota.allowed) {
+      throw new HttpsError('resource-exhausted', 'You have reached the report limit. Try again after the current one-hour window.');
+    }
 
     const now = FieldValue.serverTimestamp();
     transaction.create(reportRef, {
@@ -84,6 +96,11 @@ export const submitModerationReport = onCall({ maxInstances: 10 }, async (reques
       status: 'pending',
       policyVersion: '2026-10',
       createdAt: now,
+      updatedAt: now,
+    });
+    transaction.set(quotaRef, {
+      windowStartedAtMs: quota.windowStartedAtMs,
+      attempts: quota.attempts,
       updatedAt: now,
     });
     const auditRef = db.collection('moderationAuditEvents').doc();
