@@ -789,60 +789,38 @@ export default function SystemHubControlPanel({
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-violet-400" />
                     <h4 className="text-[11px] font-sans font-black text-white uppercase tracking-wider">
-                      Zero-Knowledge Privacy Protocol
+                      Privacy & permissions
                     </h4>
                   </div>
                   <p className="text-[10px] text-zinc-400 leading-relaxed font-sans">
-                    NEXORA encrypts all microphone voices, images, drafts, and profile edits client-side before transmission. We never store or monetize personal browsing history. You are the sole controller of your interest matrix and content logs.
+                    NEXORA applies feature-specific access controls and privacy settings. Not all content is end-to-end encrypted; review each feature's privacy options and the published privacy policy before sharing sensitive information.
                   </p>
                 </div>
 
-                {/* 2. Permission simulator */}
+                {/* Browser permission status is read-only; this panel cannot grant or revoke permissions. */}
                 <div className="space-y-3">
-                  <h4 className="text-[11px] font-sans font-black text-white uppercase tracking-widest block">
-                    Browser Hardware Access Ledger
-                  </h4>
-                  
-                  <div className="space-y-2">
-                    {[
-                      { id: 'camera', label: 'Camera Capability', desc: 'Allows instant video post captures & stories recording.' },
-                      { id: 'microphone', label: 'Microphone Capability', desc: 'Used for Nexora\'s signature auto-transcribed Voice Posts.' },
-                      { id: 'location', label: 'Geolocation Pulse', desc: 'Pinpoint region coordinates for localized World Pulse reporting.' }
-                    ].map((perm) => {
-                      const isGranted = (permissions as any)[perm.id] === 'granted';
-                      return (
-                        <div
-                          key={perm.id}
-                          className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
-                            isHighContrast ? 'border-white' : 'bg-white/[0.02] border-white/5'
-                          }`}
-                        >
-                          <div>
-                            <span className="block text-[11px] font-sans font-black uppercase text-white">{perm.label}</span>
-                            <span className="block text-[9.5px] text-zinc-400 font-sans mt-0.5">{perm.desc}</span>
-                          </div>
-                          
-                          <button
-                            onMouseEnter={() => speakAnnouncement(`Toggle ${perm.label} permission.`)}
-                            onClick={() => {
-                              const current = (permissions as any)[perm.id];
-                              const next = current === 'granted' ? 'denied' : 'granted';
-                              setPermissions(p => ({ ...p, [perm.id]: next }));
-                              playHapticHum(next === 'granted' ? 240 : 120, 0.1);
-                              speakAnnouncement(`Permission for ${perm.label} switched to ${next}.`);
-                            }}
-                            className={`px-3 py-1.5 rounded-xl text-[9.5px] font-mono font-bold border transition-all cursor-pointer ${
-                              isGranted
-                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                                : 'bg-red-500/10 border-red-500/30 text-red-400'
-                            }`}
-                          >
-                            {isGranted ? 'GRANTED' : 'DENIED'}
-                          </button>
-                        </div>
-                      );
-                    })}
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-[11px] font-sans font-black text-white uppercase tracking-widest">Browser Hardware Access</h4>
+                    <button type="button" onClick={() => { void checkBrowserPermissions(); }} className="rounded-lg border border-white/10 px-3 py-1.5 text-[9px] font-mono text-zinc-300 hover:bg-white/5">
+                      CHECK STATUS
+                    </button>
                   </div>
+                  <p className="text-[10px] leading-relaxed text-zinc-400">These are read-only browser permission states. NEXORA cannot change a permission from this panel.</p>
+                  {[
+                    { id: 'camera', label: 'Camera' },
+                    { id: 'microphone', label: 'Microphone' },
+                    { id: 'location', label: 'Location' },
+                    { id: 'notifications', label: 'Notifications' },
+                  ].map(permission => {
+                    const status = (permissions as any)[permission.id] || 'unknown';
+                    const statusLabel = status === 'granted' ? 'GRANTED' : status === 'denied' ? 'DENIED' : status === 'prompt' ? 'ASK FIRST' : status === 'unavailable' ? 'UNAVAILABLE' : 'NOT CHECKED';
+                    return (
+                      <div key={permission.id} className="p-3.5 rounded-2xl border border-white/5 bg-white/[0.02] flex items-center justify-between gap-3">
+                        <span className="text-[11px] font-sans font-black uppercase text-white">{permission.label}</span>
+                        <span className={status === 'granted' ? 'text-[9.5px] font-mono font-bold text-emerald-400' : status === 'denied' ? 'text-[9.5px] font-mono font-bold text-red-400' : 'text-[9.5px] font-mono font-bold text-zinc-400'}>{statusLabel}</span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* 3. Export Data action */}
