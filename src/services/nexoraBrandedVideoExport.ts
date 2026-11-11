@@ -170,7 +170,7 @@ export async function exportNexoraBrandedVideo(
     onProgress?.(94);
     const outroDurationMs = Math.max(2400, sonicBuffer.duration * 1000);
     const outroStartedAt = performance.now();
-    const drawOutroFrame = (now: number) => {
+    const drawOutroFrame = (now: number, rhythm: number) => {
       const elapsed = Math.min(1, (now - outroStartedAt) / outroDurationMs);
       const eased = 1 - Math.pow(1 - elapsed, 3);
       const w = canvas.width;
@@ -181,21 +181,26 @@ export async function exportNexoraBrandedVideo(
       gradient.addColorStop(1, '#260A68');
       context.fillStyle = gradient;
       context.fillRect(0, 0, w, h);
-      const glow = context.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.42, Math.max(w, h) * 0.62);
-      glow.addColorStop(0, 'rgba(113, 56, 255, 0.34)');
+      const glow = context.createRadialGradient(w * 0.5, h * 0.42, 0, w * 0.5, h * 0.42, Math.max(w, h) * (0.62 + rhythm * 0.08));
+      glow.addColorStop(0, `rgba(113, 56, 255, ${0.34 + rhythm * 0.2})`);
       glow.addColorStop(1, 'rgba(113, 56, 255, 0)');
       context.fillStyle = glow;
       context.fillRect(0, 0, w, h);
-      const centerX = w / 2;
-      const centerY = h * 0.43;
-      const logoSize = Math.round(Math.min(w * 0.25, h * 0.19) * (0.86 + eased * 0.14));
+      const centerX = w / 2 + Math.sin(now * 0.045) * rhythm * w * 0.009;
+      const centerY = h * 0.43 - rhythm * h * 0.012;
+      const logoSize = Math.round(Math.min(w * 0.25, h * 0.19) * (0.86 + eased * 0.14 + rhythm * 0.075));
+      context.save();
+      context.translate(centerX, centerY);
+      context.rotate(Math.sin(now * 0.035) * rhythm * 0.045);
+      context.globalAlpha = eased;
+      context.shadowColor = 'rgba(138, 63, 252, 0.75)';
+      context.shadowBlur = Math.max(12, logoSize * (0.22 + rhythm * 0.16));
+      if (brandLogo.complete && brandLogo.naturalWidth > 0) {
+        context.drawImage(brandLogo, -logoSize / 2, -logoSize / 2, logoSize, logoSize);
+      }
+      context.restore();
       context.save();
       context.globalAlpha = eased;
-      context.shadowColor = 'rgba(138, 63, 252, 0.65)';
-      context.shadowBlur = Math.max(12, logoSize * 0.22);
-      if (brandLogo.complete && brandLogo.naturalWidth > 0) {
-        context.drawImage(brandLogo, centerX - logoSize / 2, centerY - logoSize / 2, logoSize, logoSize);
-      }
       context.shadowBlur = 0;
       context.textAlign = 'center';
       context.textBaseline = 'middle';
@@ -211,16 +216,33 @@ export async function exportNexoraBrandedVideo(
       context.fillText("THE WORLD'S LIVING SOCIAL NETWORK", centerX, h * 0.81, w * 0.88);
       context.restore();
     };
-    {
-      const sonicSource = audioContext!.createBufferSource();
-      sonicSource.buffer = sonicBuffer;
-      sonicSource.connect(audioOutput);
-      sonicSource.start();
-    }
+    const sonicAnalyser = audioContext!.createAnalyser();
+    sonicAnalyser.fftSize = 256;
+    sonicAnalyser.smoothingTimeConstant = 0.72;
+    const sonicWaveform = new Uint8Array(sonicAnalyser.fftSize);
+    const sonicSource = audioContext!.createBufferSource();
+    sonicSource.buffer = sonicBuffer;
+    sonicSource.connect(sonicAnalyser);
+    sonicAnalyser.connect(audioOutput);
+    sonicSource.start();
+
+    let previousEnergy = 0;
+    let beatPulse = 0;
     await new Promise<void>(resolve => {
       const finishOutro = () => { settled = true; resolve(); };
       const outroLoop = (now: number) => {
-        drawOutroFrame(now);
+        sonicAnalyser.getByteTimeDomainData(sonicWaveform);
+        let sumSquares = 0;
+        for (let i = 0; i < sonicWaveform.length; i += 1) {
+          const sample = (sonicWaveform[i] - 128) / 128;
+          sumSquares += sample * sample;
+        }
+        const energy = Math.sqrt(sumSquares / sonicWaveform.length);
+        const transient = Math.max(0, energy - previousEnergy);
+        beatPulse = Math.max(transient * 8, beatPulse * 0.84);
+        previousEnergy = energy;
+        const rhythm = Math.min(1, Math.max(energy * 0.65, beatPulse));
+        drawOutroFrame(now, rhythm);
         if (now - outroStartedAt >= outroDurationMs) finishOutro();
         else frameRequest = requestAnimationFrame(outroLoop);
       };
