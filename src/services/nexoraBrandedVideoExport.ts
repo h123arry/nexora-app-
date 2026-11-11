@@ -38,6 +38,7 @@ export async function exportNexoraBrandedVideo(
   const brandLogo = new Image();
   brandLogo.src = '/logo.svg';
   await brandLogo.decode().catch(() => undefined);
+  if (!brandLogo.naturalWidth) throw new Error('The official NEXORA logo could not be loaded. Branded export was stopped.');
 
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d', { alpha: false });
