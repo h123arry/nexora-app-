@@ -8,6 +8,6 @@ export function isStudioCloudRevisionCurrent(expectedRevision: number, actualRev
 }
 
 export function isStudioCloudAssetPathOwnedByUser(storagePath: string, userId: string): boolean {
-  return Boolean(userId) && storagePath.startsWith(`users/${userId}/media/`) &&
+  return Boolean(userId) && storagePath.startsWith(`users/${userId}/studio-drafts/active/assets/`) &&
     !storagePath.split('/').some(segment => segment === '.' || segment === '..');
 }
