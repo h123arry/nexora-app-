@@ -2525,6 +2525,9 @@ export default function ProfileView({
                                 />
                               </div>
 
+                              <p className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-2 text-[10px] leading-relaxed text-amber-200/80">
+                                Support ticketing is not connected yet. Sending this form will not create a ticket; your message will be kept in the field.
+                              </p>
                               <button
                                 onClick={() => {
                                   if (!supportMessage.trim()) {
@@ -2532,7 +2535,6 @@ export default function ProfileView({
                                     return;
                                   }
                                   window.dispatchEvent(new CustomEvent('toast', { detail: 'Support ticketing is not connected yet. Your message was not sent.' }));
-                                  setSupportMessage('');
                                 }}
                                 className="w-full py-2 bg-pink-600 hover:bg-pink-500 text-white font-mono text-[9px] uppercase font-black tracking-wider rounded-lg transition-all"
                               >
