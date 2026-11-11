@@ -11,6 +11,13 @@ function validUid(value: unknown): value is string {
   return typeof value === 'string' && ID_PATTERN.test(value);
 }
 
+/** A public post contributes to at most one challenge, preventing cross-tag multiplier farming. */
+export function extractSocialChallengeIds(source: unknown): string[] {
+  if (typeof source !== 'string') return [];
+  const match = source.match(/#nxchallenge_([A-Za-z0-9_-]{1,150})/);
+  return match ? [match[1]] : [];
+}
+
 
 export interface CommunityCapabilitySnapshot {
   totalVerifiedContributions: number;
