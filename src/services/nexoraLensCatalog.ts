@@ -77,7 +77,7 @@ function makeLens(collectionIndex: number, itemIndex: number): NexoraLens {
   const sepia = clamp(collection.base.sepia + (variation % 4) * 0.035, 0, 0.22);
   const isAr = collection.category === 'AR';
   const sticker = isAr && itemIndex < arStickers.length ? arStickers[itemIndex] : 'none';
-  const name = sticker !== 'none' ? originalNames[sticker] : `${prefix} ${suffix}`;
+  const name = sticker !== 'none' ? originalNames[sticker] : `${prefix} ${suffix} ${String(variation).padStart(2, '0')}`;
   const id = `nexora-${collection.category.toLowerCase().replaceAll(' ', '-')}-${String(variation).padStart(2, '0')}`;
   const filter = [
     `brightness(${brightness.toFixed(3)})`,
