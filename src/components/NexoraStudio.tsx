@@ -114,7 +114,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   const selectedClipGlobalOffset = useMemo(() => clips.slice(0, Math.max(0, selectedClipIndex)).reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips, selectedClipIndex]);
   const nextPreviewClip = selectedClipIndex >= 0 ? clips[selectedClipIndex + 1] || null : null;
   const selectedClipLocalTime = selectedClip ? selectedClip.start + Math.max(0, previewGlobalTime - selectedClipGlobalOffset) : 0;
-  const crossDissolveProgress = transition === 'cross-dissolve' && selectedClip && nextPreviewClip ? getCrossDissolveProgress(selectedClipLocalTime, selectedClip.end, STUDIO_CROSS_DISSOLVE_SECONDS) : 0;
+  const crossDissolveProgress = transition === 'cross-dissolve' && selectedClip && nextPreviewClip ? getCrossDissolveProgress(selectedClipLocalTime, selectedClip.end, Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, selectedClip.end - selectedClip.start), Math.max(0, nextPreviewClip.end - nextPreviewClip.start))) : 0;
   const totalDuration = useMemo(() => clips.reduce((sum, clip) => sum + Math.max(0, clip.end - clip.start), 0), [clips]);
   const timelineClipSegments = useMemo(() => {
     let cursor = 0;
@@ -775,6 +775,7 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       draw();
       for (const [clipIndex, clip] of clips.entries()) {
         const overlapFromPrevious = transition === 'cross-dissolve' && clipIndex > 0 ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clips[clipIndex - 1].end - clips[clipIndex - 1].start), Math.max(0, clip.end - clip.start)) : 0;
+        const transitionDuration = transition === 'cross-dissolve' && clipIndex < clips.length - 1 ? Math.min(STUDIO_CROSS_DISSOLVE_SECONDS, Math.max(0, clip.end - clip.start), Math.max(0, clips[clipIndex + 1].end - clips[clipIndex + 1].start)) : 0;
         const sourceStart = Math.min(clip.end, clip.start + overlapFromPrevious);
         if (clipGain) clipGain.gain.value = clip.volume;
         if (soundtrackGain) soundtrackGain.gain.value = soundtrackVolume;
@@ -814,8 +815,8 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
           const check = () => {
             elapsed = clipElapsedStart + Math.max(0, preview.currentTime - clip.start);
             const remaining = Math.max(0, clip.end - preview.currentTime);
-            if (transition === 'cross-dissolve' && clipIndex < clips.length - 1 && remaining <= STUDIO_CROSS_DISSOLVE_SECONDS) {
-              transitionProgress = getCrossDissolveProgress(preview.currentTime, clip.end, STUDIO_CROSS_DISSOLVE_SECONDS);
+            if (transition === 'cross-dissolve' && clipIndex < clips.length - 1 && remaining <= transitionDuration) {
+              transitionProgress = getCrossDissolveProgress(preview.currentTime, clip.end, transitionDuration);
               if (!transitionStarted && transitionProgress > 0) { transitionStarted = true; void transitionPreview.play().catch(() => undefined); }
               if (transitionStarted && transitionPreview.readyState >= 2) transitionPreview.currentTime = Math.min(clips[clipIndex + 1].end, clips[clipIndex + 1].start + transitionProgress * STUDIO_CROSS_DISSOLVE_SECONDS);
             }
