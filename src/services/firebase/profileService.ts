@@ -74,6 +74,9 @@ export class ProfileService {
     if (!auth.currentUser || auth.currentUser.uid !== uid) {
       throw new Error('Only the signed-in account owner can update this profile.');
     }
+    if (Object.prototype.hasOwnProperty.call(updates, 'isVerified')) {
+      throw new Error('Verification status is managed by NEXORA and cannot be changed from profile settings.');
+    }
     if (updates.username) {
       await this.reserveUsername(uid, updates.username);
     }
