@@ -6,6 +6,7 @@ import { getStudioTextLayerFrame, normalizeStudioTextLayer, type StudioTextLayer
 import { canAddStudioImageLayer, isStudioImageLayerVisible, normalizeStudioImageLayer, type StudioImageLayer } from '../utils/studioImageLayerPolicy';
 import { normalizeStudioSubtitleSegment } from '../utils/studioSubtitlePolicy';
 import { getStudioClipTimelinePosition } from '../utils/studioTimelinePolicy';
+import { getStudioTimelineAudioPosition } from '../utils/studioTimelineAudioPolicy';
 import { ArrowDown, ArrowLeft, ArrowUp, Check, Clapperboard, Film, Mic, Music2, Pause, Play, Plus, Redo2, Scissors, Trash2, Type, Undo2, Upload, Volume2, X } from 'lucide-react';
 
 type StudioClip = { id: string; name: string; blob: Blob; start: number; end: number; duration: number; volume: number };
@@ -217,18 +218,16 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
     if (!music || !narration) return;
     const elapsed = Math.max(0, previewGlobalTime);
     if (soundtrack) {
-      if (Number.isFinite(music.duration) && music.duration > 0) {
-        const expectedMusicTime = elapsed % music.duration;
-        if (Math.abs(music.currentTime - expectedMusicTime) > 0.75) music.currentTime = expectedMusicTime;
-      }
+      const musicPosition = getStudioTimelineAudioPosition(elapsed, 0, Number.isFinite(music.duration) ? music.duration : null, true);
+      if (Number.isFinite(music.duration) && music.duration > 0 && Math.abs(music.currentTime - musicPosition.sourceTime) > 0.75) music.currentTime = musicPosition.sourceTime;
       music.volume = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration: Number.isFinite(narration.duration) ? narration.duration : 0, duckingLevel: musicDuckingLevel });
       if (playing && music.paused) void music.play().catch(() => setMessage('Tap play again to allow soundtrack preview.'));
       if (!playing && !music.paused) music.pause();
     } else music.pause();
-    const narrationTime = elapsed - voiceoverStart;
-    const narrationActive = Boolean(voiceover) && narrationTime >= 0 && (!Number.isFinite(narration.duration) || narrationTime < narration.duration);
-    narration.volume = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: Math.max(0, narrationTime), totalDuration: Number.isFinite(narration.duration) ? narration.duration : 0, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
-    if (narrationActive) {
+    const narrationPosition = getStudioTimelineAudioPosition(elapsed, voiceoverStart, Number.isFinite(narration.duration) ? narration.duration : null);
+    const narrationTime = narrationPosition.sourceTime;
+    narration.volume = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: narrationTime, totalDuration: Number.isFinite(narration.duration) ? narration.duration : 0, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
+    if (Boolean(voiceover) && narrationPosition.active) {
       if (Math.abs(narration.currentTime - narrationTime) > 0.75) narration.currentTime = narrationTime;
       if (playing && narration.paused) void narration.play().catch(() => setMessage('Tap play again to allow voiceover preview.'));
       if (!playing && !narration.paused) narration.pause();
@@ -516,11 +515,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       const music = soundtrackPreviewRef.current;
       const narration = voiceoverPreviewRef.current;
       if (music && soundtrack) {
-        if (Number.isFinite(music.duration) && music.duration > 0) music.currentTime = elapsed % music.duration;
+        if (Number.isFinite(music.duration) && music.duration > 0) music.currentTime = getStudioTimelineAudioPosition(elapsed, 0, music.duration, true).sourceTime;
         await music.play().catch(() => undefined);
       }
       if (narration && voiceover && elapsed >= voiceoverStart && (!Number.isFinite(narration.duration) || elapsed - voiceoverStart < narration.duration)) {
-        narration.currentTime = Math.max(0, elapsed - voiceoverStart);
+        narration.currentTime = getStudioTimelineAudioPosition(elapsed, voiceoverStart, Number.isFinite(narration.duration) ? narration.duration : null).sourceTime;
         await narration.play().catch(() => undefined);
       }
       setPlaying(true);
