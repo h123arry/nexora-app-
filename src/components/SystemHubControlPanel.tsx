@@ -298,8 +298,8 @@ export default function SystemHubControlPanel({
           } hidden md:block`}>
             <div className="flex items-center justify-between text-[9px] font-mono text-zinc-500">
               <span>LOCAL DEVICE STATUS</span>
-              <span className={`flex items-center gap-1 ${isOffline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${isOffline ? 'bg-red-400' : 'bg-emerald-400 animate-ping'}`} />
+              <span className={`flex items-center gap-1 ${isOffline || !browserOnline ? 'text-red-400' : 'text-emerald-400 font-bold'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${isOffline || !browserOnline ? 'bg-red-400' : 'bg-emerald-400'}`} />
                 {isOffline ? 'OFFLINE SIMULATION' : browserOnline ? 'BROWSER ONLINE' : 'BROWSER OFFLINE'}
               </span>
             </div>
