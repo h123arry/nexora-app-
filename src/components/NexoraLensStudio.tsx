@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon, RotateCcw } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Camera, Heart, Sparkles, Star, Crown, Glasses, Cat, Sun, Moon } from 'lucide-react';
 
 type Facing = 'user' | 'environment';
 type Lens = {
@@ -12,6 +12,7 @@ type Lens = {
 
 type Props = {
   cameraFacing: Facing;
+  userId: string;
   onStreamReady: (stream: MediaStream | null) => void;
   onCapture: (blob: Blob) => void;
 };
@@ -128,14 +129,14 @@ function drawLens(context: CanvasRenderingContext2D, landmarks: any[], lens: Len
   context.restore();
 }
 
-export default function NexoraLensStudio({ cameraFacing, onStreamReady, onCapture }: Props) {
+export default function NexoraLensStudio({ cameraFacing, userId, onStreamReady, onCapture }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamCallbackRef = useRef(onStreamReady);
   const [activeLens, setActiveLens] = useState('natural');
   const [category, setCategory] = useState<'For you' | 'Beauty' | 'Mood' | 'AR'>('For you');
   const [favourites, setFavourites] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('nexora_lens_favourites') || '[]'); } catch { return []; }
+    try { return JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]'); } catch { return []; }
   });
   const [faceTracking, setFaceTracking] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [cameraError, setCameraError] = useState('');
@@ -246,7 +247,7 @@ export default function NexoraLensStudio({ cameraFacing, onStreamReady, onCaptur
   const toggleFavourite = (id: string) => {
     setFavourites(previous => {
       const next = previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id];
-      localStorage.setItem('nexora_lens_favourites', JSON.stringify(next));
+      localStorage.setItem(`nexora_lens_favourites_${userId}`, JSON.stringify(next));
       return next;
     });
   };
