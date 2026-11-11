@@ -1698,7 +1698,7 @@ export default function MediaCreationEngine({
                           <div className="flex items-center justify-between gap-2">
                             <div><p className="text-sm font-bold text-white">NEXORA Filters & Lenses</p><p className="text-[10px] text-[#A39BBF]">Live effects are baked into your capture.</p></div>
                             <div className="flex gap-2">
-                              <button type="button" onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
+                              <button type="button" disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full border border-white/10 bg-[#120E2B] p-2 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-4 w-4" /></button>
                               <button type="button" disabled={isRecording || isSavingRecordedVideo} onClick={() => setIsLensStudioOpen(false)} className="rounded-full border border-white/10 bg-[#120E2B] px-3 py-2 text-xs font-semibold text-white disabled:opacity-40">{isRecording || isSavingRecordedVideo ? 'Saving recording…' : 'Close'}</button>
                             </div>
                           </div>
@@ -1723,7 +1723,7 @@ export default function MediaCreationEngine({
                             <span className="rounded border border-white/5 bg-black/70 px-2 py-0.5">YOUR CAMERA</span>
                             <div className="flex items-center gap-2">
                               <button type="button" onClick={() => { if (permissionState === 'granted') setIsLensStudioOpen(true); else { setOpenLensAfterPermission(true); setPermissionTarget('camera'); } }} className="rounded-full border border-[#A78BFA]/40 bg-[#7138FF]/25 px-3 py-1.5 text-[9px] font-bold text-white"><Sparkles className="mr-1 inline h-3 w-3" /> Filters & Lenses</button>
-                              <button onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
+                              <button disabled={isRecording || isSavingRecordedVideo || countdownTimer !== null} onClick={() => setCameraFacing(prev => prev === 'user' ? 'environment' : 'user')} className="rounded-full bg-[#120E2B] p-1.5 text-white disabled:opacity-40" aria-label="Switch camera"><RefreshCw className="h-3 w-3" /></button>
                             </div>
                           </div>
                           <div className="absolute inset-0 z-0 flex items-center justify-center">
