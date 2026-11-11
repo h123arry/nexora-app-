@@ -2,7 +2,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { getFirestore } from 'firebase-admin/firestore';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { getFirebaseAdminApp, resolveFirebaseStorageBucket, resolveFirestoreDatabaseId } from './runtimeConfig.js';
-import { chooseVideoRendition, safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
+import { canResolvePublicPostMedia, chooseVideoRendition, safeVideoRenditions } from './publicMediaPlaybackPolicy.js';
 
 const app = getFirebaseAdminApp();
 const db = getFirestore(app, resolveFirestoreDatabaseId());
@@ -29,9 +29,8 @@ export const getPublicPostPlayback = onCall({ maxInstances: 40 }, async request 
   const [postSnapshot, assetSnapshot] = await Promise.all([postRef.get(), assetRef.get()]);
   const post = postSnapshot.data();
   const asset = assetSnapshot.data();
-  if (!postSnapshot.exists || post?.audience !== 'public' || post?.mediaAssetId !== mediaAssetId
-    || typeof post?.userId !== 'string' || !assetSnapshot.exists || asset?.ownerId !== post.userId
-    || asset?.kind !== 'video') {
+  if (!postSnapshot.exists || !assetSnapshot.exists
+    || !canResolvePublicPostMedia(post, asset, mediaAssetId)) {
     throw new HttpsError('not-found', 'Processed playback is unavailable for this post.');
   }
   if (asset?.status !== 'ready') return { ready: false as const };
