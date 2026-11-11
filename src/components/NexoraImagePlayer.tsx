@@ -258,10 +258,14 @@ export default function NexoraImagePlayer({
       return () => { active = false; };
     }
 
-    Promise.all(missingIndexes.map(async index => ({
-      index,
-      url: await resolveMediaUrl(rawImages[index]),
-    })))
+    Promise.all(missingIndexes.map(async index => {
+      try {
+        return { index, url: await resolveMediaUrl(rawImages[index]) };
+      } catch {
+        // A failed adjacent prefetch must not prevent the visible image loading.
+        return { index, url: '' };
+      }
+    }))
       .then(resolved => {
         if (!active) return;
         setDisplayImages(previous => {
@@ -270,14 +274,9 @@ export default function NexoraImagePlayer({
           return next;
         });
         setIsResolvingMedia(false);
-      })
-      .catch(() => {
-        if (active) {
-          setIsResolvingMedia(false);
-          if (!displayImages[currentImageIndex]) {
-            setIsImageLoading(false);
-            setHasImageLoadError(true);
-          }
+        if (resolved.some(item => item.index === currentImageIndex && !item.url)) {
+          setIsImageLoading(false);
+          setHasImageLoadError(true);
         }
       });
 
