@@ -28,6 +28,7 @@ interface Post {
   image?: string;
   images?: string[];
   videoUrl?: string;
+  mediaAssetId?: string;
   likes: number;
   comments: any[];
   tags: string[];
@@ -157,7 +158,31 @@ export default function NexoraVideoPlayer({
   const serverWatchSessionId = useRef(`vw_${post.id}_${Math.random().toString(36).slice(2, 18)}`).current;
 
   const resolvedUrl = useResolvedUrl(videoUrl);
-  const finalVideoUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
+  const originalResolvedUrl = videoUrl?.startsWith('db-media://') ? resolvedUrl : videoUrl;
+  const [processedPlaybackUrl, setProcessedPlaybackUrl] = useState<string | null>(null);
+  const finalVideoUrl = processedPlaybackUrl || originalResolvedUrl;
+
+  // Resolve a short-lived, server-signed rendition only for visible/nearby public posts.
+  // The callable verifies current post audience, media ID and owner before signing.
+  useEffect(() => {
+    let cancelled = false;
+    setProcessedPlaybackUrl(null);
+    if (!post.mediaAssetId || !((isActive ?? true) || shouldPreload)) return () => { cancelled = true; };
+    const resolvePlayback = httpsCallable<
+      { postId: string; mediaAssetId: string },
+      { ready: boolean; playbackUrl?: string }
+    >(getFunctions(app), 'getPublicPostPlayback');
+    void resolvePlayback({ postId: post.id, mediaAssetId: post.mediaAssetId })
+      .then(result => {
+        if (!cancelled && result.data.ready && typeof result.data.playbackUrl === 'string') {
+          setProcessedPlaybackUrl(result.data.playbackUrl);
+        }
+      })
+      .catch(() => {
+        // Keep the original published URL as a compatibility fallback.
+      });
+    return () => { cancelled = true; };
+  }, [post.id, post.mediaAssetId, isActive, shouldPreload]);
   const posterUrl = post.image || post.images?.[0];
 
   // Connection & Speed playback status states
@@ -373,7 +398,7 @@ export default function NexoraVideoPlayer({
         entries.forEach((entry) => {
           if (entry.isIntersecting && entry.intersectionRatio >= 0.7) {
             if (videoRef.current && finalVideoUrl) {
-              globalVideoPlaybackManager.play(playerId, videoRef.current, videoUrl)
+              globalVideoPlaybackManager.play(playerId, videoRef.current, finalVideoUrl)
                 .then((played) => {
                   if (played) {
                     setIsPlaying(true);
@@ -462,7 +487,7 @@ export default function NexoraVideoPlayer({
     setDuration(videoRef.current.duration);
     
     // Read saved positions
-    const savedPos = globalVideoPlaybackManager.getPosition(videoUrl);
+    const savedPos = globalVideoPlaybackManager.getPosition(finalVideoUrl);
     if (savedPos > 0) {
       if (savedPos < videoRef.current.duration - 2) {
         videoRef.current.currentTime = savedPos;
@@ -524,7 +549,7 @@ export default function NexoraVideoPlayer({
     // Throttle localStorage write to at most once every 4 seconds to eliminate main-thread storage locks
     if (Math.abs(time - lastSavedPosTimeRef.current) >= 4.0) {
       lastSavedPosTimeRef.current = time;
-      globalVideoPlaybackManager.savePosition(videoUrl, time);
+      globalVideoPlaybackManager.savePosition(finalVideoUrl, time);
     }
 
     // A seek or loop is not watch time. Completion is credited only after
