@@ -215,24 +215,25 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
   useEffect(() => {
     const music = soundtrackPreviewRef.current;
     const narration = voiceoverPreviewRef.current;
-    if (!music || !narration) return;
     const elapsed = Math.max(0, previewGlobalTime);
-    if (soundtrack) {
+    if (music && soundtrack) {
       const musicPosition = getStudioTimelineAudioPosition(elapsed, 0, Number.isFinite(music.duration) ? music.duration : null, true);
       if (Number.isFinite(music.duration) && music.duration > 0 && Math.abs(music.currentTime - musicPosition.sourceTime) > 0.75) music.currentTime = musicPosition.sourceTime;
-      music.volume = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration: Number.isFinite(narration.duration) ? narration.duration : 0, duckingLevel: musicDuckingLevel });
+      music.volume = getDuckedMusicGain({ volume: soundtrackVolume, elapsed, totalDuration, fadeIn: soundtrackFadeIn, fadeOut: soundtrackFadeOut, duckingEnabled: duckMusicUnderVoiceover && Boolean(voiceover), voiceoverStart, voiceoverDuration: narration && Number.isFinite(narration.duration) ? narration.duration : 0, duckingLevel: musicDuckingLevel });
       if (playing && music.paused) void music.play().catch(() => setMessage('Tap play again to allow soundtrack preview.'));
       if (!playing && !music.paused) music.pause();
-    } else music.pause();
-    const narrationPosition = getStudioTimelineAudioPosition(elapsed, voiceoverStart, Number.isFinite(narration.duration) ? narration.duration : null);
-    const narrationTime = narrationPosition.sourceTime;
-    narration.volume = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: narrationTime, totalDuration: Number.isFinite(narration.duration) ? narration.duration : 0, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
-    if (Boolean(voiceover) && narrationPosition.active) {
-      if (Math.abs(narration.currentTime - narrationTime) > 0.75) narration.currentTime = narrationTime;
-      if (playing && narration.paused) void narration.play().catch(() => setMessage('Tap play again to allow voiceover preview.'));
-      if (!playing && !narration.paused) narration.pause();
-    } else narration.pause();
-    if (!playing) { music.pause(); narration.pause(); }
+    } else if (music) music.pause();
+    if (narration && voiceover) {
+      const narrationPosition = getStudioTimelineAudioPosition(elapsed, voiceoverStart, Number.isFinite(narration.duration) ? narration.duration : null);
+      const narrationTime = narrationPosition.sourceTime;
+      narration.volume = getAudioEnvelopeGain({ volume: voiceoverVolume, elapsed: narrationTime, totalDuration: Number.isFinite(narration.duration) ? narration.duration : 0, fadeIn: voiceoverFadeIn, fadeOut: voiceoverFadeOut });
+      if (narrationPosition.active) {
+        if (Math.abs(narration.currentTime - narrationTime) > 0.75) narration.currentTime = narrationTime;
+        if (playing && narration.paused) void narration.play().catch(() => setMessage('Tap play again to allow voiceover preview.'));
+        if (!playing && !narration.paused) narration.pause();
+      } else narration.pause();
+    } else if (narration) narration.pause();
+    if (!playing) { music?.pause(); narration?.pause(); }
   }, [playing, previewGlobalTime, soundtrack, voiceover, soundtrackVolume, soundtrackFadeIn, soundtrackFadeOut, duckMusicUnderVoiceover, voiceoverStart, voiceoverVolume, voiceoverFadeIn, voiceoverFadeOut, musicDuckingLevel, totalDuration]);
 
   useEffect(() => {
