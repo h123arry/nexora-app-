@@ -6,7 +6,7 @@ export function normalizeStudioSubtitleSegment(
   totalDuration = 600,
 ): StudioSubtitleSegment {
   const duration = Number.isFinite(totalDuration) ? Math.max(0, totalDuration) : 600;
-  const start = Math.min(duration, Math.max(0, Number.isFinite(value?.start) ? Number(value?.start) : 0));
+  const start = duration > 0 ? Math.min(Math.max(0, duration - 0.1), Math.max(0, Number.isFinite(value?.start) ? Number(value?.start) : 0)) : Math.max(0, Number.isFinite(value?.start) ? Number(value?.start) : 0);
   const requestedEnd = Number.isFinite(value?.end) ? Number(value?.end) : start + 3;
   const end = Math.min(duration || 600, Math.max(start + 0.1, requestedEnd));
   return {
