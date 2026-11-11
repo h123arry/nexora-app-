@@ -65,7 +65,7 @@ export const cleanupStudioExportAsset = onCall({ maxInstances: 20 }, async reque
   }
   const snapshot = await db.collection('mediaAssets').doc(mediaAssetId).get();
   const asset = snapshot.data();
-  if (!snapshot.exists || !isOwnedStudioExportAsset(asset, uid, mediaAssetId)) {
+  if (!snapshot.exists || !asset || !isOwnedStudioExportAsset(asset, uid, mediaAssetId)) {
     throw new HttpsError('not-found', 'This temporary Studio export is unavailable.');
   }
   if (asset.status === 'processing') {
