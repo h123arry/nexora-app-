@@ -19,7 +19,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - Studio entry from the Create menu.
 - Multi-clip import, per-clip trim in/out, split at playhead, drag-to-reorder and remove.
 - Bounded 40-step project-wide undo/redo history, including keyboard shortcuts and edit restoration across timeline, audio and title settings.
-- Browser-side canvas + MediaRecorder WebM export.
+- Browser-side canvas + MediaRecorder WebM render, with an optional server-rendered MP4 download through the existing FFmpeg media worker.
 - Source clip audio and optional soundtrack mixed through Web Audio when supported.
 - Multiple independently timed text layers with separate colour, placement, font size, opacity, scale and rotation; edits are previewed and baked into export.
 - User-authored text motion keyframes for opacity, scale, rotation and vertical offset, interpolated in preview and export with existing entrance animation curves.
@@ -75,7 +75,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 - [x] Balanced and high-quality WebM bitrate presets.
 - [x] Explicit 720p and 1080p export dimensions for portrait, square and landscape formats; device-specific performance acceptance remains.
 - [x] Validate rendered WebM output metadata (format, non-empty payload, duration and selected dimensions) before download or publish; failed validation preserves the local draft.
-- Robust MP4 output where a supported native/server renderer is available; WebM remains an explicitly labelled fallback.
+- [x] Server-rendered MP4 download path with owner-authenticated signed URLs and scheduled temporary-asset cleanup; production availability still depends on deploying the Cloud Run worker/Eventarc pipeline.
 - [x] Firebase resumable publishing upload with live progress, user cancellation and retry without re-rendering the export.
 - Publish to posts and Reels through the existing publishing pipeline.
 - [x] Versioned cloud draft manifests with private Studio-only Storage-backed source media, owner-only Firestore access, revision conflict detection and cross-device restore.
@@ -92,7 +92,7 @@ NEXORA Studio is an in-app editing workspace inside the existing Create experien
 
 ## Known limitations
 
-- Current export is WebM and depends on browser MediaRecorder, canvas capture and Web Audio support.
+- Studio first renders a verified WebM intermediate; Download MP4 converts it through the server worker when that pipeline is deployed. Local WebM remains available if server conversion is unavailable.
 - Voiceover waveform decoding is capped at 30 MB per recording to avoid excessive memory use on mobile devices; larger recordings remain attachable and exportable but do not receive a generated waveform preview.
 - Studio drafts are saved in IndexedDB and backed up to a private, versioned Firestore manifest with source media in a dedicated owner-only Studio Storage path. Concurrent edits are rejected rather than silently overwriting another device. Browser/device acceptance and recovery drills remain required.
 - The shared timeline seeks across video clips and shows independently timed visual/audio lanes. Preview playback now advances sequentially across trimmed clips while soundtrack and voiceover follow the global playhead, with voiceover offsets, soundtrack looping, fade envelopes and music ducking. Device-specific sync acceptance remains outstanding.
