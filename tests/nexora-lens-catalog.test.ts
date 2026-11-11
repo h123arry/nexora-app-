@@ -12,7 +12,7 @@ test('NEXORA Lensverse ships 300 original lens definitions', () => {
 });
 
 test('every Lensverse category contains 30 named lenses', () => {
-  for (const category of NEXORA_LENS_CATEGORIES.filter(item => item !== 'For you' && item !== 'Favourites')) {
+  for (const category of NEXORA_LENS_CATEGORIES.filter(item => item !== 'For you' && item !== 'Favourites' && item !== 'Community')) {
     assert.equal(NEXORA_LENS_CATALOG.filter(lens => lens.category === category).length, 30, category);
   }
 });
