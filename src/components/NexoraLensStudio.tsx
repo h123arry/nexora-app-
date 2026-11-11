@@ -388,7 +388,10 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
   const beautyIntensityRef = useRef(32);
   beautyIntensityRef.current = beautyIntensity;
   const [favourites, setFavourites] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]'); } catch { return []; }
+    try {
+      const saved = JSON.parse(localStorage.getItem(`nexora_lens_favourites_${userId}`) || '[]');
+      return Array.isArray(saved) ? saved.filter((id): id is string => typeof id === 'string') : [];
+    } catch { return []; }
   });
   const [faceTracking, setFaceTracking] = useState<'loading' | 'ready' | 'unavailable'>('loading');
   const [threeReady, setThreeReady] = useState(false);
@@ -578,7 +581,11 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, on
   const toggleFavourite = (id: string) => {
     setFavourites(previous => {
       const next = previous.includes(id) ? previous.filter(item => item !== id) : [...previous, id];
-      localStorage.setItem(`nexora_lens_favourites_${userId}`, JSON.stringify(next));
+      try {
+        localStorage.setItem(`nexora_lens_favourites_${userId}`, JSON.stringify(next));
+      } catch {
+        window.dispatchEvent(new CustomEvent('toast', { detail: 'NEXORA could not save lens favourites on this device.' }));
+      }
       return next;
     });
   };
