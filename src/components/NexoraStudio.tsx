@@ -210,9 +210,11 @@ export default function NexoraStudio({ currentUser, onClose, onPublish }: Props)
       if (cloudSyncAbortRef.current === controller) cloudSyncAbortRef.current = null;
       cloudSyncInFlightRef.current = false;
       setCloudProgress(0);
-      if (cloudSyncPendingRef.current) {
+      if (cloudSyncPendingRef.current && !controller.signal.aborted) {
         cloudSyncPendingRef.current = false;
         void requestCloudSync();
+      } else {
+        cloudSyncPendingRef.current = false;
       }
     }
   }, [currentUser.id]);
