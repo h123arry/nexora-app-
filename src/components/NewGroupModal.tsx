@@ -1,3 +1,4 @@
+import { createSecureId } from '../utils/secureId';
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Users, Shield, Sparkles, Check, Search, Image as ImageIcon, Layout, HelpCircle, Lock, Globe, FileText, ArrowRight, ArrowLeft } from 'lucide-react';
@@ -122,7 +123,7 @@ export default function NewGroupModal({ isOpen, onClose, onCreateGroup }: NewGro
       adminsCount: 1,
       onlineCount: Math.ceil((invitedPeerIds.length + 1) * 0.4),
       username: `@${groupSlug}`,
-      inviteLink: `https://nexora.live/invite/${groupSlug}-${Math.floor(1000 + Math.random() * 9000)}`,
+      inviteLink: `https://nexora.live/invite/${groupSlug}-${createSecureId('invite').slice('invite-'.length)}`,
       isVerified: category === 'Business' || category === 'Technology'
     });
 
