@@ -59,6 +59,7 @@ import { addPostCommentReply } from './services/firebase/postReplyService';
 import { setPostCommentLike } from './services/firebase/postCommentReactionService';
 import { deletePostComment } from './services/firebase/postCommentDeletionService';
 import { uploadMediaFile } from './services/firebase/storageService';
+import { normalizeMediaAssetId } from './utils/mediaAssetReference';
 
 import Sidebar from './components/Sidebar';
 import RightSidebar from './components/RightSidebar';
@@ -1509,7 +1510,7 @@ export default function App() {
     scheduledTime?: string,
     isBroadcastPost?: boolean,
     communityName?: string,
-    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean }
+    postDetails?: { location?: string; taggedUsernames?: string[]; imageAltText?: string; commentsAllowed?: boolean; mediaAssetId?: string }
   ): string => {
     if (!isLoggedIn || !firebaseUser || currentUser.id !== firebaseUser.uid) {
       requireAuth(() => handleAddPost(content, imageUrl, tagsString, images, videoUrl, voiceTranscript, voiceAudioUrl, audience, isVoice, voiceDuration, interactivePoll, opportunityType, pulseRegion, imageFilter, imageFilters, scheduledTime, isBroadcastPost, communityName, postDetails), 'Sign in to publish content.');
@@ -1534,6 +1535,7 @@ export default function App() {
       images,
       imageFilters,
       videoUrl,
+      mediaAssetId: normalizeMediaAssetId(postDetails?.mediaAssetId),
       voiceTranscript,
       voiceAudioUrl,
       audience: 'public',
@@ -2392,7 +2394,7 @@ export default function App() {
                   fileName: file.name,
                   onProgress: () => undefined,
                 });
-                const postId = handleAddPost(caption || 'Created with NEXORA Studio', undefined, undefined, undefined, uploaded.downloadUrl);
+                const postId = handleAddPost(caption || 'Created with NEXORA Studio', undefined, undefined, undefined, uploaded.downloadUrl, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, { mediaAssetId: uploaded.mediaId });
                 if (!postId) throw new Error('The video uploaded, but the post could not be created. Your Studio draft is still saved.');
                 setIsNexoraStudioOpen(false);
                 window.dispatchEvent(new CustomEvent('toast', { detail: 'Your Studio video is now on NEXORA.' }));
