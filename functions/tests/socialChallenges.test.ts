@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { initializeApp, deleteApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
-import { createSocialChallenge, joinSocialChallenge, recordSocialChallengePost, listSocialChallenges, getCommunityCapabilitySnapshot } from '../src/socialChallenges.js';
+import { createSocialChallenge, joinSocialChallenge, recordSocialChallengePost, listSocialChallenges, getCommunityCapabilitySnapshot, extractSocialChallengeIds } from '../src/socialChallenges.js';
 
 const app = initializeApp({ projectId: process.env.GCLOUD_PROJECT || 'demo-nexora-challenges' }, 'social-challenge-tests');
 const db = getFirestore(app);
@@ -92,4 +92,10 @@ it('advanced challenge hosting unlocks only after verified activity across three
     }
     await ref.delete();
   }
+});
+
+it('allows a public post to contribute to only one challenge even when multiple tags are supplied', () => {
+  assert.deepEqual(extractSocialChallengeIds('A useful update #nxchallenge_first #nxchallenge_second'), ['first']);
+  assert.deepEqual(extractSocialChallengeIds('No challenge tag here'), []);
+  assert.deepEqual(extractSocialChallengeIds(null), []);
 });
