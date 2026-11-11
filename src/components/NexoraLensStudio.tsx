@@ -395,6 +395,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     } catch { return []; }
   });
   const [faceTracking, setFaceTracking] = useState<'loading' | 'ready' | 'unavailable'>('loading');
+  const [cameraReady, setCameraReady] = useState(false);
   const [threeReady, setThreeReady] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [isCapturing, setIsCapturing] = useState(false);
@@ -417,6 +418,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
     const context = canvas?.getContext('2d', { alpha: false });
     if (!video || !canvas || !context) return;
     setCameraError('');
+    setCameraReady(false);
     setFaceTracking('loading');
     setThreeReady(false);
 
@@ -439,6 +441,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         const renderWidth = constrainedDevice ? 720 : 1280;
         canvas.width = Math.min(renderWidth, video.videoWidth || 720);
         canvas.height = Math.round(canvas.width * (video.videoHeight || 1280) / (video.videoWidth || 720));
+        setCameraReady(true);
         const canvasStream = canvas.captureStream(30);
         outputStream = new MediaStream([...canvasStream.getVideoTracks(), ...cameraStream.getAudioTracks()]);
         streamCallbackRef.current(outputStream);
@@ -565,7 +568,7 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
         outputStream?.getTracks().forEach(track => track.stop());
         cameraStream?.getTracks().forEach(track => track.stop());
         streamCallbackRef.current(null);
-        if (!cancelled) setCameraError(error instanceof Error ? error.message : 'Could not start the NEXORA camera.');
+        if (!cancelled) { setCameraReady(false); setCameraError(error instanceof Error ? error.message : 'Could not start the NEXORA camera.'); }
       }
     };
 
@@ -621,13 +624,13 @@ export default function NexoraLensStudio({ cameraFacing, userId, captureMode, co
           <span className="h-1.5 w-1.5 rounded-full bg-violet-400 shadow-[0_0_10px_#8A3FFC]" /> NEXORA LENSES
         </div>
         <div className="absolute right-3 top-3 rounded-full bg-[#050914]/75 px-2.5 py-1.5 text-[9px] text-[#D7C7FF] backdrop-blur">
-          {threeReady ? '3D AR ready' : faceTracking === 'ready' ? 'Face tracking ready' : faceTracking === 'loading' ? 'Preparing AR…' : 'Filters ready · AR offline'}
+          {!cameraReady ? 'Opening camera…' : threeReady ? '3D AR ready' : faceTracking === 'ready' ? 'Face tracking ready' : faceTracking === 'loading' ? 'Preparing AR…' : 'Filters ready · AR offline'}
         </div>
         {cameraError && <div className="absolute inset-0 flex items-center justify-center bg-[#050914]/90 p-6 text-center text-sm text-rose-200">{cameraError}</div>}
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
           <span className="rounded-full bg-black/60 px-3 py-1.5 text-[10px] text-white">{LENSES.find(item => item.id === activeLens)?.name}</span>
           {captureMode === 'photo' && (
-            <button type="button" onClick={() => void capturePhoto()} disabled={isCapturing || Boolean(cameraError)} className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-br from-[#8A3FFC] to-[#4B10F2] text-white shadow-lg disabled:opacity-50" aria-label="Capture filtered photo">
+            <button type="button" onClick={() => void capturePhoto()} disabled={!cameraReady || isCapturing || Boolean(cameraError)} className="flex h-12 w-12 items-center justify-center rounded-full border-[3px] border-white bg-gradient-to-br from-[#8A3FFC] to-[#4B10F2] text-white shadow-lg disabled:opacity-50" aria-label="Capture filtered photo">
               <Camera className="h-5 w-5" />
             </button>
           )}
