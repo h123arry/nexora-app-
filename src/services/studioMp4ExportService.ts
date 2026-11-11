@@ -1,5 +1,6 @@
 import { httpsCallable } from 'firebase/functions';
-import { functions } from '../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db, functions } from '../lib/firebase';
 import { uploadMediaFile } from './firebase/storageService';
 
 type Mp4UrlResponse = {
@@ -30,6 +31,55 @@ function wait(milliseconds: number, signal?: AbortSignal): Promise<void> {
   });
 }
 
+function waitForStudioMp4Asset(
+  mediaAssetId: string,
+  userId: string,
+  signal?: AbortSignal,
+  onProgress?: (progress: number) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let unsubscribe = () => undefined;
+    let settled = false;
+    const finish = (error?: Error) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeout);
+      signal?.removeEventListener('abort', abort);
+      unsubscribe();
+      if (error) reject(error); else resolve();
+    };
+    const abort = () => finish(new DOMException('MP4 export cancelled.', 'AbortError'));
+    const timeout = window.setTimeout(() => {
+      finish(new Error('MP4 preparation is taking longer than expected. Your original export and Studio draft are safe; try again later.'));
+    }, 10 * 60 * 1000);
+    if (signal?.aborted) {
+      abort();
+      return;
+    }
+    signal?.addEventListener('abort', abort, { once: true });
+    unsubscribe = onSnapshot(doc(db, 'mediaAssets', mediaAssetId), snapshot => {
+      if (!snapshot.exists()) {
+        finish(new Error('The temporary MP4 export record is no longer available.'));
+        return;
+      }
+      const asset = snapshot.data();
+      if (asset.ownerId !== userId) {
+        finish(new Error('The MP4 export belongs to a different account.'));
+        return;
+      }
+      if (asset.status === 'failed' || asset.status === 'rejected') {
+        finish(new Error('The media renderer could not prepare this MP4. Your original Studio export remains available.'));
+        return;
+      }
+      if (asset.status === 'processing') onProgress?.(60);
+      if (asset.status === 'ready' && asset.sourcePurpose === 'studio-export') {
+        onProgress?.(90);
+        finish();
+      }
+    }, error => finish(new Error(error.message || 'Could not monitor MP4 preparation.')));
+  });
+}
+
 export async function createStudioMp4Export(
   source: Blob,
   userId: string,
@@ -49,21 +99,17 @@ export async function createStudioMp4Export(
     signal,
     onProgress: progress => onProgress?.(Math.round(progress * 0.4)),
   });
+  onProgress?.(45);
+  await waitForStudioMp4Asset(uploaded.mediaId, userId, signal, onProgress);
   const getUrl = httpsCallable<{ mediaAssetId: string }, Mp4UrlResponse>(functions, 'getStudioExportMp4Url');
-  const maxAttempts = 300;
-  for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-    if (signal?.aborted) throw new DOMException('MP4 export cancelled.', 'AbortError');
-    const result = (await getUrl({ mediaAssetId: uploaded.mediaId })).data;
-    if (result.ready && result.downloadUrl) {
-      onProgress?.(100);
-      return {
-        downloadUrl: result.downloadUrl,
-        renditionHeight: result.renditionHeight || 0,
-        expiresAt: result.expiresAt || Date.now() + 15 * 60 * 1000,
-      };
-    }
-    onProgress?.(40 + Math.round((attempt / maxAttempts) * 48));
-    await wait(2_000, signal);
+  const result = (await getUrl({ mediaAssetId: uploaded.mediaId })).data;
+  if (!result.ready || !result.downloadUrl) {
+    throw new Error('The MP4 rendition is not available yet. Your original Studio export remains available; try again shortly.');
   }
-  throw new Error('MP4 preparation is taking longer than expected. Your original export and Studio draft are safe; try again later.');
+  onProgress?.(100);
+  return {
+    downloadUrl: result.downloadUrl,
+    renditionHeight: result.renditionHeight || 0,
+    expiresAt: result.expiresAt || Date.now() + 15 * 60 * 1000,
+  };
 }
