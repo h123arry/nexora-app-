@@ -89,15 +89,15 @@ export const submitCreatorLensForReview = onCall({ maxInstances: 10 }, async req
   try { lensId = validateCreatorLensId(request.data?.lensId); }
   catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'A lens reference is required.'); }
   const ref = db.collection('creatorLenses').doc(lensId);
-  const snapshot = await ref.get();
-  if (!snapshot.exists) throw new HttpsError('not-found', 'Creator lens not found.');
-  if (snapshot.get('ownerId') !== uid) throw new HttpsError('permission-denied', 'You cannot submit another creator’s lens.');
-  if (!canSubmitCreatorLens(snapshot.get('status'))) throw new HttpsError('failed-precondition', 'Only draft or rejected lenses can be submitted for review.');
-  const batch = db.batch();
-  batch.update(ref, { status: 'pending_review', submittedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), reviewNote: '' });
-  const audit = db.collection('creatorLensAuditEvents').doc();
-  batch.create(audit, { lensId, ownerId: uid, event: 'submitted_for_review', version: snapshot.get('version'), createdAt: FieldValue.serverTimestamp() });
-  await batch.commit();
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) throw new HttpsError('not-found', 'Creator lens not found.');
+    if (snapshot.get('ownerId') !== uid) throw new HttpsError('permission-denied', 'You cannot submit another creator’s lens.');
+    if (!canSubmitCreatorLens(snapshot.get('status'))) throw new HttpsError('failed-precondition', 'Only draft or rejected lenses can be submitted for review.');
+    transaction.update(ref, { status: 'pending_review', submittedAt: FieldValue.serverTimestamp(), updatedAt: FieldValue.serverTimestamp(), reviewNote: '' });
+    const audit = db.collection('creatorLensAuditEvents').doc();
+    transaction.create(audit, { lensId, ownerId: uid, event: 'submitted_for_review', version: snapshot.get('version'), createdAt: FieldValue.serverTimestamp() });
+  });
   return { lensId, submitted: true, status: 'pending_review' };
 });
 
@@ -110,27 +110,27 @@ export const reviewCreatorLens = onCall({ maxInstances: 10 }, async request => {
   if (!['approved', 'rejected'].includes(String(data.decision))) throw new HttpsError('invalid-argument', 'Choose approve or reject.');
   const reviewNote = typeof data.reviewNote === 'string' ? data.reviewNote.trim().slice(0, 1000) : '';
   const ref = db.collection('creatorLenses').doc(lensId);
-  const snapshot = await ref.get();
-  if (!snapshot.exists) throw new HttpsError('not-found', 'Creator lens not found.');
-  if (!canReviewCreatorLens(snapshot.get('status'))) throw new HttpsError('failed-precondition', 'Only pending lenses can be reviewed.');
   const approved = data.decision === 'approved';
-  const batch = db.batch();
-  batch.update(ref, {
-    status: approved ? 'approved' : 'rejected',
-    reviewNote,
-    reviewedBy: reviewerId,
-    reviewedAt: FieldValue.serverTimestamp(),
-    publishedAt: approved ? FieldValue.serverTimestamp() : null,
-    updatedAt: FieldValue.serverTimestamp(),
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) throw new HttpsError('not-found', 'Creator lens not found.');
+    if (!canReviewCreatorLens(snapshot.get('status'))) throw new HttpsError('failed-precondition', 'Only pending lenses can be reviewed.');
+    transaction.update(ref, {
+      status: approved ? 'approved' : 'rejected',
+      reviewNote,
+      reviewedBy: reviewerId,
+      reviewedAt: FieldValue.serverTimestamp(),
+      publishedAt: approved ? FieldValue.serverTimestamp() : null,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    const audit = db.collection('creatorLensAuditEvents').doc();
+    transaction.create(audit, {
+      lensId, ownerId: snapshot.get('ownerId'), reviewerId,
+      event: approved ? 'approved' : 'rejected',
+      version: snapshot.get('version'), reviewNote,
+      createdAt: FieldValue.serverTimestamp(),
+    });
   });
-  const audit = db.collection('creatorLensAuditEvents').doc();
-  batch.create(audit, {
-    lensId, ownerId: snapshot.get('ownerId'), reviewerId,
-    event: approved ? 'approved' : 'rejected',
-    version: snapshot.get('version'), reviewNote,
-    createdAt: FieldValue.serverTimestamp(),
-  });
-  await batch.commit();
   return { lensId, status: approved ? 'approved' : 'rejected' };
 });
 
