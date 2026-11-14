@@ -194,6 +194,22 @@ const publicProfile = (uid) => ({
     await assertFails(deleteDoc(doc(dbFor('bob'), ...reactionPath)));
   });
 
+  it('does not allow clients to alter pinned WorldWeave moment references', async () => {
+    await seed(async adminDb => {
+      await setDoc(doc(adminDb, 'worldWeaves', 'pin-rules-weave'), {
+        id: 'pin-rules-weave', ownerId: 'alice', ownerName: 'Alice', title: 'Pinned story',
+        description: '', visibility: 'private', participantIds: ['alice', 'bob'],
+        memberCount: 2, momentCount: 1, pinnedMomentIds: [], createdAt: Timestamp.now(), updatedAt: Timestamp.now()
+      });
+    });
+    await assertFails(updateDoc(doc(dbFor('alice'), 'worldWeaves', 'pin-rules-weave'), {
+      pinnedMomentIds: ['moment-1'], updatedAt: serverTimestamp()
+    }));
+    await assertFails(updateDoc(doc(dbFor('bob'), 'worldWeaves', 'pin-rules-weave'), {
+      pinnedMomentIds: ['moment-1'], updatedAt: serverTimestamp()
+    }));
+  });
+
   it('caps WorldWeave membership at 500 contributors for public joins and accepted invitations', async () => {
     const members = ['alice', ...Array.from({ length: 499 }, (_, index) => 'member-' + index)];
     await seed(async adminDb => {

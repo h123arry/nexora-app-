@@ -12,7 +12,7 @@ export const MAX_WORLDWEAVE_MEMBERS = 500;
 export interface WorldWeave {
   id: string; ownerId: string; ownerName: string; title: string; description: string;
   visibility: WorldWeaveVisibility; participantIds: string[]; memberCount: number;
-  momentCount: number; createdAt?: unknown; updatedAt?: unknown;
+  momentCount: number; pinnedMomentIds?: string[]; createdAt?: unknown; updatedAt?: unknown;
 }
 export interface WorldWeaveInvite { id: string; weaveId: string; inviteeId: string; invitedBy: string; ownerName: string; weaveTitle: string; status: 'pending' | 'accepted'; createdAt?: unknown; }
 export type WorldWeaveReaction = 'heart' | 'applause' | 'insight' | 'laugh';
@@ -301,4 +301,35 @@ export async function setWorldWeaveMomentReaction(
   }
   const action = httpsCallable(functions, 'setWorldWeaveMomentReaction');
   await action({ weaveId, momentId, reaction });
+}
+
+export async function toggleWorldWeaveMomentPin(
+  weaveId: string,
+  momentId: string,
+): Promise<{ pinned: boolean; pinnedMomentIds: string[] }> {
+  requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !momentId || momentId.length > 128 || momentId.includes('/')) {
+    throw new Error('Choose a valid WorldWeave moment.');
+  }
+  const action = httpsCallable<{ weaveId: string; momentId: string }, { pinned: boolean; pinnedMomentIds: string[] }>(functions, 'toggleWorldWeaveMomentPin');
+  const result = await action({ weaveId, momentId });
+  return result.data;
+}
+
+export async function fetchWorldWeavePinnedMoments(weaveId: string): Promise<WorldWeaveMoment[]> {
+  const user = requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')) throw new Error('Choose a valid WorldWeave.');
+  const weave = await getDoc(doc(db, 'worldWeaves', weaveId));
+  if (!weave.exists()) throw new Error('This WorldWeave no longer exists.');
+  const data = weave.data();
+  const participants: string[] = Array.isArray(data.participantIds) ? data.participantIds : [];
+  if (data.ownerId !== user.uid && !participants.includes(user.uid)) {
+    throw new Error('Join this WorldWeave before viewing its pinned moments.');
+  }
+  const ids: string[] = Array.isArray(data.pinnedMomentIds) ? data.pinnedMomentIds.filter((id): id is string => typeof id === 'string').slice(0, 3) : [];
+  const moments = await Promise.all(ids.map(async momentId => {
+    const snapshot = await getDoc(doc(db, 'worldWeaves', weaveId, 'moments', momentId));
+    return snapshot.exists() ? ({ ...snapshot.data(), id: snapshot.id } as WorldWeaveMoment) : null;
+  }));
+  return moments.filter((moment): moment is WorldWeaveMoment => Boolean(moment));
 }
