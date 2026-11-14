@@ -27,7 +27,7 @@ test('identity evidence rejects insecure, credentialed, duplicate and malformed 
   assert.throws(() => validateIdentityApplicationInput({ ...base, evidenceUrls: ['not-a-url'] }));
   assert.throws(() => validateIdentityApplicationInput({ ...base, evidenceUrls: ['https://example.com', 'https://example.com'] }));
   assert.throws(() => validateIdentityApplicationInput({ ...base, evidenceUrls: [] }));
-  assert.throws(() => validateIdentityApplicationInput({ ...base, evidenceUrls: Array(6).fill('https://example.com/' + Math.random()) }));
+  assert.throws(() => validateIdentityApplicationInput({ ...base, evidenceUrls: ['https://example.com/1', 'https://example.com/2', 'https://example.com/3', 'https://example.com/4', 'https://example.com/5', 'https://example.com/6'] }));
 });
 
 test('identity applications cannot bypass active review or already-approved status', () => {
