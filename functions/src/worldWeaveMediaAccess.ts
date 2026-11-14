@@ -132,7 +132,6 @@ export const resolveWorldWeaveMomentMediaUrl = onCall({ maxInstances: 20 }, asyn
     action: 'read',
     expires: Date.now() + SIGNED_URL_TTL_MS,
     responseDisposition: 'inline',
-    responseCacheControl: 'private, no-store, max-age=0',
   });
 
   // Re-check the parent immediately before returning the URL so a concurrent
