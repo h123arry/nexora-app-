@@ -11,6 +11,7 @@ import {
   canApplyIdentityImpersonationDecision,
   isSeniorIdentityImpersonationDecision,
   buildIdentityReviewNotification,
+  buildIdentityCaseNotification,
 } from './identityVerificationPolicy.js';
 
 const db = getFirestore(getFirebaseAdminApp(), resolveFirestoreDatabaseId());
@@ -248,6 +249,11 @@ export const reviewIdentityImpersonationCase = onCall({ maxInstances: 10 }, asyn
         transaction.update(applicationRef, { status: 'revoked', reviewNote, reviewerId, reviewedAt: now, updatedAt: now });
       }
     }
+    const notification = buildIdentityCaseNotification(userId, decision as 'dismiss' | 'place_on_hold' | 'clear_hold' | 'confirm_impersonation', auditRef.id, new Date().toISOString());
+    transaction.create(db.collection('users').doc(userId).collection('notifications').doc(notification.id), {
+      ...notification,
+      createdAt: now,
+    });
     transaction.create(auditRef, {
       userId,
       reviewerId,
