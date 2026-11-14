@@ -162,7 +162,7 @@ export const listMyOriginAttributionCases = onCall({ maxInstances: 10 }, async r
       db.collection(CASES).where('requesterUid', '==', uid).limit(50).get(),
       db.collection(CASES).where('sourceCreatorUid', '==', uid).limit(50).get(),
     ]);
-    const unique = new Map<string, FirebaseFirestore.QueryDocumentSnapshot>();
+    const unique = new Map<string, (typeof requested.docs)[number]>();
     for (const snapshot of [...requested.docs, ...received.docs]) unique.set(snapshot.id, snapshot);
     return {
       cases: [...unique.values()].map(snapshot => {
