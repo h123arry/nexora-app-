@@ -210,3 +210,28 @@ export async function deleteWorldWeaveMoment(weaveId: string, moment: WorldWeave
   // A trusted Firestore delete trigger removes the Storage object and its
   // mediaAssets record. Completed media assets are intentionally not client-deletable.
 }
+
+export async function leaveWorldWeave(weaveId: string): Promise<void> {
+  const user = requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/')) throw new Error('Choose a valid WorldWeave.');
+  const action = httpsCallable(functions, 'leaveWorldWeave');
+  await action({ weaveId, actorUid: user.uid });
+}
+
+export async function removeWorldWeaveContributor(weaveId: string, memberId: string): Promise<void> {
+  const user = requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !memberId || memberId.length > 128 || memberId.includes('/')) {
+    throw new Error('Choose a valid contributor.');
+  }
+  const action = httpsCallable(functions, 'removeWorldWeaveContributor');
+  await action({ weaveId, memberId, actorUid: user.uid });
+}
+
+export async function transferWorldWeaveOwnership(weaveId: string, memberId: string): Promise<void> {
+  const user = requireUser();
+  if (!weaveId || weaveId.length > 128 || weaveId.includes('/') || !memberId || memberId.length > 128 || memberId.includes('/')) {
+    throw new Error('Choose a valid new owner.');
+  }
+  const action = httpsCallable(functions, 'transferWorldWeaveOwnership');
+  await action({ weaveId, memberId, actorUid: user.uid });
+}
