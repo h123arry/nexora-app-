@@ -180,6 +180,20 @@ service cloud.firestore {
         && addedComment.keys().hasOnly(['id', 'postId', 'userId', 'username', 'name', 'avatar', 'content', 'timestamp', 'likes']);
     }
 
+    // Identity applications and evidence links are private to the applicant and trusted review Functions.
+    // Public profiles receive a minimal projection only after an approved review.
+    match /identityVerificationApplications/{userId} {
+      allow get: if owner(userId);
+      allow list, create, update, delete: if false;
+    }
+    match /identityVerificationAuditEvents/{eventId} {
+      allow read, write: if false;
+    }
+    match /verifiedIdentities/{userId} {
+      allow get, list: if resource.data.status == 'verified';
+      allow create, update, delete: if false;
+    }
+
     // Default-deny for every path not explicitly listed below.
     match /{document=**} { allow read, write: if false; }
 
