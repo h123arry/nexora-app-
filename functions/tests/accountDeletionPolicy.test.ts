@@ -108,7 +108,7 @@ describe('account deletion data and storage scope', () => {
     });
 
     const deleted = await deleteUserOwnedDocuments(db, 'identity-delete-test');
-    assert.equal(deleted, 6);
+    assert.equal(deleted, 12);
     for (const collection of [
       'identityVerificationApplications', 'identityVerificationPrivateSignals',
       'verifiedIdentities', 'identityImpersonationCases',
