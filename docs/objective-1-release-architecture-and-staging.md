@@ -119,3 +119,30 @@ The following require account/project authority or physical devices and cannot b
 7. Execute real-device acceptance tests on Android and iOS.
 
 No production Firebase resource or store account is modified by these repository changes.
+
+## 10. Express API hosting and native CORS
+
+The existing Express process in `server.ts` is the canonical API boundary for VOH and private chat voice media. It also serves the built React application. Objective 1 now includes:
+
+- A multi-stage Node.js 22 `Dockerfile` that builds the existing Vite/Express application and prunes development-only dependencies from the runtime image.
+- A `.dockerignore` that excludes credentials, local dependencies, test data, native build output, and unrelated tooling from the container context.
+- A protected staging workflow that deploys Firebase resources and the existing Express/React container to a dedicated Cloud Run service in `europe-west1`.
+- Cloud Run runtime environment isolation: `NEXORA_ENV=staging`, `NODE_ENV=production`, explicit staging project/database/bucket, and an immutable `RELEASE_VERSION`.
+- A post-deployment `/healthz` and `/readyz` check. Readiness must reach Firestore using the attached runtime service account.
+- Strict API CORS: same-origin browser requests, iOS `capacitor://localhost`, Android `https://localhost`, and explicitly configured HTTPS origins only. Firebase ID-token validation remains the authorization boundary.
+
+The Cloud Run container builds the web app with an empty `VITE_API_BASE_URL`, so browser API calls remain same-origin. After first deployment, the workflow prints the Cloud Run service URL; use that URL as `VITE_API_BASE_URL` for native staging builds. Do not hardcode the Cloud Run URL into source.
+
+### Additional GitHub Environment configuration
+
+Add the following variable to the protected `nexora-staging` GitHub Environment:
+
+- `GCP_STAGING_RUNTIME_SERVICE_ACCOUNT`: owner-created Cloud Run runtime service-account email. Grant only the Firebase/Firestore/Storage permissions required by the server.
+
+The deployer Workload Identity service account and the Cloud Run runtime service account are separate identities. Restrict GitHub OIDC trust to this repository and protected deployment ref. Grant the deployer only Artifact Registry Writer, Cloud Run deployment, service-account impersonation, and Firebase deployment permissions needed for this workflow. The runtime identity must not be a project Owner.
+
+The workflow creates the Artifact Registry Docker repository `nexora` in `europe-west1` if missing, pushes an immutable image tagged with the reviewed Git SHA, deploys `nexora-api-staging`, retrieves its URL, validates staging environment separation, and checks health/readiness.
+
+### External cloud prerequisites
+
+The owner must enable Artifact Registry, Cloud Run, and required Firebase APIs; create the runtime service account; grant its least-privilege data access; and configure the WIF provider/deployer identity. The workflow does not create a Firebase project, billing account, DNS record, Apple/Google store account, or signing credential.
