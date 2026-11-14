@@ -16,6 +16,7 @@ test('includes only the optional profile decoration identifiers in the public pr
   assert.equal(decorated.profileFrameId, 'frame-aurora');
   assert.equal(decorated.profileBadgeId, 'badge-regalia');
   assert.equal('email' in decorated, false);
+  assert.equal('isVerified' in decorated, false);
 });
 
 test('omits location from public profiles unless explicitly opted in', () => {
