@@ -2,7 +2,7 @@ import { after, before, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { initializeTestEnvironment, assertFails, assertSucceeds } from '@firebase/rules-unit-testing';
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 const projectId = 'demo-nexora-identity-rules';
 let env;
@@ -32,6 +32,15 @@ describe('verification authority rules', () => {
       await setDoc(doc(adminDb, 'publicProfiles', 'bob'), {
         id: 'bob', username: 'bob', name: 'Bob', isVerified: false,
       });
+      await setDoc(doc(adminDb, 'identityVerificationApplications', 'alice'), {
+        userId: 'alice', status: 'pending_review', evidenceUrls: ['https://example.com/private-evidence'],
+      });
+      await setDoc(doc(adminDb, 'identityVerificationApplications', 'bob'), {
+        userId: 'bob', status: 'pending_review', evidenceUrls: ['https://example.com/bob-private-evidence'],
+      });
+      await setDoc(doc(adminDb, 'verifiedIdentities', 'alice'), {
+        userId: 'alice', status: 'verified', identityType: 'creator', displayName: 'Alice Creator',
+      });
     });
 
     const db = env.authenticatedContext('alice', {
@@ -50,6 +59,11 @@ describe('verification authority rules', () => {
     await assertFails(updateDoc(doc(verifiedBobDb, 'publicProfiles', 'bob'), { isVerified: true }));
 
     await assertSucceeds(updateDoc(doc(db, 'users', 'alice'), { name: 'Alice Updated' }));
+    await assertSucceeds(getDoc(doc(db, 'identityVerificationApplications', 'alice')));
+    await assertFails(getDoc(doc(db, 'identityVerificationApplications', 'bob')));
+    await assertFails(updateDoc(doc(db, 'identityVerificationApplications', 'alice'), { status: 'approved' }));
+    await assertFails(updateDoc(doc(db, 'verifiedIdentities', 'alice'), { status: 'revoked' }));
+    await assertSucceeds(getDoc(doc(db, 'verifiedIdentities', 'alice')));
     await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), { name: 'Alice Updated' }));
   });
 });
