@@ -52,6 +52,7 @@ describe('trusted WorldWeave chapters', () => {
 
   it('rejects invalid chapter titles and caps each experience at 30 chapters', async () => {
     await assert.rejects(call(createWorldWeaveChapter, 'alice', { weaveId: weave.id, title: ' ', description: '' }), /2 to 60 characters/);
+    await assert.rejects(call(createWorldWeaveChapter, 'alice', { weaveId: weave.id, title: 'x'.repeat(61), description: '' }), /2 to 60 characters/);
     const batch = db.batch();
     for (let position = 2; position < 30; position += 1) {
       const ref = weave.collection('chapters').doc('seed-' + position);
