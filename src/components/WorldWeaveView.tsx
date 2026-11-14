@@ -68,7 +68,11 @@ export default function WorldWeaveView({ currentUser }: Props) {
 
   useEffect(() => {
     let active = true;
-    if (!selected) { setContributors([]); setSelectedContributorId(''); return; }
+    if (!selected || (selected.ownerId !== currentUser.id && !selected.participantIds?.includes(currentUser.id))) {
+      setContributors([]);
+      setSelectedContributorId('');
+      return;
+    }
     listWorldWeaveContributors(selected.id).then(items => {
       if (active) {
         setContributors(items);
