@@ -1344,7 +1344,9 @@ service cloud.firestore {
               && request.resource.data.get('mediaUrl', '') is string
               && request.resource.data.mediaUrl.size() <= 2048
               && request.resource.data.get('storagePath', '') is string
-              && request.resource.data.storagePath.matches('^users/' + request.auth.uid + '/media/.*')))
+              && request.resource.data.storagePath.matches('^users/' + request.auth.uid + '/media/.*')
+              && (get(/databases/$(database)/documents/worldWeaves/$(weaveId)).data.get('visibility', 'private') != 'private'
+                || request.resource.data.get('mediaUrl', '') == '')))
           && request.resource.data.createdAt == request.time;
         match /reactions/{userId} {
           // Reactions are visible only to current contributors; writes go through
