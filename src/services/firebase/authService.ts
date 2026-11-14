@@ -24,6 +24,8 @@ import { User } from '../../types';
 import { ProfileService } from './profileService';
 import { EmailService } from './emailService';
 import { SecurityNotificationService } from './securityNotificationService';
+import { httpsCallable } from 'firebase/functions';
+import { functions } from './config';
 import { hasLinkedProvider, isRecentAuthentication } from './accountLinkingPolicy';
 import { isNativeRuntime } from '../../lib/nativeRuntime';
 
@@ -491,6 +493,18 @@ export class AuthService {
   }
 
   /** Link Google to the currently signed-in account; never create or merge a second NEXORA account. */
+  static async revokeAllSessions(): Promise<void> {
+    this.requireConfigured();
+    if (!auth.currentUser) throw new Error('Sign in before revoking active sessions.');
+    const revoke = httpsCallable(functions, 'revokeAllSessions');
+    try {
+      await revoke({});
+      await signOut(auth);
+    } catch (error) {
+      throw this.publicAuthError(error);
+    }
+  }
+
   static async linkGoogleAccount(): Promise<string[]> {
     this.requireConfigured();
     const currentUser = auth.currentUser;

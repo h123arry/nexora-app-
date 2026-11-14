@@ -111,6 +111,9 @@ describe('account deletion data and storage scope', () => {
       userId: 'identity-delete-test', reviewerId: 'identity-delete-test', actorId: 'identity-delete-test',
       reviewNote: 'private reviewer note', event: 'identity_reviewed'
     });
+    await db.collection('securityAuditEvents').doc('session-delete-audit').set({
+      userId: 'identity-delete-test', action: 'revoke_all_sessions', status: 'completed'
+    });
     await db.collection('identityVerificationApplications').doc('identity-delete-other').set({
       userId: 'identity-delete-other', status: 'pending_review'
     });
@@ -129,6 +132,10 @@ describe('account deletion data and storage scope', () => {
     assert.equal(audit.get('userId'), undefined);
     assert.equal(audit.get('reviewerId'), undefined);
     assert.equal(audit.get('actorId'), undefined);
+    const securityAudit = await db.collection('securityAuditEvents').doc('session-delete-audit').get();
+    assert.equal(securityAudit.exists, true);
+    assert.equal(securityAudit.get('accountDeleted'), true);
+    assert.equal(securityAudit.get('userId'), undefined);
     assert.equal((await db.collection('identityVerificationApplications').doc('identity-delete-other').get()).exists, true);
   });
 

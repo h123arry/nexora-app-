@@ -1,1 +1,1 @@
-export { app, auth, db, storage, firebaseConfigError } from '../../lib/firebase';
+export { app, auth, db, storage, functions, firebaseConfigError } from '../../lib/firebase';
