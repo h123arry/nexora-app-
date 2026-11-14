@@ -105,3 +105,18 @@ Add the GitHub Environment variable `GCP_STAGING_RUNTIME_SERVICE_ACCOUNT` contai
 The Cloud Run web build keeps `VITE_API_BASE_URL` empty so browser requests remain same-origin. After deployment, the Cloud Run service URL is printed in the workflow summary. Copy it into `VITE_API_BASE_URL` for native staging builds. The Express API permits same-origin traffic and the two Capacitor origins (`capacitor://localhost` and `https://localhost`) while retaining Firebase ID-token authorization.
 
 **This workflow is a deploy mechanism, not proof of provisioning.** Staging is still NOT PROVISIONED until the owner creates the project/resources, configures WIF and runtime IAM, and the workflow's readiness checks pass.
+
+## 9. Private media processing and Eventarc
+
+The staging workflow also builds the locked `services/media-worker` image and deploys `nexora-media-worker` to Cloud Run with private ingress and authenticated invocation only. The service runs the Functions Framework `processMedia` HTTP target with FFmpeg and Sharp; concurrency is one job per instance, with a 4 GiB memory allocation, 2 vCPU, 900-second timeout, and a maximum of three instances.
+
+It creates `nexora-media-staging-finalized` for `google.cloud.storage.object.v1.finalized` events on the staging bucket. Set `MEDIA_BUCKET_LOCATION` to the bucket's exact region or multi-region. Eventarc trigger location must match the bucket; the destination Cloud Run service remains in `europe-west1`. Eventarc trigger event filters cannot be changed after creation, so changing the source bucket/location requires a controlled trigger replacement.
+
+Add these GitHub Environment variables:
+- `MEDIA_BUCKET_LOCATION`
+- `GCP_STAGING_MEDIA_RUNTIME_SERVICE_ACCOUNT`
+- `GCP_STAGING_EVENTARC_SERVICE_ACCOUNT`
+
+Grant the media runtime service account only the Firestore permissions and bucket-scoped object read/create permissions needed to read original media and write `processed/**`. Grant the Eventarc trigger identity `roles/eventarc.eventReceiver` and `roles/run.invoker` on the worker. Grant the Cloud Storage service agent `roles/pubsub.publisher` so the direct Storage event can be delivered. The deployer identity must be able to create the trigger and attach the selected service accounts.
+
+After deployment, upload a short video through the staging app and verify the event reaches the private worker, the `mediaAssets` document reaches `ready`, expected poster/MP4/HLS objects exist, duplicate events do not overwrite a completed asset, and a second authenticated account can play the media through the app's authorized delivery path. Do not make the source bucket public. CDN signing configuration is a separate optional staging setting and must use Secret Manager.
