@@ -98,7 +98,7 @@ export function buildIdentityReviewNotification(
   return {
     id: `identity_review_${version}_${decision}`,
     type: 'system' as const,
-    userId: 'nexora-system',
+    userId: 'system',
     username: 'nexora',
     actorName: 'NEXORA',
     avatar: '',
@@ -130,7 +130,7 @@ export function buildIdentityCaseNotification(
   return {
     id: `identity_case_${eventId}`,
     type: 'system' as const,
-    userId: 'nexora-system',
+    userId: 'system',
     username: 'nexora',
     actorName: 'NEXORA',
     avatar: '',
