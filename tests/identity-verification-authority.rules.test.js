@@ -62,6 +62,7 @@ describe('verification authority rules', () => {
     await assertSucceeds(getDoc(doc(db, 'identityVerificationApplications', 'alice')));
     await assertFails(getDoc(doc(db, 'identityVerificationApplications', 'bob')));
     await assertFails(updateDoc(doc(db, 'identityVerificationApplications', 'alice'), { status: 'approved' }));
+    await assertFails(setDoc(doc(db, 'identityVerificationApplications', 'charlie'), { userId: 'charlie', status: 'approved' }));
     await assertFails(updateDoc(doc(db, 'verifiedIdentities', 'alice'), { status: 'revoked' }));
     await assertSucceeds(getDoc(doc(db, 'verifiedIdentities', 'alice')));
     await assertSucceeds(updateDoc(doc(db, 'publicProfiles', 'alice'), { name: 'Alice Updated' }));
