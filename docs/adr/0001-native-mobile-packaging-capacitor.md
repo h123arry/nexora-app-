@@ -74,3 +74,17 @@ Trade-offs:
 The architecture decision is accepted and documented. Capacitor dependencies, configuration, and generated native projects have **not** yet been added. No Android or iOS store build has been produced or tested by this decision record.
 
 The next implementation step is the dependency/configuration integration, preceded by the API-origin and browser/native compatibility audit.
+
+
+## Repository compatibility audit — confirmed findings
+
+The initial source inspection found several web-origin assumptions that must be adapted before native release:
+
+- `src/services/firebase/storageService.ts` calls relative `/api/private-chat-media/...` endpoints for private voice uploads and playback. A Capacitor app's local WebView origin is not the Express API origin. These calls need a single validated HTTPS API base URL for staging and production, with auth tokens and request IDs preserved.
+- `src/services/firebase/authService.ts` imports and uses Firebase `signInWithPopup` for Google sign-in. The native app needs a tested native-compatible OAuth/deep-link flow; a browser popup flow must not be assumed to work inside the packaged WebView.
+- `src/services/firebase/pushNotificationService.ts` uses Firebase Web Messaging, browser `Notification`, and a Web Push token labelled `platform: 'web'`. This is not native FCM registration. Android/iOS push needs a native push integration, platform-specific token registration, permission handling, and real-device delivery tests.
+- `src/main.tsx` registers `/service-worker.js` in production. The Capacitor build must not rely on a service worker for native push or app-shell lifecycle. PWA registration should remain web-only or be explicitly guarded for native runtime.
+- `index.html` includes a CDN-hosted LiveKit UMD script. Native release testing must verify network availability, CSP/origin behaviour, and that the native app can load the required LiveKit runtime reliably; bundling a pinned dependency may be preferable if the compatibility audit confirms it.
+- Existing localStorage-based browser persistence and lockout UX must be reviewed for native lifecycle and account-switch behaviour. Security-critical throttling must remain server-authoritative.
+
+These findings are compatibility work items, not evidence that the features are already native-ready. They should be resolved with small platform adapters while preserving the current web implementation.
